@@ -110,67 +110,10 @@ TreePtr fromRawTree(
 } // namespace
 
 void HgDatapackStore::getTreeBatch(const ImportRequestsList& importRequests) {
-  // TODO: extract each ClientRequestInfo from importRequests into a
-  // sapling::ClientRequestInfo and pass them with the corresponding
-  // sapling::NodeId
-
-  // Group requests by proxyHash to ensure no duplicates in fetch request to
-  // SaplingNativeBackingStore.
-  ImportRequestsMap importRequestsMap;
-  for (const auto& importRequest : importRequests) {
-    auto nodeId = importRequest->getRequest<HgImportRequest::TreeImport>()
-                      ->proxyHash.byteHash();
-    // Look for and log duplicates.
-    const auto& importRequestsEntry = importRequestsMap.find(nodeId);
-    if (importRequestsEntry != importRequestsMap.end()) {
-      XLOGF(DBG9, "Duplicate tree fetch request with proxyHash: {}", nodeId);
-      auto& importRequestList = importRequestsEntry->second.first;
-
-      // Only look for mismatched requests if logging level is high enough.
-      // Make sure this level is the same as the XLOG_IF statement below.
-      if (XLOG_IS_ON(DBG9)) {
-        // Log requests that do not have the same hash (ObjectId).
-        // This happens when two paths (file or directory) have same content.
-        for (const auto& priorRequest : importRequestList) {
-          XLOGF_IF(
-              DBG9,
-              UNLIKELY(
-                  priorRequest->getRequest<HgImportRequest::TreeImport>()
-                      ->hash !=
-                  importRequest->getRequest<HgImportRequest::TreeImport>()
-                      ->hash),
-              "Tree requests have the same proxyHash (HgProxyHash) but different hash (ObjectId). "
-              "This should not happen. Previous request: proxyHash='{}', hash='{}'; "
-              "current request: proxyHash ='{}', hash='{}'.",
-              folly::hexlify(
-                  priorRequest->getRequest<HgImportRequest::TreeImport>()
-                      ->proxyHash.getValue()),
-              priorRequest->getRequest<HgImportRequest::TreeImport>()
-                  ->hash.asHexString(),
-              folly::hexlify(
-                  importRequest->getRequest<HgImportRequest::TreeImport>()
-                      ->proxyHash.getValue()),
-              importRequest->getRequest<HgImportRequest::TreeImport>()
-                  ->hash.asHexString());
-        }
-      }
-      importRequestList.emplace_back(importRequest);
-    } else {
-      std::vector<std::shared_ptr<HgImportRequest>> requests({importRequest});
-      importRequestsMap.emplace(
-          nodeId, make_pair(requests, &liveBatchedBlobWatches_));
-    }
-  }
-
-  // Indexable vector of nodeIds - required by SaplingNativeBackingStore API.
-  std::vector<sapling::NodeId> requests;
-  requests.reserve(importRequestsMap.size());
-  std::transform(
-      importRequestsMap.begin(),
-      importRequestsMap.end(),
-      std::back_inserter(requests),
-      [](auto& pair) { return pair.first; });
-
+  auto preparedRequests =
+      prepareRequests<HgImportRequest::TreeImport>(importRequests, "Tree");
+  auto importRequestsMap = std::move(preparedRequests.first);
+  auto requests = std::move(preparedRequests.second);
   auto hgObjectIdFormat = config_->getEdenConfig()->hgObjectIdFormat.getValue();
   const auto& filteredPaths =
       config_->getEdenConfig()->hgFilteredPaths.getValue();
@@ -194,8 +137,7 @@ void HgDatapackStore::getTreeBatch(const ImportRequestsList& importRequests) {
           // tree from HgImporter.
           return;
         }
-
-        XLOGF(DBG9, "Imported tree node={}", folly::hexlify(requests[index]));
+        XLOGF(DBG9, "Imported Tree node={}", folly::hexlify(requests[index]));
         const auto& nodeId = requests[index];
         auto& [importRequestList, watch] = importRequestsMap[nodeId];
         for (auto& importRequest : importRequestList) {
@@ -274,66 +216,10 @@ TreePtr HgDatapackStore::getTreeLocal(
 }
 
 void HgDatapackStore::getBlobBatch(const ImportRequestsList& importRequests) {
-  // TODO: extract each ClientRequestInfo from importRequests into a
-  // sapling::ClientRequestInfo and pass them with the corresponding
-  // sapling::NodeId
-
-  // Group requests by proxyHash to ensure no duplicates in fetch request to
-  // SaplingNativeBackingStore.
-  ImportRequestsMap importRequestsMap;
-  for (const auto& importRequest : importRequests) {
-    auto nodeId = importRequest->getRequest<HgImportRequest::BlobImport>()
-                      ->proxyHash.byteHash();
-    // Look for and log duplicates.
-    const auto& importRequestsEntry = importRequestsMap.find(nodeId);
-    if (importRequestsEntry != importRequestsMap.end()) {
-      XLOGF(DBG9, "Duplicate blob fetch request with proxyHash: {}", nodeId);
-      auto& importRequestList = importRequestsEntry->second.first;
-
-      // Only look for mismatched requests if logging level is high enough.
-      // Make sure this level is the same as the XLOG_IF statement below.
-      if (XLOG_IS_ON(DBG9)) {
-        // Log requests that do not have the same hash (ObjectId).
-        // This happens when two paths (file or directory) have same content.
-        for (const auto& priorRequest : importRequestList) {
-          XLOGF_IF(
-              DBG9,
-              UNLIKELY(
-                  priorRequest->getRequest<HgImportRequest::BlobImport>()
-                      ->hash !=
-                  importRequest->getRequest<HgImportRequest::BlobImport>()
-                      ->hash),
-              "Blob requests have the same proxyHash (HgProxyHash) but different hash (ObjectId). "
-              "This should not happen. Previous request: proxyHash='{}', hash='{}'; "
-              "current request: proxyHash ='{}', hash='{}'.",
-              folly::hexlify(
-                  priorRequest->getRequest<HgImportRequest::BlobImport>()
-                      ->proxyHash.getValue()),
-              priorRequest->getRequest<HgImportRequest::BlobImport>()
-                  ->hash.asHexString(),
-              folly::hexlify(
-                  importRequest->getRequest<HgImportRequest::BlobImport>()
-                      ->proxyHash.getValue()),
-              importRequest->getRequest<HgImportRequest::BlobImport>()
-                  ->hash.asHexString());
-        }
-      }
-      importRequestList.emplace_back(importRequest);
-    } else {
-      std::vector<std::shared_ptr<HgImportRequest>> requests({importRequest});
-      importRequestsMap.emplace(
-          nodeId, make_pair(requests, &liveBatchedBlobWatches_));
-    }
-  }
-
-  // Indexable vector of nodeIds - required by SaplingNativeBackingStore API.
-  std::vector<sapling::NodeId> requests;
-  requests.reserve(importRequestsMap.size());
-  std::transform(
-      importRequestsMap.begin(),
-      importRequestsMap.end(),
-      std::back_inserter(requests),
-      [](auto& pair) { return pair.first; });
+  auto preparedRequests =
+      prepareRequests<HgImportRequest::BlobImport>(importRequests, "Blob");
+  auto importRequestsMap = std::move(preparedRequests.first);
+  auto requests = std::move(preparedRequests.second);
 
   store_.getBlobBatch(
       folly::range(requests),
@@ -354,7 +240,7 @@ void HgDatapackStore::getBlobBatch(const ImportRequestsList& importRequests) {
           return;
         }
 
-        XLOGF(DBG9, "Imported blob node={}", folly::hexlify(requests[index]));
+        XLOGF(DBG9, "Imported Blob node={}", folly::hexlify(requests[index]));
         const auto& nodeId = requests[index];
         auto& [importRequestList, watch] = importRequestsMap[nodeId];
         auto result = content.hasException()
@@ -397,69 +283,10 @@ BlobMetadataPtr HgDatapackStore::getLocalBlobMetadata(
 
 void HgDatapackStore::getBlobMetadataBatch(
     const ImportRequestsList& importRequests) {
-  // TODO: extract each ClientRequestInfo from importRequests into a
-  // sapling::ClientRequestInfo and pass them with the corresponding
-  // sapling::NodeId
-
-  // Group requests by proxyHash to ensure no duplicates in fetch request to
-  // SaplingNativeBackingStore.
-  ImportRequestsMap importRequestsMap;
-  for (const auto& importRequest : importRequests) {
-    auto nodeId = importRequest->getRequest<HgImportRequest::BlobMetaImport>()
-                      ->proxyHash.byteHash();
-    // Look for and log duplicates.
-    const auto& importRequestsEntry = importRequestsMap.find(nodeId);
-    if (importRequestsEntry != importRequestsMap.end()) {
-      XLOGF(
-          DBG9,
-          "Duplicate blob metadata fetch request with proxyHash: {}",
-          nodeId);
-      auto& importRequestList = importRequestsEntry->second.first;
-
-      // Only look for mismatched requests if logging level is high enough.
-      // Make sure this level is the same as the XLOG_IF statement below.
-      if (XLOG_IS_ON(DBG9)) {
-        // Log requests that do not have the same hash (ObjectId).
-        // This happens when two paths (file or directory) have same content.
-        for (const auto& priorRequest : importRequestList) {
-          XLOGF_IF(
-              DBG9,
-              UNLIKELY(
-                  priorRequest->getRequest<HgImportRequest::BlobMetaImport>()
-                      ->hash !=
-                  importRequest->getRequest<HgImportRequest::BlobMetaImport>()
-                      ->hash),
-              "Blob metadata requests have the same proxyHash (HgProxyHash) but different hash (ObjectId). "
-              "This should not happen. Previous request: proxyHash='{}', hash='{}'; "
-              "current request: proxyHash ='{}', hash='{}'.",
-              folly::hexlify(
-                  priorRequest->getRequest<HgImportRequest::BlobMetaImport>()
-                      ->proxyHash.getValue()),
-              priorRequest->getRequest<HgImportRequest::BlobMetaImport>()
-                  ->hash.asHexString(),
-              folly::hexlify(
-                  importRequest->getRequest<HgImportRequest::BlobMetaImport>()
-                      ->proxyHash.getValue()),
-              importRequest->getRequest<HgImportRequest::BlobMetaImport>()
-                  ->hash.asHexString());
-        }
-      }
-      importRequestList.emplace_back(importRequest);
-    } else {
-      std::vector<std::shared_ptr<HgImportRequest>> requests({importRequest});
-      importRequestsMap.emplace(
-          nodeId, make_pair(requests, &liveBatchedBlobWatches_));
-    }
-  }
-
-  // Indexable vector of nodeIds - required by SaplingNativeBackingStore API.
-  std::vector<sapling::NodeId> requests;
-  requests.reserve(importRequestsMap.size());
-  std::transform(
-      importRequestsMap.begin(),
-      importRequestsMap.end(),
-      std::back_inserter(requests),
-      [](auto& pair) { return pair.first; });
+  auto preparedRequests = prepareRequests<HgImportRequest::BlobMetaImport>(
+      importRequests, "BlobMetadata");
+  auto importRequestsMap = std::move(preparedRequests.first);
+  auto requests = std::move(preparedRequests.second);
 
   store_.getBlobMetadataBatch(
       folly::range(requests),
@@ -478,7 +305,7 @@ void HgDatapackStore::getBlobMetadataBatch(
         }
 
         XLOGF(
-            DBG9, "Imported blob metadata={}", folly::hexlify(requests[index]));
+            DBG9, "Imported BlobMetadata={}", folly::hexlify(requests[index]));
         const auto& nodeId = requests[index];
         auto& [importRequestList, watch] = importRequestsMap[nodeId];
         folly::Try<BlobMetadataPtr> result;
@@ -502,6 +329,77 @@ void HgDatapackStore::getBlobMetadataBatch(
         // Make sure that we're stopping this watch.
         watch.reset();
       });
+}
+
+template <typename T>
+std::pair<HgDatapackStore::ImportRequestsMap, std::vector<sapling::NodeId>>
+HgDatapackStore::prepareRequests(
+    const ImportRequestsList& importRequests,
+    const std::string& requestType) {
+  // TODO: extract each ClientRequestInfo from importRequests into a
+  // sapling::ClientRequestInfo and pass them with the corresponding
+  // sapling::NodeId
+
+  // Group requests by proxyHash to ensure no duplicates in fetch request to
+  // SaplingNativeBackingStore.
+  ImportRequestsMap importRequestsMap;
+  for (const auto& importRequest : importRequests) {
+    auto nodeId = importRequest->getRequest<T>()->proxyHash.byteHash();
+
+    // Look for and log duplicates.
+    const auto& importRequestsEntry = importRequestsMap.find(nodeId);
+    if (importRequestsEntry != importRequestsMap.end()) {
+      XLOGF(
+          DBG9,
+          "Duplicate {} fetch request with proxyHash: {}",
+          requestType,
+          nodeId);
+      auto& importRequestList = importRequestsEntry->second.first;
+
+      // Only look for mismatched requests if logging level is high enough.
+      // Make sure this level is the same as the XLOG_IF statement below.
+      if (XLOG_IS_ON(DBG9)) {
+        // Log requests that do not have the same hash (ObjectId).
+        // This happens when two paths (file or directory) have same content.
+        for (const auto& priorRequest : importRequestList) {
+          XLOGF_IF(
+              DBG9,
+              UNLIKELY(
+                  priorRequest->template getRequest<T>()->hash !=
+                  importRequest->getRequest<T>()->hash),
+              "{} requests have the same proxyHash (HgProxyHash) but different hash (ObjectId). "
+              "This should not happen. Previous request: hash='{}', proxyHash='{}', proxyHash.path='{}'; "
+              "current request: hash='{}', proxyHash ='{}', proxyHash.path='{}'.",
+              requestType,
+              priorRequest->template getRequest<T>()->hash.asHexString(),
+              folly::hexlify(
+                  priorRequest->template getRequest<T>()->proxyHash.byteHash()),
+              priorRequest->template getRequest<T>()->proxyHash.path(),
+              importRequest->getRequest<T>()->hash.asHexString(),
+              folly::hexlify(
+                  importRequest->getRequest<T>()->proxyHash.byteHash()),
+              importRequest->getRequest<T>()->proxyHash.path());
+        }
+      }
+
+      importRequestList.emplace_back(importRequest);
+    } else {
+      std::vector<std::shared_ptr<HgImportRequest>> requests({importRequest});
+      importRequestsMap.emplace(
+          nodeId, make_pair(requests, &liveBatchedBlobWatches_));
+    }
+  }
+
+  // Indexable vector of nodeIds - required by SaplingNativeBackingStore API.
+  std::vector<sapling::NodeId> requests;
+  requests.reserve(importRequestsMap.size());
+  std::transform(
+      importRequestsMap.begin(),
+      importRequestsMap.end(),
+      std::back_inserter(requests),
+      [](auto& pair) { return pair.first; });
+
+  return std::make_pair(std::move(importRequestsMap), std::move(requests));
 }
 
 void HgDatapackStore::flush() {

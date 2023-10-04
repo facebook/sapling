@@ -123,6 +123,12 @@ class HgDatapackStore {
   using ImportRequestsMap = std::
       map<sapling::NodeId, std::pair<ImportRequestsList, RequestMetricsScope>>;
 
+  template <typename T>
+  std::pair<HgDatapackStore::ImportRequestsMap, std::vector<sapling::NodeId>>
+  prepareRequests(
+      const ImportRequestsList& importRequests,
+      const std::string& requestType);
+
   sapling::SaplingNativeBackingStore store_;
   std::shared_ptr<ReloadableConfig> config_;
   std::shared_ptr<StructuredLogger> logger_;
