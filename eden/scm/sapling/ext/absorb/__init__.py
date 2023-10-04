@@ -963,7 +963,7 @@ def absorb(ui, repo, stack=None, targetctx=None, pats=None, opts=None):
 
 
 @command(
-    "absorb|ab",
+    "absorb|ab|sf",
     [
         (
             "a",
@@ -998,7 +998,7 @@ def absorb(ui, repo, stack=None, targetctx=None, pats=None, opts=None):
     + commands.templateopts
     + commands.walkopts,
     _("@prog@ absorb [OPTION] [FILE]..."),
-    legacyaliases=["abs", "abso", "absor", "sf"],
+    legacyaliases=["abs", "abso", "absor"],
 )
 def absorbcmd(ui, repo, *pats, **opts):
     """intelligently integrate pending changes into current stack

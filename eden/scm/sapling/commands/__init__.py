@@ -1211,7 +1211,7 @@ def _update_state(repo, state, rev, good, bad, skip):
 
 
 @command(
-    "bookmark|bo|book",
+    "bookmark|bo|book|bookmarks",
     [
         ("f", "force", False, _("force")),
         ("r", "rev", "", _("revision for bookmark action"), _("REV")),
@@ -1222,7 +1222,7 @@ def _update_state(repo, state, rev, good, bad, skip):
     ]
     + formatteropts,
     _("[OPTION]... [NAME]..."),
-    legacyaliases=["bookmarks", "boo", "bookm", "bookma", "bookmar"],
+    legacyaliases=["boo", "bookm", "bookma", "bookmar"],
 )
 def bookmark(ui, repo, *names, **opts):
     """create a new bookmark or list existing bookmarks
@@ -6298,7 +6298,7 @@ def _ensurebaserev(ui, repo, fname):
 
 
 @command(
-    "goto|go",
+    "goto|go|up|update|co|checkout",
     [
         ("C", "clean", None, _("discard uncommitted changes (no backup)")),
         ("c", "check", None, _("require clean working copy")),
@@ -6310,13 +6310,9 @@ def _ensurebaserev(ui, repo, fname):
     ]
     + mergetoolopts,
     legacyaliases=[
-        "update",
-        "up",
         "upd",
         "upda",
         "updat",
-        "checkout",
-        "co",
         "che",
         "chec",
         "check",
