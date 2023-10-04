@@ -35,7 +35,7 @@ use crate::utils::file_path_similarity;
 use crate::SearchDirection;
 
 /// Maximum rename candidate files to check
-const DEFAULT_MAX_RENAME_CANDIDATES: usize = 10;
+const DEFAULT_MAX_RENAME_CANDIDATES: usize = 1000;
 /// Content similarity threhold for rename detection. The definition of "similarity"
 /// between file a and file b is: (len(a.lines()) - edit_cost(a, b)) / len(a.lines())
 ///   * 1.0 means exact match
