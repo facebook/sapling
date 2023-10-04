@@ -80,7 +80,7 @@ install-oss: oss
 	  --install-scripts="$(PREFIX)/bin" --force
 
 local:
-	SAPLING_OSS_BUILD=$(OSS) \
+	SAPLING_OSS_BUILD=$(OSS) HGNAME=$(HGNAME) \
 	  $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup.py $(PURE) \
 	  build_interactive_smartlog \
 	  build_py -c -d . \
