@@ -968,16 +968,14 @@ Test list of internal help commands
    debugdrawdag  read an ASCII graph from stdin and create changesets
    debugdryup    Execute native checkout (update) without actually writing to
                  working copy
-   debugdumpdynamicconfig
-                 print the dynamic configuration
    debugdumpindexedlog
                  dump indexedlog data
+   debugdumpinternalconfig
+                 print the internal configuration
    debugdumptrace
                  export tracing information
    debugduplicatedconfig
                  find duplicated or overridden configs
-   debugdynamicconfig
-                 generate the dynamic configuration
    debugedenimporthelper
                  Obtain data for edenfs
    debugedenrunpostupdatehook
@@ -1070,6 +1068,8 @@ Test list of internal help commands
                  revision
    debugrebuildfncache
                  rebuild the fncache file
+   debugrefreshconfig
+                 refresh the internal configuration
    debugremotefilelog
                  (no help text available)
    debugrename   dump rename information

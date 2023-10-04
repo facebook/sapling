@@ -52,11 +52,11 @@ pub fn run(ctx: ReqCtx<DebugDynamicConfigOpts>, repo: &mut Repo) -> Result<u8> {
 }
 
 pub fn aliases() -> &'static str {
-    "debugdynamicconfig"
+    "debugrefreshconfig|debugdynamicconfig"
 }
 
 pub fn doc() -> &'static str {
-    "generate the dynamic configuration"
+    "refresh the internal configuration"
 }
 
 pub fn synopsis() -> Option<&'static str> {

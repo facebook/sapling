@@ -80,11 +80,11 @@ pub fn run(ctx: ReqCtx<DebugDumpConfigOpts>, config: &mut ConfigSet) -> Result<u
 }
 
 pub fn aliases() -> &'static str {
-    "debugdumpdynamicconfig"
+    "debugdumpinternalconfig|debugdumpdynamicconfig"
 }
 
 pub fn doc() -> &'static str {
-    "print the dynamic configuration
+    "print the internal configuration
 
 Without arguments, print the dynamic config in hgrc format.
 Otherwise, print config values specified by the arguments.

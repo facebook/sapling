@@ -122,11 +122,10 @@ Show debug commands if there are no other candidates
   debugdiscovery
   debugdrawdag
   debugdryup
-  debugdumpdynamicconfig
   debugdumpindexedlog
+  debugdumpinternalconfig
   debugdumptrace
   debugduplicatedconfig
-  debugdynamicconfig
   debugedenimporthelper
   debugedenrunpostupdatehook
   debugexistingcasecollisions
@@ -179,6 +178,7 @@ Show debug commands if there are no other candidates
   debugrebuildchangelog
   debugrebuilddirstate
   debugrebuildfncache
+  debugrefreshconfig
   debugremotefilelog
   debugrename
   debugresetheads
@@ -448,11 +448,10 @@ Show all commands + options
   debugdiscovery: rev
   debugdrawdag: print, bookmarks, files, write-env
   debugdryup: 
-  debugdumpdynamicconfig: reponame, username, canary, mode
   debugdumpindexedlog: 
+  debugdumpinternalconfig: reponame, username, canary, mode
   debugdumptrace: time-range, session-id, output-path
   debugduplicatedconfig: style, template
-  debugdynamicconfig: canary
   debugedenimporthelper: in-fd, out-fd, manifest, get-manifest-node, cat-file, cat-tree, get-file-size, fetch-tree
   debugedenrunpostupdatehook: 
   debugexistingcasecollisions: rev
@@ -505,6 +504,7 @@ Show all commands + options
   debugrebuildchangelog: revlog
   debugrebuilddirstate: rev, minimal
   debugrebuildfncache: 
+  debugrefreshconfig: canary
   debugremotefilelog: decompress
   debugrename: rev
   debugresetheads: 

@@ -14,10 +14,10 @@ pub use super::IO;
 
 commands! {
     mod args;
-    mod dumpdynamicconfig;
+    mod dumpinternalconfig;
     mod dumpindexedlog;
     mod dumptrace;
-    mod dynamicconfig;
+    mod refreshconfig;
     mod fsync;
     mod http;
     mod networkdoctor;

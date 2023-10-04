@@ -577,7 +577,7 @@ largeworkingcopy=True
 
 [runlog]
 enable=True
-boring-commands=debugrunlog config version debugdynamicconfig
+boring-commands=debugrunlog config version debugrefreshconfig
 
 [deprecate]
 rev-option=true
