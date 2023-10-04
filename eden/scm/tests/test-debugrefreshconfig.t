@@ -173,8 +173,6 @@ Verify configs.allowedlocations limits config loading to the allowed locations
   > %include hgrc1
   > %include hgrc2
   > %include hgrc3
-  > [configs]
-  > validatedynamicconfig=True
   > EOF
   $ cat >> .hg/hgrc1 <<EOF
   > [zz_section]
@@ -207,7 +205,7 @@ Verify configs.allowedlocations limits config loading to the allowed locations
   --config: configs.allowedconfigs=zz_section.key .hgrc
   $TESTTMP/shared_copy/.hg/hgrc2:2: zz_section.key=bar
 
-Verify we load dynamicconfigs during clone
+Verify we load internalconfig during clone
   $ cd $TESTTMP
   $ export HG_TEST_INTERNALCONFIG="$TESTTMP/test_hgrc"
   $ cat > test_hgrc <<EOF

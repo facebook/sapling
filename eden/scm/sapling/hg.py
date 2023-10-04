@@ -543,7 +543,7 @@ def clone(
         if destrepo:
             _writehgrc(destrepo, abspath, ui.configlist("_configs", "configfiles"))
             # Reload hgrc to pick up `%include` configs. We don't need to
-            # regenerate dynamicconfig here, unless the hgrc contains reponame or
+            # regenerate internalconfig here, unless the hgrc contains reponame or
             # username overrides (unlikely).
             destrepo.ui.reloadconfigs(destrepo.root)
 

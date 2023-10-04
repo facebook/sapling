@@ -7,7 +7,7 @@
 
 use clidispatch::ReqCtx;
 #[cfg(feature = "fb")]
-use configloader::hg::generate_dynamicconfig;
+use configloader::hg::generate_internalconfig;
 #[cfg(feature = "fb")]
 use configmodel::Config;
 #[cfg(feature = "fb")]
@@ -36,7 +36,7 @@ pub fn run(ctx: ReqCtx<DebugDynamicConfigOpts>, repo: &mut Repo) -> Result<u8> {
 
         let mode = FbConfigMode::default();
 
-        generate_dynamicconfig(
+        generate_internalconfig(
             mode,
             Some(repo.shared_dot_hg_path()),
             repo.repo_name(),

@@ -99,7 +99,7 @@ def doctor(ui, **opts) -> typing.Optional[int]:
     # Construct the real repo object as shallowutil requires it.
     # User the original ui, so we don't load the repo on top of the ui we
     # manually loaded earlier. This caused unexpected side effects in the
-    # dynamicconfig validation layer.
+    # internalconfig validation layer.
     repo = hg.repository(origui, repopath)
     ui = repo.ui
     if "remotefilelog" in repo.requirements:

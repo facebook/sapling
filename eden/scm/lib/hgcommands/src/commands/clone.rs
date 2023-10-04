@@ -249,7 +249,7 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &mut ConfigSet) -> Result<u8> {
 
     let reponame = match config.get_opt::<String>("remotefilelog", "reponame")? {
         // This gets the reponame from the --configfile config. Ignore
-        // bogus "no-repo" value that dynamicconfig sets when there is
+        // bogus "no-repo" value that internalconfig sets when there is
         // no repo name.
         Some(c) if c != "no-repo" => {
             logger.verbose(|| format!("Repo name is {} from config", c));

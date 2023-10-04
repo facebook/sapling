@@ -378,7 +378,7 @@ impl ConfigSetHgExt for ConfigSet {
 
         use util::run_background;
 
-        use crate::fb::dynamicconfig::vpnless_config_path;
+        use crate::fb::internalconfig::vpnless_config_path;
 
         let mut errors = Vec::new();
         let mode = FbConfigMode::from_identity(identity);
@@ -437,7 +437,7 @@ impl ConfigSetHgExt for ConfigSet {
             };
 
             // Regen inline
-            let res = generate_dynamicconfig(
+            let res = generate_internalconfig(
                 mode,
                 repo_path,
                 repo_name,
@@ -457,7 +457,7 @@ impl ConfigSetHgExt for ConfigSet {
                 }
             }
         } else {
-            tracing::debug!(?dynamic_path, version=%this_version, "dynamicconfig version in-sync");
+            tracing::debug!(?dynamic_path, version=%this_version, "internalconfig version in-sync");
         }
 
         if !dynamic_path.exists() {
@@ -839,7 +839,7 @@ fn get_config_dir(repo_path: Option<&Path>) -> Result<PathBuf, Error> {
 }
 
 #[cfg(feature = "fb")]
-pub fn calculate_dynamicconfig(
+pub fn calculate_internalconfig(
     mode: FbConfigMode,
     config_dir: PathBuf,
     repo_name: Option<impl AsRef<str>>,
@@ -847,12 +847,12 @@ pub fn calculate_dynamicconfig(
     user_name: String,
     proxy_sock_path: Option<String>,
 ) -> Result<ConfigSet> {
-    use crate::fb::dynamicconfig::Generator;
+    use crate::fb::internalconfig::Generator;
     Generator::new(mode, repo_name, config_dir, user_name, proxy_sock_path)?.execute(canary)
 }
 
 #[cfg(feature = "fb")]
-pub fn generate_dynamicconfig(
+pub fn generate_internalconfig(
     mode: FbConfigMode,
     repo_path: Option<&Path>,
     repo_name: Option<impl AsRef<str>>,
@@ -869,7 +869,7 @@ pub fn generate_dynamicconfig(
     tracing::debug!(
         repo_path = ?repo_path,
         canary = ?canary,
-        "generate_dynamicconfig",
+        "generate_internalconfig",
     );
 
     // Resolve sharedpath
@@ -903,7 +903,7 @@ pub fn generate_dynamicconfig(
     let hgrc_path = config_dir.join("hgrc.dynamic");
     let global_config_dir = get_config_dir(None)?;
 
-    let config = calculate_dynamicconfig(
+    let config = calculate_internalconfig(
         mode,
         global_config_dir,
         repo_name,

@@ -7,7 +7,7 @@
 
 use clidispatch::ReqCtx;
 #[cfg(feature = "fb")]
-use configloader::hg::calculate_dynamicconfig;
+use configloader::hg::calculate_internalconfig;
 #[cfg(feature = "fb")]
 use configmodel::ConfigExt;
 
@@ -52,7 +52,7 @@ pub fn run(ctx: ReqCtx<DebugDumpConfigOpts>, config: &mut ConfigSet) -> Result<u
         } else {
             FbConfigMode::from_str(&ctx.opts.mode)
         };
-        let generated = calculate_dynamicconfig(
+        let generated = calculate_internalconfig(
             mode,
             temp_dir,
             reponame,
