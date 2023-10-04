@@ -397,58 +397,110 @@ BlobMetadataPtr HgDatapackStore::getLocalBlobMetadata(
 
 void HgDatapackStore::getBlobMetadataBatch(
     const ImportRequestsList& importRequests) {
-  size_t count = importRequests.size();
-
   // TODO: extract each ClientRequestInfo from importRequests into a
   // sapling::ClientRequestInfo and pass them with the corresponding
   // sapling::NodeId
-  std::vector<sapling::NodeId> requests;
-  requests.reserve(count);
+
+  // Group requests by proxyHash to ensure no duplicates in fetch request to
+  // SaplingNativeBackingStore.
+  ImportRequestsMap importRequestsMap;
   for (const auto& importRequest : importRequests) {
-    requests.emplace_back(
-        importRequest->getRequest<HgImportRequest::BlobMetaImport>()
-            ->proxyHash.byteHash());
+    auto nodeId = importRequest->getRequest<HgImportRequest::BlobMetaImport>()
+                      ->proxyHash.byteHash();
+    // Look for and log duplicates.
+    const auto& importRequestsEntry = importRequestsMap.find(nodeId);
+    if (importRequestsEntry != importRequestsMap.end()) {
+      XLOGF(
+          DBG9,
+          "Duplicate blob metadata fetch request with proxyHash: {}",
+          nodeId);
+      auto& importRequestList = importRequestsEntry->second.first;
+
+      // Only look for mismatched requests if logging level is high enough.
+      // Make sure this level is the same as the XLOG_IF statement below.
+      if (XLOG_IS_ON(DBG9)) {
+        // Log requests that do not have the same hash (ObjectId).
+        // This happens when two paths (file or directory) have same content.
+        for (const auto& priorRequest : importRequestList) {
+          XLOGF_IF(
+              DBG9,
+              UNLIKELY(
+                  priorRequest->getRequest<HgImportRequest::BlobMetaImport>()
+                      ->hash !=
+                  importRequest->getRequest<HgImportRequest::BlobMetaImport>()
+                      ->hash),
+              "Blob metadata requests have the same proxyHash (HgProxyHash) but different hash (ObjectId). "
+              "This should not happen. Previous request: proxyHash='{}', hash='{}'; "
+              "current request: proxyHash ='{}', hash='{}'.",
+              folly::hexlify(
+                  priorRequest->getRequest<HgImportRequest::BlobMetaImport>()
+                      ->proxyHash.getValue()),
+              priorRequest->getRequest<HgImportRequest::BlobMetaImport>()
+                  ->hash.asHexString(),
+              folly::hexlify(
+                  importRequest->getRequest<HgImportRequest::BlobMetaImport>()
+                      ->proxyHash.getValue()),
+              importRequest->getRequest<HgImportRequest::BlobMetaImport>()
+                  ->hash.asHexString());
+        }
+      }
+      importRequestList.emplace_back(importRequest);
+    } else {
+      std::vector<std::shared_ptr<HgImportRequest>> requests({importRequest});
+      importRequestsMap.emplace(
+          nodeId, make_pair(requests, &liveBatchedBlobWatches_));
+    }
   }
 
-  std::vector<RequestMetricsScope> requestsWatches;
-  requestsWatches.reserve(count);
-  for (auto i = 0ul; i < count; i++) {
-    requestsWatches.emplace_back(&liveBatchedBlobMetaWatches_);
-  }
+  // Indexable vector of nodeIds - required by SaplingNativeBackingStore API.
+  std::vector<sapling::NodeId> requests;
+  requests.reserve(importRequestsMap.size());
+  std::transform(
+      importRequestsMap.begin(),
+      importRequestsMap.end(),
+      std::back_inserter(requests),
+      [](auto& pair) { return pair.first; });
 
   store_.getBlobMetadataBatch(
       folly::range(requests),
       false,
+      // store_.getBlobMetadataBatch is blocking, hence we can take these by
+      // reference.
       [&](size_t index,
           folly::Try<std::shared_ptr<sapling::FileAuxData>> auxTry) {
         if (auxTry.hasException() &&
             config_->getEdenConfig()->hgBlobMetaFetchFallback.getValue()) {
-          // The caller will fallback to fetching the blob.
-          // TODO: Remove this.
+          // TODO: log EdenApiMiss for metadata
+
+          // If we're falling back, the caller will fulfill this Promise with a
+          // blob metadata from HgImporter.
           return;
         }
 
-        XLOGF(DBG9, "Imported aux={}", folly::hexlify(requests[index]));
-        auto& importRequest = importRequests[index];
-        importRequest->getPromise<BlobMetadataPtr>()->setWith(
-            [&]() -> folly::Try<BlobMetadataPtr> {
-              if (auxTry.hasException()) {
-                return folly::Try<BlobMetadataPtr>{
-                    std::move(auxTry).exception()};
-              }
+        XLOGF(
+            DBG9, "Imported blob metadata={}", folly::hexlify(requests[index]));
+        const auto& nodeId = requests[index];
+        auto& [importRequestList, watch] = importRequestsMap[nodeId];
+        folly::Try<BlobMetadataPtr> result;
+        if (auxTry.hasException()) {
+          result = folly::Try<BlobMetadataPtr>{auxTry.exception()};
+        } else {
+          auto& aux = auxTry.value();
+          std::optional<Hash32> blake3;
+          if (aux->content_blake3 != nullptr) {
+            blake3.emplace(*aux->content_blake3);
+          }
 
-              auto& aux = auxTry.value();
-              std::optional<Hash32> blake3;
-              if (aux->content_blake3 != nullptr) {
-                blake3.emplace(*aux->content_blake3);
-              }
-
-              return folly::Try{std::make_shared<BlobMetadataPtr::element_type>(
-                  Hash20{aux->content_sha1}, blake3, aux->total_size)};
-            });
+          result = folly::Try{std::make_shared<BlobMetadataPtr::element_type>(
+              Hash20{aux->content_sha1}, blake3, aux->total_size)};
+        }
+        for (auto& importRequest : importRequestList) {
+          importRequest->getPromise<BlobMetadataPtr>()->setWith(
+              [&]() -> folly::Try<BlobMetadataPtr> { return result; });
+        }
 
         // Make sure that we're stopping this watch.
-        requestsWatches[index].reset();
+        watch.reset();
       });
 }
 
