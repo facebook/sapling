@@ -62,6 +62,13 @@ impl GitSymbolicRefsEntry {
             ref_type,
         })
     }
+
+    pub fn ref_name_with_type(&self) -> String {
+        match self.ref_type {
+            RefType::Branch => format!("refs/heads/{}", self.ref_name),
+            RefType::Tag => format!("refs/tags/{}", self.ref_name),
+        }
+    }
 }
 
 #[facet::facet]

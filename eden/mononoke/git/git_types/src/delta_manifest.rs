@@ -25,6 +25,8 @@ use futures::TryStreamExt;
 use gix_hash::oid;
 use gix_hash::ObjectId;
 use mononoke_types::hash::Blake2;
+use mononoke_types::hash::GitSha1;
+use mononoke_types::hash::RichGitSha1;
 use mononoke_types::impl_typed_hash;
 use mononoke_types::impl_typed_hash_loadable;
 use mononoke_types::impl_typed_hash_no_context;
@@ -437,6 +439,17 @@ pub struct ObjectEntry {
     pub kind: ObjectKind,
     /// The path of the directory or file corresponding to this Git Tree or Blob
     pub path: MPath,
+}
+
+impl ObjectEntry {
+    pub fn as_rich_git_sha1(&self) -> Result<RichGitSha1> {
+        let sha1 = GitSha1::from_bytes(self.oid.as_bytes())?;
+        let ty = match self.kind {
+            ObjectKind::Blob => "blob",
+            ObjectKind::Tree => "tree",
+        };
+        Ok(RichGitSha1::from_sha1(sha1, ty, self.size))
+    }
 }
 
 impl TryFrom<thrift::ObjectEntry> for ObjectEntry {

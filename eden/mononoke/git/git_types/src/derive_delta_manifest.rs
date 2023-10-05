@@ -8,6 +8,7 @@
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::io::Write;
 use std::sync::Arc;
 
 use anyhow::anyhow;
@@ -37,6 +38,7 @@ use futures_util::StreamExt;
 use futures_util::TryStreamExt;
 use gix_diff::blob::Algorithm;
 use gix_hash::ObjectId;
+use gix_object::WriteTo;
 use manifest::ManifestOps;
 use mononoke_types::hash::RichGitSha1;
 use mononoke_types::path::MPath;
@@ -52,7 +54,7 @@ use crate::delta_manifest::GitDeltaManifestEntry;
 use crate::delta_manifest::GitDeltaManifestId;
 use crate::delta_manifest::ObjectDelta;
 use crate::delta_manifest::ObjectEntry;
-use crate::store::fetch_git_object_bytes;
+use crate::fetch_git_object;
 use crate::store::store_delta_instructions;
 use crate::DeltaObjectKind;
 use crate::GitError;
@@ -73,6 +75,10 @@ pub struct RootGitDeltaManifestId(GitDeltaManifestId);
 impl RootGitDeltaManifestId {
     pub fn new(id: GitDeltaManifestId) -> Self {
         Self(id)
+    }
+
+    pub fn manifest_unode_id(&self) -> &GitDeltaManifestId {
+        &self.0
     }
 }
 
@@ -124,11 +130,18 @@ fn tree_member_to_object_entry(member: &TreeMember, path: MPath) -> Result<Objec
     })
 }
 
-async fn get_object_bytes(
+#[derive(Clone, Debug)]
+pub enum HeaderState {
+    Included,
+    Excluded,
+}
+
+pub async fn get_object_bytes(
     ctx: &CoreContext,
     blobstore: Arc<dyn Blobstore>,
     entry: &ObjectEntry,
     sha: &RichGitSha1,
+    header_state: HeaderState,
 ) -> Result<Bytes> {
     match entry.kind {
         // Blobs are stored as regular content in Mononoke and can be accessed via GitSha1 alias
@@ -139,7 +152,10 @@ async fn get_object_bytes(
                 .map_err(|e| GitError::StorageFailure(sha.to_hex().to_string(), e.into()))?
                 .ok_or_else(|| GitError::NonExistentObject(sha.to_hex().to_string()))?;
             // The blob object stored in the blobstore exists without the git header. Prepend the git blob header before retuning the bytes
-            let mut header_bytes = sha.prefix();
+            let mut header_bytes = match header_state {
+                HeaderState::Included => sha.prefix(),
+                HeaderState::Excluded => vec![],
+            };
             // We know the number of bytes we are going to write so reserve the buffer to avoid resizing
             header_bytes.reserve(num_bytes as usize);
             bytes_stream
@@ -152,8 +168,13 @@ async fn get_object_bytes(
         }
         // Trees are stored directly as raw Git trees in Mononoke
         DeltaObjectKind::Tree => {
-            let object_bytes = fetch_git_object_bytes(ctx, &blobstore, entry.oid.as_ref()).await?;
-            Ok(object_bytes)
+            let object = fetch_git_object(ctx, &blobstore, entry.oid.as_ref()).await?;
+            let mut object_bytes = match header_state {
+                HeaderState::Included => object.loose_header().into_vec(),
+                HeaderState::Excluded => vec![],
+            };
+            object.write_to(object_bytes.by_ref())?;
+            Ok(Bytes::from(object_bytes))
         }
     }
 }
@@ -186,8 +207,8 @@ async fn metadata_to_manifest_entry(
                         )
                     })?;
                 let origin = delta_metadata.origin;
-                let actual_object = get_object_bytes(&ctx, blobstore.clone(), &full_object_entry, metadata.actual.oid()).await?;
-                let base_object = get_object_bytes(&ctx, blobstore.clone(), &base, delta_metadata.object.oid()).await?;
+                let actual_object = get_object_bytes(&ctx, blobstore.clone(), &full_object_entry, metadata.actual.oid(), HeaderState::Excluded).await?;
+                let base_object = get_object_bytes(&ctx, blobstore.clone(), &base, delta_metadata.object.oid(), HeaderState::Excluded).await?;
                 let instructions = DeltaInstructions::generate(
                     base_object,
         actual_object,

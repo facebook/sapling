@@ -33,10 +33,15 @@ pub use object::ObjectKind;
 
 pub use crate::blob::BlobHandle;
 pub use crate::commit::MappedGitCommitId;
+pub use crate::delta::DeltaInstructionChunkIdPrefix;
+pub use crate::delta::DeltaInstructions;
+pub use crate::derive_delta_manifest::get_object_bytes;
+pub use crate::derive_delta_manifest::HeaderState;
 pub use crate::derive_delta_manifest::RootGitDeltaManifestId;
 pub use crate::errors::GitError;
 pub use crate::store::fetch_delta_instructions;
 pub use crate::store::fetch_git_object;
+pub use crate::store::fetch_git_object_bytes;
 pub use crate::store::upload_git_object;
 pub use crate::tree::Tree;
 pub use crate::tree::TreeBuilder;
