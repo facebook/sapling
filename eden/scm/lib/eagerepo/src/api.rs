@@ -6,6 +6,7 @@
  */
 
 use std::collections::HashSet;
+use std::num::NonZeroU64;
 use std::sync::Arc;
 
 use configmodel::Config;
@@ -22,6 +23,7 @@ use dag::Vertex;
 use dag::VertexName;
 use edenapi::configmodel;
 use edenapi::types::make_hash_lookup_request;
+use edenapi::types::AnyFileContentId;
 use edenapi::types::BookmarkEntry;
 use edenapi::types::CommitGraphEntry;
 use edenapi::types::CommitHashLookupResponse;
@@ -35,7 +37,9 @@ use edenapi::types::FileContent;
 use edenapi::types::FileEntry;
 use edenapi::types::FileResponse;
 use edenapi::types::FileSpec;
+use edenapi::types::HgFilenodeData;
 use edenapi::types::HgId;
+use edenapi::types::HgMutationEntryContent;
 use edenapi::types::HistoryEntry;
 use edenapi::types::Key;
 use edenapi::types::NodeInfo;
@@ -43,6 +47,11 @@ use edenapi::types::Parents;
 use edenapi::types::RepoPathBuf;
 use edenapi::types::TreeAttributes;
 use edenapi::types::TreeEntry;
+use edenapi::types::UploadHgChangeset;
+use edenapi::types::UploadToken;
+use edenapi::types::UploadTokensResponse;
+use edenapi::types::UploadTreeEntry;
+use edenapi::types::UploadTreeResponse;
 use edenapi::EdenApi;
 use edenapi::EdenApiError;
 use edenapi::Response;
@@ -53,6 +62,7 @@ use futures::stream::TryStreamExt;
 use futures::StreamExt;
 use http::StatusCode;
 use http::Version;
+use minibytes::Bytes;
 use nonblocking::non_blocking_result;
 use tracing::debug;
 use tracing::trace;
@@ -455,6 +465,41 @@ impl EdenApi for EagerRepo {
         debug!("commit_mutations {}", debug_hgid_list(&commits));
         let _ = (commits,);
         Ok(vec![])
+    }
+
+    async fn process_files_upload(
+        &self,
+        data: Vec<(AnyFileContentId, Bytes)>,
+        bubble_id: Option<NonZeroU64>,
+        copy_from_bubble_id: Option<NonZeroU64>,
+    ) -> Result<Response<UploadToken>, EdenApiError> {
+        let _ = (data, bubble_id, copy_from_bubble_id);
+        Err(EdenApiError::NotSupported)
+    }
+
+    async fn upload_filenodes_batch(
+        &self,
+        items: Vec<HgFilenodeData>,
+    ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
+        let _ = items;
+        Err(EdenApiError::NotSupported)
+    }
+
+    async fn upload_trees_batch(
+        &self,
+        items: Vec<UploadTreeEntry>,
+    ) -> Result<Response<UploadTreeResponse>, EdenApiError> {
+        let _ = items;
+        Err(EdenApiError::NotSupported)
+    }
+
+    async fn upload_changesets(
+        &self,
+        changesets: Vec<UploadHgChangeset>,
+        mutations: Vec<HgMutationEntryContent>,
+    ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
+        let _ = (changesets, mutations);
+        Err(EdenApiError::NotSupported)
     }
 }
 
