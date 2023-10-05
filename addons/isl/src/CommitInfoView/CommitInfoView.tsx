@@ -190,7 +190,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
   const [mode, setMode] = useRecoilState(commitMode);
   const isCommitMode = commit.isHead && mode === 'commit';
   const hashOrHead = isCommitMode ? 'head' : commit.hash;
-  const [editedMessage, setEditedCommitMesage] = useRecoilState(editedCommitMessages(hashOrHead));
+  const [editedMessage, setEditedCommitMessage] = useRecoilState(editedCommitMessages(hashOrHead));
   const uncommittedChanges = useRecoilValue(uncommittedChangesWithPreviews);
   const schema = useRecoilValue(commitMessageFieldsSchema);
 
@@ -268,7 +268,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
           .filter(field => mode !== 'commit' || field.type !== 'read-only')
           .map(field => {
             const setField = (newVal: string) =>
-              setEditedCommitMesage(val =>
+              setEditedCommitMessage(val =>
                 val.type === 'optimistic'
                   ? val
                   : {

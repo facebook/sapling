@@ -38,7 +38,7 @@ import './CommitTreeList.css';
 
 export function CommitTreeList() {
   // Make sure we trigger subscription to changes to uncommitted changes *before* we have a tree to render,
-  // so we don't miss the first returned uncommitted changes mesage.
+  // so we don't miss the first returned uncommitted changes message.
   // TODO: This is a little ugly, is there a better way to tell recoil to start the subscription immediately?
   // Or should we queue/cache messages?
   useRecoilState(latestUncommittedChangesData);

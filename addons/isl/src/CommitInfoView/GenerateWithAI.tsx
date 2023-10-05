@@ -39,7 +39,7 @@ import './GenerateWithAI.css';
 /** Either a commit hash or "commit/aaaaa" when making a new commit on top of hash aaaaa  */
 type HashKey = `commit/${string}` | string;
 
-export function GenerateAICommitMesageButton({
+export function GenerateAICommitMessageButton({
   textAreaRef,
   appendToTextArea,
 }: {
