@@ -76,7 +76,7 @@ TEST_F(FilteredBackingStoreTest, getNonExistent) {
           ObjectId{blobFilterId.getValue()},
           ObjectFetchContext::getNullContext()),
       std::domain_error,
-      "blob 1.*1 not found");
+      "blob 0.*1 not found");
   auto relPath = RelativePathPiece{"foo/bar"};
   auto treeFilterId = FilteredObjectId(relPath, kTestFilter1, hash);
   EXPECT_THROW_RE(
@@ -90,16 +90,17 @@ TEST_F(FilteredBackingStoreTest, getNonExistent) {
 TEST_F(FilteredBackingStoreTest, getBlob) {
   // Add a blob to the tree
   auto hash = makeTestHash("1");
+  auto filteredHash = ObjectId{FilteredObjectId{hash}.getValue()};
   auto* storedBlob = wrappedStore_->putBlob(hash, "foobar");
   EXPECT_EQ("foobar", blobContents(storedBlob->get()));
 
   // The blob is not ready yet, so calling getBlob() should yield not-ready
   // Future objects.
-  auto future1 =
-      filteredStore_->getBlob(hash, ObjectFetchContext::getNullContext());
+  auto future1 = filteredStore_->getBlob(
+      filteredHash, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(future1.isReady());
-  auto future2 =
-      filteredStore_->getBlob(hash, ObjectFetchContext::getNullContext());
+  auto future2 = filteredStore_->getBlob(
+      filteredHash, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(future2.isReady());
 
   // Calling trigger() should make the pending futures ready.
@@ -110,11 +111,11 @@ TEST_F(FilteredBackingStoreTest, getBlob) {
   EXPECT_EQ("foobar", blobContents(*std::move(future2).get(0ms).blob));
 
   // But subsequent calls to getBlob() should still yield unready futures.
-  auto future3 =
-      filteredStore_->getBlob(hash, ObjectFetchContext::getNullContext());
+  auto future3 = filteredStore_->getBlob(
+      filteredHash, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(future3.isReady());
-  auto future4 =
-      filteredStore_->getBlob(hash, ObjectFetchContext::getNullContext());
+  auto future4 = filteredStore_->getBlob(
+      filteredHash, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(future4.isReady());
   bool future4Failed = false;
   folly::exception_wrapper future4Error;
@@ -138,8 +139,8 @@ TEST_F(FilteredBackingStoreTest, getBlob) {
 
   // Calling setReady() should make the pending futures ready, as well
   // as all subsequent Futures returned by getBlob()
-  auto future5 =
-      filteredStore_->getBlob(hash, ObjectFetchContext::getNullContext());
+  auto future5 = filteredStore_->getBlob(
+      filteredHash, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(future5.isReady());
 
   storedBlob->setReady();
@@ -148,8 +149,8 @@ TEST_F(FilteredBackingStoreTest, getBlob) {
 
   // Subsequent calls to getBlob() should return Futures that are immediately
   // ready since we called setReady() above.
-  auto future6 =
-      filteredStore_->getBlob(hash, ObjectFetchContext::getNullContext());
+  auto future6 = filteredStore_->getBlob(
+      filteredHash, ObjectFetchContext::getNullContext());
   ASSERT_TRUE(future6.isReady());
   EXPECT_EQ("foobar", blobContents(*std::move(future6).get(0ms).blob));
 }

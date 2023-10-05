@@ -216,13 +216,18 @@ FilteredBackingStore::getBlobMetadata(
 folly::SemiFuture<BackingStore::GetBlobResult> FilteredBackingStore::getBlob(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) {
-  return backingStore_->getBlob(id, context);
+  auto filteredId = FilteredObjectId::fromObjectId(id);
+  return backingStore_->getBlob(filteredId.object(), context);
 }
 
 folly::SemiFuture<folly::Unit> FilteredBackingStore::prefetchBlobs(
     ObjectIdRange ids,
     const ObjectFetchContextPtr& context) {
-  return backingStore_->prefetchBlobs(ids, context);
+  std::vector<ObjectId> nonFilteredIds;
+  std::transform(ids.begin(), ids.end(), nonFilteredIds.begin(), [](auto id) {
+    return FilteredObjectId::fromObjectId(id).object();
+  });
+  return backingStore_->prefetchBlobs(nonFilteredIds, context);
 }
 
 void FilteredBackingStore::periodicManagementTask() {
@@ -241,7 +246,11 @@ folly::SemiFuture<folly::Unit> FilteredBackingStore::importManifestForRoot(
     const RootId& rootId,
     const Hash20& manifest,
     const ObjectFetchContextPtr& context) {
-  return backingStore_->importManifestForRoot(rootId, manifest, context);
+  // The manifest passed to this function will be unfiltered (i.e. it won't be
+  // a FilteredRootId or FilteredObjectId), so we pass it directly to the
+  // underlying BackingStore.
+  auto [parsedRootId, _] = parseFilterIdFromRootId(rootId);
+  return backingStore_->importManifestForRoot(parsedRootId, manifest, context);
 }
 
 RootId FilteredBackingStore::parseRootId(folly::StringPiece rootId) {
