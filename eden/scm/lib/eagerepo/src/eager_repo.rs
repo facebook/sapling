@@ -284,6 +284,7 @@ impl EagerRepo {
         }
         let path = Path::new(value);
         if is_eager_repo(path) {
+            tracing::trace!("url_to_dir {} => {}", value, path.display());
             return Some(path.to_path_buf());
         }
         None
