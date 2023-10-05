@@ -2171,9 +2171,7 @@ def update(
         else:
             from . import eden_update
 
-            oldnode = repo["."].node()
-
-            result = eden_update.update(
+            return eden_update.update(
                 repo,
                 node,
                 branchmerge,
@@ -2184,25 +2182,6 @@ def update(
                 updatecheck,
                 wc,
             )
-
-            prefetchprofiles = repo.ui.configlist("eden", "prefetchsparseprofiles")
-            if prefetchprofiles:
-                from sapling.ext import sparse
-
-                raw = ""
-                for profile in prefetchprofiles:
-                    raw += "%%include %s\n" % profile
-                rawconfig = sparse.readsparseconfig(
-                    repo, raw, filename="eden_checkout_prefetch"
-                )
-                prefetchmatcher = sparse.computesparsematcher(
-                    repo, ["."], rawconfig=rawconfig
-                )
-                repo.ui.status_err(
-                    _("prefetching %s sparse profiles\n") % len(prefetchprofiles)
-                )
-                repo.prefetch(["."], base=oldnode, matcher=prefetchmatcher)
-            return result
 
     if not branchmerge and not force:
         # TODO: remove the default once all callers that pass branchmerge=False
@@ -2228,12 +2207,6 @@ def update(
         p2 = repo[node]
 
         fp1, fp2, xp1, xp2 = p1.node(), p2.node(), str(p1), str(p2)
-
-        # A temporary escape hatch for clones, since they're notoriously flakey
-        # with http.
-        if repo.ui.configbool("clone", "nohttp") and repo["."].node() == nullid:
-            repo.ui.setconfig("remotefilelog", "http", "False")
-            repo.ui.setconfig("treemanifest", "http", "False")
 
         # If we're doing the initial checkout from null, let's use the new fancier
         # nativecheckout, since it has more efficient fetch mechanics.
