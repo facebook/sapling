@@ -45,7 +45,11 @@ pub struct Profile {
 
 /// Root represents the root sparse profile (usually .hg/sparse).
 #[derive(Debug, Hash)]
-pub struct Root(Profile);
+pub struct Root {
+    prof: Profile,
+    version_override: Option<String>,
+    skip_catch_all: bool,
+}
 
 #[derive(Debug, Clone, PartialEq)]
 enum Pattern {
@@ -107,17 +111,25 @@ pub enum Error {
 
 impl Root {
     pub fn from_bytes(data: impl AsRef<[u8]>, source: String) -> Result<Self, io::Error> {
-        Ok(Self(Profile::from_bytes(data, source)?))
+        Ok(Self {
+            prof: Profile::from_bytes(data, source)?,
+            version_override: None,
+            skip_catch_all: false,
+        })
+    }
+
+    pub fn set_version_override(&mut self, version_override: Option<String>) {
+        self.version_override = version_override;
+    }
+
+    pub fn set_skip_catch_all(&mut self, skip_catch_all: bool) {
+        self.skip_catch_all = skip_catch_all;
     }
 
     pub async fn matcher<B: Future<Output = anyhow::Result<Option<Vec<u8>>>> + Send>(
         &self,
         mut fetch: impl FnMut(String) -> B + Send + Sync,
     ) -> Result<Matcher, Error> {
-        if self.0.entries.is_empty() {
-            return Ok(Matcher::always());
-        }
-
         let mut matchers: Vec<TreeMatcher> = Vec::new();
 
         // List of rule origins per-matcher.
@@ -154,23 +166,27 @@ impl Root {
             };
 
         let mut only_v1 = true;
-        for entry in self.0.entries.iter() {
+        for entry in self.prof.entries.iter() {
             match entry {
                 ProfileEntry::Pattern(p, src) => push_rule((
                     p.clone(),
-                    join_source(self.0.source.clone(), src.as_deref()),
+                    join_source(self.prof.source.clone(), src.as_deref()),
                 )),
                 ProfileEntry::Profile(child_path) => {
-                    let child = match fetch(child_path.clone()).await? {
+                    let mut child = match fetch(child_path.clone()).await? {
                         Some(data) => Profile::from_bytes(data, child_path.clone())?,
                         None => continue,
                     };
+
+                    if let Some(version_override) = &self.version_override {
+                        child.version = Some(version_override.clone());
+                    }
 
                     let child_rules: VecDeque<(Pattern, String)> = child
                         .rules(&mut fetch)
                         .await?
                         .into_iter()
-                        .map(|(p, s)| (p, format!("{} -> {}", self.0.source, s)))
+                        .map(|(p, s)| (p, format!("{} -> {}", self.prof.source, s)))
                         .collect();
 
                     if child.is_v2() {
@@ -179,7 +195,7 @@ impl Root {
                         let (matcher_rules, origins) = prepare_rules(child_rules)?;
                         matchers.push(TreeMatcher::from_rules(
                             matcher_rules.iter(),
-                            self.0.case_sensitive,
+                            self.prof.case_sensitive,
                         )?);
                         rule_origins.push(origins);
                     } else {
@@ -193,7 +209,10 @@ impl Root {
 
         // If all user specified rules are exclude rules, add an
         // implicit "**" to provide the default include of everything.
-        if only_v1 && (rules.is_empty() || matches!(&rules[0].0, Pattern::Exclude(_))) {
+        if only_v1
+            && (rules.is_empty() || matches!(&rules[0].0, Pattern::Exclude(_)))
+            && !self.skip_catch_all
+        {
             rules.push_front((Pattern::Include("**".to_string()), "(builtin)".to_string()))
         }
 
@@ -206,7 +225,7 @@ impl Root {
         let (matcher_rules, origins) = prepare_rules(rules)?;
         matchers.push(TreeMatcher::from_rules(
             matcher_rules.iter(),
-            self.0.case_sensitive,
+            self.prof.case_sensitive,
         )?);
         rule_origins.push(origins);
 
@@ -418,7 +437,6 @@ fn join_source(main_source: String, opt_source: Option<&str>) -> String {
 }
 
 pub struct Matcher {
-    always: bool,
     matchers: Vec<TreeMatcher>,
     // List of rule origins per-matcher.
     rule_origins: Vec<Vec<String>>,
@@ -426,20 +444,12 @@ pub struct Matcher {
 
 impl Matcher {
     pub fn matches(&self, path: &RepoPath) -> anyhow::Result<bool> {
-        if self.always {
-            Ok(true)
-        } else {
-            let result = UnionMatcher::matches_file(self.matchers.iter(), path);
-            tracing::trace!(%path, ?result, "matches");
-            result
-        }
+        let result = UnionMatcher::matches_file(self.matchers.iter(), path);
+        tracing::trace!(%path, ?result, "matches");
+        result
     }
 
     pub fn explain(&self, path: &RepoPath) -> anyhow::Result<(bool, String)> {
-        if self.always {
-            return Ok((true, "implicit match due to empty profile".to_string()));
-        }
-
         for (i, m) in self.matchers.iter().enumerate() {
             if let Some(idx) = m.matching_rule_indexes(path.as_str()).last() {
                 let rule_origin = self
@@ -457,13 +467,9 @@ impl Matcher {
 
 impl MatcherTrait for Matcher {
     fn matches_directory(&self, path: &RepoPath) -> anyhow::Result<DirectoryMatch> {
-        if self.always {
-            Ok(DirectoryMatch::Everything)
-        } else {
-            let result = UnionMatcher::matches_directory(self.matchers.iter(), path);
-            tracing::trace!(%path, ?result, "matches_directory");
-            result
-        }
+        let result = UnionMatcher::matches_directory(self.matchers.iter(), path);
+        tracing::trace!(%path, ?result, "matches_directory");
+        result
     }
 
     fn matches_file(&self, path: &RepoPath) -> anyhow::Result<bool> {
@@ -474,16 +480,8 @@ impl MatcherTrait for Matcher {
 impl Matcher {
     fn new(matchers: Vec<TreeMatcher>, rule_origins: Vec<Vec<String>>) -> Self {
         Self {
-            always: false,
             matchers,
             rule_origins,
-        }
-    }
-    fn always() -> Self {
-        Self {
-            always: true,
-            rule_origins: Vec::new(),
-            matchers: Vec::new(),
         }
     }
 }
@@ -994,7 +992,7 @@ re:^bar/bad/(?:.*/)?IMPORTANT.ext(?:/|$)
 
         assert_eq!(
             matcher.explain("a/b".try_into().unwrap()).unwrap(),
-            (true, "implicit match due to empty profile".to_string())
+            (true, "(builtin)".to_string())
         );
     }
 
@@ -1083,5 +1081,75 @@ four
             matcher.explain("four".try_into().unwrap()).unwrap(),
             (true, "base".to_string())
         );
+    }
+
+    #[tokio::test]
+    async fn test_skip_catch_all() {
+        let base = b"[exclude]\nfoo";
+        let mut prof = Root::from_bytes(base, "base".to_string()).unwrap();
+
+        let matcher = prof.matcher(|_| async { unreachable!() }).await.unwrap();
+        assert!(matcher.matches("bar".try_into().unwrap()).unwrap());
+
+        prof.set_skip_catch_all(true);
+        let matcher = prof.matcher(|_| async { unreachable!() }).await.unwrap();
+        assert!(!matcher.matches("bar".try_into().unwrap()).unwrap());
+
+        // Skip catch-all for empty profile as well.
+        let base = b"";
+        let mut prof = Root::from_bytes(base, "base".to_string()).unwrap();
+        prof.set_skip_catch_all(true);
+        let matcher = prof.matcher(|_| async { unreachable!() }).await.unwrap();
+        assert!(!matcher.matches("bar".try_into().unwrap()).unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_version_override() {
+        let base = b"
+%include child_1
+%include child_2
+";
+        let child_1 = b"
+[metadata]
+version = 2
+
+[include]
+path:foo
+";
+        let child_2 = b"
+[metadata]
+version = 2
+
+[exclude]
+path:foo
+";
+
+        let mut prof = Root::from_bytes(base, "base".to_string()).unwrap();
+
+        let matcher = prof
+            .matcher(|path| async move {
+                match path.as_ref() {
+                    "child_1" => Ok(Some(child_1.to_vec())),
+                    "child_2" => Ok(Some(child_2.to_vec())),
+                    _ => unreachable!(),
+                }
+            })
+            .await
+            .unwrap();
+        assert!(matcher.matches("foo".try_into().unwrap()).unwrap());
+
+        prof.set_version_override(Some("1".to_string()));
+
+        let matcher = prof
+            .matcher(|path| async move {
+                match path.as_ref() {
+                    "child_1" => Ok(Some(child_1.to_vec())),
+                    "child_2" => Ok(Some(child_2.to_vec())),
+                    _ => unreachable!(),
+                }
+            })
+            .await
+            .unwrap();
+        assert!(!matcher.matches("foo".try_into().unwrap()).unwrap());
     }
 }
