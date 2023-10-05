@@ -35,6 +35,7 @@ use anyhow::Error;
 use anyhow::Result;
 use async_runtime::block_on;
 use async_runtime::stream_to_iter;
+use clientinfo::get_client_request_info_thread_local;
 use configmodel::convert::ByteCount;
 use configmodel::Config;
 use configmodel::ConfigExt;
@@ -1318,6 +1319,8 @@ impl LfsRemoteInner {
             .await
         };
 
+        // Fetch ClientRequestInfo from a thread local and pass to async code
+        let _maybe_client_request_info = get_client_request_info_thread_local();
         let response = block_on(response_fut)?;
         Ok(Some(serde_json::from_slice(response.as_ref())?))
     }

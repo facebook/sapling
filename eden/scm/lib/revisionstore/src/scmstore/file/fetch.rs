@@ -14,6 +14,7 @@ use anyhow::Result;
 use async_runtime::block_on;
 use async_runtime::spawn_blocking;
 use async_runtime::stream_to_iter;
+use clientinfo::get_client_request_info_thread_local;
 use crossbeam::channel::Sender;
 use edenapi_types::FileResponse;
 use edenapi_types::FileSpec;
@@ -561,6 +562,8 @@ impl FetchState {
             })
             .collect();
 
+        // Fetch ClientRequestInfo from a thread local and pass to async code
+        let _maybe_client_request_info = get_client_request_info_thread_local();
         let response = match block_on(store.files_attrs(pending_attrs)).map_err(|e| e.tag_network())
         {
             Ok(r) => r,

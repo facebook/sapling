@@ -10,6 +10,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use async_runtime::block_on;
 use async_runtime::spawn_blocking;
+use clientinfo::get_client_request_info_thread_local;
 use futures::prelude::*;
 use progress_model::ProgressBar;
 use tracing::field;
@@ -101,6 +102,8 @@ impl RemoteDataStore for EdenApiDataStore<File> {
             scmstore = false,
         );
         let _enter = span.enter();
+        // Fetch ClientRequestInfo from a thread local and pass to async code
+        let _maybe_client_request_info = get_client_request_info_thread_local();
         let (keys, stats) = block_on(response)?;
         util::record_edenapi_stats(&span, &stats);
         Ok(keys)
@@ -146,6 +149,8 @@ impl RemoteDataStore for EdenApiDataStore<Tree> {
             scmstore = false,
         );
         let _enter = span.enter();
+        // Fetch ClientRequestInfo from a thread local and pass to async code
+        let _maybe_client_request_info = get_client_request_info_thread_local();
         let (keys, stats) = block_on(response)?;
         util::record_edenapi_stats(&span, &stats);
         Ok(keys)
