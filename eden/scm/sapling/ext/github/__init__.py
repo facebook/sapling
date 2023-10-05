@@ -67,7 +67,7 @@ def extsetup(ui):
 @command(
     "pr",
     [],
-    _("<submit|get|link|unlink|...>"),
+    _("<submit|pull|list|link|unlink|...>"),
 )
 def pull_request_command(ui, repo, *args, **opts):
     """exchange local commit data with GitHub pull requests"""
