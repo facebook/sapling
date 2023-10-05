@@ -16,6 +16,7 @@
 #include "eden/fs/model/ObjectId.h"
 #include "eden/fs/model/RootId.h"
 #include "eden/fs/model/TreeFwd.h"
+#include "eden/fs/store/BackingStoreType.h"
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/utils/ImmediateFuture.h"
@@ -30,8 +31,6 @@ namespace facebook::eden {
 
 class TreeEntry;
 enum class TreeEntryType : uint8_t;
-
-enum BackingStoreType : uint8_t { EMPTY, GIT, HG, RECAS, HTTP };
 
 enum class ObjectComparison : uint8_t {
   /// Given the IDs alone, it's not possible to know whether the contents are
