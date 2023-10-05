@@ -40,7 +40,7 @@ bool FilteredBackingStore::pathAffectedByFilterChange(
   return true;
 }
 
-std::tuple<std::string, RootId> parseFilterIdFromRootId(const RootId& rootId) {
+std::tuple<RootId, std::string> parseFilterIdFromRootId(const RootId& rootId) {
   auto separatorIdx = rootId.value().find(":");
   if (separatorIdx == std::string::npos) {
     throwf<std::invalid_argument>(
@@ -49,7 +49,7 @@ std::tuple<std::string, RootId> parseFilterIdFromRootId(const RootId& rootId) {
   }
   auto root = RootId{rootId.value().substr(0, separatorIdx)};
   auto filterId = rootId.value().substr(separatorIdx + 1);
-  return {std::move(filterId), std::move(root)};
+  return {std::move(root), std::move(filterId)};
 }
 
 ObjectComparison FilteredBackingStore::compareObjectsById(
@@ -161,7 +161,7 @@ ImmediateFuture<BackingStore::GetRootTreeResult>
 FilteredBackingStore::getRootTree(
     const RootId& rootId,
     const ObjectFetchContextPtr& context) {
-  auto [filterId, parsedRootId] = parseFilterIdFromRootId(rootId);
+  auto [parsedRootId, filterId] = parseFilterIdFromRootId(rootId);
   return backingStore_->getRootTree(parsedRootId, context)
       .thenValue([filterId = filterId,
                   self = shared_from_this()](GetRootTreeResult rootTreeResult) {
