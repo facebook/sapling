@@ -35,8 +35,7 @@ std::ostream& operator<<(std::ostream& os, const timespec& ts) {
   return os << fmt::format("{}.{:09d}", ts.tv_sec, ts.tv_nsec);
 }
 
-namespace std {
-namespace chrono {
+namespace std::chrono {
 std::ostream& operator<<(
     std::ostream& os,
     const std::chrono::system_clock::time_point& tp) {
@@ -45,8 +44,7 @@ std::ostream& operator<<(
   auto nsecs = duration_cast<std::chrono::nanoseconds>(duration - secs);
   return os << fmt::format("{}.{:09d}", secs.count(), nsecs.count());
 }
-} // namespace chrono
-} // namespace std
+} // namespace std::chrono
 
 /*
  * Helper functions for comparing timespec structs from file attributes

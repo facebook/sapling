@@ -2345,7 +2345,7 @@ bool TreeInode::readdirImpl(
   std::make_heap(indices.begin(), indices.end(), std::greater<>{});
 
   // The provided FuseDirList has limited space. Add entries until no more fit.
-  while (indices.size()) {
+  while (!indices.empty()) {
     std::pop_heap(indices.begin(), indices.end(), std::greater<>{});
     auto& [name, entry] = entries.begin()[indices.back().second];
     indices.pop_back();
@@ -2948,7 +2948,7 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
       }
 
       // If there are no matches, then we've finished the entire walk.
-      if (!matchingInodeIter && matchingScIters.size() == 0) {
+      if (!matchingInodeIter && matchingScIters.empty()) {
         break;
       }
 
@@ -2961,7 +2961,7 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
           // the inode.
         }
       } else { // If the inode has this path...
-        if (matchingScIters.size() == 0) { // ...but no trees do...
+        if (matchingScIters.empty()) { // ...but no trees do...
           // ...then the entry is considered untracked.
           processUntracked(inodeIter->first, &inodeIter->second);
         } else { // ...and some trees do as well...

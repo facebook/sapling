@@ -773,7 +773,7 @@ ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathsToObjectIds(
       if (facebook::eden::ObjectType::TREE == object.type) {
         // If the path is root, and setting to tree type, no more than one tree
         // is allowed.
-        if (parentToObjectsMap[path.dirname()].size() > 0) {
+        if (!parentToObjectsMap[path.dirname()].empty()) {
           throw std::domain_error(
               "SetPathObjectId does not support set multiple trees on root");
         }

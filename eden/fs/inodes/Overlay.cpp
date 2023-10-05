@@ -668,7 +668,6 @@ void Overlay::gcThread() noexcept {
           return;
         }
         gcCondVar_.wait(lock.as_lock());
-        continue;
       }
 
       requests = std::move(lock->queue);

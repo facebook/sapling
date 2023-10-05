@@ -12,8 +12,6 @@
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 
-#include "eden/fs/utils/PathFuncs.h"
-
 using namespace facebook::eden;
 using namespace std::chrono_literals;
 using namespace std::string_view_literals;
