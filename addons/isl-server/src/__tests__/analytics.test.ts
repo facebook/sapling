@@ -11,6 +11,7 @@ import type {ServerPlatform} from '../serverPlatform';
 
 import {Repository} from '../Repository';
 import {makeServerSideTracker} from '../analytics/serverSideTracker';
+import * as execa from 'execa';
 import {mockLogger} from 'shared/testUtils';
 import {defer} from 'shared/utils';
 
@@ -23,6 +24,47 @@ const mockTracker = makeServerSideTracker(
   '0.1',
   jest.fn(),
 );
+
+jest.mock('../WatchForChanges', () => {
+  class MockWatchForChanges {
+    dispose = jest.fn();
+  }
+  return {WatchForChanges: MockWatchForChanges};
+});
+
+jest.mock('execa', () => {
+  return jest.fn();
+});
+
+function mockExeca(
+  cmds: Array<[RegExp, (() => {stdout: string} | Error) | {stdout: string} | Error]>,
+) {
+  return jest.spyOn(execa, 'default').mockImplementation(((cmd: string, args: Array<string>) => {
+    const argStr = cmd + ' ' + args?.join(' ');
+    const execaOther = {
+      kill: jest.fn(),
+      on: jest.fn((event, cb) => {
+        // immediately call exit cb to teardown timeout
+        if (event === 'exit') {
+          cb();
+        }
+      }),
+    };
+    for (const [regex, output] of cmds) {
+      if (regex.test(argStr)) {
+        let value = output;
+        if (typeof output === 'function') {
+          value = output();
+        }
+        if (value instanceof Error) {
+          throw value;
+        }
+        return {...execaOther, ...value};
+      }
+    }
+    return {...execaOther, stdout: ''};
+  }) as unknown as typeof execa.default);
+}
 
 describe('track', () => {
   const mockSendData = jest.fn();
@@ -68,6 +110,20 @@ describe('track', () => {
   });
 
   it('allows setting repository', () => {
+    // No need to call the actual command lines to test tracking
+    const execaSpy = mockExeca([
+      [/^sl config paths.default/, {stdout: 'https://github.com/facebook/sapling.git'}],
+      [/^sl config github.pull_request_domain/, {stdout: 'github.com'}],
+      [/^sl root --dotdir/, {stdout: '/path/to/myRepo/.sl'}],
+      [/^sl root/, {stdout: '/path/to/myRepo'}],
+      [
+        /^gh auth status --hostname gitlab.myCompany.com/,
+        new Error('not authenticated on this hostname'),
+      ],
+      [/^gh auth status --hostname ghe.myCompany.com/, {stdout: ''}],
+      [/^gh api graphql/, {stdout: '{}'}],
+    ]);
+
     const repo = new Repository(
       {
         type: 'success',
@@ -94,6 +150,7 @@ describe('track', () => {
       mockLogger,
     );
     repo.dispose();
+    execaSpy.mockClear();
   });
 
   it('uses consistent session id, but different track ids', () => {

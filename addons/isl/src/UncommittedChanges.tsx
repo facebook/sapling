@@ -17,7 +17,6 @@ import {
   type ChangedFilesDisplayType,
   changedFilesDisplayType,
 } from './ChangedFileDisplayTypePicker';
-import serverAPI from './ClientToServerAPI';
 import {
   commitFieldsBeingEdited,
   commitMode,
