@@ -20,6 +20,8 @@ use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::ensure;
 use anyhow::Result;
+use clientinfo::get_client_request_info_thread_local;
+use clientinfo::set_client_request_info_thread_local;
 use crossbeam::channel::unbounded;
 use minibytes::Bytes;
 use parking_lot::Mutex;
@@ -250,7 +252,13 @@ impl FileStore {
 
         // Only kick off a thread if there's a substantial amount of work.
         if keys_len > 1000 {
-            std::thread::spawn(process_func);
+            let cri = get_client_request_info_thread_local();
+            std::thread::spawn(move || {
+                if let Some(cri) = cri {
+                    set_client_request_info_thread_local(cri);
+                }
+                process_func();
+            });
         } else {
             process_func();
         }

@@ -22,6 +22,9 @@ use tracing::field;
 
 pub mod types;
 
+use clientinfo::get_client_request_info_thread_local;
+use clientinfo::set_client_request_info_thread_local;
+
 use crate::datastore::HgIdDataStore;
 use crate::datastore::RemoteDataStore;
 use crate::indexedlogdatastore::Entry;
@@ -252,7 +255,13 @@ impl TreeStore {
 
         // Only kick off a thread if there's a substantial amount of work.
         if keys_len > 1000 {
-            std::thread::spawn(process_func_errors);
+            let cri = get_client_request_info_thread_local();
+            std::thread::spawn(move || {
+                if let Some(cri) = cri {
+                    set_client_request_info_thread_local(cri);
+                }
+                process_func_errors();
+            });
         } else {
             process_func_errors();
         }
