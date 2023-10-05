@@ -155,8 +155,8 @@ impl Root {
                         }
                         Ok(rules) => {
                             for expanded_rule in rules {
+                                origins.push(format!("{} ({})", expanded_rule, src));
                                 matcher_rules.push(expanded_rule);
-                                origins.push(src.clone());
                             }
                         }
                     }
@@ -213,13 +213,13 @@ impl Root {
             && (rules.is_empty() || matches!(&rules[0].0, Pattern::Exclude(_)))
             && !self.skip_catch_all
         {
-            rules.push_front((Pattern::Include("**".to_string()), "(builtin)".to_string()))
+            rules.push_front((Pattern::Include("**".to_string()), "<builtin>".to_string()))
         }
 
         // This is for files such as .hgignore and .hgsparse-base, unrelated to the .hg directory.
         rules.push_front((
             Pattern::Include("glob:.hg*".to_string()),
-            "(builtin)".to_string(),
+            "<builtin>".to_string(),
         ));
 
         let (matcher_rules, origins) = prepare_rules(rules)?;
@@ -992,7 +992,7 @@ re:^bar/bad/(?:.*/)?IMPORTANT.ext(?:/|$)
 
         assert_eq!(
             matcher.explain("a/b".try_into().unwrap()).unwrap(),
-            (true, "(builtin)".to_string())
+            (true, "**/** (<builtin>)".to_string())
         );
     }
 
@@ -1036,12 +1036,12 @@ path:d
 
         assert_eq!(
             matcher.explain("b".try_into().unwrap()).unwrap(),
-            (true, "base -> child_1 -> child_2".to_string())
+            (true, "b/** (base -> child_1 -> child_2)".to_string())
         );
 
         assert_eq!(
             matcher.explain("d".try_into().unwrap()).unwrap(),
-            (false, "base -> child_1 -> child_2".to_string())
+            (false, "!d/** (base -> child_1 -> child_2)".to_string())
         );
     }
 
@@ -1064,22 +1064,22 @@ four
 
         assert_eq!(
             matcher.explain("one".try_into().unwrap()).unwrap(),
-            (true, "base".to_string())
+            (true, "one/** (base)".to_string())
         );
 
         assert_eq!(
             matcher.explain("two".try_into().unwrap()).unwrap(),
-            (true, "base (banana)".to_string())
+            (true, "two/** (base (banana))".to_string())
         );
 
         assert_eq!(
             matcher.explain("three".try_into().unwrap()).unwrap(),
-            (true, "base (banana)".to_string())
+            (true, "three/** (base (banana))".to_string())
         );
 
         assert_eq!(
             matcher.explain("four".try_into().unwrap()).unwrap(),
-            (true, "base".to_string())
+            (true, "four/** (base)".to_string())
         );
     }
 
