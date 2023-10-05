@@ -6,6 +6,7 @@
  */
 
 #include "eden/fs/inodes/GlobNode.h"
+#include <eden/fs/inodes/InodePtrFwd.h>
 #include <iomanip>
 #include <iostream>
 #include "eden/fs/inodes/TreeInode.h"
@@ -89,6 +90,8 @@ struct TreeInodePtrRoot {
   }
 };
 
+using TreeRootPtr = std::shared_ptr<const Tree>;
+
 /** TreeRoot wraps a Tree for globbing.
  * The entries do not need to be locked, but to satisfy the interface
  * we return the entries when lockContents() is called.
@@ -116,7 +119,7 @@ struct TreeRoot {
   /** We can never load a TreeInodePtr from a raw Tree, so this always
    * fails.  We never call this method because entryShouldLoadChildTree()
    * always returns false. */
-  ImmediateFuture<TreeInodePtr> getOrLoadChildTree(
+  ImmediateFuture<TreeRootPtr> getOrLoadChildTree(
       PathComponentPiece,
       const ObjectFetchContextPtr&) {
     throw std::runtime_error("impossible to get here");
@@ -231,7 +234,7 @@ void GlobNode::parse(StringPiece pattern) {
   }
 }
 
-template <typename ROOT>
+template <typename ROOT, typename ROOTPtr>
 ImmediateFuture<folly::Unit> GlobNode::evaluateImpl(
     const ObjectStore* store,
     const ObjectFetchContextPtr& context,
@@ -245,12 +248,12 @@ ImmediateFuture<folly::Unit> GlobNode::evaluateImpl(
   vector<ImmediateFuture<folly::Unit>> futures;
 
   if (!recursiveChildren_.empty()) {
-    futures.emplace_back(evaluateRecursiveComponentImpl(
+    futures.emplace_back(evaluateRecursiveComponentImpl<ROOT, ROOTPtr>(
         store,
         context,
         rootPath,
         RelativePathPiece{""},
-        root,
+        std::forward<ROOT>(root),
         fileBlobsToPrefetch,
         globResult,
         originRootId));
@@ -274,7 +277,7 @@ ImmediateFuture<folly::Unit> GlobNode::evaluateImpl(
                                 &globResult,
                                 &originRootId](
                                    std::shared_ptr<const Tree> dir) mutable {
-                      return innerNode->evaluateImpl(
+                      return innerNode->evaluateImpl<TreeRoot, TreeRootPtr>(
                           store,
                           context,
                           candidateName,
@@ -347,12 +350,12 @@ ImmediateFuture<folly::Unit> GlobNode::evaluateImpl(
                                          node = item.second,
                                          fileBlobsToPrefetch,
                                          &globResult,
-                                         &originRootId](TreeInodePtr dir) {
-                               return node->evaluateImpl(
+                                         &originRootId](ROOTPtr dir) {
+                               return node->evaluateImpl<ROOT, ROOTPtr>(
                                    store,
                                    context,
                                    candidateName,
-                                   TreeInodePtrRoot(std::move(dir)),
+                                   ROOT(std::move(dir)),
                                    fileBlobsToPrefetch,
                                    globResult,
                                    originRootId);
@@ -381,7 +384,7 @@ ImmediateFuture<folly::Unit> GlobNode::evaluate(
     GlobNode::PrefetchList* fileBlobsToPrefetch,
     GlobNode::ResultList& globResult,
     const RootId& originRootId) const {
-  return evaluateImpl(
+  return evaluateImpl<TreeInodePtrRoot, TreeInodePtr>(
              store.get(),
              context,
              rootPath,
@@ -401,7 +404,7 @@ ImmediateFuture<folly::Unit> GlobNode::evaluate(
     GlobNode::PrefetchList* fileBlobsToPrefetch,
     GlobNode::ResultList& globResult,
     const RootId& originRootId) const {
-  return evaluateImpl(
+  return evaluateImpl<TreeRoot, TreeRootPtr>(
              store.get(),
              context,
              rootPath,
@@ -451,7 +454,7 @@ GlobNode* GlobNode::lookupToken(
   return nullptr;
 }
 
-template <typename ROOT>
+template <typename ROOT, typename ROOTPtr>
 ImmediateFuture<folly::Unit> GlobNode::evaluateRecursiveComponentImpl(
     const ObjectStore* store,
     const ObjectFetchContextPtr& context,
@@ -497,7 +500,9 @@ ImmediateFuture<folly::Unit> GlobNode::evaluateRecursiveComponentImpl(
                               fileBlobsToPrefetch,
                               &globResult,
                               &originRootId](std::shared_ptr<const Tree> tree) {
-                    return evaluateRecursiveComponentImpl(
+                    return evaluateRecursiveComponentImpl<
+                        TreeRoot,
+                        TreeRootPtr>(
                         store,
                         context,
                         rootPath,
@@ -525,13 +530,13 @@ ImmediateFuture<folly::Unit> GlobNode::evaluateRecursiveComponentImpl(
                         this,
                         fileBlobsToPrefetch,
                         &globResult,
-                        &originRootId](TreeInodePtr dir) {
-              return evaluateRecursiveComponentImpl(
+                        &originRootId](ROOTPtr dir) {
+              return evaluateRecursiveComponentImpl<ROOT, ROOTPtr>(
                   store,
                   context,
                   rootPath,
                   candidateName,
-                  TreeInodePtrRoot(std::move(dir)),
+                  ROOT(std::move(dir)),
                   fileBlobsToPrefetch,
                   globResult,
                   originRootId);

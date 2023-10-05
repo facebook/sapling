@@ -155,7 +155,7 @@ class GlobNode {
   // inode children.
   // The difference is because a pattern like "**/foo" must be recursively
   // matched against all the children of the inode.
-  template <typename ROOT>
+  template <typename ROOT, typename ROOTPtr>
   ImmediateFuture<folly::Unit> evaluateRecursiveComponentImpl(
       const ObjectStore* store,
       const ObjectFetchContextPtr& context,
@@ -166,7 +166,7 @@ class GlobNode {
       ResultList& globResult,
       const RootId& originRootId) const;
 
-  template <typename ROOT>
+  template <typename ROOT, typename ROOTPtr>
   ImmediateFuture<folly::Unit> evaluateImpl(
       const ObjectStore* store,
       const ObjectFetchContextPtr& context,
