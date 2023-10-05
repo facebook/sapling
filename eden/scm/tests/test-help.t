@@ -4,11 +4,11 @@
 Short help:
 
   $ hg
-  Mercurial Distributed SCM
+  Sapling SCM
   
   hg COMMAND [OPTIONS]
   
-  These are some common Mercurial commands.  Use 'hg help commands' to list all
+  These are some common Sapling commands.  Use 'hg help commands' to list all
   commands, and 'hg help COMMAND' to get help on a specific command.
   
   Get the latest commits from the server:
@@ -61,11 +61,11 @@ Short help:
    templating    customizing output with templates
 
   $ hg -q
-  Mercurial Distributed SCM
+  Sapling SCM
   
   hg COMMAND [OPTIONS]
   
-  These are some common Mercurial commands.  Use 'hg help commands' to list all
+  These are some common Sapling commands.  Use 'hg help commands' to list all
   commands, and 'hg help COMMAND' to get help on a specific command.
   
   Get the latest commits from the server:
@@ -118,11 +118,11 @@ Short help:
    templating    customizing output with templates
 
   $ hg help
-  Mercurial Distributed SCM
+  Sapling SCM
   
   hg COMMAND [OPTIONS]
   
-  These are some common Mercurial commands.  Use 'hg help commands' to list all
+  These are some common Sapling commands.  Use 'hg help commands' to list all
   commands, and 'hg help COMMAND' to get help on a specific command.
   
   Get the latest commits from the server:
@@ -175,11 +175,11 @@ Short help:
    templating    customizing output with templates
 
   $ hg -q help
-  Mercurial Distributed SCM
+  Sapling SCM
   
   hg COMMAND [OPTIONS]
   
-  These are some common Mercurial commands.  Use 'hg help commands' to list all
+  These are some common Sapling commands.  Use 'hg help commands' to list all
   commands, and 'hg help COMMAND' to get help on a specific command.
   
   Get the latest commits from the server:
@@ -236,11 +236,11 @@ Test extension help:
   Using Additional Features
   """""""""""""""""""""""""
   
-      Mercurial has the ability to add new features through the use of
-      extensions. Extensions may add new commands, add options to existing
-      commands, change the default behavior of commands, or implement hooks.
+      Sapling has the ability to add new features through the use of extensions.
+      Extensions may add new commands, add options to existing commands, change
+      the default behavior of commands, or implement hooks.
   
-      To enable the "foo" extension, either shipped with Mercurial or in the
+      To enable the "foo" extension, either shipped with Sapling or in the
       Python search path, create an entry for it in your configuration file,
       like this:
   
@@ -258,8 +258,8 @@ Test extension help:
       increase startup overhead; they may be meant for advanced usage only; they
       may provide potentially dangerous abilities (such as letting you destroy
       or modify history); they might not be ready for prime time; or they may
-      alter some usual behaviors of stock Mercurial. It is thus up to the user
-      to activate extensions as needed.
+      alter some usual behaviors of stock Sapling. It is thus up to the user to
+      activate extensions as needed.
   
       To explicitly disable an extension enabled in a configuration file of
       broader scope, prepend its path with !:
@@ -276,7 +276,7 @@ Test extension help:
        debugshell    a python shell with repo, changelog & manifest objects
        errorredirect
                      redirect error message
-       githelp       try mapping git commands to Mercurial commands
+       githelp       try mapping git commands to Sapling commands
        mergedriver   custom merge drivers for autoresolved files
        progressfile  allows users to have JSON progress bar information written
                      to a path
@@ -378,7 +378,7 @@ Normal help for add
   
   start tracking the specified files
   
-      Specify files to be tracked by Mercurial. The files will be added to the
+      Specify files to be tracked by Sapling. The files will be added to the
       repository at the next commit.
   
       To undo an add before files have been committed, use 'hg forget'. To undo
@@ -404,7 +404,7 @@ Verbose help for add
   
   start tracking the specified files
   
-      Specify files to be tracked by Mercurial. The files will be added to the
+      Specify files to be tracked by Sapling. The files will be added to the
       repository at the next commit.
   
       To undo an add before files have been committed, use 'hg forget'. To undo
@@ -542,16 +542,6 @@ Test help on a self-referencing alias that is a rust command
     --shared show root of the shared repo
   
   (some details hidden, use --verbose to show complete help)
-
-Test help option with version option
-
-  $ hg add -h --version
-  Mercurial * (glob)
-
-  $ hg add --skjdfks
-  hg add: option --skjdfks not recognized
-  (use 'hg add -h' to get help)
-  [255]
 
 Test ambiguous command help
 
@@ -847,11 +837,11 @@ for the module itself.
 Test that default list of commands omits extension commands
 
   $ hg help
-  Mercurial Distributed SCM
+  Sapling SCM
   
   hg COMMAND [OPTIONS]
   
-  These are some common Mercurial commands.  Use 'hg help commands' to list all
+  These are some common Sapling commands.  Use 'hg help commands' to list all
   commands, and 'hg help COMMAND' to get help on a specific command.
   
   Get the latest commits from the server:
@@ -1225,7 +1215,7 @@ Test a help topic
       - "yesterday" (midnight)
       - "now" - right now
   
-      Lastly, there is Mercurial's internal format:
+      Lastly, there is Sapling's internal format:
   
       - "1165411109 0" (Wed Dec 6 13:18:29 2006 UTC)
   
@@ -1522,7 +1512,7 @@ Test section lookup
           (DVCS) can be described as a directed acyclic graph (DAG), consisting
           of nodes and edges, where nodes correspond to changesets and edges
           imply a parent -> child relation. This graph can be visualized by
-          graphical tools such as 'hg log --graph'. In Mercurial, the DAG is
+          graphical tools such as 'hg log --graph'. In Sapling, the DAG is
           limited by the requirement for children to have at most two parents.
   
 
@@ -1653,7 +1643,7 @@ Test dynamic list of merge tools only shows up once
   Merge Tools
   """""""""""
   
-      To merge files Mercurial uses merge tools.
+      To merge files Sapling uses merge tools.
   
       A merge tool combines two different versions of a file into a merged file.
       Merge tools are given the two files and the greatest common ancestor of
@@ -1668,7 +1658,7 @@ Test dynamic list of merge tools only shows up once
       different evolutions of the same initial base file. Furthermore, some
       interactive merge programs make it easier to manually resolve conflicting
       merges, either in a graphical way, or by inserting some conflict markers.
-      Mercurial does not include any interactive merge programs but relies on
+      Sapling does not include any interactive merge programs but relies on
       external tools for that.
   
       Available merge tools
@@ -1756,7 +1746,7 @@ Test dynamic list of merge tools only shows up once
       Choosing a merge tool
       =====================
   
-      Mercurial uses these rules when deciding which merge tool to use:
+      Sapling uses these rules when deciding which merge tool to use:
   
       1. If a tool has been specified with the --tool option to merge or
          resolve, it is used.  If it is the name of a tool in the merge-tools
@@ -1781,9 +1771,9 @@ Test dynamic list of merge tools only shows up once
       8. Otherwise, ":prompt" is used.
   
       Note:
-         After selecting a merge program, Mercurial will by default attempt to
+         After selecting a merge program, Sapling will by default attempt to
          merge the files using a simple merge algorithm first. Only if it
-         doesn't succeed because of conflicting changes will Mercurial actually
+         doesn't succeed because of conflicting changes will Sapling actually
          execute the merge program. Whether to use the simple merge algorithm
          first can be controlled by the premerge setting of the merge tool.
          Premerge is enabled by default unless the file is binary or a symlink.

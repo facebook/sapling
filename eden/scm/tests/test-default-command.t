@@ -4,8 +4,8 @@
   $ disable commitcloud
 
 Test running hg without any arguments and various configs
-  $ hg | grep "These are some common Mercurial commands"
-  These are some common Mercurial commands.  Use 'hg help commands' to list all
+  $ hg | grep "These are some common"
+  These are some common Sapling commands.  Use 'hg help commands' to list all
   $ setconfig commands.naked-default.no-repo=sl
   $ hg
   abort: '$TESTTMP' is not inside a repository, but this command requires a repository!
@@ -17,8 +17,8 @@ Test running hg without any arguments and various configs
   > |
   > A
   > EOS
-  $ hg | grep "These are some common Mercurial commands"
-  These are some common Mercurial commands.  Use 'hg help commands' to list all
+  $ hg | grep "These are some common"
+  These are some common Sapling commands.  Use 'hg help commands' to list all
   $ setconfig commands.naked-default.in-repo=sl
   $ hg
   o  commit:      112478962961
@@ -54,9 +54,10 @@ Test running hg without any arguments and various configs
 
 
 Make sure passing either --help or --version, or using HGPLAIN does not trigger the default command
-  $ hg --version
-  Mercurial * (glob)
-  $ hg --help | grep "These are some common Mercurial commands"
-  These are some common Mercurial commands.  Use 'hg help commands' to list all
-  $ HGPLAIN=true hg | grep "These are some common Mercurial commands"
-  These are some common Mercurial commands.  Use 'hg help commands' to list all
+
+  $ hg --version -q
+  Sapling * (glob)
+  $ hg --help | grep "These are some common"
+  These are some common Sapling commands.  Use 'hg help commands' to list all
+  $ HGPLAIN=true hg | grep "These are some common"
+  These are some common Sapling commands.  Use 'hg help commands' to list all

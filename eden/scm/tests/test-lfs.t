@@ -440,7 +440,7 @@
   >     for n in 'abcd':
   >         ui.write(('%s: binary=%s\n') % (n, repo['.'][n].isbinary()))
   > EOF
-  $ hg --config extensions.dumpbinary=$TESTTMP/dumpbinary.py id --trace
+  $ hg --config extensions.dumpbinary=$TESTTMP/dumpbinary.py id
   a: binary=True
   b: binary=False
   c: binary=True

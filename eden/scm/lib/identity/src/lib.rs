@@ -316,8 +316,8 @@ impl std::fmt::Display for Identity {
 const HG: Identity = Identity {
     user: UserIdentity {
         cli_name: "hg",
-        product_name: "Mercurial",
-        long_product_name: "Mercurial Distributed SCM",
+        product_name: "Sapling",
+        long_product_name: "Sapling SCM",
         env_prefix: "HG",
         config_user_directory: None,
         config_user_files: &[

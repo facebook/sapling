@@ -206,13 +206,19 @@ impl Dispatcher {
     /// Load configs. Prepare to run a command.
     pub fn from_args(mut args: Vec<String>) -> Result<Self> {
         if args.get(1).map(|s| s.as_ref()) == Some("--version") {
-            args = version_args(&args[0]);
+            args[1] = "version".to_string();
         }
 
         let mut early_result = early_parse(&args[1..])?;
         let global_opts: HgGlobalOpts = early_result.clone().try_into()?;
         if global_opts.version {
             args = version_args(&args[0]);
+            if global_opts.quiet {
+                args.push("--quiet".to_string());
+            }
+            if global_opts.verbose {
+                args.push("--verbose".to_string());
+            }
             early_result = early_parse(&args[1..])?;
         }
 

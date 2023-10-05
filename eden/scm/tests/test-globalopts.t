@@ -252,7 +252,7 @@ Testing --time:
 Testing --version:
 
   $ hg --version -q
-  Mercurial * (glob)
+  Sapling * (glob)
 
 hide outer repo
   $ hg init
@@ -260,11 +260,11 @@ hide outer repo
 Testing -h/--help:
 
   $ hg -h
-  Mercurial Distributed SCM
+  Sapling SCM
   
   hg COMMAND [OPTIONS]
   
-  These are some common Mercurial commands.  Use 'hg help commands' to list all
+  These are some common Sapling commands.  Use 'hg help commands' to list all
   commands, and 'hg help COMMAND' to get help on a specific command.
   
   Get the latest commits from the server:
@@ -331,11 +331,11 @@ Testing -h/--help:
 
 
   $ hg --help
-  Mercurial Distributed SCM
+  Sapling SCM
   
   hg COMMAND [OPTIONS]
   
-  These are some common Mercurial commands.  Use 'hg help commands' to list all
+  These are some common Sapling commands.  Use 'hg help commands' to list all
   commands, and 'hg help COMMAND' to get help on a specific command.
   
   Get the latest commits from the server:

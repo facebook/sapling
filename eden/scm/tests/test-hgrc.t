@@ -57,8 +57,8 @@ issue1829: wrong indentation
   $ FAKEPATH=/path/to/nowhere
   $ export FAKEPATH
   $ echo '%include $FAKEPATH/no-such-file' >> $HGRC
-  $ hg version
-  Mercurial * (glob)
+  $ hg version -q
+  * (glob)
   $ unset FAKEPATH
 
 make sure global options given on the cmdline take precedence
