@@ -37,6 +37,9 @@ commands! {
     mod whereami;
 }
 
+#[cfg(feature = "fb")]
+mod fb;
+
 pub use anyhow::Result;
 use clidispatch::command::CommandTable;
 use clidispatch::errors::FallbackToPython;

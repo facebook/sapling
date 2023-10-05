@@ -13,8 +13,16 @@ use super::Result;
 
 pub fn run(ctx: ReqCtx<NoOpts>, _config: &mut ConfigSet) -> Result<u8> {
     let id = identity::default();
-    ctx.io()
-        .write(format!("{} {}\n", id.product_name(), ::version::VERSION))?;
+    let io = ctx.io();
+    io.write(format!("{} {}\n", id.product_name(), ::version::VERSION))?;
+
+    if !ctx.global_opts().quiet {
+        io.write_err("(see https://sapling-scm.com/ for more information)\n")?;
+
+        #[cfg(feature = "fb")]
+        io.write_err(super::fb::VERSION_TEXT)?;
+    }
+
     Ok(0)
 }
 
