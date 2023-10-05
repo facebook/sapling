@@ -798,7 +798,6 @@ class SparseConfig:
     mainrules = attr.ib(convert=list)
     profiles = attr.ib(convert=tuple)
     metadata = attr.ib(default=attr.Factory(dict))
-    isroot = attr.ib(default=False)
     ruleorigins = attr.ib(default=attr.Factory(list))
 
     def toincludeexclude(self):
@@ -1130,19 +1129,14 @@ def computesparsematcher(
                     # mainrules above.
                     version = debugversion or profile.version()
                     if version != "1":
-                        # Only union the profiles if we are the root level .hg/sparse profile.
-                        if config.isroot:
-                            matchers.append(
-                                matchmod.rulesmatch(
-                                    repo.root,
-                                    "",
-                                    profile.rules,
-                                    ruledetails=profile.ruleorigins,
-                                )
+                        matchers.append(
+                            matchmod.rulesmatch(
+                                repo.root,
+                                "",
+                                profile.rules,
+                                ruledetails=profile.ruleorigins,
                             )
-                        else:
-                            matchrules.extend(profile.rules)
-                            ruleorigins.extend(profile.ruleorigins)
+                        )
 
             if matchrules:
                 matchers.append(
@@ -1264,7 +1258,6 @@ def getsparsepatterns(
         rules,
         profiles,
         rawconfig.metadata,
-        True,  # isroot
         ruleorigins,
     )
 
