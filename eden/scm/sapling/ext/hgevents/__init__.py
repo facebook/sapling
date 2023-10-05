@@ -39,7 +39,8 @@ _incompatible_exts = ["largefiles", "eol"]
 
 
 def extsetup(ui):
-    extensions.wrapfunction(merge, "update", wrapupdate)
+    extensions.wrapfunction(merge, "goto", wrapgoto)
+    extensions.wrapfunction(merge, "merge", wrapmerge)
     extensions.wrapfunction(filemerge, "_xmerge", _xmerge)
 
 
@@ -103,11 +104,10 @@ def reposetup(ui, repo):
 # and state-leave commands.  This allows clients to perform more intelligent
 # settling during bulk file change scenarios
 # https://facebook.github.io/watchman/docs/cmd/subscribe.html#advanced-settling
-def wrapupdate(
+def wrapmerge(
     orig,
     repo,
     node,
-    branchmerge=False,
     wc=None,
     **kwargs,
 ):
@@ -117,7 +117,6 @@ def wrapupdate(
         return orig(
             repo,
             node,
-            branchmerge=branchmerge,
             wc=wc,
             **kwargs,
         )
@@ -132,13 +131,38 @@ def wrapupdate(
         oldnode=oldnode,
         newnode=newnode,
         distance=distance,
-        metadata={"merge": branchmerge},
+        metadata={"merge": True},
     ):
         return orig(
             repo,
             node,
-            branchmerge=branchmerge,
             wc=wc,
+            **kwargs,
+        )
+
+
+def wrapgoto(
+    orig,
+    repo,
+    node,
+    **kwargs,
+):
+    distance = 0
+    oldnode = repo["."].node()
+    newnode = repo[node].node()
+    distance = watchmanclient.calcdistance(repo, oldnode, newnode)
+
+    with watchmanclient.state_update(
+        repo,
+        name="hg.update",
+        oldnode=oldnode,
+        newnode=newnode,
+        distance=distance,
+        metadata={"merge": False},
+    ):
+        return orig(
+            repo,
+            node,
             **kwargs,
         )
 

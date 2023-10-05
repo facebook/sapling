@@ -368,9 +368,9 @@ def _setupupdates(_ui) -> None:
 
     extensions.wrapfunction(mergemod, "calculateupdates", _calculateupdates)
 
-    def _update(orig, repo, node, branchmerge=False, **kwargs):
+    def _goto(orig, repo, node, **kwargs):
         try:
-            results = orig(repo, node, branchmerge=branchmerge, **kwargs)
+            results = orig(repo, node, **kwargs)
         except Exception:
             if _hassparse(repo):
                 repo._clearpendingprofileconfig()
@@ -378,12 +378,12 @@ def _setupupdates(_ui) -> None:
 
         # If we're updating to a location, clean up any stale temporary includes
         # (ex: this happens during hg rebase --abort).
-        if not branchmerge and hasattr(repo, "sparsematch"):
+        if hasattr(repo, "sparsematch"):
             repo.prunetemporaryincludes()
 
         return results
 
-    extensions.wrapfunction(mergemod, "update", _update)
+    extensions.wrapfunction(mergemod, "goto", _goto)
 
 
 def _setupcommit(ui) -> None:

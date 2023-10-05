@@ -767,7 +767,7 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions):
                 # (1) this is probably the wrong behavior here -- we should
                 #     probably abort, but some actions like rebases currently
                 #     don't like an abort happening in the middle of
-                #     merge.update.
+                #     merge.update/goto.
                 if not different:
                     actions[f] = ("g", (fl2, False), "remote created")
                 elif config == "abort":
@@ -1989,13 +1989,10 @@ def recordupdates(repo, actions, branchmerge):
             prog.value += 1
 
 
-def _logupdatedistance(ui, repo, node, branchmerge):
+def _logupdatedistance(ui, repo, node):
     """Logs the update distance, if configured"""
     # internal config: merge.recordupdatedistance
     if not ui.configbool("merge", "recordupdatedistance", default=True):
-        return
-
-    if branchmerge:
         return
 
     try:
@@ -2074,9 +2071,122 @@ def _prefetchlazychildren(repo, node):
         )
 
 
+def goto(
+    repo,
+    node,
+    force=False,
+    labels=None,
+    updatecheck=None,
+):
+    _logupdatedistance(repo.ui, repo, node)
+    _prefetchlazychildren(repo, node)
+
+    if not force:
+        # TODO: remove the default once all callers that pass force=False pass
+        # a value for updatecheck. We may want to allow updatecheck='abort' to
+        # better suppport some of these callers.
+        if updatecheck is None:
+            updatecheck = "linear"
+        assert updatecheck in ("none", "linear", "noconflict")
+
+    if edenfs.requirement in repo.requirements:
+        from . import eden_update
+
+        return eden_update.update(
+            repo,
+            node,
+            force=force,
+            labels=labels,
+            updatecheck=updatecheck,
+        )
+
+    # If we're doing the initial checkout from null, let's use the new fancier
+    # nativecheckout, since it has more efficient fetch mechanics.
+    # git backend only supports nativecheckout at present.
+    isclonecheckout = repo["."].node() == nullid
+
+    if (
+        repo.ui.configbool("experimental", "nativecheckout")
+        or (repo.ui.configbool("clone", "nativecheckout") and isclonecheckout)
+        or git.isgitstore(repo)
+    ):
+        wc = repo[None]
+
+        if (
+            not isclonecheckout
+            and (force or updatecheck != "noconflict")
+            and (wc.dirty(missing=True) or mergestate.read(repo).active())
+        ):
+            fallbackcheckout = (
+                "Working copy is dirty and --clean specified - not supported yet"
+            )
+        elif not hasattr(repo.fileslog, "contentstore"):
+            fallbackcheckout = "Repo does not have remotefilelog"
+        else:
+            fallbackcheckout = None
+
+        if fallbackcheckout:
+            repo.ui.debug("Not using native checkout: %s\n" % fallbackcheckout)
+        else:
+            # If the user is attempting to checkout for the first time, let's assume
+            # they don't have any pending changes and let's do a force checkout.
+            # This makes it much faster, by skipping the entire "check for unknown
+            # files" and "check for conflicts" code paths, and makes it so they
+            # aren't blocked by pending files and have to purge+clone over and over.
+            if isclonecheckout:
+                force = True
+
+            p1 = wc.parents()[0]
+            p2 = repo[node]
+
+            with repo.wlock():
+                ret = donativecheckout(
+                    repo,
+                    p1,
+                    p2,
+                    force,
+                    wc,
+                    querywatchmanrecrawls(repo),
+                )
+                if git.isgitformat(repo):
+                    git.submodulecheckout(p2, force=force)
+                return ret
+
+    return _update(
+        repo,
+        node,
+        force=force,
+        labels=labels,
+        updatecheck=updatecheck,
+    )
+
+
+def merge(
+    repo,
+    node,
+    force=False,
+    ancestor=None,
+    mergeancestor=False,
+    labels=None,
+    wc=None,
+):
+    _prefetchlazychildren(repo, node)
+
+    return _update(
+        repo,
+        node,
+        branchmerge=True,
+        ancestor=ancestor,
+        mergeancestor=mergeancestor,
+        force=force,
+        labels=labels,
+        wc=wc,
+    )
+
+
 @perftrace.tracefunc("Update")
 @util.timefunction("mergeupdate", 0, "ui")
-def update(
+def _update(
     repo,
     node,
     branchmerge=False,
@@ -2141,55 +2251,9 @@ def update(
     # that's now in destutil.py.
     assert node is not None
 
-    _prefetchlazychildren(repo, node)
-    _logupdatedistance(repo.ui, repo, node, branchmerge)
-
+    # Positive indication we aren't using eden fastpath for eden integration tests.
     if edenfs.requirement in repo.requirements:
-        if branchmerge:
-            # TODO: We potentially should support handling this scenario ourself in
-            # the future.  For now we simply haven't investigated what the correct
-            # semantics are in this case.
-            why_not_eden = 'branchmerge is "truthy:" %s.' % branchmerge
-        elif ancestor is not None:
-            # TODO: We potentially should support handling this scenario ourself in
-            # the future.  For now we simply haven't investigated what the correct
-            # semantics are in this case.
-            why_not_eden = "ancestor is not None: %s." % ancestor
-        elif wc is not None and wc.isinmemory():
-            # In memory merges do not operate on the working directory,
-            # so we don't need to ask eden to change the working directory state
-            # at all, and can use the vanilla merge logic in this case.
-            why_not_eden = "merge is in-memory"
-        else:
-            # TODO: Figure out what's the other cases here.
-            why_not_eden = None
-
-        if why_not_eden:
-            repo.ui.debug(
-                "falling back to non-eden update code path: %s\n" % why_not_eden
-            )
-        else:
-            from . import eden_update
-
-            return eden_update.update(
-                repo,
-                node,
-                branchmerge,
-                force,
-                ancestor,
-                mergeancestor,
-                labels,
-                updatecheck,
-                wc,
-            )
-
-    if not branchmerge and not force:
-        # TODO: remove the default once all callers that pass branchmerge=False
-        # and force=False pass a value for updatecheck. We may want to allow
-        # updatecheck='abort' to better suppport some of these callers.
-        if updatecheck is None:
-            updatecheck = "linear"
-        assert updatecheck in ("none", "linear", "noconflict")
+        repo.ui.debug("falling back to non-eden update code path: merge\n")
 
     with repo.wlock():
         prerecrawls = querywatchmanrecrawls(repo)
@@ -2207,60 +2271,6 @@ def update(
         p2 = repo[node]
 
         fp1, fp2, xp1, xp2 = p1.node(), p2.node(), str(p1), str(p2)
-
-        # If we're doing the initial checkout from null, let's use the new fancier
-        # nativecheckout, since it has more efficient fetch mechanics.
-        # git backend only supports nativecheckout at present.
-        isclonecheckout = repo["."].node() == nullid
-
-        # If the user is attempting to checkout for the first time, let's assume
-        # they don't have any pending changes and let's do a force checkout.
-        # This makes it much faster, by skipping the entire "check for unknown
-        # files" and "check for conflicts" code paths, and makes it so they
-        # aren't blocked by pending files and have to purge+clone over and over.
-        if isclonecheckout:
-            force = True
-
-        if (
-            repo.ui.configbool("experimental", "nativecheckout")
-            or (repo.ui.configbool("clone", "nativecheckout") and isclonecheckout)
-            or git.isgitstore(repo)
-        ):
-            if branchmerge:
-                fallbackcheckout = "branchmerge is not supported: %s" % branchmerge
-            elif ancestor is not None:
-                fallbackcheckout = "ancestor is not supported: %s" % ancestor
-            elif wc is not None and wc.isinmemory():
-                fallbackcheckout = "Native checkout does not work inmemory"
-            elif (
-                not isclonecheckout
-                and (force or updatecheck != "noconflict")
-                and (wc.dirty(missing=True) or mergestate.read(repo).active())
-            ):
-                fallbackcheckout = (
-                    "Working copy is dirty and --clean specified - not supported yet"
-                )
-            elif not hasattr(repo.fileslog, "contentstore"):
-                fallbackcheckout = "Repo does not have remotefilelog"
-            else:
-                fallbackcheckout = None
-
-            if fallbackcheckout:
-                repo.ui.debug("Not using native checkout: %s\n" % fallbackcheckout)
-            else:
-                ret = donativecheckout(
-                    repo,
-                    p1,
-                    p2,
-                    xp1,
-                    xp2,
-                    force,
-                    wc,
-                    prerecrawls,
-                )
-                if git.isgitformat(repo) and not wc.isinmemory():
-                    git.submodulecheckout(p2, force=force)
-                return ret
 
         if pas[0] is None:
             if repo.ui.configlist("merge", "preferancestor") == ["*"]:
@@ -2528,12 +2538,15 @@ def makenativecheckoutplan(repo, p1, p2, updateprogresspath=None):
 
 
 @util.timefunction("donativecheckout", 0, "ui")
-def donativecheckout(repo, p1, p2, xp1, xp2, force, wc, prerecrawls):
+def donativecheckout(repo, p1, p2, force, wc, prerecrawls):
     repo.ui.debug("Using native checkout\n")
     repo.ui.log(
         "nativecheckout",
         using_nativecheckout=True,
     )
+
+    xp1 = str(p1)
+    xp2 = str(p2)
 
     updateprogresspath = None
     if repo.ui.configbool("checkout", "resumable"):
@@ -2657,10 +2670,9 @@ def graft(repo, ctx, pctx, labels, keepparent=False):
     # which local deleted".
     mergeancestor = repo.changelog.isancestor(repo["."].node(), ctx.node())
 
-    stats = update(
+    stats = merge(
         repo,
         ctx.node(),
-        branchmerge=True,
         force=True,
         ancestor=pctx.node(),
         mergeancestor=mergeancestor,

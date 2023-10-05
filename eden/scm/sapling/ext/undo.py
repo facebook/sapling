@@ -166,9 +166,12 @@ def _runcommandwrapper(orig, lui, repo, cmd, fullargs, *args):
     #
     # To detect a write command, wrap all possible entries:
     #  - transaction.__init__
-    #  - merge.update
+    #  - merge.goto
+    #  - merge.merge
     w = extensions.wrappedfunction
-    with w(merge, "update", log), w(transaction.transaction, "__init__", log):
+    with w(merge, "goto", log), w(merge, "merge", log), w(
+        transaction.transaction, "__init__", log
+    ):
         try:
             result = orig(lui, repo, cmd, fullargs, *args)
         finally:

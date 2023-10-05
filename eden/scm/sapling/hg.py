@@ -891,7 +891,7 @@ def updaterepo(repo, node, overwrite, updatecheck=None):
     When overwrite is set, changes are clobbered, merged else
 
     returns stats (see pydoc merge.applyupdates)"""
-    return mergemod.update(
+    return mergemod.goto(
         repo,
         node,
         force=overwrite,
@@ -1009,7 +1009,7 @@ def updatetotally(
 def merge(repo, node, force=False, remind: bool = True, labels=None):
     """Branch merge with node, resolving changes. Return true if any
     unresolved conflicts."""
-    stats = mergemod.update(repo, node, branchmerge=True, force=force, labels=labels)
+    stats = mergemod.merge(repo, node, force=force, labels=labels)
     _showstats(repo, stats)
     if stats[3]:
         repo.ui.status(

@@ -9,26 +9,18 @@ This overrides the dirstate to check with the eden daemon for modifications,
 instead of doing a normal scan of the filesystem.
 """
 
-from . import error, localrepo, merge as mergemod, progress, pycompat, util
+from . import error, merge as mergemod, progress, pycompat, util
 from .i18n import _
 
-
-_repoclass = localrepo.localrepository
-
-
-# This function is called by merge.update() in the fast path
+# This function is called by merge.goto() in the fast path
 # to ask the eden daemon to perform the update operation.
 @util.timefunction("edenupdate", 0, "ui")
 def update(
     repo,
     node,
-    branchmerge,
-    force,
-    ancestor=None,
-    mergeancestor=False,
+    force=False,
     labels=None,
     updatecheck=None,
-    wc=None,
 ):
     repo.ui.debug("using eden update code path\n")
 
@@ -138,7 +130,7 @@ def update(
                 repo.dirstate.clear()
             # TODO(mbolin): Set the second parent, if appropriate.
             repo.setparents(destctx.node())
-            mergemod.recordupdates(repo, actions, branchmerge)
+            mergemod.recordupdates(repo, actions, False)
 
             # Clear the update state
             util.unlink(vfs.join("updatestate"))

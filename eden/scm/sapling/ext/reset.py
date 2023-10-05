@@ -95,7 +95,7 @@ def _moveto(repo, bookmark, ctx, clean=False):
     """
     # Move working copy over
     if clean:
-        merge.update(
+        merge.goto(
             repo,
             ctx.node(),
             force=True,

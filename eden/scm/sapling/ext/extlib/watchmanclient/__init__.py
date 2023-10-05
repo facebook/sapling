@@ -377,7 +377,7 @@ class state_update:
     def enter(self):
         # Make sure we have a wlock prior to sending notifications to watchman.
         # We don't want to race with other actors. In the update case,
-        # merge.update is going to take the wlock almost immediately. We are
+        # merge.merge/goto is going to take the wlock almost immediately. We are
         # effectively extending the lock around several short sanity checks.
         if self.oldnode is None:
             self.oldnode = self.repo["."].node()
