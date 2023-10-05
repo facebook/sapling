@@ -14,11 +14,27 @@
 #include "eden/fs/config/MountProtocol.h"
 #include "eden/fs/config/ParentCommit.h"
 #include "eden/fs/model/RootId.h"
+#include "eden/fs/store/BackingStoreType.h"
 #include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/Guid.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
+
+// List of supported repository types. This should stay in sync with the list
+// in the Rust CLI at fs/cli_rs/edenfs-client/src/checkout.rs and the list in
+// the Python CLI at fs/cli/config.py.
+constexpr BackingStoreType kSupportedRepositoryTypes[] = {
+    BackingStoreType::HG,
+    BackingStoreType::GIT,
+    BackingStoreType::RECAS,
+    BackingStoreType::EMPTY,
+    BackingStoreType::HTTP,
+};
+
+constexpr BackingStoreType kUnsupportedRespositoryTypes[] = {
+    BackingStoreType::FILTEREDHG,
+};
 
 /**
  * CheckoutConfig contains the configuration state for a single Eden checkout.
@@ -86,10 +102,17 @@ class CheckoutConfig {
   /**
    * Get the repository type.
    *
-   * Currently supported types include "git" and "hg".
+   * Currently supported types include "git", "hg", and "recas".
    */
   const std::string& getRepoType() const {
     return repoType_;
+  }
+
+  /**
+   * Get the BackingStoreType of the repo.
+   */
+  BackingStoreType getRepoBackingStoreType() const {
+    return toBackingStoreType(repoType_);
   }
 
   /**

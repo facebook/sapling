@@ -89,6 +89,9 @@ SNAPSHOT_MAGIC_2 = b"eden\x00\x00\x00\x02"
 SNAPSHOT_MAGIC_3 = b"eden\x00\x00\x00\x03"
 SNAPSHOT_MAGIC_4 = b"eden\x00\x00\x00\x04"
 
+# List of supported repository types. This should stay in sync with the list
+# in the Rust CLI at fs/cli_rs/edenfs-client/src/checkout.rs and the list in
+# the Daemon's CheckoutConfig at fs/config/CheckoutConfig.h.
 DEFAULT_REVISION = {  # supported repo name -> default bookmark
     "git": "refs/heads/master",
     "hg": "first(present(master) + .)",
