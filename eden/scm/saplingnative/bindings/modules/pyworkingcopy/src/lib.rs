@@ -17,6 +17,7 @@ use std::time::SystemTime;
 use anyhow::anyhow;
 use anyhow::Error;
 use cpython::*;
+use cpython_ext::convert::Serde;
 use cpython_ext::error::ResultPyErrExt;
 use cpython_ext::PyPathBuf;
 use io::IO;
@@ -25,10 +26,12 @@ use pathmatcher::Matcher;
 use pyconfigloader::config;
 use pypathmatcher::extract_matcher;
 use pypathmatcher::extract_option_matcher;
+use pypathmatcher::treematcher;
 use pytreestate::treestate;
 use rsworkingcopy::walker::WalkError;
 use rsworkingcopy::walker::Walker;
 use rsworkingcopy::workingcopy::WorkingCopy;
+use types::HgId;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "workingcopy"].join(".");
@@ -116,6 +119,53 @@ py_class!(pub class workingcopy |py| {
                 wc.status(matcher, last_write, include_ignored, &config, &io)
             }).map_pyerr(py)?
         )
+    }
+
+    // Fetch list of (treematcher, rule_details) to be unioned together.
+    // rule_details drive the sparse "explain" functionality.
+    def sparsematchers(
+        &self,
+        nodes: Serde<Vec<HgId>>,
+        raw_config: Option<(String, String)>,
+        debug_version: Option<String>,
+        no_catch_all: bool,
+    ) -> PyResult<Vec<(treematcher, Vec<String>)>> {
+        let wc = self.inner(py).read();
+
+        let mut prof = match raw_config {
+            Some((contents, source)) => sparse::Root::from_bytes(contents.into_bytes(), source).map_pyerr(py)?,
+            None => {
+                let repo_sparse_path = wc.dot_hg_path().join("sparse");
+                match util::file::read(&repo_sparse_path) {
+                    Ok(contents) => sparse::Root::from_bytes(contents, repo_sparse_path.display().to_string()).map_pyerr(py)?,
+                    Err(e) if e.is_not_found() => return Ok(Vec::new()),
+                    Err(e) => return Err(e).map_pyerr(py),
+                }
+            },
+        };
+
+        if debug_version.is_some() {
+            prof.set_version_override(debug_version);
+        }
+
+        prof.set_skip_catch_all(no_catch_all);
+
+        let overrides = rsworkingcopy::sparse::disk_overrides(wc.dot_hg_path()).map_pyerr(py)?;
+
+        let mut all_tree_matchers = Vec::new();
+        for node in &*nodes {
+            let mf = wc.tree_resolver().get(node).map_pyerr(py)?;
+            let matcher = rsworkingcopy::sparse::build_matcher(&prof, mf.read().clone(), wc.filestore(), &overrides).map_pyerr(py)?.0;
+            let tree_matchers = matcher.into_matchers();
+            if tree_matchers.is_empty() {
+                return Ok(Vec::new());
+            }
+            all_tree_matchers.extend(tree_matchers.into_iter());
+        }
+        all_tree_matchers
+            .into_iter()
+            .map(|(tm, origins)| Ok((treematcher::create_instance(py, Arc::new(tm))?, origins)))
+            .collect::<PyResult<Vec<_>>>()
     }
 });
 

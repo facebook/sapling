@@ -85,7 +85,7 @@ pub fn repo_matcher_with_overrides(
     Ok(Some((matcher, hasher.finish())))
 }
 
-fn build_matcher(
+pub fn build_matcher(
     prof: &sparse::Root,
     manifest: impl Manifest + Send + Sync + 'static,
     store: Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
@@ -180,7 +180,7 @@ pub fn config_overrides(config: impl Config) -> HashMap<String, String> {
     overrides
 }
 
-fn disk_overrides(dot_path: &Path) -> anyhow::Result<HashMap<String, String>> {
+pub fn disk_overrides(dot_path: &Path) -> anyhow::Result<HashMap<String, String>> {
     match util::file::open(dot_path.join(CONFIG_OVERRIDE_CACHE), "r") {
         Ok(f) => Ok(serde_json::from_reader(f)?),
         Err(err) if err.kind() != std::io::ErrorKind::NotFound => Err(err.into()),

@@ -78,6 +78,7 @@ pub struct WorkingCopy {
     format: StorageFormat,
     treestate: Arc<Mutex<TreeState>>,
     tree_resolver: ArcReadTreeManifest,
+    filestore: ArcReadFileContents,
     filesystem: Mutex<FileSystem>,
     ignore_matcher: Arc<GitignoreMatcher>,
     locker: Arc<RepoLocker>,
@@ -112,7 +113,7 @@ impl WorkingCopy {
             file_system_type,
             treestate.clone(),
             tree_resolver.clone(),
-            filestore,
+            filestore.clone(),
             locker.clone(),
         )?);
 
@@ -131,6 +132,7 @@ impl WorkingCopy {
             ident,
             treestate,
             tree_resolver,
+            filestore,
             filesystem,
             ignore_matcher,
             locker,
@@ -165,6 +167,14 @@ impl WorkingCopy {
 
     pub fn set_parents(&mut self, parents: &mut dyn Iterator<Item = &HgId>) -> Result<()> {
         self.treestate.lock().set_parents(parents)
+    }
+
+    pub fn filestore(&self) -> ArcReadFileContents {
+        self.filestore.clone()
+    }
+
+    pub fn tree_resolver(&self) -> ArcReadTreeManifest {
+        self.tree_resolver.clone()
     }
 
     pub(crate) fn current_manifests(
