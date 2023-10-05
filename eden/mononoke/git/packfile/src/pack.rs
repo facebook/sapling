@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::io::Write;
 
 use anyhow::Context;
@@ -27,6 +28,16 @@ use crate::types::PackfileItem;
 #[error(transparent)]
 pub struct PackfileError(#[from] anyhow::Error);
 
+/// The final representation of deltas in the packfile
+#[derive(Debug)]
+pub enum DeltaForm {
+    /// The deltas in the packfile can be either RefDelta or OffsetDelta
+    RefAndOffset,
+    /// All the deltas in packfile should be OffsetDeltas. Any RefDelta will be
+    /// converted to OffsetDelta
+    OnlyOffset,
+}
+
 /// Struct responsible for encoding and writing incoming stream
 /// of git object bytes as a packfile to `raw_writer`.
 pub struct PackfileWriter<T>
@@ -48,12 +59,16 @@ where
     /// Entries marking the offset at which each object in the packfile begins
     /// along with flag determining if the object actually exists at the offset.
     object_offset_with_validity: Vec<(u64, bool)>,
+    /// The form of deltas that should be allowed in the packfile
+    delta_form: DeltaForm,
+    /// Mapping from Object Id to index in `object_offset_with_validity`
+    object_id_with_index: HashMap<ObjectId, usize>,
 }
 
 #[allow(dead_code)]
 impl<T: AsyncWrite + Unpin> PackfileWriter<T> {
     /// Create a new packfile writer based on `raw_writer` for writing `count` entries to the Packfile.
-    pub fn new(raw_writer: T, count: u32) -> Self {
+    pub fn new(raw_writer: T, count: u32, delta_form: DeltaForm) -> Self {
         let hash_writer = AsyncHashWriter::new(raw_writer);
         Self {
             hash_writer,
@@ -63,6 +78,8 @@ impl<T: AsyncWrite + Unpin> PackfileWriter<T> {
             // Git uses V2 right now so we do the same
             header_info: Some((Version::V2, count)),
             object_offset_with_validity: Vec::with_capacity(count as usize),
+            object_id_with_index: HashMap::with_capacity(count as usize),
+            delta_form,
         }
     }
 
@@ -88,7 +105,7 @@ impl<T: AsyncWrite + Unpin> PackfileWriter<T> {
             let entry = entry
                 .await
                 .context("Failure in getting packfile item entry")?;
-            let entry: Entry = entry
+            let mut entry: Entry = entry
                 .try_into()
                 .context("Failure in converting PackfileItem to Entry")?;
             // Will be false for all our cases since we generate the entry with the object ID in hand. Including here for
@@ -98,6 +115,13 @@ impl<T: AsyncWrite + Unpin> PackfileWriter<T> {
             }
             // The current object will be written at offset `size`.
             self.object_offset_with_validity.push((self.size, true));
+            if let DeltaForm::OnlyOffset = self.delta_form {
+                // The pack is allowed to have only offset deltas. Convert any ref deltas into
+                // offset deltas before writing to pack
+                self.object_id_with_index
+                    .insert(entry.id.clone(), self.object_offset_with_validity.len() - 1);
+                entry = self.convert_ref_delta_to_offset_delta(entry)?;
+            }
             // Since the packfile is version 2, the entry should follow the same version
             let header = entry.to_entry_header(Version::V2, |index| {
                 let (base_offset, is_valid_object) = self.object_offset_with_validity[index];
@@ -144,5 +168,21 @@ impl<T: AsyncWrite + Unpin> PackfileWriter<T> {
     /// the underlying raw writer.
     pub fn into_write(self) -> T {
         self.hash_writer.inner
+    }
+
+    fn convert_ref_delta_to_offset_delta(&self, entry: Entry) -> Result<Entry> {
+        match entry.kind {
+            gix_pack::data::output::entry::Kind::Base(_) => Ok(entry),
+            gix_pack::data::output::entry::Kind::DeltaRef { .. } => Ok(entry),
+            gix_pack::data::output::entry::Kind::DeltaOid { id } => {
+                let object_index = self
+                    .object_id_with_index
+                    .get(&id)
+                    .ok_or_else(|| anyhow::anyhow!("Couldn't find index for {}", id))?
+                    .clone();
+                let kind = gix_pack::data::output::entry::Kind::DeltaRef { object_index };
+                Ok(Entry { kind, ..entry })
+            }
+        }
     }
 }

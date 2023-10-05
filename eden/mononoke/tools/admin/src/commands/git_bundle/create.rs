@@ -22,6 +22,7 @@ use futures::StreamExt;
 use futures::TryStreamExt;
 use gix_hash::ObjectId;
 use packfile::bundle::BundleWriter;
+use packfile::pack::DeltaForm;
 use packfile::types::PackfileItem;
 use walkdir::WalkDir;
 
@@ -120,6 +121,7 @@ pub async fn create(_ctx: &CoreContext, create_args: CreateBundleArgs) -> Result
         refs_to_include.into_iter().collect(),
         None,
         object_count as u32,
+        DeltaForm::RefAndOffset,
     )
     .await?;
     let object_stream =

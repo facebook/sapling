@@ -24,6 +24,7 @@ use sha1::Sha1;
 /// The type of items that can be present in a Git packfile. Does not include RefDelta currently
 /// since we do not use it
 /// See: https://fburl.com/1yaui1um
+#[derive(Debug)]
 pub enum PackfileItem {
     Base(BaseObject),
     OidDelta(DeltaOidObject),
@@ -69,6 +70,7 @@ pub enum PackfileItemType {
 
 /// Struct representing the DeltaOid variant of the packfile item. Used to express
 /// a target object as a delta of a hash-identified base object
+#[derive(Debug)]
 pub struct DeltaOidObject {
     /// The ObjectId of the object that would be constructed using the delta
     oid: ObjectId,
@@ -118,6 +120,7 @@ impl TryFrom<DeltaOidObject> for output::Entry {
 }
 
 /// Struct representing a base Git object that can be included in packfiles
+#[derive(Debug)]
 pub struct BaseObject {
     object: Object,
     hash: ObjectId,

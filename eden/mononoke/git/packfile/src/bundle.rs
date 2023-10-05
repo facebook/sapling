@@ -14,6 +14,7 @@ use gix_hash::ObjectId;
 use tokio::io::AsyncWrite;
 use tokio::io::AsyncWriteExt;
 
+use crate::pack::DeltaForm;
 use crate::pack::PackfileWriter;
 use crate::types::PackfileItem;
 
@@ -60,6 +61,7 @@ impl<T: AsyncWrite + Unpin> BundleWriter<T> {
         refs: Vec<(String, ObjectId)>,
         prereqs: Option<Vec<ObjectId>>,
         num_objects: u32,
+        delta_form: DeltaForm,
     ) -> Result<Self> {
         // Append the bundle header
         writer
@@ -81,7 +83,7 @@ impl<T: AsyncWrite + Unpin> BundleWriter<T> {
         }
         // Newline before starting packfile
         writer.write_all(b"\n").await?;
-        let pack_writer = PackfileWriter::new(writer, num_objects);
+        let pack_writer = PackfileWriter::new(writer, num_objects, delta_form);
         Ok(Self {
             version: BundleVersion::V2,
             refs,
