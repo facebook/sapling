@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::io::Write;
+
 use anyhow::Context;
 use async_trait::async_trait;
 use blobstore::impl_loadable_storable;
@@ -16,6 +18,8 @@ use context::CoreContext;
 use filestore::hash_bytes;
 use filestore::ExpectedSize;
 use filestore::Sha1IncrementalHasher;
+use flate2::write::ZlibEncoder;
+use flate2::Compression;
 use futures::future;
 use futures::stream;
 use futures::stream::BoxStream;
@@ -31,7 +35,6 @@ use crate::delta::DeltaInstructions;
 use crate::errors::GitError;
 use crate::thrift::Tree as ThriftTree;
 use crate::thrift::TreeHandle as ThriftTreeHandle;
-use crate::zlib_writer::AsyncZlibEncoder;
 use crate::Tree;
 use crate::TreeHandle;
 
@@ -89,7 +92,7 @@ where
 }
 
 /// Free function for fetching the raw bytes of stored git objects
-pub(crate) async fn fetch_git_object_bytes<B>(
+pub async fn fetch_git_object_bytes<B>(
     ctx: &CoreContext,
     blobstore: &B,
     git_hash: &gix_hash::oid,
@@ -150,17 +153,24 @@ pub async fn store_delta_instructions<B>(
 where
     B: Blobstore + Clone,
 {
-    // Zlib encode the instructions when writing to buffer
-    let mut raw_instruction_bytes = AsyncZlibEncoder::new(Vec::new());
+    let mut raw_instruction_bytes = Vec::new();
     instructions
         .write(&mut raw_instruction_bytes)
         .await
         .context("Error in converting DeltaInstructions to raw bytes")?;
-    let uncompressed_bytes = raw_instruction_bytes.bytes_written();
-    let raw_instruction_bytes = raw_instruction_bytes.into_inner();
-    let compressed_bytes = raw_instruction_bytes.len() as u64;
+    let uncompressed_bytes = raw_instruction_bytes.len() as u64;
+    // Zlib encode the instructions before writing to the store
+    let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
+    encoder
+        .write_all(&raw_instruction_bytes)
+        .context("Failure in writing raw delta instruction bytes to ZLib buffer")?;
+    let compressed_instruction_bytes = encoder
+        .finish()
+        .context("Failure in ZLib encoding delta instruction bytes")?;
+    let compressed_bytes = compressed_instruction_bytes.len() as u64;
     let size = ExpectedSize::new(compressed_bytes);
-    let raw_instructions_stream = stream::once(future::ok(Bytes::from(raw_instruction_bytes)));
+    let raw_instructions_stream =
+        stream::once(future::ok(Bytes::from(compressed_instruction_bytes)));
     let chunk_stream = filestore::make_chunks(raw_instructions_stream, size, chunk_size);
     let chunks = match chunk_stream {
         filestore::Chunks::Inline(fallible_bytes) => {

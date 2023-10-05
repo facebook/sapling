@@ -27,7 +27,6 @@ mod manifest;
 mod object;
 mod store;
 mod tree;
-mod zlib_writer;
 
 pub use delta_manifest::ObjectKind as DeltaObjectKind;
 pub use object::ObjectKind;
@@ -36,6 +35,7 @@ pub use crate::blob::BlobHandle;
 pub use crate::commit::MappedGitCommitId;
 pub use crate::derive_delta_manifest::RootGitDeltaManifestId;
 pub use crate::errors::GitError;
+pub use crate::store::fetch_delta_instructions;
 pub use crate::store::fetch_git_object;
 pub use crate::store::upload_git_object;
 pub use crate::tree::Tree;

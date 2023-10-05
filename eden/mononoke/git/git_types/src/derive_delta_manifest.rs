@@ -996,8 +996,8 @@ mod test {
             .deltas
             .first()
             .expect("Expected a delta variant for path '10'");
-        // Validate that the size of the encoded instructions is less than the size of the raw instructions
-        assert!(delta.instructions_compressed_size < delta.instructions_uncompressed_size);
+        // We can't make any assertions about the size of the delta instructions since they can be larger than the
+        // size of the actual object itself if the object is too small
         let chunk_prefix = DeltaInstructionChunkIdPrefix::new(
             cs_id,
             MPath::new("10")?,
