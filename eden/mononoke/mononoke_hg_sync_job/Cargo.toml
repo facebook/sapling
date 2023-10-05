@@ -15,7 +15,7 @@ name = "mononoke_hg_sync_job"
 path = "src/main.rs"
 
 [dependencies]
-anyhow = "1.0.71"
+anyhow = "=1.0.72"
 assembly_line = { version = "0.1.0", path = "../common/assembly_line" }
 async-stream = "0.3"
 async-trait = "0.1.71"

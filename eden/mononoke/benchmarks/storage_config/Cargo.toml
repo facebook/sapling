@@ -12,7 +12,7 @@ name = "benchmark_storage_config"
 test = false
 
 [dependencies]
-anyhow = "1.0.71"
+anyhow = "=1.0.72"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
 cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }

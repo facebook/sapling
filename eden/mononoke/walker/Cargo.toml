@@ -9,7 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 ahash = "0.8"
-anyhow = "1.0.71"
+anyhow = "=1.0.72"
 array-init = "0.1"
 async-trait = "0.1.71"
 async_compression = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

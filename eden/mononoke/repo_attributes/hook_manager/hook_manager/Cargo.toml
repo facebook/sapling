@@ -12,7 +12,7 @@ test = false
 doctest = false
 
 [dependencies]
-anyhow = "1.0.71"
+anyhow = "=1.0.72"
 async-trait = "0.1.71"
 bookmarks_types = { version = "0.1.0", path = "../../../bookmarks/bookmarks_types" }
 bytes = { version = "1.1", features = ["serde"] }

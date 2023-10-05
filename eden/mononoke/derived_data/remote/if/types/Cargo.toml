@@ -14,7 +14,7 @@ test = false
 doctest = false
 
 [dependencies]
-anyhow = "1.0.71"
+anyhow = "=1.0.72"
 codegen_includer_proc_macro = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 derived_data_thrift = { version = "0.1.0", path = "../../../changeset_info/if" }
 fb303_core = { version = "0.0.0", git = "https://github.com/facebook/fb303.git", branch = "main" }

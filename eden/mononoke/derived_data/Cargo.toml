@@ -12,7 +12,7 @@ name = "derived_data_test"
 path = "test/derived_data_test.rs"
 
 [dependencies]
-anyhow = "1.0.71"
+anyhow = "=1.0.72"
 async-trait = "0.1.71"
 blobstore = { version = "0.1.0", path = "../blobstore" }
 context = { version = "0.1.0", path = "../server/context" }

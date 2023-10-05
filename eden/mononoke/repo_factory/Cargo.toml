@@ -9,7 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 acl_regions = { version = "0.1.0", path = "../acl_regions" }
-anyhow = "1.0.71"
+anyhow = "=1.0.72"
 async_once_cell = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
 blobstore_factory = { version = "0.1.0", path = "../blobstore/factory" }

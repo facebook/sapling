@@ -12,7 +12,7 @@ name = "blobstore_sync_queue_test"
 path = "test/main.rs"
 
 [dependencies]
-anyhow = "1.0.71"
+anyhow = "=1.0.72"
 async-trait = "0.1.71"
 auto_impl = "1.1.0"
 context = { version = "0.1.0", path = "../server/context" }

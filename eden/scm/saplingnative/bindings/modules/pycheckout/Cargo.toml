@@ -6,7 +6,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.71"
+anyhow = "=1.0.72"
 async-runtime = { version = "0.1.0", path = "../../../../lib/async-runtime" }
 checkout = { version = "0.1.0", path = "../../../../lib/checkout" }
 cpython = { version = "0.7.1", default-features = false }

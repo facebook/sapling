@@ -13,7 +13,7 @@ name = "bench"
 harness = false
 
 [dependencies]
-anyhow = "1.0.71"
+anyhow = "=1.0.72"
 base64 = "0.13"
 configmodel = { version = "0.1.0", path = "../model" }
 configset = { version = "0.1.0", path = "../set" }

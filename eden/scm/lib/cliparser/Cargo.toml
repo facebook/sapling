@@ -14,7 +14,7 @@ shlex = "1.0"
 thiserror = "1.0.43"
 
 [dev-dependencies]
-anyhow = "1.0.71"
+anyhow = "=1.0.72"
 
 [features]
 default = []

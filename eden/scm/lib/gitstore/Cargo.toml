@@ -10,7 +10,7 @@ name = "read_obj"
 harness = false
 
 [dependencies]
-anyhow = "1.0.71"
+anyhow = "=1.0.72"
 async-trait = "0.1.71"
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 git2 = "0.14"

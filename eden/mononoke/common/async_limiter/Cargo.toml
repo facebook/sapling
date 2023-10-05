@@ -9,7 +9,7 @@ license = "GPLv2+"
 autoexamples = false
 
 [dependencies]
-anyhow = "1.0.71"
+anyhow = "=1.0.72"
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 governor = "0.3.2"
 thiserror = "1.0.43"
