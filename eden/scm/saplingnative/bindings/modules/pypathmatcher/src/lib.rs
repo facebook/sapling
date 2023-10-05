@@ -118,19 +118,19 @@ py_class!(pub class treematcher |py| {
     }
 
     def matches(&self, path: &PyPath) -> PyResult<bool> {
-        Ok(self.matcher(py).matches(path))
+        Ok(self.matcher(py).matches(path.as_str()))
     }
 
     def match_recursive(&self, path: &PyPath) -> PyResult<Option<bool>> {
         if path.as_path().as_os_str().is_empty() {
             Ok(None)
         } else {
-            Ok(self.matcher(py).match_recursive(path))
+            Ok(self.matcher(py).match_recursive(path.as_str()))
         }
     }
 
     def matching_rule_indexes(&self, path: &PyPath) -> PyResult<Vec<usize>> {
-        Ok(self.matcher(py).matching_rule_indexes(path))
+        Ok(self.matcher(py).matching_rule_indexes(path.as_str()))
     }
 });
 

@@ -143,7 +143,7 @@ impl SparseProfileMonitoring {
                             .monitoring_profiles_only_matcher
                             .as_ref()
                             .map_or_else(|| &self.profiles_location_with_excludes_matcher, |m| m);
-                        Ok(match matcher.matches(path.to_string()) {
+                        Ok(match matcher.matches(path.to_string().as_str()) {
                             // Since None in MononokePath is a root repo directory
                             // and we are returning list of profiles
                             // we can safely filter that out.
@@ -182,7 +182,7 @@ impl SparseProfileMonitoring {
             MonitoringProfiles::Exact { .. } => &self.exact_profiles_matcher,
             MonitoringProfiles::All => &self.profiles_location_with_excludes_matcher,
         };
-        matcher.matches(path.to_string())
+        matcher.matches(path.to_string().as_str())
     }
 
     pub async fn get_profile_size(

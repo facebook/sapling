@@ -9,7 +9,7 @@
 //!
 //! [TreeMatcher] is the main structure.
 
-use std::path::Path;
+use std::borrow::Cow;
 
 use anyhow::Result;
 use bitflags::bitflags;
@@ -59,6 +59,8 @@ pub struct TreeMatcher {
     // Flags (ex. negative rule or is it a parent directory) for additional
     // information matching the pattern indexes.
     rule_info: Vec<RuleInfo>,
+
+    case_sensitive: bool,
 }
 
 impl TreeMatcher {
@@ -104,6 +106,12 @@ impl TreeMatcher {
                 rule
             };
 
+            let rule = if case_sensitive {
+                rule.to_string()
+            } else {
+                rule.to_lowercase()
+            };
+
             // "{", "}" do not have special meaning in gitignore, while
             // globset treats them differently.
             //
@@ -128,7 +136,7 @@ impl TreeMatcher {
             while let Some(index) = next_path_separator(rule_bytes, sep_index) {
                 if index > 0 && index < rule_bytes.len() - 1 {
                     let parent_rule = &rule[..index];
-                    for glob in build_globs(parent_rule, case_sensitive)? {
+                    for glob in build_globs(parent_rule)? {
                         builder.add(glob);
                         rule_info.push(RuleInfo {
                             flags: flag | RuleFlags::PARENT,
@@ -146,7 +154,7 @@ impl TreeMatcher {
             // Insert the rule.
             // NOTE: This crate depends on the fact that "a/**" matches "a", although
             // the documentation of globset might say otherwise.
-            for glob in build_globs(&rule, case_sensitive)? {
+            for glob in build_globs(&rule)? {
                 builder.add(glob);
                 rule_info.push(RuleInfo {
                     flags: flag,
@@ -159,6 +167,7 @@ impl TreeMatcher {
         let matcher = Self {
             glob_set,
             rule_info,
+            case_sensitive,
         };
         Ok(matcher)
     }
@@ -181,13 +190,18 @@ impl TreeMatcher {
     /// Return `None` if there is no fast path.
     ///
     /// `/` should be used as the path separator, regardless of system.
-    pub fn match_recursive(&self, dir: impl AsRef<Path>) -> Option<bool> {
-        let dir = dir.as_ref();
+    pub fn match_recursive(&self, dir: &str) -> Option<bool> {
+        let dir = if self.case_sensitive {
+            Cow::from(dir)
+        } else {
+            Cow::from(dir.to_lowercase())
+        };
+
         // A subpath may match - cannot return Some(false)
         let mut subpath_may_match = false;
         // A subpath may mismatch - cannot return Some(true)
         let mut subpath_may_mismatch = false;
-        for id in self.glob_set.matches(dir).into_iter().rev() {
+        for id in self.glob_set.matches(&*dir).into_iter().rev() {
             let flag = self.rule_info[id].flags;
             if flag.contains(RuleFlags::PARENT) {
                 // An auto-generated parent rule matches.
@@ -220,7 +234,7 @@ impl TreeMatcher {
 
         if subpath_may_match {
             None
-        } else if !self.rule_info.is_empty() && dir.to_str() == Some("") {
+        } else if !self.rule_info.is_empty() && dir.is_empty() {
             // Special case: empty dir
             None
         } else {
@@ -231,8 +245,14 @@ impl TreeMatcher {
     /// Return if `path` matches with the matcher.
     ///
     /// `/` should be used as the path separator, regardless of system.
-    pub fn matches(&self, path: impl AsRef<Path>) -> bool {
-        for id in self.glob_set.matches(path).into_iter().rev() {
+    pub fn matches(&self, path: &str) -> bool {
+        let path = if self.case_sensitive {
+            Cow::from(path)
+        } else {
+            Cow::from(path.to_lowercase())
+        };
+
+        for id in self.glob_set.matches(&*path).into_iter().rev() {
             let flag = self.rule_info[id].flags;
             if flag.contains(RuleFlags::PARENT) {
                 // For full path matches, parent rules do not count.
@@ -251,10 +271,16 @@ impl TreeMatcher {
 
     /// Similar to matches, but return rule indexes matching the given path.
     /// Includes both positive and negative rules.
-    pub fn matching_rule_indexes(&self, path: impl AsRef<Path>) -> Vec<usize> {
+    pub fn matching_rule_indexes(&self, path: &str) -> Vec<usize> {
+        let path = if self.case_sensitive {
+            Cow::from(path)
+        } else {
+            Cow::from(path.to_lowercase())
+        };
+
         let mut idxs: Vec<usize> = self
             .glob_set
-            .matches(path)
+            .matches(&*path)
             .into_iter()
             .filter_map(|idx: usize| {
                 let info = &self.rule_info[idx];
@@ -285,7 +311,7 @@ impl Matcher for TreeMatcher {
     }
 }
 
-fn build_globs(pat: &str, case_sensitive: bool) -> Result<Vec<Glob>, globset::Error> {
+fn build_globs(pat: &str) -> Result<Vec<Glob>, globset::Error> {
     // Fast path (maybe).
     if pat.ends_with("/**") {
         let prefix = &pat[..pat.len() - 3];
@@ -302,7 +328,7 @@ fn build_globs(pat: &str, case_sensitive: bool) -> Result<Vec<Glob>, globset::Er
                 .map(|r| {
                     GlobBuilder::new(r)
                         .backslash_escape(true)
-                        .case_insensitive(!case_sensitive)
+                        .case_insensitive(false)
                         .build()
                 })
                 .collect();
@@ -313,12 +339,12 @@ fn build_globs(pat: &str, case_sensitive: bool) -> Result<Vec<Glob>, globset::Er
                 GlobBuilder::new(prefix)
                     .backslash_escape(true)
                     .literal_separator(true)
-                    .case_insensitive(!case_sensitive)
+                    .case_insensitive(false)
                     .build()?,
                 GlobBuilder::new(pat)
                     .backslash_escape(true)
                     .literal_separator(true)
-                    .case_insensitive(!case_sensitive)
+                    .case_insensitive(false)
                     .build()?,
             ]);
         }
@@ -328,7 +354,7 @@ fn build_globs(pat: &str, case_sensitive: bool) -> Result<Vec<Glob>, globset::Er
     let glob = GlobBuilder::new(pat)
         .literal_separator(true) // `*` or `?` should not match `/`
         .backslash_escape(true)
-        .case_insensitive(!case_sensitive)
+        .case_insensitive(false)
         .build()?;
     Ok(vec![glob])
 }
@@ -361,7 +387,7 @@ fn next_path_separator(pat: &[u8], start: usize) -> Option<usize> {
 }
 
 /// Escape `{` and `}` so they no longer have special meanings to `globset`.
-fn escape_curly_brackets(pat: &str) -> String {
+fn escape_curly_brackets(pat: String) -> String {
     if pat.contains('{') || pat.contains('}') {
         let mut result = String::with_capacity(pat.len() * 2);
         for ch in pat.chars() {
@@ -374,7 +400,7 @@ fn escape_curly_brackets(pat: &str) -> String {
         result
     } else {
         // No escaping is needed
-        pat.to_string()
+        pat
     }
 }
 
