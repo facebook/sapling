@@ -411,4 +411,16 @@ struct NfsCrawlDetected {
   }
 };
 
+struct HgImportFailure {
+  static constexpr const char* type = "hgimport_failure";
+
+  std::string hgImportMethod = "";
+  std::string hgImportResult = "";
+
+  void populate(DynamicEvent& event) const {
+    event.addString("method", hgImportMethod);
+    event.addString("reason", hgImportResult);
+  }
+};
+
 } // namespace facebook::eden

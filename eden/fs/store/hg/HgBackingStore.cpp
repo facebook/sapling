@@ -94,12 +94,17 @@ ObjectId hashFromRootId(const RootId& root) {
  */
 class HgImporterThreadFactory : public folly::InitThreadFactory {
  public:
-  HgImporterThreadFactory(AbsolutePathPiece repository, EdenStatsPtr stats)
+  HgImporterThreadFactory(
+      AbsolutePathPiece repository,
+      EdenStatsPtr stats,
+      std::shared_ptr<StructuredLogger> logger)
       : folly::InitThreadFactory(
             std::make_shared<folly::NamedThreadFactory>("HgImporter"),
-            [repository = AbsolutePath{repository}, stats = std::move(stats)] {
+            [repository = AbsolutePath{repository},
+             stats = std::move(stats),
+             logger] {
               threadLocalImporter.reset(
-                  new HgImporterManager(repository, stats.copy()));
+                  new HgImporterManager(repository, stats.copy(), logger));
             },
             [] {
               if (folly::kIsWindows) {
@@ -171,7 +176,10 @@ HgBackingStore::HgBackingStore(
            */
           make_unique<folly::UnboundedBlockingQueue<
               folly::CPUThreadPoolExecutor::CPUTask>>(),
-          std::make_shared<HgImporterThreadFactory>(repository, stats.copy()))),
+          std::make_shared<HgImporterThreadFactory>(
+              repository,
+              stats.copy(),
+              logger))),
       config_(std::move(config)),
       serverThreadPool_(serverThreadPool),
       logger_(std::move(logger)),

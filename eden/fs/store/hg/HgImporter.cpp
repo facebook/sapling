@@ -32,6 +32,7 @@
 #include "eden/fs/store/hg/HgImportPyError.h"
 #include "eden/fs/store/hg/HgProxyHash.h"
 #include "eden/fs/telemetry/EdenStats.h"
+#include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/SpawnedProcess.h"
 
@@ -590,13 +591,15 @@ const ImporterOptions& HgImporter::getOptions() const {
 HgImporterManager::HgImporterManager(
     AbsolutePathPiece repoPath,
     EdenStatsPtr stats,
+    std::shared_ptr<StructuredLogger> logger,
     std::optional<AbsolutePath> importHelperScript)
     : repoPath_{repoPath},
       stats_{std::move(stats)},
+      logger_{std::move(logger)},
       importHelperScript_{importHelperScript} {}
 
 template <typename Fn>
-auto HgImporterManager::retryOnError(Fn&& fn) {
+auto HgImporterManager::retryOnError(Fn&& fn, StringPiece func) {
   bool retried = false;
 
   auto retryableError = [this, &retried](const std::exception& ex) {
@@ -609,43 +612,55 @@ auto HgImporterManager::retryOnError(Fn&& fn) {
     }
   };
 
-  while (true) {
-    try {
-      return fn(getImporter());
-    } catch (const HgImportPyError& ex) {
-      if (ex.errorType() == "ResetRepoError") {
-        // The python code thinks its repository state has gone bad, and
-        // is requesting to be restarted
+  try {
+    while (true) {
+      try {
+        return fn(getImporter());
+      } catch (const HgImportPyError& ex) {
+        if (ex.errorType() == "ResetRepoError") {
+          // The python code thinks its repository state has gone bad, and
+          // is requesting to be restarted
+          retryableError(ex);
+        } else {
+          throw;
+        }
+      } catch (const HgImporterError& ex) {
         retryableError(ex);
-      } else {
-        throw;
       }
-    } catch (const HgImporterError& ex) {
-      retryableError(ex);
     }
+  } catch (const std::exception& ex) {
+    logger_->logEvent(
+        HgImportFailure{folly::to<string>(func), folly::to<string>(ex.what())});
+    throw;
   }
 }
 
 Hash20 HgImporterManager::resolveManifestNode(StringPiece revName) {
-  return retryOnError([&](HgImporter* importer) {
-    return importer->resolveManifestNode(revName);
-  });
+  return retryOnError(
+      [&](HgImporter* importer) {
+        return importer->resolveManifestNode(revName);
+      },
+      __func__);
 }
 
 BlobPtr HgImporterManager::importFileContents(
     RelativePathPiece path,
     Hash20 blobHash) {
-  return retryOnError([=](HgImporter* importer) {
-    return importer->importFileContents(path, blobHash);
-  });
+  return retryOnError(
+      [=](HgImporter* importer) {
+        return importer->importFileContents(path, blobHash);
+      },
+      __func__);
 }
 
 std::unique_ptr<IOBuf> HgImporterManager::fetchTree(
     RelativePathPiece path,
     Hash20 pathManifestNode) {
-  return retryOnError([&](HgImporter* importer) {
-    return importer->fetchTree(path, pathManifestNode);
-  });
+  return retryOnError(
+      [&](HgImporter* importer) {
+        return importer->fetchTree(path, pathManifestNode);
+      },
+      __func__);
 }
 
 HgImporter* HgImporterManager::getImporter() {

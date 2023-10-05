@@ -30,6 +30,7 @@ namespace facebook::eden {
 class Hash20;
 class HgManifestImporter;
 class StoreResult;
+class StructuredLogger;
 class HgProxyHash;
 
 /**
@@ -290,6 +291,7 @@ class HgImporterManager : public Importer {
   HgImporterManager(
       AbsolutePathPiece repoPath,
       EdenStatsPtr,
+      std::shared_ptr<StructuredLogger> logger,
       std::optional<AbsolutePath> importHelperScript = std::nullopt);
 
   Hash20 resolveManifestNode(folly::StringPiece revName) override;
@@ -301,7 +303,7 @@ class HgImporterManager : public Importer {
 
  private:
   template <typename Fn>
-  auto retryOnError(Fn&& fn);
+  auto retryOnError(Fn&& fn, folly::StringPiece func);
 
   HgImporter* getImporter();
   void resetHgImporter(const std::exception& ex);
@@ -310,6 +312,7 @@ class HgImporterManager : public Importer {
 
   const AbsolutePath repoPath_;
   EdenStatsPtr const stats_;
+  std::shared_ptr<StructuredLogger> logger_;
   const std::optional<AbsolutePath> importHelperScript_;
 };
 
