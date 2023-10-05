@@ -67,6 +67,7 @@ impl<'a> Builder<'a> {
     /// Build the client.
     pub fn build(self) -> Result<Arc<dyn EdenApi>, EdenApiError> {
         {
+            // Hook in other EdenAPI implementations such as eagerepo (used for tests).
             let funcs = CUSTOM_BUILD_FUNCS.read();
             for func in funcs.iter() {
                 if let Some(client) = func(self.config)? {
