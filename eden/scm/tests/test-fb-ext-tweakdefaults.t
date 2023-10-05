@@ -4,7 +4,7 @@
   $ . "$TESTDIR/histedit-helpers.sh"
 
   $ enable amend histedit rebase tweakdefaults
-  $ setconfig experimental.updatecheck=noconflict
+  $ setconfig commands.update.check=noconflict
   $ setconfig ui.suggesthgprev=True
 
 Setup repo

@@ -455,8 +455,6 @@ class UpdateTest(EdenHgTestCase):
         result = self.repo.run_hg(
             "update",
             new_commit,
-            "--config",
-            "experimental.updatecheck=noconflict",
             check=False,
             traceback=False,
         )

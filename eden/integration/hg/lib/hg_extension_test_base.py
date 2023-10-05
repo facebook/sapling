@@ -29,12 +29,6 @@ def get_default_hgrc() -> configparser.ConfigParser:
     cases and test case variants.
     """
     hgrc = configparser.ConfigParser()
-    # TODO(mbolin): This is supposed to replace experimental.updatecheck,
-    # but it does not appear to be taking effect today. The
-    # experimental.updatecheck setting on this hgrc should be removed once
-    # it has been deprecated and update.check does what it is supposed to
-    # do.
-    hgrc["commands"] = {"update.check": "noconflict"}
     hgrc["ui"] = {
         "origbackuppath": ".hg/origbackups",
         "username": "Kevin Flynn <lightcyclist@example.com>",
@@ -42,7 +36,6 @@ def get_default_hgrc() -> configparser.ConfigParser:
     hgrc["experimental"] = {
         "evolution": "createmarkers",
         "evolutioncommands": "prev next split fold obsolete metaedit",
-        "updatecheck": "noconflict",
     }
     hgrc["extensions"] = {
         "absorb": "",

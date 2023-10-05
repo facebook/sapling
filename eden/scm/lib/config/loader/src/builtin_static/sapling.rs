@@ -111,7 +111,6 @@ narrow-heads=True
 new-clone-path=True
 rebase.multidest=True
 samplestatus=3
-updatecheck=noconflict
 verifyhiddencache=False
 worddiff=True
 mmapindexthreshold=1

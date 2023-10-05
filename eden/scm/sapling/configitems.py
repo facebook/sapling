@@ -157,13 +157,7 @@ coreconfigitem("commands", "show.aliasprefix", default=list)
 coreconfigitem("commands", "status.relative", default=False)
 coreconfigitem("commands", "status.skipstates", default=[])
 coreconfigitem("commands", "status.verbose", default=False)
-coreconfigitem(
-    "commands",
-    "update.check",
-    default=None,
-    # Deprecated, remove after 4.4 release
-    alias=[("experimental", "updatecheck")],
-)
+coreconfigitem("commands", "update.check", default="noconflict")
 coreconfigitem("commands", "update.requiredest", default=False)
 coreconfigitem("commands", "new-pull", default=True)
 coreconfigitem("commit", "description-size-limit", default=None)

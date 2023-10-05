@@ -2105,7 +2105,7 @@ def update(
     dirty, whether a revision is specified, and the relationship of the parent
     rev to the target rev (linear or not). Match from top first. The -n
     option doesn't exist on the command line, but represents the
-    experimental.updatecheck=noconflict option.
+    commands.update.check=noconflict option.
 
     This logic is tested by test-update-branches.t.
 
