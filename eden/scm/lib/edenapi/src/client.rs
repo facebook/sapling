@@ -17,6 +17,8 @@ use std::time::Duration;
 use anyhow::format_err;
 use async_trait::async_trait;
 use bytes::Bytes as RawBytes;
+use clientinfo::ClientInfo;
+use clientinfo_async::get_client_request_info_task_local;
 use edenapi_types::make_hash_lookup_request;
 use edenapi_types::AlterSnapshotRequest;
 use edenapi_types::AlterSnapshotResponse;
@@ -242,6 +244,12 @@ impl Client {
 
         if let Some(mts) = &config.min_transfer_speed {
             req.set_min_transfer_speed(*mts);
+        }
+
+        if let Some(client_info) = get_client_request_info_task_local() {
+            let client_info_json: String =
+                ClientInfo::new_with_client_request_info(client_info)?.to_json()?;
+            req.set_client_info(&Some(client_info_json));
         }
 
         Ok(req)

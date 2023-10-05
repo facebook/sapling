@@ -66,6 +66,17 @@ impl ClientInfo {
         })
     }
 
+    /// Creates a new ClientInfo object with given ClientRequestInfo
+    pub fn new_with_client_request_info(client_request_info: ClientRequestInfo) -> Result<Self> {
+        let fb = get_fb_client_info();
+        let hostname = get_hostname().ok();
+        Ok(ClientInfo {
+            hostname,
+            fb,
+            request_info: Some(client_request_info),
+        })
+    }
+
     /// Creates a new ClientInfo object with fresh generated ClientRequestInfo for the specified
     /// ClientEntryPoint but the remaining fields will be empty.
     pub fn default_with_entry_point(entry_point: ClientEntryPoint) -> Self {

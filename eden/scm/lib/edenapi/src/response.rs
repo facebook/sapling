@@ -8,6 +8,7 @@
 use anyhow::Context;
 use async_runtime::block_unless_interrupted;
 use clientinfo::get_client_request_info_thread_local;
+use clientinfo_async::with_client_request_info_scope;
 pub use edenapi_trait::Response;
 pub use edenapi_trait::ResponseMeta;
 use futures::prelude::*;
@@ -27,9 +28,12 @@ impl<T> BlockingResponse<T> {
         F: Future<Output = Result<Response<T>, EdenApiError>>,
     {
         // Fetch ClientRequestInfo from a thread local and pass to async code
-        let _maybe_client_request_info = get_client_request_info_thread_local();
-        let Response { entries, stats } =
-            block_unless_interrupted(fetch).context("transfer interrupted by user")??;
+        let maybe_client_request_info = get_client_request_info_thread_local();
+        let Response { entries, stats } = block_unless_interrupted(with_client_request_info_scope(
+            maybe_client_request_info,
+            fetch,
+        ))
+        .context("transfer interrupted by user")??;
         let entries = block_unless_interrupted(entries.try_collect())
             .context("transfer interrupted by user")??;
         let stats = block_unless_interrupted(stats).context("transfer interrupted by user")??;

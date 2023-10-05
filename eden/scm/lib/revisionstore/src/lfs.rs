@@ -36,6 +36,9 @@ use anyhow::Result;
 use async_runtime::block_on;
 use async_runtime::stream_to_iter;
 use clientinfo::get_client_request_info_thread_local;
+use clientinfo::ClientInfo;
+use clientinfo_async::get_client_request_info_task_local;
+use clientinfo_async::with_client_request_info_scope;
 use configmodel::convert::ByteCount;
 use configmodel::Config;
 use configmodel::ConfigExt;
@@ -1158,7 +1161,18 @@ impl LfsRemoteInner {
                 let res = async {
                     let request_timeout = http_options.request_timeout;
 
-                    let req = add_extra(req);
+                    let mut req = add_extra(req);
+
+                    // Set up client_request_info fetched from a task local
+                    if let Some(client_request_info) = get_client_request_info_task_local() {
+                        if let Ok(client_info) =
+                            ClientInfo::new_with_client_request_info(client_request_info)
+                        {
+                            if let Ok(client_info_json) = client_info.to_json() {
+                                req.set_client_info(&Some(client_info_json));
+                            }
+                        }
+                    }
 
                     let (responses, _) = client.send_async(vec![req])?;
                     let mut stream = responses.into_iter().collect::<FuturesUnordered<_>>();
@@ -1320,8 +1334,11 @@ impl LfsRemoteInner {
         };
 
         // Fetch ClientRequestInfo from a thread local and pass to async code
-        let _maybe_client_request_info = get_client_request_info_thread_local();
-        let response = block_on(response_fut)?;
+        let maybe_client_request_info = get_client_request_info_thread_local();
+        let response = block_on(with_client_request_info_scope(
+            maybe_client_request_info,
+            response_fut,
+        ))?;
         Ok(Some(serde_json::from_slice(response.as_ref())?))
     }
 
@@ -1461,6 +1478,8 @@ impl LfsRemoteInner {
         };
 
         let mut futures = Vec::new();
+        // Fetch ClientRequestInfo from a thread local and pass to async code
+        let maybe_client_request_info = get_client_request_info_thread_local();
 
         for object in response.objects {
             let oid = object.object.oid;
@@ -1504,7 +1523,10 @@ impl LfsRemoteInner {
                     .right_future(),
                 };
 
-                futures.push(fut);
+                futures.push(with_client_request_info_scope(
+                    maybe_client_request_info.clone(),
+                    fut,
+                ));
             }
         }
 

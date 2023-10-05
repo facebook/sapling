@@ -11,6 +11,7 @@ use anyhow::Result;
 use async_runtime::block_on;
 use async_runtime::spawn_blocking;
 use clientinfo::get_client_request_info_thread_local;
+use clientinfo_async::with_client_request_info_scope;
 use futures::prelude::*;
 use progress_model::ProgressBar;
 use tracing::field;
@@ -103,8 +104,11 @@ impl RemoteDataStore for EdenApiDataStore<File> {
         );
         let _enter = span.enter();
         // Fetch ClientRequestInfo from a thread local and pass to async code
-        let _maybe_client_request_info = get_client_request_info_thread_local();
-        let (keys, stats) = block_on(response)?;
+        let maybe_client_request_info = get_client_request_info_thread_local();
+        let (keys, stats) = block_on(with_client_request_info_scope(
+            maybe_client_request_info,
+            response,
+        ))?;
         util::record_edenapi_stats(&span, &stats);
         Ok(keys)
     }
@@ -150,8 +154,11 @@ impl RemoteDataStore for EdenApiDataStore<Tree> {
         );
         let _enter = span.enter();
         // Fetch ClientRequestInfo from a thread local and pass to async code
-        let _maybe_client_request_info = get_client_request_info_thread_local();
-        let (keys, stats) = block_on(response)?;
+        let maybe_client_request_info = get_client_request_info_thread_local();
+        let (keys, stats) = block_on(with_client_request_info_scope(
+            maybe_client_request_info,
+            response,
+        ))?;
         util::record_edenapi_stats(&span, &stats);
         Ok(keys)
     }
