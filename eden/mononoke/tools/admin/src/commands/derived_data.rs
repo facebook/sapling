@@ -72,7 +72,7 @@ pub struct CommandArgs {
 
 #[derive(Subcommand)]
 enum DerivedDataSubcommand {
-    /// Get the changeset of a bookmark
+    /// Check if derived data has been generated
     Exists(ExistsArgs),
     /// Count how many ancestors of a given commit weren't derived
     CountUnderived(CountUnderivedArgs),
