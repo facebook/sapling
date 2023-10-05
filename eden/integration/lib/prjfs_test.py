@@ -41,6 +41,7 @@ class PrjFSTestBase(testcase.EdenRepoTest):
                     mountPoint=self.mount.encode(),
                     commit=self.get_initial_commit().encode(),
                     listIgnored=listIgnored,
+                    rootIdOptions=None,
                 )
             )
             return status.status.entries

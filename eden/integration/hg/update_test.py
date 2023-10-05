@@ -499,6 +499,7 @@ class UpdateTest(EdenHgTestCase):
                             mountPoint=bytes(self.mount, encoding="utf-8"),
                             commit=bytes(hg_parent, encoding="utf-8"),
                             listIgnored=False,
+                            rootIdOptions=None,
                         )
                     )
             except EdenError as ex:

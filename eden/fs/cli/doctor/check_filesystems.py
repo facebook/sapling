@@ -852,6 +852,7 @@ def get_modified_files(instance: EdenInstance, checkout: EdenCheckout) -> List[P
             GetScmStatusParams(
                 mountPoint=bytes(checkout.path),
                 commit=checkout.get_snapshot().working_copy_parent.encode(),
+                rootIdOptions=None,
             )
         )
 

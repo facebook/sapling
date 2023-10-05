@@ -33,6 +33,7 @@ class LongPathsTest(testcase.EdenRepoTest):
                     mountPoint=self.mount.encode(),
                     commit=self.initial_commit.encode(),
                     listIgnored=listIgnored,
+                    rootIdOptions=None,
                 )
             )
             return status.status.entries

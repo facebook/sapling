@@ -21,6 +21,7 @@ class ResetParentsCommitsArgs(NamedTuple):
     parent1: bytes
     parent2: Optional[bytes]
     hg_root_manifest: Optional[bytes]
+    rootIdOptions: Optional[eden_ttypes.RootIdOptions]
 
 
 class FakeClient:
@@ -94,6 +95,7 @@ class FakeClient:
                 parent1=parents.parent1,
                 parent2=parents.parent2,
                 hg_root_manifest=params.hgRootManifest,
+                rootIdOptions=params.rootIdOptions,
             )
         )
 

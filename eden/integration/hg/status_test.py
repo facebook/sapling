@@ -86,6 +86,7 @@ class StatusTest(EdenHgTestCase):
                 mountPoint=bytes(mountPoint, encoding="utf-8"),
                 commit=commit,
                 listIgnored=False,
+                rootIdOptions=None,
             )
         ).status
 

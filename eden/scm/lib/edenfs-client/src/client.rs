@@ -80,6 +80,10 @@ impl EdenFsClient {
                 commit: commit.into_byte_array().into(),
                 listIgnored: list_ignored,
                 cri: Some(self.get_client_request_info()),
+                rootIdOptions: Some(edenfs::RootIdOptions {
+                    filterId: None,
+                    ..Default::default()
+                }),
                 ..Default::default()
             },
         )))?;
@@ -110,6 +114,10 @@ impl EdenFsClient {
         let params = edenfs::ResetParentCommitsParams {
             hgRootManifest: Some(p1_tree.into_byte_array().into()),
             cri: Some(self.get_client_request_info()),
+            rootIdOptions: Some(edenfs::RootIdOptions {
+                filterId: None,
+                ..Default::default()
+            }),
             ..Default::default()
         };
         extract_error(block_on(
@@ -133,6 +141,10 @@ impl EdenFsClient {
         let params = edenfs::CheckOutRevisionParams {
             hgRootManifest: Some(tree_vec),
             cri: Some(self.get_client_request_info()),
+            rootIdOptions: Some(edenfs::RootIdOptions {
+                filterId: None,
+                ..Default::default()
+            }),
             ..Default::default()
         };
         let root_vec = self.root_vec();
