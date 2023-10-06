@@ -62,8 +62,9 @@ When developing, it's useful to add a few extra arguments to `yarn serve`:
 
 ## Production builds
 
-`isl/release.js` is a script to build production bundles and
-package them into a single self-contained directory that can be distributed.
+`build-tar.py` is a script to build production bundles and
+package them into a single self-contained `tar.xz` that can be distributed
+along with `sl`. It can be launched by the `sl web` command.
 
 `yarn build` lets you build production bundles without watching for changes, in either
 `isl/` or `isl-server/`.
