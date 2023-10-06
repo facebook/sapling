@@ -121,10 +121,13 @@ fn main() {
             code = 255;
         }
     }
-    drop(io);
+
+    tracing::debug!(target: "atexit", "calling atexit from main()");
 
     // Run atexit handlers.
     atexit::drop_queued();
+
+    drop(io);
 
     std::process::exit(code);
 }

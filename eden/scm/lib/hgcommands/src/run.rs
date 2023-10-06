@@ -919,6 +919,8 @@ fn setup_ctrlc() {
         // metalog) is SIGKILL-safe, if "finally" (Python) or "Drop" (Rust) does
         // not run, it won't corrupt the repo data.
 
+        tracing::debug!(target: "atexit", "calling atexit from ctrlc handler");
+
         // Exit pager to restore terminal states (ex. quit raw mode)
         if let Ok(io) = clidispatch::io::IO::main() {
             let _ = io.quit_pager();

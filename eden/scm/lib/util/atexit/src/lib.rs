@@ -42,7 +42,10 @@ impl Drop for AtExit {
         std::mem::swap(&mut drop, &mut self.drop);
         if let Some(func) = drop {
             if !self.ignored.load(Ordering::Acquire) {
+                tracing::debug!("running AtExit handler: {}", self.name);
                 func();
+            } else {
+                tracing::debug!("skipping AtExit handler: {}", self.name);
             }
         }
     }
@@ -107,6 +110,7 @@ impl AtExitRef {
 /// This is usually called at the end of a program.
 pub fn drop_queued() {
     if let Ok(mut lock) = AT_EXIT_QUEUED.lock() {
+        tracing::debug!("running {} AtExit handlers by drop_queued()", lock.len());
         let mut to_drop: Vec<_> = lock.drain(..).collect();
         // Unlock first so drop(to_drop) can call `drop_queued`
         // without deadlock.
