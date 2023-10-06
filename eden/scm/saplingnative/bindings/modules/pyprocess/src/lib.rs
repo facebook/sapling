@@ -254,5 +254,15 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add_class::<Child>(py)?;
     m.add_class::<Command>(py)?;
     m.add_class::<Stdio>(py)?;
+    m.add(
+        py,
+        "terminate_pid_tree_on_exit",
+        py_fn!(py, terminate_pid_tree_on_exit(pid: u32)),
+    )?;
     Ok(m)
+}
+
+fn terminate_pid_tree_on_exit(py: Python, pid: u32) -> PyResult<PyNone> {
+    procutil::terminate_pid_tree_on_exit(pid).map_pyerr(py)?;
+    Ok(PyNone)
 }
