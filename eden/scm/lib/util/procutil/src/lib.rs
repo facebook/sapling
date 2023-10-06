@@ -15,7 +15,7 @@ use std::time::Instant;
 pub fn is_pid_alive(pid: u32) -> bool {
     #[cfg(windows)]
     unsafe {
-        win32::is_pid_alive(pid);
+        win32::is_pid_alive(pid)
     }
 
     #[cfg(unix)]

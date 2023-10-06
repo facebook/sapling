@@ -12,7 +12,6 @@ dirs = "2.0"
 fn-error-context = "0.2"
 fs2 = "0.4"
 identity = { version = "0.1.0", path = "../identity" }
-libc = "0.2.139"
 nodeipc = { version = "0.1.0", path = "../util/nodeipc" }
 once_cell = "1.12"
 serde = { version = "1.0.185", features = ["derive", "rc"] }
@@ -21,6 +20,12 @@ system-command = { version = "0.1.0", path = "../util/system-command" }
 tracing = "0.1.35"
 udsipc = { version = "0.1.0", path = "../util/udsipc" }
 version = { version = "0.1.0", path = "../version" }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+libc = "0.2.139"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+libc = "0.2.139"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 atexit = { version = "0.1.0", path = "../util/atexit" }
