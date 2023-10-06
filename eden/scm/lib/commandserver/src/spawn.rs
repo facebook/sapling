@@ -47,7 +47,8 @@ pub fn spawn_one() -> io::Result<Child> {
         .current_dir("/")
         // The server will get node channel fd via recv_stdio.
         // They should not have NODE_CHANNEL_FD via env vars.
-        .env_remove("NODE_CHANNEL_FD");
+        .env_remove("NODE_CHANNEL_FD")
+        .new_session();
 
     tracing::debug!("spawning a command server");
     if tracing::enabled!(tracing::Level::DEBUG) {
