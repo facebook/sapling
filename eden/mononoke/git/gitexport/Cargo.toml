@@ -15,6 +15,10 @@ name = "gitexport"
 path = "src/main.rs"
 
 [[test]]
+name = "commit_rewrite_tests"
+path = "tests/gitexport_tools/commit_rewrite/lib.rs"
+
+[[test]]
 name = "partial_commit_graph_tests"
 path = "tests/gitexport_tools/partial_commit_graph/lib.rs"
 
