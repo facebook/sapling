@@ -26,7 +26,7 @@ Do nothing. Exit:
   $ newrepo
   $ node --input-type=module << 'EOF'
   > import { withIpc } from '../ipc.mjs';
-  > import * as assert from 'node:assert/strict';
+  > import * as assert from 'node:assert';
   > await withIpc(async ({sendRecv}) => {
   >     const pingResponse = await sendRecv(['ping']);
   >     assert.deepEqual(pingResponse, ['ok', 'ack']);
@@ -40,7 +40,7 @@ Create a commit, then read it out.
   $ newrepo
   $ node --input-type=module << 'EOF'
   > import { withIpc } from '../ipc.mjs';
-  > import * as assert from 'node:assert/strict';
+  > import * as assert from 'node:assert';
   > const commit1 = {
   >     author: 'test', date: [0, 0], text: 'P', parents: [],
   >     files: {'a.txt': {data: 'aaa\n'}, 'b.txt': {data: 'bbbbbb\n'}},
@@ -59,7 +59,7 @@ Write to working copy, then read it out.
   $ newrepo
   $ node --input-type=module << 'EOF'
   > import { withIpc } from '../ipc.mjs';
-  > import * as assert from 'node:assert/strict';
+  > import * as assert from 'node:assert';
   > const files = {'a.txt': {data: 'aaa\n'}};
   > await withIpc(async ({sendRecv}) => {
   >     await sendRecv(['import', [['write', files]]]);
