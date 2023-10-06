@@ -153,7 +153,9 @@ def testsetup(t: TestTmp):
 
     if hgpath:
         # provide access to the real binary
-        t.requireexe("hg", hgpath)
+        # set symlink=True, since going through cmd.exe to execute
+        # `.bat` is incompatilbe with node IPC channel.
+        t.requireexe("hg", hgpath, symlink=True)
         # required for util.hgcmd to work in buck test, where
         # the entry point is a shell script, not argv[0].
         t.setenv("HGEXECUTABLEPATH", hgpath)

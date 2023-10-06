@@ -325,13 +325,11 @@ class TestTmp:
         if export:
             self.shenv.exportenv(name)
 
-    def requireexe(self, name: str, fullpath: Optional[str] = None):
+    def requireexe(self, name: str, fullpath: Optional[str] = None, symlink=False):
         """require an external binary"""
+        ext = ".exe" if os.name == "nt" else ""
         # find the program from PATH
         if fullpath is None:
-            ext = ""
-            if os.name == "nt":
-                ext = ".exe"
             paths = self._origpathenv.split(os.pathsep)
             paths += os.defpath.split(os.pathsep)
             for path in paths:
@@ -345,32 +343,36 @@ class TestTmp:
         else:
             fullpath = os.path.realpath(fullpath)
         # add a function for sheval
+        orig_path = os.pathsep.join([str(self.path / "bin"), self._origpathenv])
         self.shenv.cmdtable[name] = shext.wrapexe(
-            fullpath, env_override={"PATH": self._origpathenv}
+            fullpath, env_override={"PATH": orig_path}
         )
         # write a shim in $TESTTMP/bin for os.system
         self.path.joinpath("bin").mkdir(exist_ok=True)
-        if os.name == "nt":
-            script = "\n".join(
-                [
-                    "@echo off",
-                    f"set PATH={self._origpathenv}",
-                    f'"{fullpath}" %*',
-                    "exit /B %errorlevel%",
-                ]
-            )
-            destpath = self.path / "bin" / f"{name}.bat"
+        if symlink:
+            os.symlink(fullpath, self.path / "bin" / (name + ext))
         else:
-            script = "\n".join(
-                [
-                    "#!/bin/sh",
-                    f"export PATH={repr(self._origpathenv)}",
-                    f'exec {fullpath} "$@"',
-                ]
-            )
-            destpath = self.path / "bin" / name
-        destpath.write_text(script)
-        destpath.chmod(0o555)
+            if os.name == "nt":
+                script = "\n".join(
+                    [
+                        "@echo off",
+                        f"set PATH={orig_path}",
+                        f'"{fullpath}" %*',
+                        "exit /B %errorlevel%",
+                    ]
+                )
+                destpath = self.path / "bin" / f"{name}.bat"
+            else:
+                script = "\n".join(
+                    [
+                        "#!/bin/sh",
+                        f"export PATH={repr(orig_path)}",
+                        f'exec {fullpath} "$@"',
+                    ]
+                )
+                destpath = self.path / "bin" / name
+            destpath.write_text(script)
+            destpath.chmod(0o555)
 
     def updatedglobalstate(self):
         """context manager that updates global states (pwd, environ, ...)"""

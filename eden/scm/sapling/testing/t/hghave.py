@@ -871,7 +871,7 @@ def has_eden():
 @check("node", "nodejs", exe=True)
 def has_node():
     return matchoutput(
-        """node --input-type=module -e 'import * as assert from "node:assert"; console.log(1+2)'""",
+        '''node --input-type=module -e "import * as assert from 'node:assert'; console.log(1+2)"''',
         b"3\n",
     )
 

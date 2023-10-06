@@ -142,6 +142,7 @@ Show debug commands if there are no other candidates
   debughistorypack
   debughttp
   debugignore
+  debugimportexport
   debugimportstack
   debugindex
   debugindexdot
@@ -468,6 +469,7 @@ Show all commands + options
   debughistorypack: long
   debughttp: 
   debugignore: 
+  debugimportexport: node-ipc
   debugimportstack: 
   debugindex: changelog, manifest, dir, format
   debugindexdot: changelog, manifest, dir

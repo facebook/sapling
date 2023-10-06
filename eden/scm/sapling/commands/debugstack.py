@@ -7,6 +7,8 @@ from __future__ import absolute_import
 
 import base64, collections, functools, stat
 
+import bindings
+
 from .. import context, hg, json, mutation, scmutil, smartset, visibility
 from ..i18n import _
 from ..node import bin, hex, nullid, wdirhex, wdirrev
@@ -675,3 +677,80 @@ def _existing_flags(wvfs, path):
     except FileNotFoundError:
         pass
     return flags
+
+
+@command(
+    "debugimportexport",
+    [
+        ("", "node-ipc", False, _("use node IPC to communicate messages")),
+    ],
+)
+def debugimportexport(ui, repo, **opts):
+    """interactively import and export contents
+
+    This command will read line delimited json from stdin and write results in stdout.
+    With ``--node-ipc``, the messages will be written via the nodejs channel instead of
+    stdio.
+
+    Supported inputs and their outputs:
+
+        # input: export commits (see debugexportstack); revs will be passed to formatspec
+        ["export", {"revs": ["parents(%s)", "."], "assumeTracked": [], "sizeLimit": 100}]
+        # => ["ok", debugexportstack result]
+
+        # input: import commits (see debugimportstack)
+        ["import", importStackActions]
+        # => ["ok", debugimportstack result]
+
+        # input: ping, output: ["ack"]; useful for heartbeat detection
+        ["ping"]
+        # => ["ok", "ack"]
+
+        # input: exit
+        ["exit"]
+        # => ["ok", null]
+        # side effect: process exit
+
+        # input: others or errors
+        ["error", {"message": "unsupported: ..."}]
+    """
+    if opts.get("node_ipc"):
+        ipc = bindings.nodeipc.IPC
+        recv = ipc.recv
+        send = ipc.send
+    else:
+
+        def recv():
+            line = ui.fin.readline()
+            if line is None:
+                return line
+            return json.loads(line.decode())
+
+        def send(obj):
+            line = json.dumps(obj) + "\n"
+            ui.write(line)
+            ui.flush()
+
+    while (req := recv()) is not None:
+        name = req[0]
+        try:
+            if name == "export":
+                revs = repo.revs(*req[1]["revs"])
+                max_bytes = req[1].get("sizeLimit")
+                extra_tracked = req[1].get("assumeTracked")
+                res = _export(repo, revs, max_bytes, extra_tracked)
+            elif name == "import":
+                actions = req[1]
+                res = _import(repo, actions)
+            elif name == "ping":
+                res = "ack"
+            elif name == "exit":
+                res = None
+            else:
+                raise ValueError(f"unsupported {name}")
+        except Exception as ex:
+            send(["error", {"message": str(ex)}])
+        else:
+            send(["ok", res])
+        if name == "exit":
+            break
