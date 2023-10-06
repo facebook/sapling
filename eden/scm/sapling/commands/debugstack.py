@@ -55,6 +55,9 @@ def debugexportstack(ui, repo, **opts):
               // Present if the file content is not utf-8.
               "dataBase85": "base85 encoded data",
 
+              // Content "reference" representation if the file is too large.
+              "dataRef": {"node": hex_hash, "path": path},
+
               // Present if the file is copied from "path/from".
               // The content of "path/from" will be included in "relevant_map"
               // of the parent commits.
@@ -82,31 +85,14 @@ def debugexportstack(ui, repo, **opts):
     The commits are sorted topologically. Ancestors (roots) first, descendants
     (heads) last.
 
-    On error (ex. exceeds size limit), print a JSON object with "error" set
-    to the actual problem:
-
-        {"error": "too many commits"}
-        {"error": "too many files changed"}
-
     Configs::
 
-        # Maximum (explicitly requested) commits to export
-        experimental.exportstack-max-commit-count = 50
-
-        # Maximum files to export
-        experimental.exportstack-max-file-count = 200
-
-        # Maximum bytes of files to export
-        experimental.exportstack-max-bytes = 2M
+        # Maximum bytes of a file to export. Exceeding the limit will turn the
+        # file to "ref" representation.
+        experimental.exportstack-max-bytes = 1M
     """
     # size limits
-    max_commit_count = ui.configint("experimental", "exportstack-max-commit-count")
-    max_file_count = ui.configint("experimental", "exportstack-max-file-count")
     max_bytes = ui.configbytes("experimental", "exportstack-max-bytes")
-
-    commit_limiter = _size_limiter(max_commit_count, "too many commits")
-    file_limiter = _size_limiter(max_file_count, "too many files")
-    bytes_limiter = _size_limiter(max_bytes, "too much data")
 
     # Figure out relevant commits and files:
     # - If rev X modifies or deleted (not "added") a file, then the file in
@@ -121,37 +107,29 @@ def debugexportstack(ui, repo, **opts):
     revs = scmutil.revrange(repo, opts.get("rev"))
     revs.sort()
 
-    try:
-        for ctx in revs.prefetch("text").iterctx():
-            commit_limiter(1)
-            pctx = ctx.p1()
-            files = requested_map[ctx.node()]
-            changed_files = ctx.files()
-            if ctx.node() is None:
-                # Consider other (untracked) files in wdir() defined by
-                # status.force-tracked.
-                extra_tracked = opts.get("assume_tracked")
-                if extra_tracked:
-                    existing_tracked = set(changed_files)
-                    for path in extra_tracked:
-                        if path not in existing_tracked:
-                            changed_files.append(path)
-            for path in changed_files:
-                file_limiter(1)
-                parent_paths = [path]
-                file_obj = _file_obj(ctx, path, parent_paths.append, bytes_limiter)
-                files[path] = file_obj
-                for pctx in ctx.parents():
-                    pfiles = relevant_map[pctx.node()]
-                    for ppath in parent_paths:
-                        # Skip relevant_map if included by requested_map.
-                        if ppath not in requested_map.get(pctx.node(), {}):
-                            pfiles[ppath] = _file_obj(
-                                pctx, ppath, limiter=bytes_limiter
-                            )
-    except ValueError as ex:
-        ui.write("%s\n" % json.dumps({"error": str(ex)}))
-        return 1
+    for ctx in revs.prefetch("text").iterctx():
+        pctx = ctx.p1()
+        files = requested_map[ctx.node()]
+        changed_files = ctx.files()
+        if ctx.node() is None:
+            # Consider other (untracked) files in wdir() defined by
+            # status.force-tracked.
+            extra_tracked = opts.get("assume_tracked")
+            if extra_tracked:
+                existing_tracked = set(changed_files)
+                for path in extra_tracked:
+                    if path not in existing_tracked:
+                        changed_files.append(path)
+        for path in changed_files:
+            parent_paths = [path]
+            file_obj = _file_obj(ctx, path, parent_paths.append, max_bytes=max_bytes)
+            files[path] = file_obj
+            for pctx in ctx.parents():
+                pfiles = relevant_map[pctx.node()]
+                for ppath in parent_paths:
+                    # Skip relevant_map if included by requested_map.
+                    if ppath not in requested_map.get(pctx.node(), {}):
+                        pfiles[ppath] = _file_obj(pctx, ppath, max_bytes=max_bytes)
 
     # Put together final result
     result = []
@@ -211,7 +189,7 @@ def _size_limiter(limit, error_message):
     return increase
 
 
-def _file_obj(ctx, path, set_copy_from=None, limiter=None):
+def _file_obj(ctx, path, set_copy_from=None, max_bytes=None):
     if ctx.node() is None:
         # For the working copy, use wvfs directly.
         # This allows exporting untracked files and properly report deleting
@@ -230,14 +208,15 @@ def _file_obj(ctx, path, set_copy_from=None, limiter=None):
             copy_from_path = renamed[0]
             if set_copy_from is not None:
                 set_copy_from(copy_from_path)
-        bdata = fctx.data()
-        if limiter is not None:
-            limiter(len(bdata))
         file_obj = {}
-        try:
-            file_obj["data"] = bdata.decode("utf-8")
-        except UnicodeDecodeError:
-            file_obj["dataBase85"] = base64.b85encode(bdata).decode()
+        if max_bytes is not None and fctx.size() > max_bytes:
+            file_obj["dataRef"] = {"node": ctx.hex(), "path": path}
+        else:
+            bdata = fctx.data()
+            try:
+                file_obj["data"] = bdata.decode("utf-8")
+            except UnicodeDecodeError:
+                file_obj["dataBase85"] = base64.b85encode(bdata).decode()
         if copy_from_path:
             file_obj["copyFrom"] = copy_from_path
         flags = fctx.flags()

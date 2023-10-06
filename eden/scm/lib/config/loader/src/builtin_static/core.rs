@@ -47,9 +47,7 @@ status.unknown=magenta bold underline
 filtersuspectsymlink=true
 
 [experimental]
-exportstack-max-commit-count=100
-exportstack-max-file-count=400
-exportstack-max-bytes=20M
+exportstack-max-bytes=1M
 
 log-implicit-follow-threshold=10000
 

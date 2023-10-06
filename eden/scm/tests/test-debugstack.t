@@ -48,7 +48,7 @@ non-utf8, symlink, executable:
   > commit('A', remotename='remote/master', files={"A":"1"})
   > commit('B', files={"A":"2", "B":"3 (executable)"})
   > commit('C', files={"C":b85(b"\xfbm"), "Z": "B (symlink)"})  # C: invalid utf-8
-  > commit('D', files={"D":"2 (renamed from A)", "E": "E (copied from C)"})
+  > commit('D', files={"D":"222 (renamed from A)", "E": "E (copied from C)"})
   > EOS
 
 Test that various code paths in debugexportstack are exercised:
@@ -78,23 +78,42 @@ Test that various code paths in debugexportstack are exercised:
         'text': 'C'},
        {'author': 'test',
         'date': [0.0, 0],
-        'files': {'A': None, 'D': {'copyFrom': 'A', 'data': '2'}, 'E': {'copyFrom': 'C', 'data': 'E'}},
+        'files': {'A': None, 'D': {'copyFrom': 'A', 'data': '222'}, 'E': {'copyFrom': 'C', 'data': 'E'}},
         'immutable': False,
-        'node': 'f5086e168b2741946a5118463a8be38273822529',
+        'node': '2a493edf8997358199a3bb8b486fc77798cd39a4',
         'parents': ['d2a2ca8387f2339934b6ce3fb17992433e06fdd4'],
         'requested': True,
         'text': 'D'}]
 
-      # Various kinds of limits.
-      $ hg debugexportstack -r $B::$D --config experimental.exportstack-max-commit-count=2
-      {"error": "too many commits"}
-      [1]
-      $ hg debugexportstack -r $B::$D --config experimental.exportstack-max-file-count=2
-      {"error": "too many files"}
-      [1]
-      $ hg debugexportstack -r $B::$D --config experimental.exportstack-max-bytes=4B
-      {"error": "too much data"}
-      [1]
+      # Use "dataRef" for large files (file "D" in commit "D").
+      $ hg debugexportstack -r $B::$D --config experimental.exportstack-max-bytes=2B | pprint
+      [{'author': 'test', 'date': [0.0, 0], 'immutable': True, 'node': '983f771099bbf84b42d0058f027b47ede52f179a', 'relevantFiles': {'A': {'data': '1'}, 'B': None}, 'requested': False, 'text': 'A'},
+       {'author': 'test',
+        'date': [0.0, 0],
+        'files': {'A': {'data': '2'}, 'B': {'data': '3', 'flags': 'x'}},
+        'immutable': False,
+        'node': '8b5b077308ecdd37270b7b94d98d64d27c170dfb',
+        'parents': ['983f771099bbf84b42d0058f027b47ede52f179a'],
+        'relevantFiles': {'C': None, 'Z': None},
+        'requested': True,
+        'text': 'B'},
+       {'author': 'test',
+        'date': [0.0, 0],
+        'files': {'C': {'dataBase85': '`)v'}, 'Z': {'data': 'B', 'flags': 'l'}},
+        'immutable': False,
+        'node': 'd2a2ca8387f2339934b6ce3fb17992433e06fdd4',
+        'parents': ['8b5b077308ecdd37270b7b94d98d64d27c170dfb'],
+        'relevantFiles': {'A': {'data': '2'}, 'D': None, 'E': None},
+        'requested': True,
+        'text': 'C'},
+       {'author': 'test',
+        'date': [0.0, 0],
+        'files': {'A': None, 'D': {'copyFrom': 'A', 'dataRef': {'node': '2a493edf8997358199a3bb8b486fc77798cd39a4', 'path': 'D'}}, 'E': {'copyFrom': 'C', 'data': 'E'}},
+        'immutable': False,
+        'node': '2a493edf8997358199a3bb8b486fc77798cd39a4',
+        'parents': ['d2a2ca8387f2339934b6ce3fb17992433e06fdd4'],
+        'requested': True,
+        'text': 'D'}]
 
       # Export the working copy.
       $ hg go -q $D
@@ -109,8 +128,8 @@ Test that various code paths in debugexportstack are exercised:
       [{'author': 'test',
         'date': [0.0, 0],
         'immutable': False,
-        'node': 'f5086e168b2741946a5118463a8be38273822529',
-        'relevantFiles': {'B': {'data': '3', 'flags': 'x'}, 'B1': None, 'C': {'dataBase85': '`)v'}, 'D': {'copyFrom': 'A', 'data': '2'}, 'G': None, 'X': None},
+        'node': '2a493edf8997358199a3bb8b486fc77798cd39a4',
+        'relevantFiles': {'B': {'data': '3', 'flags': 'x'}, 'B1': None, 'C': {'dataBase85': '`)v'}, 'D': {'copyFrom': 'A', 'data': '222'}, 'G': None, 'X': None},
         'requested': False,
         'text': 'D'},
        {'author': 'test',
@@ -118,7 +137,7 @@ Test that various code paths in debugexportstack are exercised:
         'files': {'B': None, 'B1': {'copyFrom': 'B', 'data': '3', 'flags': 'x'}, 'C': None, 'D': {'data': '3\n'}, 'G': {'data': 'G\n'}, 'X': {'data': 'X\n'}},
         'immutable': False,
         'node': 'ffffffffffffffffffffffffffffffffffffffff',
-        'parents': ['f5086e168b2741946a5118463a8be38273822529'],
+        'parents': ['2a493edf8997358199a3bb8b486fc77798cd39a4'],
         'requested': True,
         'text': ''}]
 
