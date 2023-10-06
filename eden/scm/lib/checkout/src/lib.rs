@@ -831,6 +831,19 @@ pub fn checkout(
         io,
     )?;
 
+    let unknown_conflicts = block_on(plan.check_unknown_files(
+        &*target_mf.read(),
+        &repo.file_store()?,
+        &mut wc.treestate().lock(),
+        &status,
+    ))?;
+    if !unknown_conflicts.is_empty() {
+        for unknown in unknown_conflicts {
+            let _ = writeln!(io.error(), "{unknown}: untracked file differs");
+        }
+        bail!("untracked files in working directory differ from files in requested revision");
+    }
+
     let conflicts = plan.check_conflicts(&status);
     if !conflicts.is_empty() {
         bail!(
