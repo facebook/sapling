@@ -341,6 +341,8 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
             newFile.data = file.data;
           } else if (file.data instanceof Base85) {
             newFile.dataBase85 = file.data.dataBase85;
+          } else if (file.data instanceof DataRef) {
+            newFile.dataRef = file.data.toJS();
           }
           if (file.copyFrom != null) {
             newFile.copyFrom = file.copyFrom;
@@ -708,6 +710,9 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     // We assume base85 data is immutable, non-utf8 so they won't match utf8 data.
     if (a.data instanceof Base85 && b.data instanceof Base85) {
       return a.data.dataBase85 === b.data.dataBase85;
+    }
+    if (a.data instanceof DataRef && b.data instanceof DataRef) {
+      return is(a.data, b.data);
     }
     return false;
   }
@@ -1281,7 +1286,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     // - Adjust "revs".
     const processDenseCommit = (c: CommitState): CommitState => {
       const newFiles = c.files.flatMap<RepoPath, FileState>((currentFile, path) => {
-        let file = currentFile;
+        let file: FileState = currentFile;
         const oldFile = afterFileMap.get(path);
         // Drop "absent" flag (and reuse the old flag).
         if (
@@ -1427,7 +1432,12 @@ function convertExportFileToFileState(file: ExportFile | null): FileState {
     return ABSENT_FILE;
   }
   return FileState({
-    data: file.data != null ? file.data : Base85({dataBase85: unwrap(file.dataBase85)}),
+    data:
+      file.data != null
+        ? file.data
+        : file.dataBase85
+        ? Base85({dataBase85: file.dataBase85})
+        : DataRef(unwrap(file.dataRef)),
     copyFrom: file.copyFrom,
     flags: file.flags,
   });
@@ -1646,7 +1656,7 @@ export type CommitState = RecordOf<CommitStateProps>;
  * Besides, supports "absent" state.
  */
 type FileStateProps = {
-  data: string | Base85 | FileIdx;
+  data: string | Base85 | FileIdx | DataRef;
   /** If present, this file is copied (or renamed) from another file. */
   copyFrom?: RepoPath;
   /** 'x': executable. 'l': symlink. 'm': submodule. */
@@ -1654,9 +1664,12 @@ type FileStateProps = {
 };
 
 type Base85Props = {dataBase85: string};
-
 const Base85 = Record<Base85Props>({dataBase85: ''});
 type Base85 = RecordOf<Base85Props>;
+
+type DataRefProps = {node: Hash; path: RepoPath};
+const DataRef = Record<DataRefProps>({node: '', path: ''});
+type DataRef = RecordOf<DataRefProps>;
 
 const FileState = Record<FileStateProps>({data: '', copyFrom: undefined, flags: ''});
 type FileState = RecordOf<FileStateProps>;
