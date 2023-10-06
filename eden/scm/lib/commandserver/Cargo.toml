@@ -21,3 +21,7 @@ system-command = { version = "0.1.0", path = "../util/system-command" }
 tracing = "0.1.35"
 udsipc = { version = "0.1.0", path = "../util/udsipc" }
 version = { version = "0.1.0", path = "../version" }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+atexit = { version = "0.1.0", path = "../util/atexit" }
+procutil = { version = "0.1.0", path = "../util/procutil" }

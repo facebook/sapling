@@ -92,11 +92,27 @@ pub fn run_via_commandserver(args: Vec<String>, config: &dyn Config) -> anyhow::
     #[cfg(unix)]
     forward_signals(&props);
 
+    // On Windows, terminate the server on Ctrl+C event. The server will kill
+    // the pager process. We use an "AtExit" handler to handle Ctrl+C.
+    #[cfg(windows)]
+    let server_killer = atext::AtExit::new({
+        Box::new(move || {
+            let _ = procutil::terminate_pid(props.pid, Some(Default::default()));
+        })
+    })
+    .named("terminating server".into())
+    .queued();
+
     // Send the run_command request.
     // Note the server might ask the client for "ui.system" requests.
     tracing::debug!("sending command request");
     let ret = ServerIpc::run_command(&client, args.clone())?;
     tracing::debug!("command {:?} returned: {}", &args, ret);
+
+    // No need to kill the server if no Ctrl+C was pressed.
+    #[cfg(windows)]
+    server_killer.cancel();
+
     Ok(ret)
 }
 
