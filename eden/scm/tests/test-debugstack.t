@@ -446,6 +446,23 @@ Import stack:
         X1 (no-eol)
         [1]
 
+      # Refer to existing file contents.
+
+        $ newrepo
+        $ drawdag << 'EOS'
+        > X  # X/a.txt=content\n
+        >    # X/c.txt=something\n
+        > EOS
+        $ hg debugimportstack << EOS
+        > [["commit", {"author": "test1", "date": [3600, 3600], "text": "Y", "mark": ":1", "parents": ["$X"],
+        >              "files": {"b.txt": {"dataRef": {"node": "$X", "path": "a.txt"}},
+        >                        "c.txt": {"dataRef": {"node": "$X", "path": "missing"}}}}],
+        >  ["goto", {"mark": ":1"}]]
+        > EOS
+        {":1": "*"} (glob)
+        $ hg cat -r . b.txt
+        content
+
       # Error cases.
 
         $ hg debugimportstack << EOS

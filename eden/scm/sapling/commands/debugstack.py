@@ -576,8 +576,16 @@ def _filectxfn(repo, mctx, path, files_dict):
     else:
         if "data" in file_info:
             data = file_info["data"].encode("utf-8")
-        else:
+        elif "dataBase85" in file_info:
             data = base64.b85decode(file_info["dataBase85"])
+        else:
+            data_ref = file_info["dataRef"]
+            ref_path = data_ref["path"]
+            ctx = repo[data_ref["node"]]
+            if ref_path in ctx:
+                data = ctx[ref_path].data()
+            else:
+                return None
         copied = file_info.get("copyFrom")
         flags = file_info.get("flags", "")
         if copied == ".":
