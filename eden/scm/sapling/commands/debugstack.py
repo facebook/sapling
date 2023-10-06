@@ -92,7 +92,16 @@ def debugexportstack(ui, repo, **opts):
         experimental.exportstack-max-bytes = 1M
     """
     # size limits
-    max_bytes = ui.configbytes("experimental", "exportstack-max-bytes")
+    extra_tracked = opts.get("assume_tracked")
+    revs = scmutil.revrange(repo, opts.get("rev"))
+    revs.sort()
+    obj = _export(repo, revs, extra_tracked=extra_tracked)
+    ui.write("%s\n" % json.dumps(obj))
+
+
+def _export(repo, revs, max_bytes=None, extra_tracked=None):
+    if max_bytes is None:
+        max_bytes = repo.ui.configbytes("experimental", "exportstack-max-bytes")
 
     # Figure out relevant commits and files:
     # - If rev X modifies or deleted (not "added") a file, then the file in
@@ -104,9 +113,6 @@ def debugexportstack(ui, repo, **opts):
     relevant_map = collections.defaultdict(dict)
     requested_map = collections.defaultdict(dict)
 
-    revs = scmutil.revrange(repo, opts.get("rev"))
-    revs.sort()
-
     for ctx in revs.prefetch("text").iterctx():
         pctx = ctx.p1()
         files = requested_map[ctx.node()]
@@ -114,7 +120,6 @@ def debugexportstack(ui, repo, **opts):
         if ctx.node() is None:
             # Consider other (untracked) files in wdir() defined by
             # status.force-tracked.
-            extra_tracked = opts.get("assume_tracked")
             if extra_tracked:
                 existing_tracked = set(changed_files)
                 for path in extra_tracked:
@@ -172,8 +177,7 @@ def debugexportstack(ui, repo, **opts):
             commit_obj["files"] = requested_map[node]
         result.append(commit_obj)
 
-    ui.write("%s\n" % json.dumps(result))
-    return 0
+    return result
 
 
 def _size_limiter(limit, error_message):
@@ -345,55 +349,58 @@ def debugimportstack(ui, repo, **opts):
     There might be extra output caused by the "goto" operation after the first
     line. Those should be ignored by automation.
     """
+    try:
+        actions = json.loads(ui.fin.read())
+    except json.JSONDecodeError as ex:
+        obj = {"error": f"commit info is invalid JSON ({ex})"}
+    else:
+        try:
+            obj = _import(repo, actions)
+        except (ValueError, TypeError, KeyError, AttributeError) as ex:
+            obj = {"error": str(ex)}
+    ui.write("%s\n" % json.dumps(obj))
+    if obj and "error" in obj:
+        return 1
+
+
+def _import(repo, actions):
     wnode = repo["."].node()
     marks = Marks(wnode)
 
-    try:
-        try:
-            actions = json.loads(ui.fin.read())
-        except json.JSONDecodeError as ex:
-            raise ValueError(f"commit info is invalid JSON ({ex})")
+    with repo.wlock(), repo.lock(), repo.transaction("importstack"):
+        # Create commits.
+        commit_infos = [action[1] for action in actions if action[0] in "commit"]
+        _create_commits(repo, commit_infos, marks)
 
-        with repo.wlock(), repo.lock(), repo.transaction("importstack"):
-            # Create commits.
-            commit_infos = [action[1] for action in actions if action[0] in "commit"]
-            _create_commits(repo, commit_infos, marks)
+        # Handle "amend"
+        commit_infos = [action[1] for action in actions if action[0] in "amend"]
+        _create_commits(repo, commit_infos, marks, amend=True)
 
-            # Handle "amend"
-            commit_infos = [action[1] for action in actions if action[0] in "amend"]
-            _create_commits(repo, commit_infos, marks, amend=True)
+        # Handle "goto" or "reset".
+        to_hide = []
+        for action in actions:
+            action_name = action[0]
+            if action_name in {"commit", "amend"}:
+                # Handled by _create_commits already.
+                continue
+            elif action_name == "goto":
+                node = marks[action[1]["mark"]]
+                hg.updaterepo(repo, node, overwrite=True)
+            elif action_name == "reset":
+                node = marks[action[1]["mark"]]
+                _reset(repo, node)
+            elif action_name == "hide":
+                to_hide += [bin(n) for n in action[1]["nodes"]]
+            elif action_name == "write":
+                _write_files(repo, action[1])
+            else:
+                raise ValueError(f"unsupported action: {action}")
 
-            # Handle "goto" or "reset".
-            to_hide = []
-            for action in actions:
-                action_name = action[0]
-                if action_name in {"commit", "amend"}:
-                    # Handled by _create_commits already.
-                    continue
-                elif action_name == "goto":
-                    node = marks[action[1]["mark"]]
-                    hg.updaterepo(repo, node, overwrite=True)
-                elif action_name == "reset":
-                    node = marks[action[1]["mark"]]
-                    _reset(repo, node)
-                elif action_name == "hide":
-                    to_hide += [bin(n) for n in action[1]["nodes"]]
-                elif action_name == "write":
-                    _write_files(repo, action[1])
-                else:
-                    raise ValueError(f"unsupported action: {action}")
+        # Handle "hide".
+        if to_hide:
+            visibility.remove(repo, to_hide)
 
-            # Handle "hide".
-            if to_hide:
-                visibility.remove(repo, to_hide)
-
-    except (ValueError, TypeError, KeyError, AttributeError) as ex:
-        ui.write("%s\n" % json.dumps({"error": str(ex)}))
-        return 1
-
-    ui.write("%s\n" % json.dumps(marks.to_hex()))
-
-    return 0
+    return marks.to_hex()
 
 
 class Marks:

@@ -54,7 +54,7 @@ non-utf8, symlink, executable:
 Test that various code paths in debugexportstack are exercised:
 
     from sapling.commands import debugstack
-    with assertCovered(debugstack.debugexportstack):
+    with assertCovered(debugstack.debugexportstack, debugstack._export):
       # Regular export.
       $ hg debugexportstack -r $B::$D | pprint
       [{'author': 'test', 'date': [0.0, 0], 'immutable': True, 'node': '983f771099bbf84b42d0058f027b47ede52f179a', 'relevantFiles': {'A': {'data': '1'}, 'B': None}, 'requested': False, 'text': 'A'},
@@ -149,6 +149,7 @@ Import stack:
       debugstack._filectxfn,
       debugstack._reset,
       debugstack._write_files,
+      debugstack._import,
     ):
       # Simple linear stack
         $ newrepo
