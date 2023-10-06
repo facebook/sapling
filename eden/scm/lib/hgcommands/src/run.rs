@@ -900,7 +900,7 @@ fn setup_atexit(start_time: StartTime) {
 
         // Make extra sure our metrics are written out.
         sampling::flush();
-    })).queued();
+    })).named("flush sampling".into()).queued();
 }
 
 fn setup_ctrlc() {

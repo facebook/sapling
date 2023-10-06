@@ -9,6 +9,7 @@
 //! Intended to be used as an alternative to Python's
 //! `except KeyboardInterrupt`.
 
+use std::borrow::Cow;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -20,6 +21,7 @@ use once_cell::sync::Lazy;
 /// Call `drop` on drop if `ignored` is `false`.
 pub struct AtExit {
     drop: Option<Box<dyn FnOnce() + Send + Sync>>,
+    name: Cow<'static, str>,
     ignored: AtomicBool,
 }
 
@@ -62,7 +64,14 @@ impl AtExit {
         Self {
             drop: Some(drop),
             ignored: AtomicBool::new(false),
+            name: "unnamed".into(),
         }
+    }
+
+    /// Assign a name to the `AtExit` handler.
+    pub fn named(mut self, name: Cow<'static, str>) -> Self {
+        self.name = name;
+        self
     }
 
     /// Move the `AtExit` to a global queue.
