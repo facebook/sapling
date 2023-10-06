@@ -86,7 +86,10 @@ pub fn run_via_commandserver(args: Vec<String>, config: &dyn Config) -> anyhow::
     }
 
     // We're likely going to use this command server.
-    // Forward signals so terminal resize, etc can work.
+    // On POSIX, forward signals so terminal resize, etc can work.
+    // We don't use the "atexit" handler here, since it does not forward
+    // signals like terminal resize, etc. This replaces the `atexit` handler.
+    #[cfg(unix)]
     forward_signals(&props);
 
     // Send the run_command request.
@@ -126,49 +129,47 @@ fn should_run_remotely(args: &[String]) -> (bool, &'static str) {
     (true, "")
 }
 
+#[cfg(unix)]
 fn forward_signals(props: &ProcessProps) {
-    #[cfg(unix)]
-    {
-        use std::sync::atomic::AtomicU32;
-        use std::sync::atomic::Ordering;
+    use std::sync::atomic::AtomicU32;
+    use std::sync::atomic::Ordering;
 
-        static PID: AtomicU32 = AtomicU32::new(0);
-        static PGID: AtomicU32 = AtomicU32::new(0);
+    static PID: AtomicU32 = AtomicU32::new(0);
+    static PGID: AtomicU32 = AtomicU32::new(0);
 
-        extern "C" fn forward_signal_process(sig: libc::c_int) {
-            let pid = PID.load(Ordering::Acquire);
-            if pid > 0 {
-                unsafe { libc::kill(pid as i32, sig) };
-            }
+    extern "C" fn forward_signal_process(sig: libc::c_int) {
+        let pid = PID.load(Ordering::Acquire);
+        if pid > 0 {
+            unsafe { libc::kill(pid as i32, sig) };
         }
+    }
 
-        extern "C" fn forward_signal_group(sig: libc::c_int) {
-            let pgid = PGID.load(Ordering::Acquire);
-            if pgid > 1 {
-                unsafe { libc::kill(-(pgid as i32), sig) };
-            } else {
-                forward_signal_process(sig);
-            }
+    extern "C" fn forward_signal_group(sig: libc::c_int) {
+        let pgid = PGID.load(Ordering::Acquire);
+        if pgid > 1 {
+            unsafe { libc::kill(-(pgid as i32), sig) };
+        } else {
+            forward_signal_process(sig);
         }
+    }
 
-        PID.store(props.pid, Ordering::Release);
-        PGID.store(props.pgid, Ordering::Release);
+    PID.store(props.pid, Ordering::Release);
+    PGID.store(props.pgid, Ordering::Release);
 
-        for sig in [
-            libc::SIGTERM,
-            libc::SIGHUP,
-            libc::SIGINT,
-            libc::SIGCONT,
-            libc::SIGTSTP,
-        ] {
-            unsafe { libc::signal(sig, forward_signal_group as _) };
-        }
+    for sig in [
+        libc::SIGTERM,
+        libc::SIGHUP,
+        libc::SIGINT,
+        libc::SIGCONT,
+        libc::SIGTSTP,
+    ] {
+        unsafe { libc::signal(sig, forward_signal_group as _) };
+    }
 
-        // The main process is expected to setup SIGUSR* handler.
-        // But child processes in the group is not ready, so we
-        // only send SIGUSR* to the process, not the group.
-        for sig in [libc::SIGUSR1, libc::SIGUSR2] {
-            unsafe { libc::signal(sig, forward_signal_process as _) };
-        }
+    // The main process is expected to setup SIGUSR* handler.
+    // But child processes in the group is not ready, so we
+    // only send SIGUSR* to the process, not the group.
+    for sig in [libc::SIGUSR1, libc::SIGUSR2] {
+        unsafe { libc::signal(sig, forward_signal_process as _) };
     }
 }
