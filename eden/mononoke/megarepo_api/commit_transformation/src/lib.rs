@@ -53,8 +53,8 @@ use sorted_vector_map::SortedVectorMap;
 use thiserror::Error;
 use tunables::tunables;
 
-pub type MultiMover =
-    Arc<dyn Fn(&NonRootMPath) -> Result<Vec<NonRootMPath>, Error> + Send + Sync + 'static>;
+pub type MultiMover<'a> =
+    Arc<dyn Fn(&NonRootMPath) -> Result<Vec<NonRootMPath>, Error> + Send + Sync + 'a>;
 pub type DirectoryMultiMover = Arc<
     dyn Fn(&Option<NonRootMPath>) -> Result<Vec<Option<NonRootMPath>>, Error>
         + Send
@@ -93,7 +93,7 @@ pub enum ErrorKind {
 
 pub fn create_source_to_target_multi_mover(
     mapping_rules: SourceMappingRules,
-) -> Result<MultiMover, Error> {
+) -> Result<MultiMover<'static>, Error> {
     // We apply the longest prefix first
     let mut overrides = mapping_rules.overrides.into_iter().collect::<Vec<_>>();
     overrides.sort_unstable_by_key(|(ref prefix, _)| prefix.len());
@@ -222,7 +222,7 @@ async fn get_renamed_implicit_deletes<'a, I: IntoIterator<Item = ChangesetId>>(
     ctx: &'a CoreContext,
     cs: BonsaiChangesetMut,
     parent_changeset_ids: I,
-    mover: MultiMover,
+    mover: MultiMover<'a>,
     source_repo: &'a impl Repo,
 ) -> Result<Vec<Vec<NonRootMPath>>, Error> {
     let parent_manifest_ids = get_manifest_ids(ctx, source_repo, parent_changeset_ids).await?;
@@ -287,7 +287,7 @@ pub async fn rewrite_commit<'a>(
     ctx: &'a CoreContext,
     cs: BonsaiChangesetMut,
     remapped_parents: &'a HashMap<ChangesetId, ChangesetId>,
-    mover: MultiMover,
+    mover: MultiMover<'a>,
     source_repo: &'a impl Repo,
     force_first_parent: Option<ChangesetId>,
     rewrite_opts: RewriteOpts,
@@ -323,7 +323,7 @@ pub async fn rewrite_as_squashed_commit<'a>(
     source_cs_id: ChangesetId,
     (source_parent_cs_id, target_parent_cs_id): (ChangesetId, ChangesetId),
     mut cs: BonsaiChangesetMut,
-    mover: MultiMover,
+    mover: MultiMover<'a>,
     side_commits_info: Vec<String>,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
     let diff_stream = find_bonsai_diff(ctx, source_repo, source_parent_cs_id, source_cs_id).await?;
@@ -370,7 +370,7 @@ pub async fn rewrite_stack_no_merges<'a>(
     ctx: &'a CoreContext,
     css: Vec<BonsaiChangeset>,
     mut rewritten_parent: ChangesetId,
-    mover: MultiMover,
+    mover: MultiMover<'a>,
     source_repo: &'a impl Repo,
     force_first_parent: Option<ChangesetId>,
     mut modify_bonsai_cs: impl FnMut((ChangesetId, BonsaiChangesetMut)) -> BonsaiChangesetMut,
@@ -1240,7 +1240,7 @@ mod test {
         repo: &'a impl Repo,
         bcs_id: ChangesetId,
         parents: HashMap<ChangesetId, ChangesetId>,
-        multi_mover: MultiMover,
+        multi_mover: MultiMover<'a>,
         force_first_parent: Option<ChangesetId>,
     ) -> Result<ChangesetId, Error> {
         let bcs = bcs_id.load(ctx, &repo.repo_blobstore()).await?;

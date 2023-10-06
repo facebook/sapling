@@ -74,7 +74,7 @@ pub async fn rewrite_partial_changesets(
 
     let logger_clone = logger.clone();
 
-    let multi_mover: MultiMover = Arc::new(move |source_path: &NonRootMPath| {
+    let multi_mover: MultiMover<'static> = Arc::new(move |source_path: &NonRootMPath| {
         let should_export = export_paths.iter().any(|p| p.is_prefix_of(source_path));
 
         if !should_export {
@@ -172,7 +172,7 @@ pub async fn rewrite_partial_changesets(
 /// BonsaiChangeset containing only the changes to those paths.
 async fn create_bonsai_for_new_repo(
     source_repo_ctx: &RepoContext,
-    multi_mover: MultiMover,
+    multi_mover: MultiMover<'_>,
     changeset_parents: &ChangesetParents,
     mut remapped_parents: HashMap<ChangesetId, ChangesetId>,
     changeset_ctx: ChangesetContext,
