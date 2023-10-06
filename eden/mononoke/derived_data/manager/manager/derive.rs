@@ -203,16 +203,16 @@ impl DerivedDataManager {
                 // We must perform derivation.  Use the appropriate session
                 // class for derivation.
                 let ctx = self.set_derivation_session_class(ctx.clone());
+                let bonsai = bonsai?;
 
                 // The derivation process is additionally logged to the derived
                 // data scuba table.
                 let mut derived_data_scuba = self.derived_data_scuba::<Derivable>();
-                derived_data_scuba.add_changeset(csid);
+                derived_data_scuba.add_changeset(&bonsai);
                 derived_data_scuba.add_discovery_stats(discovery_stats);
                 derived_data_scuba.log_derivation_start(&ctx);
 
                 let (derive_stats, derived) = async {
-                    let bonsai = bonsai?;
                     let parents = derivation_ctx.fetch_parents(&ctx, &bonsai).await?;
                     Derivable::derive_single(&ctx, derivation_ctx, bonsai, parents).await
                 }
@@ -537,7 +537,7 @@ impl DerivedDataManager {
             };
             let mut request_state = DerivationState::NotRequested;
             let mut derived_data_scuba = self.derived_data_scuba::<Derivable>();
-            derived_data_scuba.add_changeset(csid);
+            derived_data_scuba.add_changeset_id(csid);
 
             // Try to perform remote derivation.  Capture the error so that we
             // can decide what to do.
