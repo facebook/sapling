@@ -868,15 +868,12 @@ def has_eden():
     )
 
 
-@check("parso", "parso parsing library")
-def has_parso():
-    try:
-        import parso
-
-        parso.parse
-        return True
-    except ImportError:
-        return False
+@check("node", "nodejs", exe=True)
+def has_node():
+    return matchoutput(
+        """node --input-type=module -e 'import * as assert from "node:assert"; console.log(1+2)'""",
+        b"3\n",
+    )
 
 
 @check("mononoke", "Mononoke server available")
