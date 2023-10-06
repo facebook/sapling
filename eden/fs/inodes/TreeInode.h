@@ -781,6 +781,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       std::vector<std::unique_ptr<CheckoutAction>>& actions,
       std::vector<IncompleteInodeLoad>& pendingLoads,
       bool& wasDirectoryListModified);
+
   /**
    * Sets wasDirectoryListModified true if this checkout entry operation has
    * modified the directory contents, which implies the return value is nullptr.
@@ -795,6 +796,14 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       const Tree::value_type* newScmEntry,
       std::vector<IncompleteInodeLoad>& pendingLoads,
       bool& wasDirectoryListModified);
+
+  std::unique_ptr<CheckoutAction> processAbsentCheckoutEntry(
+      CheckoutContext* ctx,
+      TreeInodeState& state,
+      const Tree::value_type* oldScmEntry,
+      const Tree::value_type* newScmEntry,
+      bool& wasDirectoryListModified);
+
   void saveOverlayPostCheckout(CheckoutContext* ctx, const Tree* tree);
 
   /**

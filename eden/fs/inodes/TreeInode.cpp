@@ -3346,73 +3346,12 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
   }
 
   // Look to see if we have a child entry with this name.
-  bool contentsUpdated = false;
   const auto& name = oldScmEntry ? oldScmEntry->first : newScmEntry->first;
   auto& contents = state.entries;
   auto it = contents.find(name);
   if (it == contents.end()) {
-    if (!oldScmEntry) {
-      // This is a new entry being added, that did not exist in the old tree
-      // and does not currently exist in the filesystem.  Go ahead and add it
-      // now.
-      if (!ctx->isDryRun()) {
-        contentsUpdated = true;
-      }
-    } else if (!newScmEntry) {
-      // This file exists in the old tree, but is being removed in the new
-      // tree.  It has already been removed from the local filesystem, so
-      // we are already in the desired state.
-      //
-      // We can proceed, but we still flag this as a conflict.
-      ctx->addConflict(ConflictType::MISSING_REMOVED, this, oldScmEntry->first);
-    } else {
-      // The file was removed locally, but modified in the new tree.
-      ctx->addConflict(
-          ConflictType::REMOVED_MODIFIED, this, oldScmEntry->first);
-      if (ctx->forceUpdate()) {
-        XDCHECK(!ctx->isDryRun());
-        contentsUpdated = true;
-      }
-    }
-
-    if (contentsUpdated) {
-      // Contents have changed and they need to be written out to the
-      // overlay.  We should not do that here since this code runs per
-      // entry. Today this is reconciled in saveOverlayPostCheckout()
-      // after this inode processes all of its checkout actions. But we
-      // do want to invalidate the kernel's dcache and inode caches.
-      wasDirectoryListModified = true;
-
-      auto success = invalidateChannelEntryCache(state, name, std::nullopt);
-      if (success.hasValue()) {
-        auto [it, inserted] = contents.emplace(
-            newScmEntry->first,
-            modeFromTreeEntryType(filteredEntryType(
-                newScmEntry->second.getType(), windowsSymlinksEnabled)),
-            getOverlay()->allocateInodeNumber(),
-            newScmEntry->second.getHash());
-        XDCHECK(inserted);
-      } else {
-        if (folly::kIsWindows) {
-          if (auto* exc = success.tryGetExceptionObject<std::system_error>();
-              exc && isEnotempty(*exc)) {
-            XLOG(DBG6)
-                << "entry was created on disk while checkout is in progress: "
-                << getLogPath() << "/" << name;
-            if (oldScmEntry) {
-              ctx->addConflict(ConflictType::MODIFIED_MODIFIED, this, name);
-            } else {
-              ctx->addConflict(ConflictType::UNTRACKED_ADDED, this, name);
-            }
-            return nullptr;
-          }
-        }
-        ctx->addError(this, name, success.exception());
-      }
-    }
-
-    // Nothing else to do when there is no local inode.
-    return nullptr;
+    return processAbsentCheckoutEntry(
+        ctx, state, oldScmEntry, newScmEntry, wasDirectoryListModified);
   }
 
   auto& entry = it->second;
@@ -3578,6 +3517,79 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
   // this information up to our caller so it can mark us
   // materialized if necessary.
 
+  return nullptr;
+}
+
+std::unique_ptr<CheckoutAction> TreeInode::processAbsentCheckoutEntry(
+    CheckoutContext* ctx,
+    TreeInodeState& state,
+    const Tree::value_type* oldScmEntry,
+    const Tree::value_type* newScmEntry,
+    bool& wasDirectoryListModified) {
+  const auto& name = oldScmEntry ? oldScmEntry->first : newScmEntry->first;
+  auto& contents = state.entries;
+  bool contentsUpdated = false;
+
+  if (!oldScmEntry) {
+    // This is a new entry being added, that did not exist in the old tree
+    // and does not currently exist in the filesystem.  Go ahead and add it
+    // now.
+    if (!ctx->isDryRun()) {
+      contentsUpdated = true;
+    }
+  } else if (!newScmEntry) {
+    // This file exists in the old tree, but is being removed in the new
+    // tree.  It has already been removed from the local filesystem, so
+    // we are already in the desired state.
+    //
+    // We can proceed, but we still flag this as a conflict.
+    ctx->addConflict(ConflictType::MISSING_REMOVED, this, oldScmEntry->first);
+  } else {
+    // The file was removed locally, but modified in the new tree.
+    ctx->addConflict(ConflictType::REMOVED_MODIFIED, this, oldScmEntry->first);
+    if (ctx->forceUpdate()) {
+      XDCHECK(!ctx->isDryRun());
+      contentsUpdated = true;
+    }
+  }
+
+  if (contentsUpdated) {
+    // Contents have changed and they need to be written out to the
+    // overlay.  We should not do that here since this code runs per
+    // entry. Today this is reconciled in saveOverlayPostCheckout()
+    // after this inode processes all of its checkout actions. But we
+    // do want to invalidate the kernel's dcache and inode caches.
+    wasDirectoryListModified = true;
+
+    auto success = invalidateChannelEntryCache(state, name, std::nullopt);
+    if (success.hasValue()) {
+      auto [it, inserted] = contents.emplace(
+          newScmEntry->first,
+          modeFromTreeEntryType(filteredEntryType(
+              newScmEntry->second.getType(), ctx->getWindowsSymlinksEnabled())),
+          getOverlay()->allocateInodeNumber(),
+          newScmEntry->second.getHash());
+      XDCHECK(inserted);
+    } else {
+      if (folly::kIsWindows) {
+        if (auto* exc = success.tryGetExceptionObject<std::system_error>();
+            exc && isEnotempty(*exc)) {
+          XLOG(DBG6)
+              << "entry was created on disk while checkout is in progress: "
+              << getLogPath() << "/" << name;
+          if (oldScmEntry) {
+            ctx->addConflict(ConflictType::MODIFIED_MODIFIED, this, name);
+          } else {
+            ctx->addConflict(ConflictType::UNTRACKED_ADDED, this, name);
+          }
+          return nullptr;
+        }
+      }
+      ctx->addError(this, name, success.exception());
+    }
+  }
+
+  // Nothing else to do when there is no local inode.
   return nullptr;
 }
 
