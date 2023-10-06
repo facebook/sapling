@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::time::Duration;
+
 use cpython::*;
 use cpython_ext::PyNone;
 
@@ -40,6 +42,29 @@ py_class!(pub class AtExit |py| {
             if std::fs::remove_dir_all(&path).is_err() {
                 let _ = std::fs::remove_file(&path);
             }
+        });
+        Self::new(py, func)
+    }
+
+    /// wait_pid(pid, timeout_ms=None) -> AtExit.
+    /// Creates `AtExit` that waits for the given process.
+    /// `timeout` is in milliseconds.
+    @staticmethod
+    def wait_pid(pid: u32, timeout_ms: Option<u64> = None) -> PyResult<Self> {
+        let func = Box::new(move || {
+            let timeout = timeout_ms.map(Duration::from_millis);
+            let _ = procutil::wait_pid(pid, timeout);
+        });
+        Self::new(py, func)
+    }
+
+    /// terminate_pid(pid) -> AtExit.
+    /// Creates `AtExit` that terminates the given process.
+    @staticmethod
+    def terminate_pid(pid: u32, grace_period_ms: u64 = 2000) -> PyResult<Self> {
+        let grace_period = Duration::from_millis(grace_period_ms);
+        let func = Box::new(move || {
+            let _ = procutil::terminate_pid(pid, Some(grace_period));
         });
         Self::new(py, func)
     }
