@@ -980,6 +980,18 @@ class ui:
         if self._isatty(util.stderr) and self.configbool("pager", "stderr"):
             os.dup2(pager.stdin.fileno(), util.stderr.fileno())
 
+        if os.name == "nt":
+            # Note:
+            # - `terminate_pid_tree_on_exit` is only available on Windows.
+            # - Cannot use atexit or ctrlc handler, since TerminateProcess does
+            #   not give them a chance to run.
+            # - Need process tree killing. The "pager" process might be
+            #   "cmd.exe". "less.exe" is a child. Killing "cmd.exe" does
+            #   not affect "less.exe".
+            # - Important when running with commandserver, where Ctrl+C does
+            #   not affect the server-spawned "less.exe" directly.
+            bindings.process.terminate_pid_tree_on_exit(pager.pid)
+
         @self.atexit
         def killpager():
             if hasattr(signal, "SIGINT"):
