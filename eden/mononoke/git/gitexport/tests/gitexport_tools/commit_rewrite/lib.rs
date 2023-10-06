@@ -24,26 +24,27 @@ use mononoke_api::BookmarkKey;
 use mononoke_api::ChangesetContext;
 use mononoke_api::CoreContext;
 use mononoke_api::MononokeError;
+use mononoke_api::RepoContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
 use test_utils::build_test_repo;
 use test_utils::get_relevant_changesets_from_ids;
 use test_utils::GitExportTestRepoOptions;
-use test_utils::EXPORT_DIR;
-use test_utils::EXPORT_FILE;
-use test_utils::FILE_IN_SECOND_EXPORT_DIR;
-use test_utils::SECOND_EXPORT_DIR;
-use test_utils::SECOND_EXPORT_FILE;
 
 #[fbinit::test]
 async fn test_rewrite_partial_changesets(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
 
-    let export_dir = NonRootMPath::new(EXPORT_DIR).unwrap();
-    let second_export_dir = NonRootMPath::new(SECOND_EXPORT_DIR).unwrap();
+    let test_data = build_test_repo(fb, &ctx, GitExportTestRepoOptions::default()).await?;
+    let source_repo_ctx = test_data.repo_ctx;
+    let changeset_ids = test_data.commit_id_map;
+    let relevant_paths = test_data.relevant_paths;
 
-    let (source_repo_ctx, changeset_ids) =
-        build_test_repo(fb, &ctx, GitExportTestRepoOptions::default()).await?;
+    let export_dir = NonRootMPath::new(relevant_paths["export_dir"]).unwrap();
+    let export_file = relevant_paths["export_file"];
+    let second_export_dir = NonRootMPath::new(relevant_paths["second_export_dir"]).unwrap();
+    let second_export_file = relevant_paths["second_export_file"];
+    let file_in_second_export_dir = relevant_paths["file_in_second_export_dir"];
 
     let A = changeset_ids["A"];
     let C = changeset_ids["C"];
@@ -79,6 +80,74 @@ async fn test_rewrite_partial_changesets(fb: FacebookInit) -> Result<(), Error> 
     )
     .await?;
 
+    let expected_message_and_affected_files: Vec<(String, Vec<NonRootMPath>)> = vec![
+        build_expected_tuple("A", vec![export_file]),
+        build_expected_tuple("C", vec![export_file]),
+        build_expected_tuple("E", vec![export_file]),
+        build_expected_tuple("F", vec![file_in_second_export_dir]),
+        build_expected_tuple("G", vec![export_file, file_in_second_export_dir]),
+        build_expected_tuple("I", vec![second_export_file]),
+        build_expected_tuple("J", vec![export_file]),
+    ];
+
+    check_expected_results(
+        temp_repo_ctx,
+        relevant_changesets,
+        expected_message_and_affected_files,
+    )
+    .await
+}
+
+#[fbinit::test]
+async fn test_rewriting_fails_with_irrelevant_changeset(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+
+    let test_data = build_test_repo(fb, &ctx, GitExportTestRepoOptions::default()).await?;
+    let source_repo_ctx = test_data.repo_ctx;
+    let changeset_ids = test_data.commit_id_map;
+    let relevant_paths = test_data.relevant_paths;
+
+    let export_dir = NonRootMPath::new(relevant_paths["export_dir"]).unwrap();
+
+    let A = changeset_ids["A"];
+    let C = changeset_ids["C"];
+    let D = changeset_ids["D"];
+    let E = changeset_ids["E"];
+
+    // Passing an irrelevant changeset in the list should result in an error
+    let broken_changeset_list_ids: Vec<ChangesetId> = vec![A, C, D, E];
+
+    let broken_changeset_list: Vec<ChangesetContext> =
+        get_relevant_changesets_from_ids(&source_repo_ctx, broken_changeset_list_ids).await?;
+
+    let broken_changeset_parents =
+        HashMap::from([(A, vec![]), (C, vec![A]), (D, vec![C]), (E, vec![D])]);
+
+    let error = rewrite_partial_changesets(
+        fb,
+        source_repo_ctx.clone(),
+        broken_changeset_list.clone(),
+        &broken_changeset_parents,
+        vec![export_dir.clone()],
+    )
+    .await
+    .unwrap_err();
+    assert_eq!(
+        error.to_string(),
+        "internal error: Commit wasn't rewritten because it had no signficant changes"
+    );
+
+    Ok(())
+}
+
+async fn check_expected_results(
+    temp_repo_ctx: RepoContext,
+    // All the changesets that should be exported
+    relevant_changesets: Vec<ChangesetContext>,
+    // Topologically sorted list of the messages and affected files expected
+    // in the changesets in the temporary repo
+    expected_message_and_affected_files: Vec<(String, Vec<NonRootMPath>)>,
+) -> Result<()> {
     let temp_repo_master_csc = temp_repo_ctx
         .resolve_bookmark(
             &BookmarkKey::from_str(MASTER_BOOKMARK)?,
@@ -135,74 +204,21 @@ async fn test_rewrite_partial_changesets(fb: FacebookInit) -> Result<(), Error> 
     )
     .await?;
 
-    fn build_expected_tuple(msg: &str, fpaths: Vec<&str>) -> (String, Vec<NonRootMPath>) {
-        (
-            String::from(msg),
-            fpaths
-                .iter()
-                .map(|p| NonRootMPath::new(p).unwrap())
-                .collect::<Vec<_>>(),
-        )
-    }
+    assert_eq!(result.len(), expected_message_and_affected_files.len());
 
-    assert_eq!(result.len(), 7);
-    assert_eq!(result[0], build_expected_tuple("A", vec![EXPORT_FILE]));
-    assert_eq!(result[1], build_expected_tuple("C", vec![EXPORT_FILE]));
-    assert_eq!(result[2], build_expected_tuple("E", vec![EXPORT_FILE]));
-    assert_eq!(
-        result[3],
-        build_expected_tuple("F", vec![FILE_IN_SECOND_EXPORT_DIR])
-    );
-    assert_eq!(
-        result[4],
-        build_expected_tuple("G", vec![EXPORT_FILE, FILE_IN_SECOND_EXPORT_DIR])
-    );
-    assert_eq!(
-        result[5],
-        build_expected_tuple("I", vec![SECOND_EXPORT_FILE])
-    );
-    assert_eq!(result[6], build_expected_tuple("J", vec![EXPORT_FILE]));
+    for (i, expected_tuple) in expected_message_and_affected_files.into_iter().enumerate() {
+        assert_eq!(result[i], expected_tuple);
+    }
 
     Ok(())
 }
 
-#[fbinit::test]
-async fn test_rewriting_fails_with_irrelevant_changeset(fb: FacebookInit) -> Result<(), Error> {
-    let ctx = CoreContext::test_mock(fb);
-
-    let export_dir = NonRootMPath::new(EXPORT_DIR).unwrap();
-
-    let (source_repo_ctx, changeset_ids) =
-        build_test_repo(fb, &ctx, GitExportTestRepoOptions::default()).await?;
-
-    let A = changeset_ids["A"];
-    let C = changeset_ids["C"];
-    let D = changeset_ids["D"];
-    let E = changeset_ids["E"];
-
-    // Passing an irrelevant changeset in the list should result in an error
-    let broken_changeset_list_ids: Vec<ChangesetId> = vec![A, C, D, E];
-
-    let broken_changeset_list: Vec<ChangesetContext> =
-        get_relevant_changesets_from_ids(&source_repo_ctx, broken_changeset_list_ids).await?;
-
-    let broken_changeset_parents =
-        HashMap::from([(A, vec![]), (C, vec![A]), (D, vec![C]), (E, vec![D])]);
-
-    let error = rewrite_partial_changesets(
-        fb,
-        source_repo_ctx.clone(),
-        broken_changeset_list.clone(),
-        &broken_changeset_parents,
-        vec![export_dir.clone()],
+fn build_expected_tuple(msg: &str, fpaths: Vec<&str>) -> (String, Vec<NonRootMPath>) {
+    (
+        String::from(msg),
+        fpaths
+            .iter()
+            .map(|p| NonRootMPath::new(p).unwrap())
+            .collect::<Vec<_>>(),
     )
-    .await
-    .unwrap_err();
-
-    assert_eq!(
-        error.to_string(),
-        "internal error: Commit wasn't rewritten because it had no signficant changes"
-    );
-
-    Ok(())
 }

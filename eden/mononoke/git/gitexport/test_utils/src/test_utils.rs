@@ -6,11 +6,13 @@
  */
 
 use std::collections::BTreeMap;
+use std::collections::HashMap;
 
 use anyhow::anyhow;
-use anyhow::Error;
+use anyhow::Result;
 use fbinit::FacebookInit;
 use futures::future::try_join_all;
+use maplit::hashmap;
 use mononoke_api::ChangesetContext;
 use mononoke_api::CoreContext;
 use mononoke_api::MononokeError;
@@ -24,16 +26,15 @@ use tests_utils::drawdag::create_from_dag_with_changes;
 
 // Directory and file constants.
 // By convention, directories with uppercase names are exported.
+const EXPORT_DIR: &str = "EXP";
+const EXPORT_FILE: &str = "EXP/bar.txt";
+const SECOND_EXPORT_FILE: &str = "EXP/foo.txt";
 
-pub const EXPORT_DIR: &str = "EXP";
-pub const EXPORT_FILE: &str = "EXP/bar.txt";
-pub const SECOND_EXPORT_FILE: &str = "EXP/foo.txt";
+const IRRELEVANT_FILE: &str = "internal/bar.txt";
+const SECOND_IRRELEVANT_FILE: &str = "internal/foo.txt";
 
-pub const IRRELEVANT_FILE: &str = "internal/bar.txt";
-pub const SECOND_IRRELEVANT_FILE: &str = "internal/foo.txt";
-
-pub const SECOND_EXPORT_DIR: &str = "EXP_2";
-pub const FILE_IN_SECOND_EXPORT_DIR: &str = "EXP_2/foo.txt";
+const SECOND_EXPORT_DIR: &str = "EXP_2";
+const FILE_IN_SECOND_EXPORT_DIR: &str = "EXP_2/foo.txt";
 
 pub async fn get_relevant_changesets_from_ids(
     repo_ctx: &RepoContext,
@@ -54,14 +55,34 @@ pub struct GitExportTestRepoOptions {
     pub add_branch_commit: bool,
 }
 
+/// Store all relevant data about a test case to avoid harcoding and duplication
+pub struct GitExportTestData {
+    /// Repo created for the test case
+    pub repo_ctx: RepoContext,
+    /// Map of commit id/name to the actual ChangesetId
+    pub commit_id_map: BTreeMap<String, ChangesetId>,
+    /// ID of the HEAD commit
+    pub head_id: &'static str,
+    /// Paths that were used in the commits and should be known by the tests
+    pub relevant_paths: HashMap<&'static str, &'static str>,
+}
+
 pub async fn build_test_repo(
     fb: FacebookInit,
     ctx: &CoreContext,
     opts: GitExportTestRepoOptions,
-) -> Result<(RepoContext, BTreeMap<String, ChangesetId>), Error> {
+) -> Result<GitExportTestData> {
     let source_repo = TestRepoFactory::new(fb)?.build().await?;
     let source_repo_ctx = RepoContext::new_test(ctx.clone(), source_repo).await?;
     let source_repo = source_repo_ctx.repo();
+
+    let relevant_paths = hashmap! {
+        "export_dir" => EXPORT_DIR,
+        "export_file" => EXPORT_FILE,
+        "second_export_file" => SECOND_EXPORT_FILE,
+        "second_export_dir" => SECOND_EXPORT_DIR,
+        "file_in_second_export_dir" => FILE_IN_SECOND_EXPORT_DIR,
+    };
 
     let mut dag_changes = changes! {
         "A" => |c| c.add_file(EXPORT_FILE, "file_to_export")
@@ -103,14 +124,14 @@ pub async fn build_test_repo(
         dag_changes.extend(branch_commit_changes);
 
         r"
-        A-B-C-D-E-F-G-H-I-J
-                 \ /
-                  K
-        "
+          A-B-C-D-E-F-G-H-I-J
+                   \ /
+                    K
+          "
     } else {
         r"
-        A-B-C-D-E-F-G-H-I-J
-        "
+          A-B-C-D-E-F-G-H-I-J
+          "
     };
 
     let commit_id_map = create_from_dag_with_changes(ctx, &source_repo, dag, dag_changes).await?;
@@ -118,5 +139,10 @@ pub async fn build_test_repo(
     let bookmark_update_ctx = bookmark(ctx, source_repo, "master");
     let _master_bookmark_key = bookmark_update_ctx.set_to(commit_id_map["J"]).await?;
 
-    Ok((source_repo_ctx, commit_id_map))
+    Ok(GitExportTestData {
+        repo_ctx: source_repo_ctx,
+        commit_id_map,
+        relevant_paths,
+        head_id: "J",
+    })
 }

@@ -8,7 +8,6 @@
 use std::collections::HashMap;
 
 use anyhow::anyhow;
-use anyhow::Error;
 use anyhow::Result;
 use futures::future::try_join_all;
 use futures::stream::StreamExt;
@@ -18,9 +17,8 @@ use itertools::Itertools;
 use mononoke_api::changeset_path::ChangesetPathHistoryContext;
 use mononoke_api::changeset_path::ChangesetPathHistoryOptions;
 use mononoke_api::ChangesetContext;
-use mononoke_api::MononokeError;
-use mononoke_api::MononokePath;
 use mononoke_types::ChangesetId;
+use mononoke_types::NonRootMPath;
 use slog::debug;
 use slog::info;
 use slog::trace;
@@ -34,18 +32,14 @@ pub type PartialGraphInfo = (Vec<ChangesetContext>, ChangesetParents);
 /// modified at least one of the paths.
 /// The commit graph is returned as a topologically sorted list of changesets
 /// and a hashmap of changset id to their parents' ids.
-pub async fn build_partial_commit_graph_for_export<P>(
+pub async fn build_partial_commit_graph_for_export(
     logger: &Logger,
-    paths: Vec<P>,
+    paths: Vec<NonRootMPath>,
     cs_ctx: ChangesetContext,
     // Consider history until the provided timestamp, i.e. all commits in the
     // graph will have its creation time greater than or equal to it.
     oldest_commit_ts: Option<i64>,
-) -> Result<PartialGraphInfo, MononokeError>
-where
-    P: TryInto<MononokePath>,
-    MononokeError: From<P::Error>,
-{
+) -> Result<PartialGraphInfo> {
     info!(logger, "Building partial commit graph for export...");
 
     let cs_path_hist_ctxs: Vec<ChangesetPathHistoryContext> = stream::iter(paths)
@@ -101,7 +95,7 @@ where
 async fn merge_cs_lists_and_build_parents_map(
     logger: &Logger,
     changeset_lists: Vec<Vec<ChangesetContext>>,
-) -> Result<(Vec<ChangesetContext>, ChangesetParents), Error> {
+) -> Result<(Vec<ChangesetContext>, ChangesetParents)> {
     info!(
         logger,
         "Merging changeset lists and building parents map..."
