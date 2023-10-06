@@ -91,8 +91,8 @@ pub struct CheckoutPlan {
     /// Files to be removed.
     remove: Vec<RepoPathBuf>,
     /// Files that needs their content updated.
-    update_content: Vec<UpdateContentAction>,
-    filtered_update_content: Vec<UpdateContentAction>,
+    update_content: HashMap<RepoPathBuf, UpdateContentAction>,
+    filtered_update_content: HashMap<RepoPathBuf, UpdateContentAction>,
     /// Files that only need X flag updated.
     update_meta: Vec<UpdateMetaAction>,
     progress: Option<Mutex<CheckoutProgress>>,
@@ -109,14 +109,10 @@ struct CheckoutProgress {
 /// Update content and (possibly) metadata on the file
 #[derive(Clone, Debug)]
 struct UpdateContentAction {
-    /// Path to file.
-    path: RepoPathBuf,
     /// If content has changed, HgId of new content.
     content_hgid: HgId,
     /// New file type.
     file_type: FileType,
-    /// Whether this is a new file.
-    new_file: bool,
 }
 
 /// Only update metadata on the file, do not update content
@@ -169,7 +165,7 @@ impl Checkout {
 impl CheckoutPlan {
     fn from_action_map(checkout: Checkout, map: ActionMap) -> Self {
         let mut remove = vec![];
-        let mut update_content = vec![];
+        let mut update_content = HashMap::new();
         let mut update_meta = vec![];
         for (path, action) in map.into_iter() {
             match action {
@@ -178,7 +174,7 @@ impl CheckoutPlan {
                     update_meta.push(UpdateMetaAction { path, set_x_flag })
                 }
                 Action::Update(up) => {
-                    update_content.push(UpdateContentAction::new(path, up.to, up.from.is_none()))
+                    update_content.insert(path, UpdateContentAction::new(up.to));
                 }
             }
         }
@@ -251,7 +247,7 @@ impl CheckoutPlan {
         let actions: HashMap<_, _> = self
             .filtered_update_content
             .iter()
-            .map(|u| (u.make_key(), u.clone()))
+            .map(|(p, u)| (Key::new(p.clone(), u.content_hgid.clone()), u.clone()))
             .collect();
         let keys: Vec<_> = actions.keys().cloned().collect();
 
@@ -262,7 +258,7 @@ impl CheckoutPlan {
             let action = actions
                 .get(&key)
                 .ok_or_else(|| format_err!("Storage returned unknown key {}", key))?;
-            let path = action.path.clone();
+            let path = key.path.clone();
             let flag = type_to_flag(&action.file_type);
             Ok((path, action.content_hgid, data, flag))
         });
@@ -293,9 +289,9 @@ impl CheckoutPlan {
                 let symlinks = self
                     .filtered_update_content
                     .iter()
-                    .filter_map(|a| {
+                    .filter_map(|(p, a)| {
                         if a.file_type == FileType::Symlink {
-                            Some(a.path.as_str().to_owned())
+                            Some(p.as_str().to_owned())
                         } else {
                             None
                         }
@@ -323,7 +319,7 @@ impl CheckoutPlan {
         let keys = self
             .filtered_update_content
             .iter()
-            .map(UpdateContentAction::make_key);
+            .map(|(p, u)| Key::new(p.clone(), u.content_hgid.clone()));
         let mut stream = store.read_file_contents(keys.collect()).await;
         let (mut count, mut size) = (0, 0);
         while let Some(result) = stream.next().await {
@@ -355,17 +351,17 @@ impl CheckoutPlan {
         let vfs = &self.checkout.vfs;
         let mut check_content = vec![];
 
-        let new_files: Vec<_> = self.new_file_actions().collect();
+        let unknown: Vec<&RepoPathBuf> = status.unknown().collect();
 
-        let bar = ProgressBar::register_new("Checking untracked", new_files.len() as u64, "files");
-        for file_action in new_files {
-            let file: &RepoPathBuf = &file_action.path;
+        let bar = ProgressBar::register_new("Checking untracked", unknown.len() as u64, "files");
 
+        for file in unknown {
             bar.increase_position(1);
-            if !matches!(status.status(file), Some(FileStatus::Unknown)) {
+            bar.set_message(file.to_string());
+
+            if !self.filtered_update_content.contains_key(file) {
                 continue;
             }
-            bar.set_message(file.to_string());
 
             let state = if vfs.case_sensitive() {
                 tree_state.get(file)?
@@ -549,22 +545,16 @@ impl CheckoutPlan {
     }
 
     pub fn updated_content_files(&self) -> impl Iterator<Item = &RepoPathBuf> {
-        self.update_content.iter().map(|u| &u.path)
+        self.update_content.keys()
     }
 
     pub fn updated_meta_files(&self) -> impl Iterator<Item = &RepoPathBuf> {
         self.update_meta.iter().map(|u| &u.path)
     }
 
-    fn new_file_actions(&self) -> impl Iterator<Item = &UpdateContentAction> {
-        // todo - index new files so that this function don't need to be O(total_files_changed)test-update-names.t.err
-        self.filtered_update_content.iter().filter(|u| u.new_file)
-    }
-
     pub fn all_files(&self) -> impl Iterator<Item = &RepoPathBuf> {
         self.update_content
-            .iter()
-            .map(|u| &u.path)
+            .keys()
             .chain(self.remove.iter())
             .chain(self.update_meta.iter().map(|u| &u.path))
     }
@@ -585,8 +575,8 @@ impl CheckoutPlan {
     pub fn empty(vfs: VFS) -> Self {
         Self {
             remove: vec![],
-            update_content: vec![],
-            filtered_update_content: vec![],
+            update_content: HashMap::new(),
+            filtered_update_content: HashMap::new(),
             update_meta: vec![],
             progress: None,
             checkout: Checkout::default_config(vfs),
@@ -689,15 +679,14 @@ impl CheckoutProgress {
 
     fn filter_already_written<'a>(
         &self,
-        actions: &[UpdateContentAction],
-    ) -> Vec<UpdateContentAction> {
+        actions: &HashMap<RepoPathBuf, UpdateContentAction>,
+    ) -> HashMap<RepoPathBuf, UpdateContentAction> {
         // TODO: This should be done in parallel. Maybe with the new vfs async batch APIs?
         let bar = ProgressBar::register_new("Filtering existing", actions.len() as u64, "files");
         actions
             .iter()
-            .filter(move |action| {
-                let path = &action.path;
-                if let Some((hgid, time, size)) = &self.state.get(path) {
+            .filter(move |(path, action)| {
+                if let Some((hgid, time, size)) = &self.state.get(*path) {
                     if *hgid != action.content_hgid {
                         return true;
                     }
@@ -721,7 +710,7 @@ impl CheckoutProgress {
                 }
                 true
             })
-            .cloned()
+            .map(|(p, u)| (p.clone(), u.clone()))
             .collect()
     }
 }
@@ -738,23 +727,11 @@ fn type_to_flag(ft: &FileType) -> UpdateFlag {
 }
 
 impl UpdateContentAction {
-    pub fn new(path: RepoPathBuf, meta: FileMetadata, new_file: bool) -> Self {
+    pub fn new(meta: FileMetadata) -> Self {
         Self {
-            path,
             content_hgid: meta.hgid,
             file_type: meta.file_type,
-            new_file,
         }
-    }
-
-    pub fn make_key(&self) -> Key {
-        Key::new(self.path.clone(), self.content_hgid)
-    }
-}
-
-impl AsRef<RepoPath> for UpdateContentAction {
-    fn as_ref(&self) -> &RepoPath {
-        &self.path
     }
 }
 
@@ -769,14 +746,14 @@ impl fmt::Display for CheckoutPlan {
         for r in &self.remove {
             writeln!(f, "rm {}", r)?;
         }
-        for u in &self.update_content {
+        for (p, u) in &self.update_content {
             let ft = match u.file_type {
                 FileType::Executable => "(x)",
                 FileType::Symlink => "(s)",
                 FileType::Regular => "",
                 FileType::GitSubmodule => continue,
             };
-            writeln!(f, "up {}=>{}{}", u.path, u.content_hgid, ft)?;
+            writeln!(f, "up {}=>{}{}", p, u.content_hgid, ft)?;
         }
         for u in &self.update_meta {
             let ch = if u.set_x_flag { "+x" } else { "-x" };
