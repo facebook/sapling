@@ -4012,12 +4012,54 @@ def buildcommittemplate(repo, ctx, extramsg, ref):
         for k, v in repo.ui.configitems("committemplate")
     )
 
+    # load extra aliases based on changed files
+    if repo.ui.configbool("experimental", "local-committemplate"):
+        localtemplate = localcommittemplate(repo, ctx)
+        t.t.cache.update((k, templater.unquotestring(v)) for k, v in localtemplate)
+
     if not extramsg:
         extramsg = ""  # ensure that extramsg is string
 
     ui.pushbuffer()
     t.show(ctx, extramsg=extramsg)
     return pycompat.decodeutf8(ui.popbufferbytes(), errors="replace")
+
+
+def localcommittemplate(repo, ctx):
+    """return [(k, v)], local [committemplate] config based on changed files.
+
+    The local commit template only works for working copy ctx.
+
+    The local commit template is decided in these steps:
+    - First, calculate the common prefix of the changed files.
+      For example, the common prefix of a/x/1, a/x/2/3 is a/x.
+    - Then, find the config file, starting with prefix/.committemplate,
+      recursively look at parent directories until repo root.
+      For the above example, check a/x/.committemplate, then a/.committemplate,
+      then .committemplate from repo root.
+    - Load the config file. The format of the config file is ``key = value``,
+      similar to config files but without the [committemplate] header.
+    """
+
+    if ctx.node() is None:
+        files = ctx.files()
+        prefix = os.path.commonpath(files) if files else ""
+        wvfs = repo.wvfs
+        while True:
+            config_path = prefix + (prefix and "/" or "") + ".committemplate"
+            if wvfs.isdir(prefix) and wvfs.exists(config_path):
+                cfg = bindings.configloader.config()
+                content = wvfs.tryreadutf8(config_path)
+                cfg.parse(content, source=config_path)
+                section = ""
+                names = cfg.names(section)
+                return [(name, cfg.get(section, name)) for name in names]
+            next_prefix = os.path.dirname(prefix)
+            if next_prefix == prefix:
+                break
+            prefix = next_prefix
+
+    return []
 
 
 def hgprefix(msg):
