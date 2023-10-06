@@ -368,12 +368,17 @@ impl MononokeApp {
         &self.env.readonly_storage
     }
 
-    /// Create a basic CoreContext without scuba logging.  Good choice for
-    /// simple CLI tools like admin.
+    /// Create a basic CoreContext.
     ///
-    /// Warning: returned context doesn't provide any scuba logging!
+    /// This is a good choice for simple CLI tools like admin.  It will
+    /// contain basic logging, and also scuba logging if configured by the
+    /// command line arguments.
     pub fn new_basic_context(&self) -> CoreContext {
-        CoreContext::new_with_logger(self.env.fb, self.logger().clone())
+        CoreContext::new_with_logger_and_scuba(
+            self.env.fb,
+            self.logger().clone(),
+            self.env.scuba_sample_builder.clone(),
+        )
     }
 
     /// Return repo factory used by app.

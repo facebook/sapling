@@ -42,6 +42,15 @@ impl CoreContext {
         session.new_context(logger, MononokeScubaSampleBuilder::with_discard())
     }
 
+    pub fn new_with_logger_and_scuba(
+        fb: FacebookInit,
+        logger: Logger,
+        scuba: MononokeScubaSampleBuilder,
+    ) -> Self {
+        let session = SessionContainer::new_with_defaults(fb);
+        session.new_context(logger, scuba)
+    }
+
     // Context for bulk processing like scrubbing or bulk backfilling
     pub fn new_for_bulk_processing(fb: FacebookInit, logger: Logger) -> Self {
         let session = SessionContainer::builder(fb)
