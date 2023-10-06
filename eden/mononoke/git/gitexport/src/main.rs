@@ -144,7 +144,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         .map(|p| TryFrom::try_from(p.as_os_str()))
         .collect::<Result<Vec<NonRootMPath>>>()?;
 
-    let (changesets, cs_parents) = build_partial_commit_graph_for_export(
+    let graph_info = build_partial_commit_graph_for_export(
         logger,
         export_paths.clone(),
         cs_ctx,
@@ -152,11 +152,11 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     )
     .await?;
 
-    trace!(logger, "changesets: {:#?}", changesets);
-    trace!(logger, "changeset parents: {:?}", cs_parents);
+    trace!(logger, "changesets: {:#?}", &graph_info.changesets);
+    trace!(logger, "changeset parents: {:?}", &graph_info.parents_map);
 
     let temp_repo_ctx =
-        rewrite_partial_changesets(app.fb, repo_ctx, changesets, &cs_parents, export_paths).await?;
+        rewrite_partial_changesets(app.fb, repo_ctx, graph_info, export_paths).await?;
 
     let temp_master_csc = temp_repo_ctx
         .resolve_bookmark(

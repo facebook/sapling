@@ -64,17 +64,18 @@ async fn test_partial_commit_graph_for_single_export_path(fb: FacebookInit) -> R
         .await?
         .ok_or(anyhow!("Couldn't find master bookmark in source repo."))?;
 
-    let (relevant_css, parents_map) =
+    let graph_info =
         build_partial_commit_graph_for_export(&logger, vec![export_dir], master_cs, None).await?;
 
-    let relevant_cs_ids = relevant_css
+    let relevant_cs_ids = graph_info
+        .changesets
         .iter()
         .map(ChangesetContext::id)
         .collect::<Vec<_>>();
 
     assert_eq!(expected_cs_ids, relevant_cs_ids);
 
-    assert_eq!(expected_parent_map, parents_map);
+    assert_eq!(expected_parent_map, graph_info.parents_map);
 
     Ok(())
 }
@@ -172,7 +173,7 @@ async fn test_partial_commit_graph_for_multiple_export_paths(fb: FacebookInit) -
         .await?
         .ok_or(anyhow!("Couldn't find master bookmark in source repo."))?;
 
-    let (relevant_css, parents_map) = build_partial_commit_graph_for_export(
+    let graph_info = build_partial_commit_graph_for_export(
         &logger,
         vec![export_dir, second_export_dir],
         master_cs,
@@ -180,14 +181,15 @@ async fn test_partial_commit_graph_for_multiple_export_paths(fb: FacebookInit) -
     )
     .await?;
 
-    let relevant_cs_ids = relevant_css
+    let relevant_cs_ids = graph_info
+        .changesets
         .iter()
         .map(ChangesetContext::id)
         .collect::<Vec<_>>();
 
     assert_eq!(expected_cs_ids, relevant_cs_ids);
 
-    assert_eq!(expected_parent_map, parents_map);
+    assert_eq!(expected_parent_map, graph_info.parents_map);
 
     Ok(())
 }
@@ -245,7 +247,7 @@ async fn test_oldest_commit_ts_option(fb: FacebookInit) -> Result<()> {
 
     let oldest_ts = fifth_cs.author_date().await?.timestamp();
 
-    let (relevant_css, parents_map) = build_partial_commit_graph_for_export(
+    let graph_info = build_partial_commit_graph_for_export(
         &logger,
         vec![export_dir, second_export_dir],
         master_cs,
@@ -253,14 +255,15 @@ async fn test_oldest_commit_ts_option(fb: FacebookInit) -> Result<()> {
     )
     .await?;
 
-    let relevant_cs_ids = relevant_css
+    let relevant_cs_ids = graph_info
+        .changesets
         .iter()
         .map(ChangesetContext::id)
         .collect::<Vec<_>>();
 
     assert_eq!(expected_cs_ids, relevant_cs_ids);
 
-    assert_eq!(expected_parent_map, parents_map);
+    assert_eq!(expected_parent_map, graph_info.parents_map);
 
     Ok(())
 }

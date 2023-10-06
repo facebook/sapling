@@ -18,6 +18,7 @@ use anyhow::Result;
 use fbinit::FacebookInit;
 use futures::future::try_join_all;
 use gitexport_tools::rewrite_partial_changesets;
+use gitexport_tools::GitExportGraphInfo;
 use gitexport_tools::MASTER_BOOKMARK;
 use mononoke_api::BookmarkFreshness;
 use mononoke_api::BookmarkKey;
@@ -71,11 +72,15 @@ async fn test_rewrite_partial_changesets(fb: FacebookInit) -> Result<(), Error> 
         (J, vec![I]),
     ]);
 
+    let graph_info = GitExportGraphInfo {
+        parents_map: relevant_changeset_parents,
+        changesets: relevant_changesets.clone(),
+    };
+
     let temp_repo_ctx = rewrite_partial_changesets(
         fb,
         source_repo_ctx.clone(),
-        relevant_changesets.clone(),
-        &relevant_changeset_parents,
+        graph_info,
         vec![export_dir.clone(), second_export_dir.clone()],
     )
     .await?;
@@ -123,15 +128,20 @@ async fn test_rewriting_fails_with_irrelevant_changeset(fb: FacebookInit) -> Res
     let broken_changeset_parents =
         HashMap::from([(A, vec![]), (C, vec![A]), (D, vec![C]), (E, vec![D])]);
 
+    let graph_info = GitExportGraphInfo {
+        parents_map: broken_changeset_parents.clone(),
+        changesets: broken_changeset_list,
+    };
+
     let error = rewrite_partial_changesets(
         fb,
         source_repo_ctx.clone(),
-        broken_changeset_list.clone(),
-        &broken_changeset_parents,
+        graph_info,
         vec![export_dir.clone()],
     )
     .await
     .unwrap_err();
+
     assert_eq!(
         error.to_string(),
         "internal error: Commit wasn't rewritten because it had no signficant changes"

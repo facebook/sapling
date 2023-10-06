@@ -14,7 +14,6 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures::stream::{self};
 use itertools::Itertools;
-use mononoke_api::changeset_path::ChangesetPathHistoryContext;
 use mononoke_api::changeset_path::ChangesetPathHistoryOptions;
 use mononoke_api::ChangesetContext;
 use mononoke_types::ChangesetId;
@@ -25,7 +24,12 @@ use slog::trace;
 use slog::Logger;
 
 pub type ChangesetParents = HashMap<ChangesetId, Vec<ChangesetId>>;
-pub type PartialGraphInfo = (Vec<ChangesetContext>, ChangesetParents);
+
+#[derive(Debug)]
+pub struct GitExportGraphInfo {
+    pub changesets: Vec<ChangesetContext>,
+    pub parents_map: ChangesetParents,
+}
 
 /// Given a list of paths and a changeset, return a commit graph
 /// containing only commits that are ancestors of the changeset and have
@@ -39,13 +43,8 @@ pub async fn build_partial_commit_graph_for_export(
     // Consider history until the provided timestamp, i.e. all commits in the
     // graph will have its creation time greater than or equal to it.
     oldest_commit_ts: Option<i64>,
-) -> Result<PartialGraphInfo> {
+) -> Result<GitExportGraphInfo> {
     info!(logger, "Building partial commit graph for export...");
-
-    let cs_path_hist_ctxs: Vec<ChangesetPathHistoryContext> = stream::iter(paths)
-        .then(|p| async { cs_ctx.path_with_history(p).await })
-        .try_collect::<Vec<_>>()
-        .await?;
 
     let cs_path_history_options = ChangesetPathHistoryOptions {
         follow_history_across_deletions: true,
@@ -53,18 +52,12 @@ pub async fn build_partial_commit_graph_for_export(
         ..Default::default()
     };
 
-    // Get each path's history as a vector of changesets
-    let history_changesets: Vec<Vec<ChangesetContext>> = try_join_all(
-        try_join_all(
-            cs_path_hist_ctxs
-                .iter()
-                .map(|csphc| csphc.history(cs_path_history_options)),
-        )
-        .await?
-        .into_iter()
-        .map(|stream| stream.try_collect()),
-    )
-    .await?;
+    let history_changesets: Vec<Vec<ChangesetContext>> = stream::iter(paths)
+        .then(|p| async {
+            get_relevant_changesets_for_single_path(p, &cs_ctx, &cs_path_history_options).await
+        })
+        .try_collect::<Vec<_>>()
+        .await?;
 
     let (sorted_changesets, parents_map) =
         merge_cs_lists_and_build_parents_map(logger, history_changesets).await?;
@@ -80,7 +73,28 @@ pub async fn build_partial_commit_graph_for_export(
     trace!(logger, "changeset messages: {0:#?}", cs_msgs);
 
     info!(logger, "Partial commit graph built!");
-    Ok((sorted_changesets, parents_map))
+    Ok(GitExportGraphInfo {
+        parents_map,
+        changesets: sorted_changesets,
+    })
+}
+
+/// Get all changesets that affected the provided path up to a specific head
+/// commit.
+async fn get_relevant_changesets_for_single_path(
+    path: NonRootMPath,
+    head_cs: &ChangesetContext,
+    cs_path_history_opts: &ChangesetPathHistoryOptions,
+) -> Result<Vec<ChangesetContext>> {
+    let cs_path_hist_ctx = head_cs.path_with_history(path).await?;
+
+    let changesets: Vec<ChangesetContext> = cs_path_hist_ctx
+        .history(*cs_path_history_opts)
+        .await?
+        .try_collect()
+        .await?;
+
+    Ok(changesets)
 }
 
 /// Given a list of changeset lists, merge, dedupe and sort them topologically

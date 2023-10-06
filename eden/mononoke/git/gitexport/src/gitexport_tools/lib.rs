@@ -47,7 +47,8 @@ use sql::rusqlite::Connection as SqliteConnection;
 use test_repo_factory::TestRepoFactory;
 
 pub use crate::partial_commit_graph::build_partial_commit_graph_for_export;
-pub use crate::partial_commit_graph::ChangesetParents;
+use crate::partial_commit_graph::ChangesetParents;
+pub use crate::partial_commit_graph::GitExportGraphInfo;
 
 pub const MASTER_BOOKMARK: &str = "master";
 
@@ -57,12 +58,12 @@ pub const MASTER_BOOKMARK: &str = "master";
 pub async fn rewrite_partial_changesets(
     fb: FacebookInit,
     source_repo_ctx: RepoContext,
-    changesets: Vec<ChangesetContext>,
-    changeset_parents: &ChangesetParents,
+    graph_info: GitExportGraphInfo,
     export_paths: Vec<NonRootMPath>,
 ) -> Result<RepoContext> {
     let ctx: &CoreContext = source_repo_ctx.ctx();
-
+    let changesets = graph_info.changesets;
+    let changeset_parents = &graph_info.parents_map;
     let logger = ctx.logger();
 
     info!(logger, "Copying changesets to temporary repo...");
