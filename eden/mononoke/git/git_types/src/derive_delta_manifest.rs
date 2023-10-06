@@ -77,7 +77,7 @@ impl RootGitDeltaManifestId {
         Self(id)
     }
 
-    pub fn manifest_unode_id(&self) -> &GitDeltaManifestId {
+    pub fn manifest_id(&self) -> &GitDeltaManifestId {
         &self.0
     }
 }

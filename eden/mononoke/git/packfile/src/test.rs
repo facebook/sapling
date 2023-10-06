@@ -16,7 +16,6 @@ use flate2::write::ZlibDecoder;
 use flate2::write::ZlibEncoder;
 use flate2::Compression;
 use futures::stream;
-use futures::Future;
 use git_types::DeltaInstructions;
 use gix_diff::blob::Algorithm;
 use gix_hash::ObjectId;
@@ -34,8 +33,7 @@ use crate::types::PackfileItem;
 
 async fn get_objects_stream(
     with_delta: bool,
-) -> anyhow::Result<impl stream::Stream<Item = impl Future<Output = anyhow::Result<PackfileItem>>>>
-{
+) -> anyhow::Result<impl stream::Stream<Item = anyhow::Result<PackfileItem>>> {
     // Create a few Git objects
     let tag_bytes = Bytes::from(to_vec_bytes(&gix_object::Object::Tag(Tag {
         target: ObjectId::empty_tree(gix_hash::Kind::Sha1),
@@ -56,9 +54,9 @@ async fn get_objects_stream(
         }],
     }))?);
     let mut pack_items = vec![
-        futures::future::ready(PackfileItem::new_base(tag_bytes.clone())),
-        futures::future::ready(PackfileItem::new_base(blob_bytes)),
-        futures::future::ready(PackfileItem::new_base(tree_bytes)),
+        PackfileItem::new_base(tag_bytes.clone()),
+        PackfileItem::new_base(blob_bytes),
+        PackfileItem::new_base(tree_bytes),
     ];
     if with_delta {
         let another_tag_bytes = Bytes::from(to_vec_bytes(&gix_object::Object::Tag(Tag {
@@ -87,7 +85,7 @@ async fn get_objects_stream(
             decompressed_size,
             compressed_instruction_bytes,
         );
-        pack_items.push(futures::future::ready(anyhow::Ok(pack_item)));
+        pack_items.push(anyhow::Ok(pack_item));
     }
     let objects_stream = stream::iter(pack_items);
     Ok(objects_stream)
@@ -213,9 +211,7 @@ async fn validate_staggered_packfile_generation() -> anyhow::Result<()> {
     }))?);
     // Validate we are able to write the object to the packfile without errors
     packfile_writer
-        .write(stream::iter(vec![futures::future::ready(
-            PackfileItem::new_base(tag_bytes),
-        )]))
+        .write(stream::iter(vec![PackfileItem::new_base(tag_bytes)]))
         .await
         .expect("Expected successful write of object to packfile");
     let blob_bytes = Bytes::from(to_vec_bytes(&gix_object::Object::Blob(gix_object::Blob {
@@ -223,9 +219,7 @@ async fn validate_staggered_packfile_generation() -> anyhow::Result<()> {
     }))?);
     // Validate we are able to write the object to the packfile without errors
     packfile_writer
-        .write(stream::iter(vec![futures::future::ready(
-            PackfileItem::new_base(blob_bytes),
-        )]))
+        .write(stream::iter(vec![PackfileItem::new_base(blob_bytes)]))
         .await
         .expect("Expected successful write of object to packfile");
     let tree_bytes = Bytes::from(to_vec_bytes(&gix_object::Object::Tree(gix_object::Tree {
@@ -237,9 +231,7 @@ async fn validate_staggered_packfile_generation() -> anyhow::Result<()> {
     }))?);
     // Validate we are able to write the object to the packfile without errors
     packfile_writer
-        .write(stream::iter(vec![futures::future::ready(
-            PackfileItem::new_base(tree_bytes),
-        )]))
+        .write(stream::iter(vec![PackfileItem::new_base(tree_bytes)]))
         .await
         .expect("Expected successful write of object to packfile");
 
@@ -395,9 +387,7 @@ async fn validate_staggered_bundle_generation() -> anyhow::Result<()> {
     }))?);
     // Validate we are able to write the object to the bundle without errors
     bundle_writer
-        .write(stream::iter(vec![futures::future::ready(
-            PackfileItem::new_base(tag_bytes),
-        )]))
+        .write(stream::iter(vec![PackfileItem::new_base(tag_bytes)]))
         .await
         .expect("Expected successful write of object to bundle");
     let blob_bytes = Bytes::from(to_vec_bytes(&gix_object::Object::Blob(gix_object::Blob {
@@ -405,9 +395,7 @@ async fn validate_staggered_bundle_generation() -> anyhow::Result<()> {
     }))?);
     // Validate we are able to write the object to the bundle without errors
     bundle_writer
-        .write(stream::iter(vec![futures::future::ready(
-            PackfileItem::new_base(blob_bytes),
-        )]))
+        .write(stream::iter(vec![PackfileItem::new_base(blob_bytes)]))
         .await
         .expect("Expected successful write of object to bundle");
     let tree_bytes = Bytes::from(to_vec_bytes(&gix_object::Object::Tree(gix_object::Tree {
@@ -415,9 +403,7 @@ async fn validate_staggered_bundle_generation() -> anyhow::Result<()> {
     }))?);
     // Validate we are able to write the object to the bundle without errors
     bundle_writer
-        .write(stream::iter(vec![futures::future::ready(
-            PackfileItem::new_base(tree_bytes),
-        )]))
+        .write(stream::iter(vec![PackfileItem::new_base(tree_bytes)]))
         .await
         .expect("Expected successful write of object to bundle");
     // Validate we are able to finish writing to the bundle

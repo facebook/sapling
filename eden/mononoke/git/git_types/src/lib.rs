@@ -35,6 +35,7 @@ pub use crate::blob::BlobHandle;
 pub use crate::commit::MappedGitCommitId;
 pub use crate::delta::DeltaInstructionChunkIdPrefix;
 pub use crate::delta::DeltaInstructions;
+pub use crate::delta_manifest::GitDeltaManifestEntry;
 pub use crate::derive_delta_manifest::get_object_bytes;
 pub use crate::derive_delta_manifest::HeaderState;
 pub use crate::derive_delta_manifest::RootGitDeltaManifestId;

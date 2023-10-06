@@ -10,7 +10,6 @@ use std::io::Write;
 
 use anyhow::Context;
 use anyhow::Result;
-use futures::Future;
 use futures::Stream;
 use futures::StreamExt;
 use gix_hash::ObjectId;
@@ -96,15 +95,13 @@ impl<T: AsyncWrite + Unpin> PackfileWriter<T> {
     /// Write the stream of objects to the packfile
     pub async fn write(
         &mut self,
-        entries_stream: impl Stream<Item = impl Future<Output = Result<PackfileItem>>>,
+        entries_stream: impl Stream<Item = Result<PackfileItem>>,
     ) -> Result<()> {
         // Write the packfile header if applicable
         self.write_header().await?;
         let mut entries_stream = Box::pin(entries_stream);
         while let Some(entry) = entries_stream.next().await {
-            let entry = entry
-                .await
-                .context("Failure in getting packfile item entry")?;
+            let entry = entry.context("Failure in getting packfile item entry")?;
             let mut entry: Entry = entry
                 .try_into()
                 .context("Failure in converting PackfileItem to Entry")?;

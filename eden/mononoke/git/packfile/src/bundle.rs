@@ -8,7 +8,6 @@
 use std::fmt::Display;
 
 use anyhow::Result;
-use futures::Future;
 use futures::Stream;
 use gix_hash::ObjectId;
 use tokio::io::AsyncWrite;
@@ -95,7 +94,7 @@ impl<T: AsyncWrite + Unpin> BundleWriter<T> {
     /// Write the stream of input items to the bundle
     pub async fn write(
         &mut self,
-        objects_stream: impl Stream<Item = impl Future<Output = Result<PackfileItem>>>,
+        objects_stream: impl Stream<Item = Result<PackfileItem>>,
     ) -> Result<()> {
         self.pack_writer.write(objects_stream).await
     }

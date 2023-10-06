@@ -16,7 +16,6 @@ use clap::Args;
 use context::CoreContext;
 use flate2::write::ZlibDecoder;
 use futures::stream;
-use futures::Future;
 use futures::Stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
@@ -205,8 +204,8 @@ async fn get_refs(refs_path: PathBuf) -> Result<HashMap<String, ObjectId>> {
 /// their content as a stream
 async fn get_objects_stream(
     object_paths: Vec<PathBuf>,
-) -> impl Stream<Item = impl Future<Output = Result<PackfileItem>>> {
-    stream::iter(object_paths.into_iter().map(|path| {
+) -> impl Stream<Item = Result<PackfileItem>> {
+    stream::iter(object_paths.into_iter().map(anyhow::Ok)).and_then(move |path| {
         async move {
             // Fetch the Zlib encoded content of the Git object
             let encoded_data = tokio::fs::read(path.as_path())
@@ -219,7 +218,7 @@ async fn get_objects_stream(
             decoded_data = decoder.finish()?;
             PackfileItem::new_base(Bytes::from(decoded_data))
         }
-    }))
+    })
 }
 
 fn get_files_in_dir_recursive<P>(path: PathBuf, predicate: P) -> Result<Vec<PathBuf>>
