@@ -7,7 +7,8 @@
  * of this source tree.
  */
 
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
+
 #[cfg(any(fbcode_build, feature = "fb"))]
 mod facebook;
 #[cfg(any(fbcode_build, feature = "fb"))]
@@ -21,11 +22,9 @@ pub use facebook::is_prod;
 #[cfg(any(fbcode_build, feature = "fb"))]
 pub use facebook::Env;
 
-lazy_static! {
-    pub static ref IN_PROD: bool = is_prod();
-    pub static ref IN_CORP: bool = is_corp();
-    pub static ref IN_LAB: bool = is_lab();
-}
+pub static IN_PROD: Lazy<bool> = Lazy::new(is_prod);
+pub static IN_CORP: Lazy<bool> = Lazy::new(is_corp);
+pub static IN_LAB: Lazy<bool> = Lazy::new(is_lab);
 
 #[cfg(not(any(fbcode_build, feature = "fb")))]
 pub fn get_env() -> u8 {
