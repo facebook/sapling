@@ -27,6 +27,8 @@ from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple, Type
 
 import thrift.transport
+
+from cli.py import par_telemetry
 from eden.fs.cli.buck import get_buck_command, run_buck_command
 from eden.fs.cli.telemetry import TelemetrySample
 from eden.fs.cli.util import (
@@ -2502,6 +2504,9 @@ except AttributeError:
 
 
 def main() -> int:
+    # This is called hundreds of millions of times on unique hosts.
+    # Increase how often it's sampled.
+    par_telemetry.set_sample_rate(automation=10000)
     parser = create_parser()
     args = parser.parse_args()
 
