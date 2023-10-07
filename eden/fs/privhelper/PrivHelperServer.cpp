@@ -28,15 +28,14 @@
 #include <folly/logging/xlog.h>
 #include <folly/portability/Unistd.h>
 #include <folly/system/ThreadName.h>
-#include <signal.h>
 #include <sys/mount.h>
 #include <sys/stat.h>
 #include <sys/statvfs.h>
 #include <sys/types.h>
 #include <chrono>
+#include <csignal>
 #include <set>
 #include "eden/fs/privhelper/NfsMountRpc.h"
-#include "eden/fs/privhelper/PrivHelperConn.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/SysctlUtil.h"
 #include "eden/fs/utils/Throw.h"
@@ -63,9 +62,9 @@ using std::string;
 
 namespace facebook::eden {
 
-PrivHelperServer::PrivHelperServer() {}
+PrivHelperServer::PrivHelperServer() = default;
 
-PrivHelperServer::~PrivHelperServer() {}
+PrivHelperServer::~PrivHelperServer() = default;
 
 void PrivHelperServer::init(folly::File socket, uid_t uid, gid_t gid) {
   initPartial(std::move(socket), uid, gid);
