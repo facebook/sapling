@@ -41,7 +41,6 @@ serde_test = "1.0.167"
 tempfile = "3.5"
 
 [target.'cfg(target_os = "macos")'.dependencies]
-nix = "0.25"
 psutil = "3.2.2"
 
 [target.'cfg(target_os = "windows")'.dependencies]

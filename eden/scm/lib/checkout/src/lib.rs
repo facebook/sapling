@@ -1021,6 +1021,7 @@ mod test {
     use std::fs::create_dir;
     use std::path::Path;
 
+    #[cfg(unix)]
     use anyhow::ensure;
     use anyhow::Context;
     use futures::stream::BoxStream;

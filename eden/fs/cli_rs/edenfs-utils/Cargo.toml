@@ -21,6 +21,8 @@ nix = "0.25"
 nix = "0.25"
 
 [target.'cfg(target_os = "windows")'.dependencies]
+winapi = { version = "0.3", features = ["everything"] }
+
+[target.'cfg(target_os = "windows")'.dev-dependencies]
 quickcheck = "1.0"
 quickcheck_macros = "1.0"
-winapi = { version = "0.3", features = ["everything"] }

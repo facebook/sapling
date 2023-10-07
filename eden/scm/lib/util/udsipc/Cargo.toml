@@ -13,4 +13,3 @@ nodeipc = { version = "0.1.0", path = "../nodeipc" }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 uds_windows = "1.0.1"
-winapi = { version = "0.3", features = ["everything"] }

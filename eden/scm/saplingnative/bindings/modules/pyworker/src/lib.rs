@@ -356,13 +356,9 @@ mod tests {
     use std::fs::read_to_string;
     use std::fs::symlink_metadata;
     use std::fs::File;
-    #[cfg(windows)]
-    use std::fs::OpenOptions;
     use std::io::Write;
     #[cfg(unix)]
     use std::os::unix::fs::PermissionsExt;
-    #[cfg(windows)]
-    use std::os::windows::fs::OpenOptionsExt;
 
     use anyhow::ensure;
     use memmap2::MmapOptions;

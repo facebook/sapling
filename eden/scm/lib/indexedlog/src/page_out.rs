@@ -11,6 +11,7 @@ use std::sync::atomic::AtomicI64;
 use std::sync::atomic::Ordering;
 use std::sync::Mutex;
 
+#[cfg(unix)]
 use minibytes::Bytes;
 use minibytes::WeakBytes;
 

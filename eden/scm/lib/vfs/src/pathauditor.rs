@@ -150,9 +150,8 @@ fn audit_invalid_components(path: &str) -> Result<(), AuditError> {
 
 #[cfg(test)]
 mod tests {
-    use std::fs::create_dir_all;
-    use std::fs::read_link;
-    use std::fs::remove_dir_all;
+    #[cfg(not(windows))]
+    use std::fs;
 
     use tempfile::TempDir;
 
@@ -214,7 +213,7 @@ mod tests {
         let link = root.as_ref().join("a");
         std::os::unix::fs::symlink(&other, &link)?;
         let canonical_other = other.as_ref().canonicalize()?;
-        assert_eq!(read_link(&link)?.canonicalize()?, canonical_other);
+        assert_eq!(fs::read_link(&link)?.canonicalize()?, canonical_other);
 
         let repo_path = RepoPath::from_str("a/b")?;
         assert!(auditor.audit(repo_path).is_err());
@@ -229,7 +228,7 @@ mod tests {
         let other = TempDir::new()?;
 
         let path = root.as_ref().join("a");
-        create_dir_all(&path)?;
+        fs::create_dir_all(&path)?;
 
         let auditor = PathAuditor::new(&root);
 
@@ -237,12 +236,12 @@ mod tests {
         let repo_path = RepoPath::from_str("a/b")?;
         auditor.audit(repo_path)?;
 
-        remove_dir_all(&path)?;
+        fs::remove_dir_all(&path)?;
 
         let link = root.as_ref().join("a");
         std::os::unix::fs::symlink(&other, &link)?;
         let canonical_other = other.as_ref().canonicalize()?;
-        assert_eq!(read_link(&link)?.canonicalize()?, canonical_other);
+        assert_eq!(fs::read_link(&link)?.canonicalize()?, canonical_other);
 
         // Even though "a" is now a symlink to outside the repo, the audit will succeed due to the
         // one performed just above.

@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::process;
 use std::process::Command;
 use std::time::SystemTime;
 
@@ -13,7 +14,7 @@ use spawn_ext::CommandExt;
 fn main() {
     let exe_path = std::env::current_exe().unwrap();
     if std::env::args().len() == 1 {
-        let pid = unsafe { libc::getpid() };
+        let pid = process::id();
         println!("parent pid: {}", pid);
         let mut cmd = Command::new(exe_path);
         let clock = SystemTime::now();

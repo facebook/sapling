@@ -781,6 +781,9 @@ mod tests {
             assert_eq!(metadata.permissions().mode(), mode);
         }
 
+        #[cfg(windows)]
+        let _ = mode;
+
         // Sanity that there is no error if directory already exists.
         create_fn(&path)?;
 
