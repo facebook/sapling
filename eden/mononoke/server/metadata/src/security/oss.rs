@@ -7,7 +7,7 @@
 
 use anyhow::Result;
 
-pub fn is_client_untrusted<GetHeaderFn>(headers: GetHeaderFn) -> Result<bool>
+pub fn is_client_untrusted<GetHeaderFn>(_headers: GetHeaderFn) -> Result<bool>
 where
     GetHeaderFn: Fn(&str) -> Result<Option<String>>,
 {

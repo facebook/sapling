@@ -611,7 +611,13 @@ pub fn make_blobstore_unlink_ops<'a>(
                 }
                 #[cfg(not(fbcode_build))]
                 {
-                    let _ = (bucket, region, num_concurrent_operations);
+                    let _ = (
+                        aws_account_id,
+                        aws_role,
+                        bucket,
+                        region,
+                        num_concurrent_operations,
+                    );
                     unimplemented!("This is implemented only for fbcode_build")
                 }
             }

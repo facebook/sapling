@@ -90,7 +90,7 @@ impl MononokeIdentitySetExt for MononokeIdentitySet {
         self.iter().map(ToString::to_string).join(",")
     }
 
-    fn identity_type_filtered_concat(&self, id_type: &str) -> Option<String> {
+    fn identity_type_filtered_concat(&self, _id_type: &str) -> Option<String> {
         None
     }
 }

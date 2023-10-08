@@ -78,6 +78,7 @@ use deletion_log::DeletionLog;
 use deletion_log::SqlDeletionLog;
 #[cfg(fbcode_build)]
 use derived_data_client_library::Client as DerivationServiceClient;
+#[cfg(fbcode_build)]
 use derived_data_remote::Address;
 use derived_data_remote::DerivationClient;
 use derived_data_remote::RemoteDerivationOptions;

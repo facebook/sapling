@@ -6,6 +6,7 @@
  */
 
 #![cfg_attr(not(fbcode_build), allow(unused_crate_dependencies))]
+
 mod file_history_test;
 mod tracing_blobstore;
 mod utils;
@@ -13,6 +14,7 @@ mod utils;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::sync::Arc;
+#[cfg(fbcode_build)]
 use std::time::Duration;
 
 use ::manifest::Entry;
@@ -20,6 +22,7 @@ use ::manifest::Manifest;
 use ::manifest::ManifestOps;
 use anyhow::Error;
 use assert_matches::assert_matches;
+#[cfg(fbcode_build)]
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobrepo_errors::ErrorKind;
