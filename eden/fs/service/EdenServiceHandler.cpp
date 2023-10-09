@@ -1452,9 +1452,18 @@ std::shared_ptr<HgQueuedBackingStore> castToHgQueuedBackingStore(
     hgBackingStore =
         std::dynamic_pointer_cast<HgQueuedBackingStore>(backingStore);
   } else {
-    // LocalStoreCachedBackingStore -> HgQueuedBackingStore
-    hgBackingStore = std::dynamic_pointer_cast<HgQueuedBackingStore>(
+    // If FilteredFS is enabled, we'll see a FilteredBackingStore next
+    auto filteredBackingStore = std::dynamic_pointer_cast<FilteredBackingStore>(
         localStoreCachedBackingStore->getBackingStore());
+    if (filteredBackingStore) {
+      // FilteredBackingStore -> HgQueuedBackingStore
+      hgBackingStore = std::dynamic_pointer_cast<HgQueuedBackingStore>(
+          filteredBackingStore->getBackingStore());
+    } else {
+      // LocalStoreCachedBackingStore -> HgQueuedBackingStore
+      hgBackingStore = std::dynamic_pointer_cast<HgQueuedBackingStore>(
+          localStoreCachedBackingStore->getBackingStore());
+    }
   }
 
   if (!hgBackingStore) {
