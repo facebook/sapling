@@ -19,6 +19,7 @@ import {debugToolsEnabledState} from './debug/DebugToolsState';
 import {t, T} from './i18n';
 import {SetConfigOperation} from './operations/SetConfigOperation';
 import platform from './platform';
+import {renderCompactAtom} from './responsive';
 import {repositoryInfo, useRunOperation} from './serverAPIState';
 import {themeState} from './theme';
 import {
@@ -69,6 +70,9 @@ function SettingsDropdown() {
           </VSCodeDropdown>
         </Setting>
       )}
+      <Setting title={<T>Commits</T>}>
+        <RenderCompactSetting />
+      </Setting>
       <Setting
         title={<T>Language</T>}
         description={<T>Locale for translations used in the UI. Currently only en supported.</T>}>
@@ -151,6 +155,25 @@ function ConfirmSubmitStackSetting() {
           setValue((e.target as HTMLInputElement).checked);
         }}>
         <T>Show confirmation when submitting a stack</T>
+      </VSCodeCheckbox>
+    </Tooltip>
+  );
+}
+
+function RenderCompactSetting() {
+  const [value, setValue] = useRecoilState(renderCompactAtom);
+  return (
+    <Tooltip
+      title={t(
+        'Render commits in the tree more compactly, by reducing spacing and not wrapping Diff info to multiple lines. ' +
+          'May require more horiztonal scrolling.',
+      )}>
+      <VSCodeCheckbox
+        checked={value}
+        onChange={e => {
+          setValue((e.target as HTMLInputElement).checked);
+        }}>
+        <T>Compact Mode</T>
       </VSCodeCheckbox>
     </Tooltip>
   );

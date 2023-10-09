@@ -284,10 +284,7 @@ export const Commit = memo(
         (commit.isHead || previewType === CommitPreview.GOTO_PREVIOUS_LOCATION) ? (
           <HeadCommitInfo commit={commit} previewType={previewType} hasChildren={hasChildren} />
         ) : null}
-        <div
-          className={
-            'commit-rows' + (isNarrow ? ' narrow' : '') + (isSelected ? ' selected-commit' : '')
-          }>
+        <div className={'commit-rows' + (isSelected ? ' selected-commit' : '')}>
           {isSelected ? (
             <div className="selected-commit-background" data-testid="selected-commit" />
           ) : null}

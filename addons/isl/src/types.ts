@@ -405,6 +405,7 @@ export type ConfigName =
   | 'isl.pull-button-choice'
   | 'isl.show-stack-submit-confirmation'
   | 'isl.show-diff-number'
+  | 'isl.render-compact'
   | 'isl.experimental-features';
 
 export type ClientToServerMessage =

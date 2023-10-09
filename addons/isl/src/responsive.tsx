@@ -5,12 +5,19 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {persistAtomToConfigEffect} from './persistAtomToConfigEffect';
 import {useRef, useEffect} from 'react';
 import {atom, selector, useSetRecoilState} from 'recoil';
 
 export const mainContentWidthState = atom({
   key: 'mainContentWidthState',
   default: 500,
+});
+
+export const renderCompactAtom = atom<boolean>({
+  key: 'renderCompactAtom',
+  default: false,
+  effects: [persistAtomToConfigEffect('isl.render-compact', false as boolean)],
 });
 
 export function useMainContentWidth() {
@@ -35,8 +42,11 @@ export function useMainContentWidth() {
 }
 
 export const NARROW_COMMIT_TREE_WIDTH = 800;
+export const NARROW_COMMIT_TREE_WIDTH_WHEN_COMPACT = 300;
 
 export const isNarrowCommitTree = selector({
   key: 'isNarrowCommitTree',
-  get: ({get}) => get(mainContentWidthState) < NARROW_COMMIT_TREE_WIDTH,
+  get: ({get}) =>
+    get(mainContentWidthState) <
+    (get(renderCompactAtom) ? NARROW_COMMIT_TREE_WIDTH_WHEN_COMPACT : NARROW_COMMIT_TREE_WIDTH),
 });

@@ -152,9 +152,17 @@
   align-items: center;
 }
 
-.commit-rows.narrow {
+.commit-tree-root {
+  min-width: 450px;
+}
+
+.commit-tree-narrow .commit-rows {
   flex-direction: column;
   align-items: initial;
+}
+
+.commit-tree-narrow .commit-group {
+  gap: 0;
 }
 
 .commit-details {

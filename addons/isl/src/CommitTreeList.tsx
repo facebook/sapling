@@ -19,6 +19,7 @@ import {pageVisibility} from './codeReview/CodeReviewInfo';
 import {T, t} from './i18n';
 import {CreateEmptyInitialCommitOperation} from './operations/CreateEmptyInitialCommitOperation';
 import {treeWithPreviews, useMarkOperationsCompleted} from './previews';
+import {isNarrowCommitTree} from './responsive';
 import {useArrowKeysToChangeSelection} from './selection';
 import {
   commitFetchError,
@@ -48,6 +49,8 @@ export function CommitTreeList() {
 
   useArrowKeysToChangeSelection();
 
+  const isNarrow = useRecoilValue(isNarrowCommitTree);
+
   const {trees} = useRecoilValue(treeWithPreviews);
   const fetchError = useRecoilValue(commitFetchError);
   return fetchError == null && trees.length === 0 ? (
@@ -59,7 +62,10 @@ export function CommitTreeList() {
       {fetchError ? <CommitFetchError error={fetchError} /> : null}
       {trees.length === 0 ? null : (
         <div
-          className="commit-tree-root commit-group with-vertical-line"
+          className={
+            'commit-tree-root commit-group with-vertical-line' +
+            (isNarrow ? ' commit-tree-narrow' : '')
+          }
           data-testid="commit-tree-root">
           <MainLineEllipsis />
           {trees.filter(shouldShowPublicCommit).map(tree => (
