@@ -73,13 +73,14 @@ function SettingsDropdown() {
       <Setting title={<T>Commits</T>}>
         <RenderCompactSetting />
       </Setting>
-      <Setting
+      {/* TODO: enable this setting when there is actually a chocie to be made here. */}
+      {/* <Setting
         title={<T>Language</T>}
         description={<T>Locale for translations used in the UI. Currently only en supported.</T>}>
         <VSCodeDropdown value="en" disabled>
           <VSCodeOption value="en">en</VSCodeOption>
         </VSCodeDropdown>
-      </Setting>
+      </Setting> */}
       {repoInfo?.type !== 'success' ? (
         <Icon icon="loading" />
       ) : repoInfo?.codeReviewSystem.type === 'github' ? (
