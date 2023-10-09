@@ -7,6 +7,7 @@
 
 #include "eden/fs/testharness/FakeBackingStore.h"
 
+#include <folly/Varint.h>
 #include <folly/executors/QueuedImmediateExecutor.h>
 #include <folly/experimental/TestUtil.h>
 #include <folly/io/Cursor.h>
@@ -65,7 +66,7 @@ TEST_F(FilteredBackingStoreTest, getNonExistent) {
   // when called on non-existent objects.
   EXPECT_THROW_RE(
       filteredStore_->getRootTree(
-          RootId{fmt::format("1:{}", kTestFilter1)},
+          RootId{FilteredBackingStore::createFilteredRootId("1", kTestFilter1)},
           ObjectFetchContext::getNullContext()),
       std::domain_error,
       "commit 1 not found");
@@ -295,11 +296,11 @@ TEST_F(FilteredBackingStoreTest, getRootTree) {
   auto* commit2 = wrappedStore_->putCommit(RootId{"2"}, makeTestHash("3"));
 
   auto future1 = filteredStore_->getRootTree(
-      RootId{fmt::format("1:{}", kTestFilter1)},
+      RootId{FilteredBackingStore::createFilteredRootId("1", kTestFilter1)},
       ObjectFetchContext::getNullContext());
   EXPECT_FALSE(future1.isReady());
   auto future2 = filteredStore_->getRootTree(
-      RootId{fmt::format("2:{}", kTestFilter1)},
+      RootId{FilteredBackingStore::createFilteredRootId("2", kTestFilter1)},
       ObjectFetchContext::getNullContext());
   EXPECT_FALSE(future2.isReady());
 
@@ -314,7 +315,7 @@ TEST_F(FilteredBackingStoreTest, getRootTree) {
 
   // Get another future for commit1
   auto future3 = filteredStore_->getRootTree(
-      RootId{fmt::format("1:{}", kTestFilter1)},
+      RootId{FilteredBackingStore::createFilteredRootId("1", kTestFilter1)},
       ObjectFetchContext::getNullContext());
   EXPECT_FALSE(future3.isReady());
 
@@ -329,14 +330,14 @@ TEST_F(FilteredBackingStoreTest, getRootTree) {
 
   // Try triggering errors
   auto future4 = filteredStore_->getRootTree(
-      RootId{fmt::format("1:{}", kTestFilter1)},
+      RootId{FilteredBackingStore::createFilteredRootId("1", kTestFilter1)},
       ObjectFetchContext::getNullContext());
   EXPECT_FALSE(future4.isReady());
   commit1->triggerError(std::runtime_error("bad luck"));
   EXPECT_THROW_RE(std::move(future4).get(0ms), std::runtime_error, "bad luck");
 
   auto future5 = filteredStore_->getRootTree(
-      RootId{fmt::format("1:{}", kTestFilter1)},
+      RootId{FilteredBackingStore::createFilteredRootId("1", kTestFilter1)},
       ObjectFetchContext::getNullContext());
   EXPECT_FALSE(future5.isReady());
   commit1->trigger();
@@ -394,10 +395,10 @@ TEST_F(FilteredBackingStoreTest, testCompareBlobObjectsById) {
   auto* commit2 = wrappedStore_->putCommit(RootId{"2"}, fooDirExtendedTree);
 
   auto future1 = filteredStore_->getRootTree(
-      RootId{fmt::format("1:{}", kTestFilter2)},
+      RootId{FilteredBackingStore::createFilteredRootId("1", kTestFilter2)},
       ObjectFetchContext::getNullContext());
   auto future2 = filteredStore_->getRootTree(
-      RootId{fmt::format("2:{}", kTestFilter3)},
+      RootId{FilteredBackingStore::createFilteredRootId("2", kTestFilter3)},
       ObjectFetchContext::getNullContext());
 
   // Trigger commit1, then rootDirTree to make future1 ready.
@@ -535,10 +536,10 @@ TEST_F(FilteredBackingStoreTest, testCompareTreeObjectsById) {
   auto* commit2 = wrappedStore_->putCommit(RootId{"2"}, modifiedRootDirTree);
 
   auto rootFuture1 = filteredStore_->getRootTree(
-      RootId{fmt::format("1:{}", kTestFilter4)},
+      RootId{FilteredBackingStore::createFilteredRootId("1", kTestFilter4)},
       ObjectFetchContext::getNullContext());
   auto rootFuture2 = filteredStore_->getRootTree(
-      RootId{fmt::format("2:{}", kTestFilter5)},
+      RootId{FilteredBackingStore::createFilteredRootId("2", kTestFilter5)},
       ObjectFetchContext::getNullContext());
 
   // Trigger commit1, then rootDirTree to make rootFuture1 ready.

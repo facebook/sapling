@@ -82,6 +82,20 @@ class FilteredBackingStore
   std::optional<folly::StringPiece> getRepoName() override;
 
   /**
+   * Encodes an underlying RootId in the RootId format used by
+   * FilteredBackingStore. This format is as follows:
+   *
+   * <originalRootIdLength><originalRootId><filterId>
+   *
+   * Where originalRootIdLength is a varint representing the length of the
+   * original RootId. This is used so we can properly parse out the filterId
+   * from the RootID at a later point in time.
+   */
+  static std::string createFilteredRootId(
+      std::string_view originalRootId,
+      std::string_view filterId);
+
+  /**
    * Get the underlying BackingStore. This should only be used for operations
    * that need to be made directly on the BackingStore, like getting a TraceBus
    */

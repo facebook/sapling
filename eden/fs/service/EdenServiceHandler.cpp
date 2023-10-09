@@ -65,6 +65,7 @@
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/Diff.h"
 #include "eden/fs/store/DiffContext.h"
+#include "eden/fs/store/FilteredBackingStore.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/LocalStoreCachedBackingStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
@@ -124,6 +125,24 @@ std::string toLogArg(const std::vector<std::string>& args) {
         "[{}, and {} more]",
         fmt::join(args.begin(), args.begin() + limit, ", "),
         args.size() - limit);
+  }
+}
+
+bool mountIsUsingFilteredFS(const EdenMountHandle& mount) {
+  return mount.getEdenMountPtr()
+             ->getCheckoutConfig()
+             ->getRepoBackingStoreType() == BackingStoreType::FILTEREDHG;
+}
+
+std::string resolveRootId(
+    std::string rootId,
+    const RootIdOptions& rootIdOptions,
+    const EdenMountHandle& mount) {
+  if (rootIdOptions.filterId() && mountIsUsingFilteredFS(mount)) {
+    return FilteredBackingStore::createFilteredRootId(
+        rootId, *rootIdOptions.filterId());
+  } else {
+    return rootId;
   }
 }
 
@@ -597,6 +616,7 @@ EdenServiceHandler::semifuture_checkOutRevision(
     std::unique_ptr<std::string> hash,
     CheckoutMode checkoutMode,
     std::unique_ptr<CheckOutRevisionParams> params) {
+  auto rootIdOptions = params->rootIdOptions().ensure();
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG1,
       *mountPoint,
@@ -604,16 +624,26 @@ EdenServiceHandler::semifuture_checkOutRevision(
       apache::thrift::util::enumName(checkoutMode, "(unknown)"),
       params->hgRootManifest_ref().has_value()
           ? logHash(*params->hgRootManifest_ref())
-          : "(unspecified hg root manifest)");
+          : "(unspecified hg root manifest)",
+      rootIdOptions.filterId_ref().has_value() ? *rootIdOptions.filterId_ref()
+                                               : "no filter provided");
   helper->getThriftFetchContext().fillClientRequestInfo(params->cri_ref());
   auto& fetchContext = helper->getFetchContext();
+
+  auto mountHandle = lookupMount(mountPoint);
+
+  // If we were passed a FilterID, create a RootID that contains the
+  // filter and a varint that indicates the length of the original hash.
+  std::string parsedHash =
+      resolveRootId(std::move(*hash), rootIdOptions, mountHandle);
+  hash.reset();
 
   auto mountPath = absolutePathFromThrift(*mountPoint);
   auto checkoutFuture =
       ImmediateFuture{server_
                           ->checkOutRevision(
                               mountPath,
-                              *hash,
+                              parsedHash,
                               params->hgRootManifest_ref().to_optional(),
                               fetchContext,
                               helper->getFunctionName(),
@@ -634,18 +664,25 @@ EdenServiceHandler::semifuture_resetParentCommits(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<WorkingDirectoryParents> parents,
     std::unique_ptr<ResetParentCommitsParams> params) {
+  auto rootIdOptions = params->rootIdOptions_ref().ensure();
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG1,
       *mountPoint,
       logHash(*parents->parent1_ref()),
       params->hgRootManifest_ref().has_value()
           ? logHash(*params->hgRootManifest_ref())
-          : "(unspecified hg root manifest)");
+          : "(unspecified hg root manifest)",
+      rootIdOptions.filterId_ref().has_value() ? *rootIdOptions.filterId_ref()
+                                               : "no filter provided");
   helper->getThriftFetchContext().fillClientRequestInfo(params->cri_ref());
 
   auto mountHandle = lookupMount(mountPoint);
-  auto parent1 =
-      mountHandle.getObjectStore().parseRootId(*parents->parent1_ref());
+
+  // If we were passed a FilterID, create a RootID that contains the filter and
+  // a varint that indicates the length of the original hash.
+  std::string parsedParent = resolveRootId(
+      std::move(*parents->parent1_ref()), rootIdOptions, mountHandle);
+  auto parent1 = mountHandle.getObjectStore().parseRootId(parsedParent);
 
   auto fut = folly::SemiFuture<folly::Unit>::makeEmpty();
   if (params->hgRootManifest_ref().has_value()) {
@@ -2991,18 +3028,29 @@ folly::SemiFuture<std::unique_ptr<GetScmStatusResult>>
 EdenServiceHandler::semifuture_getScmStatusV2(
     unique_ptr<GetScmStatusParams> params) {
   auto* context = getRequestContext();
-
+  auto rootIdOptions = params->rootIdOptions_ref().ensure();
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG3,
       *params->mountPoint_ref(),
       folly::to<string>("commitHash=", logHash(*params->commit_ref())),
-      folly::to<string>("listIgnored=", *params->listIgnored_ref()));
+      folly::to<string>("listIgnored=", *params->listIgnored_ref()),
+      folly::to<string>(
+          "filterId=",
+          rootIdOptions.filterId_ref().has_value()
+              ? *rootIdOptions.filterId_ref()
+              : "(none)"));
   helper->getThriftFetchContext().fillClientRequestInfo(params->cri_ref());
 
   auto& fetchContext = helper->getFetchContext();
 
   auto mountHandle = lookupMount(params->mountPoint());
-  auto rootId = mountHandle.getObjectStore().parseRootId(*params->commit_ref());
+
+  // If we were passed a FilterID, create a RootID that contains the filter and
+  // a varint that indicates the length of the original hash.
+  std::string parsedCommit = resolveRootId(
+      std::move(*params->commit_ref()), rootIdOptions, mountHandle);
+  auto rootId = mountHandle.getObjectStore().parseRootId(parsedCommit);
+
   const auto& enforceParents = server_->getServerState()
                                    ->getReloadableConfig()
                                    ->getEdenConfig()

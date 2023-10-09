@@ -6,6 +6,7 @@
  */
 
 #include "eden/fs/store/FilteredBackingStore.h"
+#include <folly/Varint.h>
 #include <stdexcept>
 #include <tuple>
 #include "eden/fs/model/Blob.h"
@@ -41,14 +42,21 @@ bool FilteredBackingStore::pathAffectedByFilterChange(
 }
 
 std::tuple<RootId, std::string> parseFilterIdFromRootId(const RootId& rootId) {
-  auto separatorIdx = rootId.value().find(":");
-  if (separatorIdx == std::string::npos) {
+  auto rootRange = folly::range(rootId.value());
+  auto expectedLength = folly::tryDecodeVarint(rootRange);
+  if (UNLIKELY(!expectedLength)) {
     throwf<std::invalid_argument>(
-        "Invalid root id: {}. FilteredBackingStore expects a root ID in the form of <scm hash>:<filter ID>",
+        "Could not decode varint; FilteredBackingStore expects a root ID in the form of <hashLengthVarint><scmHash><filterId>, got {}",
         rootId.value());
   }
-  auto root = RootId{rootId.value().substr(0, separatorIdx)};
-  auto filterId = rootId.value().substr(separatorIdx + 1);
+  auto root = RootId{std::string{rootRange.begin(), expectedLength.value()}};
+  auto filterId = std::string{rootRange.begin() + expectedLength.value()};
+  XLOGF(
+      DBG7,
+      "Decoded Original RootId Length: {}, Original RootId: {}, FilterID: {}",
+      expectedLength.value(),
+      filterId,
+      root.value());
   return {std::move(root), std::move(filterId)};
 }
 
@@ -162,6 +170,11 @@ FilteredBackingStore::getRootTree(
     const RootId& rootId,
     const ObjectFetchContextPtr& context) {
   auto [parsedRootId, filterId] = parseFilterIdFromRootId(rootId);
+  XLOGF(
+      DBG7,
+      "Getting rootTree {} with filter {}",
+      parsedRootId.value(),
+      filterId);
   return backingStore_->getRootTree(parsedRootId, context)
       .thenValue([filterId = filterId,
                   self = shared_from_this()](GetRootTreeResult rootTreeResult) {
@@ -254,11 +267,19 @@ folly::SemiFuture<folly::Unit> FilteredBackingStore::importManifestForRoot(
 }
 
 RootId FilteredBackingStore::parseRootId(folly::StringPiece rootId) {
-  return backingStore_->parseRootId(rootId);
+  auto [startingRootId, filterId] =
+      parseFilterIdFromRootId(RootId{rootId.toString()});
+  auto parsedRootId = backingStore_->parseRootId(startingRootId.value());
+  XLOGF(
+      DBG7, "Parsed RootId {} with filter {}", parsedRootId.value(), filterId);
+  return RootId{createFilteredRootId(
+      std::move(parsedRootId).value(), std::move(filterId))};
 }
 
 std::string FilteredBackingStore::renderRootId(const RootId& rootId) {
-  return backingStore_->renderRootId(rootId);
+  auto [underlyingRootId, filterId] = parseFilterIdFromRootId(rootId);
+  return createFilteredRootId(
+      std::move(underlyingRootId).value(), std::move(filterId));
 }
 
 ObjectId FilteredBackingStore::parseObjectId(folly::StringPiece objectId) {
@@ -271,6 +292,27 @@ std::string FilteredBackingStore::renderObjectId(const ObjectId& id) {
 
 std::optional<folly::StringPiece> FilteredBackingStore::getRepoName() {
   return backingStore_->getRepoName();
+}
+
+std::string FilteredBackingStore::createFilteredRootId(
+    std::string_view originalRootId,
+    std::string_view filterId) {
+  size_t originalRootIdSize = originalRootId.size();
+  uint8_t varintBuf[folly::kMaxVarintLength64] = {};
+  size_t encodedSize = folly::encodeVarint(originalRootIdSize, varintBuf);
+  std::string buf;
+  buf.reserve(encodedSize + originalRootIdSize + filterId.size());
+  buf.append(reinterpret_cast<const char*>(varintBuf), encodedSize);
+  buf.append(originalRootId);
+  buf.append(filterId);
+  XLOGF(
+      DBG7,
+      "Created FilteredRootId: {} from Original Root Size: {}, Original RootId: {}, FilterID: {}",
+      buf,
+      originalRootIdSize,
+      originalRootId,
+      filterId);
+  return buf;
 }
 
 } // namespace facebook::eden
