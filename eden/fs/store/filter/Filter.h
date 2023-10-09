@@ -11,6 +11,10 @@
 
 #include "eden/fs/utils/PathFuncs.h"
 
+// A null filter indicates that nothing should be filtered (i.e. no filter is
+// applied to the repo).
+constexpr const char kNullFilterId[] = "null";
+
 namespace facebook::eden {
 
 class Filter {

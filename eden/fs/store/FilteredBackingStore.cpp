@@ -11,6 +11,7 @@
 #include <tuple>
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Tree.h"
+#include "eden/fs/store/filter/Filter.h"
 #include "eden/fs/store/filter/FilteredObjectId.h"
 #include "eden/fs/utils/ImmediateFuture.h"
 
@@ -205,17 +206,17 @@ FilteredBackingStore::getTreeEntryForObjectId(
 folly::SemiFuture<BackingStore::GetTreeResult> FilteredBackingStore::getTree(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) {
-  FilteredObjectId filteredId = FilteredObjectId::fromObjectId(id);
+  auto filteredId = FilteredObjectId::fromObjectId(id);
   auto unfilteredTree = backingStore_->getTree(filteredId.object(), context);
   return std::move(unfilteredTree)
-      .deferValue(
-          [self = shared_from_this(), filteredId](GetTreeResult&& result) {
-            auto pathMap = self->filterImpl(
-                result.tree, filteredId.path(), filteredId.filter());
-            auto tree = std::make_shared<Tree>(
-                std::move(pathMap), ObjectId{filteredId.getValue()});
-            return GetTreeResult{std::move(tree), result.origin};
-          });
+      .deferValue([self = shared_from_this(),
+                   filteredId = std::move(filteredId)](GetTreeResult&& result) {
+        auto pathMap = self->filterImpl(
+            result.tree, filteredId.path(), filteredId.filter());
+        auto tree = std::make_shared<Tree>(
+            std::move(pathMap), ObjectId{filteredId.getValue()});
+        return GetTreeResult{std::move(tree), result.origin};
+      });
 }
 
 folly::SemiFuture<BackingStore::GetBlobMetaResult>

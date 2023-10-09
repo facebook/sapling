@@ -96,6 +96,14 @@ class FilteredBackingStore
       std::string_view filterId);
 
   /**
+   * Similar to createFilteredRootId, but uses the null filter ID instead of a
+   * user provided filter ID.
+   */
+  static std::string createNullFilteredRootId(std::string_view originalRootId) {
+    return createFilteredRootId(originalRootId, kNullFilterId);
+  }
+
+  /**
    * Get the underlying BackingStore. This should only be used for operations
    * that need to be made directly on the BackingStore, like getting a TraceBus
    */

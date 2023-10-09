@@ -138,9 +138,13 @@ std::string resolveRootId(
     std::string rootId,
     const RootIdOptions& rootIdOptions,
     const EdenMountHandle& mount) {
-  if (rootIdOptions.filterId() && mountIsUsingFilteredFS(mount)) {
-    return FilteredBackingStore::createFilteredRootId(
-        rootId, *rootIdOptions.filterId());
+  if (mountIsUsingFilteredFS(mount)) {
+    if (rootIdOptions.filterId()) {
+      return FilteredBackingStore::createFilteredRootId(
+          rootId, *rootIdOptions.filterId());
+    } else {
+      return FilteredBackingStore::createNullFilteredRootId(rootId);
+    }
   } else {
     return rootId;
   }
