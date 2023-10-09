@@ -25,6 +25,18 @@ use slog::Logger;
 
 pub type ChangesetParents = HashMap<ChangesetId, Vec<ChangesetId>>;
 
+/// Represents a path that should be exported until a given changeset, i.e. the
+/// HEAD commit for that path.
+///
+/// When partially copying each relevant changeset to the temporary repo, changes
+/// to this path in a given changeset will only be copied if this changeset is
+/// an ancestor of the head changeset of that path.
+///
+/// This head changeset will be used to query the history of the path,
+/// i.e. all exported commits that affect this path will be this changeset's
+/// ancestor.
+pub type ExportPathInfo = (NonRootMPath, ChangesetContext);
+
 #[derive(Debug)]
 pub struct GitExportGraphInfo {
     pub changesets: Vec<ChangesetContext>,
@@ -38,8 +50,7 @@ pub struct GitExportGraphInfo {
 /// and a hashmap of changset id to their parents' ids.
 pub async fn build_partial_commit_graph_for_export(
     logger: &Logger,
-    paths: Vec<NonRootMPath>,
-    cs_ctx: ChangesetContext,
+    paths: Vec<ExportPathInfo>,
     // Consider history until the provided timestamp, i.e. all commits in the
     // graph will have its creation time greater than or equal to it.
     oldest_commit_ts: Option<i64>,
@@ -53,7 +64,7 @@ pub async fn build_partial_commit_graph_for_export(
     };
 
     let history_changesets: Vec<Vec<ChangesetContext>> = stream::iter(paths)
-        .then(|p| async {
+        .then(|(p, cs_ctx)| async move {
             get_relevant_changesets_for_single_path(p, &cs_ctx, &cs_path_history_options).await
         })
         .try_collect::<Vec<_>>()

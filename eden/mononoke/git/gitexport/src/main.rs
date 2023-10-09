@@ -143,11 +143,15 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         .into_iter()
         .map(|p| TryFrom::try_from(p.as_os_str()))
         .collect::<Result<Vec<NonRootMPath>>>()?;
+    // TODO(T164121717): support proper head commits per paths
+    let export_path_infos: Vec<(NonRootMPath, ChangesetContext)> = export_paths
+        .into_iter()
+        .map(|p| (p, cs_ctx.clone()))
+        .collect();
 
     let graph_info = build_partial_commit_graph_for_export(
         logger,
-        export_paths.clone(),
-        cs_ctx,
+        export_path_infos.clone(),
         args.oldest_commit_ts,
     )
     .await?;
@@ -156,7 +160,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     trace!(logger, "changeset parents: {:?}", &graph_info.parents_map);
 
     let temp_repo_ctx =
-        rewrite_partial_changesets(app.fb, repo_ctx, graph_info, export_paths).await?;
+        rewrite_partial_changesets(app.fb, repo_ctx, graph_info, export_path_infos).await?;
 
     let temp_master_csc = temp_repo_ctx
         .resolve_bookmark(

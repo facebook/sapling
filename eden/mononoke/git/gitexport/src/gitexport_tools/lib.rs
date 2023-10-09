@@ -16,7 +16,6 @@ use anyhow::Result;
 use blobstore::Loadable;
 use blobstore::PutBehaviour;
 use borrowed::borrowed;
-use cloned::cloned;
 use commit_transformation::rewrite_commit;
 use commit_transformation::upload_commits;
 use commit_transformation::MultiMover;
@@ -24,6 +23,7 @@ use fbinit::FacebookInit;
 use fileblob::Fileblob;
 use futures::stream::TryStreamExt;
 use futures::stream::{self};
+use futures::StreamExt;
 use indicatif::ProgressBar;
 use indicatif::ProgressStyle;
 use mononoke_api::BookmarkKey;
@@ -42,12 +42,15 @@ use slog::debug;
 use slog::error;
 use slog::info;
 use slog::trace;
+use slog::warn;
 use slog::Drain;
+use slog::Logger;
 use sql::rusqlite::Connection as SqliteConnection;
 use test_repo_factory::TestRepoFactory;
 
 pub use crate::partial_commit_graph::build_partial_commit_graph_for_export;
 use crate::partial_commit_graph::ChangesetParents;
+use crate::partial_commit_graph::ExportPathInfo;
 pub use crate::partial_commit_graph::GitExportGraphInfo;
 
 pub const MASTER_BOOKMARK: &str = "master";
@@ -59,7 +62,7 @@ pub async fn rewrite_partial_changesets(
     fb: FacebookInit,
     source_repo_ctx: RepoContext,
     graph_info: GitExportGraphInfo,
-    export_paths: Vec<NonRootMPath>,
+    export_paths: Vec<ExportPathInfo>,
 ) -> Result<RepoContext> {
     let ctx: &CoreContext = source_repo_ctx.ctx();
     let changesets = graph_info.changesets;
@@ -72,24 +75,6 @@ pub async fn rewrite_partial_changesets(
 
     // Repo that will hold the partial changesets that will be exported to git
     let temp_repo_ctx = create_temp_repo(fb, ctx).await?;
-
-    let logger_clone = logger.clone();
-
-    let multi_mover: MultiMover<'static> = Arc::new(move |source_path: &NonRootMPath| {
-        let should_export = export_paths.iter().any(|p| p.is_prefix_of(source_path));
-
-        if !should_export {
-            trace!(
-                logger_clone,
-                "Path {:#?} will NOT be exported.",
-                &source_path
-            );
-            return Ok(vec![]);
-        }
-
-        trace!(logger_clone, "Path {:#?} will be exported.", &source_path);
-        Ok(vec![source_path.clone()])
-    });
 
     let num_changesets = changesets.len().try_into().unwrap();
     let cs_results: Vec<Result<ChangesetContext, MononokeError>> =
@@ -116,14 +101,21 @@ pub async fn rewrite_partial_changesets(
             |(mut new_bonsai_changesets, remapped_parents), changeset| {
                 borrowed!(source_repo_ctx);
                 borrowed!(mb_progress_bar);
-                cloned!(multi_mover);
+                borrowed!(export_paths);
+                borrowed!(logger);
+
                 async move {
+                    let export_paths =
+                        get_export_paths_for_changeset(&changeset, export_paths).await?;
+
+                    let multi_mover = build_multi_mover_for_changeset(logger, &export_paths)?;
                     let (new_bcs, remapped_parents) = create_bonsai_for_new_repo(
                         source_repo_ctx,
                         multi_mover,
                         changeset_parents,
                         remapped_parents,
                         changeset,
+                        &export_paths,
                     )
                     .await?;
                     new_bonsai_changesets.push(new_bcs);
@@ -171,12 +163,13 @@ pub async fn rewrite_partial_changesets(
 
 /// Given a changeset and a set of paths being exported, build the
 /// BonsaiChangeset containing only the changes to those paths.
-async fn create_bonsai_for_new_repo(
+async fn create_bonsai_for_new_repo<'a>(
     source_repo_ctx: &RepoContext,
     multi_mover: MultiMover<'_>,
     changeset_parents: &ChangesetParents,
     mut remapped_parents: HashMap<ChangesetId, ChangesetId>,
     changeset_ctx: ChangesetContext,
+    export_paths: &'a [&'a NonRootMPath],
 ) -> Result<(BonsaiChangeset, HashMap<ChangesetId, ChangesetId>), MononokeError> {
     let logger = changeset_ctx.repo().ctx().logger();
     trace!(
@@ -207,30 +200,66 @@ async fn create_bonsai_for_new_repo(
     let mut mut_bcs = bcs.into_mut();
     mut_bcs.parents = orig_parent_ids.clone();
 
-    // If this isn't the first changeset (i.e. that creates the oldest exported
-    // directory), we need to make sure that file changes that copy from
-    // previous commits only reference revisions that are also being exported.
-    if let Some(new_parent_cs_id) = orig_parent_ids.first() {
-        // TODO(T161204758): iterate over all parents and select one that is the closest
-        // ancestor of each commit in the `copy_from` field.
-        mut_bcs.file_changes.iter_mut().for_each(|(_p, fc)| {
-            if let FileChange::Change(tracked_fc) = fc {
-                // If any FileChange copies a file from a previous revision (e.g. a parent),
-                // set the `copy_from` field to point to its new parent.
+    // If this changeset created an export directory by copying/moving files
+    // from a directory that's not being exported, we only need to print a
+    // warning once and not for every single file that was copied.
+    let mut printed_warning_about_copy = false;
+
+    // TODO(T161204758): iterate over all parents and select one that is the closest
+    // ancestor of each commit in the `copy_from` field.
+    mut_bcs.file_changes.iter_mut().for_each(|(_p, fc)| {
+        if let FileChange::Change(tracked_fc) = fc {
+            // If any FileChange copies a file from a previous revision (e.g. a parent),
+            // set the `copy_from` field to point to its new parent.
+            //
+            // Since we're building a history using all changesets that
+            // affect the exported directories, any file being copied
+            // should always exist in the new parent.
+            //
+            // If this isn't done, it might not be possible to rewrite the
+            // commit to the new repo, because the changeset referenced in
+            // its `copy_from` field will not have been remapped.
+            if let Some((old_path, copy_from_cs_id)) = tracked_fc.copy_from_mut() {
+                // If this isn't the first changeset (i.e. that creates the oldest exported
+                // directory), we need to make sure that file changes that copy from
+                // previous commits only reference revisions that are also being exported.
                 //
-                // Since we're building a history using all changesets that
-                // affect the exported directories, any file being copied
-                // should always exist in the new parent.
-                //
-                // If this isn't done, it might not be possible to rewrite the
-                // commit to the new repo, because the changeset referenced in
-                // its `copy_from` field will not have been remapped.
-                if let Some((_p, copy_from_cs_id)) = tracked_fc.copy_from_mut() {
-                    *copy_from_cs_id = new_parent_cs_id.clone();
+                // We should also make sure that we only reference files that are
+                // are in the revision that we'll set as the parent.
+                // If that's not the case, the `copy_from` information will be
+                // dropped and a warning will be printed to the user so they're
+                // aware that files in an export directory might have been
+                // copied/moved from another one.
+                let old_path = &*old_path; // We need an immutable reference for prefix checks
+                let should_export = export_paths.iter().any(|p| p.is_prefix_of(old_path));
+                let new_parent_cs_id = orig_parent_ids.first();
+                if new_parent_cs_id.is_some() && should_export {
+                    *copy_from_cs_id = new_parent_cs_id.cloned().unwrap();
+                } else {
+                    // First commit where the export paths were created.
+                    // If the `copy_from` field is set, it means that some files
+                    // were copied from other directories, which might not be
+                    // included in the provided export paths.
+                    //
+                    // By default, these renames won't be followed, but a warning
+                    // will be printed so that the user can check the commit
+                    // and decide if they want to re-run it passing the old
+                    // name as an export path along with this commit as the
+                    // head changeset.
+                    if !printed_warning_about_copy {
+                        warn!(
+                            logger,
+                            "Changeset {0:?} might have created one of the exported paths by moving/copying files from a previous commit that will not be exported (id {1:?}).",
+                            changeset_ctx.id(),
+                            copy_from_cs_id
+                        );
+                        printed_warning_about_copy =  true;
+                    };
+                    *tracked_fc =  tracked_fc.with_new_copy_from(None);
                 };
             };
-        });
-    };
+        };
+    });
 
     let rewritten_bcs_mut = rewrite_commit(
         source_repo_ctx.ctx(),
@@ -255,6 +284,79 @@ async fn create_bonsai_for_new_repo(
     remapped_parents.insert(changeset_ctx.id(), rewritten_bcs.get_changeset_id());
 
     Ok((rewritten_bcs, remapped_parents))
+}
+
+/// Builds a vector of references to the paths that should be exported when
+/// rewriting the provided changeset based on each export path's head commit.
+async fn get_export_paths_for_changeset<'a>(
+    processed_cs: &ChangesetContext,
+    export_path_infos: &'a Vec<ExportPathInfo>,
+) -> Result<Vec<&'a NonRootMPath>> {
+    // Get the export paths for the changeset being processed considering its
+    // head commit.
+    let export_paths: Vec<&NonRootMPath> = stream::iter(export_path_infos)
+        .then(|(exp_path, head_cs)| async move {
+            // If the processed changeset is older than a path's head commit,
+            // then this path should be exported when rewriting this changeset.
+            let is_ancestor_of_head_cs = processed_cs.is_ancestor_of(head_cs.id()).await?;
+            if is_ancestor_of_head_cs {
+                return anyhow::Ok::<Option<&NonRootMPath>>(Some(exp_path));
+            }
+            // Otherwise the changeset is a descendant of this path's head, so
+            // the path should NOT be exported.
+            Ok(None)
+        })
+        .try_collect::<Vec<_>>()
+        .await?
+        .into_iter()
+        .flatten()
+        .collect::<Vec<&NonRootMPath>>();
+
+    Ok(export_paths)
+}
+
+/// The MultiMover closure is called for every path affected by a commit being
+/// copied and it should determine if the changes to the path should be
+/// included or not in the new commit.
+///
+/// This function builds the MultiMover for a given changeset, considering what
+/// paths should be exported based on their head.
+/// This is needed to handle renames of export directories.
+/// For details about head changeset, see the docs of `ExportPathInfo`.
+///
+/// **Example:**
+/// `A -> B -> c -> D -> E -> f (master)`
+/// A) CREATE: old/foo
+/// B) MODIFY: old/foo
+/// c) MODIFY: random/file.txt
+/// D) RENAME: old/foo → new/foo
+/// E) MODIFY: new/foo.txt
+/// f) CREATE: old/foo.
+///
+/// Expected changesets: [A', B', D', E'], because the `old` directory created
+/// in `f` should NOT be exported.
+///
+/// In this case, `export_path_infos` would be `[("new", "f", ("old", "D")]`.
+///
+fn build_multi_mover_for_changeset<'a>(
+    logger: &'a Logger,
+    export_paths: &'a [&'a NonRootMPath],
+) -> Result<MultiMover<'a>> {
+    let multi_mover: MultiMover = Arc::new(
+        move |source_path: &NonRootMPath| -> Result<Vec<NonRootMPath>> {
+            let should_export = export_paths.iter().any(|p| p.is_prefix_of(source_path));
+
+            if !should_export {
+                trace!(logger, "Path {:#?} will NOT be exported.", &source_path);
+                return Ok(vec![]);
+            }
+
+            trace!(logger, "Path {:#?} will be exported.", &source_path);
+            Ok(vec![source_path.clone()])
+        },
+    );
+
+    Ok(multi_mover)
 }
 
 /// Create a temporary repository to store the changesets that affect the export
