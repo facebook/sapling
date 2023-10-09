@@ -633,20 +633,20 @@ function maybeOpenURL(url: URL): void {
   }
 
   let openCommand: string;
-  let commandOptions: string[] | null = null;
+  let shell = false;
+  let args: string[] = [href];
   switch (process.platform) {
     case 'darwin': {
       openCommand = '/usr/bin/open';
       break;
     }
     case 'win32': {
-      // We cannot use `powershell -command 'start <URL>'` because then
-      // `start <URL>` is a single argument and we have to worry about
-      // escaping it safely. We use this construction in combination with
-      // `windowsVerbatimArguments: true` below so that we do not have
-      // to take responsibility for escaping the URL.
-      openCommand = 'cmd';
-      commandOptions = ['/c', 'start'];
+      // START ["title"] command
+      openCommand = 'start';
+      // Trust `href`. Use naive quoting.
+      args = ['"ISL"', `"${href}"`];
+      // START is a shell (cmd.exe) builtin, not a standalone exe.
+      shell = true;
       break;
     }
     default: {
@@ -655,13 +655,12 @@ function maybeOpenURL(url: URL): void {
     }
   }
 
-  const args = commandOptions != null ? commandOptions.concat(href) : [href];
-
   // Note that if openCommand does not exist on the host, this will fail with
   // ENOENT. Often, this is fine: the user could start isl on a headless
   // machine, but then set up tunneling to reach the server from another host.
   const child = child_process.spawn(openCommand, args, {
     detached: true,
+    shell,
     stdio: 'ignore' as IOType,
     windowsHide: true,
     windowsVerbatimArguments: true,
