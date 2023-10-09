@@ -14,6 +14,7 @@ pub use super::IO;
 
 commands! {
     mod args;
+    mod currentexe;
     mod dumpinternalconfig;
     mod dumpindexedlog;
     mod dumptrace;

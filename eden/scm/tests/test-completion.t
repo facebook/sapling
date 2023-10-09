@@ -110,6 +110,7 @@ Show debug commands if there are no other candidates
   debugconfig
   debugcopytrace
   debugcreatestreamclonebundle
+  debugcurrentexe
   debugdag
   debugdata
   debugdatapack
@@ -437,6 +438,7 @@ Show all commands + options
   debugcomplete: options
   debugcopytrace: source, dest
   debugcreatestreamclonebundle: 
+  debugcurrentexe: 
   debugdag: bookmarks, branches, dots, spaces
   debugdata: changelog, manifest, dir
   debugdatapack: long, node, node-delta

@@ -937,6 +937,8 @@ Test list of internal help commands
                  trace the copy of the given files from source to dest commit
    debugcreatestreamclonebundle
                  create a stream clone bundle file
+   debugcurrentexe
+                 show the path to the main executable
    debugdag      format the changelog or an index DAG as a concise textual
                  description
    debugdata     dump the contents of a data file revision
