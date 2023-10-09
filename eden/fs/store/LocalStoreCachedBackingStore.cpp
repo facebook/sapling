@@ -68,49 +68,52 @@ LocalStoreCachedBackingStore::getTree(
   }
 
   return std::move(localStoreGetTree)
-      .thenValue([self = shared_from_this(), id = id, context = context.copy()](
-                     TreePtr tree) mutable {
-        if (tree) {
-          self->stats_->increment(&ObjectStoreStats::getTreeFromLocalStore);
-          return folly::makeSemiFuture(GetTreeResult{
-              std::move(tree), ObjectFetchContext::FromDiskCache});
-        }
+      .thenValue(
+          [self = shared_from_this(), id = id, context = context.copy()](
+              TreePtr tree) mutable
+          -> ImmediateFuture<BackingStore::GetTreeResult> {
+            if (tree) {
+              self->stats_->increment(&ObjectStoreStats::getTreeFromLocalStore);
+              return GetTreeResult{
+                  std::move(tree), ObjectFetchContext::FromDiskCache};
+            }
 
-        return self->backingStore_
-            ->getTree(id, context)
-            // TODO: This is a good use for toUnsafeFuture to ensure the tree is
-            // cached even if the resulting future is never consumed.
-            .deferValue([self](GetTreeResult result) {
-              if (result.tree) {
-                auto batch = self->localStore_->beginWrite();
-                if (self->shouldCache(
-                        LocalStoreCachedBackingStore::CachingPolicy::Trees)) {
-                  batch->putTree(*result.tree);
-                }
-
-                if (self->shouldCache(LocalStoreCachedBackingStore::
-                                          CachingPolicy::BlobMetadata)) {
-                  // Let's cache all the entries in the LocalStore.
-                  for (const auto& [name, treeEntry] : *result.tree) {
-                    const auto& size = treeEntry.getSize();
-                    const auto& sha1 = treeEntry.getContentSha1();
-                    const auto& blake3 = treeEntry.getContentBlake3();
-                    if (treeEntry.getType() == TreeEntryType::REGULAR_FILE &&
-                        size && sha1) {
-                      batch->putBlobMetadata(
-                          treeEntry.getHash(),
-                          BlobMetadata{*sha1, blake3, *size});
+            return ImmediateFuture{self->backingStore_->getTree(id, context)}
+                // TODO: This is a good use for toUnsafeFuture to ensure the
+                // tree is cached even if the resulting future is never
+                // consumed.
+                .thenValue([self](GetTreeResult result) {
+                  if (result.tree) {
+                    auto batch = self->localStore_->beginWrite();
+                    if (self->shouldCache(LocalStoreCachedBackingStore::
+                                              CachingPolicy::Trees)) {
+                      batch->putTree(*result.tree);
                     }
-                  }
-                }
-                batch->flush();
-                self->stats_->increment(
-                    &ObjectStoreStats::getTreeFromBackingStore);
-              }
 
-              return result;
-            });
-      })
+                    if (self->shouldCache(LocalStoreCachedBackingStore::
+                                              CachingPolicy::BlobMetadata)) {
+                      // Let's cache all the entries in the LocalStore.
+                      for (const auto& [name, treeEntry] : *result.tree) {
+                        const auto& size = treeEntry.getSize();
+                        const auto& sha1 = treeEntry.getContentSha1();
+                        const auto& blake3 = treeEntry.getContentBlake3();
+                        if (treeEntry.getType() ==
+                                TreeEntryType::REGULAR_FILE &&
+                            size && sha1) {
+                          batch->putBlobMetadata(
+                              treeEntry.getHash(),
+                              BlobMetadata{*sha1, blake3, *size});
+                        }
+                      }
+                    }
+                    batch->flush();
+                    self->stats_->increment(
+                        &ObjectStoreStats::getTreeFromBackingStore);
+                  }
+
+                  return result;
+                });
+          })
       .semi();
 }
 
@@ -124,60 +127,66 @@ LocalStoreCachedBackingStore::getBlobMetadata(
     localStoreGetBlobMetadata = localStore_->getBlobMetadata(id);
   }
   return std::move(localStoreGetBlobMetadata)
-      .thenValue([self = shared_from_this(), id = id, context = context.copy()](
-                     BlobMetadataPtr metadata) mutable {
-        if (metadata) {
-          self->stats_->increment(
-              &ObjectStoreStats::getBlobMetadataFromLocalStore);
-          return folly::makeSemiFuture(GetBlobMetaResult{
-              std::move(metadata), ObjectFetchContext::FromDiskCache});
-        }
+      .thenValue(
+          [self = shared_from_this(), id = id, context = context.copy()](
+              BlobMetadataPtr metadata) mutable
+          -> ImmediateFuture<BackingStore::GetBlobMetaResult> {
+            if (metadata) {
+              self->stats_->increment(
+                  &ObjectStoreStats::getBlobMetadataFromLocalStore);
+              return GetBlobMetaResult{
+                  std::move(metadata), ObjectFetchContext::FromDiskCache};
+            }
 
-        return self->backingStore_->getBlobMetadata(id, context)
-            .deferValue(
-                [self, id, context = context.copy()](GetBlobMetaResult result)
-                    -> folly::SemiFuture<GetBlobMetaResult> {
-                  if (result.blobMeta) {
-                    if (result.origin ==
-                        ObjectFetchContext::Origin::FromDiskCache) {
-                      self->stats_->increment(
-                          &ObjectStoreStats::
-                              getLocalBlobMetadataFromBackingStore);
-                    } else {
-                      self->stats_->increment(
-                          &ObjectStoreStats::getBlobMetadataFromBackingStore);
-                    }
-
-                    return result;
-                  }
-
-                  return self->getBlob(id, context)
-                      .deferValue([self](GetBlobResult result) {
-                        if (result.blob) {
+            return ImmediateFuture{
+                self->backingStore_->getBlobMetadata(id, context)}
+                .thenValue(
+                    [self, id, context = context.copy()](
+                        GetBlobMetaResult result)
+                        -> ImmediateFuture<BackingStore::GetBlobMetaResult> {
+                      if (result.blobMeta) {
+                        if (result.origin ==
+                            ObjectFetchContext::Origin::FromDiskCache) {
                           self->stats_->increment(
-                              &ObjectStoreStats::getBlobMetadataFromBlob);
-
-                          return GetBlobMetaResult{
-                              std::make_shared<BlobMetadata>(
-                                  Hash20::sha1(result.blob->getContents()),
-                                  /*blake3=*/std::nullopt,
-                                  result.blob->getSize()),
-                              result.origin};
+                              &ObjectStoreStats::
+                                  getLocalBlobMetadataFromBackingStore);
+                        } else {
+                          self->stats_->increment(
+                              &ObjectStoreStats::
+                                  getBlobMetadataFromBackingStore);
                         }
 
-                        return GetBlobMetaResult{
-                            nullptr, ObjectFetchContext::Origin::NotFetched};
-                      });
-                })
-            .deferValue([self, id](GetBlobMetaResult result) {
-              if (result.blobMeta &&
-                  self->shouldCache(LocalStoreCachedBackingStore::
-                                        CachingPolicy::BlobMetadata)) {
-                self->localStore_->putBlobMetadata(id, *result.blobMeta);
-              }
-              return result;
-            });
-      })
+                        return result;
+                      }
+
+                      return ImmediateFuture{self->getBlob(id, context)}
+                          .thenValue([self](GetBlobResult result) {
+                            if (result.blob) {
+                              self->stats_->increment(
+                                  &ObjectStoreStats::getBlobMetadataFromBlob);
+
+                              return GetBlobMetaResult{
+                                  std::make_shared<BlobMetadata>(
+                                      Hash20::sha1(result.blob->getContents()),
+                                      /*blake3=*/std::nullopt,
+                                      result.blob->getSize()),
+                                  result.origin};
+                            }
+
+                            return GetBlobMetaResult{
+                                nullptr,
+                                ObjectFetchContext::Origin::NotFetched};
+                          });
+                    })
+                .thenValue([self, id](GetBlobMetaResult result) {
+                  if (result.blobMeta &&
+                      self->shouldCache(LocalStoreCachedBackingStore::
+                                            CachingPolicy::BlobMetadata)) {
+                    self->localStore_->putBlobMetadata(id, *result.blobMeta);
+                  }
+                  return result;
+                });
+          })
       .semi();
 }
 
@@ -190,30 +199,32 @@ LocalStoreCachedBackingStore::getBlob(
     localStoreGetBlob = localStore_->getBlob(id);
   }
   return std::move(localStoreGetBlob)
-      .thenValue([self = shared_from_this(), id = id, context = context.copy()](
-                     BlobPtr blob) mutable {
-        if (blob) {
-          self->stats_->increment(&ObjectStoreStats::getBlobFromLocalStore);
-          return folly::makeSemiFuture(GetBlobResult{
-              std::move(blob), ObjectFetchContext::FromDiskCache});
-        }
+      .thenValue(
+          [self = shared_from_this(), id = id, context = context.copy()](
+              BlobPtr blob) mutable
+          -> ImmediateFuture<BackingStore::GetBlobResult> {
+            if (blob) {
+              self->stats_->increment(&ObjectStoreStats::getBlobFromLocalStore);
+              return GetBlobResult{
+                  std::move(blob), ObjectFetchContext::FromDiskCache};
+            }
 
-        return self->backingStore_
-            ->getBlob(id, context)
-            // TODO: This is a good use for toUnsafeFuture to ensure the tree is
-            // cached even if the resulting future is never consumed.
-            .deferValue([self, id](GetBlobResult result) {
-              if (result.blob) {
-                if (self->shouldCache(
-                        LocalStoreCachedBackingStore::CachingPolicy::Blobs)) {
-                  self->localStore_->putBlob(id, result.blob.get());
-                }
-                self->stats_->increment(
-                    &ObjectStoreStats::getBlobFromBackingStore);
-              }
-              return result;
-            });
-      })
+            return ImmediateFuture{self->backingStore_->getBlob(id, context)}
+                // TODO: This is a good use for toUnsafeFuture to ensure the
+                // tree is cached even if the resulting future is never
+                // consumed.
+                .thenValue([self, id](GetBlobResult result) {
+                  if (result.blob) {
+                    if (self->shouldCache(LocalStoreCachedBackingStore::
+                                              CachingPolicy::Blobs)) {
+                      self->localStore_->putBlob(id, result.blob.get());
+                    }
+                    self->stats_->increment(
+                        &ObjectStoreStats::getBlobFromBackingStore);
+                  }
+                  return result;
+                });
+          })
       .semi();
 }
 
