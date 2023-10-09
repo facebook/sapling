@@ -422,14 +422,14 @@ class HTTPResponse(httplib.HTTPResponse):
         return s
 
     # stolen from Python SVN #68532 to fix issue1088
-    def _read_chunked(self, amt):
+    def _read_chunked(self, amt) -> bytes:
         chunk_left = self.chunk_left
         parts = []
 
         while True:
             if chunk_left is None:
                 line = self.fp.readline()
-                i = line.find(";")
+                i = line.find(b";")
                 if i >= 0:
                     line = line[:i]  # strip chunk-extensions
                 try:
@@ -446,12 +446,12 @@ class HTTPResponse(httplib.HTTPResponse):
             elif amt < chunk_left:
                 parts.append(self._safe_read(amt))
                 self.chunk_left = chunk_left - amt
-                return "".join(parts)
+                return b"".join(parts)
             elif amt == chunk_left:
                 parts.append(self._safe_read(amt))
                 self._safe_read(2)  # toss the CRLF at the end of the chunk
                 self.chunk_left = None
-                return "".join(parts)
+                return b"".join(parts)
             else:
                 parts.append(self._safe_read(chunk_left))
                 amt -= chunk_left
@@ -468,16 +468,14 @@ class HTTPResponse(httplib.HTTPResponse):
                 # a vanishingly small number of sites EOF without
                 # sending the trailer
                 break
-            if line == "\r\n":
+            if line == b"\r\n":
                 break
 
         # we read everything; close the "file"
         self.close()
 
-        return "".join(parts)
+        return b"".join(parts)
 
-    # pyre-fixme[14]: `readline` overrides method defined in `HTTPResponse`
-    #  inconsistently.
     def readline(self, size: int = -1) -> bytes:
         # Fast path for a line is already available in read buffer.
         i = self._rbuf.find(b"\n")
