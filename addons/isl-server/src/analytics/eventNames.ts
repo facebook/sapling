@@ -95,6 +95,7 @@ export type TrackErrorName =
   | 'DiffFetchFailed'
   | 'InvalidCwd'
   | 'InvalidCommand'
+  | 'JfNotAuthenticated'
   | 'GhCliNotAuthenticated'
   | 'GhCliNotInstalled'
   | 'TopLevelError'
