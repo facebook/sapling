@@ -51,6 +51,7 @@
 .file-header-copyable-path {
   cursor: pointer;
   display: inherit;
+  white-space: nowrap;
 }
 
 .file-header-copyable-path:hover > .tooltip-creator {
