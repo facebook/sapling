@@ -576,8 +576,8 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
       InodeNumber number,
       AbsolutePath archivePath,
       mode_t mode) const {
-    auto input =
-        repair.fcs()->openFile(number, FileContentStore::kHeaderIdentifierFile);
+    auto input = std::get<folly::File>(repair.fcs()->openFile(
+        number, FileContentStore::kHeaderIdentifierFile));
 
     // If the file is a symlink, try to create the file in the archive
     // directory as a symlink.

@@ -80,7 +80,10 @@ class TestOverlay : public std::enable_shared_from_this<TestOverlay> {
     XCHECK_EQ(headerData.size(), FileContentStore::kHeaderLength);
     auto overlayFile = fcs_.openFileNoVerify(number);
     auto ret = folly::pwriteFull(
-        overlayFile.fd(), headerData.data(), headerData.size(), 0);
+        std::get<folly::File>(overlayFile).fd(),
+        headerData.data(),
+        headerData.size(),
+        0);
     folly::checkUnixError(ret, "failed to replace file inode header");
   }
 
@@ -148,7 +151,8 @@ class TestDir {
     // The file should only be created in the overlay if it is materialized
     folly::File file;
     if (!hash.has_value()) {
-      file = overlay_->fcs().createOverlayFile(number, contents);
+      file = std::get<folly::File>(
+          overlay_->fcs().createOverlayFile(number, contents));
     }
     return TestFile(overlay_, number, std::move(file));
   }
@@ -508,8 +512,8 @@ TEST_P(FsckTest, testBadFileData) {
   auto replacementFile = testOverlay->fcs().openFile(
       layout.src_foo_testTxt.number(), FileContentStore::kHeaderIdentifierFile);
   std::array<std::byte, 128> buf;
-  auto bytesRead =
-      folly::readFull(replacementFile.fd(), buf.data(), buf.size());
+  auto bytesRead = folly::readFull(
+      std::get<folly::File>(replacementFile).fd(), buf.data(), buf.size());
   EXPECT_EQ(0, bytesRead);
 
   testOverlay->inodeCatalog()->close(checker.getNextInodeNumber());
@@ -529,7 +533,8 @@ TEST_P(FsckTest, testTruncatedDirData) {
 
   // Truncate one of the directory inode files to 0 bytes
   auto srcDataFile = testOverlay->fcs().openFileNoVerify(layout.src.number());
-  folly::checkUnixError(ftruncate(srcDataFile.fd(), 0), "truncate failed");
+  folly::checkUnixError(
+      ftruncate(std::get<folly::File>(srcDataFile).fd(), 0), "truncate failed");
 
   InodeCatalog::LookupCallback lookup = [](auto&&, auto&&) {
     return makeImmediateFuture<InodeCatalog::LookupCallbackValue>(

@@ -425,11 +425,11 @@ FileContentStore::createHeader(
   return headerStorage;
 }
 
-folly::File FileContentStore::openFile(
+std::variant<folly::File, InodeNumber> FileContentStore::openFile(
     InodeNumber inodeNumber,
     folly::StringPiece headerId) {
   // Open the overlay file
-  auto file = openFileNoVerify(inodeNumber);
+  auto file = std::get<folly::File>(openFileNoVerify(inodeNumber));
 
   // Read the contents
   std::string contents;
@@ -446,7 +446,8 @@ folly::File FileContentStore::openFile(
   return file;
 }
 
-folly::File FileContentStore::openFileNoVerify(InodeNumber inodeNumber) {
+std::variant<folly::File, InodeNumber> FileContentStore::openFileNoVerify(
+    InodeNumber inodeNumber) {
   auto path = FileContentStore::getFilePath(inodeNumber);
 
   int fd = openat(dirFile_.fd(), path.c_str(), O_RDWR | O_CLOEXEC | O_NOFOLLOW);
@@ -566,7 +567,7 @@ folly::File FileContentStore::createOverlayFileImpl(
   return file;
 }
 
-folly::File FileContentStore::createOverlayFile(
+std::variant<folly::File, InodeNumber> FileContentStore::createOverlayFile(
     InodeNumber inodeNumber,
     ByteRange contents) {
   auto header = createHeader(kHeaderIdentifierFile, kHeaderVersion);
@@ -579,7 +580,7 @@ folly::File FileContentStore::createOverlayFile(
   return createOverlayFileImpl(inodeNumber, iov.data(), iov.size());
 }
 
-folly::File FileContentStore::createOverlayFile(
+std::variant<folly::File, InodeNumber> FileContentStore::createOverlayFile(
     InodeNumber inodeNumber,
     const IOBuf& contents) {
   // In the common case where there is just one element in the chain, use the
@@ -698,7 +699,7 @@ std::optional<fsck::InodeInfo> FileContentStore::loadInodeInfo(
   // Open the inode file
   folly::File file;
   try {
-    file = openFileNoVerify(number);
+    file = std::get<folly::File>(openFileNoVerify(number));
   } catch (const std::exception& ex) {
     return inodeError("error opening file: ", folly::exceptionStr(ex));
   }
