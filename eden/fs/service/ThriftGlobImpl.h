@@ -15,6 +15,8 @@
 #include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/RefPtr.h"
 
+#include "eden/fs/utils/GlobNodeImpl.h"
+
 namespace facebook::eden {
 
 class EdenMount;
