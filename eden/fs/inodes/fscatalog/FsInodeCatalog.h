@@ -36,9 +36,10 @@ class InodePath;
 /**
  * Class to manage the on disk data.
  */
-class FileContentStore : public IFileContentStore {
+class FsFileContentStore : public IFileContentStore {
  public:
-  explicit FileContentStore(AbsolutePathPiece localDir) : localDir_{localDir} {}
+  explicit FsFileContentStore(AbsolutePathPiece localDir)
+      : localDir_{localDir} {}
 
   /**
    * Initialize the FileContentStore, acquire the "info" file lock and load the
@@ -56,7 +57,7 @@ class FileContentStore : public IFileContentStore {
   void close() override;
 
   /**
-   * Was FileContentStore initialized - i.e., is cleanup (close) necessary.
+   * Was FsFileContentStore initialized - i.e., is cleanup (close) necessary.
    */
   bool initialized() const override {
     return bool(infoFile_);
@@ -254,7 +255,7 @@ class FileContentStore : public IFileContentStore {
  */
 class FsInodeCatalog : public InodeCatalog {
  public:
-  explicit FsInodeCatalog(FileContentStore* core) : core_(core) {}
+  explicit FsInodeCatalog(FsFileContentStore* core) : core_(core) {}
 
   bool supportsSemanticOperations() const override {
     return false;
@@ -306,7 +307,7 @@ class FsInodeCatalog : public InodeCatalog {
   std::optional<fsck::InodeInfo> loadInodeInfo(InodeNumber number) override;
 
  private:
-  FileContentStore* core_;
+  FsFileContentStore* core_;
 };
 
 } // namespace facebook::eden

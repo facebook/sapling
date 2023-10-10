@@ -41,7 +41,7 @@ int main(int argc, char** argv) {
   auto loggingConfig = folly::parseLogConfig("eden=DBG2; default:async=true");
   folly::LoggerDB::get().updateConfig(loggingConfig);
 
-  std::optional<FileContentStore> fileContentStore;
+  std::optional<FsFileContentStore> fileContentStore;
   std::optional<FsInodeCatalog> fsInodeCatalog;
   std::optional<InodeNumber> nextInodeNumber;
   auto overlayPath = normalizeBestEffort(argv[1]);

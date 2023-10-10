@@ -100,7 +100,7 @@ std::unique_ptr<InodeCatalog> makeInodeCatalog(
 #else
   XLOG(DBG4) << "Legacy overlay being used.";
   return std::make_unique<FsInodeCatalog>(
-      static_cast<FileContentStore*>(fileContentStore));
+      static_cast<FsFileContentStore*>(fileContentStore));
 #endif
 }
 
@@ -110,7 +110,7 @@ std::unique_ptr<IFileContentStore> makeFileContentStore(
   (void)localDir;
   return nullptr;
 #else
-  return std::make_unique<FileContentStore>(localDir);
+  return std::make_unique<FsFileContentStore>(localDir);
 #endif
 }
 } // namespace
@@ -312,7 +312,7 @@ void Overlay::initOverlay(
     // call.
     OverlayChecker checker(
         inodeCatalog_.get(),
-        static_cast<FileContentStore*>(fileContentStore_.get()),
+        static_cast<FsFileContentStore*>(fileContentStore_.get()),
         std::nullopt,
         lookupCallback);
     folly::stop_watch<> fsckRuntime;
@@ -363,7 +363,8 @@ void Overlay::initOverlay(
   // Open after infoFile_'s lock is acquired because the InodeTable acquires
   // its own lock, which should be released prior to infoFile_.
   inodeMetadataTable_ = InodeMetadataTable::open(
-      (localDir_ + PathComponentPiece{FileContentStore::kMetadataFile}).c_str(),
+      (localDir_ + PathComponentPiece{FsFileContentStore::kMetadataFile})
+          .c_str(),
       stats_.copy());
 #endif // !_WIN32
 }
