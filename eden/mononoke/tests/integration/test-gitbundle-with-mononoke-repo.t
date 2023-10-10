@@ -11,7 +11,6 @@
   $ GIT_REPO="${TESTTMP}/repo-git"
   $ HG_REPO="${TESTTMP}/repo-hg"
   $ BUNDLE_PATH="${TESTTMP}/repo_bundle.bundle"
-  $ CREATED_GIT_REPO="${TESTTMP}/created-repo-git"
   $ cat >> repos/repo/server.toml <<EOF
   > [source_control_service]
   > permit_writes = true
