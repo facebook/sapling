@@ -121,7 +121,11 @@ export default function ComparisonView({comparison}: {comparison: Comparison}) {
 
   return (
     <div data-testid="comparison-view" className="comparison-view">
-      <ComparisonViewHeader comparison={comparison} />
+      <ComparisonViewHeader
+        comparison={comparison}
+        collapsedFiles={collapsedFiles}
+        setCollapsedFile={setCollapsedFile}
+      />
       <div className="comparison-view-details">
         {compared.data == null ? (
           <Icon icon="loading" />
@@ -154,9 +158,27 @@ const defaultComparisons = [
   ComparisonType.HeadChanges as const,
   ComparisonType.StackChanges as const,
 ];
-function ComparisonViewHeader({comparison}: {comparison: Comparison}) {
+function ComparisonViewHeader({
+  comparison,
+  collapsedFiles,
+  setCollapsedFile,
+}: {
+  comparison: Comparison;
+  collapsedFiles: Map<string, boolean>;
+  setCollapsedFile: (path: string, collapsed: boolean) => unknown;
+}) {
   const setComparisonMode = useSetRecoilState(currentComparisonMode);
   const [compared, reloadComparison] = useComparisonData(comparison);
+
+  const allFilesExpanded =
+    compared?.data?.value?.every(
+      file => file.newFileName && collapsedFiles.get(file.newFileName) === false,
+    ) === true;
+  const noFilesExpanded =
+    compared?.data?.value?.every(
+      file => file.newFileName && collapsedFiles.get(file.newFileName) === true,
+    ) === true;
+  const isLoading = compared.isLoading;
 
   return (
     <>
@@ -192,6 +214,32 @@ function ComparisonViewHeader({comparison}: {comparison: Comparison}) {
               <Icon icon="refresh" data-testid="comparison-refresh-button" />
             </VSCodeButton>
           </Tooltip>
+          <VSCodeButton
+            onClick={() => {
+              for (const file of compared?.data?.value ?? []) {
+                if (file.newFileName) {
+                  setCollapsedFile(file.newFileName, false);
+                }
+              }
+            }}
+            disabled={isLoading || allFilesExpanded}
+            appearance="icon">
+            <Icon icon="unfold" slot="start" />
+            <T>Expand all files</T>
+          </VSCodeButton>
+          <VSCodeButton
+            onClick={() => {
+              for (const file of compared?.data?.value ?? []) {
+                if (file.newFileName) {
+                  setCollapsedFile(file.newFileName, true);
+                }
+              }
+            }}
+            appearance="icon"
+            disabled={isLoading || noFilesExpanded}>
+            <Icon icon="fold" slot="start" />
+            <T>Collapse all files</T>
+          </VSCodeButton>
           {compared.isLoading ? <Icon icon="loading" data-testid="comparison-loading" /> : null}
         </span>
         <VSCodeButton
