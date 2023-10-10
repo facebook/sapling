@@ -42,7 +42,7 @@ struct DirContents;
 class InodeMap;
 class SerializedInodeMap;
 class InodeCatalog;
-class IFileContentStore;
+class FileContentStore;
 class DirEntry;
 class EdenConfig;
 class EdenStats;
@@ -361,7 +361,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
    */
   std::atomic<uint64_t> nextInodeNumber_{0};
 
-  std::unique_ptr<IFileContentStore> fileContentStore_;
+  std::unique_ptr<FileContentStore> fileContentStore_;
   std::unique_ptr<InodeCatalog> inodeCatalog_;
   InodeCatalogType inodeCatalogType_;
   InodeCatalogOptions inodeCatalogOptions_;

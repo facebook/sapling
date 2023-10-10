@@ -13,7 +13,7 @@
 #include <array>
 #include <condition_variable>
 #include <optional>
-#include "eden/fs/inodes/IFileContentStore.h"
+#include "eden/fs/inodes/FileContentStore.h"
 #include "eden/fs/inodes/InodeCatalog.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
@@ -36,7 +36,7 @@ class InodePath;
 /**
  * Class to manage the on disk data.
  */
-class FsFileContentStore : public IFileContentStore {
+class FsFileContentStore : public FileContentStore {
  public:
   explicit FsFileContentStore(AbsolutePathPiece localDir)
       : localDir_{localDir} {}

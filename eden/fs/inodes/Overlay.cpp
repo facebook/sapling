@@ -21,7 +21,7 @@
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/DirEntry.h"
-#include "eden/fs/inodes/IFileContentStore.h"
+#include "eden/fs/inodes/FileContentStore.h"
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/OverlayFile.h"
@@ -45,7 +45,7 @@ std::unique_ptr<InodeCatalog> makeInodeCatalog(
     InodeCatalogType inodeCatalogType,
     InodeCatalogOptions inodeCatalogOptions,
     const EdenConfig& config,
-    IFileContentStore* fileContentStore,
+    FileContentStore* fileContentStore,
     const std::shared_ptr<StructuredLogger>& logger) {
   if (inodeCatalogType == InodeCatalogType::Sqlite) {
     // Controlled via EdenConfig::unsafeInMemoryOverlay
@@ -104,7 +104,7 @@ std::unique_ptr<InodeCatalog> makeInodeCatalog(
 #endif
 }
 
-std::unique_ptr<IFileContentStore> makeFileContentStore(
+std::unique_ptr<FileContentStore> makeFileContentStore(
     AbsolutePathPiece localDir) {
 #ifdef _WIN32
   (void)localDir;

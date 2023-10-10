@@ -30,16 +30,16 @@ namespace facebook::eden {
 /**
  * Interface to manage materalized file data.
  */
-class IFileContentStore {
+class FileContentStore {
  public:
-  IFileContentStore() = default;
+  FileContentStore() = default;
 
-  virtual ~IFileContentStore() = default;
+  virtual ~FileContentStore() = default;
 
-  IFileContentStore(const IFileContentStore&) = delete;
-  IFileContentStore& operator=(const IFileContentStore&) = delete;
-  IFileContentStore(IFileContentStore&&) = delete;
-  IFileContentStore&& operator=(IFileContentStore&&) = delete;
+  FileContentStore(const FileContentStore&) = delete;
+  FileContentStore& operator=(const FileContentStore&) = delete;
+  FileContentStore(FileContentStore&&) = delete;
+  FileContentStore&& operator=(FileContentStore&&) = delete;
 
   virtual bool initialize(
       bool createIfNonExisting,
@@ -51,7 +51,7 @@ class IFileContentStore {
   virtual void close() = 0;
 
   /**
-   * Was IFileContentStore initialized - i.e., is cleanup (close) necessary.
+   * Was FileContentStore initialized - i.e., is cleanup (close) necessary.
    */
   virtual bool initialized() const = 0;
 
