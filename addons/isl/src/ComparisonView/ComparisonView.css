@@ -38,7 +38,7 @@
   overflow-y: scroll;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--pad);
   padding-bottom: var(--pad);
   align-items: center;
 }
