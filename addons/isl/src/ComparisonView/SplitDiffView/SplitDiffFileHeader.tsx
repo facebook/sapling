@@ -83,21 +83,7 @@ export function FileHeader({
       )}
       {diffType !== undefined && <Icon icon={diffTypeToIcon[diffType]} />}
       <div className="split-diff-view-file-path-parts">{filePathParts}</div>
-      {fileActions != null ? (
-        fileActions
-      ) : (
-        // open file button shows only if other actions not specified
-        <Tooltip title={t('Open file')} placement={'bottom'}>
-          <VSCodeButton
-            appearance="icon"
-            className="split-diff-view-file-header-open-button"
-            onClick={() => {
-              platform.openFile(path);
-            }}>
-            <Icon icon="go-to-file" />
-          </VSCodeButton>
-        </Tooltip>
-      )}
+      {fileActions}
     </div>
   );
 }

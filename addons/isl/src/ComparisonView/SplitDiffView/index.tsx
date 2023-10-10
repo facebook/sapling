@@ -58,6 +58,33 @@ export function SplitDiffView({ctx, path, patch}: {ctx: Context; path: string; p
     );
   }
 
+  const fileActions = (
+    <>
+      {platform.openDiff == null ? null : (
+        <Tooltip title={t('Open diff view for file')} placement={'bottom'}>
+          <VSCodeButton
+            appearance="icon"
+            className="split-diff-view-file-header-open-diff-button"
+            onClick={() => {
+              platform.openDiff?.(path, ctx.id.comparison);
+            }}>
+            <Icon icon="git-pull-request-go-to-changes" />
+          </VSCodeButton>
+        </Tooltip>
+      )}
+      <Tooltip title={t('Open file')} placement={'bottom'}>
+        <VSCodeButton
+          appearance="icon"
+          className="split-diff-view-file-header-open-button"
+          onClick={() => {
+            platform.openFile(path);
+          }}>
+          <Icon icon="go-to-file" />
+        </VSCodeButton>
+      </Tooltip>
+    </>
+  );
+
   return (
     <div className="split-diff-view">
       <FileHeader
@@ -65,6 +92,7 @@ export function SplitDiffView({ctx, path, patch}: {ctx: Context; path: string; p
         diffType={patch.type}
         open={!collapsed}
         onChangeOpen={open => ctx.setCollapsed(!open)}
+        fileActions={fileActions}
       />
       {!collapsed && (
         <TypedSplitDiffTable ctx={ctx} path={path} patch={patch} preamble={preamble} />
