@@ -105,6 +105,10 @@ impl<T: AsyncWrite + Unpin> PackfileWriter<T> {
             let mut entry: Entry = entry
                 .try_into()
                 .context("Failure in converting PackfileItem to Entry")?;
+            // If the entry is already written to the packfile, skip writing it again
+            if self.object_id_with_index.contains_key(&entry.id) {
+                continue;
+            }
             // Will be false for all our cases since we generate the entry with the object ID in hand. Including here for
             // completeness sake.
             if entry.is_invalid() {
@@ -112,11 +116,11 @@ impl<T: AsyncWrite + Unpin> PackfileWriter<T> {
             }
             // The current object will be written at offset `size`.
             self.object_offset_with_validity.push((self.size, true));
+            self.object_id_with_index
+                .insert(entry.id.clone(), self.object_offset_with_validity.len() - 1);
             if let DeltaForm::OnlyOffset = self.delta_form {
                 // The pack is allowed to have only offset deltas. Convert any ref deltas into
                 // offset deltas before writing to pack
-                self.object_id_with_index
-                    .insert(entry.id.clone(), self.object_offset_with_validity.len() - 1);
                 entry = self.convert_ref_delta_to_offset_delta(entry)?;
             }
             // Since the packfile is version 2, the entry should follow the same version
