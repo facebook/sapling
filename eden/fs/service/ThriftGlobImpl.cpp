@@ -7,7 +7,6 @@
 
 #include "eden/fs/service/ThriftGlobImpl.h"
 
-#include <folly/futures/Future.h>
 #include <folly/logging/LogLevel.h>
 #include <folly/logging/xlog.h>
 #include "eden/fs/inodes/EdenMount.h"

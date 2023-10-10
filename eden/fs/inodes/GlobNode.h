@@ -9,11 +9,11 @@
 #include <ostream>
 #include "eden/fs/inodes/InodePtrFwd.h"
 #include "eden/fs/model/Tree.h"
-#include "eden/fs/model/git/GlobMatcher.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/EnumValue.h"
+#include "eden/fs/utils/GlobMatcher.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {

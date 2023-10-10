@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/model/git/GlobMatcher.h"
+#include "eden/fs/utils/GlobMatcher.h"
 
 #include <fmt/core.h>
 #include <folly/logging/xlog.h>

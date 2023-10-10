@@ -11,7 +11,7 @@
 
 #include <memory>
 
-#include "eden/fs/model/git/GlobMatcher.h"
+#include "eden/fs/utils/GlobMatcher.h"
 #include "watchman/thirdparty/wildmatch/wildmatch.h"
 
 using namespace facebook::eden;

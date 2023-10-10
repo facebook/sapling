@@ -10,7 +10,7 @@
 #include <folly/Range.h>
 #include <optional>
 #include "eden/fs/model/git/GitIgnore.h"
-#include "eden/fs/model/git/GlobMatcher.h"
+#include "eden/fs/utils/GlobMatcher.h"
 
 namespace facebook::eden {
 
