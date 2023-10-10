@@ -60,3 +60,7 @@
 .file-header-copyable-path-hover {
   font-size: 90%;
 }
+
+.comparison-view-modal {
+  --border-amt: calc(2 * var(--pad));
+}
