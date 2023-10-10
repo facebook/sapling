@@ -180,7 +180,7 @@ def extsetup(ui) -> None:
     action = ui.config("megarepo", "lossy-commit-action")
     should_abort = action == "abort"
 
-    def _wrap_commit_ctx(orig, repo, ctx, **opts):
+    def _wrap_commit_ctx(orig, repo, ctx, *args, **opts):
         to_check = set()
 
         # Check mutation info. Some commands like "metaedit" only set this.
@@ -194,7 +194,7 @@ def extsetup(ui) -> None:
         for c in to_check:
             _check_for_lossy_commit_usage(repo, c, should_abort)
 
-        return orig(repo, ctx, **opts)
+        return orig(repo, ctx, *args, **opts)
 
     # Wrap backout separately since it doesn't set any commit extras.
     def _wrap_backout(orig, ui, repo, node=None, rev=None, **opts):
