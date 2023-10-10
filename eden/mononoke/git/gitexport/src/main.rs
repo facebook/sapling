@@ -6,6 +6,7 @@
  */
 
 use std::fs::File;
+use std::io::Read;
 use std::path::PathBuf;
 use std::str::FromStr;
 
@@ -15,8 +16,12 @@ use anyhow::Result;
 use bookmarks_types::BookmarkKey;
 use commit_id::parse_commit_id;
 use fbinit::FacebookInit;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
+use futures::StreamExt;
 use gitexport_tools::build_partial_commit_graph_for_export;
 use gitexport_tools::rewrite_partial_changesets;
+use gitexport_tools::ExportPathInfo;
 use gitexport_tools::MASTER_BOOKMARK;
 use mononoke_api::BookmarkFreshness;
 use mononoke_api::ChangesetContext;
@@ -32,6 +37,8 @@ use print_graph::PrintGraphOptions;
 use repo_authorization::AuthorizationContext;
 use slog::info;
 use slog::trace;
+use types::ExportPathInfoArg;
+use types::HeadChangesetArg;
 
 use crate::types::GitExportArgs;
 
@@ -41,6 +48,8 @@ pub mod types {
     use clap::Args;
     use clap::Parser;
     use mononoke_app::args::RepoArgs;
+    use serde::Deserialize;
+    use serde::Serialize;
 
     #[derive(Debug, Args)]
     pub struct PrintGraphArgs {
@@ -89,6 +98,25 @@ pub mod types {
         #[clap(long, short = 'B', conflicts_with = "latest_cs_id", required = true)]
         pub latest_cs_bookmark: Option<String>,
 
+        /// JSON file storing a list of export paths with different changeset
+        /// upper bounds.
+        ///
+        /// The JSON file should contain a list of JSON serialized
+        /// `ExportPathInfoArg`, e.g.
+        /// ```
+        /// [ { "path": "foo", "head": { "ID": "abcde123" }  } ]
+        /// ```
+        /// or
+        /// ```
+        /// [
+        ///     { "path": "bar", "head": { "Bookmark": "master" }  },
+        ///     { "path": "foo", "head": { "ID": "abcde123" }  },
+        ///
+        /// ]
+        /// ```
+        #[clap(long, short = 'f')]
+        pub bounded_export_paths_file: Option<String>,
+
         // Consider history until the provided timestamp, i.e. all exported
         // commits will have its creation time greater than or equal to it.
         #[clap(long)]
@@ -98,6 +126,23 @@ pub mod types {
         // Graph printing args for debugging and tests
         #[clap(flatten)]
         pub print_graph_args: PrintGraphArgs,
+    }
+
+    /// Data type used  to get upper bound changesets for export paths through
+    /// JSON files.
+    #[derive(Debug, Serialize, Deserialize)]
+    pub enum HeadChangesetArg {
+        ID(String),
+        Bookmark(String),
+    }
+
+    /// Data type used  to get export paths with specific upper bound changesets
+    /// through JSON files. After deserilization, these will be converted to
+    /// `ExportPathInfo`.
+    #[derive(Debug, Serialize, Deserialize)]
+    pub struct ExportPathInfoArg {
+        pub path: PathBuf,
+        pub head: HeadChangesetArg,
     }
 }
 
@@ -138,16 +183,35 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         .await?;
     };
 
+    // Paths provided directly via args with a single head commit, e.g. "master".
     let export_paths = args
         .export_paths
         .into_iter()
         .map(|p| TryFrom::try_from(p.as_os_str()))
         .collect::<Result<Vec<NonRootMPath>>>()?;
-    // TODO(T164121717): support proper head commits per paths
-    let export_path_infos: Vec<(NonRootMPath, ChangesetContext)> = export_paths
-        .into_iter()
-        .map(|p| (p, cs_ctx.clone()))
-        .collect();
+
+    let export_path_infos = {
+        let mut export_path_infos: Vec<(NonRootMPath, ChangesetContext)> = export_paths
+            .into_iter()
+            .map(|p| (p, cs_ctx.clone()))
+            .collect();
+
+        // Paths provided with associated head commits through a JSON file
+        let export_paths_with_specific_heads: Vec<ExportPathInfo> =
+            match args.bounded_export_paths_file {
+                Some(file) => get_bounded_export_paths(&repo_ctx, file).await?,
+                None => vec![],
+            };
+
+        export_path_infos.extend(export_paths_with_specific_heads);
+
+        export_path_infos
+    };
+
+    info!(
+        logger,
+        "Export paths and their HEAD commits: {0:#?}", export_path_infos
+    );
 
     let graph_info = build_partial_commit_graph_for_export(
         logger,
@@ -157,7 +221,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     .await?;
 
     trace!(logger, "changesets: {:#?}", &graph_info.changesets);
-    trace!(logger, "changeset parents: {:?}", &graph_info.parents_map);
+    trace!(logger, "changeset parents: {:#?}", &graph_info.parents_map);
 
     let temp_repo_ctx =
         rewrite_partial_changesets(app.fb, repo_ctx, graph_info, export_path_infos).await?;
@@ -213,28 +277,77 @@ async fn print_commit_graph(
     .await
 }
 
+/// Gets the head commit for all export paths provided via the
+/// `-p` (or `--export_paths`) argument.
 async fn get_latest_changeset_context(
     repo_ctx: &RepoContext,
     args: &GitExportArgs,
 ) -> Result<ChangesetContext> {
     if let Some(changeset_id) = &args.latest_cs_id {
-        let cs_id = parse_commit_id(repo_ctx.ctx(), repo_ctx.repo(), changeset_id.as_str()).await?;
-        return repo_ctx
-            .changeset(cs_id)
-            .await?
-            .ok_or(anyhow!("Provided starting changeset id not found"));
+        return get_changeset_context_from_head_arg(
+            repo_ctx,
+            HeadChangesetArg::ID(changeset_id.clone()),
+        )
+        .await;
     };
 
     let bookmark_name = args.latest_cs_bookmark.clone().ok_or(anyhow!(
         "No bookmark or changeset id specified to search history"
     ))?;
 
-    let bookmark_key = BookmarkKey::from_str(bookmark_name.as_str())?;
+    get_changeset_context_from_head_arg(repo_ctx, HeadChangesetArg::Bookmark(bookmark_name)).await
+}
 
-    let cs_ctx = repo_ctx
-        .resolve_bookmark(&bookmark_key, BookmarkFreshness::MostRecent)
-        .await?
-        .unwrap();
+async fn get_bounded_export_paths(
+    repo_ctx: &RepoContext,
+    bounded_export_paths_file: String,
+) -> Result<Vec<ExportPathInfo>> {
+    let export_path_info_args = read_bounded_export_paths_file(bounded_export_paths_file)?;
 
-    Ok(cs_ctx)
+    stream::iter(export_path_info_args)
+        .then(|ep_arg| async move {
+            let export_path: NonRootMPath = TryFrom::try_from(ep_arg.path.as_os_str())?;
+            let head_cs: ChangesetContext =
+                get_changeset_context_from_head_arg(repo_ctx, ep_arg.head).await?;
+
+            Ok((export_path, head_cs))
+        })
+        .try_collect()
+        .await
+}
+
+/// Deserialize a JSON file containing export paths and associated head commits
+fn read_bounded_export_paths_file(
+    bounded_export_paths_file: String,
+) -> Result<Vec<ExportPathInfoArg>> {
+    let mut file = File::open(bounded_export_paths_file)?;
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)?;
+    Ok(serde_json::from_str(&contents)?)
+}
+
+async fn get_changeset_context_from_head_arg(
+    repo_ctx: &RepoContext,
+    head_cs: HeadChangesetArg,
+) -> Result<ChangesetContext> {
+    match head_cs {
+        HeadChangesetArg::ID(changeset_id) => {
+            let cs_id =
+                parse_commit_id(repo_ctx.ctx(), repo_ctx.repo(), changeset_id.as_str()).await?;
+            repo_ctx
+                .changeset(cs_id)
+                .await?
+                .ok_or(anyhow!("Provided starting changeset id not found"))
+        }
+        HeadChangesetArg::Bookmark(bookmark_name) => {
+            let bookmark_key = BookmarkKey::from_str(bookmark_name.as_str())?;
+
+            let cs_ctx = repo_ctx
+                .resolve_bookmark(&bookmark_key, BookmarkFreshness::MostRecent)
+                .await?
+                .unwrap();
+
+            Ok(cs_ctx)
+        }
+    }
 }

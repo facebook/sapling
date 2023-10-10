@@ -50,7 +50,7 @@ use test_repo_factory::TestRepoFactory;
 
 pub use crate::partial_commit_graph::build_partial_commit_graph_for_export;
 use crate::partial_commit_graph::ChangesetParents;
-use crate::partial_commit_graph::ExportPathInfo;
+pub use crate::partial_commit_graph::ExportPathInfo;
 pub use crate::partial_commit_graph::GitExportGraphInfo;
 
 pub const MASTER_BOOKMARK: &str = "master";
