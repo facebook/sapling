@@ -6,6 +6,7 @@
  */
 
 import type {RecoilValueReadOnly} from 'recoil';
+import type {Comparison} from 'shared/Comparison';
 
 export type LineRangeParams<Id> = {
   // 1-based line number.
@@ -17,14 +18,16 @@ export type LineRangeParams<Id> = {
 /**
  * Context used to render SplitDiffView
  */
-export type Context<T> = {
+export type Context = {
   /**
    * Arbitrary identifying information for a given SplitDiffView, usually
    * information like a hash or revset + path.
    */
-  id: T;
+  id: {path: string; comparison: Comparison};
   atoms: {
-    lineRange: (params: LineRangeParams<T>) => RecoilValueReadOnly<Array<string>>;
+    lineRange: (
+      params: LineRangeParams<{path: string; comparison: Comparison}>,
+    ) => RecoilValueReadOnly<Array<string>>;
   };
   translate?: (s: string) => string;
   copy?: (s: string) => void;

@@ -6,7 +6,7 @@
  */
 
 import type {Result} from '../types';
-import type {LineRangeParams} from './SplitDiffView/types';
+import type {Context, LineRangeParams} from './SplitDiffView/types';
 import type {Comparison} from 'shared/Comparison';
 import type {ParsedDiff} from 'shared/patch/parse';
 
@@ -325,7 +325,7 @@ function ComparisonViewFile({
   setCollapsed: (isCollapsed: boolean) => void;
 }) {
   const path = diff.newFileName ?? diff.oldFileName ?? '';
-  const context = {
+  const context: Context = {
     id: {path, comparison},
     atoms: {lineRange},
     translate: t,

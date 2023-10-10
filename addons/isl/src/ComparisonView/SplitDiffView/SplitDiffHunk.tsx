@@ -25,15 +25,15 @@ import {
 
 const MAX_INPUT_LENGTH_FOR_INTRALINE_DIFF = 300;
 
-export type SplitDiffTableProps<Id> = {
-  ctx: Context<Id>;
+export type SplitDiffTableProps = {
+  ctx: Context;
   path: string;
   patch: ParsedDiff;
   preamble?: Array<React.ReactElement>;
 };
 
 export const SplitDiffTable = React.memo(
-  <Id,>({ctx, path, patch, preamble}: SplitDiffTableProps<Id>): React.ReactElement => {
+  ({ctx, path, patch, preamble}: SplitDiffTableProps): React.ReactElement => {
     const [deletedFileExpanded, setDeletedFileExpanded] = useState<boolean>(false);
     const [expandedSeparators, setExpandedSeparators] = useState<Readonly<Set<string>>>(
       () => new Set(),
@@ -66,7 +66,7 @@ export const SplitDiffTable = React.memo(
           // TODO: test empty file that went from 644 to 755?
           const key = 's0';
           if (expandedSeparators.has(key)) {
-            const range: LineRangeParams<Id> = {
+            const range = {
               id: ctx.id,
               start: 1,
               numLines: hunk.oldStart - 1,
@@ -98,7 +98,7 @@ export const SplitDiffTable = React.memo(
           if (expandedSeparators.has(key)) {
             const start = hunk.oldStart + hunk.oldLines;
             const numLines = nextHunk.oldStart - start;
-            const range: LineRangeParams<Id> = {
+            const range = {
               id: ctx.id,
               start,
               numLines,
@@ -379,10 +379,10 @@ function HunkSeparator({
   );
 }
 
-type ExpandingSeparatorProps<Id> = {
-  ctx: Context<Id>;
+type ExpandingSeparatorProps = {
+  ctx: Context;
   path: string;
-  range: LineRangeParams<Id>;
+  range: LineRangeParams<Context['id']>;
   beforeLineStart: number;
   afterLineStart: number;
   t: (s: string) => string;
@@ -392,14 +392,14 @@ type ExpandingSeparatorProps<Id> = {
  * This replaces a <HunkSeparator> when the user clicks on it to expand the
  * hidden file contents.
  */
-function ExpandingSeparator<Id>({
+function ExpandingSeparator({
   ctx,
   path,
   range,
   beforeLineStart,
   afterLineStart,
   t,
-}: ExpandingSeparatorProps<Id>): React.ReactElement {
+}: ExpandingSeparatorProps): React.ReactElement {
   const loadable = useRecoilValueLoadable(ctx.atoms.lineRange(range));
 
   const tokenization = useTokenizedContents(path, loadable.valueMaybe());

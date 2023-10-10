@@ -11,24 +11,20 @@ import type {SplitDiffTableProps} from './SplitDiffHunk';
 import type {Context} from './types';
 import type {ParsedDiff} from 'shared/patch/parse';
 
+import {Tooltip} from '../../Tooltip';
+import platform from '../../platform';
 import {FileHeader} from './SplitDiffFileHeader';
 import {SplitDiffTable} from './SplitDiffHunk';
+import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
+import {Icon} from 'shared/Icon';
 import {DiffType} from 'shared/patch/parse';
 
-export function SplitDiffView<Id>({
-  ctx,
-  path,
-  patch,
-}: {
-  ctx: Context<Id>;
-  path: string;
-  patch: ParsedDiff;
-}) {
+export function SplitDiffView({ctx, path, patch}: {ctx: Context; path: string; patch: ParsedDiff}) {
   const fileName = patch.newFileName ?? patch.oldFileName ?? '/dev/null';
   const collapsed = ctx.collapsed;
 
   // Type hack to get a templatized version of a React.memo-ized component
-  const TypedSplitDiffTable = SplitDiffTable as unknown as React.FC<SplitDiffTableProps<Id>>;
+  const TypedSplitDiffTable = SplitDiffTable as unknown as React.FC<SplitDiffTableProps>;
 
   const t = ctx.translate ?? (s => s);
 
