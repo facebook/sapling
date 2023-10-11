@@ -28,6 +28,8 @@ use metaconfig_types::BlobstoreId;
 use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
+use rand::seq::SliceRandom;
+use rand::thread_rng;
 use regex::Regex;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::info;
@@ -154,9 +156,10 @@ fn main(fb: FacebookInit) -> Result<()> {
     let readonly_storage = &env.readonly_storage;
     let blobstore_options = &env.blobstore_options;
 
-    let keys_file_entries = fs::read_dir(keys_dir)?
+    let mut keys_file_entries = fs::read_dir(keys_dir)?
         .map(|res| res.map(|e| e.path()))
         .collect::<Result<Vec<_>, io::Error>>()?;
+    keys_file_entries.shuffle(&mut thread_rng());
 
     // prepare the tuning info scuba table
     let tuning_info_scuba_builder = MononokeScubaSampleBuilder::new(fb, &tuning_info_scuba_table)?;
