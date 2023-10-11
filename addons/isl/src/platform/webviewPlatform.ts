@@ -19,7 +19,7 @@ import {browserPlatform} from '../BrowserPlatform';
  * This lets us handle features like alerts, file dialogs, and opening external links
  * which are not implemented in the webview itself.
  */
-const webviewPlatform: Platform = {
+export const webviewPlatform: Platform = {
   ...browserPlatform, // just act like the browser platform by default, since the app use case is similar
   platformName: 'webview',
   openExternalLink(url: string) {
