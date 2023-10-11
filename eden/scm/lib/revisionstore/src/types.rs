@@ -168,3 +168,22 @@ impl<'a> From<&'a ContentHash> for StoreKey {
         StoreKey::Content(hash.clone(), None)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn snapshot_blake2() {
+        #[rustfmt::skip]
+        assert_eq!(
+            ContentHash::content_id(&Bytes::from_static(b"abc")),
+            ContentId::from([
+                0x22, 0x8d, 0x7e, 0xfd, 0x5e, 0x3c, 0x1a, 0xcd,
+                0xf4, 0x0e, 0x52, 0x43, 0x3f, 0x72, 0x8f, 0x53,
+                0x78, 0x90, 0x0e, 0x41, 0xd4, 0xea, 0xe7, 0x14,
+                0x64, 0x1f, 0x6f, 0x04, 0x0d, 0xee, 0x69, 0x3e,
+            ])
+        );
+    }
+}

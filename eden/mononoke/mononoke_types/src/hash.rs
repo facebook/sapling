@@ -706,6 +706,16 @@ mod test {
     }
 
     #[test]
+    fn snapshot_hash() {
+        let context = Context::new(b"abc");
+        assert_eq!(
+            context.finish(),
+            Blake2::from_str("7a78f9455f438d36794c4adcf1a499856367dd403ceb8e9ca14a19a173b8f07b")
+                .unwrap()
+        );
+    }
+
+    #[test]
     fn parse_ok() {
         assert_eq!(
             NULL,
