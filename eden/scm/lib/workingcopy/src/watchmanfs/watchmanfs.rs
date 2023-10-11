@@ -507,6 +507,44 @@ pub(crate) fn detect_changes(
 
     drop(_span);
 
+    let mut deletes = Vec::new();
+
+    if wm_fresh_instance {
+        let _span = tracing::info_span!("fresh_instance work", wm_len = wm_seen.len()).entered();
+
+        // On fresh instance, watchman returns all files present on
+        // disk. We need to catch the case where a tracked file has been
+        // deleted while watchman wasn't running. To do that, report a
+        // pending "delete" change for all EXIST_NEXT files that were
+        // _not_ in the list we got from watchman.
+        walk_treestate(
+            ts,
+            Arc::new(AlwaysMatcher::new()),
+            StateFlags::EXIST_NEXT,
+            StateFlags::NEED_CHECK,
+            |path, _state| {
+                if !wm_seen.contains(&path) {
+                    deletes.push(path);
+                }
+                Ok(())
+            },
+        )?;
+
+        // Clear out ignored/untracked files that have been deleted.
+        walk_treestate(
+            ts,
+            Arc::new(AlwaysMatcher::new()),
+            StateFlags::NEED_CHECK,
+            StateFlags::EXIST_NEXT | StateFlags::EXIST_P1 | StateFlags::EXIST_P2,
+            |path, _state| {
+                if !wm_seen.contains(&path) {
+                    needs_clear.push((path, None));
+                }
+                Ok(())
+            },
+        )?;
+    }
+
     let _span = tracing::info_span!("submit wm_need_check").entered();
 
     for mut wm_needs_check in wm_need_check {
@@ -546,8 +584,6 @@ pub(crate) fn detect_changes(
 
     let _span = tracing::info_span!("handle results").entered();
 
-    let mut deletes = Vec::new();
-
     for result in file_change_detector {
         match result {
             Ok(ResolvedFileChangeResult::Yes(change)) => {
@@ -574,42 +610,6 @@ pub(crate) fn detect_changes(
     }
 
     drop(_span);
-
-    if wm_fresh_instance {
-        let _span = tracing::info_span!("fresh_instance work", wm_len = wm_seen.len()).entered();
-
-        // On fresh instance, watchman returns all files present on
-        // disk. We need to catch the case where a tracked file has been
-        // deleted while watchman wasn't running. To do that, report a
-        // pending "delete" change for all EXIST_NEXT files that were
-        // _not_ in the list we got from watchman.
-        walk_treestate(
-            ts,
-            Arc::new(AlwaysMatcher::new()),
-            StateFlags::EXIST_NEXT,
-            StateFlags::NEED_CHECK,
-            |path, _state| {
-                if !wm_seen.contains(&path) {
-                    deletes.push(path);
-                }
-                Ok(())
-            },
-        )?;
-
-        // Clear out ignored/untracked files that have been deleted.
-        walk_treestate(
-            ts,
-            Arc::new(AlwaysMatcher::new()),
-            StateFlags::NEED_CHECK,
-            StateFlags::EXIST_NEXT | StateFlags::EXIST_P1 | StateFlags::EXIST_P2,
-            |path, _state| {
-                if !wm_seen.contains(&path) {
-                    needs_clear.push((path, None));
-                }
-                Ok(())
-            },
-        )?;
-    }
 
     if !deletes.is_empty() {
         let mut deletes: HashSet<_> = deletes.into_iter().collect();
