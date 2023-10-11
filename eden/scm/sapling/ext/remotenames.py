@@ -1400,8 +1400,8 @@ def calculatedistance(repo, fromrev, torev):
     if not repo.ui.configbool("remotenames", "calculatedistance"):
         return (None, None)
 
-    ahead = len(repo.revs("only(%d, %d)" % (fromrev, torev)))
-    behind = len(repo.revs("only(%d, %d)" % (torev, fromrev)))
+    ahead = len(repo.revs("only(%d, %d)", fromrev, torev))
+    behind = len(repo.revs("only(%d, %d)", torev, fromrev))
 
     return (ahead, behind)
 
