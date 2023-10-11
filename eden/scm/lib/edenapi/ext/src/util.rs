@@ -5,28 +5,17 @@
  * GNU General Public License version 2.
  */
 
-use std::io::Write;
-
-use blake2::digest::Update;
-use blake2::digest::VariableOutput;
-use blake2::VarBlake2b;
+use blake2::digest::FixedOutput;
+use blake2::digest::Mac;
+use blake2::Blake2bMac;
 use edenapi_types::ContentId;
 
 pub fn calc_contentid(data: &[u8]) -> ContentId {
-    let mut hash = VarBlake2b::new_keyed(b"content", ContentId::len());
+    let mut hash = Blake2bMac::new_from_slice(b"content").expect("key to be less than 32 bytes");
     hash.update(data);
-    let mut ret = [0u8; ContentId::len()];
-    hash.finalize_variable(|res| {
-        if let Err(e) = ret.as_mut().write_all(res) {
-            panic!(
-                "{}-byte array must work with {}-byte blake2b: {:?}",
-                ContentId::len(),
-                ContentId::len(),
-                e
-            );
-        }
-    });
-    ContentId::from(ret)
+    let mut ret = [0; ContentId::len()];
+    hash.finalize_into((&mut ret).into());
+    ContentId::from_byte_array(ret)
 }
 
 #[cfg(test)]

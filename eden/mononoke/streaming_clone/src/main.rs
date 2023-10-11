@@ -13,7 +13,7 @@ use std::path::PathBuf;
 use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
-use blake2::Blake2b;
+use blake2::Blake2b512;
 use blake2::Digest;
 use blobstore::Blobstore;
 use blobstore::BlobstoreBytes;
@@ -423,7 +423,7 @@ async fn upload_data(
 }
 
 fn generate_key(chunk_id: u32, data: &[u8], suffix: &str) -> String {
-    let hash = Blake2b::digest(data);
+    let hash = Blake2b512::digest(data);
 
     format!("streaming_clone-chunk{:06}-{:x}-{}", chunk_id, hash, suffix,)
 }

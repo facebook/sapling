@@ -8,7 +8,6 @@
 use std::fmt;
 use std::fmt::Debug;
 use std::fmt::Display;
-use std::io::Write;
 use std::str::FromStr;
 
 use abomonation_derive::Abomonation;
@@ -17,9 +16,13 @@ use anyhow::Error;
 use anyhow::Result;
 use ascii::AsciiStr;
 use ascii::AsciiString;
+use blake2::digest::typenum::U32;
+use blake2::digest::Digest;
+use blake2::digest::FixedOutput;
+use blake2::digest::KeyInit;
 use blake2::digest::Update;
-use blake2::digest::VariableOutput;
-use blake2::VarBlake2b;
+use blake2::Blake2b;
+use blake2::Blake2bMac;
 use edenapi_types::Blake3 as EdenapiBlake3;
 use edenapi_types::CommitId as EdenapiCommitId;
 use edenapi_types::GitSha1 as EdenapiGitSha1;
@@ -147,13 +150,22 @@ impl Blake2 {
 
 /// Context for incrementally computing a `Blake2` hash.
 #[derive(Clone)]
-pub struct Context(VarBlake2b);
+pub enum Context {
+    Unkeyed(Blake2b<U32>),
+    Keyed(Blake2bMac<U32>),
+}
 
 impl Context {
     /// Construct a `Context`
     #[inline]
     pub fn new(key: &[u8]) -> Self {
-        Context(VarBlake2b::new_keyed(key, BLAKE2_HASH_LENGTH_BYTES))
+        if key.is_empty() {
+            Self::Unkeyed(Blake2b::new())
+        } else {
+            Self::Keyed(
+                Blake2bMac::new_from_slice(key).expect("key should not be bigger than block size"),
+            )
+        }
     }
 
     #[inline]
@@ -161,21 +173,18 @@ impl Context {
     where
         T: AsRef<[u8]>,
     {
-        self.0.update(data.as_ref())
+        match self {
+            Self::Unkeyed(b2) => Digest::update(b2, data.as_ref()),
+            Self::Keyed(b2) => b2.update(data.as_ref()),
+        }
     }
 
     #[inline]
     pub fn finish(self) -> Blake2 {
-        let mut ret = [0u8; BLAKE2_HASH_LENGTH_BYTES];
-        self.0.finalize_variable(|res| {
-            if let Err(e) = ret.as_mut().write_all(res) {
-                panic!(
-                    "{}-byte array must work with {}-byte blake2b: {:?}",
-                    BLAKE2_HASH_LENGTH_BYTES, BLAKE2_HASH_LENGTH_BYTES, e
-                );
-            }
-        });
-        Blake2(ret)
+        match self {
+            Self::Unkeyed(b2) => Blake2(b2.finalize_fixed().into()),
+            Self::Keyed(b2) => Blake2(b2.finalize_fixed().into()),
+        }
     }
 }
 
