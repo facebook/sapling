@@ -38,9 +38,8 @@ pub fn open_isl(opts: ISLSpawnOptions) -> io::Result<()> {
     #[cfg(target_os = "macos")]
     setup_and_spawn_app_bundle(opts)?;
 
-    // TODO: reenable this code path for non-macOS.
-    // #[cfg(not(target_os = "macos"))]
-    // opts.run_chrome_like(None)?;
+    #[cfg(not(target_os = "macos"))]
+    setup_and_spawn_chrome_like(opts)?;
 
     Ok(())
 }
@@ -89,7 +88,9 @@ impl ISLSpawnOptions {
         cmd.args(["--command", &self.slcommand]);
         cmd.args(["--sl-version", &self.slversion]);
         cmd.args(["--cwd", &self.repo_cwd]);
-        cmd.args(["--platform", &self.platform]);
+        if self.platform != "browser" {
+            cmd.args(["--platform", &self.platform]);
+        }
         if self.json {
             cmd.arg("--json");
         }
@@ -133,6 +134,18 @@ impl ISLSpawnOptions {
         opts.foreground = false;
         opts.kill = false;
         opts.platform = "webview".to_owned();
+        opts
+    }
+
+    /// Override arguments that make the spawned server compatible with connecting to a chromelike browser via --app
+    pub fn replace_args_for_chromelike_spawn(self) -> ISLSpawnOptions {
+        let mut opts = self.clone();
+        opts.json = true;
+        // See replace_args_for_webview_spawn above
+        opts.no_open = true;
+        opts.foreground = false;
+        opts.kill = false;
+        opts.platform = "browser".to_owned();
         opts
     }
 }
@@ -292,15 +305,34 @@ impl ISLAppBundle {
     }
 }
 
-#[allow(dead_code)]
-struct ISLWebviewOptions<'a> {
+pub fn setup_and_spawn_chrome_like(opts: ISLSpawnOptions) -> Result<(), io::Error> {
+    // TODO: save & read saved server state, to remember windows size and position?
+    let opts = opts.replace_args_for_chromelike_spawn();
+
+    let server_output = opts
+        .spawn_isl_server_json()
+        .expect("could not start server");
+    println!("Started ISL server: {:?}", server_output);
+
+    let width = 1280;
+    let height = 720;
+    let chrome_opts = ISLChromelikeOptions {
+        url: &server_output.url,
+        width,
+        height,
+    };
+    chrome_opts.run_chrome_like(None)?;
+
+    Ok(())
+}
+
+struct ISLChromelikeOptions<'a> {
     url: &'a str,
     width: i32,
     height: i32,
 }
 
-#[allow(dead_code)]
-impl ISLWebviewOptions<'_> {
+impl ISLChromelikeOptions<'_> {
     /// Spawn a chrome-like browser to fulfil the webview request.
     fn run_chrome_like(&self, browser_path: Option<String>) -> io::Result<()> {
         let browser_path = match browser_path {
@@ -323,17 +355,15 @@ impl ISLWebviewOptions<'_> {
     }
 }
 
-#[allow(dead_code)]
 fn find_chrome_like() -> io::Result<String> {
     if cfg!(target_os = "windows") {
         let program_files = [
-            std::env::var("ProgramFiles(x86)")
-                .unwrap_or_else(|_| r#"C:\Program Files (x86)"#.into()),
-            std::env::var("ProgramFiles").unwrap_or_else(|_| r#"C:\Program Files"#.into()),
+            std::env::var("ProgramFiles(x86)").unwrap_or_else(|_| r"C:\Program Files (x86)".into()),
+            std::env::var("ProgramFiles").unwrap_or_else(|_| r"C:\Program Files".into()),
         ];
         let relative_paths = [
-            r#"\Microsoft\Edge\Application\msedge.exe"#,
-            r#"\Google\Chrome\Application\chrome.exe"#,
+            r"\Microsoft\Edge\Application\msedge.exe",
+            r"\Google\Chrome\Application\chrome.exe",
         ];
         for dir in program_files {
             for path in relative_paths {
