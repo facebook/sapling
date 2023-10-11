@@ -59,9 +59,10 @@ fn start_webview_app(force_foreground: bool) -> anyhow::Result<()> {
     let app =
         ISLAppBundle::get_or_create_app_bundle().context("could not create ISL app bundle")?;
 
-    let server_options = app
+    let mut server_options = app
         .read_server_args()
         .context("could not read saved server args")?;
+    server_options.slversion = ::version::VERSION.to_owned();
     println!("Found spawn options: {:?}", server_options);
 
     // TODO: It might be a better idea to save an array of servers in the app state instead of just one.
