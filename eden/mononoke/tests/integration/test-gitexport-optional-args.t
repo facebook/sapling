@@ -63,16 +63,16 @@ Specify a bookmark
   $ gitexport --log-level ERROR --repo-name "repo" -B "master" -p $EXPORT_DIR --partial-graph-output "$MASTER_CS_OUTPUT" --distance-limit 30
 
   $ cat $MASTER_CS_OUTPUT
-  o  message: Add files to all directories, id: 565ba318c542ac2257113bdc31881e129939042ba10354e41605880c1f397cc8
+  o  message: Add files to all directories
   │   File changes:
   │  	 ADDED/MODIFIED: export_dir/C.txt 3e8ba6ef6107965afc1446b5b24533d9865204f1ea617672930d202f932bb892
   │  	 ADDED/MODIFIED: export_dir/subdir_to_export/second_subdir_export.txt e6d9f9d3bdd71e9c2dddec53da3bf447734da86b3897a7f7afd69cc7ac0cf3f1
   │
-  o  message: Add subdirectory to export dir, id: ef0f4051b96d92f5d8e0521c4abbb63c9cd7f8d6324866d0be6b2dfe3b0c9973
+  o  message: Add subdirectory to export dir
   │   File changes:
   │  	 ADDED/MODIFIED: export_dir/subdir_to_export/export_file_in_subdir.txt e6d9f9d3bdd71e9c2dddec53da3bf447734da86b3897a7f7afd69cc7ac0cf3f1
   │
-  o  message: Add files to export dir, id: 69f4d052996dc4a3fba7ab86939f567ad5a9be2a551198d0dc2f8b6f2145e511
+  o  message: Add files to export dir
       File changes:
      	 ADDED/MODIFIED: export_dir/B.txt 3e8ba6ef6107965afc1446b5b24533d9865204f1ea617672930d202f932bb892
 
@@ -81,11 +81,11 @@ Specify a changeset id
   $ gitexport --log-level ERROR --repo-name "repo" -p $EXPORT_DIR -i "$C" --partial-graph-output "$LATEST_CS_OUTPUT" --distance-limit 30
 
   $ cat $LATEST_CS_OUTPUT
-  o  message: Add subdirectory to export dir, id: ef0f4051b96d92f5d8e0521c4abbb63c9cd7f8d6324866d0be6b2dfe3b0c9973
+  o  message: Add subdirectory to export dir
   │   File changes:
   │  	 ADDED/MODIFIED: export_dir/subdir_to_export/export_file_in_subdir.txt e6d9f9d3bdd71e9c2dddec53da3bf447734da86b3897a7f7afd69cc7ac0cf3f1
   │
-  o  message: Add files to export dir, id: 69f4d052996dc4a3fba7ab86939f567ad5a9be2a551198d0dc2f8b6f2145e511
+  o  message: Add files to export dir
       File changes:
      	 ADDED/MODIFIED: export_dir/B.txt 3e8ba6ef6107965afc1446b5b24533d9865204f1ea617672930d202f932bb892
 
@@ -93,12 +93,12 @@ Test oldest commit timestamp arg
   $ gitexport --log-level ERROR --repo-name "repo" -B "master" -p $EXPORT_DIR --oldest-commit-ts $B_AUTHOR_TS --partial-graph-output "$OLDEST_COMMIT_TS_OUTPUT" --distance-limit 30
 
   $ cat $OLDEST_COMMIT_TS_OUTPUT
-  o  message: Add files to all directories, id: 4978da5e38b8cd80c2f7c48fb66fa4006bab6a537a4ccef50d393ffaecb2804e
+  o  message: Add files to all directories
   │   File changes:
   │  	 ADDED/MODIFIED: export_dir/C.txt 3e8ba6ef6107965afc1446b5b24533d9865204f1ea617672930d202f932bb892
   │  	 ADDED/MODIFIED: export_dir/subdir_to_export/second_subdir_export.txt e6d9f9d3bdd71e9c2dddec53da3bf447734da86b3897a7f7afd69cc7ac0cf3f1
   │
-  o  message: Add subdirectory to export dir, id: 37bb6d51a4fcc191fdf9b194c2968cbde2f572624f0c2163ce64cdc9999aa05e
+  o  message: Add subdirectory to export dir
       File changes:
      	 ADDED/MODIFIED: export_dir/subdir_to_export/export_file_in_subdir.txt e6d9f9d3bdd71e9c2dddec53da3bf447734da86b3897a7f7afd69cc7ac0cf3f1
 
@@ -106,6 +106,6 @@ Test both latest changeset and commit timestamp arg
   $ gitexport --log-level ERROR --repo-name "repo" -p $EXPORT_DIR -i "$C" --oldest-commit-ts $B_AUTHOR_TS --partial-graph-output "$LATEST_CS_AND_OLDEST_COMMIT_OUTPUT" --distance-limit 30
 
   $ cat $LATEST_CS_AND_OLDEST_COMMIT_OUTPUT
-  o  message: Add subdirectory to export dir, id: 37bb6d51a4fcc191fdf9b194c2968cbde2f572624f0c2163ce64cdc9999aa05e
+  o  message: Add subdirectory to export dir
       File changes:
      	 ADDED/MODIFIED: export_dir/subdir_to_export/export_file_in_subdir.txt e6d9f9d3bdd71e9c2dddec53da3bf447734da86b3897a7f7afd69cc7ac0cf3f1

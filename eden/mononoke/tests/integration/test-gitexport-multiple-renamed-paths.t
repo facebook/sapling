@@ -60,24 +60,22 @@ Run the tool without passing the old name as an export path
 
 
   $ diff --old-line-format="- %L" --new-line-format="+ %L" "$SOURCE_GRAPH_OUTPUT" "$PARTIAL_GRAPH_OUTPUT"
-  - o  message: D, id: 3d2e1991a96782483be8a1437ad4e38849152d097c39cc4ec1bfdb5c371b7c79
-  + o  message: D, id: c1f06d696564c9f868e392560810fa2476ecdcff0ee1206dcbdaada2acddc261
+  o  message: D
   │   File changes:
   - │  	 COPY/MOVE: foo/file.txt 056371707324074ec6f9ba23d5191ec48b240be074484e5a1eefc911b0f1de70
   - │  	 REMOVED: old_foo/file.txt
-  + │  	 ADDED/MODIFIED: foo/file.txt 056371707324074ec6f9ba23d5191ec48b240be074484e5a1eefc911b0f1de70
-  │
-  - o  message: C, id: fe89c567605a899a5e59edf16eec50e70085fb989e5c799701285436c723fb0f
+  - │
+  - o  message: C
   - │   File changes:
   - │  	 ADDED/MODIFIED: old_foo/file.txt 056371707324074ec6f9ba23d5191ec48b240be074484e5a1eefc911b0f1de70
-  - │
-  - o  message: B, id: 4aefc65541bed48aa05912520e72886dc187846900552521fd609684b13bac29
+  + │  	 ADDED/MODIFIED: foo/file.txt 056371707324074ec6f9ba23d5191ec48b240be074484e5a1eefc911b0f1de70
+  │
+  o  message: B
   - │   File changes:
   - │  	 COPY/MOVE: bar/file.txt 3772c641632546f18cac2b14e11f1f07896449a63161637d738df49b5480615c
   - │  	 REMOVED: old_bar/file.txt
   - │
-  - o  message: A, id: 4611de5cc4c4aebb12fe004b72e4bfb4fe3f6f92ecf4e7e13101aa21ee63f376
-  + o  message: B, id: 3d66d5c798938574f8e74967b925c49449f8abd78687f36cfaab905d4a26532e
+  - o  message: A
       File changes:
   -    	 ADDED/MODIFIED: old_bar/file.txt 3772c641632546f18cac2b14e11f1f07896449a63161637d738df49b5480615c
   +    	 ADDED/MODIFIED: bar/file.txt 3772c641632546f18cac2b14e11f1f07896449a63161637d738df49b5480615c

@@ -258,7 +258,7 @@ async fn print_commit_graph(
     let print_graph_args = PrintGraphOptions {
         limit,
         display_message: true,
-        display_id: true,
+        display_id: false,
         display_file_changes: true,
         display_author: false,
         display_author_date: false,
