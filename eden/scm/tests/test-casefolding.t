@@ -68,7 +68,6 @@ test changing case of path components
   $ echo c > D/c
   $ hg add "glob:**/c"
   adding d/c (no-fsmonitor !)
-  warning: possible case-folding collision for D/c (fsmonitor !)
   adding D/c (fsmonitor !)
   $ hg st
   A d/c (no-fsmonitor !)

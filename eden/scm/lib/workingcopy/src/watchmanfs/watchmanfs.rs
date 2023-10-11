@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::io::Write;
 use std::path::PathBuf;
@@ -29,6 +30,7 @@ use serde::Serialize;
 use treestate::filestate::StateFlags;
 use treestate::treestate::TreeState;
 use types::path::ParseError;
+use types::RepoPath;
 use types::RepoPathBuf;
 use vfs::VFS;
 use watchman_client::prelude::*;
@@ -461,6 +463,8 @@ pub(crate) fn detect_changes(
     let mut needs_clear: Vec<(RepoPathBuf, Option<Metadata>)> = Vec::new();
     let mut needs_mark = Vec::new();
 
+    let wm_need_check = normalize_watchman_files(ts, wm_need_check, fs_case_sensitive)?;
+
     tracing::debug!(
         watchman_needs_check = wm_need_check.len(),
         treestate_needs_check = ts_need_check.len(),
@@ -469,13 +473,11 @@ pub(crate) fn detect_changes(
     let total_needs_check = ts_need_check.len()
         + wm_need_check
             .iter()
-            .filter(|p| !ts_need_check.contains(&p.path))
+            .filter(|(p, _)| !ts_need_check.contains(*p))
             .count();
 
     // This is to set "total" for progress bar.
     file_change_detector.total_work_hint(total_needs_check as u64);
-
-    let wm_seen: HashSet<RepoPathBuf> = wm_need_check.iter().map(|f| f.path.clone()).collect();
 
     drop(_span);
 
@@ -484,7 +486,7 @@ pub(crate) fn detect_changes(
     for ts_needs_check in ts_need_check.iter() {
         // Prefer to kick off file check using watchman data since that already
         // includes disk metadata.
-        if wm_seen.contains(ts_needs_check) {
+        if wm_need_check.contains_key(ts_needs_check) {
             continue;
         }
 
@@ -510,7 +512,8 @@ pub(crate) fn detect_changes(
     let mut deletes = Vec::new();
 
     if wm_fresh_instance {
-        let _span = tracing::info_span!("fresh_instance work", wm_len = wm_seen.len()).entered();
+        let _span =
+            tracing::info_span!("fresh_instance work", wm_len = wm_need_check.len()).entered();
 
         // On fresh instance, watchman returns all files present on
         // disk. We need to catch the case where a tracked file has been
@@ -523,7 +526,7 @@ pub(crate) fn detect_changes(
             StateFlags::EXIST_NEXT,
             StateFlags::NEED_CHECK,
             |path, _state| {
-                if !wm_seen.contains(&path) {
+                if !wm_need_check.contains_key(&path) {
                     deletes.push(path);
                 }
                 Ok(())
@@ -537,7 +540,7 @@ pub(crate) fn detect_changes(
             StateFlags::NEED_CHECK,
             StateFlags::EXIST_NEXT | StateFlags::EXIST_P1 | StateFlags::EXIST_P2,
             |path, _state| {
-                if !wm_seen.contains(&path) {
+                if !wm_need_check.contains_key(&path) {
                     needs_clear.push((path, None));
                 }
                 Ok(())
@@ -547,12 +550,10 @@ pub(crate) fn detect_changes(
 
     let _span = tracing::info_span!("submit wm_need_check").entered();
 
-    for mut wm_needs_check in wm_need_check {
-        let state = ts.normalized_get(&wm_needs_check.path)?;
-
+    for (_, wm_needs_check) in wm_need_check {
         // is_tracked is used to short circuit invocations of the ignore
         // matcher, which can be expensive.
-        let is_tracked = match &state {
+        let is_tracked = match &wm_needs_check.ts_state {
             Some(state) => state
                 .state
                 .intersects(StateFlags::EXIST_P1 | StateFlags::EXIST_P2 | StateFlags::EXIST_NEXT),
@@ -574,8 +575,6 @@ pub(crate) fn detect_changes(
                 continue;
             }
         }
-
-        wm_needs_check.ts_state = state;
 
         file_change_detector.submit(wm_needs_check);
     }
@@ -611,42 +610,11 @@ pub(crate) fn detect_changes(
 
     drop(_span);
 
-    if !deletes.is_empty() {
-        let mut deletes: HashSet<_> = deletes.into_iter().collect();
-
-        if !fs_case_sensitive {
-            // On case insensitive (but case preservign) filesystems, watchman
-            // reports a case sensitive rename as a delete of the old name and
-            // update of the new name. We need to ignore the delete. We do that
-            // here by skipping deletes that insensitively match other paths
-            // watchman told us about.
-            let other_changes: HashSet<RepoPathBuf> = wm_seen
-                .iter()
-                .filter_map(|p| {
-                    if !deletes.contains(p) {
-                        Some(p.to_lower_case())
-                    } else {
-                        None
-                    }
-                })
-                .collect();
-
-            deletes.retain(|d| {
-                if !other_changes.contains(&d.to_lower_case()) {
-                    true
-                } else {
-                    tracing::trace!(deleted=?d, "ignoring case insensitive delete");
-                    false
-                }
-            });
+    for d in deletes {
+        if !ts_need_check.contains(&d) {
+            needs_mark.push(d.clone());
         }
-
-        for d in deletes {
-            if !ts_need_check.contains(&d) {
-                needs_mark.push(d.clone());
-            }
-            pending_changes.push(Ok(PendingChange::Deleted(d)));
-        }
+        pending_changes.push(Ok(PendingChange::Deleted(d)));
     }
 
     Ok(WatchmanPendingChanges {
@@ -654,6 +622,62 @@ pub(crate) fn detect_changes(
         needs_clear,
         needs_mark,
     })
+}
+
+fn normalize_watchman_files(
+    ts: &mut TreeState,
+    wm_files: Vec<metadata::File>,
+    fs_case_sensitive: bool,
+) -> Result<HashMap<RepoPathBuf, metadata::File>> {
+    let mut wm_need_check = HashMap::with_capacity(wm_files.len());
+
+    for mut file in wm_files {
+        let (normalized_path, state) = ts.normalize_path_and_get(file.path.as_ref())?;
+
+        let normalized_path = RepoPath::from_utf8(&normalized_path)?;
+
+        let path_differs = normalized_path != file.path.as_ref();
+
+        if path_differs
+            && state.as_ref().is_some_and(|state| {
+                state.state.intersects(StateFlags::EXIST_P1)
+                    && !state.state.intersects(StateFlags::EXIST_NEXT)
+            })
+        {
+            // Don't normalize into a pending "remove". This is the one case we
+            // allow case colliding paths on case insensitive filesystems.
+            tracing::trace!(
+                "not normalizing {:?} since {:?} is removed",
+                file.path,
+                normalized_path
+            );
+            wm_need_check.insert(file.path.clone(), file);
+            continue;
+        }
+
+        if !fs_case_sensitive {
+            if let Some(existing) = wm_need_check.get(normalized_path) {
+                if matches!(existing.fs_meta, Some(Some(_))) {
+                    // After a case sensitive file rename on a case insensitive
+                    // filesystem, watchman reports a delete and an add. We need
+                    // to fold those two events together, which we do here by
+                    // preserving the add.
+                    tracing::trace!(path = ?file.path, "dropping in favor of exists-on-disk");
+                    continue;
+                }
+            }
+        }
+
+        if path_differs {
+            file.path = normalized_path.to_owned();
+        }
+
+        file.ts_state = state;
+
+        wm_need_check.insert(file.path.clone(), file);
+    }
+
+    Ok(wm_need_check)
 }
 
 pub struct WatchmanPendingChanges {
