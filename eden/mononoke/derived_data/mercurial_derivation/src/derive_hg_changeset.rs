@@ -304,7 +304,7 @@ pub async fn get_manifest_from_bonsai(
                 }
             }
         })
-        .try_buffer_unordered(100)
+        .try_buffer_unordered(1000)
         .try_collect()
         .await?;
 
