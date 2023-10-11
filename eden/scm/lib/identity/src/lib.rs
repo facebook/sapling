@@ -263,7 +263,7 @@ impl Identity {
     }
 }
 
-const RCPATH_SEP: char = if cfg!(windows) { ';' } else { ':' };
+pub const RCPATH_SEP: char = if cfg!(windows) { ';' } else { ':' };
 
 /// Split the HGRCPATH. Return items matching at least one of the given prefix.
 fn split_rcpath<'a>(

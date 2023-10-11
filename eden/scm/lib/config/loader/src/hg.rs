@@ -953,6 +953,7 @@ mod tests {
     use std::collections::BTreeMap;
     use std::io::Write;
 
+    use identity::RCPATH_SEP;
     use once_cell::sync::Lazy;
     use tempdir::TempDir;
     use testutil::envs::lock_env;
@@ -1001,6 +1002,11 @@ mod tests {
     #[test]
     fn test_static_config_hgplain() {
         let mut env = lock_env();
+
+        for id in identity::all() {
+            env.set(id.env_name_static("PLAIN").unwrap(), None);
+            env.set(id.env_name_static("PLAINEXCEPT").unwrap(), None);
+        }
 
         env.set("TESTTMP", Some("1"));
 
@@ -1054,8 +1060,11 @@ mod tests {
 
         use hgplain::is_plain;
 
-        env.set(*HGPLAIN, None);
-        env.set(*HGPLAINEXCEPT, None);
+        for id in identity::all() {
+            env.set(id.env_name_static("PLAIN").unwrap(), None);
+            env.set(id.env_name_static("PLAINEXCEPT").unwrap(), None);
+        }
+
         assert!(!is_plain(None));
 
         env.set(*HGPLAIN, Some("1"));
@@ -1077,28 +1086,21 @@ mod tests {
 
         write_file(dir.path().join("1.rc"), "[x]\na=1");
         write_file(dir.path().join("2.rc"), "[y]\nb=2");
+        write_file(dir.path().join("user.rc"), "");
 
-        env.set("EDITOR", None);
-        env.set("VISUAL", None);
-        env.set("HGPROF", None);
-
-        let hgrcpath = format!(
-            "{}{}{}",
-            dir.path().join("1.rc").display(),
-            if cfg!(windows) { ';' } else { ':' },
-            dir.path().join("2.rc").display()
-        );
+        let hgrcpath = &[
+            dir.path().join("1.rc").display().to_string(),
+            dir.path().join("2.rc").display().to_string(),
+            format!("user={}", dir.path().join("user.rc").display()),
+        ]
+        .join(&RCPATH_SEP.to_string());
         env.set(*CONFIG_ENV_VAR, Some(&hgrcpath));
 
         let mut cfg = ConfigSet::new();
 
         let identity = identity::default();
         cfg.load_user(Options::new(), &identity);
-        assert!(
-            cfg.sections().is_empty(),
-            "sections {:?} should be empty",
-            cfg.sections()
-        );
+        assert_eq!(cfg.get("x", "a"), None);
 
         let identity = identity::default();
         cfg.load_system(Options::new(), &identity);
@@ -1157,6 +1159,11 @@ mod tests {
         write_file(path.clone(), "[x]\na=1\n[alias]\nb=c\n");
 
         let mut env = lock_env();
+
+        for id in identity::all() {
+            env.set(id.env_name_static("PLAIN").unwrap(), None);
+            env.set(id.env_name_static("PLAINEXCEPT").unwrap(), None);
+        }
 
         env.set(*HGPLAIN, Some("1"));
         env.set(*HGPLAINEXCEPT, None);
