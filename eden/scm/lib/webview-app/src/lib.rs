@@ -180,7 +180,7 @@ impl ISLSpawnOptions {
         opts.no_open = true;
         opts.foreground = false;
         opts.kill = false;
-        opts.platform = "browser".to_owned();
+        opts.platform = "chromelike_app".to_owned();
         opts
     }
 }

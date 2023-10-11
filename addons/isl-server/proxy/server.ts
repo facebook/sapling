@@ -192,6 +192,9 @@ export function startServer({
         case 'webview':
           platformImpl = (await import('../platform/webviewServerPlatform')).platform;
           break;
+        case 'chromelike_app':
+          platformImpl = (await import('../platform/chromelikeAppServerPlatform')).platform;
+          break;
         default:
         case undefined:
           break;

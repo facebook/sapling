@@ -244,6 +244,7 @@ const validPlatforms: Array<PlatformName> = [
   'androidStudioRemote',
   'standalone',
   'webview',
+  'chromelike_app',
 ];
 function isValidCustomPlatform(name: unknown): name is PlatformName {
   return validPlatforms.includes(name as PlatformName);
