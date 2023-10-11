@@ -28,7 +28,37 @@ const webviewPlatform: Platform = {
   confirm(message: string, details?: string): Promise<boolean> {
     return request({cmd: 'confirm', message, details}).then(({ok}) => ok);
   },
+  async chooseFile(title: string, multi: boolean): Promise<Array<File>> {
+    const response = await request({cmd: 'chooseFile', title, path: '', multi, mediaOnly: true});
+    const {files} = response;
+    if (!files) {
+      return [];
+    }
+    const result = files.map(value => b64toFile(value.base64Content, value.name));
+    return result;
+  },
 };
+
+function b64toFile(b64Data: string, filename: string, sliceSize = 512): File {
+  const byteCharacters = atob(b64Data);
+  const byteArrays = [];
+
+  for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+    const slice = byteCharacters.slice(offset, offset + sliceSize);
+
+    const byteNumbers = new Array(slice.length);
+    for (let i = 0; i < slice.length; i++) {
+      byteNumbers[i] = slice.charCodeAt(i);
+    }
+
+    const byteArray = new Uint8Array(byteNumbers);
+    byteArrays.push(byteArray);
+  }
+
+  const blobParts = [new Blob(byteArrays)];
+  const file = new File(blobParts, filename);
+  return file;
+}
 
 window.islPlatform = webviewPlatform;
 
@@ -38,8 +68,18 @@ window.islPlatform = webviewPlatform;
  */
 type ExternalWebviewCommandsInvoke =
   | {cmd: 'openExternal'; url: string}
-  | {cmd: 'confirm'; message: string; details?: string};
-type ExternalWebviewCommandsResponse = {cmd: 'confirm'} & {ok: boolean; id: number};
+  | {cmd: 'confirm'; message: string; details?: string}
+  | {cmd: 'chooseFile'; title: string; path: string; multi: boolean; mediaOnly: boolean};
+type ExternalWebviewCommandsResponse = (
+  | {cmd: 'confirm'; ok: boolean}
+  | {
+      cmd: 'chooseFile';
+      files: Array<{
+        name: string;
+        base64Content: string;
+      }>;
+    }
+) & {id: number};
 
 declare global {
   interface Window {

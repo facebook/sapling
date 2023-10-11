@@ -185,6 +185,7 @@ impl ISLAppBundle {
 
 #[derive(Debug, Deserialize)]
 #[serde(tag = "cmd")]
+#[serde(rename_all = "camelCase")]
 enum WebviewInvokeMessage {
     #[serde(rename = "openExternal")]
     OpenExternal { url: String },
@@ -194,13 +195,35 @@ enum WebviewInvokeMessage {
         message: String,
         details: Option<String>,
     },
+    #[serde(rename = "chooseFile")]
+    ChooseFile {
+        id: i32,
+        title: String,
+        path: String,
+        multi: bool,
+        #[serde(rename = "mediaOnly")]
+        media_only: bool,
+    },
 }
 
 #[derive(Debug, Serialize)]
 #[serde(tag = "cmd")]
+#[serde(rename_all = "camelCase")]
 enum WebviewInvokeResponse {
     #[serde(rename = "confirm")]
     Confirm { id: i32, ok: bool },
+    #[serde(rename = "chooseFile")]
+    ChooseFile {
+        id: i32,
+        files: Vec<WebviewInvokeFile>,
+    },
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct WebviewInvokeFile {
+    name: String,
+    base64_content: String,
 }
 
 #[cfg(target_os = "macos")]
@@ -247,12 +270,63 @@ extern "C" fn handle_webview_invoke(webview: *mut webview_sys::CWebView, arg: *c
         } => {
             let result = tinyfiledialogs::message_box_ok_cancel(
                 "", // message is usually too long for the title
-                &vec![message, details.unwrap_or_default()].join("\n\n"),
+                &[message, details.unwrap_or_default()].join("\n\n"),
                 tinyfiledialogs::MessageBoxIcon::Warning,
                 tinyfiledialogs::OkCancel::Ok,
             );
             let ok = result == tinyfiledialogs::OkCancel::Ok;
             respond(webview, WebviewInvokeResponse::Confirm { id, ok })
+        }
+        WebviewInvokeMessage::ChooseFile {
+            id,
+            title,
+            path,
+            multi,
+            media_only,
+        } => {
+            if !multi {
+                unimplemented!();
+            }
+            let paths = tinyfiledialogs::open_file_dialog_multi(
+                &title,
+                if path.is_empty() { "/" } else { &path },
+                if media_only {
+                    Some((
+                        &[
+                            "*.png", "*.jpg", "*.jpeg", "*.bmp", "*.gif", "*.mov", "*.avi",
+                            "*.mp4", "*.mpeg", "*.mpg", "*.svg", "*.tiff",
+                        ],
+                        "Image files",
+                    ))
+                } else {
+                    None
+                },
+            );
+            let files: Vec<WebviewInvokeFile> = paths
+                .unwrap_or_default()
+                .iter()
+                .filter_map(|path| match fs::read(path) {
+                    Ok(content) => {
+                        let path = std::path::Path::new(path);
+                        let file_name = path.file_name().unwrap_or_default();
+                        let file_name: String =
+                            file_name.to_owned().into_string().unwrap_or_default();
+                        Some(WebviewInvokeFile {
+                            name: file_name,
+                            base64_content: base64::encode(content),
+                        })
+                    }
+                    Err(e) => {
+                        tracing::warn!("Failed to load selected file: {}", e);
+                        None
+                    }
+                })
+                .collect();
+
+            match respond(webview, WebviewInvokeResponse::ChooseFile { id, files }) {
+                Err(err) => Err(err),
+                Ok(o) => Ok(o),
+            }
         }
     };
 }

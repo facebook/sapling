@@ -24,6 +24,7 @@ export interface Platform {
   openDiff?(path: RepoRelativePath, comparison: Comparison): void;
   openExternalLink(url: string): void;
   clipboardCopy(value: string): void;
+  chooseFile?(title: string, multi: boolean): Promise<Array<File>>;
 
   /**
    * Component representing additional buttons/info in the help menu.

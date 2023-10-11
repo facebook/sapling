@@ -12,6 +12,7 @@ serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
+base64 = "0.13"
 open = "4"
 tinyfiledialogs = "3.9.1"
 tracing = "0.1.35"
