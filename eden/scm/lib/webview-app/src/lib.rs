@@ -32,16 +32,27 @@ use serde::Serialize;
 /// - An ISL server process is spawned by the current process to get the url for the browser to open.
 /// - Try to find a chrome/edge browser and use its `--app` with the url.
 pub fn open_isl(opts: ISLSpawnOptions) -> io::Result<()> {
-    // TODO: check for --no-open and do simple server spawn without webview or browser.
-    // TODO: check for --browser in opts to control which browser to use.
+    if should_just_launch_server(&opts) {
+        let mut child = opts.spawn_isl_server(false)?;
+        child.wait()?;
+        return Ok(());
+    }
 
     #[cfg(target_os = "macos")]
     setup_and_spawn_app_bundle(opts)?;
 
+    // TODO: check for --browser in opts to control which browser to use.
     #[cfg(not(target_os = "macos"))]
     setup_and_spawn_chrome_like(opts)?;
 
     Ok(())
+}
+
+/// Check if the isl spawn options prevent opening a webview/chromelike window.
+fn should_just_launch_server(opts: &ISLSpawnOptions) -> bool {
+    // TODO: allow --browser with no path to imply having the isl server open itself,
+    // without an app / chromelike, as a way to opt-out of the app / chromelike UI.
+    opts.no_open || opts.kill
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -80,7 +91,7 @@ pub struct ISLSpawnOptions {
 }
 
 impl ISLSpawnOptions {
-    pub fn spawn_isl_server(&self) -> io::Result<Child> {
+    pub fn spawn_isl_server(&self, pipe_stdout: bool) -> io::Result<Child> {
         let mut cmd = Command::new(&self.nodepath);
         cmd.current_dir(&self.server_cwd);
         cmd.arg(&self.entrypoint);
@@ -107,12 +118,14 @@ impl ISLSpawnOptions {
             cmd.arg("--force");
         }
         cmd.stdin(Stdio::null());
-        cmd.stdout(Stdio::piped());
+        if pipe_stdout {
+            cmd.stdout(Stdio::piped());
+        }
         cmd.spawn()
     }
 
     pub fn spawn_isl_server_json(&self) -> io::Result<ISLSpawnResult> {
-        let child = self.spawn_isl_server()?;
+        let child = self.spawn_isl_server(true)?;
         let output = child.wait_with_output()?;
         let stdout = String::from_utf8(output.stdout).expect("invalid utf-8");
 

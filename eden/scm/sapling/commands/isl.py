@@ -51,7 +51,7 @@ DEFAULT_PORT = 3011
         (
             "",
             "platform",
-            "",
+            "browser",
             _(
                 "which environment ISL is being embedded in, used to support IDE integrations (ADVANCED)"
             ),
