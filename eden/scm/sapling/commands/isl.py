@@ -126,21 +126,23 @@ def isl_cmd(ui, repo, *args, **opts):
     isl_args, server_cwd = get_isl_args_cwd(ui)
     nodepath, entrypoint = isl_args
     webview.open_isl(
-        repo_cwd=repo.root,
-        port=port,
-        no_open=not open_isl,
-        json_output=json_output,
-        foreground=foreground,
-        force=force,
-        kill=kill,
-        platform=platform,
-        slcommand=util.hgcmd()[0],
-        slversion=util.version(),
-        server_cwd=server_cwd,
-        nodepath=nodepath,
-        entrypoint=entrypoint,
-        browser=None if browser == "" else browser,
-        no_app=not app,
+        {
+            "repoCwd": repo.root,
+            "port": port,
+            "noOpen": not open_isl,
+            "json": json_output,
+            "foreground": foreground,
+            "force": force,
+            "kill": kill,
+            "platform": platform,
+            "slcommand": util.hgcmd()[0],
+            "slversion": util.version(),
+            "serverCwd": server_cwd,
+            "nodepath": nodepath,
+            "entrypoint": entrypoint,
+            "browser": None if browser == "" else browser,
+            "noApp": not app,
+        }
     )
 
 
