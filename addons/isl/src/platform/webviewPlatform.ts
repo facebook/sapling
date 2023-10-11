@@ -9,27 +9,75 @@ import type {Platform} from '../platform';
 
 import {browserPlatform} from '../BrowserPlatform';
 
-/** Typed commands to communicate with the Tauri backend from the frontend */
-type ExternalWebviewCommands = {
-  openExternal: (url: string) => void;
-};
-
-declare const external: {
-  invoke<K extends keyof ExternalWebviewCommands>(
-    cmd: K,
-    args: Parameters<ExternalWebviewCommands[K]>,
-  ): Promise<ReturnType<ExternalWebviewCommands[K]>>;
-};
-
 // important: this file should not try to import other code from 'isl',
 // since it will end up getting duplicated by webpack.
 
+/**
+ * This platform is used when spawned as a standalone webview from `sl web`.
+ * We pass messages to the rust side via `external.invoke`,
+ * with JSON serialized requests. Rust will respond back with JSON serialized responses.
+ * This lets us handle features like alerts, file dialogs, and opening external links
+ * which are not implemented in the webview itself.
+ */
 const webviewPlatform: Platform = {
   ...browserPlatform, // just act like the browser platform by default, since the app use case is similar
   platformName: 'webview',
   openExternalLink(url: string) {
-    external.invoke('openExternal', [url]);
+    invoke({cmd: 'openExternal', url});
+    request({cmd: 'testResponse', val: 123456789}).then(({result}) => {
+      console.log('received test response: ', result);
+    });
   },
 };
 
 window.islPlatform = webviewPlatform;
+
+/**
+ * Typed commands to communicate from the frontend with the Rust app hosting the webview.
+ * This should match the rust types used in webview-app.
+ */
+type ExternalWebviewCommandsInvoke =
+  | {cmd: 'openExternal'; url: string}
+  | {cmd: 'testResponse'; val: number};
+type ExternalWebviewCommandsResponse = {cmd: 'testResponse'; result: number} & {id: number};
+
+declare global {
+  interface Window {
+    islWebviewHandleResponse: (response: ExternalWebviewCommandsResponse) => void;
+  }
+}
+
+let nextId = 0;
+const callbacks: Array<(response: ExternalWebviewCommandsResponse) => void> = [];
+window.islWebviewHandleResponse = (response: ExternalWebviewCommandsResponse) => {
+  const cb = callbacks[response.id];
+  if (cb) {
+    cb(response);
+    delete callbacks[response.id];
+  }
+};
+
+declare const external: {
+  invoke(arg: string): Promise<void>;
+};
+
+function invoke(json: ExternalWebviewCommandsInvoke) {
+  external.invoke(JSON.stringify({...json, id: nextId++}));
+}
+
+function request<K extends ExternalWebviewCommandsInvoke['cmd']>(
+  json: ExternalWebviewCommandsInvoke & {cmd: K},
+): Promise<ExternalWebviewCommandsResponse & {cmd: K}> {
+  const id = nextId++;
+  let resolve: (value: ExternalWebviewCommandsResponse & {cmd: K}) => void;
+  const callback = (response: ExternalWebviewCommandsResponse) => {
+    resolve(response as ExternalWebviewCommandsResponse & {cmd: K});
+  };
+  const promise = new Promise<ExternalWebviewCommandsResponse & {cmd: K}>(res => {
+    resolve = res;
+  });
+  external.invoke(JSON.stringify({...json, id}));
+  callbacks[id] = callback;
+
+  return promise;
+}

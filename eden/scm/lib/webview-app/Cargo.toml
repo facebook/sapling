@@ -12,4 +12,6 @@ serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
+open = "4"
+tracing = "0.1.35"
 webview-sys = { version = "0.6.2", path = "../third-party/webview-sys" }

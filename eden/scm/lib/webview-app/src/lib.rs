@@ -235,6 +235,7 @@ fn start_webview_app() -> anyhow::Result<()> {
     std::process::exit(0);
 }
 
+#[cfg(target_os = "macos")]
 struct ISLAppBundle {
     app_dir: PathBuf,
 }
@@ -334,7 +335,7 @@ impl ISLAppBundle {
                 min_width,
                 min_height,
                 hide_instead_of_close as _,
-                None,
+                Some(handle_webview_invoke),
                 std::ptr::null_mut(),
             );
             loop {
@@ -345,6 +346,71 @@ impl ISLAppBundle {
             }
         }
     }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(tag = "cmd")]
+#[cfg(target_os = "macos")]
+enum WebviewInvokeMessage {
+    #[serde(rename = "openExternal")]
+    OpenExternal { url: String },
+    #[serde(rename = "testResponse")]
+    TestResponse { val: i32, id: i32 },
+}
+
+#[derive(Debug, Serialize)]
+#[serde(tag = "cmd")]
+#[cfg(target_os = "macos")]
+enum WebviewInvokeResponse {
+    #[serde(rename = "testResponse")]
+    TestResponse { result: i32, id: i32 },
+}
+
+#[cfg(target_os = "macos")]
+extern "C" fn handle_webview_invoke(webview: *mut webview_sys::CWebView, arg: *const i8) {
+    let arg = unsafe { std::ffi::CStr::from_ptr(arg).to_string_lossy().to_string() };
+
+    tracing::debug!("Webview invoked: {}", arg);
+
+    let message: WebviewInvokeMessage = match serde_json::from_str(&arg) {
+        Err(e) => {
+            tracing::warn!("Failed to parse JSON message from webview: {}", e);
+            return;
+        }
+        Ok(m) => m,
+    };
+
+    fn respond(
+        webview: *mut webview_sys::CWebView,
+        message: WebviewInvokeResponse,
+    ) -> anyhow::Result<()> {
+        let response: String = serde_json::to_string(&message)?;
+        // This evals JS code, which could be a security concern.
+        // however, we're only sending back serialized JSON so it should be ok.
+        let js = format!("window.islWebviewHandleResponse({});", response);
+        let js_cstr = std::ffi::CString::new(js).unwrap();
+        let ret = unsafe { webview_sys::webview_eval(webview, js_cstr.as_ptr()) };
+        if ret != 0 {
+            Err(anyhow::Error::msg(
+                "failed to execute javascript in webview to respond",
+            ))
+        } else {
+            Ok(())
+        }
+    }
+
+    let _ = match message {
+        WebviewInvokeMessage::OpenExternal { url } => {
+            open::that(url).context("could not open external url")
+        }
+        WebviewInvokeMessage::TestResponse { val, id } => respond(
+            webview,
+            WebviewInvokeResponse::TestResponse {
+                result: val + 1,
+                id,
+            },
+        ),
+    };
 }
 
 fn setup_and_spawn_chrome_like(opts: ISLSpawnOptions) -> anyhow::Result<()> {
