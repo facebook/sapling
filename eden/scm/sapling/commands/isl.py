@@ -133,6 +133,8 @@ def isl_cmd(ui, repo, *args, **opts):
     app = opts.get("app")
     dev = opts.get("dev")
 
+    force_no_app = ui.configbool("web", "force-no-app")
+
     isl_args, server_cwd = get_dev_isl_args_cwd(ui) if dev else get_isl_args_cwd(ui)
     nodepath, entrypoint = isl_args
     webview.open_isl(
@@ -151,7 +153,7 @@ def isl_cmd(ui, repo, *args, **opts):
             "nodepath": nodepath,
             "entrypoint": entrypoint,
             "browser": None if browser == "" else browser,
-            "noApp": not app,
+            "noApp": force_no_app or not app,
             "dev": dev,
         }
     )
