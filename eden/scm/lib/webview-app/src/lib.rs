@@ -13,6 +13,7 @@ use std::process::Child;
 use std::process::Command;
 use std::process::Stdio;
 
+use anyhow::Context;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -31,7 +32,7 @@ use serde::Serialize;
 /// By default, on Windows and Linux:
 /// - An ISL server process is spawned by the current process to get the url for the browser to open.
 /// - Try to find a chrome/edge browser and use its `--app` with the url.
-pub fn open_isl(opts: ISLSpawnOptions) -> io::Result<()> {
+pub fn open_isl(opts: ISLSpawnOptions) -> anyhow::Result<()> {
     if should_just_launch_server(&opts) {
         let mut child = opts.spawn_isl_server(false)?;
         child.wait()?;
@@ -99,7 +100,7 @@ pub struct ISLSpawnOptions {
 }
 
 impl ISLSpawnOptions {
-    pub fn spawn_isl_server(&self, pipe_stdout: bool) -> io::Result<Child> {
+    fn spawn_isl_server(&self, pipe_stdout: bool) -> io::Result<Child> {
         let mut cmd = Command::new(&self.nodepath);
         cmd.current_dir(&self.server_cwd);
         cmd.arg(&self.entrypoint);
@@ -132,17 +133,18 @@ impl ISLSpawnOptions {
         cmd.spawn()
     }
 
-    pub fn spawn_isl_server_json(&self) -> io::Result<ISLSpawnResult> {
+    fn spawn_isl_server_json(&self) -> anyhow::Result<ISLSpawnResult> {
         let child = self.spawn_isl_server(true)?;
         let output = child.wait_with_output()?;
-        let stdout = String::from_utf8(output.stdout).expect("invalid utf-8");
+        let stdout = String::from_utf8(output.stdout).context("invalid utf-8 from ISL server")?;
 
-        let json = serde_json::from_str::<ISLSpawnResult>(&stdout).expect("failed to parse JSON");
+        let json = serde_json::from_str::<ISLSpawnResult>(&stdout)
+            .context("failed to parse JSON from ISL server")?;
         Ok(json)
     }
 
     /// Override arguments that make the spawned server compatible with connecting to the webview.
-    pub fn replace_args_for_webview_spawn(self) -> ISLSpawnOptions {
+    fn replace_args_for_webview_spawn(self) -> ISLSpawnOptions {
         let mut opts = self.clone();
         opts.json = true;
         // no_open is slightly overloaded: it's used to prevent the app from spawning at all, but also passed
@@ -159,7 +161,7 @@ impl ISLSpawnOptions {
     }
 
     /// Override arguments that make the spawned server compatible with connecting to a chromelike browser via --app
-    pub fn replace_args_for_chromelike_spawn(self) -> ISLSpawnOptions {
+    fn replace_args_for_chromelike_spawn(self) -> ISLSpawnOptions {
         let mut opts = self.clone();
         opts.json = true;
         // See replace_args_for_webview_spawn above
@@ -173,7 +175,7 @@ impl ISLSpawnOptions {
 
 /// Setup macOS app bundle, save the configured server settings, and spawn the application in a new process.
 #[cfg(target_os = "macos")]
-pub fn setup_and_spawn_app_bundle(opts: ISLSpawnOptions) -> Result<(), io::Error> {
+fn setup_and_spawn_app_bundle(opts: ISLSpawnOptions) -> anyhow::Result<()> {
     let opts = opts.replace_args_for_webview_spawn();
 
     let app = ISLAppBundle::get_or_create_app_bundle()?;
@@ -195,9 +197,19 @@ pub fn maybe_become_webview_app() -> Option<()> {
         return None;
     }
 
-    let app = ISLAppBundle::get_or_create_app_bundle().expect("could not create app bundle");
+    // start the webview, and print any error it encounters
+    start_webview_app().unwrap_or_else(|e| eprintln!("error starting webview app: {}", e));
+    Some(())
+}
 
-    let server_options = app.read_server_args().expect("could not read server args");
+#[cfg(target_os = "macos")]
+fn start_webview_app() -> anyhow::Result<()> {
+    let app =
+        ISLAppBundle::get_or_create_app_bundle().context("could not create ISL app bundle")?;
+
+    let server_options = app
+        .read_server_args()
+        .context("could not read saved server args")?;
     println!("Found spawn options: {:?}", server_options);
 
     // TODO: It might be a better idea to save an array of servers in the app state instead of just one.
@@ -207,8 +219,7 @@ pub fn maybe_become_webview_app() -> Option<()> {
 
     let server_output = server_options
         .spawn_isl_server_json()
-        .expect("could not start server");
-    println!("Started ISL server: {:?}", server_output);
+        .context("could not start ISL server")?;
 
     // TODO: save & read these from saved server state.
     let width = 1280;
@@ -228,9 +239,11 @@ const SERVER_ARGS_DIR: &str = "Contents/Resources/server_args.json";
 #[cfg(target_os = "macos")]
 impl ISLAppBundle {
     /// Create an app bundle for the application.
-    fn get_or_create_app_bundle() -> Result<ISLAppBundle, io::Error> {
+    pub(crate) fn get_or_create_app_bundle() -> anyhow::Result<ISLAppBundle> {
         let dir = match dirs::data_local_dir() {
-            None => return Err(io::Error::new(io::ErrorKind::NotFound, "no data local dir")),
+            None => {
+                return Err(anyhow::anyhow!("no data local dir"));
+            }
             Some(dir) => dir,
         };
         let app_dir = dir.join("Sapling/Sapling.app");
@@ -262,7 +275,8 @@ impl ISLAppBundle {
         Ok(ISLAppBundle { app_dir })
     }
 
-    fn read_server_args(&self) -> Result<ISLSpawnOptions, io::Error> {
+    /// Read the server args from the app bundle, which should have been previously written
+    pub(crate) fn read_server_args(&self) -> anyhow::Result<ISLSpawnOptions> {
         let server_args_json = fs::read_to_string(self.app_dir.join(SERVER_ARGS_DIR))?;
         let json = serde_json::from_str::<ISLSpawnOptions>(&server_args_json)?;
         // // TODO: read args from the app bundle.
@@ -271,7 +285,8 @@ impl ISLAppBundle {
         Ok(json)
     }
 
-    fn write_server_args(&self, opts: ISLSpawnOptions) -> Result<(), io::Error> {
+    /// Write the server args to the app bundle, to be used the next time the app is launched.
+    pub(crate) fn write_server_args(&self, opts: ISLSpawnOptions) -> anyhow::Result<()> {
         fs::write(
             self.app_dir.join(SERVER_ARGS_DIR),
             serde_json::to_vec(&opts)?,
@@ -280,7 +295,7 @@ impl ISLAppBundle {
     }
 
     /// Launch the app bundle in a new process via 'open'.
-    fn run_app_bundle(&self) -> io::Result<()> {
+    pub(crate) fn run_app_bundle(&self) -> anyhow::Result<()> {
         // Use 'open' to run the app.
         let mut command = Command::new("/usr/bin/open");
         command.arg(&self.app_dir).spawn()?;
@@ -290,7 +305,7 @@ impl ISLAppBundle {
 
     /// Open a browser window using webview-sys.
     /// Block until the webview is closed.
-    fn run_webview_sys(&self, url: &str, width: i32, height: i32) {
+    pub(crate) fn run_webview_sys(&self, url: &str, width: i32, height: i32) {
         // Use webview-sys directly in this process.
         let url_cstr = std::ffi::CString::new(url).unwrap_or_default();
         unsafe {
@@ -326,14 +341,13 @@ impl ISLAppBundle {
     }
 }
 
-pub fn setup_and_spawn_chrome_like(opts: ISLSpawnOptions) -> Result<(), io::Error> {
+fn setup_and_spawn_chrome_like(opts: ISLSpawnOptions) -> anyhow::Result<()> {
     // TODO: save & read saved server state, to remember windows size and position?
     let opts = opts.replace_args_for_chromelike_spawn();
 
     let server_output = opts
         .spawn_isl_server_json()
-        .expect("could not start server");
-    println!("Started ISL server: {:?}", server_output);
+        .context("could not start ISL server")?;
 
     let width = 1280;
     let height = 720;
@@ -356,7 +370,7 @@ struct ISLChromelikeOptions<'a> {
 
 impl ISLChromelikeOptions<'_> {
     /// Spawn a chrome-like browser to fulfil the webview request.
-    fn run_chrome_like(&self, browser_path: Option<String>) -> io::Result<()> {
+    fn run_chrome_like(&self, browser_path: Option<String>) -> anyhow::Result<()> {
         let browser_path = match browser_path {
             None => find_chrome_like()?,
             Some(path) => path,
@@ -377,7 +391,7 @@ impl ISLChromelikeOptions<'_> {
     }
 }
 
-fn find_chrome_like() -> io::Result<String> {
+fn find_chrome_like() -> anyhow::Result<String> {
     if cfg!(target_os = "windows") {
         let program_files = [
             std::env::var("ProgramFiles(x86)").unwrap_or_else(|_| r"C:\Program Files (x86)".into()),
@@ -411,10 +425,7 @@ fn find_chrome_like() -> io::Result<String> {
         }
     }
 
-    Err(io::Error::new(
-        io::ErrorKind::NotFound,
-        "Cannot find a chrome browser for webview",
-    ))
+    Err(anyhow::anyhow!("Cannot find a chrome browser for webview"))
 }
 
 // Match Info.plist CFBundleExecutable.
