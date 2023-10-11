@@ -23,7 +23,6 @@ import sys
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 
 import contextlib
-import ctypes
 import ctypes.util
 import errno
 import glob
@@ -34,7 +33,6 @@ import socket
 import stat
 import struct
 import subprocess
-import tarfile
 import tempfile
 import time
 import zipfile
@@ -99,7 +97,7 @@ from distutils.command.build_scripts import build_scripts
 from distutils.command.install import install
 from distutils.command.install_lib import install_lib
 from distutils.command.install_scripts import install_scripts
-from distutils.core import Command, Extension, setup
+from distutils.core import Command, setup
 from distutils.dir_util import copy_tree
 from distutils.dist import Distribution
 from distutils.errors import CCompilerError, DistutilsExecError
@@ -107,7 +105,7 @@ from distutils.spawn import find_executable, spawn
 from distutils.sysconfig import get_config_var
 from distutils.version import StrictVersion
 
-from distutils_rust import BuildRustExt, InstallRustExt, RustBinary, RustExtension
+from distutils_rust import BuildRustExt, InstallRustExt, RustBinary
 
 havefb = not ossbuild and os.path.exists("fb")
 isgetdepsbuild = os.environ.get("GETDEPS_BUILD") == "1"

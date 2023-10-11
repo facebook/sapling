@@ -7,8 +7,6 @@ from __future__ import absolute_import, print_function
 
 import pprint
 
-from hghave import require
-
 from sapling import minirst
 
 

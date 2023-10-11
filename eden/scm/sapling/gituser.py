@@ -5,8 +5,6 @@
 
 from typing import Tuple
 
-from sapling.i18n import _
-
 
 def parse_username(username: str) -> Tuple[str, str]:
     r"""parses `username` and returns a tuple (name, email)

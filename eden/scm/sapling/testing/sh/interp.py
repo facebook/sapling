@@ -9,7 +9,6 @@ See module-level doc for examples.
 """
 
 import functools
-import os
 import re
 import shlex
 import textwrap

@@ -7,8 +7,6 @@ from __future__ import absolute_import
 
 import unittest
 
-from hghave import require
-
 from sapling import encoding
 
 

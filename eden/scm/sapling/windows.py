@@ -19,9 +19,7 @@ import os
 import re
 import stat
 import sys
-import tempfile
-import time
-from typing import IO, Optional
+from typing import IO
 
 import bindings
 

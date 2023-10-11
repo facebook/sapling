@@ -69,7 +69,7 @@ from sapling import (
     util,
     wireproto,
 )
-from sapling.i18n import _, _x
+from sapling.i18n import _
 from sapling.node import bin, hex, nullid, nullrev
 from sapling.pycompat import decodeutf8, encodeutf8, queue, range
 

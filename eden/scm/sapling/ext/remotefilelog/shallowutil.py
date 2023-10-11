@@ -9,7 +9,6 @@ from __future__ import absolute_import
 import errno
 import os
 import struct
-import sys
 import typing
 from collections import defaultdict
 from typing import Dict, IO, Mapping

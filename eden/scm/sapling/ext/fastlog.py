@@ -23,7 +23,6 @@ Config::
 
 import heapq
 from collections import deque
-from threading import Event, Thread
 
 from sapling import error, extensions, match as matchmod, phases, revset, smartset
 from sapling.i18n import _

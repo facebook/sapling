@@ -7,10 +7,7 @@ from __future__ import absolute_import
 
 import doctest
 import os
-import re
 import sys
-
-from hghave import require
 
 
 # this is hack to make sure no escape characters are inserted into the output

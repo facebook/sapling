@@ -2,7 +2,6 @@ import logging
 
 import ghstack.github
 import ghstack.github_utils
-import ghstack.shell
 
 
 def main(
@@ -22,7 +21,7 @@ def main(
             }
         }
     """,
-        **params
+        **params,
     )
     pr_id = pr_result["data"]["repository"]["pullRequest"]["id"]
 

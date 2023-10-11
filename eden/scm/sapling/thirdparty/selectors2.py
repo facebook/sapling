@@ -30,7 +30,6 @@ import errno
 import math
 import select
 import socket
-import sys
 import time
 
 from .. import pycompat
@@ -69,7 +68,7 @@ SelectorKey = namedtuple("SelectorKey", ["fileobj", "fd", "events", "data"])
 
 
 class _SelectorMapping(Mapping):
-    """ Mapping of file objects to selector keys """
+    """Mapping of file objects to selector keys"""
 
     def __init__(self, selector):
         self._selector = selector
@@ -89,8 +88,8 @@ class _SelectorMapping(Mapping):
 
 
 def _fileobj_to_fd(fileobj):
-    """ Return a file descriptor from a file object. If
-    given an integer will simply return that integer back. """
+    """Return a file descriptor from a file object. If
+    given an integer will simply return that integer back."""
     if isinstance(fileobj, int):
         fd = fileobj
     else:
@@ -104,7 +103,7 @@ def _fileobj_to_fd(fileobj):
 
 
 class BaseSelector:
-    """ Abstract Selector class
+    """Abstract Selector class
 
     A selector supports registering file objects to be monitored
     for specific I/O events.
@@ -127,7 +126,7 @@ class BaseSelector:
         self._map = _SelectorMapping(self)
 
     def _fileobj_lookup(self, fileobj):
-        """ Return a file descriptor from a file object.
+        """Return a file descriptor from a file object.
         This wraps _fileobj_to_fd() to do an exhaustive
         search in case the object is invalid but we still
         have it in our map. Used by unregister() so we can
@@ -147,7 +146,7 @@ class BaseSelector:
             raise
 
     def register(self, fileobj, events, data=None):
-        """ Register a file object for a set of events to monitor. """
+        """Register a file object for a set of events to monitor."""
         if (not events) or (events & ~(EVENT_READ | EVENT_WRITE)):
             raise ValueError("Invalid events: {0!r}".format(events))
 
@@ -162,7 +161,7 @@ class BaseSelector:
         return key
 
     def unregister(self, fileobj):
-        """ Unregister a file object from being monitored. """
+        """Unregister a file object from being monitored."""
         try:
             key = self._fd_to_key.pop(self._fileobj_lookup(fileobj))
         except KeyError:
@@ -182,7 +181,7 @@ class BaseSelector:
         return key
 
     def modify(self, fileobj, events, data=None):
-        """ Change a registered file object monitored events and data. """
+        """Change a registered file object monitored events and data."""
         # NOTE: Some subclasses optimize this operation even further.
         try:
             key = self._fd_to_key[self._fileobj_lookup(fileobj)]
@@ -201,18 +200,18 @@ class BaseSelector:
         return key
 
     def select(self, timeout=None):
-        """ Perform the actual selection until some monitored file objects
-        are ready or the timeout expires. """
+        """Perform the actual selection until some monitored file objects
+        are ready or the timeout expires."""
         raise NotImplementedError()
 
     def close(self):
-        """ Close the selector. This must be called to ensure that all
-        underlying resources are freed. """
+        """Close the selector. This must be called to ensure that all
+        underlying resources are freed."""
         self._fd_to_key.clear()
         self._map = None
 
     def get_key(self, fileobj):
-        """ Return the key associated with a registered file object. """
+        """Return the key associated with a registered file object."""
         mapping = self.get_map()
         if mapping is None:
             raise RuntimeError("Selector is closed")
@@ -222,12 +221,12 @@ class BaseSelector:
             raise KeyError("{0!r} is not registered".format(fileobj))
 
     def get_map(self):
-        """ Return a mapping of file objects to selector keys """
+        """Return a mapping of file objects to selector keys"""
         return self._map
 
     def _key_from_fd(self, fd):
-        """ Return the key associated to a given file descriptor
-         Return None if it is not found. """
+        """Return the key associated to a given file descriptor
+        Return None if it is not found."""
         try:
             return self._fd_to_key[fd]
         except KeyError:
@@ -244,7 +243,7 @@ class BaseSelector:
 if hasattr(select, "select"):
 
     class SelectSelector(BaseSelector):
-        """ Select-based selector. """
+        """Select-based selector."""
 
         def __init__(self):
             super(SelectSelector, self).__init__()
@@ -290,7 +289,7 @@ if hasattr(select, "select"):
             return ready
 
         def _wrap_select(self, r, w, timeout=None):
-            """ Wrapper for select.select because timeout is a positional arg """
+            """Wrapper for select.select because timeout is a positional arg"""
             return select.select(r, w, [], timeout)
 
     __all__.append("SelectSelector")
@@ -299,9 +298,9 @@ if hasattr(select, "select"):
     if pycompat.isjython:
 
         class _JythonSelectorMapping:
-            """ This is an implementation of _SelectorMapping that is built
+            """This is an implementation of _SelectorMapping that is built
             for use specifically with Jython, which does not provide a hashable
-            value from socket.socket.fileno(). """
+            value from socket.socket.fileno()."""
 
             def __init__(self, selector):
                 assert isinstance(selector, JythonSelectSelector)
@@ -318,7 +317,7 @@ if hasattr(select, "select"):
                     raise KeyError("{0!r} is not registered.".format(fileobj))
 
         class JythonSelectSelector(SelectSelector):
-            """ This is an implementation of SelectSelector that is for Jython
+            """This is an implementation of SelectSelector that is for Jython
             which works around that Jython's socket.socket.fileno() does not
             return an integer fd value. All SelectorKey.fd will be equal to -1
             and should not be used. This instead uses object id to compare fileobj
@@ -373,18 +372,18 @@ if hasattr(select, "select"):
                 return key
 
             def _wrap_select(self, r, w, timeout=None):
-                """ Wrapper for select.select because timeout is a positional arg """
+                """Wrapper for select.select because timeout is a positional arg"""
                 return self._select_func(r, w, [], timeout)
 
         __all__.append("JythonSelectSelector")
         SelectSelector = (
-            JythonSelectSelector
-        )  # Override so the wrong selector isn't used.
+            JythonSelectSelector  # Override so the wrong selector isn't used.
+        )
 
 if hasattr(select, "poll"):
 
     class PollSelector(BaseSelector):
-        """ Poll-based selector """
+        """Poll-based selector"""
 
         def __init__(self):
             super(PollSelector, self).__init__()
@@ -406,8 +405,8 @@ if hasattr(select, "poll"):
             return key
 
         def _wrap_poll(self, timeout=None):
-            """ Wrapper function for select.poll.poll() so that
-            _syscall_wrapper can work with only seconds. """
+            """Wrapper function for select.poll.poll() so that
+            _syscall_wrapper can work with only seconds."""
             if timeout is not None:
                 if timeout <= 0:
                     timeout = 0
@@ -440,7 +439,7 @@ if hasattr(select, "poll"):
 if hasattr(select, "epoll"):
 
     class EpollSelector(BaseSelector):
-        """ Epoll-based selector """
+        """Epoll-based selector"""
 
         def __init__(self):
             super(EpollSelector, self).__init__()
@@ -535,8 +534,8 @@ if hasattr(select, "devpoll"):
             return key
 
         def _wrap_poll(self, timeout=None):
-            """ Wrapper function for select.poll.poll() so that
-            _syscall_wrapper can work with only seconds. """
+            """Wrapper function for select.poll.poll() so that
+            _syscall_wrapper can work with only seconds."""
             if timeout is not None:
                 if timeout <= 0:
                     timeout = 0
@@ -573,7 +572,7 @@ if hasattr(select, "devpoll"):
 if hasattr(select, "kqueue"):
 
     class KqueueSelector(BaseSelector):
-        """ Kqueue / Kevent-based selector """
+        """Kqueue / Kevent-based selector"""
 
         def __init__(self):
             super(KqueueSelector, self).__init__()
@@ -655,10 +654,10 @@ if hasattr(select, "kqueue"):
 
 
 def _can_allocate(struct):
-    """ Checks that select structs can be allocated by the underlying
+    """Checks that select structs can be allocated by the underlying
     operating system, not just advertised by the select module. We don't
     check select() because we'll be hopeful that most platforms that
-    don't have it available will not advertise it. (ie: GAE) """
+    don't have it available will not advertise it. (ie: GAE)"""
     try:
         # select.poll() objects won't fail until used.
         if struct == "poll":
@@ -674,17 +673,18 @@ def _can_allocate(struct):
 
 
 def _syscall_wrapper(func, _, *args, **kwargs):
-    """ This is the short-circuit version of the below logic
-    because in Python 3.5+ all selectors restart system calls. """
+    """This is the short-circuit version of the below logic
+    because in Python 3.5+ all selectors restart system calls."""
     return func(*args, **kwargs)
+
 
 # Choose the best implementation, roughly:
 # kqueue == devpoll == epoll > poll > select
 # select() also can't accept a FD > FD_SETSIZE (usually around 1024)
 def DefaultSelector():
-    """ This function serves as a first call for DefaultSelector to
+    """This function serves as a first call for DefaultSelector to
     detect if the select module is being monkey-patched incorrectly
-    by eventlet, greenlet, and preserve proper behavior. """
+    by eventlet, greenlet, and preserve proper behavior."""
     global _DEFAULT_SELECTOR
     if _DEFAULT_SELECTOR is None:
         if pycompat.isjython:

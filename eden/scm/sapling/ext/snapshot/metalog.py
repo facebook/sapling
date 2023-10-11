@@ -5,7 +5,7 @@
 
 from typing import Optional
 
-from sapling import error, perftrace
+from sapling import perftrace
 
 LATESTBUBBLE = "latestbubble"
 LATESTSNAPSHOT = "latestsnapshot"

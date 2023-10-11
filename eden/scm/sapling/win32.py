@@ -18,7 +18,6 @@ import errno
 import msvcrt
 import os
 import random
-import sys
 
 from . import encoding, pycompat
 from .pycompat import range

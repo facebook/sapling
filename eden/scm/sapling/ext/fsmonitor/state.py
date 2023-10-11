@@ -9,11 +9,8 @@ from __future__ import absolute_import
 
 import errno
 import os
-import socket
-import struct
 
 from sapling import pathutil
-from sapling.i18n import _
 
 
 _version = 4

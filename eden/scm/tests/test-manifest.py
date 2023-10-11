@@ -6,9 +6,7 @@ import os
 import unittest
 
 import silenttestrunner
-from hghave import require
 from sapling import manifest as manifestmod, match as matchmod
-from sapling.pycompat import encodeutf8
 
 
 EMTPY_MANIFEST = b""

@@ -1,8 +1,6 @@
 from __future__ import absolute_import, print_function
 
-from hghave import require
-
-from sapling import dispatch, error, ui as uimod
+from sapling import error, ui as uimod
 
 
 testui = uimod.ui.load()

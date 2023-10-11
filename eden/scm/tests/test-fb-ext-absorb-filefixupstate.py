@@ -7,8 +7,6 @@ from __future__ import absolute_import
 
 import itertools
 
-from hghave import require
-
 from sapling.ext import absorb
 
 

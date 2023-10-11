@@ -11,8 +11,6 @@
 # GNU General Public License version 2 or any later version.
 from __future__ import absolute_import
 
-import sys
-
 from . import pycompat
 
 

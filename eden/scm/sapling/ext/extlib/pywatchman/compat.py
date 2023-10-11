@@ -8,8 +8,6 @@ from __future__ import absolute_import, division, print_function
 
 import collections.abc as abc
 
-import sys
-
 """Compatibility module across Python 2 and 3."""
 
 

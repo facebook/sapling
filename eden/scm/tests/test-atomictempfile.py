@@ -11,8 +11,6 @@ import shutil
 import tempfile
 import unittest
 
-from hghave import require
-
 from sapling import util
 
 

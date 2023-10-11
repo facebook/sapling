@@ -17,8 +17,7 @@ import unittest
 
 import silenttestrunner
 from bindings import revisionstore
-from hghave import require
-from sapling import error, pycompat, ui as uimod, util
+from sapling import error, pycompat
 from sapling.ext.remotefilelog.metadatastore import unionmetadatastore
 from sapling.node import nullid
 

@@ -4,8 +4,6 @@ from __future__ import absolute_import, print_function
 import doctest
 import os
 
-from hghave import require
-
 from sapling import sslutil
 
 

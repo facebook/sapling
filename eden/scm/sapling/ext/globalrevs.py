@@ -46,7 +46,7 @@ template.
 """
 from __future__ import absolute_import
 
-from sapling import error, extensions, localrepo, namespaces, registrar, revset, util
+from sapling import error, extensions, localrepo, namespaces, registrar, revset
 from sapling.i18n import _
 from sapling.namespaces import namespace
 

@@ -11,7 +11,7 @@ import struct
 import time
 import traceback
 
-from sapling import error, perftrace, pycompat, revlog, util, wireproto
+from sapling import error, perftrace, pycompat, revlog, wireproto
 from sapling.i18n import _
 from sapling.node import bin
 

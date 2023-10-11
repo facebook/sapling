@@ -17,7 +17,6 @@ import glob
 import os
 import re
 import socket
-import subprocess
 import tempfile
 import time
 

@@ -4,7 +4,6 @@ import io
 import unittest
 
 import silenttestrunner
-from hghave import require
 from sapling import sshserver, wireproto
 
 

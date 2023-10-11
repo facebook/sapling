@@ -11,7 +11,6 @@ import errno
 import hashlib
 import os
 import re
-import shutil
 import subprocess
 import textwrap
 import weakref

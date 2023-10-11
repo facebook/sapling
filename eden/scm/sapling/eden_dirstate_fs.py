@@ -8,8 +8,6 @@
 from typing import Callable, Iterable, Optional, Tuple
 
 from . import filesystem, perftrace, pycompat, util
-from .i18n import _
-from .pycompat import decodeutf8
 
 
 class eden_filesystem(filesystem.physicalfilesystem):

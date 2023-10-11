@@ -2,8 +2,6 @@
 
 from __future__ import absolute_import, print_function
 
-from hghave import require
-
 from sapling import bundlerepo, localrepo, sshpeer, ui as uimod
 
 

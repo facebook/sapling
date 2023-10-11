@@ -6,10 +6,9 @@
 import socket
 
 import ssl
-import sys
 from typing import List, Optional, Sized
 
-from sapling import mutation, pycompat, registrar, smartset, util as hgutil
+from sapling import pycompat, registrar, smartset, util as hgutil
 from sapling.i18n import _
 
 from .extlib.phabricator import arcconfig, diffprops, graphql

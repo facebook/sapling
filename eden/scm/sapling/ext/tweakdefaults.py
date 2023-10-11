@@ -50,8 +50,6 @@ from __future__ import absolute_import
 import json
 import re
 import subprocess
-import sys
-import time
 from typing import List, Set, Tuple
 
 from sapling import (

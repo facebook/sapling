@@ -64,7 +64,6 @@ import tempfile
 import threading
 import time
 import unittest
-import uuid
 import xml.dom.minidom as minidom
 
 # If we're running in an embedded Python build, it won't add the test directory

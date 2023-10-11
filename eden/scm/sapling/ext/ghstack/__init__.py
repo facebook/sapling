@@ -15,8 +15,6 @@ from sapling.i18n import _
 
 cmdtable = {}
 command = registrar.command(cmdtable)
-
-import ghstack
 import ghstack.action
 import ghstack.checkout
 import ghstack.config

@@ -16,8 +16,6 @@ import random
 import sys
 import time
 
-from hghave import require
-
 from sapling import pycompat, store
 
 

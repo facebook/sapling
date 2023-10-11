@@ -34,7 +34,6 @@ import hashlib
 import itertools
 import mmap
 import os
-import platform as pyplatform
 import random
 import re as remod
 import shutil
@@ -46,7 +45,6 @@ import subprocess
 import sys
 import tempfile
 import textwrap
-import threading
 import time
 import traceback
 import types

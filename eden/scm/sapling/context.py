@@ -56,7 +56,6 @@ from .node import (
     wdirrev,
 )
 from .pycompat import encodeutf8, isint, range
-from .thirdparty import attr
 
 
 propertycache = util.propertycache

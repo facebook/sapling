@@ -4,8 +4,6 @@ Tests the behavior of filelog w.r.t. data starting with '\1\n'
 """
 from __future__ import absolute_import, print_function
 
-from hghave import require
-
 from sapling import hg, ui as uimod
 from sapling.node import hex, nullid
 

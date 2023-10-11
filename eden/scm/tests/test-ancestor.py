@@ -13,9 +13,7 @@ import random
 import sys
 import time
 
-from hghave import require
-
-from sapling import ancestor, debugcommands, hg, pycompat, ui as uimod, util
+from sapling import ancestor, debugcommands, hg, ui as uimod
 from sapling.node import nullrev
 
 

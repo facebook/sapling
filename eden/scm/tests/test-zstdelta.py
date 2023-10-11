@@ -5,7 +5,6 @@ import unittest
 
 import silenttestrunner
 from bindings import zstd
-from hghave import require
 
 
 class testzstd(unittest.TestCase):

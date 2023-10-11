@@ -11,7 +11,6 @@ import time
 import unittest
 
 import silenttestrunner
-from hghave import require
 from sapling import error, util, vfs
 from sapling.ext import extutil
 

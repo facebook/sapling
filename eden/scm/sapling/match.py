@@ -13,7 +13,6 @@
 from __future__ import absolute_import, print_function
 
 import copy
-import os
 import re
 from typing import List, Optional, Pattern, Sized, Tuple
 

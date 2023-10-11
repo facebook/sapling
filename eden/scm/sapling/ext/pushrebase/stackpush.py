@@ -38,7 +38,6 @@ stackpush tries to minimize steps inside the critical section:
 from __future__ import absolute_import
 
 from sapling import context, error, mutation, pycompat
-from sapling.i18n import _
 from sapling.node import hex, nullrev
 
 from .errors import ConflictsError, StackPushUnsupportedError

@@ -12,7 +12,6 @@ import os
 from sapling import (
     blobstore,
     error,
-    extensions,
     json,
     perftrace,
     progress,

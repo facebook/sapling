@@ -103,7 +103,6 @@ from sapling import (
     bundle2,
     changegroup,
     changelog2,
-    cloneuri,
     cmdutil,
     commands,
     context,

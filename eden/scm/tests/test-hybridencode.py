@@ -6,10 +6,6 @@
 
 from __future__ import absolute_import, print_function
 
-import sys
-
-from hghave import require
-
 from sapling import store
 
 

@@ -10,7 +10,6 @@ from __future__ import absolute_import
 import ctypes
 import getpass
 import os
-import sys
 import time
 
 from sapling import blackbox, encoding, json, progress, pycompat, util

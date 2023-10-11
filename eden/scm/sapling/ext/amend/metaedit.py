@@ -25,7 +25,6 @@ from sapling import (
     hg,
     identity,
     json,
-    mutation,
     node as nodemod,
     phases,
     pycompat,

@@ -1,12 +1,10 @@
 from __future__ import absolute_import, print_function
 
 import os
-import subprocess
-import sys
 
 from hghave import require
 
-from sapling import extensions, hg, localrepo, ui as uimod, util, vfs as vfsmod
+from sapling import localrepo, util, vfs as vfsmod
 
 
 require(["py2"])

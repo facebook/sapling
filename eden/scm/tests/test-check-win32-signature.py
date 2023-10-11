@@ -6,8 +6,6 @@
 import os
 import re
 
-from hghave import require
-
 
 def checkpath(path, dllnames):
     content = open(path).read()

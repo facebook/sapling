@@ -5,8 +5,6 @@
 
 from __future__ import absolute_import, print_function
 
-from hghave import require
-
 from sapling import pycompat
 
 from sapling.ext.lfs import pointer

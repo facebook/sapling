@@ -24,13 +24,11 @@ import socket
 import stat
 import tempfile
 import unicodedata
-from typing import Optional
 
 import bindings
 
 from . import encoding, error, fscap, identity, pycompat
 from .i18n import _
-from .pycompat import encodeutf8
 
 osutil = bindings.cext.osutil
 

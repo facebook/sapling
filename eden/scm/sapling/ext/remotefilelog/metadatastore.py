@@ -5,8 +5,6 @@
 
 from __future__ import absolute_import
 
-from sapling import util
-
 from . import shallowutil
 
 

@@ -8,11 +8,6 @@
 
 import hashlib
 import os
-import subprocess
-from tempfile import NamedTemporaryFile
-
-from sapling import error
-from sapling.i18n import _
 
 
 class bundlestore:

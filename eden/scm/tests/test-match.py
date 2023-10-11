@@ -4,7 +4,6 @@ import os
 import unittest
 
 import silenttestrunner
-from hghave import require
 from sapling import match as matchmod
 
 

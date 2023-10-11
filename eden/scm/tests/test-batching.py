@@ -7,9 +7,7 @@
 
 from __future__ import absolute_import, print_function
 
-from hghave import require
-
-from sapling import error, peer, util, wireproto
+from sapling import error, peer, wireproto
 
 
 # equivalent of repo.repository

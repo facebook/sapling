@@ -2,8 +2,6 @@ from __future__ import absolute_import, print_function
 
 import os
 
-from hghave import require
-
 from sapling import ui as uimod
 
 

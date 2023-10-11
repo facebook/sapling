@@ -172,7 +172,6 @@ from sapling import (
     wireproto,
 )
 from sapling.commands import debug as debugcommands
-from sapling.ext import clienttelemetry
 from sapling.ext.remotefilelog import (
     cmdtable as remotefilelogcmdtable,
     mutablestores,

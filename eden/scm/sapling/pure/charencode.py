@@ -13,7 +13,6 @@
 from __future__ import absolute_import
 
 import array
-import sys
 
 from .. import pycompat
 
