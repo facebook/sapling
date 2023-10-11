@@ -7,6 +7,8 @@ edition = "2021"
 
 [dependencies]
 dirs = "2.0"
+serde = { version = "1.0.185", features = ["derive", "rc"] }
+serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 webview-sys = { version = "0.6.2", path = "../third-party/webview-sys" }
