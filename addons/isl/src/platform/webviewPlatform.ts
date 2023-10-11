@@ -24,9 +24,9 @@ const webviewPlatform: Platform = {
   platformName: 'webview',
   openExternalLink(url: string) {
     invoke({cmd: 'openExternal', url});
-    request({cmd: 'testResponse', val: 123456789}).then(({result}) => {
-      console.log('received test response: ', result);
-    });
+  },
+  confirm(message: string, details?: string): Promise<boolean> {
+    return request({cmd: 'confirm', message, details}).then(({ok}) => ok);
   },
 };
 
@@ -38,8 +38,8 @@ window.islPlatform = webviewPlatform;
  */
 type ExternalWebviewCommandsInvoke =
   | {cmd: 'openExternal'; url: string}
-  | {cmd: 'testResponse'; val: number};
-type ExternalWebviewCommandsResponse = {cmd: 'testResponse'; result: number} & {id: number};
+  | {cmd: 'confirm'; message: string; details?: string};
+type ExternalWebviewCommandsResponse = {cmd: 'confirm'} & {ok: boolean; id: number};
 
 declare global {
   interface Window {

@@ -188,15 +188,19 @@ impl ISLAppBundle {
 enum WebviewInvokeMessage {
     #[serde(rename = "openExternal")]
     OpenExternal { url: String },
-    #[serde(rename = "testResponse")]
-    TestResponse { val: i32, id: i32 },
+    #[serde(rename = "confirm")]
+    Confirm {
+        id: i32,
+        message: String,
+        details: Option<String>,
+    },
 }
 
 #[derive(Debug, Serialize)]
 #[serde(tag = "cmd")]
 enum WebviewInvokeResponse {
-    #[serde(rename = "testResponse")]
-    TestResponse { result: i32, id: i32 },
+    #[serde(rename = "confirm")]
+    Confirm { id: i32, ok: bool },
 }
 
 #[cfg(target_os = "macos")]
@@ -236,13 +240,20 @@ extern "C" fn handle_webview_invoke(webview: *mut webview_sys::CWebView, arg: *c
         WebviewInvokeMessage::OpenExternal { url } => {
             open::that(url).context("could not open external url")
         }
-        WebviewInvokeMessage::TestResponse { val, id } => respond(
-            webview,
-            WebviewInvokeResponse::TestResponse {
-                result: val + 1,
-                id,
-            },
-        ),
+        WebviewInvokeMessage::Confirm {
+            id,
+            message,
+            details,
+        } => {
+            let result = tinyfiledialogs::message_box_ok_cancel(
+                "", // message is usually too long for the title
+                &vec![message, details.unwrap_or_default()].join("\n\n"),
+                tinyfiledialogs::MessageBoxIcon::Warning,
+                tinyfiledialogs::OkCancel::Ok,
+            );
+            let ok = result == tinyfiledialogs::OkCancel::Ok;
+            respond(webview, WebviewInvokeResponse::Confirm { id, ok })
+        }
     };
 }
 

@@ -13,5 +13,6 @@ serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_de
 
 [target.'cfg(target_os = "macos")'.dependencies]
 open = "4"
+tinyfiledialogs = "3.9.1"
 tracing = "0.1.35"
 webview-sys = { version = "0.6.2", path = "../third-party/webview-sys" }
