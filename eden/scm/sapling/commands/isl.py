@@ -5,15 +5,15 @@
 
 import os
 import os.path
-import shlex
 import shutil
-import subprocess
 import sys
 import tarfile
 import tempfile
 from typing import Dict, List, Optional, Tuple
 
 import bindings
+
+from bindings import webview
 
 from .. import error
 from ..i18n import _
@@ -56,6 +56,7 @@ DEFAULT_PORT = 3011
                 "which environment ISL is being embedded in, used to support IDE integrations (ADVANCED)"
             ),
         ),
+        # TODO: --browser to not use webview, or --browser=/path/to/chrome for --app
     ],
 )
 def isl_cmd(ui, repo, *args, **opts):
@@ -66,6 +67,8 @@ def isl_cmd(ui, repo, *args, **opts):
     reordering, or rebasing commits.
     Running this command launches a web server that makes Sapling Web and
     Interactive Smartlog available in a local web browser.
+    When possible, this command opens a separate OS window,
+    either using a webview or a Chrome-like browser with --app.
 
     Examples:
 
@@ -100,57 +103,24 @@ def isl_cmd(ui, repo, *args, **opts):
     kill = opts.get("kill")
     force = opts.get("force")
     platform = opts.get("platform")
-    return launch_server(
-        ui,
-        cwd=repo.root,
+
+    isl_args, server_cwd = get_isl_args_cwd(ui)
+    nodepath, entrypoint = isl_args
+    webview.open_isl(
+        repo_cwd=repo.root,
         port=port,
-        open_isl=open_isl,
+        no_open=not open_isl,
         json_output=json_output,
         foreground=foreground,
         force=force,
         kill=kill,
         platform=platform,
+        slcommand=util.hgcmd()[0],
+        slversion=util.version(),
+        server_cwd=server_cwd,
+        nodepath=nodepath,
+        entrypoint=entrypoint,
     )
-
-
-def launch_server(
-    ui,
-    *,
-    cwd,
-    port=DEFAULT_PORT,
-    open_isl=True,
-    json_output=False,
-    foreground=False,
-    kill=False,
-    force=False,
-    platform=None,
-):
-    isl_args, isl_cwd = get_isl_args_cwd(ui)
-    args = [
-        "--port",
-        str(port),
-        "--command",
-        util.hgcmd()[0],
-        "--cwd",
-        cwd,
-        "--sl-version",
-        util.version(),
-    ]
-    if not open_isl:
-        args.append("--no-open")
-    if json_output:
-        args.append("--json")
-    if foreground:
-        args.append("--foreground")
-    if force:
-        args.append("--force")
-    if kill:
-        args.append("--kill")
-    if platform:
-        args += ["--platform", str(platform)]
-    full_args = isl_args + args
-    ui.note_err(_("running %s\n") % (shlex.join(full_args),))
-    subprocess.call(full_args, cwd=isl_cwd)
 
 
 def untar(tar_path, dest_dir) -> Dict[str, str]:
