@@ -10,7 +10,7 @@ import type {Deferred} from 'shared/utils';
 import {useCommand} from './ISLShortcuts';
 import {Modal} from './Modal';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
-import React, {useEffect, useRef} from 'react';
+import React, {useCallback, useEffect, useRef} from 'react';
 import {atom, useRecoilState, useSetRecoilState} from 'recoil';
 import {Icon} from 'shared/Icon';
 import {defer} from 'shared/utils';
@@ -149,16 +149,19 @@ export function ModalContainer() {
 export function useModal(): <T>(config: ModalConfig<T>) => Promise<T | undefined> {
   const setModal = useSetRecoilState(modalState);
 
-  return <T,>(config: ModalConfig<T>) => {
-    const deferred = defer<T | undefined>();
-    // The API we provide is typed with T, but our recoil state only knows `unknown`, so we have to cast.
-    // This is safe because only one modal is visible at a time, so we know the data type we created it with is what we'll get back.
-    setModal({
-      config: config as ModalConfig<unknown>,
-      visible: true,
-      deferred: deferred as Deferred<unknown | undefined>,
-    });
+  return useCallback(
+    <T,>(config: ModalConfig<T>) => {
+      const deferred = defer<T | undefined>();
+      // The API we provide is typed with T, but our recoil state only knows `unknown`, so we have to cast.
+      // This is safe because only one modal is visible at a time, so we know the data type we created it with is what we'll get back.
+      setModal({
+        config: config as ModalConfig<unknown>,
+        visible: true,
+        deferred: deferred as Deferred<unknown | undefined>,
+      });
 
-    return deferred.promise as Promise<T>;
-  };
+      return deferred.promise as Promise<T>;
+    },
+    [setModal],
+  );
 }

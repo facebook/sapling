@@ -39,7 +39,9 @@ export interface Platform {
    */
   GettingStartedContent?: LazyExoticComponent<({dismiss}: {dismiss: () => void}) => JSX.Element>;
   /** Content to show as a tooltip on the bug button after going through the getting started experience */
-  GettingStartedBugNuxContent?: string;
+  GettingStartedBugNuxContent?: LazyExoticComponent<
+    ({dismiss}: {dismiss: () => void}) => JSX.Element
+  >;
 
   theme?: {
     getTheme(): ThemeColor;
