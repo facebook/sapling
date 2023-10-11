@@ -39,9 +39,13 @@ pub fn open_isl(opts: ISLSpawnOptions) -> io::Result<()> {
     }
 
     #[cfg(target_os = "macos")]
-    setup_and_spawn_app_bundle(opts)?;
+    if opts.browser.is_some() {
+        // if --browser=... is passed, use browser instead of macOS app
+        setup_and_spawn_chrome_like(opts)?;
+    } else {
+        setup_and_spawn_app_bundle(opts)?;
+    }
 
-    // TODO: check for --browser in opts to control which browser to use.
     #[cfg(not(target_os = "macos"))]
     setup_and_spawn_chrome_like(opts)?;
 
@@ -50,9 +54,7 @@ pub fn open_isl(opts: ISLSpawnOptions) -> io::Result<()> {
 
 /// Check if the isl spawn options prevent opening a webview/chromelike window.
 fn should_just_launch_server(opts: &ISLSpawnOptions) -> bool {
-    // TODO: allow --browser with no path to imply having the isl server open itself,
-    // without an app / chromelike, as a way to opt-out of the app / chromelike UI.
-    opts.no_open || opts.kill
+    opts.no_open || opts.kill || opts.no_app
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -67,7 +69,6 @@ pub struct ISLSpawnResult {
     log_file_location: String,
     cwd: String,
     command: String,
-    // TODO: browser: Option<String>,
 }
 
 #[derive(Debug, Default, Deserialize, Serialize, Clone)]
@@ -88,6 +89,13 @@ pub struct ISLSpawnOptions {
     pub server_cwd: String,
     pub nodepath: String,
     pub entrypoint: String,
+    /// None -> use native app or default chromelike,
+    /// "True" -> have node app open OS default browser tab,
+    ///  other string path -> launch that path as the browser with --app
+    pub browser: Option<String>,
+    /// If true, don't spawn the app bundle, just run the server directly and have it open an OS browser tab.
+    /// If false (default), spawn with the chromelike --app or in an OS webview application.
+    pub no_app: bool,
 }
 
 impl ISLSpawnOptions {
@@ -334,7 +342,8 @@ pub fn setup_and_spawn_chrome_like(opts: ISLSpawnOptions) -> Result<(), io::Erro
         width,
         height,
     };
-    chrome_opts.run_chrome_like(None)?;
+
+    chrome_opts.run_chrome_like(opts.browser)?;
 
     Ok(())
 }

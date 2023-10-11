@@ -56,7 +56,24 @@ DEFAULT_PORT = 3011
                 "which environment ISL is being embedded in, used to support IDE integrations (ADVANCED)"
             ),
         ),
-        # TODO: --browser to not use webview, or --browser=/path/to/chrome for --app
+        (
+            "",
+            "app",
+            True,
+            _(
+                "Use a native OS window or Chrome-like browser to open ISL in a standalone window. "
+                + "Use --no-app to use a normal browser tab instead.",
+            ),
+        ),
+        (
+            "",
+            "browser",
+            "",
+            _(
+                "Path to a specific Chrome-like browser "
+                + "to open ISL in as a standalone window (ADVANCED)"
+            ),
+        ),
     ],
 )
 def isl_cmd(ui, repo, *args, **opts):
@@ -103,6 +120,8 @@ def isl_cmd(ui, repo, *args, **opts):
     kill = opts.get("kill")
     force = opts.get("force")
     platform = opts.get("platform")
+    browser = opts.get("browser")
+    app = opts.get("app")
 
     isl_args, server_cwd = get_isl_args_cwd(ui)
     nodepath, entrypoint = isl_args
@@ -120,6 +139,8 @@ def isl_cmd(ui, repo, *args, **opts):
         server_cwd=server_cwd,
         nodepath=nodepath,
         entrypoint=entrypoint,
+        browser=None if browser == "" else browser,
+        no_app=not app,
     )
 
 

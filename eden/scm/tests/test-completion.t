@@ -593,7 +593,7 @@ Show all commands + options
   verify: rev, dag
   verifyremotefilelog: decompress
   version: template
-  web: port, json, open, foreground, kill, force, platform
+  web: port, json, open, foreground, kill, force, platform, app, browser
   whereami: 
 
   $ hg init a
