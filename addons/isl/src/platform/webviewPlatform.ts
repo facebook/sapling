@@ -62,6 +62,43 @@ function b64toFile(b64Data: string, filename: string, sliceSize = 512): File {
 
 window.islPlatform = webviewPlatform;
 
+if (navigator.platform.toLowerCase().includes('mac')) {
+  // Handle missing shortcuts & events on macOS.
+  // See https://github.com/webview/webview/issues/403
+  window.addEventListener('keypress', event => {
+    const onlyMeta = event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey;
+    if (onlyMeta && event.key === 'c') {
+      document.execCommand('copy');
+      event.preventDefault();
+    }
+    if (onlyMeta && event.key === 'v') {
+      event.preventDefault();
+      // Weirdly, this causes a small context menu popup that has the "paste" option.
+      // Clicking this does indeed do the paste, which includes support for images, etc.
+      // I can't find why it happens this way, but I assume it's related to security.
+      // I think this needs to be fixed in the webview library itself.
+      // See also https://github.com/webview/webview/issues/397, https://github.com/webview/webview/issues/403
+      document.execCommand('paste');
+    }
+    if (onlyMeta && event.key === 'x') {
+      event.preventDefault();
+      document.execCommand('cut');
+    }
+    if (onlyMeta && event.key === 'a') {
+      event.preventDefault();
+      document.execCommand('selectAll');
+    }
+    if (onlyMeta && event.key === 'z') {
+      event.preventDefault();
+      document.execCommand('undo');
+    }
+    if (event.metaKey && event.shiftKey && !event.ctrlKey && !event.altKey && event.key === 'z') {
+      event.preventDefault();
+      document.execCommand('redo');
+    }
+  });
+}
+
 /**
  * Typed commands to communicate from the frontend with the Rust app hosting the webview.
  * This should match the rust types used in webview-app.
