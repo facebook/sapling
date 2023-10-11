@@ -164,6 +164,8 @@ impl ISLSpawnOptions {
         // "true" to the node's no_open option.
         // TODO: it might be better if we move browser opening outside of node and just handle it here instead.
         opts.no_open = true;
+        // While we support --foreground for the webview, it does so by spawning the server NOT with --foreground,
+        // instead using the JSON to read the log file into the current process, and putting the webview in the foreground.
         opts.foreground = false;
         opts.kill = false;
         opts.platform = "webview".to_owned();

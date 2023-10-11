@@ -18,10 +18,19 @@ use crate::ISLSpawnOptions;
 /// Setup macOS app bundle, save the configured server settings, and spawn the application in a new process.
 #[cfg(target_os = "macos")]
 pub fn setup_and_spawn_app_bundle(opts: ISLSpawnOptions) -> anyhow::Result<()> {
+    let originally_foreground = opts.foreground;
+
     let opts = opts.replace_args_for_webview_spawn();
 
     let app = ISLAppBundle::get_or_create_app_bundle()?;
     app.write_server_args(opts)?;
+
+    if originally_foreground {
+        // Spawn the webview in this sl process directly,
+        // so we can see stdout inline and close the webview when we ctrl-c.
+        maybe_become_webview_app(true);
+        return Ok(());
+    }
     app.run_app_bundle()?;
 
     Ok(())
@@ -30,22 +39,23 @@ pub fn setup_and_spawn_app_bundle(opts: ISLSpawnOptions) -> anyhow::Result<()> {
 /// Entry point for the app bundle.
 /// Read past (or current) server args, spawn ISL server, then open the webview to that url.
 #[cfg(target_os = "macos")]
-pub fn maybe_become_webview_app() -> Option<()> {
+pub fn maybe_become_webview_app(force_foreground: bool) -> Option<()> {
     // this function is called from hgmain itself on all invocations, we need to only become the app
     // if it's being spawned by macOS as an app.
     let mut args = std::env::args();
     let arg0 = args.next()?;
-    if !arg0.ends_with(CF_BUNDLE_EXECUTABLE) {
+    if !force_foreground && !arg0.ends_with(CF_BUNDLE_EXECUTABLE) {
         return None;
     }
 
     // start the webview, and print any error it encounters
-    start_webview_app().unwrap_or_else(|e| eprintln!("error starting webview app: {}", e));
+    start_webview_app(force_foreground)
+        .unwrap_or_else(|e| eprintln!("error starting webview app: {}", e));
     Some(())
 }
 
 #[cfg(target_os = "macos")]
-fn start_webview_app() -> anyhow::Result<()> {
+fn start_webview_app(force_foreground: bool) -> anyhow::Result<()> {
     let app =
         ISLAppBundle::get_or_create_app_bundle().context("could not create ISL app bundle")?;
 
@@ -62,6 +72,17 @@ fn start_webview_app() -> anyhow::Result<()> {
     let server_output = server_options
         .spawn_isl_server_json()
         .context("could not start ISL server")?;
+
+    println!("Server output: {:?}", server_output);
+
+    if force_foreground {
+        println!("Tailing Node server output");
+        println!("--------------------------");
+        let mut cmd = Command::new("tail");
+        cmd.arg("-F");
+        cmd.arg(server_output.log_file_location);
+        let _ = cmd.spawn();
+    }
 
     // TODO: save & read these from saved server state.
     let width = 1280;
@@ -230,7 +251,7 @@ struct WebviewInvokeFile {
 extern "C" fn handle_webview_invoke(webview: *mut webview_sys::CWebView, arg: *const i8) {
     let arg = unsafe { std::ffi::CStr::from_ptr(arg).to_string_lossy().to_string() };
 
-    tracing::debug!("Webview invoked: {}", arg);
+    tracing::info!("Webview invoked: {}", arg);
 
     let message: WebviewInvokeMessage = match serde_json::from_str(&arg) {
         Err(e) => {

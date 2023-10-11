@@ -42,7 +42,7 @@ fn main() {
 
     // This code path is used by `open Sapling.app` on macOS.
     #[cfg(target_os = "macos")]
-    webview_app::maybe_become_webview_app();
+    webview_app::maybe_become_webview_app(false);
 
     let mut full_args = match dispatch::args() {
         Ok(args) => args,
