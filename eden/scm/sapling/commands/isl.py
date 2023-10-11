@@ -74,6 +74,15 @@ DEFAULT_PORT = 3011
                 + "to open ISL in as a standalone window (ADVANCED)"
             ),
         ),
+        (
+            "",
+            "dev",
+            False,
+            _(
+                "Spawn in dev mode on port 3000. ISL must have already been built from source. "
+                + " See addons/isl/README.md for more information. (ADVANCED)"
+            ),
+        ),
     ],
 )
 def isl_cmd(ui, repo, *args, **opts):
@@ -122,8 +131,9 @@ def isl_cmd(ui, repo, *args, **opts):
     platform = opts.get("platform")
     browser = opts.get("browser")
     app = opts.get("app")
+    dev = opts.get("dev")
 
-    isl_args, server_cwd = get_isl_args_cwd(ui)
+    isl_args, server_cwd = get_dev_isl_args_cwd(ui) if dev else get_isl_args_cwd(ui)
     nodepath, entrypoint = isl_args
     webview.open_isl(
         {
@@ -142,6 +152,7 @@ def isl_cmd(ui, repo, *args, **opts):
             "entrypoint": entrypoint,
             "browser": None if browser == "" else browser,
             "noApp": not app,
+            "dev": dev,
         }
     )
 
@@ -223,3 +234,11 @@ def get_isl_args_cwd(ui) -> Tuple[List[str], str]:
     node_path = find_nodejs(ui)
     entry_point = tar_metadata.get("entry_point") or "isl-server/dist/run-proxy.js"
     return [node_path, entry_point], dest_dir
+
+
+def get_dev_isl_args_cwd(ui) -> Tuple[List[str], str]:
+    node_path = find_nodejs(ui)
+    entry_point = "isl-server/dist/run-proxy.js"
+    return [node_path, entry_point], os.path.normpath(
+        os.path.join(os.path.dirname(sys.executable), "..", "addons")
+    )

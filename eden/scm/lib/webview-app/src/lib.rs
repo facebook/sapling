@@ -97,6 +97,7 @@ pub struct ISLSpawnOptions {
     /// If true, don't spawn the app bundle, just run the server directly and have it open an OS browser tab.
     /// If false (default), spawn with the chromelike --app or in an OS webview application.
     pub no_app: bool,
+    pub dev: bool,
 }
 
 impl ISLSpawnOptions {
@@ -104,7 +105,12 @@ impl ISLSpawnOptions {
         let mut cmd = Command::new(&self.nodepath);
         cmd.current_dir(&self.server_cwd);
         cmd.arg(&self.entrypoint);
-        cmd.args(["--port", &self.port.to_string()]);
+        if self.dev {
+            // dev mode overrides your port automatically
+            cmd.arg("--dev");
+        } else {
+            cmd.args(["--port", &self.port.to_string()]);
+        }
         cmd.args(["--command", &self.slcommand]);
         cmd.args(["--sl-version", &self.slversion]);
         cmd.args(["--cwd", &self.repo_cwd]);
