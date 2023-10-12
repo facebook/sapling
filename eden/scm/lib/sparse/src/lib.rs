@@ -245,6 +245,7 @@ impl Profile {
         let mut current_metadata_val: Option<&mut String> = None;
         let mut section_type = SectionType::Include;
         let mut dynamic_source: Option<String> = None;
+        let mut dummy_metadata_value: Option<String> = None;
 
         for (mut line_num, line) in BufReader::new(data.as_ref()).lines().enumerate() {
             line_num += 1;
@@ -304,8 +305,11 @@ impl Profile {
                             "hidden" => &mut prof.hidden,
                             "version" => &mut prof.version,
                             _ => {
-                                tracing::warn!(%line, %source, line_num, "ignoring uninteresting metadata key");
-                                continue;
+                                tracing::info!(%line, %source, line_num, "ignoring uninteresting metadata key");
+                                // Use a dummy value to maintain parser state (i.e. avoid
+                                // "orphan metadata line" warning).
+                                dummy_metadata_value.take();
+                                &mut dummy_metadata_value
                             }
                         };
 

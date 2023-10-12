@@ -2,6 +2,8 @@
 
 test sparse
 
+  $ export LOG=sparse=warn
+
   $ configure modernclient
   $ enable sparse rebase
   $ newclientrepo
@@ -102,6 +104,7 @@ Verify error checking includes filename and line numbers
   $ hg add broken.sparse
   $ hg ci -m 'Adding a broken file'
   $ hg sparse enableprofile broken.sparse
+   WARN sparse: ignoring sparse rule starting with / line=/absolute/paths/are/ignored source=broken.sparse line_num=4
   $ hg -q debugstrip . --no-backup 2>/dev/null
 
 Verify that a profile is updated across multiple commits
@@ -813,13 +816,17 @@ current working copy:
   
   warning: sparse profile [metadata] section indented lines that do not belong to a multi-line entry, ignoring, in profiles/foo/errors:2
   warning: sparse profile [metadata] section does not appear to have a valid option definition, ignoring, in profiles/foo/errors:3
+   WARN sparse: orphan metadata line line=  indented line but no current key active source=profiles/foo/errors line_num=2
      profiles/bar/ham  An extended profile including some interesting files
+   WARN sparse: orphan metadata line line=  indented line but no current key active source=profiles/foo/errors line_num=2
   $ hg sparse list --contains-file interesting/later_revision -r .
   Available Profiles:
   
   warning: sparse profile [metadata] section indented lines that do not belong to a multi-line entry, ignoring, in profiles/foo/errors:2
   warning: sparse profile [metadata] section does not appear to have a valid option definition, ignoring, in profiles/foo/errors:3
+   WARN sparse: orphan metadata line line=  indented line but no current key active source=profiles/foo/errors line_num=2
      profiles/bar/ham  An extended profile including some interesting files
+   WARN sparse: orphan metadata line line=  indented line but no current key active source=profiles/foo/errors line_num=2
   $ hg up -q ".^"
 
 We can list the files in a profile with the hg sparse files command:
