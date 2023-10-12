@@ -20,6 +20,7 @@ import {unwrap} from 'shared/utils';
 import * as vscode from 'vscode';
 
 let islPanelOrView: vscode.WebviewPanel | vscode.WebviewView | undefined = undefined;
+let hasOpenedISLWebviewBeforeState = false;
 
 const viewType = 'sapling.isl';
 
@@ -57,6 +58,10 @@ function getWebviewOptions(
 
 function shouldUseWebviewView(): boolean {
   return vscode.workspace.getConfiguration('sapling.isl').get<boolean>('showInSidebar') ?? false;
+}
+
+export function hasOpenedISLWebviewBefore() {
+  return hasOpenedISLWebviewBeforeState;
 }
 
 export function registerISLCommands(
@@ -150,6 +155,7 @@ function populateAndSetISLWebview<W extends vscode.WebviewPanel | vscode.Webview
   logger: Logger,
 ): W {
   logger.info(`Populating ISL webview ${isPanel(panelOrView) ? 'panel' : 'view'}`);
+  hasOpenedISLWebviewBeforeState = true;
   if (isPanel(panelOrView)) {
     islPanelOrView = panelOrView;
     panelOrView.iconPath = vscode.Uri.joinPath(
