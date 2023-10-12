@@ -9,6 +9,8 @@
 
 use std::cell::Cell;
 use std::cell::RefCell;
+use std::io::Seek;
+use std::io::Write;
 
 use cpython::*;
 use cpython_ext::wrap_rust_write;
@@ -21,6 +23,7 @@ use pyconfigloader::config as PyConfig;
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "io"].join(".");
     let m = PyModule::new(py, &name)?;
+    m.add_class::<BufIO>(py)?;
     m.add_class::<IO>(py)?;
     m.add_class::<styler>(py)?;
     m.add(
@@ -178,6 +181,139 @@ fn should_color(py: Python, config: PyConfig) -> PyResult<bool> {
         config,
         &RustIO::main().map_pyerr(py)?.output(),
     ))
+}
+
+// Implements io.BinaryIO w/ a few additions to quack like io.BytesIO.
+py_class!(pub class BufIO |py| {
+    data buf: RefCell<io::BufIO>;
+
+    def __new__(_cls, data: Option<PyBytes> = None) -> PyResult<BufIO> {
+        Self::create_instance(
+            py,
+            RefCell::new(io::BufIO::with_content(data.map(|d| d.data(py).to_vec()).unwrap_or_default())),
+        )
+    }
+
+    def read(&self, size: i64 = -1) -> PyResult<PyBytes> {
+        let mut ret = Vec::new();
+        self.buf(py).borrow().read_until(&mut ret, |so_far, is_eof| {
+            is_eof || size >= 0 && so_far.len() >= size as usize
+        }).map_pyerr(py)?;
+        Ok(PyBytes::new(py, &ret))
+    }
+
+    def write(&self, bytes: PyBytes) -> PyResult<PyNone> {
+        self.buf(py).borrow_mut().write_all(bytes.data(py)).map_pyerr(py)?;
+        Ok(PyNone)
+    }
+
+    def flush(&self) -> PyResult<PyNone> {
+        Ok(PyNone)
+    }
+
+    // io.BytesIO supports this - maybe we will need it, too.
+    def close(&self) -> PyResult<PyNone> {
+        Ok(PyNone)
+    }
+
+    def isatty(&self) -> PyResult<bool> {
+        Ok(false)
+    }
+
+    def readline(&self, size: i64 = -1) -> PyResult<PyBytes> {
+        let mut ret = Vec::new();
+        self.buf(py).borrow().read_until(&mut ret, |so_far, is_eof| {
+            is_eof || so_far.last() == Some(&b'\n') || (size >= 0 && so_far.len() >= size as usize)
+        }).map_pyerr(py)?;
+        Ok(PyBytes::new(py, &ret))
+    }
+
+    def readlines(&self, hint: i64 = -1) -> PyResult<Vec<PyBytes>> {
+        let mut ret = Vec::new();
+        self.buf(py).borrow().read_until(&mut ret, |so_far, is_eof| {
+            is_eof || (so_far.last() == Some(&b'\n') && hint > 0 && so_far.len() >= hint as usize)
+        }).map_pyerr(py)?;
+        Ok(ret.split_inclusive(|b| *b == b'\n').map(|s| PyBytes::new(py, s)).collect())
+    }
+
+    def seek(&self, offset: i64, whence: i8 = 0) -> PyResult<u64> {
+        // Python has some limitations on its "seek" API, but we don't reproduce them here.
+        self.buf(py).borrow_mut().seek(match whence {
+            0 => std::io::SeekFrom::Start(offset.try_into().map_pyerr(py)?),
+            1 => std::io::SeekFrom::Current(offset),
+            2 => std::io::SeekFrom::End(offset),
+            _ => panic!("bad whence: {}", whence),
+        }).map_pyerr(py)
+    }
+
+    def seekable(&self) -> PyResult<bool> {
+        Ok(true)
+    }
+
+    def tell(&self) -> PyResult<u64> {
+        Ok(self.buf(py).borrow().position())
+    }
+
+    def writelines(&self, lines: Vec<PyBytes>) -> PyResult<PyNone> {
+        let mut buf = self.buf(py).borrow_mut();
+        for l in lines {
+            buf.write_all(l.data(py)).map_pyerr(py)?;
+        }
+        Ok(PyNone)
+    }
+
+    def truncate(&self, size: Option<usize> = None) -> PyResult<u64> {
+        Ok(self.buf(py).borrow().truncate(size) as u64)
+    }
+
+    def readable(&self) -> PyResult<bool> {
+        Ok(true)
+    }
+
+    def writable(&self) -> PyResult<bool> {
+        Ok(true)
+    }
+
+    def getbuffer(&self) -> PyResult<bool> {
+        // This provides a writable view of the byte buffer, which
+        // hopefully we won't need to support.
+        unimplemented!("getbuffer() not supported by BufIO");
+    }
+
+    def getvalue(&self) -> PyResult<PyBytes> {
+        Ok(PyBytes::new(py, &self.buf(py).borrow().to_vec()))
+    }
+
+    def __iter__(&self) -> PyResult<Self> {
+        Ok(self.clone_ref(py))
+    }
+
+    def __next__(&self) -> PyResult<Option<PyBytes>> {
+        let line = self.readline(py, -1)?;
+        if line.data(py).is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(line))
+        }
+    }
+
+    def __enter__(&self) -> PyResult<PyObject> {
+        Ok(self.clone_ref(py).into_object())
+    }
+
+    def __exit__(&self, _ty: Option<PyType>, _value: PyObject, _traceback: PyObject) -> PyResult<bool> {
+        Ok(false)
+    }
+
+    def fileno(&self) -> PyResult<u64> {
+        Err(PyErr::from_instance(py, py.import("io")?.get(py, "UnsupportedOperation")?))
+    }
+});
+
+impl BufIO {
+    pub fn to_rust(&self, py: Python) -> io::BufIO {
+        self.buf(py).borrow().clone()
+    }
 }
 
 /// Wrap a PyObject into a Rust object that implements Rust Read / Write traits.
