@@ -212,7 +212,6 @@ cpp_library(
         "//folly/container:f14_hash",
         "//folly/experimental:string_keyed_unordered_map",
         "//folly/futures:core",
-        "//folly/futures:shared_promise",
         "//folly/logging:logging",
         "//folly/synchronization:distributed_mutex",
     ],

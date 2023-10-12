@@ -9,7 +9,6 @@
 
 #include <folly/Synchronized.h>
 #include <folly/container/EvictingCacheMap.h>
-#include <folly/futures/SharedPromise.h>
 #include <memory>
 #include <unordered_map>
 
@@ -338,12 +337,6 @@ class ObjectStore : public IObjectStore,
    * approach the size limit of the cache.)
    */
   const std::shared_ptr<TreeCache> treeCache_;
-
-  // TODO: shard this for lower contention
-  mutable std::shared_ptr<folly::Synchronized<std::unordered_map<
-      ObjectId,
-      folly::SharedPromise<BackingStore::GetTreeResult>>>>
-      inflightTreeGet_;
 
   /*
    * The BackingStore.
