@@ -99,8 +99,7 @@ Set some env vars that will be used frequently
 Run the tool without passing the old name as an export path
 
   $ gitexport --log-level WARN --repo-name "repo" -B "master" -p "$EXPORT_DIR" --source-graph-output "$SOURCE_GRAPH_OUTPUT" --partial-graph-output "$PARTIAL_GRAPH_OUTPUT" --distance-limit 30
-  *] Changeset ChangesetId(Blake2(6fc3f51f797aecf2a419fb70362d7da614bf5a7c1fc7ca067af0bdccff817493)) might have created one of the exported paths by moving/copying files from a previous commit that will not be exported (id ChangesetId(Blake2(659ed19d0148b13710d4d466e39a5d86d52e6dabfe3becd8dbfb7e02fe327abc))). (glob)
-  *] Changeset ChangesetId(Blake2(6f2bbddd552711fd6a7eab98b1e9b0ca8a6fbb3fb5c39de68b788fa79458e152)) might have created one of the exported paths by moving/copying files from a previous commit that will not be exported (id ChangesetId(Blake2(6fc3f51f797aecf2a419fb70362d7da614bf5a7c1fc7ca067af0bdccff817493))). (glob)
+  *] Changeset 6fc3f51f797aecf2a419fb70362d7da614bf5a7c1fc7ca067af0bdccff817493 might have created the exported path export_dir by moving/copying files from a commit that might not be exported (id 659ed19d0148b13710d4d466e39a5d86d52e6dabfe3becd8dbfb7e02fe327abc). (glob)
 
   $ diff --old-line-format="- %L" --new-line-format="+ %L" "$SOURCE_GRAPH_OUTPUT" "$PARTIAL_GRAPH_OUTPUT"
   - o  message: Add file to repo root

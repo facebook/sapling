@@ -55,8 +55,8 @@ Set some env vars that will be used frequently
 Run the tool without passing the old name as an export path
 
   $ gitexport --log-level WARN --repo-name "repo" -B "master" -p "bar" -p "foo" --source-graph-output "$SOURCE_GRAPH_OUTPUT" --partial-graph-output "$PARTIAL_GRAPH_OUTPUT"
-  *] Changeset ChangesetId(Blake2(4aefc65541bed48aa05912520e72886dc187846900552521fd609684b13bac29)) might have created one of the exported paths by moving/copying files from a previous commit that will not be exported (id ChangesetId(Blake2(4611de5cc4c4aebb12fe004b72e4bfb4fe3f6f92ecf4e7e13101aa21ee63f376))). (glob)
-  *] Changeset ChangesetId(Blake2(3d2e1991a96782483be8a1437ad4e38849152d097c39cc4ec1bfdb5c371b7c79)) might have created one of the exported paths by moving/copying files from a previous commit that will not be exported (id ChangesetId(Blake2(fe89c567605a899a5e59edf16eec50e70085fb989e5c799701285436c723fb0f))). (glob)
+  *] Changeset 4aefc65541bed48aa05912520e72886dc187846900552521fd609684b13bac29 might have created the exported path bar by moving/copying files from a commit that might not be exported (id 4611de5cc4c4aebb12fe004b72e4bfb4fe3f6f92ecf4e7e13101aa21ee63f376). (glob)
+  *] Changeset 3d2e1991a96782483be8a1437ad4e38849152d097c39cc4ec1bfdb5c371b7c79 might have created the exported path foo by moving/copying files from a commit that might not be exported (id fe89c567605a899a5e59edf16eec50e70085fb989e5c799701285436c723fb0f). (glob)
 
 
   $ diff --old-line-format="- %L" --new-line-format="+ %L" "$SOURCE_GRAPH_OUTPUT" "$PARTIAL_GRAPH_OUTPUT"

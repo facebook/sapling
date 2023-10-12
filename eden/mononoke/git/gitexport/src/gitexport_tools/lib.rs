@@ -7,6 +7,7 @@
 
 mod partial_commit_graph;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::env;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -95,10 +96,20 @@ pub async fn rewrite_partial_changesets(
         None
     };
 
-    let (new_bonsai_changesets, _) = stream::iter(cs_results)
+    // Commits are copied from oldest to newest. In the situation where an
+    // export paths is created by copying a file from a non-export path, we
+    // print a warning to the user informing the path being created, the commit
+    // creating it and the commit from which the file is being copied.
+    //
+    // This set keeps track of the paths that haven't yet had a warning printed
+    // for their creation during the rewrite of the commits.
+    let all_export_paths: HashSet<NonRootMPath> =
+        export_paths.iter().cloned().map(|p| p.0).collect();
+
+    let (new_bonsai_changesets, _, _) = stream::iter(cs_results)
         .try_fold(
-            (Vec::new(), HashMap::new()),
-            |(mut new_bonsai_changesets, remapped_parents), changeset| {
+            (Vec::new(), HashMap::new(), all_export_paths),
+            |(mut new_bonsai_changesets, remapped_parents, export_paths_not_created), changeset| {
                 borrowed!(source_repo_ctx);
                 borrowed!(mb_progress_bar);
                 borrowed!(export_paths);
@@ -109,20 +120,26 @@ pub async fn rewrite_partial_changesets(
                         get_export_paths_for_changeset(&changeset, export_paths).await?;
 
                     let multi_mover = build_multi_mover_for_changeset(logger, &export_paths)?;
-                    let (new_bcs, remapped_parents) = create_bonsai_for_new_repo(
-                        source_repo_ctx,
-                        multi_mover,
-                        changeset_parents,
-                        remapped_parents,
-                        changeset,
-                        &export_paths,
-                    )
-                    .await?;
+                    let (new_bcs, remapped_parents, export_paths_not_created) =
+                        create_bonsai_for_new_repo(
+                            source_repo_ctx,
+                            multi_mover,
+                            changeset_parents,
+                            remapped_parents,
+                            changeset,
+                            &export_paths,
+                            export_paths_not_created,
+                        )
+                        .await?;
                     new_bonsai_changesets.push(new_bcs);
                     if let Some(progress_bar) = mb_progress_bar {
                         progress_bar.inc(1);
                     }
-                    Ok((new_bonsai_changesets, remapped_parents))
+                    Ok((
+                        new_bonsai_changesets,
+                        remapped_parents,
+                        export_paths_not_created,
+                    ))
                 }
             },
         )
@@ -170,7 +187,15 @@ async fn create_bonsai_for_new_repo<'a>(
     mut remapped_parents: HashMap<ChangesetId, ChangesetId>,
     changeset_ctx: ChangesetContext,
     export_paths: &'a [&'a NonRootMPath],
-) -> Result<(BonsaiChangeset, HashMap<ChangesetId, ChangesetId>), MononokeError> {
+    mut export_paths_not_created: HashSet<NonRootMPath>,
+) -> Result<
+    (
+        BonsaiChangeset,
+        HashMap<ChangesetId, ChangesetId>,
+        HashSet<NonRootMPath>,
+    ),
+    MononokeError,
+> {
     let logger = changeset_ctx.repo().ctx().logger();
     trace!(
         logger,
@@ -200,14 +225,7 @@ async fn create_bonsai_for_new_repo<'a>(
     let mut mut_bcs = bcs.into_mut();
     mut_bcs.parents = orig_parent_ids.clone();
 
-    // If this changeset created an export directory by copying/moving files
-    // from a directory that's not being exported, we only need to print a
-    // warning once and not for every single file that was copied.
-    let mut printed_warning_about_copy = false;
-
-    // TODO(T161204758): iterate over all parents and select one that is the closest
-    // ancestor of each commit in the `copy_from` field.
-    mut_bcs.file_changes.iter_mut().for_each(|(_p, fc)| {
+    mut_bcs.file_changes.iter_mut().for_each(|(new_path, fc)| {
         if let FileChange::Change(tracked_fc) = fc {
             // If any FileChange copies a file from a previous revision (e.g. a parent),
             // set the `copy_from` field to point to its new parent.
@@ -231,31 +249,59 @@ async fn create_bonsai_for_new_repo<'a>(
                 // aware that files in an export directory might have been
                 // copied/moved from another one.
                 let old_path = &*old_path; // We need an immutable reference for prefix checks
-                let should_export = export_paths.iter().any(|p| p.is_prefix_of(old_path));
+
+                // This is copying from a path that's being exported, so we can
+                // reference the new parent in the `copy_from` field.
+                let is_old_path_exported = export_paths.iter().any(|p| p.is_prefix_of(old_path));
                 let new_parent_cs_id = orig_parent_ids.first();
-                if new_parent_cs_id.is_some() && should_export {
+
+                if new_parent_cs_id.is_some() && is_old_path_exported {
                     *copy_from_cs_id = new_parent_cs_id.cloned().unwrap();
                 } else {
-                    // First commit where the export paths were created.
-                    // If the `copy_from` field is set, it means that some files
-                    // were copied from other directories, which might not be
-                    // included in the provided export paths.
+                    // In this case, the `copy_from` reference will be dropped,
+                    // because (a) the file being created is not being exported
+                    // or (b) the file being copied is creating an export path,
+                    // so we can't reference previous commits because the path
+                    // won't be there.
                     //
-                    // By default, these renames won't be followed, but a warning
-                    // will be printed so that the user can check the commit
-                    // and decide if they want to re-run it passing the old
-                    // name as an export path along with this commit as the
-                    // head changeset.
-                    if !printed_warning_about_copy {
+                    // Scenario (a) is irrelevant, but in scenario (b), we print
+                    // a warning to the user for every export path being created
+                    // so that they can re-run gitexport passing extra paths
+                    // if they want to follow the history.
+
+                    // Check if the file being copied is creating any export
+                    // path.
+                    let created_export_paths = export_paths_not_created
+                        .iter()
+                        .filter(|p| p.is_prefix_of(new_path))
+                        .cloned()
+                        .collect::<Vec<_>>();
+                    // Remove the paths from the `export_paths_not_created` set.
+                    let created_export_paths = created_export_paths
+                        .iter()
+                        .map(|p| export_paths_not_created.take(p).unwrap())
+                        .collect::<Vec<_>>();
+
+                    for exp_p in created_export_paths {
+                        // By default, these renames won't be followed, but a warning
+                        // will be printed so that the user can check the commit
+                        // and decide if they want to re-run it passing the old
+                        // name as an export path along with this commit as the
+                        // head changeset.
                         warn!(
                             logger,
-                            "Changeset {0:?} might have created one of the exported paths by moving/copying files from a previous commit that will not be exported (id {1:?}).",
+                            concat!(
+                                "Changeset {} might have created the exported path {} by ",
+                                "moving/copying files from a commit that might not be",
+                                " exported (id {})."
+                            ),
                             changeset_ctx.id(),
+                            exp_p,
                             copy_from_cs_id
                         );
-                        printed_warning_about_copy =  true;
-                    };
-                    *tracked_fc =  tracked_fc.with_new_copy_from(None);
+                    }
+
+                    *tracked_fc = tracked_fc.with_new_copy_from(None);
                 };
             };
         };
@@ -283,7 +329,7 @@ async fn create_bonsai_for_new_repo<'a>(
     // its new id when moved.
     remapped_parents.insert(changeset_ctx.id(), rewritten_bcs.get_changeset_id());
 
-    Ok((rewritten_bcs, remapped_parents))
+    Ok((rewritten_bcs, remapped_parents, export_paths_not_created))
 }
 
 /// Builds a vector of references to the paths that should be exported when
