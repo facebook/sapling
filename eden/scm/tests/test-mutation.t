@@ -1328,7 +1328,7 @@ hack until we write an indexed changelog that lets us do the successor lookup fo
 commit cheaply.  Normally the pullcreatemarkers and pushrebase extensions will do this
 for us, but for this test we do it manually.
 
-  $ hg debugsh --hidden -c "with repo.lock(): e.mutation.recordentries(repo, [e.mutation.createsyntheticentry(repo, [repo[\"$C\"].node()], repo[\"$X\"].node(), \"land\")], skipexisting=False)"
+  $ hg debugsh --hidden -c "with repo.lock(): s.mutation.recordentries(repo, [s.mutation.createsyntheticentry(repo, [repo[\"$C\"].node()], repo[\"$X\"].node(), \"land\")], skipexisting=False)"
   $ hg log -G -r "all()" -T "{desc} {mutation_descs}\n"
   o  X
   │
@@ -1369,4 +1369,3 @@ Test debugmutation filtering of mutation info by date
       d11277f4e35fa8d09d6dd33e727e33c8c7c2d259 amend by test at 1970-08-04T00:00:00 into:
       52a4ae3f992f2c080f8bf1f141da0f6ab9df153d ...
   
-

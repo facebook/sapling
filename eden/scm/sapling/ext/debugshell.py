@@ -35,7 +35,7 @@ def _assignobjects(objects, repo) -> None:
         {
             # Shortcuts
             "b": bindings,
-            "e": sapling,
+            "s": sapling,
             "x": ext,
             "td": bindings.tracing.tracingdata,
             # Modules
@@ -124,7 +124,7 @@ def _startipython(ui, repo, env) -> None:
         sapling.__path__ and sapling.__path__[0],
     ) + (
         "\n\nAvailable variables:\n"
-        " e:  sapling\n"
+        " s:  sapling\n"
         " x:  sapling.ext\n"
         " b:  bindings\n"
         " ui: the ui object\n"
