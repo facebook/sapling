@@ -194,6 +194,13 @@ py_class!(pub class BufIO |py| {
         )
     }
 
+    @classmethod def devnull(_cls) -> PyResult<BufIO> {
+        Self::create_instance(
+            py,
+            RefCell::new(io::BufIO::dev_null()),
+        )
+    }
+
     def read(&self, size: i64 = -1) -> PyResult<PyBytes> {
         let mut ret = Vec::new();
         self.buf(py).borrow().read_until(&mut ret, |so_far, is_eof| {

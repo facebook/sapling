@@ -15,6 +15,7 @@ use parking_lot::Mutex;
 #[derive(Clone)]
 pub struct BufIO {
     buf: Arc<Mutex<std::io::Cursor<Vec<u8>>>>,
+    dev_null: bool,
 }
 
 impl BufIO {
@@ -22,7 +23,14 @@ impl BufIO {
     pub fn with_content(content: Vec<u8>) -> Self {
         Self {
             buf: Arc::new(Mutex::new(std::io::Cursor::new(content))),
+            dev_null: false,
         }
+    }
+
+    pub fn dev_null() -> Self {
+        let mut buf = Self::with_content(Vec::new());
+        buf.dev_null = true;
+        buf
     }
 
     /// Current read position.
@@ -86,6 +94,10 @@ impl std::io::Read for BufIO {
 
 impl std::io::Write for BufIO {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        if self.dev_null {
+            return Ok(buf.len());
+        }
+
         self.buf.lock().write(buf)
     }
 
@@ -193,6 +205,17 @@ mod test {
 
         assert!(buf.read_until(&mut got, |_so_far, _is_eof| false).is_err());
         assert_eq!(got, b"hello");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_io_buf_dev_null() -> std::io::Result<()> {
+        let mut buf = BufIO::dev_null();
+
+        assert_eq!(buf.write(b"hello")?, 5);
+        assert_eq!(buf.position(), 0);
+        assert!(buf.to_vec().is_empty());
 
         Ok(())
     }
