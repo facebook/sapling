@@ -6,9 +6,9 @@
 #include <string.h>
 
 #ifdef PDC_WIDE
-# include "../common/acsuni.h"
+# include "common/acsuni.h"
 #else
-# include "../common/acs437.h"
+# include "common/acs437.h"
 #endif
 
 DWORD pdc_last_blink;

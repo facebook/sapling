@@ -1,0 +1,33 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mercurial_release")
+
+cpp_library(
+    name = "windows-curses",
+    srcs = glob(["**/*.c"]),
+    headers = glob(["**/*.h"]),
+    compatible_with = ["ovr_config//os:windows"],
+    include_paths = [
+        ".",
+        "PDCurses",
+    ],
+    preprocessor_flags = [
+        "-DPDC_WIDE",
+        "-DHAVE_NCURSESW",
+        "-DHAVE_TERM_H",
+        "-DHAVE_CURSES_RESIZE_TERM",
+        "-DHAVE_CURSES_TYPEAHEAD",
+        "-DHAVE_CURSES_HAS_KEY",
+        "-DHAVE_CURSES_FILTER",
+        "-DHAVE_CURSES_WCHGAT",
+        "-DHAVE_CURSES_USE_ENV",
+        "-DHAVE_CURSES_IMMEDOK",
+        "-DHAVE_CURSES_SYNCOK",
+        "-DWINDOW_HAS_FLAGS",
+        "-D_ISPAD=0x10",
+    ],
+    deps = [
+        "fbsource//third-party/python:python",
+    ],
+)
