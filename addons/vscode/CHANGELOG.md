@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.1.28
+
+### Oct 12 2023
+
+- Correct files appear in commit info while `commit` is running
+- Added a slight background color to icon buttons, to distinguish them from just text
+- Add a button to open the Split UI next to the current commit
+- Make the uncommit button less noticeable
+- Fix file names overflowing in the comparison view and split view
+- Add buttons to expand/collapse all files in the comparison view
+- Add a "compact" mode config option. This makes commits not wrap onto multiple lines as early, which increases the density of commits visible at the same time.
+- Remove language setting, since it we don't yet have any other translations.
+- Improvements to file chunk selection UX
+- Fix discarding subsets of files not actually deleting them from disk
+
 ## 0.1.27
 
 ### Sep 22 2023
