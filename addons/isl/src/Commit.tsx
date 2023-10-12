@@ -44,6 +44,7 @@ import {
   useRunPreviewedOperation,
 } from './serverAPIState';
 import {useConfirmUnsavedEditsBeforeSplit} from './stackEdit/ui/ConfirmUnsavedEditsBeforeSplit';
+import {SplitButton} from './stackEdit/ui/SplitButton';
 import {editingStackIntentionHashes} from './stackEdit/ui/stackEditState';
 import {short} from './utils';
 import {VSCodeButton, VSCodeTag} from '@vscode/webview-ui-toolkit/react';
@@ -267,6 +268,9 @@ export const Commit = memo(
     }
     if (!isPublic && !actionsPrevented && commit.isHead) {
       commitActions.push(<UncommitButton key="uncommit" />);
+    }
+    if (!isPublic && !actionsPrevented && commit.isHead) {
+      commitActions.push(<SplitButton key="split" commit={commit} />);
     }
 
     return (

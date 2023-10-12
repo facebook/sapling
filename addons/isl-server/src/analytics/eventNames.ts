@@ -71,6 +71,7 @@ export type TrackEventName =
   | 'StackEditChangeTab'
   | 'StackEditInlineSplitButton'
   | 'SplitOpenFromCommitContextMenu'
+  | 'SplitOpenFromHeadCommit'
   | 'SplitOpenRangeSelector'
   | 'SyncDiffMessageMutation'
   | 'ConfirmSyncNewDiffNumber'
