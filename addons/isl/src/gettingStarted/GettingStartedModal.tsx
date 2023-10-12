@@ -69,7 +69,7 @@ function DismissableGettingStartedModal() {
   }
 
   return (
-    <Modal className="getting-started-modal">
+    <Modal className="getting-started-modal" maxHeight={'90vh'}>
       <Suspense fallback={<Icon icon="loading" />}>
         <ContentComponent dismiss={() => setVisible(false)} />
       </Suspense>
