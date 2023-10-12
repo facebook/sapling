@@ -37,13 +37,6 @@ import tempfile
 import time
 import zipfile
 
-PY_VERSION = os.environ.get("PY_VERSION")
-if PY_VERSION is None:
-    if os.name == "nt":
-        PY_VERSION = "39"
-    else:
-        PY_VERSION = "38"
-
 ossbuild = bool(os.environ.get("SAPLING_OSS_BUILD"))
 
 # If this is set, then skip downloading third-party dependencies
@@ -75,6 +68,8 @@ def ensureenv():
 
 
 ensureenv()
+
+PY_VERSION = "%s%s" % sys.version_info[:2]
 
 # rust-cpython uses this to collect Python information
 os.environ["PYTHON_SYS_EXECUTABLE"] = sys.executable
@@ -1033,7 +1028,9 @@ def distutils_dir_name(dname):
     else:
         f = "{dirname}.{platform}-{version}"
     return f.format(
-        dirname=dname, platform=distutils.util.get_platform(), version=sys.version[:3]
+        dirname=dname,
+        platform=distutils.util.get_platform(),
+        version=("%s.%s" % sys.version_info[:2]),
     )
 
 
