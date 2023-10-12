@@ -15,14 +15,11 @@ use clidispatch::fallback;
 use clidispatch::ReqCtx;
 use cliparser::define_flags;
 use configloader::configmodel::ConfigExt;
-use pathmatcher::AlwaysMatcher;
-use pathmatcher::DynMatcher;
 use print::PrintConfig;
 use print::PrintConfigStatusTypes;
 use repo::repo::Repo;
 use status::needs_morestatus_extension;
 use types::path::RepoPathRelativizer;
-use types::RepoPathBuf;
 use workingcopy::workingcopy::WorkingCopy;
 
 use super::get_formatter;
@@ -129,48 +126,29 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
     let cwd = std::env::current_dir()?;
     let mut lgr = ctx.logger();
 
-    let always_matches = (ctx.opts.args.is_empty()
-        || (ctx.opts.args.len() == 1 && ctx.opts.args[0] == "re:."))
-        && ctx.opts.walk_opts.include.is_empty()
-        && ctx.opts.walk_opts.exclude.is_empty();
-
-    let mut matcher_files: Vec<RepoPathBuf> = Vec::new();
-
-    let matcher: DynMatcher = if repo
-        .config()
-        .get_or_default("experimental", "rustmatcher")?
-    {
-        match pathmatcher::cli_matcher(
-            &ctx.opts.args,
-            &ctx.opts.walk_opts.include,
-            &ctx.opts.walk_opts.exclude,
-            pathmatcher::PatternKind::RelPath,
-            wc.vfs().case_sensitive(),
-            wc.vfs().root(),
-            &cwd,
-        ) {
-            Ok(matcher) => {
-                matcher_files = matcher.exact_files().to_vec();
-
-                for warning in matcher.warnings() {
-                    lgr.warn(format!("warning: {}", warning));
-                }
-
-                Arc::new(matcher)
+    let matcher = match pathmatcher::cli_matcher(
+        &ctx.opts.args,
+        &ctx.opts.walk_opts.include,
+        &ctx.opts.walk_opts.exclude,
+        pathmatcher::PatternKind::RelPath,
+        wc.vfs().case_sensitive(),
+        wc.vfs().root(),
+        &cwd,
+    ) {
+        Ok(matcher) => {
+            for warning in matcher.warnings() {
+                lgr.warn(format!("warning: {}", warning));
             }
-            Err(err) => match err.downcast_ref::<pathmatcher::Error>() {
-                Some(pathmatcher::Error::UnsupportedPatternKind(_)) => {
-                    tracing::debug!(target: "status_info", status_detail="unsupported_pattern");
-                    fallback!("unsupported pattern");
-                }
-                _ => return Err(err),
-            },
+
+            Arc::new(matcher)
         }
-    } else if always_matches {
-        Arc::new(AlwaysMatcher::new())
-    } else {
-        tracing::debug!(target: "status_info", status_detail="needs_matcher");
-        fallback!("needs matcher");
+        Err(err) => match err.downcast_ref::<pathmatcher::Error>() {
+            Some(pathmatcher::Error::UnsupportedPatternKind(_)) => {
+                tracing::debug!(target: "status_info", status_detail="unsupported_pattern");
+                fallback!("unsupported pattern");
+            }
+            _ => return Err(err),
+        },
     };
 
     let StatusOpts {
@@ -232,7 +210,7 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
     // This should be passed the "full" matcher including
     // ignores, sparse, etc., but in practice probably doesn't
     // make a difference.
-    let copymap = wc.copymap(matcher)?.into_iter().collect();
+    let copymap = wc.copymap(matcher.clone())?.into_iter().collect();
 
     let relativizer = RepoPathRelativizer::new(cwd, repo.path());
     let formatter = get_formatter(
@@ -256,7 +234,7 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
     }
 
     // Give the user warnings if explicitly specified files are "bad".
-    for file in &matcher_files {
+    for file in matcher.exact_files() {
         match wc.vfs().metadata(file) {
             Ok(fs_meta) => {
                 // Warn about invalid file type (but only if we didn't already warn).
