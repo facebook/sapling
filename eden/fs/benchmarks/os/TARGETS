@@ -1,0 +1,14 @@
+load("@fbcode_macros//build_defs:cpp_benchmark.bzl", "cpp_benchmark")
+
+oncall("scm_client_infra")
+
+cpp_benchmark(
+    name = "os",
+    srcs = glob(["*.cpp"]),
+    deps = [
+        "//eden/common/os:os",
+        "//eden/common/utils/benchharness:benchharness",
+        "//folly:try",
+        "//folly/system:pid",
+    ],
+)

@@ -1,0 +1,31 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "metalog",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    test_deps = [
+        "fbsource//third-party/rust:parking_lot",
+        "fbsource//third-party/rust:quickcheck",
+        "fbsource//third-party/rust:rand_chacha",
+        "fbsource//third-party/rust:rand_core",
+        "fbsource//third-party/rust:tempfile",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:hex",
+        "fbsource//third-party/rust:lazy_static",
+        "fbsource//third-party/rust:parking_lot",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:serde_json",
+        "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/indexedlog:indexedlog",
+        "//eden/scm/lib/mincode:mincode",
+        "//eden/scm/lib/minibytes:minibytes",
+        "//eden/scm/lib/types:types",
+        "//eden/scm/lib/zstore:zstore",
+    ],
+)

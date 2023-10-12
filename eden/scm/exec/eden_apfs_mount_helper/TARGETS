@@ -1,0 +1,64 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+rust_binary(
+    name = "eden_apfs_mount_helper",
+    srcs = glob([
+        "src/*.rs",
+        "src/facebook/*.rs",
+    ]),
+    features = [
+        "fb",
+    ],
+    os_deps = [(
+        "macos",
+        ["fbsource//third-party/rust:serde"],
+    )],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:libc",
+        "fbsource//third-party/rust:once_cell",
+        "fbsource//third-party/rust:serde_json",
+        "fbsource//third-party/rust:structopt",
+        ":eden_apfs",
+    ],
+)
+
+rust_library(
+    name = "eden_apfs",
+    srcs = glob(["src/eden_apfs/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "features": {
+                "fb": [],
+            },
+            "package": {
+                "authors": [
+                    "Wez Furlong",
+                    "Mark Shroyer",
+                ],
+                "name": "eden_apfs_mount_helper",
+            },
+        },
+    },
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    crate_root = "src/eden_apfs/eden_apfs.rs",
+    features = [
+        "fb",
+    ],
+    test_deps = [
+        "fbsource//third-party/rust:pretty_assertions",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:libc",
+        "fbsource//third-party/rust:plist",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:sha2",
+    ],
+)

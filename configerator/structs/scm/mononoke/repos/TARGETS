@@ -1,0 +1,35 @@
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+
+thrift_library(
+    name = "repos",
+    languages = [
+        "py",
+        "python",
+        "rust",
+    ],
+    py3_namespace = "mononoke.repos",
+    py_base_module = "configerator.mononoke",
+    rust_autocargo = {"cargo_toml_dir": "repos"},
+    thrift_py_options = "json",
+    thrift_rust_options = [
+        "deprecated_default_enum_min_i32",
+        "serde",
+    ],
+    thrift_srcs = {"repos.thrift": None},
+)
+
+thrift_library(
+    name = "commitsync",
+    languages = [
+        "py",
+        "rust",
+    ],
+    py_base_module = "configerator.mononoke",
+    rust_autocargo = {"cargo_toml_dir": "commitsync"},
+    thrift_py_options = "json",
+    thrift_rust_options = "serde",
+    thrift_srcs = {"commitsync.thrift": None},
+    deps = [
+        ":repos",
+    ],
+)

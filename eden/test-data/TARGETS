@@ -1,0 +1,14 @@
+load("@fbcode_macros//build_defs:native_rules.bzl", "buck_filegroup")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("scm_client_infra")
+
+buck_filegroup(
+    name = "overlay-v2",
+    srcs = ["overlay-v2.tgz"],
+)
+
+buck_filegroup(
+    name = "snapshots",
+    srcs = glob(["snapshots/**"]),
+)

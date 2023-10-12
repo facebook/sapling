@@ -1,0 +1,22 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "mononoke_configs",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:arc-swap",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:slog",
+        "fbsource//third-party/rust:tokio",
+        "//common/rust/shed/cached_config:cached_config",
+        "//common/rust/shed/cloned:cloned",
+        "//common/rust/shed/stats:stats",
+        "//configerator/structs/scm/mononoke/repos:repos-rust",
+        "//eden/mononoke/metaconfig:metaconfig_parser",
+    ],
+)

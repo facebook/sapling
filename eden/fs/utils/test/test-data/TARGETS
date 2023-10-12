@@ -1,0 +1,9 @@
+load("@fbcode_macros//build_defs:native_rules.bzl", "buck_filegroup")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("scm_client_infra")
+
+buck_filegroup(
+    name = "test-data",
+    srcs = glob(["**/*"]),
+)

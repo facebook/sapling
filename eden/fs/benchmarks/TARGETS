@@ -1,0 +1,157 @@
+load("@fbcode_macros//build_defs:cpp_binary.bzl", "cpp_binary")
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+
+oncall("scm_client_infra")
+
+# Run with --bench
+rust_binary(
+    name = "benchmarks",
+    srcs = ["benchmarks.rs"],
+    os_deps = [
+        (
+            "linux",
+            [
+                "fbsource//third-party/rust:libc",
+            ],
+        ),
+        (
+            "macos",
+            [
+                "fbsource//third-party/rust:libc",
+            ],
+        ),
+        (
+            "windows",
+            [
+                "fbsource//third-party/rust:winapi",
+            ],
+        ),
+    ],
+    deps = [
+        "fbsource//third-party/rust:criterion",
+        "fbsource//third-party/rust:rand",
+    ],
+)
+
+cpp_binary(
+    name = "random_writes",
+    srcs = ["random_writes.cpp"],
+    deps = [
+        "//eden/common/utils/benchharness:benchharness",
+        "//folly:exception",
+        "//folly:file",
+        "//folly:file_util",
+        "//folly:string",
+        "//folly/logging:logging",
+        "//folly/portability:gflags",
+    ],
+)
+
+cpp_binary(
+    name = "stat",
+    srcs = ["stat.cpp"],
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    deps = [
+        "//eden/common/utils/benchharness:benchharness",
+        "//folly:exception",
+        "//folly:file",
+        "//folly/portability:gflags",
+    ],
+)
+
+cpp_binary(
+    name = "get_sha1",
+    srcs = ["get_sha1.cpp"],
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    deps = [
+        "fbsource//third-party/benchmark:benchmark",
+        "//eden/common/utils/benchharness:benchharness",
+        "//eden/fs/service:thrift-cpp2-services",
+        "//folly:file",
+        "//folly/container:array",
+        "//folly/init:init",
+        "//folly/io/async:async_socket",
+        "//folly/logging:logging",
+        "//folly/synchronization/test:barrier",
+        "//thrift/lib/cpp2/async:header_client_channel",
+    ],
+    external_deps = [
+        ("boost", None, "boost_filesystem"),
+    ],
+)
+
+cpp_binary(
+    name = "getxattr",
+    srcs = ["getxattr.cpp"],
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    deps = [
+        "//eden/common/utils/benchharness:benchharness",
+        "//folly:exception",
+        "//folly:file",
+        "//folly/portability:gflags",
+    ],
+)
+
+cpp_binary(
+    name = "open_close_parallel",
+    srcs = ["open_close_parallel.cpp"],
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    deps = [
+        "//eden/common/utils/benchharness:benchharness",
+        "//folly:exception",
+        "//folly:likely",
+        "//folly/init:init",
+        "//folly/portability:gflags",
+        "//folly/portability:unistd",
+        "//folly/synchronization/test:barrier",
+    ],
+)
+
+cpp_binary(
+    name = "glob",
+    srcs = ["glob.cpp"],
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    deps = [
+        "//eden/common/utils/benchharness:benchharness",
+        "//eden/fs/service:thrift-cpp2-services",
+        "//eden/fs/utils:path",
+        "//folly/io/async:event_base_thread",
+        "//thrift/lib/cpp2/async:header_client_channel",
+        "//watchman/cppclient:cppclient",
+    ],
+)
+
+cpp_binary(
+    name = "set_path_object_id",
+    srcs = ["set_path_object_id.cpp"],
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    deps = [
+        "//eden/common/utils/benchharness:benchharness",
+        "//eden/fs/service:thrift-cpp2-services",
+        "//eden/fs/utils:path",
+        "//folly/io/async:event_base_thread",
+        "//folly/portability:gflags",
+        "//thrift/lib/cpp2/async:header_client_channel",
+    ],
+    external_deps = [
+        ("boost", None, "boost_uuid"),
+    ],
+)

@@ -1,0 +1,13 @@
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+
+thrift_library(
+    name = "rate_limiting_config",
+    languages = [
+        "rust",
+    ],
+    thrift_rust_options = [
+        "deprecated_default_enum_min_i32",
+        "serde",
+    ],
+    thrift_srcs = {"ratelimits.thrift": None},
+)

@@ -1,0 +1,10 @@
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+
+thrift_library(
+    name = "blobimport_state",
+    languages = ["py"],
+    no_plugin_deps = ["//thrift/annotation:all"],
+    py_base_module = "configerator.blobimport_state",
+    thrift_py_options = "json",
+    thrift_srcs = {"state.thrift": None},
+)

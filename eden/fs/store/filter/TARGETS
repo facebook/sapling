@@ -1,0 +1,27 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+
+oncall("scm_client_infra")
+
+cpp_library(
+    name = "filtered_object_id",
+    srcs = ["FilteredObjectId.cpp"],
+    headers = ["FilteredObjectId.h"],
+    deps = [
+        "//eden/fs/utils:throw",
+        "//folly:varint",
+        "//folly/logging:logging",
+    ],
+    exported_deps = [
+        "//eden/fs/model:model",
+        "//eden/fs/utils:path",
+    ],
+)
+
+cpp_library(
+    name = "filters",
+    headers = ["Filter.h"],
+    exported_deps = [
+        "//eden/fs/utils:path",
+        "//folly:range",
+    ],
+)

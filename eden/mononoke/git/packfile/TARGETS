@@ -1,0 +1,30 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mononoke")
+
+rust_library(
+    name = "packfile",
+    srcs = glob(["src/**/*.rs"]),
+    test_deps = [
+        "fbsource//third-party/rust:gix-diff",
+        "fbsource//third-party/rust:tempfile",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/git/git_types:git_types",
+    ],
+    unittests = True,
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:flate2",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:gix-features",
+        "fbsource//third-party/rust:gix-hash",
+        "fbsource//third-party/rust:gix-object",
+        "fbsource//third-party/rust:gix-pack",
+        "fbsource//third-party/rust:pin-project",
+        "fbsource//third-party/rust:sha1",
+        "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tokio",
+    ],
+)

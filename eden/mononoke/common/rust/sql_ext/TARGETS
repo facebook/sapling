@@ -1,0 +1,48 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
+
+oncall("mononoke")
+
+rust_library(
+    name = "sql_ext",
+    srcs = glob([
+        "src/**/*.rs",
+    ]),
+    test_deps = [
+        "fbsource//third-party/rust:assert_matches",
+    ],
+    deps = [
+        "fbsource//third-party/rust:abomonation",
+        "fbsource//third-party/rust:abomonation_derive",
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:base64",
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:itertools",
+        "fbsource//third-party/rust:maplit",
+        "fbsource//third-party/rust:paste",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:serde_cbor",
+        "fbsource//third-party/rust:slog",
+        "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:twox-hash",
+        "//common/rust/mysql:mysql_client",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/memcache_stub:memcache",
+        "//common/rust/shed/sql:sql",
+        "//common/rust/thrift/srclient:srclient",
+        "//dba/myadmin/if:if-myadmin-rust",
+        "//eden/mononoke/common/retry:retry",
+        "//eden/mononoke/common/rust/caching_ext:caching_ext",
+        "//eden/mononoke/repo_attributes/sql_query_config:sql_query_config",
+        "//eden/mononoke/tunables:tunables",
+    ] + ([] if rust_oss.is_oss_build() else [
+        "fbsource//third-party/rust:arc-swap",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:once_cell",
+        "fbsource//third-party/rust:vec1",
+        "//common/rust/shed/sql:sql_common",
+        "//common/rust/shed/stats:stats",
+        "//eden/mononoke/common/time_measuring:time_measuring",
+    ]),
+)

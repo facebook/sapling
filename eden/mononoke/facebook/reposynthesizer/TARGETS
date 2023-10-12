@@ -1,0 +1,12 @@
+load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
+
+oncall("mononoke")
+
+python_binary(
+    name = "reposynthesizer",
+    srcs = ["reposynthesizer.py"],
+    main_module = "eden.mononoke.facebook.reposynthesizer.reposynthesizer",
+    deps = [
+        "//scm/lib:repo",
+    ],
+)

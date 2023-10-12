@@ -1,0 +1,27 @@
+load("//eden/scm:targets.bzl", "rust_python_library")
+
+oncall("mercurial_release")
+
+rust_python_library(
+    name = "pyconchparser",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "cpython": {
+                        "features": [],
+                        "git": None,
+                        "rev": None,
+                    },
+                },
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    link_style = "static",
+    deps = [
+        "//eden/scm/lib/cpython-ext:cpython-ext",
+        "//eden/scm/lib/third-party/conch-parser:conch-parser",
+    ],
+)

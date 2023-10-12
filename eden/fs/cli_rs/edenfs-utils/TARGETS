@@ -1,0 +1,45 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("scm_client_infra")
+
+rust_library(
+    name = "edenfs-utils",
+    srcs = glob(["src/**/*.rs"]),
+    os_deps = [
+        (
+            "macos",
+            [
+                "fbsource//third-party/rust:nix",
+            ],
+        ),
+        (
+            "linux",
+            [
+                "fbsource//third-party/rust:nix",
+            ],
+        ),
+        (
+            "windows",
+            [
+                "fbsource//third-party/rust:winapi",
+            ],
+        ),
+    ],
+    test_os_deps = [
+        (
+            "windows",
+            [
+                "fbsource//third-party/rust:quickcheck",
+                "fbsource//third-party/rust:quickcheck_macros",
+            ],
+        ),
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:glob",
+        "fbsource//third-party/rust:sysinfo",
+        "fbsource//third-party/rust:tracing",
+        "//eden/fs/cli_rs/edenfs-error:edenfs-error",
+    ],
+)

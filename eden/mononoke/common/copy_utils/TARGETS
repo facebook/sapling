@@ -1,0 +1,34 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "copy_utils",
+    srcs = glob(["src/*.rs"]),
+    test_deps = [
+        "fbsource//third-party/rust:maplit",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/blobrepo:changeset_fetcher",
+        "//eden/mononoke/blobstore:blobstore",
+        "//eden/mononoke/repo_factory:test_repo_factory",
+        "//eden/mononoke/tests/utils:tests_utils",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:regex",
+        "fbsource//third-party/rust:slog",
+        "//common/rust/shed/sorted_vector_map:sorted_vector_map",
+        "//eden/mononoke/blobrepo:blobrepo",
+        "//eden/mononoke/blobrepo:repo_blobstore",
+        "//eden/mononoke/derived_data:derived_data",
+        "//eden/mononoke/derived_data:fsnodes",
+        "//eden/mononoke/manifest:manifest",
+        "//eden/mononoke/megarepo_api:commit_transformation",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
+        "//eden/mononoke/server/context:context",
+    ],
+)

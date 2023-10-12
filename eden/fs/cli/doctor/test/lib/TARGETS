@@ -1,0 +1,18 @@
+load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("scm_client_infra")
+
+python_library(
+    name = "lib",
+    srcs = glob(["*.py"]),
+    deps = [
+        "//eden/fs/cli:lib",
+        "//eden/fs/cli:version",
+        "//eden/fs/cli/test/lib:lib",
+        "//eden/fs/py/eden:dirstate",
+        "//eden/fs/service:thrift-py",
+        "//eden/test_support:py",
+        "//fb303/thrift:fb303_core-py",
+    ],
+)

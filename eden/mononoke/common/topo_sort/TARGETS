@@ -1,0 +1,11 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mononoke")
+
+rust_library(
+    name = "topo_sort",
+    srcs = glob(["src/**/*.rs"]),
+    test_deps = ["fbsource//third-party/rust:maplit"],
+    deps = [
+    ],
+)

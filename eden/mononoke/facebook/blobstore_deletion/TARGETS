@@ -1,0 +1,21 @@
+load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
+
+oncall("mononoke")
+
+python_binary(
+    name = "manifold_copy",
+    srcs = ["manifold_copy.py"],
+    main_module = "eden.mononoke.facebook.blobstore_deletion.manifold_copy",
+    deps = [
+        "//manifold/clients/python:manifold_client",
+    ],
+)
+
+python_binary(
+    name = "manifold_key_download",
+    srcs = ["manifold_key_download.py"],
+    main_module = "eden.mononoke.facebook.blobstore_deletion.manifold_key_download",
+    deps = [
+        "//datainfra/presto/py:client_lib",
+    ],
+)

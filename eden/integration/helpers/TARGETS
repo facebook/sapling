@@ -1,0 +1,123 @@
+load("@fbcode_macros//build_defs:cpp_binary.bzl", "cpp_binary")
+
+oncall("scm_client_infra")
+
+cpp_binary(
+    name = "fake_edenfs",
+    srcs = ["fake_edenfs.cpp"],
+    deps = [
+        "//eden/fs:config",
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/service:init",
+        "//eden/fs/service:startup_logger",
+        "//eden/fs/service:startup_status_subscriber",
+        "//eden/fs/service:thrift-streaming-cpp2-services",
+        "//eden/fs/utils:path",
+        "//eden/fs/utils:user_info",
+        "//folly/init:init",
+        "//folly/io/async:async_signal_handler",
+        "//folly/logging:init",
+        "//folly/logging:logging",
+        "//folly/portability:gflags",
+        "//thrift/lib/cpp2:server",
+    ],
+)
+
+cpp_binary(
+    name = "fsattr",
+    srcs = ["fsattr.cpp"],
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    deps = [
+        "//eden/fs/utils:utils",
+        "//folly:dynamic",
+        "//folly/init:init",
+    ],
+    external_deps = ["gflags"],
+)
+
+cpp_binary(
+    name = "takeover_tool",
+    srcs = ["TakeoverTool.cpp"],
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    deps = [
+        "//eden/fs/takeover:takeover",
+        "//eden/fs/utils:fs_channel_types",
+        "//folly/init:init",
+        "//folly/logging:init",
+        "//folly/logging:logging",
+        "//folly/portability:gflags",
+    ],
+)
+
+cpp_binary(
+    name = "zero_blob",
+    srcs = ["ZeroBlob.cpp"],
+    deps = [
+        "//eden/fs/model:model",
+        "//eden/fs/store:rocksdb",
+        "//eden/fs/telemetry:structured_logger",
+        "//eden/fs/telemetry:telemetry",
+        "//eden/fs/utils:utils",
+        "//folly/init:init",
+        "//folly/logging:init",
+        "//folly/logging:logging",
+        "//folly/portability:gflags",
+    ],
+)
+
+cpp_binary(
+    name = "check_windows_rename",
+    srcs = ["CheckWindowsRename.cpp"],
+    compatible_with = [
+        "ovr_config//os:windows",
+    ],
+    deps = [
+        "fbsource//third-party/fmt:fmt",
+        "//eden/common/utils:stringconv",
+        "//eden/fs/utils:path",
+        "//eden/fs/utils:projfs_util",
+        "//folly:try",
+        "//folly/init:init",
+        "//folly/portability:gflags",
+        "//folly/portability:windows",
+    ],
+)
+
+cpp_binary(
+    name = "read_reparse_buffer",
+    srcs = ["ReadReparseBuffer.cpp"],
+    compatible_with = [
+        "ovr_config//os:windows",
+    ],
+    deps = [
+        "fbsource//third-party/fmt:fmt",
+        "//eden/common/utils:file_utils",
+        "//eden/common/utils:stringconv",
+        "//eden/common/utils:win_error",
+        "//eden/fs/utils:file_utils",
+        "//eden/fs/utils:path",
+        "//folly:string",
+        "//folly/init:init",
+        "//folly/portability:gflags",
+        "//folly/portability:windows",
+    ],
+)
+
+cpp_binary(
+    name = "blake3_sum",
+    srcs = ["Blake3Sum.cpp"],
+    deps = [
+        "//eden/fs/digest:blake3_hash",
+        "//folly:file",
+        "//folly:string",
+        "//folly/init:init",
+        "//folly/portability:gflags",
+        "//folly/system:memory_mapping",
+    ],
+)

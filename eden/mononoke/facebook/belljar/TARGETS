@@ -1,0 +1,29 @@
+load("//belljar/buck:defs.bzl", "belljar_test_post_tw")
+
+oncall("mononoke")
+
+belljar_test_post_tw(
+    name = "mononoke_test",
+    src = "mononoke_belljar_test.py",
+    belljar_class = "MononokeBellJarTest",
+    fbpkg_builders = ["//eden/mononoke/facebook/fbpkg:mononoke.server"],
+    oncall = "scm_server_infra",
+    recovered_service_id = "mononoke.server",
+    deps = [
+        "//belljar/if:dependencies-py3-types",
+        "//belljar/twtf:twtf_base",
+    ],
+)
+
+belljar_test_post_tw(
+    name = "scs_test",
+    src = "scs_belljar_test.py",
+    belljar_class = "ScsBellJarTest",
+    fbpkg_builders = ["//eden/mononoke/facebook/fbpkg:mononoke.scs_server"],
+    oncall = "scm_server_infra",
+    recovered_service_id = "mononoke/scs_server",
+    deps = [
+        "//belljar/if:dependencies-py3-types",
+        "//belljar/twtf:twtf_base",
+    ],
+)

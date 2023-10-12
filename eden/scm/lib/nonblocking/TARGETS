@@ -1,0 +1,14 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "nonblocking",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_config": {"package": {"license": "MIT"}}},
+    crate_root = "src/lib.rs",
+    test_deps = [
+        "fbsource//third-party/rust:futures",
+    ],
+)

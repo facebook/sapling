@@ -1,0 +1,39 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "tunables",
+    srcs = glob(["src/**/*.rs"]),
+    test_deps = [
+        "fbsource//third-party/rust:maplit",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:arc-swap",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:serde_json",
+        "fbsource//third-party/rust:slog",
+        "fbsource//third-party/rust:tokio",
+        ":tunables-derive",
+        "//common/rust/shed/cached_config:cached_config",
+        "//common/rust/shed/stats:stats",
+        "//configerator/structs/scm/mononoke/tunables:tunables_structs-rust",
+    ],
+)
+
+rust_library(
+    name = "tunables-derive",
+    srcs = glob(["tunables-derive/*.rs"]),
+    autocargo = {"cargo_toml_dir": "tunables-derive"},
+    crate_root = "tunables-derive/lib.rs",
+    proc_macro = True,
+    deps = [
+        "fbsource//third-party/rust:proc-macro2",
+        "fbsource//third-party/rust:quote",
+        "fbsource//third-party/rust:syn1",
+    ],
+)

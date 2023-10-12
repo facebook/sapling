@@ -1,0 +1,56 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "backingstore",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_target_config": {
+            "crate_type": [
+                "staticlib",
+                "lib",
+            ],
+        },
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "indexedlog": {"features": ["configurable"]},
+                    "revisionstore": {"features": ["ods"]},
+                },
+            },
+            "extra_buck_dependencies": {
+                "dependencies": [
+                    "//eden/scm/lib/revisionstore:revisionstore",
+                ],
+            },
+            "features": {
+                "fb": ["configloader/fb"],
+            },
+            "package": {
+                "authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"],
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    named_deps = {
+        "revisionstore": "//eden/scm/lib/revisionstore:revisionstore_with_ods",
+    },
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:env_logger",
+        "fbsource//third-party/rust:libc",
+        "fbsource//third-party/rust:log",
+        "fbsource//third-party/rust:parking_lot",
+        "fbsource//third-party/rust:tracing",
+        "fbsource//third-party/rust:tracing-subscriber",
+        "//eden/scm/lib/config/loader:configloader",
+        "//eden/scm/lib/eagerepo:eagerepo",
+        "//eden/scm/lib/edenapi:edenapi",
+        "//eden/scm/lib/identity:identity",
+        "//eden/scm/lib/indexedlog:indexedlog",
+        "//eden/scm/lib/manifest:manifest",
+        "//eden/scm/lib/tracing-collector:tracing-collector",
+        "//eden/scm/lib/types:types",
+    ],
+)

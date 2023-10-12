@@ -1,0 +1,73 @@
+load("@fbcode_macros//build_defs:cpp_python_extension.bzl", "cpp_python_extension")
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "rust_conch_parser",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_target_config": {
+            "crate_type": [
+                "cdylib",
+            ],
+            "name": "conch_parser",
+        },
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "cpython": {
+                        "features": [
+                            "serde-convert",
+                            "python3-sys",
+                            "extension-module",
+                        ],
+                        "git": None,
+                        "rev": None,
+                    },
+                },
+            },
+        },
+    },
+    # The `ovr_config//os:<platform>` setting allows us to select which
+    # platforms some target is compatible with. As this target is only a
+    # dependency for the conch_parser target, let's disable it
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    crate = "conch_parser",
+    crate_root = "src/lib.rs",
+    link_style = "static",
+    named_deps = {
+        "third_party_conch_parser": "//eden/scm/lib/third-party/conch-parser:conch-parser",
+    },
+    deps = [
+        "fbsource//third-party/rust:cpython",
+    ],
+)
+
+cpp_python_extension(
+    name = "conch_parser",
+    srcs = ["symbol.c"],
+    base_module = "",
+    # Conch parser was moved into the Python bindings module itself in
+    # D42822105 and is now just available to build as a separate module. As this
+    # target is not compatible with Windows, we have to disable it
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    compiler_flags = [
+        "-fno-strict-aliasing",
+    ],
+    linker_flags = select({
+        "DEFAULT": ["-uPyInit_conch_parser"],
+        "ovr_config//os:macos": ["-u_PyInit_conch_parser"],
+        "ovr_config//os:windows": [],
+    }),
+    deps = [
+        "//eden/scm/saplingnative/conch_parser:rust_conch_parser",
+    ],
+)

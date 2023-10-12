@@ -1,0 +1,10 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mononoke")
+
+rust_library(
+    name = "uniqueheap",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+    ],
+)

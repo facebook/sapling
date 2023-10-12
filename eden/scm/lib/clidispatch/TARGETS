@@ -1,0 +1,55 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "clidispatch",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "indexedlog": {"features": ["configurable"]},
+                    "thrift-types": {"optional": True},
+                },
+            },
+            "features": {
+                "eden": [
+                    "workingcopy/eden",
+                    "thrift-types",
+                ],
+                "sl_only": [
+                    "identity/sl_only",
+                ],
+            },
+            "package": {
+                "authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"],
+            },
+        },
+    },
+    features = [
+        "eden",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tracing",
+        "//common/rust/shed/hostname:hostname",
+        "//eden/scm/lib/blackbox:blackbox",
+        "//eden/scm/lib/cliparser:cliparser",
+        "//eden/scm/lib/config/loader:configloader",
+        "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/doctor/network:network-doctor",
+        "//eden/scm/lib/identity:identity",
+        "//eden/scm/lib/indexedlog:indexedlog",
+        "//eden/scm/lib/io:io",
+        "//eden/scm/lib/io/term/logger:termlogger",
+        "//eden/scm/lib/repo:repo",
+        "//eden/scm/lib/sampling:sampling",
+        "//eden/scm/lib/thrift-types:thrift-types",
+        "//eden/scm/lib/types:types",
+        "//eden/scm/lib/util:util",
+        "//eden/scm/lib/util/hgplain:hgplain",
+        "//eden/scm/lib/workingcopy:workingcopy",
+    ],
+)

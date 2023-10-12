@@ -1,0 +1,21 @@
+load("//antlir/fbpkg:fbpkg.bzl", "fbpkg")
+load("//tupperware/image/bzl:tw.bzl", "tw")
+
+oncall("mononoke")
+
+tw.container(
+    name = "tw.mononoke.land_service",
+    features = [
+        tw.build_fbpkg(
+            fbpkg.builder(
+                name = "mononoke.land_service",
+                path_actions = {
+                    "land_service": "//eden/mononoke/land_service:land_service",
+                },
+            ),
+        ),
+    ],
+    # Use the CentOS 8 base image for this container
+    flavor = "centos8",
+    oncall = "scm_server_infra",
+)

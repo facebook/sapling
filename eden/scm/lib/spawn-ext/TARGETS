@@ -1,0 +1,62 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "spawn-ext",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "target": {
+                    "'cfg(windows)'": {
+                        "dependencies": {
+                            "winapi": {
+                                "features": [
+                                    "handleapi",
+                                    "winbase",
+                                ],
+                                "version": "0.3",
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    os_deps = [
+        (
+            "linux",
+            [
+                "fbsource//third-party/rust:libc",
+            ],
+        ),
+        (
+            "macos",
+            [
+                "fbsource//third-party/rust:libc",
+            ],
+        ),
+        (
+            "windows",
+            [
+                "fbsource//third-party/rust:winapi",
+            ],
+        ),
+    ],
+    test_deps = [
+        "fbsource//third-party/rust:tempfile",
+    ],
+)
+
+rust_binary(
+    name = "spawn",
+    srcs = ["examples/spawn.rs"],
+    autocargo = {"ignore_rule": True},
+    unittests = False,
+    deps = [
+        ":spawn-ext",
+    ],
+)

@@ -1,0 +1,27 @@
+load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("scm_client_infra")
+
+python_unittest(
+    name = "test",
+    srcs = glob(["*.py"]),
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    env = {
+        "EDENFS_UNITTEST": "1",
+    },
+    deps = [
+        "fbsource//third-party/pypi/toml:toml",
+        "//eden/fs/cli:lib",
+        "//eden/fs/cli:main_lib",
+        "//eden/fs/cli:proc_utils",
+        "//eden/fs/cli:telemetry",
+        "//eden/fs/cli/doctor/test/lib:lib",
+        "//eden/fs/cli/test/lib:lib",
+        "//eden/fs/service:thrift-py",
+        "//eden/test_support:py",
+    ],
+)

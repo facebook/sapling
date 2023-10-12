@@ -1,0 +1,28 @@
+load("//eden/scm:targets.bzl", "rust_python_library")
+
+oncall("mercurial_release")
+
+rust_python_library(
+    name = "pycliparser",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "cpython": {
+                        "features": [],
+                        "git": None,
+                        "rev": None,
+                    },
+                },
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    deps = [
+        "//eden/scm/lib/clidispatch:clidispatch",
+        "//eden/scm/lib/cliparser:cliparser",
+        "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/saplingnative/bindings/modules/pyconfigloader:pyconfigloader",
+    ],
+)

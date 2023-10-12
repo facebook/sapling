@@ -1,0 +1,16 @@
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+
+oncall("mononoke")
+
+thrift_library(
+    name = "packblob-thrift",
+    languages = ["rust"],
+    rust_deps = [
+        "fbsource//third-party/rust:bytes",
+    ],
+    thrift_srcs = {"packblob.thrift": []},
+    visibility = [
+        "//eden/mononoke/blobstore:packblob",
+        "//eden/mononoke/blobstore:packblob-unittest",
+    ],
+)

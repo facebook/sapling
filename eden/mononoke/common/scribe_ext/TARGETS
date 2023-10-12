@@ -1,0 +1,14 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mononoke")
+
+rust_library(
+    name = "scribe_ext",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "//common/rust/scribe:scribe",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/scuba_stub:scuba",
+    ],
+)

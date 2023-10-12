@@ -1,0 +1,11 @@
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+
+thrift_library(
+    name = "lfs_server_config",
+    languages = [
+        "rust",
+    ],
+    thrift_rust_options = "serde",
+    thrift_srcs = {"lfs_server.thrift": None},
+    deps = ["//configerator/structs/scm/mononoke/ratelimiting:rate_limiting_config"],
+)

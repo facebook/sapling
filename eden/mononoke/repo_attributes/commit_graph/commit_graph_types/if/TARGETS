@@ -1,0 +1,16 @@
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+
+oncall("mononoke")
+
+thrift_library(
+    name = "commit_graph_thrift",
+    languages = [
+        "rust",
+    ],
+    thrift_srcs = {
+        "commit_graph.thrift": [],
+    },
+    deps = [
+        "//eden/mononoke/mononoke_types/if:mononoke_types-thrift",
+    ],
+)

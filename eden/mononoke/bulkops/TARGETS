@@ -1,0 +1,30 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "bulkops",
+    srcs = glob([
+        "src/**/*.rs",
+    ]),
+    test_deps = [
+        "fbsource//third-party/rust:tokio",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/blobrepo:blobrepo",
+        "//eden/mononoke/bookmarks:bookmarks",
+        "//eden/mononoke/tests/fixtures:fixtures",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:strum",
+        "fbsource//third-party/rust:tokio",
+        "//eden/mononoke/changesets:changesets",
+        "//eden/mononoke/common/bounded_traversal:bounded_traversal",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/phases:phases",
+        "//eden/mononoke/server/context:context",
+    ],
+)

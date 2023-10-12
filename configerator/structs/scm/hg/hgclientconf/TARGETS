@@ -1,0 +1,12 @@
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+
+thrift_library(
+    name = "config",
+    languages = [
+        "py3",
+        "rust",
+    ],
+    py3_namespace = "configerator",
+    thrift_rust_options = "serde",
+    thrift_srcs = {"hgclient.thrift": []},
+)

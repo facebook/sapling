@@ -1,0 +1,31 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "repo_authorization",
+    srcs = glob(["src/**/*.rs"]),
+    test_deps = [
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:maplit",
+        "//common/rust/shed/facet:facet",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/repo_factory:test_repo_factory",
+        "//eden/mononoke/tunables:tunables",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:thiserror",
+        "//eden/mononoke/acl_regions:acl_regions",
+        "//eden/mononoke/bookmarks:bookmarks",
+        "//eden/mononoke/metaconfig:metaconfig_types",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/permission_checker:permission_checker",
+        "//eden/mononoke/repo_attributes/repo_bookmark_attrs:repo_bookmark_attrs",
+        "//eden/mononoke/repo_attributes/repo_permission_checker:repo_permission_checker",
+        "//eden/mononoke/server/context:context",
+    ],
+)

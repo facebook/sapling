@@ -1,0 +1,87 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbcode_macros//build_defs:rust_unittest.bzl", "rust_unittest")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "bonsai_git_mapping",
+    srcs = glob([
+        "src/**/*.rs",
+        "schemas/**/*.sql",
+    ]),
+    deps = [
+        "fbsource//third-party/rust:abomonation",
+        "fbsource//third-party/rust:abomonation_derive",
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:ascii",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:slog",
+        "fbsource//third-party/rust:thiserror",
+        "//common/rust/shed/facet:facet",
+        "//common/rust/shed/sql:sql",
+        "//common/rust/shed/stats:stats",
+        "//eden/mononoke/common/rust/sql_ext:sql_ext",
+        "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/server/context:context",
+    ],
+)
+
+rust_library(
+    name = "git_mapping_pushrebase_hook",
+    srcs = glob([
+        "git_mapping_pushrebase_hook/**/*.rs",
+    ]),
+    autocargo = {"cargo_toml_dir": "git_mapping_pushrebase_hook"},
+    test_deps = [
+        "fbsource//third-party/rust:maplit",
+        "//common/rust/shed/borrowed:borrowed",
+        "//common/rust/shed/facet:facet",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/blobrepo:changeset_fetcher",
+        "//eden/mononoke/blobrepo:repo_blobstore",
+        "//eden/mononoke/blobstore:blobstore",
+        "//eden/mononoke/bonsai_git_mapping:bonsai_git_mapping",
+        "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
+        "//eden/mononoke/bookmarks:bookmarks",
+        "//eden/mononoke/changesets:changesets",
+        "//eden/mononoke/filestore:filestore",
+        "//eden/mononoke/mononoke_types:mononoke_types-mocks",
+        "//eden/mononoke/pushrebase:pushrebase",
+        "//eden/mononoke/repo_attributes/commit_graph/commit_graph:commit_graph",
+        "//eden/mononoke/repo_attributes/repo_derived_data:repo_derived_data",
+        "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
+        "//eden/mononoke/repo_factory:test_repo_factory",
+        "//eden/mononoke/tests/utils:tests_utils",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        ":bonsai_git_mapping",
+        "//common/rust/shed/sql:sql",
+        "//eden/mononoke/bookmarks:bookmarks",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/pushrebase:pushrebase_hook",
+        "//eden/mononoke/server/context:context",
+    ],
+)
+
+rust_unittest(
+    name = "bonsai_git_mapping_test",
+    srcs = glob(["test/**/*.rs"]),
+    crate = "bonsai_git_mapping_test",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:assert_matches",
+        ":bonsai_git_mapping",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//common/rust/shed/sql:sql",
+        "//eden/mononoke/common/rust/sql_ext:sql_ext",
+        "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/mononoke_types:mononoke_types-mocks",
+        "//eden/mononoke/server/context:context",
+    ],
+)

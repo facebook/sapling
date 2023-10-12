@@ -1,0 +1,24 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "edenapi_trait",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:http",
+        "fbsource//third-party/rust:serde_cbor",
+        "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:url",
+        "//eden/scm/lib/auth:auth",
+        "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/edenapi/types:edenapi_types",
+        "//eden/scm/lib/http-client:http-client",
+        "//eden/scm/lib/minibytes:minibytes",
+        "//eden/scm/lib/types:types",
+    ],
+)
