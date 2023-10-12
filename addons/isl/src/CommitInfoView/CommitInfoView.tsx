@@ -322,7 +322,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
           </Section>
         ) : null}
         {isCommitMode ? null : (
-          <Section>
+          <Section data-testid="committed-changes">
             <SmallCapsTitle>
               <T>Files Changed</T>
               <VSCodeBadge>{commit.totalFileCount}</VSCodeBadge>

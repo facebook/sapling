@@ -13,10 +13,12 @@ import type {
   PreviewContext,
   UncommittedChangesPreviewContext,
 } from '../previews';
-import type {CommandArg, Hash, RepoRelativePath, UncommittedChanges} from '../types';
+import type {ChangedFile, CommandArg, Hash, RepoRelativePath, UncommittedChanges} from '../types';
 import type {ImportStack} from 'shared/types/stack';
 
+import {globalRecoil} from '../AccessGlobalRecoil';
 import {t} from '../i18n';
+import {uncommittedChangesWithPreviews} from '../previews';
 import {Operation} from './Operation';
 
 export class CommitOperation extends Operation {
@@ -31,7 +33,21 @@ export class CommitOperation extends Operation {
     private filesPathsToCommit?: Array<RepoRelativePath>,
   ) {
     super('CommitOperation');
+
+    // When rendering optimistic state, we need to know the set of files that will be part of this commit.
+    // This is not necessarily the same as filePathsToCommit, since it may be undefined to represent "all files".
+    // This is done once at Operation creation time, not on each call to makeOptimisticApplier, since we
+    // only care about the list of changed files when the CommitOperation was enqueued.
+    this.optimisticChangedFiles = (
+      globalRecoil().getLoadable(uncommittedChangesWithPreviews).valueMaybe() ?? []
+    ).filter(changedFile => {
+      return filesPathsToCommit == null
+        ? true
+        : filesPathsToCommit.some(f => f === changedFile.path);
+    });
   }
+
+  private optimisticChangedFiles: Array<ChangedFile>;
 
   static opName = 'Commit';
 
@@ -70,14 +86,12 @@ export class CommitOperation extends Operation {
         title,
         bookmarks: [],
         remoteBookmarks: [],
-        // TODO: we should include the files that will be in the commit.
-        // These files are visible in the commit info view during optimistic state.
-        filesSample: [],
         isHead: true,
         parents: [head?.hash ?? ''],
         hash: OPTIMISTIC_COMMIT_HASH,
         phase: 'draft',
-        totalFileCount: 0,
+        filesSample: this.optimisticChangedFiles,
+        totalFileCount: this.optimisticChangedFiles.length,
         date: new Date(),
       },
     };
