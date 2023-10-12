@@ -12,6 +12,7 @@ import {UncommitOperation} from './operations/Uncommit';
 import {latestCommitTreeMap, latestHeadCommit, useRunOperation} from './serverAPIState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useRecoilValue} from 'recoil';
+import {Icon} from 'shared/Icon';
 
 export function UncommitButton() {
   // TODO: use treeWithPreviews instead,
@@ -45,7 +46,8 @@ export function UncommitButton() {
       )}>
       <VSCodeButton
         onClick={() => runOperation(new UncommitOperation(headCommit))}
-        appearance="secondary">
+        appearance="icon">
+        <Icon icon="debug-step-out" slot="start" />
         <T>Uncommit</T>
       </VSCodeButton>
     </Tooltip>
