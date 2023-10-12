@@ -5,8 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {ClientToServerAPI} from './ClientToServerAPI';
 import type {ThemeColor} from './theme';
-import type {Disposable, OneIndexedLineNumber, PlatformName, RepoRelativePath} from './types';
+import type {
+  Disposable,
+  OneIndexedLineNumber,
+  PlatformName,
+  RepoRelativePath,
+  ServerToClientMessage,
+} from './types';
 import type {LazyExoticComponent} from 'react';
 import type {Comparison} from 'shared/Comparison';
 
@@ -25,6 +32,13 @@ export interface Platform {
   openExternalLink(url: string): void;
   clipboardCopy(value: string): void;
   chooseFile?(title: string, multi: boolean): Promise<Array<File>>;
+
+  handleServerMessage?: (message: ServerToClientMessage) => void;
+
+  /** Called once (if provided) when the ClientToServerAPI is initialized,
+   * so platform-specific server events can be listened to.
+   */
+  registerServerListeners?: (api: ClientToServerAPI) => Disposable;
 
   /**
    * Component representing additional buttons/info in the help menu.
