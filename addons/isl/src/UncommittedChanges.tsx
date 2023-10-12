@@ -67,24 +67,30 @@ import {atom, useRecoilCallback, useRecoilValue} from 'recoil';
 import {labelForComparison, revsetForComparison, ComparisonType} from 'shared/Comparison';
 import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
+import {isMac} from 'shared/OperatingSystem';
 import {useDeepMemo} from 'shared/hooks';
 import {minimalDisambiguousPaths} from 'shared/minimalDisambiguousPaths';
 import {basename, notEmpty, partition} from 'shared/utils';
 
 import './UncommittedChanges.css';
 
+const platformAltKey = (e: KeyboardEvent) => (isMac ? e.altKey : e.ctrlKey);
+/**
+ * Is the alt key currently held down, used to show full file paths.
+ * On windows, this actually uses the ctrl key instead to avoid conflicting with OS focus behaviors.
+ */
 const holdingAltAtom = atom<boolean>({
   key: 'holdingAltAtom',
   default: false,
   effects: [
     ({setSelf}) => {
       const keydown = (e: KeyboardEvent) => {
-        if (e.altKey) {
+        if (platformAltKey(e)) {
           setSelf(true);
         }
       };
       const keyup = (e: KeyboardEvent) => {
-        if (!e.altKey) {
+        if (!platformAltKey(e)) {
           setSelf(false);
         }
       };

@@ -23,6 +23,10 @@ import {act} from 'react-dom/test-utils';
 
 jest.mock('../MessageBus');
 
+jest.mock('shared/OperatingSystem', () => ({
+  isMac: true,
+}));
+
 describe('Changed Files', () => {
   beforeEach(() => {
     resetTestMessages();
