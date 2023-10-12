@@ -6,6 +6,7 @@
  */
 
 import type {Logger} from 'isl-server/src/logger';
+import type {ClientToServerMessage, ServerToClientMessage} from 'isl/src/types';
 
 import packageJson from '../package.json';
 import {executeVSCodeCommand} from './commands';
@@ -14,6 +15,7 @@ import {locale, t} from './i18n';
 import {VSCodePlatform} from './vscodePlatform';
 import crypto from 'crypto';
 import {onClientConnection} from 'isl-server/src';
+import {deserializeFromString, serializeToString} from 'isl/src/serialize';
 import {unwrap} from 'shared/utils';
 import * as vscode from 'vscode';
 
@@ -190,6 +192,31 @@ function populateAndSetISLWebview<W extends vscode.WebviewPanel | vscode.Webview
   });
 
   return panelOrView;
+}
+
+export function fetchUIState(): Promise<{state: string} | undefined> {
+  if (islPanelOrView == null) {
+    return Promise.resolve(undefined);
+  }
+
+  return new Promise(resolve => {
+    let dispose: vscode.Disposable | undefined = islPanelOrView?.webview.onDidReceiveMessage(
+      (m: string) => {
+        try {
+          const data = deserializeFromString(m) as ClientToServerMessage;
+          if (data.type === 'platform/gotUiState') {
+            dispose?.dispose();
+            dispose = undefined;
+            resolve({state: data.state});
+          }
+        } catch {}
+      },
+    );
+
+    islPanelOrView?.webview.postMessage(
+      serializeToString({type: 'platform/getUiState'} as ServerToClientMessage),
+    );
+  });
 }
 
 function htmlForISLWebview(

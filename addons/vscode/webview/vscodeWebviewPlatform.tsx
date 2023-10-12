@@ -5,12 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {ClientToServerAPI} from 'isl/src/ClientToServerAPI';
 import type {Platform} from 'isl/src/platform';
 import type {ThemeColor} from 'isl/src/theme';
 import type {RepoRelativePath} from 'isl/src/types';
 import type {Comparison} from 'shared/Comparison';
 
 import {Internal} from './Internal';
+import {globalRecoil} from 'isl/src/AccessGlobalRecoil';
+import {getAllRecoilStateJson} from 'isl/src/debug/getAllRecoilStateJson';
 
 export const vscodeWebviewPlatform: Platform = {
   platformName: 'vscode',
@@ -58,6 +61,16 @@ export const vscodeWebviewPlatform: Platform = {
   AdditionalDebugContent: Internal.AdditionalDebugContent,
   GettingStartedContent: Internal.GettingStartedContent,
   GettingStartedBugNuxContent: Internal.GettingStartedBugNuxContent,
+
+  registerServerListeners: (api: ClientToServerAPI) => {
+    return api.onMessageOfType('platform/getUiState', () => {
+      const state = getAllRecoilStateJson(globalRecoil().getSnapshot());
+      window.clientToServerAPI?.postMessage({
+        type: 'platform/gotUiState',
+        state: JSON.stringify(state, undefined, 2),
+      });
+    });
+  },
 };
 
 function getTheme(): ThemeColor {

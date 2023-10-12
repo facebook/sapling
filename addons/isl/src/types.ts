@@ -354,6 +354,7 @@ export type PlatformSpecificClientToServerMessages =
       scope: 'workspace' | 'global';
     }
   | {type: 'platform/executeVSCodeCommand'; command: string; args: Array<Json>}
+  | {type: 'platform/gotUiState'; state: string}
   | {type: 'platform/subscribeToVSCodeConfig'; config: string};
 
 /**
@@ -361,6 +362,7 @@ export type PlatformSpecificClientToServerMessages =
  * usually in response to a platform-specific ClientToServer message
  */
 export type PlatformSpecificServerToClientMessages =
+  | {type: 'platform/getUiState'}
   | {
       type: 'platform/confirmResult';
       result: boolean;
