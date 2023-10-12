@@ -8,7 +8,7 @@
 import type {ReactNode} from 'react';
 import type {Comparison} from 'shared/Comparison';
 
-import {t} from '../i18n';
+import {T, t} from '../i18n';
 import {short} from '../utils';
 import {currentComparisonMode} from './atoms';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
@@ -25,17 +25,20 @@ export function OpenComparisonViewButton({
   buttonText?: ReactNode;
   onClick?: () => unknown;
 }) {
+  const isFake =
+    comparison.type === ComparisonType.Committed && comparison.hash.startsWith('OPTIMISTIC');
   const setComparisonMode = useSetRecoilState(currentComparisonMode);
   return (
     <VSCodeButton
       data-testid={`open-comparison-view-button-${comparison.type}`}
       appearance="icon"
+      disabled={isFake}
       onClick={() => {
         onClick?.();
         setComparisonMode({comparison, visible: true});
       }}>
       <Icon icon="files" slot="start" />
-      {buttonText ?? buttonLabelForComparison(comparison)}
+      {isFake ? <T>View Changes</T> : buttonText ?? buttonLabelForComparison(comparison)}
     </VSCodeButton>
   );
 }
