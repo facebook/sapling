@@ -63,3 +63,7 @@ vscode-button::part(content) {
 vscode-button::part(control) {
   margin: 0;
 }
+
+vscode-button[appearance='icon']:not(:hover) {
+  background-color: var(--subtle-hover-darken);
+}
