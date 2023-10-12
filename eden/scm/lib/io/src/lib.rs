@@ -16,6 +16,7 @@ use std::thread::spawn;
 use std::time::Duration;
 use std::time::Instant;
 
+pub use buf::BufIO;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use once_cell::sync::Lazy;
@@ -40,6 +41,7 @@ pub use time_interval;
 use time_interval::BlockedInterval;
 use time_interval::TimeInterval;
 
+mod buf;
 mod impls;
 mod term;
 
