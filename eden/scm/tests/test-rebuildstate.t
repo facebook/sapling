@@ -1,5 +1,4 @@
-(debugruntest hits IO deadlock w/ tracing output)
-#chg-compatible
+#debugruntest-compatible
 
   $ eagerepo
   $ newext adddrop <<EOF
@@ -61,6 +60,9 @@ state dump after
   $ hg debugrebuildstate
 
 status
+
+# avoid same second race condition that leaves NEED_CHECK
+  $ sleep 1
 
   $ hg st -A
   ! bar

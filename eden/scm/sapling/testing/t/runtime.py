@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Optional
 
 from .. import sh
+from ..sh.bufio import BufIO
 from ..sh.osfs import OSFS
 from ..sh.types import Env, OnError, Scope
 from . import shext
@@ -417,7 +418,7 @@ class TestTmp:
             envvars=envvars,
             exportedenvvars=set(envvars),
             cmdtable=self._initialshellcmdtable(),
-            stdin=io.BytesIO(),
+            stdin=BufIO(),
         )
 
         pyenv = {

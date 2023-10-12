@@ -16,8 +16,9 @@ import threading
 import traceback
 from dataclasses import dataclass
 from functools import partial
-from io import BytesIO
 from typing import List, Optional
+
+from .bufio import BufIO
 
 try:
     # When run inside sapling, 'bindings' is available.
@@ -137,8 +138,8 @@ def interpjob(v, env: Env) -> InterpResult:
     env = env.nested(Scope.SHELL)
     # To avoid race conditions, forbid input and capture output by default so
     # they can show as 'wait' output.
-    env.stdin = BytesIO()
-    env.stdout = env.stderr = out = BytesIO()
+    env.stdin = BufIO()
+    env.stdout = env.stderr = out = BufIO()
     thread = threading.Thread(target=interplist, args=(v, env), daemon=True)
     origenv.jobs.append((thread, out))
     thread.start()
@@ -202,7 +203,7 @@ def interpargs(trees, env: Env) -> List[str]:
 
 def interpsubst(v, env: Env) -> InterpResult:
     env = env.nested(Scope.SHELL)
-    env.stdout = BytesIO()
+    env.stdout = BufIO()
     res = interp(v, env)
     # pyre-fixme[16]: `Optional` has no attribute `getvalue`.
     res.out += env.stdout.getvalue().decode()
@@ -258,10 +259,10 @@ def interppipe(v, env: Env) -> InterpResult:
     if len(trees) > 1:
         # has at least one "|", capture stdout
         env = env.nested(Scope.COMMAND)
-        env.stdout = BytesIO()
+        env.stdout = BufIO()
         allocatedstdout = True
         if env.stderr is None:
-            env.stderr = BytesIO()
+            env.stderr = BufIO()
             allocatedstderr = True
     for i, tree in enumerate(trees):
         if i > 0:
@@ -270,7 +271,7 @@ def interppipe(v, env: Env) -> InterpResult:
             # pyre-fixme[16]: `Optional` has no attribute `seek`.
             stdin.seek(0)
             env.stdin = stdin
-            env.stdout = BytesIO()
+            env.stdout = BufIO()
         res = interp(tree, env)
     if negate:
         res.exitcode = int(not res.exitcode)
@@ -405,7 +406,7 @@ def interpheredoc(v, env: Env) -> InterpResult:
         raise NotImplementedError(f"heredoc with {fd=}")
     res = interp(v[1], env)
     # Set res.out as the stdin
-    env.stdin = BytesIO(res.out.encode())
+    env.stdin = BufIO(res.out.encode())
     return InterpResult()
 
 

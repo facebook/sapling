@@ -4,10 +4,11 @@
 # GNU General Public License version 2.
 
 import fnmatch
+import io
 import os
-from io import BytesIO
 from typing import BinaryIO, List
 
+from .bufio import BufIO
 from .types import ShellFS
 
 
@@ -21,12 +22,12 @@ class TestFS(ShellFS):
     def open(self, path: str, mode: str) -> BinaryIO:
         path = self._absjoin(path)
         if path == "/dev/null":
-            return NullIO()
+            return BufIO.devnull()
         if "r" in mode and path not in self._paths:
             raise FileNotFoundError(f"{path} is not found among {sorted(self._paths)}")
         if "w" in mode or ("a" in mode and path not in self._paths):
             # create, or truncate
-            self._paths[path] = BytesIO()
+            self._paths[path] = BufIO()
         f = self._paths[path]
         if "r" in mode:
             # read from start
@@ -34,8 +35,6 @@ class TestFS(ShellFS):
         if "a" in mode:
             # append from end
             f.seek(0, 2)
-        # avoid closing the BytesIO
-        f.close = lambda: None
         return f
 
     def glob(self, pat: str) -> List[str]:
@@ -50,11 +49,3 @@ class TestFS(ShellFS):
         if not path.startswith("/"):
             path = f"/{path}"
         return path
-
-
-class NullIO(BytesIO):
-    def read(self, n=-1):
-        return b""
-
-    def tell(self):
-        return 0

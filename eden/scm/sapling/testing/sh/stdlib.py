@@ -13,9 +13,9 @@ instead.
 import sys
 import tarfile
 from functools import wraps
-from io import BytesIO
 from typing import BinaryIO, Callable, Dict, Iterator, List, Optional, Tuple
 
+from .bufio import BufIO
 from .types import Env, InterpResult, Scope, ShellExit, ShellFS, ShellReturn
 
 cmdtable = {}
@@ -56,8 +56,8 @@ def wrap(commandfunc) -> Callable[[Env], InterpResult]:
             kwargs["arg0"] = env.args[0]
         if "fs" in coargs:
             kwargs["fs"] = env.fs
-        # tempoarily allocated BytesIO on demand
-        allocated: Dict[str, BytesIO] = {}
+        # tempoarily allocated BufIO on demand
+        allocated: Dict[str, BufIO] = {}
         for name in ["stdin", "stdout", "stderr"]:
             if name in coargs:
                 f = getattr(env, name, None)
@@ -67,7 +67,7 @@ def wrap(commandfunc) -> Callable[[Env], InterpResult]:
                         # be allocated
                         f = allocated["stdout"]
                     else:
-                        f = BytesIO()
+                        f = BufIO()
                         allocated[name] = f
                 kwargs[name] = f
         ret = commandfunc(**kwargs)

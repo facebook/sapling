@@ -46,9 +46,6 @@ Python utilities:
   $ setconfig experimental.copytrace=off
   $ enable sparse treemanifest rebase copytrace
 
-FIXME(status): removing this causes IO deadlock due to in-processness
-  $ setconfig status.use-rust=false
-
   $ newrepo
   $ drawdag << 'EOS'
   > B  # B/x/x/y/z=B1

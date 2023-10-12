@@ -19,6 +19,7 @@ from functools import partial
 from typing import BinaryIO
 
 from ..sh import Env, Scope
+from ..sh.bufio import BufIO
 from ..sh.interp import interpcode
 from ..t.runtime import TestTmp
 from ..t.shext import shellenv
@@ -213,11 +214,11 @@ def hg(stdin: BinaryIO, stdout: BinaryIO, stderr: BinaryIO, env: Env) -> int:
     # Workaround that by using a temporary in-memory stream.
     if os.name == "nt":
         real_stdout, real_stderr = stdout, stderr
-        stdout = io.BytesIO()
+        stdout = BufIO()
         if real_stdout is real_stderr:
             stderr = stdout
         else:
-            stderr = io.BytesIO()
+            stderr = BufIO()
 
     try:
         with shellenv(

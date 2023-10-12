@@ -8,7 +8,7 @@ import os
 import shutil
 from typing import BinaryIO, List
 
-from .testfs import NullIO
+from .bufio import BufIO
 from .types import ShellFS
 
 
@@ -17,7 +17,7 @@ class OSFS(ShellFS):
 
     def open(self, path: str, mode: str) -> BinaryIO:
         if path == "/dev/null":
-            return NullIO()
+            return BufIO.devnull()
         path = self._absjoin(path)
         if "b" not in mode:
             mode += "b"
