@@ -9,7 +9,7 @@
 #endif
 
 #if rustcommand
-  $ setconfig status.use-rust=True experimental.rustmatcher=true
+  $ setconfig status.use-rust=True
 #else
   $ setconfig status.use-rust=False
 #endif

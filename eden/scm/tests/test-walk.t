@@ -1,19 +1,5 @@
 #debugruntest-compatible
 
-#testcases python dynmatcher rustmatcher
-
-#if python
-  $ setconfig experimental.dynmatcher=false experimental.rustmatcher=false
-#endif
-
-#if dynmatcher
-  $ setconfig experimental.dynmatcher=true experimental.rustmatcher=false
-#endif
-
-#if rustmatcher
-  $ setconfig experimental.dynmatcher=false experimental.rustmatcher=true
-#endif
-
   $ eagerepo
 
   $ hg init t
@@ -472,9 +458,6 @@ Test empty glob behavior:
   $ cd t
   $ hg debugwalk 'glob:'
   $ hg debugwalk 'relglob:'
-Config knob to fall back to buggy behavior, just in case:
-  $ hg debugwalk 'glob:' --config experimental.rustmatcher=false --config experimental.empty-glob-always-matches=true | wc -l
-  18
   $ cd mammals
   $ hg debugwalk 'glob:'
   $ hg debugwalk 'relglob:'

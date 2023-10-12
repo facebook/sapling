@@ -1182,7 +1182,6 @@ def _dispatch(req):
             from . import match as matchmod, mdiff
 
             mdiff.init(ui)
-            matchmod.init(ui)
 
             ui.log("command", "%s\n", msg)
             if repo:
