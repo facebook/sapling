@@ -894,15 +894,30 @@ class treematcher(basematcher):
     """
 
     def __init__(
-        self, root, cwd, badfn=None, rules=[], ruledetails=None, casesensitive=True
+        self,
+        root,
+        cwd,
+        badfn=None,
+        rules: Optional[List[str]] = None,
+        ruledetails: Optional[List] = None,
+        casesensitive=True,
+        matcher: Optional[pathmatcher.treematcher] = None,
     ):
         super(treematcher, self).__init__(root, cwd, badfn)
-        rules = list(rules)
 
-        self._matcher = pathmatcher.treematcher(rules, casesensitive)
+        if (rules is None) == (matcher is None):
+            raise error.ProgrammingError("must specify exactly one of rules or matcher")
 
-        self._rules = rules
-        self._ruledetails = ruledetails
+        if rules is not None:
+            rules = list(rules)
+            self._matcher = pathmatcher.treematcher(rules, casesensitive)
+            self._rules = rules
+        else:
+            assert matcher is not None
+            self._matcher = matcher
+            self._rules = None
+
+        self._ruledetails = ruledetails or rules
 
     def matchfn(self, f):
         return self._matcher.matches(f)
@@ -919,15 +934,10 @@ class treematcher(basematcher):
 
     def explain(self, f):
         matchingidxs = self._matcher.matching_rule_indexes(f)
-        if matchingidxs:
+        if matchingidxs and self._ruledetails:
             # Use the final matching index (this follows the "last match wins"
             # logic within the tree matcher).
-            rule = self._rules[matchingidxs[-1]]
-            if self._ruledetails:
-                rule = "{} ({})".format(rule, self._ruledetails[matchingidxs[-1]])
-
-            return rule
-
+            return self._ruledetails[matchingidxs[-1]]
         return None
 
     def __repr__(self):

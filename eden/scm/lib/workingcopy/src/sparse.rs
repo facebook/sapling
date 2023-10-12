@@ -181,11 +181,20 @@ pub fn config_overrides(config: impl Config) -> HashMap<String, String> {
 }
 
 pub fn disk_overrides(dot_path: &Path) -> anyhow::Result<HashMap<String, String>> {
-    match util::file::open(dot_path.join(CONFIG_OVERRIDE_CACHE), "r") {
-        Ok(f) => Ok(serde_json::from_reader(f)?),
-        Err(err) if err.kind() != std::io::ErrorKind::NotFound => Err(err.into()),
-        _ => Ok(HashMap::new()),
+    // Pick up cached overrides written out by sparse.py during checkout.
+    // The ".<pid>" file contains uncommited overrides for an in-progress checkout.
+    for loc in [
+        format!("{}.{}", CONFIG_OVERRIDE_CACHE, std::process::id()),
+        CONFIG_OVERRIDE_CACHE.to_string(),
+    ] {
+        match util::file::open(dot_path.join(&loc), "r") {
+            Ok(f) => return Ok(serde_json::from_reader(f)?),
+            Err(err) if !err.is_not_found() => return Err(err.into()),
+            _ => continue,
+        }
     }
+
+    Ok(HashMap::new())
 }
 
 #[cfg(test)]

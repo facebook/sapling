@@ -770,6 +770,10 @@ def _setupdiff(ui) -> None:
 class RawSparseConfig:
     """Represents a raw, unexpanded sparse config file"""
 
+    # Carry the entire raw contents so we can easily delegate to the
+    # Rust sparse library.
+    raw = attr.ib()
+
     path = attr.ib()
     lines = attr.ib(convert=list)
     profiles = attr.ib(convert=tuple)
@@ -1099,64 +1103,26 @@ def _wraprepo(ui, repo) -> None:
 
 
 def computesparsematcher(
-    repo, revs, rawconfig=None, debugversion=None, nocatchall: bool = False
+    repo,
+    revs,
+    rawconfig=Optional[RawSparseConfig],
+    debugversion=None,
+    nocatchall: bool = False,
 ):
-    matchers = []
-    isalways = False
-
-    for rev in revs:
-        try:
-            config = getsparsepatterns(
-                repo,
-                rev,
-                rawconfig=rawconfig,
-                debugversion=debugversion,
-                nocatchall=nocatchall,
-            )
-
-            matchrules = config.mainrules
-            ruleorigins = config.ruleorigins
-
-            if config.profiles:
-                # Keep each profile separate, so the end result is a
-                # union of matchers instead of a single matcher with all
-                # the rules in order. This allows users to enable
-                # a profile for each product they work on, and the
-                # excludes in one product won't prevent the files from
-                # being included by another product.
-                for profile in config.profiles:
-                    # v1 profiles are already rolled up into the
-                    # mainrules above.
-                    version = debugversion or profile.version()
-                    if version != "1":
-                        matchers.append(
-                            matchmod.rulesmatch(
-                                repo.root,
-                                "",
-                                profile.rules,
-                                ruledetails=profile.ruleorigins,
-                            )
-                        )
-
-            if matchrules:
-                matchers.append(
-                    matchmod.rulesmatch(
-                        repo.root,
-                        "",
-                        matchrules,
-                        ruledetails=ruleorigins,
-                    )
-                )
-
-            if not config.mainrules and not config.profiles:
-                isalways = True
-        except IOError:
-            pass
-
-    if isalways:
+    treematchers = repo._rsrepo.workingcopy().sparsematchers(
+        nodes=[repo[rev].node() for rev in revs],
+        raw_config=(rawconfig.raw, rawconfig.path) if rawconfig else None,
+        debug_version=debugversion,
+        no_catch_all=nocatchall,
+    )
+    if not treematchers:
         return matchmod.always(repo.root, "")
     else:
-        return matchmod.union(matchers, repo.root, "")
+        treematchers = [
+            matchmod.treematcher(repo.root, "", matcher=tm, ruledetails=details)
+            for (tm, details) in treematchers
+        ]
+        return matchmod.union(treematchers, repo.root, "")
 
 
 def getsparsepatterns(
@@ -1361,7 +1327,7 @@ def readsparseconfig(
 
     metadata = {key: "\n".join(value).strip() for key, value in metadata.items()}
     # pyre-fixme[19]: Expected 0 positional arguments.
-    return RawSparseConfig(filename, lines, profiles, metadata)
+    return RawSparseConfig(raw, filename, lines, profiles, metadata)
 
 
 def readsparseprofile(

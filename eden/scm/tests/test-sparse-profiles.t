@@ -102,7 +102,6 @@ Verify error checking includes filename and line numbers
   $ hg add broken.sparse
   $ hg ci -m 'Adding a broken file'
   $ hg sparse enableprofile broken.sparse
-  warning: sparse profile cannot use paths starting with /, ignoring /absolute/paths/are/ignored, in broken.sparse:4
   $ hg -q debugstrip . --no-backup 2>/dev/null
 
 Verify that a profile is updated across multiple commits
@@ -300,7 +299,6 @@ warning message can be suppressed by setting missingwarning = false in
   $ hg sparse enableprofile backend.sparse
   the profile 'backend.sparse' does not exist in the current commit, it will only take effect when you check out a commit containing a profile with that name
   (if the path is a typo, use 'hg sparse disableprofile' to remove it)
-  warning: sparse profile 'backend.sparse' not found in rev 42b23bc43905 - ignoring it
 
 Test file permissions changing across a sparse profile change
   $ newclientrepo
@@ -676,6 +674,7 @@ We can look at invididual profiles:
     "metadata": {"title": "An extended profile including some interesting files"},
     "path": "profiles/bar/ham",
     "profiles": ["profiles/bar/eggs"],
+    "raw": "%include profiles/bar/eggs\n[metadata]\ntitle: An extended profile including some interesting files\n[include]\ninteresting\n",
     "stats": {"filecount": 11, "filecountpercentage": 91.66666666666666}
    }
   ]
@@ -687,6 +686,7 @@ We can look at invididual profiles:
     "metadata": {"title": "An extended profile including some interesting files"},
     "path": "profiles/bar/ham",
     "profiles": ["profiles/bar/eggs"],
+    "raw": "%include profiles/bar/eggs\n[metadata]\ntitle: An extended profile including some interesting files\n[include]\ninteresting\n",
     "stats": {"filecount": 11, "filecountpercentage": 91.66666666666666, "totalsize": 4145875}
    }
   ]
