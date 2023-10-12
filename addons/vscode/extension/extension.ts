@@ -9,6 +9,7 @@ import type {Logger} from 'isl-server/src/logger';
 
 import packageJson from '../package.json';
 import {registerSaplingDiffContentProvider} from './DiffContentProvider';
+import {Internal} from './Internal';
 import {VSCodeReposList} from './VSCodeRepo';
 import {InlineBlameProvider} from './blame/blame';
 import {registerCommands} from './commands';
@@ -32,6 +33,9 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(new InlineBlameProvider(reposList, logger, extensionTracker));
     context.subscriptions.push(registerSaplingDiffContentProvider(logger));
     context.subscriptions.push(...registerCommands(extensionTracker));
+    Internal?.registerInternalBugLogsProvider != null &&
+      context.subscriptions.push(Internal.registerInternalBugLogsProvider(logger));
+
     extensionTracker.track('VSCodeExtensionActivated', {duration: Date.now() - start});
   } catch (error) {
     extensionTracker.error('VSCodeExtensionActivated', 'VSCodeActivationError', error as Error, {
