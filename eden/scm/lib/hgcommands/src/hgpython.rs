@@ -332,7 +332,7 @@ fn read_to_py_object(py: Python, reader: &dyn clidispatch::io::Read) -> PyObject
         // The Python code accepts None, and will use its default input stream.
         py.None()
     } else if let Some(obj) = any.downcast_ref::<WrappedIO>() {
-        obj.0.clone_ref(py)
+        obj.obj.clone_ref(py)
     } else {
         unimplemented!(
             "converting non-stdio Read ({}) from Rust to Python is not implemented",
@@ -348,7 +348,7 @@ fn write_to_py_object(py: Python, writer: &dyn clidispatch::io::Write) -> PyObje
     } else if any.downcast_ref::<std::io::Stderr>().is_some() {
         py.None()
     } else if let Some(obj) = any.downcast_ref::<WrappedIO>() {
-        obj.0.clone_ref(py)
+        obj.obj.clone_ref(py)
     } else {
         unimplemented!(
             "converting non-stdio Write ({}) from Rust to Python is not implemented",
@@ -367,9 +367,9 @@ fn init_bindings_commands(py: Python, package: &str) -> PyResult<PyModule> {
         ferr: Option<PyObject>,
     ) -> PyResult<i32> {
         if let (Some(fin), Some(fout), Some(ferr)) = (fin, fout, ferr) {
-            let fin = wrap_pyio(fin);
-            let fout = wrap_pyio(fout);
-            let ferr = wrap_pyio(ferr);
+            let fin = wrap_pyio(py, fin);
+            let fout = wrap_pyio(py, fout);
+            let ferr = wrap_pyio(py, ferr);
             let old_io = IO::main();
             let io = IO::new(fin, fout, Some(ferr));
             io.set_main();

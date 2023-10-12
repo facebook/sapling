@@ -317,18 +317,29 @@ impl BufIO {
 }
 
 /// Wrap a PyObject into a Rust object that implements Rust Read / Write traits.
-pub fn wrap_pyio(pyio: PyObject) -> WrappedIO {
-    WrappedIO(pyio)
+pub fn wrap_pyio(py: Python, pyio: PyObject) -> WrappedIO {
+    let bufio = pyio
+        .extract::<BufIO>(py)
+        .map(|bufio| bufio.to_rust(py))
+        .ok();
+    WrappedIO { obj: pyio, bufio }
 }
 
-pub struct WrappedIO(pub PyObject);
+pub struct WrappedIO {
+    pub obj: PyObject,
+    bufio: Option<io::BufIO>,
+}
 
 impl std::io::Read for WrappedIO {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        if let Some(bufio) = &mut self.bufio {
+            return bufio.read(buf);
+        }
+
         let gil = Python::acquire_gil();
         let py = gil.python();
         let bytes = self
-            .0
+            .obj
             .call_method(py, "read", (buf.len(),), None)
             .map_err(convert_ioerr)?
             .extract::<PyBytes>(py)
@@ -348,20 +359,28 @@ impl std::io::Read for WrappedIO {
 
 impl std::io::Write for WrappedIO {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        if let Some(bufio) = &mut self.bufio {
+            return bufio.write(buf);
+        }
+
         let gil = Python::acquire_gil();
         let py = gil.python();
         let len = buf.len();
         let buf = PyBytes::new(py, buf);
-        self.0
+        self.obj
             .call_method(py, "write", (buf,), None)
             .map_err(convert_ioerr)?;
         Ok(len)
     }
 
     fn flush(&mut self) -> std::io::Result<()> {
+        if let Some(bufio) = &mut self.bufio {
+            return bufio.flush();
+        }
+
         let gil = Python::acquire_gil();
         let py = gil.python();
-        self.0
+        self.obj
             .call_method(py, "flush", NoArgs, None)
             .map_err(convert_ioerr)?;
         Ok(())
@@ -370,17 +389,21 @@ impl std::io::Write for WrappedIO {
 
 impl ::io::IsTty for WrappedIO {
     fn is_tty(&self) -> bool {
+        if let Some(bufio) = &self.bufio {
+            return bufio.is_tty();
+        }
+
         (|| -> PyResult<bool> {
             let gil = Python::acquire_gil();
             let py = gil.python();
-            let result = self.0.call_method(py, "isatty", NoArgs, None)?;
+            let result = self.obj.call_method(py, "isatty", NoArgs, None)?;
             result.extract(py)
         })()
         .unwrap_or(false)
     }
 }
 
-/// Convert a Python `IOError` to Rust `std::io::Error`.
+/// Convert a Python `IOError` to Rust `io::Error`.
 fn convert_ioerr(mut pyerr: PyErr) -> std::io::Error {
     let gil = Python::acquire_gil();
     let py = gil.python();

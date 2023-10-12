@@ -42,7 +42,7 @@ fn encode(py: Python, value: u64) -> PyResult<PyBytes> {
 }
 
 fn read(py: Python, io: PyObject) -> PyResult<u64> {
-    let mut io = pyio::wrap_pyio(io);
+    let mut io = pyio::wrap_pyio(py, io);
     let value = io.read_vlq().map_pyerr(py)?;
     Ok(value)
 }
