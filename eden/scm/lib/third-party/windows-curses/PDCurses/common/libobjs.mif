@@ -1,0 +1,24 @@
+# Common elements for most of the DOS, OS/2 and Windows
+# makefiles (not Watcom)
+
+PDCURSES_CURSES_H	= $(PDCURSES_SRCDIR)/curses.h
+PDCURSES_CURSPRIV_H	= $(PDCURSES_SRCDIR)/curspriv.h
+PDCURSES_HEADERS	= $(PDCURSES_CURSES_H) $(PDCURSES_CURSPRIV_H)
+PANEL_HEADER		= $(PDCURSES_SRCDIR)/panel.h
+
+srcdir	= $(PDCURSES_SRCDIR)/pdcurses
+demodir	= $(PDCURSES_SRCDIR)/demos
+
+LIBOBJS = addch.$(O) addchstr.$(O) addstr.$(O) attr.$(O) beep.$(O) \
+bkgd.$(O) border.$(O) clear.$(O) color.$(O) delch.$(O) deleteln.$(O) \
+getch.$(O) getstr.$(O) getyx.$(O) inch.$(O) inchstr.$(O) \
+initscr.$(O) inopts.$(O) insch.$(O) insstr.$(O) instr.$(O) kernel.$(O) \
+keyname.$(O) mouse.$(O) move.$(O) outopts.$(O) overlay.$(O) pad.$(O) \
+panel.$(O) printw.$(O) refresh.$(O) scanw.$(O) scr_dump.$(O) scroll.$(O) \
+slk.$(O) termattr.$(O) touch.$(O) util.$(O) window.$(O) debug.$(O)
+
+PDCOBJS = pdcclip.$(O) pdcdisp.$(O) pdcgetsc.$(O) pdckbd.$(O) pdcscrn.$(O) \
+pdcsetsc.$(O) pdcutil.$(O)
+
+DEMOS = testcurs$(E) ozdemo$(E) xmas$(E) tuidemo$(E) firework$(E) \
+ptest$(E) rain$(E) worm$(E)

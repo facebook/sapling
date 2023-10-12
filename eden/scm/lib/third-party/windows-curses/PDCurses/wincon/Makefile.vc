@@ -1,0 +1,120 @@
+# Visual C++ Makefile for PDCurses - Windows console
+#
+# Usage: nmake -f [path\]Makefile.vc [DEBUG=Y] [DLL=Y] [WIDE=Y] [UTF8=Y]
+#        [INFOEX=N] [target]
+#
+# where target can be any of:
+# [all|demos|pdcurses.lib|testcurs.exe...]
+
+O = obj
+E = .exe
+RM = del
+
+!ifndef PDCURSES_SRCDIR
+PDCURSES_SRCDIR = ..
+!endif
+
+!include $(PDCURSES_SRCDIR)\common\libobjs.mif
+
+osdir		= $(PDCURSES_SRCDIR)\wincon
+common		= $(PDCURSES_SRCDIR)\common
+
+PDCURSES_WIN_H	= $(osdir)\pdcwin.h
+
+CC		= cl.exe -nologo
+
+!ifdef DEBUG
+CFLAGS		= -Z7 -DPDCDEBUG
+LDFLAGS		= -debug -pdb:none
+!else
+CFLAGS		= -O1
+LDFLAGS		=
+!endif
+
+!ifdef WIDE
+WIDEOPT		= -DPDC_WIDE
+!endif
+
+!ifdef UTF8
+UTF8OPT		= -DPDC_FORCE_UTF8
+!endif
+
+!ifdef INFOEX
+INFOPT		= -DHAVE_NO_INFOEX
+!endif
+
+SHL_LD = link $(LDFLAGS) -nologo -dll -machine:$(PLATFORM) -out:pdcurses.dll
+
+LINK		= link.exe -nologo
+
+CCLIBS		= user32.lib advapi32.lib
+# may need to add msvcrt for older compilers
+#CCLIBS		= msvcrt.lib user32.lib advapi32.lib
+
+LIBEXE		= lib -nologo
+
+LIBCURSES	= pdcurses.lib
+CURSESDLL	= pdcurses.dll
+
+!ifdef DLL
+DLLOPT		= -DPDC_DLL_BUILD
+PDCLIBS		= $(CURSESDLL)
+!else
+PDCLIBS		= $(LIBCURSES)
+!endif
+
+BUILD		= $(CC) -I$(PDCURSES_SRCDIR) -c $(CFLAGS) $(DLLOPT) \
+$(WIDEOPT) $(UTF8OPT) $(INFOPT)
+
+all:	$(PDCLIBS)
+
+clean:
+	-$(RM) *.obj
+	-$(RM) *.lib
+	-$(RM) *.exe
+	-$(RM) *.dll
+	-$(RM) *.exp
+	-$(RM) *.res
+
+demos:	$(PDCLIBS) $(DEMOS)
+
+DEMOOBJS = $(DEMOS:.exe=.obj) tui.obj
+
+$(LIBOBJS) $(PDCOBJS) : $(PDCURSES_HEADERS)
+$(PDCOBJS) : $(PDCURSES_WIN_H)
+$(DEMOOBJS) : $(PDCURSES_CURSES_H)
+$(DEMOS) : $(LIBCURSES)
+panel.obj : $(PANEL_HEADER)
+
+!ifndef DLL
+$(LIBCURSES) : $(LIBOBJS) $(PDCOBJS)
+	$(LIBEXE) -out:$@ $(LIBOBJS) $(PDCOBJS)
+!endif
+
+$(CURSESDLL) : $(LIBOBJS) $(PDCOBJS) pdcurses.obj
+	$(SHL_LD) $(LIBOBJS) $(PDCOBJS) pdcurses.obj $(CCLIBS)
+
+pdcurses.res pdcurses.obj: $(common)\pdcurses.rc
+	rc -r -fopdcurses.res $(common)\pdcurses.rc
+	cvtres -machine:$(PLATFORM) -nologo -out:pdcurses.obj pdcurses.res
+
+{$(srcdir)\}.c{}.obj::
+	$(BUILD) $<
+
+{$(osdir)\}.c{}.obj::
+	$(BUILD) $<
+
+{$(demodir)\}.c{}.obj::
+	$(BUILD) $<
+
+.obj.exe:
+	$(LINK) $(LDFLAGS) $< $(LIBCURSES) $(CCLIBS)
+
+tuidemo.exe: tuidemo.obj tui.obj
+	$(LINK) $(LDFLAGS) $*.obj tui.obj $(LIBCURSES) $(CCLIBS)
+
+tui.obj: $(demodir)\tui.c $(demodir)\tui.h
+	$(BUILD) -I$(demodir) $(demodir)\tui.c
+
+tuidemo.obj: $(demodir)\tuidemo.c
+	$(BUILD) -I$(demodir) $(demodir)\tuidemo.c

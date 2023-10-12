@@ -1,0 +1,37 @@
+# Watcom Makefile for PDCurses - Windows console
+#
+# Usage: wmake -f [path\]Makefile.wcc [DEBUG=Y] [WIDE=Y] [UTF8=Y]
+#        [INFOEX=N] [target]
+#
+# where target can be any of:
+# [all|demos|pdcurses.lib|testcurs.exe...]
+
+!ifdef %PDCURSES_SRCDIR
+PDCURSES_SRCDIR	= $(%PDCURSES_SRCDIR)
+!else
+PDCURSES_SRCDIR	= ..
+!endif
+
+osdir		= $(PDCURSES_SRCDIR)/wincon
+
+CC		= wcc386
+TARGET		= nt
+
+CFLAGS		= -bt=$(TARGET)
+
+!ifeq WIDE Y
+CFLAGS		+= -DPDC_WIDE
+!endif
+
+!ifeq UTF8 Y
+CFLAGS		+= -DPDC_FORCE_UTF8
+!endif
+
+!ifeq INFOEX N
+CFLAGS		+= -DHAVE_NO_INFOEX
+!endif
+
+!include $(PDCURSES_SRCDIR)/common/watcom.mif
+
+$(LIBCURSES) : $(LIBOBJS) $(PDCOBJS)
+	$(LIBEXE) $@ $(LIBOBJS) $(PDCOBJS)
