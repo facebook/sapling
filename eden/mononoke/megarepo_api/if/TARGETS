@@ -1,0 +1,17 @@
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+
+oncall("mononoke")
+
+thrift_library(
+    name = "megarepo_types-thrift",
+    languages = [
+        "rust",
+    ],
+    thrift_srcs = {
+        "megarepo_types_thrift.thrift": [],
+    },
+    deps = [
+        "//eden/mononoke/mononoke_types/if:mononoke_types-thrift",
+        "//eden/mononoke/scs/if:source_control",
+    ],
+)

@@ -1,0 +1,17 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "metadata",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:trust-dns-resolver",
+        "//eden/mononoke/permission_checker:permission_checker",
+        "//eden/mononoke/server/session_id:session_id",
+        "//eden/scm/lib/clientinfo:clientinfo",
+    ],
+)

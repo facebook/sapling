@@ -1,0 +1,165 @@
+load(
+    "@fbsource//xplat/security/lionhead:defs.bzl",
+    "EXTERNAL_USERS",
+    "Metadata",
+    "Severity",
+)
+load("//security/lionhead/harnesses:defs.bzl", "rust_libfuzzer_harness")
+
+oncall("mercurial_release")
+
+# Run this with: buck run -c rust.fuzzing=true :gca
+# See D13660487.
+rust_libfuzzer_harness(
+    name = "gca",
+    srcs = [
+        "fuzz_targets/gca.rs",
+        "fuzz_targets/tests.rs",
+    ],
+    crate_root = "fuzz_targets/gca.rs",
+    metadata = Metadata(
+        exposure = EXTERNAL_USERS,
+        project = "oncall_dynamic_analysis",
+        severity_denial_of_service = Severity.FILE_SECURITY_TASK,  # missing severity, using default TODO: check and apply appropriate severity
+        severity_service_takeover = Severity.FILE_SECURITY_TASK,  # missing severity, using default TODO: check and apply appropriate severity
+    ),
+    deps = [
+        "//eden/scm/lib/dag:dag",
+        "//eden/scm/lib/dag/bindag:bindag",
+    ],
+    external_deps = [
+        ("rust-crates-io", None, "lazy_static"),
+    ],
+)
+
+rust_libfuzzer_harness(
+    name = "gca_small",
+    srcs = [
+        "fuzz_targets/gca_small.rs",
+        "fuzz_targets/tests.rs",
+    ],
+    crate_root = "fuzz_targets/gca_small.rs",
+    metadata = Metadata(
+        exposure = EXTERNAL_USERS,
+        project = "oncall_dynamic_analysis",
+        severity_denial_of_service = Severity.FILE_SECURITY_TASK,  # missing severity, using default TODO: check and apply appropriate severity
+        severity_service_takeover = Severity.FILE_SECURITY_TASK,  # missing severity, using default TODO: check and apply appropriate severity
+    ),
+    deps = [
+        "//eden/scm/lib/dag:dag",
+        "//eden/scm/lib/dag/bindag:bindag",
+    ],
+    external_deps = [
+        ("rust-crates-io", None, "lazy_static"),
+    ],
+)
+
+rust_libfuzzer_harness(
+    name = "gca_octopus",
+    srcs = [
+        "fuzz_targets/gca_octopus.rs",
+        "fuzz_targets/tests.rs",
+    ],
+    crate_root = "fuzz_targets/gca_octopus.rs",
+    metadata = Metadata(
+        exposure = EXTERNAL_USERS,
+        project = "oncall_dynamic_analysis",
+        severity_denial_of_service = Severity.FILE_SECURITY_TASK,  # missing severity, using default TODO: check and apply appropriate severity
+        severity_service_takeover = Severity.FILE_SECURITY_TASK,  # missing severity, using default TODO: check and apply appropriate severity
+    ),
+    deps = [
+        "//eden/scm/lib/dag:dag",
+        "//eden/scm/lib/dag/bindag:bindag",
+    ],
+    external_deps = [
+        ("rust-crates-io", None, "lazy_static"),
+    ],
+)
+
+rust_libfuzzer_harness(
+    name = "range",
+    srcs = [
+        "fuzz_targets/range.rs",
+        "fuzz_targets/tests.rs",
+    ],
+    crate_root = "fuzz_targets/range.rs",
+    metadata = Metadata(
+        exposure = EXTERNAL_USERS,
+        project = "oncall_dynamic_analysis",
+        severity_denial_of_service = Severity.FILE_SECURITY_TASK,  # missing severity, using default TODO: check and apply appropriate severity
+        severity_service_takeover = Severity.FILE_SECURITY_TASK,  # missing severity, using default TODO: check and apply appropriate severity
+    ),
+    deps = [
+        "//eden/scm/lib/dag:dag",
+        "//eden/scm/lib/dag/bindag:bindag",
+    ],
+    external_deps = [
+        ("rust-crates-io", None, "lazy_static"),
+    ],
+)
+
+rust_libfuzzer_harness(
+    name = "range_medium",
+    srcs = [
+        "fuzz_targets/range_medium.rs",
+        "fuzz_targets/tests.rs",
+    ],
+    crate_root = "fuzz_targets/range_medium.rs",
+    metadata = Metadata(
+        exposure = EXTERNAL_USERS,
+        project = "oncall_dynamic_analysis",
+        severity_denial_of_service = Severity.FILE_SECURITY_TASK,  # missing severity, using default TODO: check and apply appropriate severity
+        severity_service_takeover = Severity.FILE_SECURITY_TASK,  # missing severity, using default TODO: check and apply appropriate severity
+    ),
+    deps = [
+        "//eden/scm/lib/dag:dag",
+        "//eden/scm/lib/dag/bindag:bindag",
+    ],
+    external_deps = [
+        ("rust-crates-io", None, "lazy_static"),
+    ],
+)
+
+rust_libfuzzer_harness(
+    name = "range_small",
+    srcs = [
+        "fuzz_targets/range_small.rs",
+        "fuzz_targets/tests.rs",
+    ],
+    crate_root = "fuzz_targets/range_small.rs",
+    metadata = Metadata(
+        exposure = EXTERNAL_USERS,
+        project = "oncall_dynamic_analysis",
+        severity_denial_of_service = Severity.FILE_SECURITY_TASK,  # missing severity, using default TODO: check and apply appropriate severity
+        severity_service_takeover = Severity.FILE_SECURITY_TASK,  # missing severity, using default TODO: check and apply appropriate severity
+    ),
+    deps = [
+        "//eden/scm/lib/dag:dag",
+        "//eden/scm/lib/dag/bindag:bindag",
+    ],
+    external_deps = [
+        ("rust-crates-io", None, "lazy_static"),
+    ],
+)
+
+rust_libfuzzer_harness(
+    name = "range_octopus",
+    srcs = [
+        "fuzz_targets/range_octopus.rs",
+        "fuzz_targets/tests.rs",
+    ],
+    crate_root = "fuzz_targets/range_octopus.rs",
+    metadata = Metadata(
+        exposure = EXTERNAL_USERS,
+        project = "oncall_dynamic_analysis",
+        severity_denial_of_service = Severity.FILE_SECURITY_TASK,  # missing severity, using default TODO: check and apply appropriate severity
+        severity_service_takeover = Severity.FILE_SECURITY_TASK,  # missing severity, using default TODO: check and apply appropriate severity
+    ),
+    deps = [
+        "//eden/scm/lib/dag:dag",
+        "//eden/scm/lib/dag/bindag:bindag",
+    ],
+    external_deps = [
+        ("rust-crates-io", None, "lazy_static"),
+    ],
+)

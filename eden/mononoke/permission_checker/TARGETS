@@ -1,0 +1,29 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "permission_checker",
+    srcs = glob(["src/**/*.rs"]),
+    test_deps = [
+        "//common/rust/shed/fbinit:fbinit-tokio",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:itertools",
+        "fbsource//third-party/rust:openssl",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:serde_json",
+        "//common/rust/aclchecker:aclchecker",
+        "//common/rust/identity:identity_ext",
+        "//common/rust/shed/fbinit:fbinit",
+        "//configerator/structs/infrasec/if:acl-rust",
+    ] + ([] if rust_oss.is_oss_build() else [
+        "fbsource//third-party/rust:maplit",
+        "fbsource//third-party/rust:tokio",
+    ]),
+)

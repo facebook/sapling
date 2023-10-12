@@ -1,0 +1,222 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+
+oncall("scm_client_infra")
+
+cpp_library(
+    name = "hg_backing_store",
+    srcs = ["HgBackingStore.cpp"],
+    headers = ["HgBackingStore.h"],
+    deps = [
+        ":hg_import_py_error",
+        ":hg_import_request",
+        ":hg_importer",
+        ":hg_proxy_hash",
+        "//eden/fs/config:config",
+        "//eden/fs/model:model",
+        "//eden/fs/telemetry:log_info",
+        "//eden/fs/telemetry:structured_logger",
+        "//eden/fs/utils:enum",
+        "//eden/fs/utils:throw",
+        "//eden/fs/utils:utils",
+        "//folly:stop_watch",
+        "//folly:thread_local",
+        "//folly:try",
+        "//folly/executors:cpu_thread_pool_executor",
+        "//folly/executors:global_executor",
+        "//folly/executors/task_queue:unbounded_blocking_queue",
+        "//folly/executors/thread_factory:init_thread_factory",
+        "//folly/executors/thread_factory:named_thread_factory",
+        "//folly/futures:core",
+        "//folly/logging:logging",
+    ],
+    exported_deps = [
+        ":hg_datapack_store",
+        "//eden/fs:config",
+        "//eden/fs/store:context",
+        "//eden/fs/store:store",
+        "//eden/fs/telemetry:telemetry",
+        "//eden/fs/utils:path",
+        "//eden/fs/utils:ref_ptr",
+        "//folly:executor",
+        "//folly:range",
+        "//folly:synchronized",
+    ],
+)
+
+cpp_library(
+    name = "hg_import_py_error",
+    srcs = ["HgImportPyError.cpp"],
+    headers = ["HgImportPyError.h"],
+    deps = [
+        "//folly:conv",
+    ],
+    exported_deps = [
+        "//folly:range",
+    ],
+)
+
+cpp_library(
+    name = "hg_import_request",
+    srcs = ["HgImportRequest.cpp"],
+    headers = ["HgImportRequest.h"],
+    deps = [
+        "//folly:try",
+    ],
+    exported_deps = [
+        ":hg_proxy_hash",
+        "//eden/fs/model:model",
+        "//eden/fs/store:context",
+        "//eden/fs/telemetry:telemetry",
+        "//eden/fs/utils:utils",
+        "//folly/futures:core",
+    ],
+)
+
+cpp_library(
+    name = "hg_import_request_queue",
+    srcs = ["HgImportRequestQueue.cpp"],
+    headers = ["HgImportRequestQueue.h"],
+    deps = [
+        "//eden/fs/config:config",
+        "//folly:map_util",
+    ],
+    exported_deps = [
+        ":hg_import_request",
+        "//eden/fs/model:model",
+        "//folly:synchronized",
+        "//folly:try",
+        "//folly/container:f14_hash",
+        "//folly/futures:core",
+    ],
+)
+
+cpp_library(
+    name = "hg_importer",
+    srcs = ["HgImporter.cpp"],
+    headers = ["HgImporter.h"],
+    deps = [
+        ":hg_import_py_error",
+        ":hg_proxy_hash",
+        "//eden/fs/model:model",
+        "//eden/fs/telemetry:structured_logger",
+        "//folly:conv",
+        "//folly:dynamic",
+        "//folly:file_util",
+        "//folly:utility",
+        "//folly/container:array",
+        "//folly/experimental:env_util",
+        "//folly/futures:core",
+        "//folly/io:iobuf",
+        "//folly/lang:bits",
+        "//folly/logging:logging",
+        "//folly/portability:unistd",
+    ],
+    exported_deps = [
+        "//eden/fs:config",
+        "//eden/fs/model:model-fwd",
+        "//eden/fs/telemetry:telemetry",
+        "//eden/fs/utils:path",
+        "//eden/fs/utils:process",
+        "//folly:range",
+        "//folly/portability:gflags",
+        "//folly/portability:iovec",
+    ],
+    external_deps = [
+        ("boost", None, "boost_filesystem"),
+    ],
+)
+
+cpp_library(
+    name = "hg_queued_backing_store",
+    srcs = ["HgQueuedBackingStore.cpp"],
+    headers = ["HgQueuedBackingStore.h"],
+    deps = [
+        ":hg_import_request",
+        ":hg_proxy_hash",
+        "//eden/fs/config:config",
+        "//eden/fs/service:thrift_util",
+        "//eden/fs/telemetry:structured_logger",
+        "//eden/fs/utils:enum",
+        "//eden/fs/utils:path",
+        "//eden/fs/utils:static_assert",
+        "//eden/fs/utils:throw",
+        "//eden/fs/utils:utils",
+        "//folly:string",
+        "//folly/futures:core",
+        "//folly/logging:logging",
+        "//folly/portability:gflags",
+        "//folly/system:thread_name",
+    ],
+    exported_deps = [
+        ":hg_backing_store",
+        ":hg_import_request_queue",
+        "//eden/fs/model:model",
+        "//eden/fs/store:context",
+        "//eden/fs/store:store",
+        "//eden/fs/telemetry:activity_buffer",
+        "//eden/fs/telemetry:telemetry",
+        "//folly:range",
+        "//folly:synchronized",
+    ],
+    external_deps = [
+        "re2",
+    ],
+)
+
+cpp_library(
+    name = "hg_datapack_store",
+    srcs = ["HgDatapackStore.cpp"],
+    headers = ["HgDatapackStore.h"],
+    # TODO: This is a hack to work around the fact that Rust framework
+    # dependencies do not propagate to downstream libraries and
+    # binaries. Remove when that's fixed.
+    os_deps = [(
+        "macos",
+        [
+            "fbsource//third-party/toolchains/macos:CoreFoundation",
+            "fbsource//third-party/toolchains/macos:Security",
+        ],
+    )],
+    deps = [
+        ":hg_import_request",
+        ":hg_proxy_hash",
+        "//eden/fs/config:config",
+        "//eden/fs/model:model",
+        "//eden/fs/store:context",
+        "//eden/fs/telemetry:log_info",
+        "//eden/fs/telemetry:structured_logger",
+        "//eden/fs/utils:ref_ptr",
+        "//eden/fs/utils:utils",
+        "//folly:optional",
+        "//folly/io:iobuf",
+        "//folly/logging:logging",
+    ],
+    exported_deps = [
+        "//eden/fs/model:model-fwd",
+        "//eden/fs/telemetry:telemetry",
+        "//eden/fs/utils:path",
+        "//eden/scm/lib/backingstore/c_api:c_api",
+        "//folly:range",
+        "//folly/futures:core",
+    ],
+)
+
+cpp_library(
+    name = "hg_proxy_hash",
+    srcs = ["HgProxyHash.cpp"],
+    headers = ["HgProxyHash.h"],
+    deps = [
+        "fbsource//third-party/fmt:fmt",
+        "//eden/fs/telemetry:telemetry",
+        "//eden/fs/utils:throw",
+        "//eden/fs/utils:utils",
+        "//folly/futures:core",
+        "//folly/logging:logging",
+    ],
+    exported_deps = [
+        "//eden/fs/config:config",
+        "//eden/fs/model:model",
+        "//eden/fs/store:store",
+        "//eden/fs/utils:path",
+    ],
+)

@@ -1,0 +1,17 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "path_hash",
+    srcs = glob([
+        "src/**/*.rs",
+    ]),
+    deps = [
+        "fbsource//third-party/rust:abomonation",
+        "fbsource//third-party/rust:abomonation_derive",
+        "//common/rust/shed/sql:sql",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+    ],
+)

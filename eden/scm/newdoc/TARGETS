@@ -1,0 +1,13 @@
+load("@fbcode_macros//build_defs:sphinx_wiki.bzl", "sphinx_wiki")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mercurial_release")
+
+sphinx_wiki(
+    name = "doc",
+    srcs = glob([
+        "**/*.rst",
+        "**/*.md",
+    ]),
+    wiki_root_path = "Mercurial/dev/DeveloperGuide",
+)

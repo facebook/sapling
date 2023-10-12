@@ -1,0 +1,20 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+
+oncall("mononoke")
+
+rust_binary(
+    name = "git_move_bookmark",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:tokio",
+        "//common/rust/scuba:scuba",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/git/facebook/scs_connection:scs_connection",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/scs/if:source_control-rust",
+    ],
+)

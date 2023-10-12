@@ -1,0 +1,20 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "thrift-types",
+    srcs = ["src/lib.rs"],
+    named_deps = {
+        "edenfs": "//eden/fs/service:thrift-rust",
+        "edenfs_config": "//eden/fs/config:config_thrift-rust",
+        "fb303_core": "//fb303/thrift:fb303_core-rust",
+        "hgclient_conf": "//configerator/structs/scm/hg/hgclientconf:config-rust",
+    },
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:thiserror",
+        "//thrift/lib/rust:fbthrift",
+    ],
+)

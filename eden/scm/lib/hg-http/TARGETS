@@ -1,0 +1,20 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "hg-http",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:once_cell",
+        "fbsource//third-party/rust:url",
+        "//eden/scm/lib/async-runtime:async-runtime",
+        "//eden/scm/lib/auth:auth",
+        "//eden/scm/lib/clientinfo:clientinfo",
+        "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/hg-metrics:hg-metrics",
+        "//eden/scm/lib/http-client:http-client",
+        "//eden/scm/lib/progress/model:progress-model",
+    ],
+)

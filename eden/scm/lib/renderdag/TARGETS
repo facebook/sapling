@@ -1,0 +1,41 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "renderdag",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dev-dependencies": {
+                    "dag": {"default-features": False},
+                },
+            },
+            "extra_buck_dependencies": {
+                "dependencies": [
+                    "fbsource//third-party/rust:serde",
+                ],
+            },
+            "features": {
+                "default": [],
+                "serialize": ["serde"],
+            },
+            "package": {
+                "license": "MIT",
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    features = [],
+    test_deps = [
+        "fbsource//third-party/rust:unicode-width",
+        "//eden/scm/lib/dag:dag",
+        "//eden/scm/lib/nonblocking:nonblocking",
+    ],
+    deps = [
+        "fbsource//third-party/rust:bitflags",
+        "fbsource//third-party/rust:itertools",
+    ],
+)

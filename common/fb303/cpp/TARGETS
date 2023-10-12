@@ -1,0 +1,16 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+
+oncall("fboss_agent_push")
+
+cpp_library(
+    name = "fb303",
+    srcs = glob(["*.cpp"]),
+    headers = glob(["*.h"]),
+    exported_deps = [
+        "//common/fb303/if:fb303-cpp2-services",
+        "//folly:small_vector",
+    ],
+    exported_external_deps = [
+        ("glibc", None, "rt"),
+    ],
+)

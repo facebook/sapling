@@ -1,0 +1,13 @@
+load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
+
+oncall("scm_client_infra")
+
+cpp_unittest(
+    name = "test",
+    srcs = glob(["*Test.cpp"]),
+    supports_static_listing = False,
+    deps = [
+        "//eden/scm/lib/backingstore/c_api:c_api",
+        "//folly:range",
+    ],
+)

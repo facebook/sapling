@@ -1,0 +1,66 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+
+oncall("scm_client_infra")
+
+thrift_library(
+    name = "serialization",
+    languages = [
+        "cpp2",
+        "py",
+        "rust",
+    ],
+    py_base_module = "facebook.eden",
+    thrift_srcs = {
+        "overlay.thrift": [],
+    },
+)
+
+cpp_library(
+    name = "overlay_checker_util",
+    headers = ["OverlayCheckerUtil.h"],
+    exported_deps = [
+        ":serialization-cpp2-types",
+        "//eden/fs/inodes:inode_number",
+        "//folly:cpp_attributes",
+        "//folly:small_vector",
+    ],
+)
+
+cpp_library(
+    name = "overlay_checker",
+    srcs = [
+        "OverlayChecker.cpp",
+    ],
+    headers = [
+        "OverlayChecker.h",
+    ],
+    deps = [
+        "//eden/fs/inodes/fscatalog:fsinodecatalog",
+        "//eden/fs/utils:enum",
+        "//folly:conv",
+        "//folly:exception_wrapper",
+        "//folly:file",
+        "//folly:file_util",
+        "//folly:overload",
+        "//folly:string",
+        "//folly/gen:base",
+        "//folly/gen:parallel_map",
+        "//folly/logging:logging",
+        "//folly/portability:unistd",
+        "//thrift/lib/cpp2/protocol:protocol",
+    ],
+    exported_deps = [
+        ":overlay_checker_util",
+        "//eden/fs/inodes:inode_catalog",
+        "//eden/fs/inodes:inode_number",
+        "//eden/fs/model:model",
+        "//eden/fs/utils:immediate_future",
+        "//eden/fs/utils:path",
+        "//folly:cpp_attributes",
+    ],
+    external_deps = [
+        ("boost", None, "boost_filesystem"),
+        ("glibc", None, "rt"),
+    ],
+)

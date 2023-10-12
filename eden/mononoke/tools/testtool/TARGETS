@@ -1,0 +1,46 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_binary(
+    name = "testtool",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:serde_derive",
+        "fbsource//third-party/rust:serde_json",
+        "fbsource//third-party/rust:smallvec",
+        "fbsource//third-party/rust:tokio",
+        "//common/rust/shed/facet:facet",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/sorted_vector_map:sorted_vector_map",
+        "//eden/mononoke/blobrepo:blobrepo",
+        "//eden/mononoke/blobrepo:repo_blobstore",
+        "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
+        "//eden/mononoke/bookmarks:bookmarks",
+        "//eden/mononoke/changesets/changesets_creation:changesets_creation",
+        "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
+        "//eden/mononoke/common/topo_sort:topo_sort",
+        "//eden/mononoke/derived_data:basename_suffix_skeleton_manifest",
+        "//eden/mononoke/derived_data:blame",
+        "//eden/mononoke/derived_data:changeset_info",
+        "//eden/mononoke/derived_data:deleted_manifest",
+        "//eden/mononoke/derived_data:derived_data_manager",
+        "//eden/mononoke/derived_data:fastlog",
+        "//eden/mononoke/derived_data:fsnodes",
+        "//eden/mononoke/derived_data:skeleton_manifest",
+        "//eden/mononoke/derived_data:unodes",
+        "//eden/mononoke/derived_data/filenodes_derivation:filenodes_derivation",
+        "//eden/mononoke/derived_data/mercurial_derivation:mercurial_derivation",
+        "//eden/mononoke/filestore:filestore",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/repo_attributes/repo_derived_data:repo_derived_data",
+        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/tests/utils:tests_utils",
+    ],
+)

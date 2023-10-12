@@ -1,0 +1,33 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("scm_client_infra")
+
+cpp_library(
+    name = "git",
+    srcs = glob(["*.cpp"]),
+    headers = glob(["*.h"]),
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
+    deps = [
+        "//eden/fs/model:model",
+        "//eden/fs/model/git:git",
+        "//eden/fs/service:thrift_util",
+        "//eden/fs/utils:enum",
+        "//eden/fs/utils:throw",
+        "//folly:conv",
+        "//folly:string",
+        "//folly/futures:core",
+        "//folly/logging:logging",
+    ],
+    exported_deps = [
+        "//eden/fs/store:context",
+        "//eden/fs/store:store",
+        "//eden/fs/utils:path",
+        "//folly:range",
+    ],
+    external_deps = [
+        ("libgit2", None, "git2"),
+    ],
+)

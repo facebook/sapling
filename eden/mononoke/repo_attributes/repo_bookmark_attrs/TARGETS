@@ -1,0 +1,17 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "repo_bookmark_attrs",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "//common/rust/shed/facet:facet",
+        "//eden/mononoke/bookmarks:bookmarks_types",
+        "//eden/mononoke/metaconfig:metaconfig_types",
+        "//eden/mononoke/permission_checker:permission_checker",
+        "//eden/mononoke/server/context:context",
+    ],
+)

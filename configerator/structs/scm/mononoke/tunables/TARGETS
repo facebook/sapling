@@ -1,0 +1,13 @@
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+
+thrift_library(
+    name = "tunables_structs",
+    languages = [
+        "rust",
+        "py",
+    ],
+    py_base_module = "configerator.mononoke",
+    thrift_py_options = "json",
+    thrift_rust_options = "serde",
+    thrift_srcs = {"tunables.thrift": None},
+)

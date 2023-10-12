@@ -1,0 +1,21 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mononoke")
+
+rust_library(
+    name = "commit_id",
+    srcs = glob(["src/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:strum",
+        "//eden/mononoke/bonsai_git_mapping:bonsai_git_mapping",
+        "//eden/mononoke/bonsai_globalrev_mapping:bonsai_globalrev_mapping",
+        "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
+        "//eden/mononoke/bonsai_svnrev_mapping:bonsai_svnrev_mapping",
+        "//eden/mononoke/mercurial:mercurial_types",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/server/context:context",
+    ],
+)

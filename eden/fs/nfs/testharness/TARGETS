@@ -1,0 +1,15 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+
+oncall("scm_client_infra")
+
+cpp_library(
+    name = "xdr_test_utils",
+    srcs = ["XdrTestUtils.cpp"],
+    headers = ["XdrTestUtils.h"],
+    exported_deps = [
+        "fbsource//third-party/fmt:fmt",
+        "//eden/fs/nfs/xdr:xdr",
+        "//folly/io:iobuf",
+        "//folly/portability:gtest",
+    ],
+)

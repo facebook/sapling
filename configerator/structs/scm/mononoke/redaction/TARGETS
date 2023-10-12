@@ -1,0 +1,11 @@
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+
+thrift_library(
+    name = "redaction_set",
+    languages = [
+        "rust",
+    ],
+    thrift_py_options = "json",
+    thrift_rust_options = "serde",
+    thrift_srcs = {"redaction_set.thrift": None},
+)

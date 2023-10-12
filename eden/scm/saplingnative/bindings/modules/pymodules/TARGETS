@@ -1,0 +1,27 @@
+load("//eden/scm:targets.bzl", "rust_python_library")
+
+oncall("mercurial_release")
+
+rust_python_library(
+    name = "pymodules",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "cpython": {
+                        "features": ["python3-sys"],
+                        "git": None,
+                        "rev": None,
+                    },
+                },
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    deps = [
+        "//eden/scm/lib/minibytes:minibytes",
+        "//eden/scm/lib/python-modules:python-modules",
+        "//eden/scm/saplingnative/bindings/modules/pybytes:pybytes",
+    ],
+)

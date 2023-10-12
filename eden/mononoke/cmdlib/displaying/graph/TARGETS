@@ -1,0 +1,43 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mononoke")
+
+rust_library(
+    name = "print_graph",
+    srcs = glob(["src/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "dag-types": {"features": [
+                        "for-tests",
+                        "serialize-abomonation",
+                    ]},
+                },
+            },
+            "extra_buck_dependencies": {
+                # This rule already depends on dag-lite, but it doesn't have a
+                # generated Cargo.toml file. Instead depend on dag and enable
+                # only lite features on it.
+                "dependencies": [
+                    "//eden/scm/lib/dag:dag",
+                    "//eden/scm/lib/dag/dag-types:dag-types",
+                ],
+            },
+        },
+    },
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:futures",
+        "//eden/mononoke/blobrepo:changeset_fetcher",
+        "//eden/mononoke/blobrepo:repo_blobstore",
+        "//eden/mononoke/blobstore:blobstore",
+        "//eden/mononoke/bonsai_git_mapping:bonsai_git_mapping",
+        "//eden/mononoke/bonsai_globalrev_mapping:bonsai_globalrev_mapping",
+        "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
+        "//eden/mononoke/cmdlib/displaying:cmdlib_displaying",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/server/context:context",
+        "//eden/scm/lib/dag:dag-lite",
+    ],
+)

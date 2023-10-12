@@ -1,0 +1,104 @@
+load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
+load("//eden/scm:targets.bzl", "rust_python_library")
+
+oncall("mercurial_release")
+
+rust_python_library(
+    name = "bindings",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "cpython": {
+                        "features": ["python3-sys"],
+                        "git": None,
+                        "rev": None,
+                    },
+                },
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:paste",
+        # see update_modules.sh
+        # [[[cog
+        # import cog, glob, os
+        # for path in sorted(glob.glob('modules/py*/TARGETS')):
+        #     name = os.path.basename(os.path.dirname(path))
+        #     cog.outl(f'"//eden/scm/saplingnative/bindings/modules/{name}:{name}",')
+        # ]]]
+        "//eden/scm/saplingnative/bindings/modules/pyatexit:pyatexit",
+        "//eden/scm/saplingnative/bindings/modules/pyauth:pyauth",
+        "//eden/scm/saplingnative/bindings/modules/pyblackbox:pyblackbox",
+        "//eden/scm/saplingnative/bindings/modules/pybytes:pybytes",
+        "//eden/scm/saplingnative/bindings/modules/pycats:pycats",
+        "//eden/scm/saplingnative/bindings/modules/pycext:pycext",
+        "//eden/scm/saplingnative/bindings/modules/pycheckout:pycheckout",
+        "//eden/scm/saplingnative/bindings/modules/pyclientinfo:pyclientinfo",
+        "//eden/scm/saplingnative/bindings/modules/pycliparser:pycliparser",
+        "//eden/scm/saplingnative/bindings/modules/pyconchparser:pyconchparser",
+        "//eden/scm/saplingnative/bindings/modules/pyconfigloader:pyconfigloader",
+        "//eden/scm/saplingnative/bindings/modules/pycopytrace:pycopytrace",
+        "//eden/scm/saplingnative/bindings/modules/pydag:pydag",
+        "//eden/scm/saplingnative/bindings/modules/pydiffhelpers:pydiffhelpers",
+        "//eden/scm/saplingnative/bindings/modules/pydirs:pydirs",
+        "//eden/scm/saplingnative/bindings/modules/pydoctor:pydoctor",
+        "//eden/scm/saplingnative/bindings/modules/pydrawdag:pydrawdag",
+        "//eden/scm/saplingnative/bindings/modules/pyeagerepo:pyeagerepo",
+        "//eden/scm/saplingnative/bindings/modules/pyedenapi:pyedenapi",
+        "//eden/scm/saplingnative/bindings/modules/pyedenclient:pyedenclient",
+        "//eden/scm/saplingnative/bindings/modules/pyerror:pyerror",
+        "//eden/scm/saplingnative/bindings/modules/pyexchange:pyexchange",
+        "//eden/scm/saplingnative/bindings/modules/pyfail:pyfail",
+        "//eden/scm/saplingnative/bindings/modules/pyfs:pyfs",
+        "//eden/scm/saplingnative/bindings/modules/pygitstore:pygitstore",
+        "//eden/scm/saplingnative/bindings/modules/pyhgmetrics:pyhgmetrics",
+        "//eden/scm/saplingnative/bindings/modules/pyhgtime:pyhgtime",
+        "//eden/scm/saplingnative/bindings/modules/pyidentity:pyidentity",
+        "//eden/scm/saplingnative/bindings/modules/pyindexedlog:pyindexedlog",
+        "//eden/scm/saplingnative/bindings/modules/pyio:pyio",
+        "//eden/scm/saplingnative/bindings/modules/pylinelog:pylinelog",
+        "//eden/scm/saplingnative/bindings/modules/pylock:pylock",
+        "//eden/scm/saplingnative/bindings/modules/pylz4:pylz4",
+        "//eden/scm/saplingnative/bindings/modules/pymanifest:pymanifest",
+        "//eden/scm/saplingnative/bindings/modules/pymetalog:pymetalog",
+        "//eden/scm/saplingnative/bindings/modules/pymodules:pymodules",
+        "//eden/scm/saplingnative/bindings/modules/pymutationstore:pymutationstore",
+        "//eden/scm/saplingnative/bindings/modules/pynodeipc:pynodeipc",
+        "//eden/scm/saplingnative/bindings/modules/pynodemap:pynodemap",
+        "//eden/scm/saplingnative/bindings/modules/pypathhistory:pypathhistory",
+        "//eden/scm/saplingnative/bindings/modules/pypathmatcher:pypathmatcher",
+        "//eden/scm/saplingnative/bindings/modules/pypprint:pypprint",
+        "//eden/scm/saplingnative/bindings/modules/pyprocess:pyprocess",
+        "//eden/scm/saplingnative/bindings/modules/pyprogress:pyprogress",
+        "//eden/scm/saplingnative/bindings/modules/pyrefencode:pyrefencode",
+        "//eden/scm/saplingnative/bindings/modules/pyregex:pyregex",
+        "//eden/scm/saplingnative/bindings/modules/pyrenderdag:pyrenderdag",
+        "//eden/scm/saplingnative/bindings/modules/pyrepo:pyrepo",
+        "//eden/scm/saplingnative/bindings/modules/pyrevisionstore:pyrevisionstore",
+        "//eden/scm/saplingnative/bindings/modules/pyrevlogindex:pyrevlogindex",
+        "//eden/scm/saplingnative/bindings/modules/pysptui:pysptui",
+        "//eden/scm/saplingnative/bindings/modules/pystatus:pystatus",
+        "//eden/scm/saplingnative/bindings/modules/pythreading:pythreading",
+        "//eden/scm/saplingnative/bindings/modules/pytoml:pytoml",
+        "//eden/scm/saplingnative/bindings/modules/pytracing:pytracing",
+        "//eden/scm/saplingnative/bindings/modules/pytreestate:pytreestate",
+        "//eden/scm/saplingnative/bindings/modules/pyversion:pyversion",
+        "//eden/scm/saplingnative/bindings/modules/pyvlq:pyvlq",
+        "//eden/scm/saplingnative/bindings/modules/pywebview:pywebview",
+        "//eden/scm/saplingnative/bindings/modules/pyworker:pyworker",
+        "//eden/scm/saplingnative/bindings/modules/pyworkingcopy:pyworkingcopy",
+        "//eden/scm/saplingnative/bindings/modules/pyxdiff:pyxdiff",
+        "//eden/scm/saplingnative/bindings/modules/pyzstd:pyzstd",
+        "//eden/scm/saplingnative/bindings/modules/pyzstore:pyzstore",
+        # [[[end]]]
+        "//eden/scm/lib/cpython-ext:cpython-ext",
+    ],
+)
+
+python_library(
+    name = "bindings_type_stubs",
+    srcs = glob(["*.pyi"]),
+)

@@ -1,0 +1,13 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mononoke")
+
+rust_library(
+    name = "sql_query_config",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "//common/rust/shed/facet:facet",
+        "//common/rust/shed/memcache_stub:memcache",
+        "//eden/mononoke/common/rust/caching_ext:caching_ext",
+    ],
+)

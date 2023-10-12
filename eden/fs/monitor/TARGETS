@@ -1,0 +1,80 @@
+load("@fbcode_macros//build_defs:cpp_binary.bzl", "cpp_binary")
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("scm_client_infra")
+
+cpp_binary(
+    name = "edenfs_monitor",
+    srcs = ["main.cpp"],
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    deps = [
+        ":edenfs_monitor_lib",
+        "//eden/fs/config:config",
+        "//eden/fs/service:init",
+        "//eden/fs/utils:path",
+        "//eden/fs/utils:user_info",
+        "//folly:exception",
+        "//folly:file",
+        "//folly:file_util",
+        "//folly/init:init",
+        "//folly/logging:logging",
+    ],
+)
+
+cpp_library(
+    name = "edenfs_monitor_lib",
+    srcs = glob(
+        ["*.cpp"],
+        exclude = ["main.cpp"],
+    ),
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    os_deps = [
+        (
+            "linux",
+            [
+                "third-party//systemd:systemd",
+            ],
+        ),
+    ],
+    deps = [
+        "fbsource//third-party/fmt:fmt",
+        "//eden/fs:config",
+        "//eden/fs/config:config",
+        "//eden/fs/service:init",
+        "//eden/fs/service:thrift-cpp2-clients",
+        "//eden/fs/utils:clock",
+        "//folly:exception",
+        "//folly:exception_string",
+        "//folly:file_util",
+        "//folly:network_address",
+        "//folly:string",
+        "//folly/futures:core",
+        "//folly/io/async:async_signal_handler",
+        "//folly/io/async:async_socket",
+        "//folly/logging:logging",
+        "//folly/portability:gflags",
+        "//folly/portability:sys_stat",
+        "//thrift/lib/cpp2/async:header_client_channel",
+    ],
+    exported_deps = [
+        "fbsource//third-party/googletest:gtest_headers",
+        "//eden/fs/utils:path",
+        "//eden/fs/utils:process",
+        "//folly:file",
+        "//folly:portability",
+        "//folly:range",
+        "//folly:synchronized",
+        "//folly/io/async:async_base",
+    ],
+    external_deps = [
+        ("boost", None, "boost_filesystem"),
+        ("glibc", None, "rt"),
+    ],
+)

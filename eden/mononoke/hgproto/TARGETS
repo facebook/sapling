@@ -1,0 +1,36 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mononoke")
+
+rust_library(
+    name = "hgproto",
+    srcs = glob(["src/**/*.rs"]),
+    named_deps = {
+        "bytes-old": "fbsource//third-party/rust:bytes-old",
+        "futures_ext": "//common/rust/shed/futures_01_ext:futures_01_ext",
+    },
+    test_deps = [
+        "fbsource//third-party/rust:maplit",
+        "fbsource//third-party/rust:quickcheck",
+        "//eden/mononoke/mercurial:mercurial_types-mocks",
+    ],
+    test_srcs = [
+        "fixtures/min.bundle",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:futures-old",
+        "fbsource//third-party/rust:hex",
+        "fbsource//third-party/rust:itertools",
+        "fbsource//third-party/rust:nom-old",
+        "fbsource//third-party/rust:slog",
+        "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tokio-io",
+        "//common/rust/shed/failure_ext:failure_ext",
+        "//common/rust/shed/limited_async_read:limited_async_read",
+        "//eden/mononoke/mercurial:mercurial_bundles",
+        "//eden/mononoke/mercurial:mercurial_types",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/server/qps:qps",
+    ],
+)

@@ -1,0 +1,34 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "zstdelta",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "bin": [
+                {
+                    "doc": False,
+                    "name": "zstdelta",
+                },
+            ],
+            "dependencies_override": {
+                "dependencies": {
+                    "zstd-sys": {"features": ["experimental"]},
+                },
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    test_deps = [
+        "fbsource//third-party/rust:quickcheck",
+        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:rand_chacha",
+    ],
+    deps = [
+        "fbsource//third-party/rust:libc",
+        "fbsource//third-party/rust:zstd-sys",
+    ],
+)

@@ -1,0 +1,21 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "conch-parser",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "package": {
+                "authors": ["Ivan Petkov <ivanppetkov@gmail.com>"],
+                "license": "MIT",
+                "version": "0.1.1",
+            },
+        },
+    },
+    deps = [
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:void",
+    ],
+)

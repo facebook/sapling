@@ -1,0 +1,38 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbcode_macros//build_defs:rust_unittest.bzl", "rust_unittest")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("scm_client_infra")
+
+rust_library(
+    name = "stack-config",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "extra_buck_dependencies": {
+                "dev-dependencies": [
+                    "fbsource//third-party/rust:serde",
+                    "fbsource//third-party/rust:toml",
+                ],
+            },
+        },
+    },
+    deps = [
+        "fbsource//third-party/rust:serde_derive",
+        "//eden/fs/cli_rs/stack-config-derive:stack-config-derive",
+    ],
+)
+
+rust_unittest(
+    name = "stack-config-test",
+    srcs = glob(["tests/**/*.rs"]),
+    autocargo = {
+        "ignore_rule": True,
+    },
+    crate = "stack_config_test",
+    deps = [
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:toml",
+        ":stack-config",
+    ],
+)

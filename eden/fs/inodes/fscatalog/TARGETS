@@ -1,0 +1,62 @@
+load("@fbcode_macros//build_defs:cpp_binary.bzl", "cpp_binary")
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+
+oncall("scm_client_infra")
+
+cpp_library(
+    name = "fsinodecatalog",
+    srcs =
+        [
+            "FsInodeCatalog.cpp",
+            "InodePath.cpp",
+        ],
+    headers =
+        [
+            "FsInodeCatalog.h",
+            "InodePath.h",
+        ],
+    deps = [
+        "//eden/fs/service:thrift-cpp2-types",
+        "//eden/fs/utils:eden_error",
+        "//eden/fs/utils:file_utils",
+        "//eden/fs/utils:throw",
+        "//folly:exception",
+        "//folly:file_util",
+        "//folly/io:iobuf",
+        "//folly/lang:to_ascii",
+        "//folly/logging:logging",
+        "//thrift/lib/cpp2/protocol:protocol",
+    ],
+    exported_deps = [
+        "fbsource//third-party/googletest:gtest_headers",
+        "//eden/fs/inodes:file_content_store",
+        "//eden/fs/inodes:inode_catalog",
+        "//eden/fs/inodes:inode_number",
+        "//eden/fs/inodes/overlay:serialization-cpp2-types",
+        "//eden/fs/utils:path",
+        "//eden/fs/utils:utils",
+        "//folly:file",
+        "//folly:range",
+    ],
+    external_deps = [
+        ("boost", None, "boost_filesystem"),
+    ],
+)
+
+cpp_binary(
+    name = "eden_fsck",
+    srcs = ["eden_fsck.cpp"],
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    deps = [
+        ":fsinodecatalog",
+        "//eden/fs/inodes/overlay:overlay_checker",
+        "//folly:exception",
+        "//folly/init:init",
+        "//folly/logging:init",
+        "//folly/logging:logging",
+        "//folly/portability:gflags",
+    ],
+)

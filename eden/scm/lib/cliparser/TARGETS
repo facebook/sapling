@@ -1,0 +1,48 @@
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+load("//eden/scm:targets.bzl", "rust_python_library")
+
+oncall("mercurial_release")
+
+rust_python_library(
+    name = "cliparser",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "cpython": {
+                        "features": [],
+                        "git": None,
+                        "rev": None,
+                    },
+                },
+            },
+            "features": {
+                "default": [],
+                "python": [
+                    "cpython",
+                ],
+            },
+            "package": {
+                "authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"],
+            },
+        },
+    },
+    features = [
+        "python",
+    ],
+    test_deps = [
+        "fbsource//third-party/rust:anyhow",
+    ],
+    # A test inside this target is using #[should_panic], setting the backtrace
+    # to false here, otherwise the test binary will try to extract the backtrace
+    # and the test will fail with leak sanatizer.
+    test_env = {"RUST_BACKTRACE": "0"},
+    test_labels = ["tpx-rust-no-backtrace-workaround"],
+    deps = [
+        "fbsource//third-party/rust:indexmap",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:shlex",
+        "fbsource//third-party/rust:thiserror",
+    ],
+)

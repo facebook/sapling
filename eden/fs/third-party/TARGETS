@@ -1,0 +1,12 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+
+oncall("scm_client_infra")
+
+cpp_library(
+    name = "fuse_kernel",
+    # TODO: conditionally pull in fuse_kernel_macos.h here on macos
+    headers = [
+        "fuse_kernel_linux.h",
+        "fuse_kernel_osxfuse.h",
+    ],
+)

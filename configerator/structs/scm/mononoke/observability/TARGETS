@@ -1,0 +1,17 @@
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+
+thrift_library(
+    name = "observability_config",
+    languages = [
+        "py3",
+        "rust",
+        "cpp2",
+    ],
+    py3_namespace = "mononoke.observability",
+    thrift_py_options = "json",
+    thrift_rust_options = [
+        "deprecated_default_enum_min_i32",
+        "serde",
+    ],
+    thrift_srcs = {"observability_config.thrift": None},
+)

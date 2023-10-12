@@ -1,0 +1,310 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+
+oncall("scm_client_infra")
+
+cpp_library(
+    name = "test_mount",
+    srcs = [
+        "TestMount.cpp",
+    ],
+    headers = [
+        "TestMount.h",
+    ],
+    deps = [
+        ":fake_backing_store_and_tree_builder",
+        ":fake_fuse",
+        ":fake_privhelper",
+        ":temp_file",
+        ":test_util",
+        "//eden/common/utils:process_info_cache",
+        "//eden/fs/config:config",
+        "//eden/fs/journal:journal",
+        "//eden/fs/notifications:command_notifier",
+        "//eden/fs/service:pretty_printers",
+        "//eden/fs/store:store",
+        "//eden/fs/telemetry:hive_logger",
+        "//eden/fs/telemetry:structured_logger",
+        "//eden/fs/telemetry:telemetry",
+        "//eden/fs/utils:eden_error",
+        "//eden/fs/utils:file_utils",
+        "//eden/fs/utils:user_info",
+        "//eden/fs/utils:utils",
+        "//folly:file_util",
+        "//folly/executors:queued_immediate_executor",
+        "//folly/experimental:test_util",
+        "//folly/io:iobuf",
+        "//folly/logging:logging",
+        "//folly/portability:gflags",
+        "//folly/portability:gtest",
+    ],
+    exported_deps = [
+        ":fake_clock",
+        "//eden/fs/fuse:fuse",
+        "//eden/fs/inodes:inode_number",
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/inodes/overlay:serialization-cpp2-types",
+        "//eden/fs/model:model",
+        "//eden/fs/utils:case_sensitivity",
+        "//eden/fs/utils:path",
+        "//folly:portability",
+        "//folly:range",
+        "//folly/executors:manual_executor",
+    ],
+)
+
+cpp_library(
+    name = "temp_file",
+    srcs = ["TempFile.cpp"],
+    headers = ["TempFile.h"],
+    deps = [
+        "//eden/fs/utils:system_error",
+        "//folly/portability:unistd",
+    ],
+    exported_deps = [
+        "//folly:range",
+        "//folly/experimental:test_util",
+    ],
+)
+
+cpp_library(
+    name = "test_util",
+    srcs = ["TestUtil.cpp"],
+    headers = ["TestUtil.h"],
+    deps = [
+        "//eden/fs/model:model",
+    ],
+    exported_deps = [
+        "//eden/fs/inodes:inode_number",
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/service:thrift-cpp2-types",
+        "//folly:range",
+        "//folly/concurrency:unbounded_queue",
+    ],
+)
+
+cpp_library(
+    name = "fake_clock",
+    headers = ["FakeClock.h"],
+    exported_deps = [
+        "//eden/fs/utils:clock",
+        "//folly/chrono:conv",
+    ],
+)
+
+cpp_library(
+    name = "test_checks",
+    headers = ["TestChecks.h"],
+    exported_deps = [
+        "fbsource//third-party/fmt:fmt",
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/store:context",
+        "//folly:range",
+        "//folly/io:iobuf",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_library(
+    name = "fake_fuse",
+    srcs = ["FakeFuse.cpp"],
+    headers = ["FakeFuse.h"],
+    deps = [
+        "//folly:exception",
+        "//folly:file_util",
+        "//folly/chrono:conv",
+        "//folly/logging:logging",
+        "//folly/portability:sockets",
+    ],
+    exported_deps = [
+        "//eden/fs/utils:fs_channel_types",
+        "//folly:file",
+        "//folly:range",
+    ],
+)
+
+cpp_library(
+    name = "test_dispatcher",
+    srcs = ["TestDispatcher.cpp"],
+    headers = ["TestDispatcher.h"],
+    deps = [
+        "//folly:conv",
+        "//folly/logging:logging",
+    ],
+    exported_deps = [
+        "//eden/fs/fuse:fuse",
+        "//eden/fs/store:store",
+        "//eden/fs/utils:path",
+        "//folly:synchronized",
+        "//folly/futures:core",
+    ],
+)
+
+cpp_library(
+    name = "fake_privhelper",
+    srcs = ["FakePrivHelper.cpp"],
+    headers = ["FakePrivHelper.h"],
+    deps = [
+        ":fake_fuse",
+        "//eden/fs/utils:eden_error",
+        "//folly:file",
+    ],
+    exported_deps = [
+        "//eden/fs/privhelper:interface",
+        "//eden/fs/utils:path",
+        "//folly/futures:core",
+    ],
+)
+
+cpp_library(
+    name = "logging_fetch_context",
+    headers = ["LoggingFetchContext.h"],
+    exported_deps = [
+        "//eden/fs/store:store",
+    ],
+)
+
+cpp_library(
+    name = "stored_object",
+    headers = ["StoredObject.h"],
+    exported_deps = [
+        "//folly/futures:core",
+    ],
+)
+
+cpp_library(
+    name = "fake_backing_store_and_tree_builder",
+    srcs = [
+        "FakeBackingStore.cpp",
+        "FakeTreeBuilder.cpp",
+    ],
+    headers = [
+        "FakeBackingStore.h",
+        "FakeTreeBuilder.h",
+    ],
+    deps = [
+        "fbsource//third-party/fmt:fmt",
+        ":test_util",
+        "//eden/fs/utils:enum",
+        "//folly:map_util",
+        "//folly/futures:core",
+        "//folly/logging:logging",
+        "//folly/ssl:openssl_hash",
+    ],
+    exported_deps = [
+        ":stored_object",
+        "//eden/fs/model:model",
+        "//eden/fs/store:context",
+        "//eden/fs/store:store",
+        "//eden/fs/utils:path",
+        "//eden/fs/utils:utils",
+        "//folly:exception_wrapper",
+        "//folly:range",
+    ],
+)
+
+cpp_library(
+    name = "fake_object_store",
+    srcs = ["FakeObjectStore.cpp"],
+    headers = ["FakeObjectStore.h"],
+    deps = [
+        "//eden/fs/utils:immediate_future",
+        "//folly:map_util",
+        "//folly:string",
+        "//folly/futures:core",
+    ],
+    exported_deps = [
+        "//eden/fs/model:model",
+        "//eden/fs/store:context",
+        "//eden/fs/store:store",
+    ],
+)
+
+cpp_library(
+    name = "fake_filter",
+    headers = ["FakeFilter.h"],
+    exported_deps = [
+        "//eden/fs/store/filter:filters",
+    ],
+)
+
+cpp_library(
+    name = "hg_repo",
+    srcs = [
+        "HgBinary.cpp",
+        "HgRepo.cpp",
+    ],
+    headers = [
+        "HgBinary.h",
+        "HgRepo.h",
+    ],
+    deps = [
+        "//eden/fs/store/hg:hg_importer",
+        "//eden/fs/utils:file_utils",
+        "//folly:exception",
+        "//folly:file",
+        "//folly:file_util",
+        "//folly:portability",
+        "//folly:range",
+        "//folly:string",
+        "//folly/logging:logging",
+        "//folly/portability:unistd",
+    ],
+    exported_deps = [
+        "//eden/fs/model:model",
+        "//eden/fs/utils:path",
+        "//eden/fs/utils:process",
+    ],
+)
+
+cpp_library(
+    name = "test_server",
+    srcs = ["TestServer.cpp"],
+    headers = ["TestServer.h"],
+    deps = [
+        ":fake_privhelper",
+        ":temp_file",
+        "//eden/fs/config:config",
+        "//eden/fs/service:server",
+        "//eden/fs/service:startup_logger",
+        "//eden/fs/store:store",
+        "//eden/fs/telemetry:activity_recorder",
+        "//eden/fs/telemetry:hive_logger",
+        "//eden/fs/telemetry:log_info",
+        "//eden/fs/utils:user_info",
+        "//folly/portability:gflags",
+    ],
+    exported_deps = [
+        "//eden/fs/service:startup_status_subscriber",
+        "//eden/fs/utils:path",
+        "//folly/experimental:test_util",
+    ],
+)
+
+cpp_library(
+    name = "inode_unloader",
+    headers = ["InodeUnloader.h"],
+    exported_deps = [
+        "//eden/fs/inodes:inodes",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_library(
+    name = "test_server_state",
+    srcs = ["TestServerState.cpp"],
+    headers = ["TestServerState.h"],
+    deps = [
+        ":fake_clock",
+        ":fake_privhelper",
+        "//eden/common/utils:process_info_cache",
+        "//eden/fs/config:config",
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/notifications:command_notifier",
+        "//eden/fs/telemetry:hive_logger",
+        "//eden/fs/telemetry:structured_logger",
+        "//eden/fs/telemetry:telemetry",
+        "//eden/fs/utils:user_info",
+        "//eden/fs/utils:utils",
+        "//folly/executors:manual_executor",
+    ],
+)

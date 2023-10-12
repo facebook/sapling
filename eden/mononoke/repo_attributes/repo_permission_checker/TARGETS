@@ -1,0 +1,21 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "repo_permission_checker",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:mockall",
+        "fbsource//third-party/rust:slog",
+        "fbsource//third-party/rust:tokio",
+        "//common/rust/shed/facet:facet",
+        "//eden/mononoke/metaconfig:metaconfig_types",
+        "//eden/mononoke/permission_checker:permission_checker",
+        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/tunables:tunables",
+    ],
+)

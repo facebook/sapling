@@ -1,0 +1,53 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+
+oncall("scm_client_infra")
+
+cpp_library(
+    name = "rpc",
+    srcs = [
+        "Rpc.cpp",
+        "StreamClient.cpp",
+    ],
+    headers = [
+        "Rpc.h",
+        "StreamClient.h",
+    ],
+    deps = [
+        "//folly:exception",
+        "//folly:string",
+    ],
+    exported_deps = [
+        "//eden/fs/nfs/xdr:xdr",
+        "//folly:network_address",
+        "//folly/io:iobuf",
+        "//folly/logging:logging",
+        "//folly/net:network_socket",
+    ],
+)
+
+cpp_library(
+    name = "server",
+    srcs = ["RpcServer.cpp"],
+    headers = ["RpcServer.h"],
+    deps = [
+        "//eden/fs/telemetry:log_info",
+        "//eden/fs/telemetry:structured_logger",
+        "//eden/fs/utils:throw",
+        "//folly:exception",
+        "//folly:string",
+        "//folly/executors:queued_immediate_executor",
+        "//folly/futures:core",
+        "//folly/io:iobuf",
+    ],
+    exported_deps = [
+        ":rpc",
+        "//eden/fs/inodes:fs_channel",
+        "//eden/fs/nfs/portmap:portmap",
+        "//eden/fs/utils:event_base_state",
+        "//eden/fs/utils:immediate_future",
+        "//folly:network_address",
+        "//folly/io/async:async_socket",
+        "//folly/io/async:server_socket",
+        "//folly/net:network_socket",
+    ],
+)

@@ -1,0 +1,26 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "executor_lib",
+    srcs = glob(["src/**/*.rs"]),
+    named_deps = {
+        "folly-logging": "//common/rust/folly/logging:logging",
+    },
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:slog",
+        "fbsource//third-party/rust:tokio",
+        "//common/rust/shardmanager:shardmanager_lib",
+        "//common/rust/shed/fbinit:fbinit",
+        "//eden/mononoke/cmdlib/sharding_ext:sharding_ext",
+    ] + ([] if rust_oss.is_oss_build() else [
+        "fbsource//third-party/rust:futures",
+        "//common/rust/shed/stats:stats",
+    ]),
+)

@@ -1,0 +1,19 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "cmdlib_caching",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:clap",
+        "//common/rust/shed/fbinit:fbinit",
+        "//eden/mononoke/cmdlib:arg_extensions",
+        "//eden/mononoke/cmdlib:environment",
+    ] + ([] if rust_oss.is_oss_build() else [
+        "fbsource//third-party/rust:anyhow",
+        "//common/rust/shed/cachelib_stub:cachelib",
+    ]),
+)

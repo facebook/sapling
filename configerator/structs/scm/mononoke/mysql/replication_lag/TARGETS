@@ -1,0 +1,10 @@
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+
+thrift_library(
+    name = "replication_lag_config",
+    languages = [
+        "rust",
+    ],
+    thrift_rust_options = "serde",
+    thrift_srcs = {"config.thrift": None},
+)

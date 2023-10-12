@@ -1,0 +1,34 @@
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+load("//eden/scm:targets.bzl", "rust_python_library")
+
+oncall("mercurial_release")
+
+rust_python_library(
+    name = "pymutationstore",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "cpython": {
+                        "features": [],
+                        "git": None,
+                        "rev": None,
+                    },
+                },
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:byteorder",
+        "fbsource//third-party/rust:thiserror",
+        "//eden/scm/lib/async-runtime:async-runtime",
+        "//eden/scm/lib/cpython-ext:cpython-ext",
+        "//eden/scm/lib/mutationstore:mutationstore",
+        "//eden/scm/lib/types:types",
+        "//eden/scm/lib/vlqencoding:vlqencoding",
+        "//eden/scm/saplingnative/bindings/modules/pydag:pydag",
+    ],
+)

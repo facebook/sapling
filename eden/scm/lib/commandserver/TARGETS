@@ -1,0 +1,46 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "commandserver",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    os_deps = [
+        (
+            "linux",
+            [
+                "fbsource//third-party/rust:libc",
+            ],
+        ),
+        (
+            "macos",
+            [
+                "fbsource//third-party/rust:libc",
+            ],
+        ),
+        (
+            "windows",
+            [
+                "//eden/scm/lib/util/atexit:atexit",
+                "//eden/scm/lib/util/procutil:procutil",
+            ],
+        ),
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:dirs",
+        "fbsource//third-party/rust:fn-error-context",
+        "fbsource//third-party/rust:fs2",
+        "fbsource//third-party/rust:once_cell",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/identity:identity",
+        "//eden/scm/lib/spawn-ext:spawn-ext",
+        "//eden/scm/lib/util/nodeipc:nodeipc",
+        "//eden/scm/lib/util/system-command:system-command",
+        "//eden/scm/lib/util/udsipc:udsipc",
+        "//eden/scm/lib/version:rust_version",
+    ],
+)

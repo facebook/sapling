@@ -1,0 +1,13 @@
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+
+oncall("mononoke")
+
+thrift_library(
+    name = "memcache-lock-thrift",
+    languages = ["rust"],
+    thrift_srcs = {"memcache_lock.thrift": []},
+    visibility = [
+        "//eden/mononoke/blobstore:cacheblob",
+        "//eden/mononoke/blobstore:cacheblob-unittest",
+    ],
+)

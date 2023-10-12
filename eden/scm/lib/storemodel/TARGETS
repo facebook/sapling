@@ -1,0 +1,17 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "storemodel",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:auto_impl",
+        "fbsource//third-party/rust:futures",
+        "//eden/scm/lib/minibytes:minibytes",
+        "//eden/scm/lib/types:types",
+    ],
+)

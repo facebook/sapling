@@ -1,0 +1,40 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "runlog",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    os_deps = [
+        (
+            "linux",
+            [
+                "fbsource//third-party/rust:libc",
+            ],
+        ),
+        (
+            "macos",
+            [
+                "fbsource//third-party/rust:libc",
+            ],
+        ),
+    ],
+    test_deps = [
+        "fbsource//third-party/rust:tempfile",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:chrono",
+        "fbsource//third-party/rust:fs2",
+        "fbsource//third-party/rust:parking_lot",
+        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:serde_json",
+        "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/hg-http:hg-http",
+        "//eden/scm/lib/progress/model:progress-model",
+        "//eden/scm/lib/repo:repo",
+        "//eden/scm/lib/util:util",
+    ],
+)

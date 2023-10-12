@@ -1,0 +1,40 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "nodemap",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dev-dependencies": {
+                    "types": {
+                        "default-features": False,
+                        "features": ["for-tests"],
+                    },
+                },
+            },
+            "extra_buck_dependencies": {
+                "dev-dependencies": [
+                    "//eden/scm/lib/types:types",
+                ],
+            },
+            "package": {
+                "authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"],
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    test_deps = [
+        "fbsource//third-party/rust:quickcheck",
+        "fbsource//third-party/rust:tempfile",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:thiserror",
+        "//eden/scm/lib/indexedlog:indexedlog",
+        "//eden/scm/lib/types:types",
+    ],
+)

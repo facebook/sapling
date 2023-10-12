@@ -1,0 +1,27 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mercurial_release")
+
+rust_binary(
+    name = "dag-benches",
+    srcs = glob([
+        "src/**/*.rs",
+    ]),
+    autocargo = {
+        "cargo_toml_config": {
+            "package": {
+                "license": "GPL-2.0-only",
+            },
+        },
+    },
+    crate_root = "src/main.rs",
+    deps = [
+        "fbsource//third-party/rust:tempfile",
+        "//eden/scm/lib/dag:dag",
+        "//eden/scm/lib/dag/bindag:bindag",
+        "//eden/scm/lib/mincode:mincode",
+        "//eden/scm/lib/minibench:minibench",
+        "//eden/scm/lib/nonblocking:nonblocking",
+    ],
+)

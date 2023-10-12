@@ -1,0 +1,40 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "procutil",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "package": {
+                "authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"],
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    os_deps = [
+        (
+            "linux",
+            [
+                "fbsource//third-party/rust:libc",
+            ],
+        ),
+        (
+            "macos",
+            [
+                "fbsource//third-party/rust:libc",
+            ],
+        ),
+        (
+            "windows",
+            [
+                "fbsource//third-party/rust:winapi",
+                "fbsource//third-party/rust:once_cell",
+            ],
+        ),
+    ],
+    deps = [
+        "fbsource//third-party/rust:tracing",
+    ],
+)

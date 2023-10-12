@@ -1,0 +1,77 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "nodeipc",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "package": {
+                "authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"],
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    os_deps = [
+        (
+            "windows",
+            [
+                "fbsource//third-party/rust:winapi",
+            ],
+        ),
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:filedescriptor",
+        "fbsource//third-party/rust:libc",
+        "fbsource//third-party/rust:paste",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:serde_json",
+        "//eden/scm/lib/util/nodeipc/derive:nodeipc_derive",
+    ],
+)
+
+rust_binary(
+    name = "hello_child",
+    srcs = ["examples/hello_child.rs"],
+    autocargo = {"ignore_rule": True},
+    unittests = False,
+    deps = [
+        "fbsource//third-party/rust:serde_json",
+        ":nodeipc",
+    ],
+)
+
+rust_binary(
+    name = "spawn_sendfd",
+    srcs = ["examples/spawn_sendfd.rs"],
+    autocargo = {"ignore_rule": True},
+    os_deps = [
+        (
+            "linux",
+            [
+                "fbsource//third-party/rust:libc",
+            ],
+        ),
+        (
+            "macos",
+            [
+                "fbsource//third-party/rust:libc",
+            ],
+        ),
+        (
+            "windows",
+            [
+                "fbsource//third-party/rust:winapi",
+            ],
+        ),
+    ],
+    unittests = False,
+    deps = [
+        "fbsource//third-party/rust:filedescriptor",
+        "fbsource//third-party/rust:serde_json",
+        ":nodeipc",
+    ],
+)

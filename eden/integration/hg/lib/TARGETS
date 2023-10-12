@@ -1,0 +1,33 @@
+load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
+load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
+load("//eden:defs.bzl", "get_integration_test_env_and_deps")
+
+oncall("scm_client_infra")
+
+artifacts = get_integration_test_env_and_deps()
+
+python_library(
+    name = "testutil",
+    srcs = [
+        "hg_extension_test_base.py",
+        "histedit_command.py",
+    ],
+    deps = [
+        "//eden/fs/py/eden:config",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "lib",
+    srcs = [
+        "hg_extension_test_base_test.py",
+    ],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        ":testutil",
+        "//eden/integration/lib:lib",
+    ],
+)

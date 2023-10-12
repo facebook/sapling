@@ -1,0 +1,43 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "dag-types",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "minibytes": {
+                        "default-features": False,
+                        "features": [],
+                    },
+                },
+            },
+            "features": {
+                "for-tests": ["quickcheck"],
+                "serialize-abomonation": ["abomonation"],
+            },
+            "package": {
+                "license": "MIT",
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    features = [
+        "for-tests",
+        "serialize-abomonation",
+    ],
+    test_deps = [
+        "fbsource//third-party/rust:quickcheck",
+    ],
+    deps = [
+        "fbsource//third-party/rust:abomonation",
+        "fbsource//third-party/rust:abomonation_derive",
+        "fbsource//third-party/rust:quickcheck",
+        "fbsource//third-party/rust:serde",
+        "//eden/scm/lib/minibytes:minibytes",
+    ],
+)
