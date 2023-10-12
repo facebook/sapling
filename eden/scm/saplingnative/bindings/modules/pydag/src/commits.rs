@@ -183,7 +183,7 @@ py_class!(pub class commits |py| {
         // This function takes a 'out' parameter so it can work with pager
         // and output progressively.
         let inner = self.inner(py).read();
-        let mut out = cpython_ext::wrap_pyio(out);
+        let mut out = pyio::wrap_pyio(out);
         inner.explain_internals(&mut out).map_pyerr(py)?;
         Ok(PyNone)
     }

@@ -20,10 +20,10 @@ use configloader::config::ConfigSet;
 use cpython::*;
 use cpython_ext::convert::Serde;
 use cpython_ext::format_py_error;
-use cpython_ext::wrap_pyio;
 use cpython_ext::ResultPyErrExt;
-use cpython_ext::WrappedIO;
 use nodeipc::NodeIpc;
+use pyio::wrap_pyio;
+use pyio::WrappedIO;
 use tracing::debug_span;
 use tracing::info_span;
 

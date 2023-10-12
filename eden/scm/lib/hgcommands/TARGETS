@@ -125,6 +125,7 @@ rust_python_library(
         "//eden/scm/lib/workingcopy:workingcopy",
         "//eden/scm/saplingnative/bindings:bindings",
         "//eden/scm/saplingnative/bindings/modules/pyconfigloader:pyconfigloader",
+        "//eden/scm/saplingnative/bindings/modules/pyio:pyio",
         "//eden/scm/saplingnative/bindings/modules/pymodules:pymodules",
         "//eden/scm/saplingnative/bindings/modules/pytracing:pytracing",
     ],

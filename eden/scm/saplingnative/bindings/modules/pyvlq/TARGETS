@@ -22,5 +22,6 @@ rust_python_library(
     deps = [
         "//eden/scm/lib/cpython-ext:cpython-ext",
         "//eden/scm/lib/vlqencoding:vlqencoding",
+        "//eden/scm/saplingnative/bindings/modules/pyio:pyio",
     ],
 )

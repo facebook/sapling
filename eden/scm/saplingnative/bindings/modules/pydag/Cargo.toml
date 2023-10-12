@@ -16,5 +16,6 @@ hgcommits = { version = "0.1.0", path = "../../../../lib/hgcommits" }
 minibytes = { version = "0.1.0", path = "../../../../lib/minibytes" }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 pyedenapi = { version = "0.1.0", path = "../pyedenapi" }
+pyio = { version = "0.1.0", path = "../pyio" }
 pymetalog = { version = "0.1.0", path = "../pymetalog" }
 storemodel = { version = "0.1.0", path = "../../../../lib/storemodel" }
