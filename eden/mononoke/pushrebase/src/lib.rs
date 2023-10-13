@@ -107,7 +107,6 @@ use repo_identity::RepoIdentityRef;
 use slog::info;
 use stats::prelude::*;
 use thiserror::Error;
-use tunables::tunables;
 
 define_stats! {
     prefix = "mononoke.pushrebase";
@@ -483,13 +482,6 @@ async fn maybe_validate_commit(
     bcs_id: &ChangesetId,
     retry_num: PushrebaseRetryNum,
 ) -> Result<(), PushrebaseError> {
-    if tunables()
-        .pushrebase_disable_rebased_commit_validation()
-        .unwrap_or_default()
-    {
-        return Ok(());
-    }
-
     // Validation is expensive, so do it only once
     if !retry_num.is_first() {
         return Ok(());
