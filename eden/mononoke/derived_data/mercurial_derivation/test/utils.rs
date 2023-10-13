@@ -17,7 +17,6 @@ use bytes::Bytes;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filestore::FilestoreConfigRef;
-use futures::compat::Future01CompatExt;
 use futures::future::BoxFuture;
 use futures::stream::FuturesUnordered;
 use futures::FutureExt;
@@ -118,8 +117,7 @@ fn upload_hg_tree_entry(
         p2: p2.map(|mfid| mfid.into_nodehash()),
         path,
     };
-    let (hgcsid, fut) = upload.upload(ctx, repo.repo_blobstore_arc()).unwrap();
-    (hgcsid, fut.compat().boxed())
+    upload.upload(ctx, repo.repo_blobstore_arc()).unwrap()
 }
 
 fn upload_hg_file_entry(

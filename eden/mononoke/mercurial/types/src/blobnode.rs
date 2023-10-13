@@ -5,9 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::Result;
 use bytes::Bytes;
-use futures_old::Future;
-use futures_old::Stream;
+use futures::pin_mut;
+use futures::Stream;
+use futures::TryStreamExt;
 use mononoke_types::sha1_hash;
 use mononoke_types::sha1_hash::Context;
 use quickcheck::Arbitrary;
@@ -170,28 +172,22 @@ pub fn calculate_hg_node_id(data: &[u8], parents: &HgParents) -> HgNodeHash {
 }
 
 /// Compute a Hg Node ID from parents and a stream of data.
-pub fn calculate_hg_node_id_stream<S, E>(
-    stream: S,
+pub async fn calculate_hg_node_id_stream(
+    stream: impl Stream<Item = Result<Bytes>>,
     parents: &HgParents,
-) -> impl Future<Item = HgNodeHash, Error = E>
-where
-    S: Stream<Item = Bytes, Error = E>,
-{
-    let ctxt = hg_node_id_hash_context(parents);
-    stream
-        .fold(ctxt, |mut ctxt, bytes| {
-            ctxt.update(bytes);
-            Ok(ctxt)
-        })
-        .map(|ctxt| ctxt.finish())
-        .map(HgNodeHash)
+) -> Result<HgNodeHash> {
+    let mut ctxt = hg_node_id_hash_context(parents);
+    pin_mut!(stream);
+    while let Some(bytes) = stream.try_next().await? {
+        ctxt.update(bytes);
+    }
+    Ok(HgNodeHash(ctxt.finish()))
 }
 
 #[cfg(test)]
 mod test {
     use bytes::BytesMut;
-    use futures::compat::Future01CompatExt;
-    use futures_old::stream;
+    use futures::stream;
     use quickcheck::quickcheck;
     use tokio::runtime::Runtime;
 
@@ -267,7 +263,7 @@ mod test {
             let rt = Runtime::new().unwrap();
             let input: Vec<Bytes> = input.into_iter().map(Bytes::from).collect();
 
-            let stream = stream::iter_ok::<_, ()>(input.clone());
+            let stream = stream::iter(input.clone().into_iter().map(Ok));
 
             let bytes = input.iter().fold(BytesMut::new(), |mut bytes, chunk| {
                 bytes.extend_from_slice(chunk);
@@ -275,7 +271,7 @@ mod test {
             }).freeze();
 
             let out_inplace = calculate_hg_node_id(bytes.as_ref(), &hg_parents);
-            let out_stream = rt.block_on(calculate_hg_node_id_stream(stream, &hg_parents).compat()).unwrap();
+            let out_stream = rt.block_on(calculate_hg_node_id_stream(stream, &hg_parents)).unwrap();
 
             out_inplace == out_stream
         }

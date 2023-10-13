@@ -242,7 +242,7 @@ fn upload_entry(
                         path: RepoPath::DirectoryPath(path),
                     };
                     let (_, upload_fut) = try_boxfuture!(upload.upload_as_entry(ctx, blobstore));
-                    upload_fut
+                    upload_fut.boxed().compat().boxify()
                 }
                 (Type::Tree, true) => Err(Error::msg("Inconsistent data: externally stored Tree"))
                     .into_future()
@@ -402,7 +402,7 @@ impl UploadChangesets {
                                     upload
                                         .upload(ctx, blobrepo.repo_blobstore_arc())
                                         .into_future()
-                                        .and_then(|(_, entry)| entry)
+                                        .and_then(|(_, entry)| entry.boxed().compat())
                                         .map(Some)
                                         .boxify()
                                 }

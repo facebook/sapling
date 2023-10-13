@@ -45,10 +45,6 @@ rust_library(
     name = "mercurial_types",
     srcs = glob(["types/src/**/*.rs"]),
     autocargo = {"cargo_toml_dir": "types"},
-    named_deps = {
-        "futures-old": "fbsource//third-party/rust:futures-old",
-        "futures_ext": "//common/rust/shed/futures_01_ext:futures_01_ext",
-    },
     test_deps = [
         "fbsource//third-party/rust:tokio",
     ],
@@ -76,7 +72,6 @@ rust_library(
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tokio",
         "//common/rust/shed/cloned:cloned",
-        "//common/rust/shed/failure_ext:failure_ext",
         "//common/rust/shed/futures_stats:futures_stats",
         "//common/rust/shed/quickcheck_arbitrary_derive:quickcheck_arbitrary_derive",
         "//common/rust/shed/sorted_vector_map:sorted_vector_map",

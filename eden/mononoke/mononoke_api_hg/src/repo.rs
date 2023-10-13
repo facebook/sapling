@@ -39,7 +39,6 @@ use ephemeral_blobstore::StorageLocation;
 use filestore::FetchKey;
 use filestore::FilestoreConfigRef;
 use filestore::StoreRequest;
-use futures::compat::Future01CompatExt;
 use futures::compat::Stream01CompatExt;
 use futures::future;
 use futures::stream;
@@ -389,7 +388,7 @@ impl HgRepoContext {
             Arc::new(self.blob_repo().repo_blobstore().clone()),
         )?;
 
-        upload_future.compat().await.map_err(MononokeError::from)?;
+        upload_future.await.map_err(MononokeError::from)?;
 
         Ok(())
     }

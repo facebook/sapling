@@ -17,7 +17,6 @@ use blobstore::Loadable;
 use cloned::cloned;
 use context::CoreContext;
 use futures::channel::mpsc;
-use futures::compat::Future01CompatExt;
 use futures::future;
 use futures::future::try_join_all;
 use futures::future::BoxFuture;
@@ -285,7 +284,7 @@ async fn create_hg_manifest(
     .upload(ctx, blobstore);
 
     let (mfid, upload_fut) = match uploader {
-        Ok((mfid, fut)) => (mfid, fut.compat().map_ok(|_| ())),
+        Ok((mfid, fut)) => (mfid, fut.map_ok(|_| ())),
         Err(e) => return Err(e),
     };
 

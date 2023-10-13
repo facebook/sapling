@@ -30,13 +30,11 @@ use filenodes::FilenodeInfo;
 use filenodes_derivation::FilenodesOnlyPublic;
 use filestore::Alias;
 use fsnodes::RootFsnodeId;
-use futures::compat::Future01CompatExt;
 use futures::future::BoxFuture;
 use futures::stream;
 use futures::stream::BoxStream;
 use futures::FutureExt;
 use futures::StreamExt;
-use futures::TryStreamExt;
 use hash_memo::EagerHashMemoizer;
 use internment::ArcIntern;
 use manifest::Entry;
@@ -1106,13 +1104,9 @@ impl Node {
                     let p1 = p1.map(|p| p.into_nodehash());
                     let p2 = p2.map(|p| p.into_nodehash());
                     let actual = calculate_hg_node_id_stream(
-                        stream::once(async { Ok(metadata) })
-                            .chain(file_bytes)
-                            .boxed()
-                            .compat(),
+                        stream::once(async { Ok(metadata) }).chain(file_bytes),
                         &HgParents::new(p1, p2),
                     )
-                    .compat()
                     .await?;
                     let actual = HgFileNodeId::new(actual);
 
