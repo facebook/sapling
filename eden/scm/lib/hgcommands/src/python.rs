@@ -70,6 +70,8 @@ pub fn py_set_program_name(name: &str) {
 
 pub fn py_initialize() {
     unsafe {
+        // Disable importing "site".
+        ffi::Py_NoSiteFlag = 1;
         // Avoid overriding exiting Ctrl+C signal handlers.
         Py_InitializeEx(0);
     }
