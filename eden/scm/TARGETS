@@ -89,6 +89,7 @@ python_library(
     srcs = [
         "fb/staticfiles/opt/facebook/bin/clone.py",
     ],
+    resources = glob(["fb/staticfiles/opt/facebook/bin/**"]),
 )
 
 buck_filegroup(
