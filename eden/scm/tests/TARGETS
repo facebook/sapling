@@ -72,8 +72,6 @@ python_unittest(
     # non-python deps should be in cpp_deps (even if not cpp)
     cpp_deps = [
         "//eden/scm:scm_prompt",
-        # explicit list Rust deps so changes in them trigger integration tests runs
-        "//eden/scm/saplingnative/bindings:bindings",
     ],
     env = ENV,
     resources = {

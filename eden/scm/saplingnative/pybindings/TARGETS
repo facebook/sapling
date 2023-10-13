@@ -6,6 +6,9 @@ rust_python_extension(
     name = "bindings",
     srcs = glob(["src/**/*.rs"]),
     base_module = "",
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
     module_name = "bindings",
     deps = [
         "fbsource//third-party/rust:cpython",
