@@ -156,7 +156,7 @@ impl ModuleInfo {
     }
 
     fn is_package(&self) -> bool {
-        self.path.ends_with("__init__.py")
+        self.path.ends_with("__init__.py") || self.path.ends_with("__init__.pyc")
     }
 }
 

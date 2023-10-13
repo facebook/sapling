@@ -42,16 +42,17 @@ dirname = os.path.dirname
 
 def module_name_from_rel_path(path):
     """'foo/bar.py' -> 'foo.bar'; 'foo/__init__.py' -> 'foo'"""
-    if os.path.basename(path) == "__init__.py":
+    name = os.path.basename(path)
+    if name in ("__init__.py", "__init__.pyc"):
         path = dirname(path)
     else:
-        # strip ".py"
-        path = path[:-3]
+        # strip ".py" or ".pyc"
+        path = path.rsplit(".", 1)[0]
     return path.replace(os.path.sep, "/").replace("/", ".")
 
 
 def find_modules(modules):
-    """Find modules recursively. Return [(module_name, path)]."""
+    """Find modules recursively. Return [(module_name, path, source|None, bytecode|None)]."""
     result = []
     for root_module_name in modules:
         locations = []
@@ -71,26 +72,77 @@ def find_modules(modules):
             #              submodule_search_locations=['.../sapling/ext'])
             #   >>> importlib.util.find_spec('saplingercurial.revset')
             #   ModuleSpec(name='sapling.revset', origin='.../sapling/revset.py')
+            #   >>> importlib.util.find_spec('saplingercurial.revset')
+            #   ModuleSpec(name='sapling.revset', origin='.../sapling/revset.py')
+            #
+            # Zip examples:
+            #   >>> spec = importlib.util.find_spec('xml')
+            #   ModuleSpec(name='xml', origin='.../python311.zip/xml/__init__.pyc',
+            #              submodule_search_locations=['.../python311.zip/xml'])
+            #   >>> importlib.util.find_spec('xml.dom.minidom')
+            #   ModuleSpec(name='xml.dom.minidom', origin='.../python311.zip/xml/dom/minidom.pyc')
+
             if spec is None:
                 raise RuntimeError(
                     f"cannot locate Python module {root_module_name} in {sys.path}"
                 )
             locations += spec.submodule_search_locations or []
+        is_zip = type(spec.loader).__name__ == "zipimporter"
         if locations:
             # a directory - scan it recursively
-            for location in locations:
-                for path in glob.glob(
-                    os.path.join(location, "**", "*.py"), recursive=True
-                ):
-                    rel_path = os.path.relpath(path, location)
-                    rel_module_name = module_name_from_rel_path(rel_path)
-                    module_name = ".".join(
-                        filter(None, [root_module_name, rel_module_name])
-                    )
-                    result.append((module_name, path))
-        elif spec.origin and os.path.exists(spec.origin):
-            # a single file
-            result.append((root_module_name, spec.origin))
+            if not is_zip:
+                for location in locations:
+                    for path in glob.glob(
+                        os.path.join(location, "**", "*.py"), recursive=True
+                    ):
+                        rel_path = os.path.relpath(path, location)
+                        rel_module_name = module_name_from_rel_path(rel_path)
+                        module_name = ".".join(
+                            filter(None, [root_module_name, rel_module_name])
+                        )
+                        with open(path, "rb") as f:
+                            source = f.read()
+                        result.append((module_name, path, source, None))
+            else:
+                # ex. '/usr/lib64/python311.zip'
+                zip_path = spec.loader.archive
+                for location in locations:
+                    prefix = location[len(zip_path) + 1 :] + os.path.sep
+                    for zip_file_path, info in spec.loader._files.items():
+                        if not zip_file_path.startswith(prefix):
+                            continue
+                        if not any(zip_file_path.endswith(p) for p in (".py", ".pyc")):
+                            continue
+                        # do not use importlib.util.find_spec - it imports the
+                        # parent module, which might fail on Windows when
+                        # importing 'curses.ascii'.
+                        zip_module_name = module_name_from_rel_path(zip_file_path)
+                        data = spec.loader.get_data(zip_file_path)
+                        if zip_file_path.endswith(".pyc"):
+                            source = b""
+                            # 16: magic (4B) + mtime (4B) + size (4B, >=3.3) + hash (4B, >=3.7)
+                            # See: zipimport._unmarshal_code
+                            # https://github.com/python/cpython/blob/3.10/Lib/zipimport.py#L677
+                            code = data[16:]
+                        else:
+                            source = data
+                            code = None
+                        result.append(
+                            (
+                                zip_module_name,
+                                os.path.sep.join((zip_path, zip_file_path)),
+                                source,
+                                code,
+                            )
+                        )
+        elif spec.origin is not None:
+            # not a package - a file on filesystem or inside a zip
+            source = (spec.loader.get_source(spec.name) or "").encode()
+            code_obj = spec.loader.get_code(spec.name)
+            if code_obj:
+                code = marshal.dumps(code_obj)
+                result.append((root_module_name, spec.origin, source, code))
+
     return result
 
 
@@ -228,23 +280,23 @@ def main():
     print(sys.version_info.major)
     print(sys.version_info.minor)
 
-    for module_name, path in find_modules(root_modules):
-        with open(path, "rb") as f:
-            source = f.read()
-        try:
-            code = compile(source, f"static:{module_name}", "exec")
-        except SyntaxError:
-            # Some ".py" files in stdlib won't compile:
-            # - lib2to3.tests contains tests in Python 2 syntax.
-            # - test.bad_coding is not utf-8.
-            if any(module_name.startswith(s) for s in ("test.", "lib2to3.tests.")):
-                continue
-            raise
+    for module_name, path, source, code in find_modules(root_modules):
+        if code is None:
+            assert source is not None
+            try:
+                code_obj = compile(source, f"static:{module_name}", "exec")
+            except SyntaxError:
+                # Some ".py" files in stdlib won't compile:
+                # - lib2to3.tests contains tests in Python 2 syntax.
+                # - test.bad_coding is not utf-8.
+                if any(module_name.startswith(s) for s in ("test.", "lib2to3.tests.")):
+                    continue
+                raise
+            code = marshal.dumps(code_obj)
         print(module_name)
         print(hex(path.encode()))
         print(hex(source))
-        bytecode = marshal.dumps(code)
-        print(hex(bytecode))
+        print(hex(code))
         print()
 
 

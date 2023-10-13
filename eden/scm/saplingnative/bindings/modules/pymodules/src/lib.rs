@@ -52,7 +52,10 @@ fn get_bytecode(py: Python, name: &str) -> PyResult<Option<::pybytes::Bytes>> {
 fn get_source(py: Python, name: &str) -> PyResult<Option<::pybytes::Bytes>> {
     match python_modules::find_module(name) {
         None => Ok(None),
-        Some(m) => Ok(Some(to_bytes(py, m.source_code().as_bytes())?)),
+        Some(m) => match m.source_code() {
+            Some(s) => Ok(Some(to_bytes(py, s.as_bytes())?)),
+            None => Ok(None),
+        },
     }
 }
 
@@ -166,7 +169,7 @@ py_class!(pub class BindingsModuleFinder |py| {
     def get_source(&self, module_name: &str) -> PyResult<Option<String>> {
         match python_modules::find_module(module_name) {
             None => Err(PyErr::new::<exc::ImportError, _>(py, module_name)),
-            Some(m) => Ok(Some(m.source_code().to_string())),
+            Some(m) => Ok(m.source_code().map(|s| s.to_string())),
         }
     }
 });

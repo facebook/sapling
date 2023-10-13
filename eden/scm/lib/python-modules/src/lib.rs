@@ -42,8 +42,13 @@ impl ModuleInfo {
         self.0.2
     }
 
-    pub fn source_code(&self) -> &'static str {
-        &UNCOMPRESS_SOURCE.as_str()[self.0.3..self.0.4]
+    pub fn source_code(&self) -> Option<&'static str> {
+        let source = &UNCOMPRESS_SOURCE.as_str()[self.0.3..self.0.4];
+        if source.is_empty() {
+            None
+        } else {
+            Some(source)
+        }
     }
 }
 
