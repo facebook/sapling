@@ -700,7 +700,7 @@ impl Repo {
         )?)
     }
 
-    async fn get_root_tree_id(&mut self, commit_id: HgId) -> Result<HgId> {
+    pub async fn get_root_tree_id(&mut self, commit_id: HgId) -> Result<HgId> {
         let commit_store = self.dag_commits()?.read().to_dyn_read_root_tree_ids();
         let tree_ids = commit_store.read_root_tree_ids(vec![commit_id]).await?;
         Ok(tree_ids[0].1)

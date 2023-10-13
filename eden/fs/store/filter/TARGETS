@@ -21,7 +21,34 @@ cpp_library(
     name = "filters",
     headers = ["Filter.h"],
     exported_deps = [
+        "//eden/fs/utils:immediate_future",
         "//eden/fs/utils:path",
         "//folly:range",
+    ],
+)
+
+cpp_library(
+    name = "hg_sparse_filter",
+    srcs = ["HgSparseFilter.cpp"],
+    headers = ["HgSparseFilter.h"],
+    os_deps = [(
+        "windows",
+        ["fbsource//third-party/rust:cxx"],
+    )],
+    preferred_linkage = "static",
+    undefined_symbols = True,
+    deps = [
+        "//eden/fs/model:model",
+        "//eden/fs/service:thrift_util",
+        "//folly/futures:core",
+    ],
+    exported_deps = [
+        "fbsource//third-party/rust:cxx-core",
+        ":filters",
+        "//eden/scm/lib/edenfs-ffi:edenfs-ffi",  # @manual
+        "//eden/scm/lib/edenfs-ffi:edenfs-ffi-wrapper",
+        "//eden/scm/lib/edenfs-ffi:edenfs-ffi@header",  # @manual
+        "//folly/container:f14_hash",
+        "//folly/logging:logging",
     ],
 )

@@ -4,6 +4,8 @@
 # GNU General Public License version 2.
 
 file(GLOB STORE_TEST_SRCS "*Test.cpp")
+list(REMOVE_ITEM STORE_TEST_SRCS
+    ${CMAKE_CURRENT_SOURCE_DIR}/FilteredBackingStoreTest.cpp)
 add_executable(
   eden_store_test
   ${STORE_TEST_SRCS}

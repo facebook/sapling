@@ -14,6 +14,7 @@ use std::io;
 use std::io::BufRead;
 use std::io::BufReader;
 
+use futures::executor;
 use futures::future::BoxFuture;
 use futures::future::FutureExt;
 use futures::Future;
@@ -52,13 +53,13 @@ pub struct Root {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-enum Pattern {
+pub enum Pattern {
     Include(String),
     Exclude(String),
 }
 
 #[derive(Debug)]
-enum ProfileEntry {
+pub enum ProfileEntry {
     // Pattern plus additional source for this rule (e.g. "hgrc.dynamic").
     Pattern(Pattern, Option<String>),
     Profile(String),
@@ -230,6 +231,19 @@ impl Root {
         rule_origins.push(origins);
 
         Ok(Matcher::new(matchers, rule_origins))
+    }
+
+    // Returns true if the profile excludes the given path.
+    pub fn is_path_excluded(self: &Root, path: &str) -> bool {
+        // TODO(cuev): Add a warning when sparse profiles contain a %include.
+        // Filters don't support that.
+        let matcher =
+            executor::block_on(
+                async move { self.matcher(|_| async move { Ok(Some(vec![])) }).await },
+            )
+            .unwrap();
+        let repo_path = RepoPath::from_str(path).unwrap();
+        !matcher.matches(repo_path).unwrap_or(true)
     }
 }
 

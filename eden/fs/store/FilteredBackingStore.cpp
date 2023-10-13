@@ -6,6 +6,8 @@
  */
 
 #include "eden/fs/store/FilteredBackingStore.h"
+#include <eden/fs/model/ObjectId.h>
+#include <eden/fs/store/BackingStore.h>
 #include <folly/Varint.h>
 #include <stdexcept>
 #include <tuple>
@@ -24,22 +26,36 @@ FilteredBackingStore::FilteredBackingStore(
 
 FilteredBackingStore::~FilteredBackingStore() {}
 
-bool FilteredBackingStore::pathAffectedByFilterChange(
+ImmediateFuture<bool> FilteredBackingStore::pathAffectedByFilterChange(
     RelativePathPiece pathOne,
     RelativePathPiece pathTwo,
     folly::StringPiece filterIdOne,
     folly::StringPiece filterIdTwo) {
-  auto pathOneIncluded = filter_->isPathFiltered(pathOne, filterIdOne);
-  auto pathTwoIncluded = filter_->isPathFiltered(pathTwo, filterIdTwo);
-  // If a path is in neither or both filters, then it wouldn't be affected by
-  // any change (it is present in both or absent in both).
-  if (pathOneIncluded == pathTwoIncluded) {
-    return false;
-  }
+  std::vector<ImmediateFuture<bool>> futures;
+  futures.emplace_back(filter_->isPathFiltered(pathOne, filterIdOne));
+  futures.emplace_back(filter_->isPathFiltered(pathTwo, filterIdTwo));
+  return collectAll(std::move(futures))
+      .thenValue([](std::vector<folly::Try<bool>>&& isFilteredVec) {
+        // If we're unable to get the results from either future, we throw.
+        if (!isFilteredVec[0].hasValue() || !isFilteredVec[1].hasValue()) {
+          throw std::runtime_error{fmt::format(
+              "Unable to determine if paths were affected by filter change: {}",
+              isFilteredVec[0].hasException()
+                  ? isFilteredVec[0].exception().what()
+                  : isFilteredVec[1].exception().what())};
+        }
 
-  // If a path is in only 1 filter, it is affected by the change in some way.
-  // This function doesn't determine how, just that the path is affected.
-  return true;
+        // If a path is in neither or both filters, then it wouldn't be affected
+        // by any change (it is present in both or absent in both).
+        if (isFilteredVec[0].value() == isFilteredVec[1].value()) {
+          return false;
+        }
+
+        // If a path is in only 1 filter, it is affected by the change in some
+        // way. This function doesn't determine how, just that the path is
+        // affected.
+        return true;
+      });
 }
 
 std::tuple<RootId, std::string> parseFilterIdFromRootId(const RootId& rootId) {
@@ -114,25 +130,32 @@ ObjectComparison FilteredBackingStore::compareObjectsById(
         filteredTwo.path(),
         filteredOne.filter(),
         filteredTwo.filter());
-    if (pathAffected) {
-      return ObjectComparison::Different;
-    } else {
-      // If the path wasn't affected by the filter change, we still can't be
-      // sure whether a subdirectory of that path was affected. Therefore we
-      // must return unknown if the underlying BackingStore reports that the
-      // objects are the same.
-      //
-      // TODO: We could improve this in the future by noting whether a tree has
-      // any subdirectories that are affected by filters. There are many ways to
-      // do this, but all of them are tricky to do. Let's save this for future
-      // optimization.
-      auto res = backingStore_->compareObjectsById(
-          filteredOne.object(), filteredTwo.object());
-      if (res == ObjectComparison::Identical) {
-        return ObjectComparison::Unknown;
+    if (pathAffected.isReady()) {
+      if (std::move(pathAffected).get()) {
+        return ObjectComparison::Different;
       } else {
-        return res;
+        // If the path wasn't affected by the filter change, we still can't be
+        // sure whether a subdirectory of that path was affected. Therefore we
+        // must return unknown if the underlying BackingStore reports that the
+        // objects are the same.
+        //
+        // TODO: We could improve this in the future by noting whether a tree
+        // has any subdirectories that are affected by filters. There are many
+        // ways to do this, but all of them are tricky to do. Let's save this
+        // for future optimization.
+        auto res = backingStore_->compareObjectsById(
+            filteredOne.object(), filteredTwo.object());
+        if (res == ObjectComparison::Identical) {
+          return ObjectComparison::Unknown;
+        } else {
+          return res;
+        }
       }
+    } else {
+      // We can't immediately tell if the path is affected by the filter
+      // change. Instead of chaining the future and queueing up a bunch of work,
+      // we'll return Unknown early.
+      return ObjectComparison::Unknown;
     }
 
   } else {
@@ -141,29 +164,70 @@ ObjectComparison FilteredBackingStore::compareObjectsById(
   }
 }
 
-PathMap<TreeEntry> FilteredBackingStore::filterImpl(
+ImmediateFuture<std::unique_ptr<PathMap<TreeEntry>>>
+FilteredBackingStore::filterImpl(
     const TreePtr unfilteredTree,
     RelativePathPiece treePath,
     folly::StringPiece filterId) {
-  auto pathMap = PathMap<TreeEntry>{unfilteredTree->getCaseSensitivity()};
+  auto isFilteredFutures =
+      std::vector<ImmediateFuture<std::pair<RelativePath, bool>>>{};
+
+  // The FilterID is passed through multiple futures. Let's create a copy and
+  // pass it around to avoid lifetime issues.
+  auto filter = filterId.toString();
   for (const auto& [path, entry] : *unfilteredTree) {
-    auto relPath = RelativePath{treePath} + path;
-    if (!filter_->isPathFiltered(relPath.piece(), filterId)) {
-      ObjectId oid;
-      if (entry.getType() == TreeEntryType::TREE) {
-        auto foid =
-            FilteredObjectId(relPath.piece(), filterId, entry.getHash());
-        oid = ObjectId{foid.getValue()};
-      } else {
-        auto foid = FilteredObjectId{entry.getHash()};
-        oid = ObjectId{foid.getValue()};
-      }
-      auto treeEntry = TreeEntry{std::move(oid), entry.getType()};
-      auto pair = std::pair{path, std::move(treeEntry)};
-      pathMap.insert(std::move(pair));
-    }
+    // TODO(cuev): I need to ensure that relPath survives until all the tree
+    // entries are created. I think the best way to do this is with a
+    // unique_ptr?
+    auto relPath = RelativePath{treePath + path};
+    auto filteredRes = filter_->isPathFiltered(relPath, filter);
+    auto fut =
+        std::move(filteredRes)
+            .thenValue([relPath = std::move(relPath)](bool isFiltered) mutable {
+              return std::pair(std::move(relPath), isFiltered);
+            });
+    isFilteredFutures.emplace_back(std::move(fut));
   }
-  return pathMap;
+
+  return collectAll(std::move(isFilteredFutures))
+      .thenValue(
+          [unfilteredTree, filterId = std::move(filter)](
+              std::vector<folly::Try<std::pair<RelativePath, bool>>>&&
+                  isFilteredVec) -> std::unique_ptr<PathMap<TreeEntry>> {
+            // This PathMap will only contain tree entries that aren't filtered
+            auto pathMap =
+                PathMap<TreeEntry>{unfilteredTree->getCaseSensitivity()};
+
+            for (auto&& isFiltered : isFilteredVec) {
+              if (isFiltered.hasException()) {
+                XLOGF(
+                    ERR,
+                    "Failed to determine if entry should be filtered: {}",
+                    isFiltered.exception().what());
+                continue;
+              }
+              // This entry is not filtered. Re-add it to the new PathMap.
+              if (!isFiltered->second) {
+                auto relPath = std::move(isFiltered->first);
+                auto entry = unfilteredTree->find(relPath.basename().piece());
+                auto entryType = entry->second.getType();
+                ObjectId oid;
+                if (entryType == TreeEntryType::TREE) {
+                  auto foid = FilteredObjectId(
+                      relPath.piece(), filterId, entry->second.getHash());
+                  oid = ObjectId{foid.getValue()};
+                } else {
+                  auto foid = FilteredObjectId{entry->second.getHash()};
+                  oid = ObjectId{foid.getValue()};
+                }
+                auto treeEntry = TreeEntry{std::move(oid), entryType};
+                auto pair =
+                    std::pair{relPath.basename().copy(), std::move(treeEntry)};
+                pathMap.insert(std::move(pair));
+              }
+            }
+            return std::make_unique<PathMap<TreeEntry>>(std::move(pathMap));
+          });
 }
 
 ImmediateFuture<BackingStore::GetRootTreeResult>
@@ -176,21 +240,29 @@ FilteredBackingStore::getRootTree(
       "Getting rootTree {} with filter {}",
       parsedRootId.value(),
       filterId);
-  return backingStore_->getRootTree(parsedRootId, context)
-      .thenValue([filterId = filterId,
-                  self = shared_from_this()](GetRootTreeResult rootTreeResult) {
-        // apply the filter to the tree
-        auto pathMap =
-            self->filterImpl(rootTreeResult.tree, RelativePath{""}, filterId);
-
-        auto rootFOID =
-            FilteredObjectId{RelativePath{""}, filterId, rootTreeResult.treeId};
-        return GetRootTreeResult{
-            std::make_shared<const Tree>(
-                std::move(pathMap), ObjectId{rootFOID.getValue()}),
-            ObjectId{rootFOID.getValue()},
-        };
-      });
+  auto fut = backingStore_->getRootTree(parsedRootId, context);
+  return std::move(fut).thenValue([filterId = std::move(filterId),
+                                   self = shared_from_this()](
+                                      GetRootTreeResult
+                                          rootTreeResult) mutable {
+    // apply the filter to the tree
+    auto filterFut =
+        self->filterImpl(rootTreeResult.tree, RelativePath{""}, filterId);
+    return std::move(filterFut).thenValue(
+        [self,
+         filterId = std::move(filterId),
+         treeId = std::move(rootTreeResult.treeId)](
+            std::unique_ptr<PathMap<TreeEntry>> pathMap) {
+          auto rootFOID = FilteredObjectId{RelativePath{""}, filterId, treeId};
+          auto res = GetRootTreeResult{
+              std::make_shared<const Tree>(
+                  std::move(*pathMap), ObjectId{rootFOID.getValue()}),
+              ObjectId{rootFOID.getValue()},
+          };
+          pathMap.reset();
+          return res;
+        });
+  });
 }
 
 ImmediateFuture<std::shared_ptr<TreeEntry>>
@@ -211,11 +283,17 @@ folly::SemiFuture<BackingStore::GetTreeResult> FilteredBackingStore::getTree(
   return std::move(unfilteredTree)
       .deferValue([self = shared_from_this(),
                    filteredId = std::move(filteredId)](GetTreeResult&& result) {
-        auto pathMap = self->filterImpl(
+        auto filterRes = self->filterImpl(
             result.tree, filteredId.path(), filteredId.filter());
-        auto tree = std::make_shared<Tree>(
-            std::move(pathMap), ObjectId{filteredId.getValue()});
-        return GetTreeResult{std::move(tree), result.origin};
+        return std::move(filterRes)
+            .thenValue([filteredId, origin = result.origin](
+                           std::unique_ptr<PathMap<TreeEntry>> pathMap) {
+              auto tree = std::make_shared<Tree>(
+                  std::move(*pathMap), ObjectId{filteredId.getValue()});
+              pathMap.reset();
+              return GetTreeResult{std::move(tree), origin};
+            })
+            .semi();
       });
 }
 

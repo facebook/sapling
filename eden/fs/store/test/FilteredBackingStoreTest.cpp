@@ -15,9 +15,17 @@
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 
+#include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/TestOps.h"
+#include "eden/fs/store/BackingStoreLogger.h"
 #include "eden/fs/store/FilteredBackingStore.h"
+#include "eden/fs/store/MemoryLocalStore.h"
+#include "eden/fs/store/filter/HgSparseFilter.h"
+#include "eden/fs/store/hg/HgImporter.h"
+#include "eden/fs/store/hg/HgQueuedBackingStore.h"
+#include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/testharness/FakeFilter.h"
+#include "eden/fs/testharness/HgRepo.h"
 #include "eden/fs/testharness/TestUtil.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -32,8 +40,45 @@ const char kTestFilter2[] = "football2";
 const char kTestFilter3[] = "football3";
 const char kTestFilter4[] = "shouldFilterZeroObjects";
 const char kTestFilter5[] = "bazbar";
+const char kTestFilter6[] =
+    "\
+[include]\n\
+*\n\
+[exclude]\n\
+foo\n\
+dir2/README\n\
+filtered_out";
 
-class FilteredBackingStoreTest : public ::testing::Test {
+struct TestRepo {
+  folly::test::TemporaryDirectory testDir{"eden_filtered_backing_store_test"};
+  AbsolutePath testPath = canonicalPath(testDir.path().string());
+  HgRepo repo{testPath + "repo"_pc};
+  RootId commit1;
+  Hash20 manifest1;
+
+  TestRepo() {
+    repo.hgInit(testPath + "cache"_pc);
+
+    // Filtered out by kTestFilter6
+    repo.mkdir("foo");
+    repo.writeFile("foo/bar.txt", "filtered out\n");
+    repo.mkdir("dir2");
+    repo.writeFile("dir2/README", "filtered out again\n");
+    repo.writeFile("filtered_out", "filtered out last\n");
+
+    // Not filtered out by kTestFilter6
+    repo.mkdir("src");
+    repo.writeFile("src/hello.txt", "world\n");
+    repo.writeFile("foo.txt", "foo\n");
+    repo.writeFile("bar.txt", "bar\n");
+    repo.writeFile("filter", kTestFilter6);
+    repo.hg("add");
+    commit1 = repo.commit("Initial commit");
+    manifest1 = repo.getManifestForCommit(commit1);
+  }
+};
+
+class FakeFilteredBackingStoreTest : public ::testing::Test {
  protected:
   void SetUp() override {
     wrappedStore_ = std::make_shared<FakeBackingStore>();
@@ -50,6 +95,45 @@ class FilteredBackingStoreTest : public ::testing::Test {
   std::shared_ptr<FilteredBackingStore> filteredStore_;
 };
 
+struct HgFilteredBackingStoreTest : TestRepo, ::testing::Test {
+  HgFilteredBackingStoreTest() {}
+
+  void SetUp() override {
+    auto hgFilter = std::make_unique<HgSparseFilter>(repo.path().copy());
+    filteredStoreFFI_ = std::make_shared<FilteredBackingStore>(
+        wrappedStore_, std::move(hgFilter));
+  }
+
+  void TearDown() override {
+    filteredStoreFFI_.reset();
+  }
+
+  std::shared_ptr<ReloadableConfig> edenConfig{
+      std::make_shared<ReloadableConfig>(EdenConfig::createTestEdenConfig())};
+  EdenStatsPtr stats{makeRefPtr<EdenStats>()};
+  std::shared_ptr<MemoryLocalStore> localStore{
+      std::make_shared<MemoryLocalStore>(stats.copy())};
+  HgImporter importer{repo.path(), stats.copy()};
+
+  std::shared_ptr<FilteredBackingStore> filteredStoreFFI_;
+
+  std::unique_ptr<HgBackingStore> backingStore{std::make_unique<HgBackingStore>(
+      repo.path(),
+      &importer,
+      edenConfig,
+      localStore,
+      stats.copy())};
+
+  std::shared_ptr<HgQueuedBackingStore> wrappedStore_{
+      std::make_shared<HgQueuedBackingStore>(
+          localStore,
+          stats.copy(),
+          std::move(backingStore),
+          edenConfig,
+          std::make_shared<NullStructuredLogger>(),
+          std::make_unique<BackingStoreLogger>())};
+};
+
 /**
  * Helper function to get blob contents as a string.
  *
@@ -61,7 +145,7 @@ std::string blobContents(const Blob& blob) {
   return c.readFixedString(blob.getContents().computeChainDataLength());
 }
 
-TEST_F(FilteredBackingStoreTest, getNonExistent) {
+TEST_F(FakeFilteredBackingStoreTest, getNonExistent) {
   // getRootTree()/getTree()/getBlob() should throw immediately
   // when called on non-existent objects.
   EXPECT_THROW_RE(
@@ -88,7 +172,7 @@ TEST_F(FilteredBackingStoreTest, getNonExistent) {
       "tree 0.*1 not found");
 }
 
-TEST_F(FilteredBackingStoreTest, getBlob) {
+TEST_F(FakeFilteredBackingStoreTest, getBlob) {
   // Add a blob to the tree
   auto hash = makeTestHash("1");
   auto filteredHash = ObjectId{FilteredObjectId{hash}.getValue()};
@@ -156,7 +240,7 @@ TEST_F(FilteredBackingStoreTest, getBlob) {
   EXPECT_EQ("foobar", blobContents(*std::move(future6).get(0ms).blob));
 }
 
-TEST_F(FilteredBackingStoreTest, getTree) {
+TEST_F(FakeFilteredBackingStoreTest, getTree) {
   // Populate some files in the store
   auto [runme, runme_id] =
       wrappedStore_->putBlob("#!/bin/sh\necho 'hello world!'\n");
@@ -284,7 +368,7 @@ TEST_F(FilteredBackingStoreTest, getTree) {
   EXPECT_EQ(treeOID, std::move(future5).get(0ms).tree->getHash());
 }
 
-TEST_F(FilteredBackingStoreTest, getRootTree) {
+TEST_F(FakeFilteredBackingStoreTest, getRootTree) {
   // Set up one commit with a root tree
   auto dir1Hash = makeTestHash("abc");
   auto dir1FOID = FilteredObjectId(RelativePath{""}, kTestFilter1, dir1Hash);
@@ -356,7 +440,7 @@ TEST_F(FilteredBackingStoreTest, getRootTree) {
       "tree .* for commit .* not found");
 }
 
-TEST_F(FilteredBackingStoreTest, testCompareBlobObjectsById) {
+TEST_F(FakeFilteredBackingStoreTest, testCompareBlobObjectsById) {
   // Populate some blobs for testing.
   //
   // NOTE: FakeBackingStore is very dumb and implements its
@@ -477,7 +561,7 @@ TEST_F(FilteredBackingStoreTest, testCompareBlobObjectsById) {
       ObjectComparison::Identical);
 }
 
-TEST_F(FilteredBackingStoreTest, testCompareTreeObjectsById) {
+TEST_F(FakeFilteredBackingStoreTest, testCompareTreeObjectsById) {
   // Populate some blobs for testing.
   //
   // NOTE: FakeBackingStore is very dumb and implements its
@@ -596,5 +680,46 @@ TEST_F(FilteredBackingStoreTest, testCompareTreeObjectsById) {
   EXPECT_TRUE(
       filteredStore_->compareObjectsById(grandchildOID, grandchildOID2) ==
       ObjectComparison::Unknown);
+}
+
+const auto kTestTimeout = 10s;
+
+TEST_F(HgFilteredBackingStoreTest, testMercurialFFI) {
+  // Set up one commit with a root tree
+  auto filterRelPath = RelativePath{"filter"};
+  auto rootFuture1 = filteredStoreFFI_->getRootTree(
+      RootId{FilteredBackingStore::createFilteredRootId(
+          commit1.value(),
+          fmt::format("{}:{}", filterRelPath.piece(), commit1.value()))},
+      ObjectFetchContext::getNullContext());
+  auto rootDirRes = std::move(rootFuture1).get(kTestTimeout);
+
+  // Get the object IDs of all the trees/files from the root dir.
+  auto [dir2Name, dir2Entry] = *rootDirRes.tree->find("dir2"_pc);
+  auto [srcName, srcEntry] = *rootDirRes.tree->find("src"_pc);
+  auto fooTxtFindRes = rootDirRes.tree->find("foo.txt"_pc);
+  auto barTxtFindRes = rootDirRes.tree->find("bar.txt"_pc);
+  auto fooFindRes = rootDirRes.tree->find("foo"_pc);
+  auto filteredOutFindRes = rootDirRes.tree->find("filtered_out"_pc);
+
+  // Get all the files from the trees from commit 1.
+  auto dir2Future = filteredStoreFFI_->getTree(
+      dir2Entry.getHash(), ObjectFetchContext::getNullContext());
+  auto dir2Res = std::move(dir2Future).get(kTestTimeout).tree;
+  auto readmeFindRes = dir2Res->find("README"_pc);
+  auto srcFuture = filteredStoreFFI_->getTree(
+      srcEntry.getHash(), ObjectFetchContext::getNullContext());
+  auto srcRes = std::move(srcFuture).get(kTestTimeout).tree;
+  auto helloFindRes = srcRes->find("hello.txt"_pc);
+
+  // We expect these files to be filtered
+  EXPECT_EQ(fooFindRes, rootDirRes.tree->cend());
+  EXPECT_EQ(readmeFindRes, dir2Res->cend());
+  EXPECT_EQ(filteredOutFindRes, rootDirRes.tree->cend());
+
+  // We expect these files to be present
+  EXPECT_NE(fooTxtFindRes, rootDirRes.tree->cend());
+  EXPECT_NE(barTxtFindRes, rootDirRes.tree->cend());
+  EXPECT_NE(helloFindRes, srcRes->cend());
 }
 } // namespace

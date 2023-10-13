@@ -21,9 +21,11 @@ class FakeFilter final : public Filter {
   /*
    * Checks whether a path is filtered by the given filter.
    */
-  bool isPathFiltered(RelativePathPiece path, folly::StringPiece filterId)
-      override {
-    return path.view().find(filterId) != std::string::npos;
+  ImmediateFuture<bool> isPathFiltered(
+      RelativePathPiece path,
+      folly::StringPiece filterId) override {
+    return ImmediateFuture<bool>{
+        path.view().find(filterId) != std::string::npos};
   }
 };
 } // namespace facebook::eden

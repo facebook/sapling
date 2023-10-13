@@ -100,6 +100,7 @@ class HgRepo {
 
   RootId commit(folly::StringPiece message);
   Hash20 getManifestForCommit(const RootId& commit);
+  Hash20 getHgIdForFile(const RootId& commit, RelativePathPiece repoRelPath);
 
   void mkdir(RelativePathPiece path, mode_t permissions = 0755);
   void mkdir(folly::StringPiece path, mode_t permissions = 0755) {

@@ -171,6 +171,17 @@ Hash20 HgRepo::getManifestForCommit(const RootId& commit) {
   return Hash20{folly::rtrimWhitespace(output)};
 }
 
+Hash20 HgRepo::getHgIdForFile(
+    const RootId& commit,
+    RelativePathPiece repoRelPath) {
+  auto command = fmt::format(
+      "print(hex(repo['{}']['{}'].filenode()))",
+      commit.value(),
+      repoRelPath.asString());
+  auto output = hg("dbsh", "-c", std::move(command));
+  return Hash20{folly::rtrimWhitespace(output)};
+}
+
 void HgRepo::mkdir(RelativePathPiece path, mode_t permissions) {
   auto fullPath = path_ + path;
   auto rc = ::mkdir(fullPath.value().c_str(), permissions);

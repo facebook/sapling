@@ -22,12 +22,24 @@ cpp_unittest(
     srcs = [
         "FilteredBackingStoreTest.cpp",
     ],
+    # TODO(T159481899): make HgRepo compile/run on Windows
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
     supports_static_listing = False,
     deps = [
+        "//eden/fs/config:config",
         "//eden/fs/model:testutil",
         "//eden/fs/store:filtered_backing_store",
+        "//eden/fs/store:store",
+        "//eden/fs/store/filter:hg_sparse_filter",
+        "//eden/fs/store/hg:hg_importer",
+        "//eden/fs/store/hg:hg_queued_backing_store",
+        "//eden/fs/telemetry:structured_logger",
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
         "//eden/fs/testharness:fake_filter",
+        "//eden/fs/testharness:hg_repo",
         "//eden/fs/testharness:test_util",
         "//eden/fs/utils:path",
         "//folly:varint",

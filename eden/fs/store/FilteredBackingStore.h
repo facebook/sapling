@@ -130,7 +130,7 @@ class FilteredBackingStore
   /*
    * Does the actual filtering logic for tree and root-tree objects.
    */
-  PathMap<TreeEntry> filterImpl(
+  ImmediateFuture<std::unique_ptr<PathMap<TreeEntry>>> filterImpl(
       const TreePtr unfilteredTree,
       RelativePathPiece treePath,
       folly::StringPiece filterId);
@@ -139,7 +139,7 @@ class FilteredBackingStore
    * Determine whether a path is affected by a filter change from One -> Two or
    * vice versa.
    */
-  bool pathAffectedByFilterChange(
+  ImmediateFuture<bool> pathAffectedByFilterChange(
       RelativePathPiece pathOne,
       RelativePathPiece pathTwo,
       folly::StringPiece filterIdOne,

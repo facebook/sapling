@@ -9,6 +9,7 @@
 
 #include <folly/Range.h>
 
+#include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 // A null filter indicates that nothing should be filtered (i.e. no filter is
@@ -24,7 +25,7 @@ class Filter {
   /*
    * Checks whether a path is filtered by the given filter.
    */
-  virtual bool isPathFiltered(
+  virtual ImmediateFuture<bool> isPathFiltered(
       RelativePathPiece path,
       folly::StringPiece filterId) = 0;
 };
