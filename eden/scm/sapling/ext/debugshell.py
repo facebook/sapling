@@ -143,6 +143,14 @@ def _startipython(ui, repo, env) -> None:
 
     util.get_main_io().disable_progress()
 
+    try:
+        # Enable site-packages before loading IPython
+        import site
+
+        site.main()
+    except Exception:
+        pass
+
     have_ipython = False
     try:
         from IPython.terminal.embed import InteractiveShellEmbed
