@@ -154,6 +154,7 @@ Show debug commands if there are no other candidates
   debuginternals
   debugknown
   debuglabelcomplete
+  debuglistpythonstd
   debuglocks
   debugmakepublic
   debugmanifestdirs
@@ -482,6 +483,7 @@ Show all commands + options
   debuginternals: output
   debugknown: 
   debuglabelcomplete: 
+  debuglistpythonstd: template
   debuglocks: force-lock, force-wlock, force-undolog-lock, set-lock, set-wlock, wait
   debugmakepublic: rev, delete
   debugmanifestdirs: rev

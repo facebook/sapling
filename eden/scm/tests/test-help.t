@@ -1012,6 +1012,8 @@ Test list of internal help commands
    debuginternals
                  list or export internal files
    debugknown    test whether node ids are known to a repo
+   debuglistpythonstd
+                 list python std modules referred by the application
    debuglocks    show or modify state of locks
    debugmakepublic
                  make revisions public

@@ -1940,6 +1940,53 @@ def debuglabelcomplete(ui, repo, *args) -> None:
     debugnamecomplete(ui, repo, *args)
 
 
+@command("debuglistpythonstd", cmdutil.formatteropts, norepo=True)
+def debuglistpythonstd(ui, **opts):
+    """list python std modules referred by the application
+
+    Only list pure, std, root modules imported from disk. This is intended to
+    be used together with ``python-modules`` to reduce overhead importing,
+    especially on Windows.
+
+    Only works with Python >= 3.10.
+    """
+    from .. import dispatch, hgdemandimport
+
+    with hgdemandimport.deactivated():
+        dispatch._preimportmodules()
+
+    try:
+        stdlib_module_names = sys.stdlib_module_names
+    except AttributeError:
+        # Python < 3.10
+        stdlib_module_names = set()
+
+    fm = ui.formatter("debuglistpythonstd", opts)
+    for name, mod in sorted(sys.modules.items()):
+        if "." in name or name not in stdlib_module_names:
+            continue
+        try:
+            origin = mod.__spec__.origin
+            # Skip builtin, frozen, or bindings.
+            if origin in {"frozen", "built-in", None}:
+                continue
+            # Skip native or non-existed.
+            if not any(origin.endswith(p) for p in (".pyc", ".py")) or (
+                not os.path.exists(origin) and ".zip" not in origin
+            ):
+                continue
+        except AttributeError:
+            # Skip missing __spec__.
+            continue
+
+        fm.startitem()
+        fm.plain("%s" % name)
+        fm.data(name=name)
+        fm.plain("\n")
+
+    fm.end()
+
+
 @command(
     "debuglocks|debuglock",
     [
