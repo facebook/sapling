@@ -83,9 +83,7 @@ local:
 	SAPLING_OSS_BUILD=$(OSS) HGNAME=$(HGNAME) \
 	  $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup.py $(PURE) \
 	  build_interactive_smartlog \
-	  build_py -c -d . \
 	  build_clib $(COMPILERFLAG) \
-	  build_ext $(COMPILERFLAG) -i \
 	  build_rust_ext -i -l $(RUST_FLAG) \
 	  build_mo
 ifeq ($(OS),Windows_NT)
@@ -97,9 +95,7 @@ endif
 
 hg:
 	SAPLING_SKIP_OTHER_RUST_BINARIES=true $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup.py $(PURE) \
-	  build_py -c -d . \
 	  build_clib $(COMPILERFLAG) \
-	  build_ext $(COMPILERFLAG) -i \
 	  build_rust_ext -i -l $(RUST_FLAG) \
 	  build_mo
 ifeq ($(OS),Windows_NT)
