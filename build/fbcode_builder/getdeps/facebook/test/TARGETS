@@ -1,5 +1,3 @@
-# @noautodeps
-
 load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
 
 oncall("scm_client_infra")
