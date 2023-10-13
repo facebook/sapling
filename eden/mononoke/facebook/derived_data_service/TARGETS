@@ -60,6 +60,23 @@ rust_binary(
     ],
 )
 
+rust_binary(
+    name = "derived_data_service_stats",
+    srcs = glob([
+        "stats/**/*.rs",
+    ]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:tokio",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//common/rust/shed/services:services",
+        "//common/rust/shed/stats:stats",
+        "//common/rust/zeus:zeus_client",
+    ],
+)
+
 rust_library(
     name = "derived_data_client_library",
     srcs = glob([
