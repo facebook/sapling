@@ -105,7 +105,6 @@ buck_sh_binary(
     name = "hgpython",
     main = "fb/run_buck_hgpython.sh",
     resources = [
-        "fb/buck_run_hg.py",
         ":hg",
     ],
 )
