@@ -257,10 +257,11 @@ impl UploadHgFileContents {
                     async move {
                         let (res, metadata) = future::try_join(lookup_fut, metadata_fut).await?;
 
-                        let fnid = match res {
-                            Some(fnid) => fnid,
+                        // Remember if this filenode pointer was a cache hit so that we can skip re-uploading it.
+                        let (is_hit, fnid) = match res {
+                            Some(fnid) => (true, fnid),
                             _ => {
-                                Self::compute_filenode_id(
+                                let fnid = Self::compute_filenode_id(
                                     ctx,
                                     &blobstore,
                                     content_id,
@@ -268,10 +269,11 @@ impl UploadHgFileContents {
                                     p1,
                                     p2,
                                 )
-                                .await?
+                                .await?;
+                                (false, fnid)
                             }
                         };
-                        anyhow::Ok((fnid, metadata, size))
+                        anyhow::Ok((is_hit, fnid, metadata, size))
                     }
                 };
 
@@ -329,7 +331,7 @@ impl UploadHgFileContents {
                     copy_from,
                 };
 
-                let compute_fut = async move { Ok((node_id, metadata, size)) };
+                let compute_fut = async move { Ok((false, node_id, metadata, size)) };
 
                 (
                     cbmeta,
@@ -344,8 +346,10 @@ impl UploadHgFileContents {
         let compute_fut = {
             cloned!(ctx, blobstore);
             async move {
-                let (filenode_id, metadata, size) = compute_fut.await?;
-                store_filenode_id(&ctx, &blobstore, key, &filenode_id).await?;
+                let (is_hit, filenode_id, metadata, size) = compute_fut.await?;
+                if !is_hit {
+                    store_filenode_id(&ctx, &blobstore, key, &filenode_id).await?;
+                }
                 Ok((filenode_id, metadata, size))
             }
         };
