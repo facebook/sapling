@@ -324,6 +324,7 @@ class SymlinkWindowsDisabledTest(EdenHgTestCase):
         repo.write_file("contents1", "c1\n")
         repo.write_file("contents2", "c2\n")
         repo.symlink("symlink", "contents1")
+        repo.symlink("symlink3", os.path.join("foo", "bar"))
         self.initial_commit = repo.commit("Initial commit.")
         # We only want the backing repo to be symlink-enabled
         self.enable_windows_symlinks = False
@@ -347,8 +348,7 @@ class SymlinkWindowsDisabledTest(EdenHgTestCase):
         self.assertEqual("contents2", self.read_file("symlink2"))
         os.remove(self.get_path("symlink2"))
         symlink_commit = self.repo.symlink("symlink2", "contents2")
-        # This used to fail when we weren't properly calculating the SHA1 of symlinks on Windows
-        self.assert_status_empty()
+        self.assert_status({"symlink2": "M"})
 
     def test_status_empty_after_fresh_clone(self) -> None:
         self.assert_status_empty()
@@ -359,10 +359,12 @@ class SymlinkWindowsDisabledTest(EdenHgTestCase):
     def test_disabled_symlinks_update(self) -> None:
         self.repo.symlink("symlink2", "contents2")
         self.repo.commit("Another commit with a symlink")
-        # There shouldn't be issues when updating now that the SHA1 is being properly calculated and everything symlink related is gated
-        self.repo.update(self.initial_commit)
-        self.assert_status_empty()
-        self.assertEqual("contents1", self.read_file("symlink"))
+        with self.assertRaises(hgrepo.HgError) as context:
+            self.repo.update(self.initial_commit)
+        self.assertIn(
+            b"conflicting changes:\n  symlink2",
+            context.exception.stderr,
+        )
 
     def test_modified_fake_symlink_target(self) -> None:
         self.assert_status_empty()
@@ -385,7 +387,7 @@ class SymlinkWindowsDisabledTest(EdenHgTestCase):
     def test_status_empty_after_restart(self) -> None:
         # Run scandir for triggering the bug
         self.assertEqual(
-            {"contents1", "contents2", "symlink", ".hg", ".eden"},
+            {"contents1", "contents2", "symlink", "symlink3", ".hg", ".eden"},
             {entry.name for entry in os.scandir(self.mount)},
         )
         self.assert_status_empty()
@@ -393,3 +395,9 @@ class SymlinkWindowsDisabledTest(EdenHgTestCase):
         self.eden.start()
         # Makes sure the symlink does not appear after restarting
         self.assert_status_empty()
+
+    def test_fake_symlink_modified_shows_in_status(self) -> None:
+        self.assertEqual("foo/bar", self.read_file("symlink3"))
+        os.remove(self.get_path("symlink3"))
+        self.repo.symlink("symlink3", os.path.join("foo", "bar"))
+        self.assert_status({"symlink3": "M"})

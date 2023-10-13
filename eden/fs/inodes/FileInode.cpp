@@ -492,7 +492,9 @@ Hash20 FileInodeState::MaterializedState::getSha1(FileInode& inode) {
   }
 
 #ifdef _WIN32
-  auto sha1 = getFileSha1(inode.getMaterializedFilePath());
+  auto sha1 = getFileSha1(
+      inode.getMaterializedFilePath(),
+      inode.getMount()->getCheckoutConfig()->getEnableWindowsSymlinks());
 #else
   auto sha1 = inode.getMount()->getOverlayFileAccess()->getSha1(inode);
 #endif // _WIN32
@@ -507,8 +509,10 @@ Hash32 FileInodeState::MaterializedState::getBlake3(
   // always delegate to overlayFileAccess to save on the materialized state
   // memory footprint
 #ifdef _WIN32
-  const auto blake3 =
-      getFileBlake3(inode.getMaterializedFilePath(), maybeBlake3Key);
+  const auto blake3 = getFileBlake3(
+      inode.getMaterializedFilePath(),
+      maybeBlake3Key,
+      inode.getMount()->getCheckoutConfig()->getEnableWindowsSymlinks());
 #else
   const auto blake3 = inode.getMount()->getOverlayFileAccess()->getBlake3(
       inode, maybeBlake3Key);
