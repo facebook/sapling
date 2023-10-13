@@ -10,7 +10,6 @@
 //! Input:
 //! - --python: which Python to use.
 //! - --sys-path: Python's sys.path[0].
-//! - --module: Root pure Python modules to compile recursively (can repeat).
 //! - --out: Output file path (set by buck genrule).
 //!
 //! Output (file $OUT):
@@ -28,14 +27,12 @@ fn main() {
     // Simple args parsing.
     let mut python: Option<String> = None;
     let mut sys_path: Option<String> = None;
-    let mut modules: Vec<String> = Vec::new();
     let mut out: Option<String> = None;
     let mut args = env::args().skip(1);
     while let Some(arg) = args.next() {
         match arg.as_str() {
             "--python" => python = Some(args.next().unwrap()),
             "--sys-path" => sys_path = Some(args.next().unwrap()),
-            "--module" => modules.push(args.next().unwrap()),
             "--out" => out = Some(args.next().unwrap()),
             _ => panic!("unknown arg: {arg}"),
         }
@@ -44,10 +41,8 @@ fn main() {
     // Run codegen.
     let python = python.as_ref().map(Path::new);
     let sys_path = sys_path.as_ref().map(Path::new);
-    let modules = modules.iter().map(|s| s.as_str()).collect::<Vec<_>>();
     let out = out.expect("--out is required");
-    let code =
-        crate::codegen::generate_code(python.expect("--python is missing"), sys_path, &modules);
+    let code = crate::codegen::generate_code(python.expect("--python is missing"), sys_path);
 
     // Write results.
     std::fs::write(out, code).unwrap();

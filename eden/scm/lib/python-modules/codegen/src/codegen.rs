@@ -33,9 +33,7 @@ use std::process::Stdio;
 /// - `python` is the path to the Python interpreter.
 /// - `sys_path` will be inserted to Python's `sys.path[0:0]`.
 ///   If None, then pycompile.py reads $SYS_ARG0.
-/// - `root_modules` defines the modules to compile (recursively).
-///   If None, then pycompile.py reads $ROOT_MODULES.
-pub fn generate_code(python: &Path, sys_path: Option<&Path>, root_modules: &[&str]) -> String {
+pub fn generate_code(python: &Path, sys_path: Option<&Path>) -> String {
     let is_cargo = is_cargo();
 
     // Run the Python script using the specified Python.
@@ -60,7 +58,7 @@ pub fn generate_code(python: &Path, sys_path: Option<&Path>, root_modules: &[&st
     } else if is_cargo {
         println!("cargo:rerun-if-env-changed=SYS_PATH0");
     }
-    cmd.env("ROOT_MODULES", root_modules.join(" "));
+    cmd.env("ROOT_MODULES", "");
     let mut child = cmd.spawn().unwrap();
     {
         let stdin = child.stdin.as_mut().unwrap();
