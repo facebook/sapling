@@ -1483,7 +1483,14 @@ mod tests {
         .await?;
 
         bookmark(&ctx, &repo.blob_repo, "master").delete().await?;
-        update_and_wait_for_bookmark(&ctx, &mut coordinator, &master_book, None).await?;
+        // This check should not be successful in deleting master because it is protected
+        update_and_wait_for_bookmark(
+            &ctx,
+            &mut coordinator,
+            &master_book,
+            Some((master, BookmarkKind::PullDefaultPublishing)),
+        )
+        .await?;
 
         Ok(())
     }
