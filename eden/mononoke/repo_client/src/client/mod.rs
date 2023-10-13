@@ -126,7 +126,6 @@ use nonzero_ext::nonzero;
 use phases::PhasesArc;
 use rand::Rng;
 use rate_limiting::Metric;
-use regex::Regex;
 use remotefilelog::create_getpack_v1_blob;
 use remotefilelog::create_getpack_v2_blob;
 use remotefilelog::get_unordered_file_history_for_multiple_nodes;
@@ -138,7 +137,6 @@ use revisionstore_types::Metadata;
 use serde::Deserialize;
 use serde_json::json;
 use slog::debug;
-use slog::error;
 use slog::info;
 use slog::o;
 use stats::prelude::*;
@@ -371,111 +369,6 @@ fn bundle2caps() -> String {
     percent_encode(&encodedcaps.join("\n"))
 }
 
-struct UndesiredPathLogger {
-    ctx: CoreContext,
-    repo_needs_logging: bool,
-    path_prefix_to_log: Option<NonRootMPath>,
-    path_regex_to_log: Option<Regex>,
-}
-
-impl UndesiredPathLogger {
-    fn new(ctx: CoreContext, repo: &BlobRepo) -> Result<Self, Error> {
-        let tunables = tunables();
-        let repo_needs_logging = repo.repo_identity().name()
-            == tunables
-                .undesired_path_repo_name_to_log()
-                .unwrap_or_default()
-                .as_str();
-
-        let path_prefix_to_log = if repo_needs_logging {
-            NonRootMPath::new_opt(
-                tunables
-                    .undesired_path_prefix_to_log()
-                    .unwrap_or_default()
-                    .as_str(),
-            )?
-        } else {
-            None
-        };
-
-        let path_regex_to_log = if repo_needs_logging
-            && !tunables
-                .undesired_path_regex_to_log()
-                .unwrap_or_default()
-                .is_empty()
-        {
-            Some(
-                Regex::new(
-                    tunables
-                        .undesired_path_regex_to_log()
-                        .unwrap_or_default()
-                        .as_str(),
-                )
-                .map_err(|e| {
-                    error!(
-                        ctx.logger(),
-                        "Error initializing undesired path regex for {}: {}",
-                        repo.repo_identity().name(),
-                        e
-                    );
-                    e
-                })?,
-            )
-        } else {
-            None
-        };
-
-        Ok(Self {
-            ctx,
-            repo_needs_logging,
-            path_prefix_to_log,
-            path_regex_to_log,
-        })
-    }
-
-    fn maybe_log_tree(&self, path: Option<&NonRootMPath>) {
-        if self.should_log(path) {
-            STATS::undesired_tree_fetches.add_value(1);
-            self.ctx
-                .perf_counters()
-                .add_to_counter(PerfCounterType::UndesiredTreeFetch, 1);
-        }
-    }
-
-    fn maybe_log_file(&self, path: Option<&NonRootMPath>, sizes: impl Iterator<Item = u64>) {
-        if self.should_log(path) {
-            for size in sizes {
-                STATS::undesired_file_fetches.add_value(1);
-                STATS::undesired_file_fetches_sizes.add_value(size as i64);
-
-                self.ctx
-                    .scuba()
-                    .clone()
-                    .add("undesired_file_size", size)
-                    .log_with_msg("Undesired file fetch", format!("{:?}", path));
-            }
-        }
-    }
-
-    fn should_log(&self, path: Option<&NonRootMPath>) -> bool {
-        if self.repo_needs_logging {
-            let op1 = match self.path_prefix_to_log.as_ref() {
-                None => false,
-                Some(prefix) => prefix.is_prefix_of(NonRootMPath::iter_opt(path)),
-            };
-
-            let op2 = match (path, self.path_regex_to_log.as_ref()) {
-                (Some(path), Some(re)) => path.matches_regex(re),
-                _ => false,
-            };
-
-            op1 || op2
-        } else {
-            false
-        }
-    }
-}
-
 #[derive(Clone)]
 pub struct RepoClient {
     repo: Arc<Repo>,
@@ -690,9 +583,6 @@ impl RepoClient {
             tunables().hash_validation_percentage().unwrap_or_default();
         let validate_hash = ((rand::random::<usize>() % 100) as i64) < hash_validation_percentage;
 
-        let undesired_path_logger =
-            try_boxstream!(UndesiredPathLogger::new(ctx.clone(), self.repo.blob_repo()));
-
         let changed_entries = gettreepack_entries(ctx.clone(), self.repo.blob_repo(), params)
             .filter({
                 let mut used_hashes = HashSet::new();
@@ -705,8 +595,6 @@ impl RepoClient {
                 cloned!(ctx);
                 let blobrepo = self.repo.blob_repo().clone();
                 move |(hg_mf_id, path)| {
-                    undesired_path_logger.maybe_log_tree(path.as_ref());
-
                     ctx.perf_counters()
                         .increment_counter(PerfCounterType::GettreepackNumTreepacks);
 
@@ -746,9 +634,6 @@ impl RepoClient {
     {
         let allow_short_getpack_history = self.knobs.allow_short_getpack_history;
         self.command_stream(name, UNSAMPLED, |ctx, command_logger| {
-            let undesired_path_logger =
-                try_boxstream!(UndesiredPathLogger::new(ctx.clone(), self.repo.blob_repo()));
-            let undesired_path_logger = Arc::new(undesired_path_logger);
             // We buffer all parameters in memory so that we can log them.
             // That shouldn't be a problem because requests are quite small
             let getpack_params = Arc::new(Mutex::new(vec![]));
@@ -764,8 +649,7 @@ impl RepoClient {
 
             let request_stream = move || {
                 let content_stream = {
-                    cloned!(ctx, getpack_params, lfs_params, undesired_path_logger);
-
+                    cloned!(ctx, getpack_params, lfs_params);
                     async move {
                         let buffered_params = BufferedParams {
                             weight_limit: 100_000_000,
@@ -822,17 +706,9 @@ impl RepoClient {
                                     )
                                     .flatten_err();
 
-                                    cloned!(undesired_path_logger);
-
                                     async move {
                                         let blobs =
                                             future::try_join_all(blob_futs.into_iter()).await?;
-
-                                        undesired_path_logger.maybe_log_file(
-                                            Some(&path),
-                                            blobs.iter().map(|(blobinfo, _)| blobinfo.filesize),
-                                        );
-
                                         let total_weight = blobs
                                             .iter()
                                             .map(|(blob_info, _)| blob_info.weight)
