@@ -7,7 +7,7 @@ oncall("mercurial_release")
 buck_genrule(
     name = "gen=compiled.rs",
     out = "compiled.rs",
-    cmd = '$(exe //eden/scm/lib/python-modules/codegen:codegen) --out $OUT --python "$(exe :pymain)" --sys-path $(location //eden/scm:pure-modules) --module sapling --module ghstack --module linecache',
+    cmd = '$(exe //eden/scm/lib/python-modules/codegen:codegen) --out $OUT --python "$(exe :pymain)" --sys-path $(location //eden/scm:pure-modules) --module sapling --module ghstack',
 )
 
 # alternatively, if we know the buck target to the "python", we can use that instead.

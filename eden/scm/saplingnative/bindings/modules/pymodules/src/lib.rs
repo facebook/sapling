@@ -161,6 +161,14 @@ py_class!(pub class BindingsModuleFinder |py| {
         }
     }
 
+    // get_source is part of PEP 302. `linecache` can use it to provide source code.
+
+    def get_source(&self, module_name: &str) -> PyResult<Option<String>> {
+        match python_modules::find_module(module_name) {
+            None => Err(PyErr::new::<exc::ImportError, _>(py, module_name)),
+            Some(m) => Ok(Some(m.source_code().to_string())),
+        }
+    }
 });
 
 impl BindingsModuleFinder {

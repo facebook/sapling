@@ -51,6 +51,9 @@ class _lazyloaderex(importlib.util.LazyLoader):
         else:
             super().exec_module(module)
 
+    def get_source(self, name):
+        return self.loader.get_source(name)
+
 
 class LazyFinder:
     """A wrapper around a ``MetaPathFinder`` that makes loaders lazy.

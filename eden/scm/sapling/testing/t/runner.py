@@ -58,7 +58,7 @@ class TestId:
                 modname = f"{mod.__name__}.{relpath.replace('/', '.')}"
                 return cls.frompath(f"doctest:{modname}")
             # try harder, using sys.path
-            # This is needed when the modules being used are <static:*>.
+            # This is needed when the modules being used are static:*.
             for root in sys.path:
                 relpath = os.path.relpath(path, root)
                 if not relpath.startswith(".."):
@@ -73,7 +73,7 @@ class TestId:
                         # double check that the source code matches
                         mod = sys.modules[modname]
 
-                        if mod.__file__.startswith("<static:"):
+                        if mod.__file__.startswith("static:"):
                             import inspect
 
                             source1 = inspect.getsource(mod)
@@ -82,7 +82,7 @@ class TestId:
 
                             if source1 != source2:
                                 sys.stderr.write(
-                                    f"warning: doctest is using an older <static> version of module {modname} that no longer matches on-disk {path}\n"
+                                    f"warning: doctest is using an older static version of module {modname} that no longer matches on-disk {path}\n"
                                 )
                                 sys.stderr.flush()
 
