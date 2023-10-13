@@ -9,9 +9,9 @@ load("@fbcode_macros//build_defs:export_files.bzl", "export_file")
 load("@fbcode_macros//build_defs:native_rules.bzl", "buck_command_alias", "buck_filegroup", "buck_sh_binary")
 load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
 load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
-load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
 load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
 load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+load("//eden/scm:targets.bzl", "rust_maybe_universal_binary")
 
 oncall("mercurial_release")
 
@@ -114,7 +114,7 @@ export_file(
     src = "exec/hgmain/manifest.xml",
 )
 
-rust_binary(
+rust_maybe_universal_binary(
     name = "hg",
     srcs = glob(["exec/hgmain/src/**/*.rs"]),
     autocargo = {
