@@ -177,152 +177,27 @@ def run(args=None, fin=None, fout=None, ferr=None, config=None):
 
 def _preimportmodules():
     """pre-import modules that are side-effect free (used by chg server)"""
-    coremods = [
-        "ancestor",
-        "archival",
-        "bookmarks",
-        "branchmap",
-        "bundle2",
-        "bundlerepo",
-        "byterange",
-        "changegroup",
-        "changelog",
-        "color",
-        "config",
-        "configitems",
-        "connectionpool",
-        "context",
-        "copies",
-        "crecord",
-        "dagop",
-        "dagparser",
-        "destutil",
-        "dirstate",
-        "dirstateguard",
-        "discovery",
-        "exchange",
-        "filelog",
-        "filemerge",
-        "fileset",
-        "formatter",
-        "graphmod",
-        "hbisect",
-        "httpclient",
-        "httpconnection",
-        "localrepo",
-        "lock",
-        "mail",
-        "manifest",
-        "match",
-        "mdiff",
-        "merge",
-        "mergeutil",
-        "minirst",
-        "mononokepeer",
-        "namespaces",
-        "node",
-        "obsolete",
-        "parser",
-        "patch",
-        "pathutil",
-        "peer",
-        "phases",
-        "progress",
-        "pushkey",
-        "rcutil",
-        "repository",
-        "revlog",
-        "revset",
-        "revsetlang",
-        "rewriteutil",
-        "scmutil",
-        "server",
-        "setdiscovery",
-        "similar",
-        "simplemerge",
-        "smartset",
-        "sshpeer",
-        "sshserver",
-        "sslutil",
-        "statprof",
-        "store",
-        "streamclone",
-        "templatefilters",
-        "templatekw",
-        "templater",
-        "transaction",
-        "txnutil",
-        "url",
-        "urllibcompat",
-        "vfs",
-        "wireproto",
-        "worker",
-    ]
-    extmods = [
-        "absorb",
-        "amend",
-        "arcdiff",
-        "automv",
-        "blackbox",
-        "chistedit",
-        "clienttelemetry",
-        "commitcloud",
-        "conflictinfo",
-        "copytrace",
-        "crdump",
-        "debugshell",
-        "dialect",
-        "dirsync",
-        "extlib",
-        "extorder",
-        "extutil",
-        "fastlog",
-        "fbscmquery",
-        "fbhistedit",
-        "fsmonitor",
-        "ghstack",
-        "githelp",
-        "github",
-        "grpcheck",
-        "hgevents",
-        "histedit",
-        "infinitepush",
-        "journal",
-        "lfs",
-        "logginghelper",
-        "mergedriver",
-        "morestatus",
-        "myparent",
-        "phabdiff",
-        "phabstatus",
-        "phrevset",
-        "progressfile",
-        "pullcreatemarkers",
-        "pushrebase",
-        "rage",
-        "rebase",
-        "remotefilelog",
-        "remotenames",
-        "reset",
-        "sampling",
-        "schemes",
-        "share",
-        "shelve",
-        "sigtrace",
-        "simplecache",
-        "smartlog",
-        "snapshot",
-        "sparse",
-        "sshaskpass",
-        "stablerev",
-        "traceprof",
-        "treemanifest",
-        "tweakdefaults",
-        "undo",
-    ]
-    modnames = ["sapling.%s" % name for name in coremods]
+    extmods = []
+    extprefix = "sapling.ext."
+    modnames = sorted(bindings.modules.list())
     for name in modnames:
-        __import__(name)
+        # Skip other modules.
+        if not any(name.startswith(p) for p in ("ghstack", "sapling")):
+            continue
+        # Extensions are handled below.
+        if name.startswith(extprefix):
+            parts = name.split(".")
+            if len(parts) == 3:
+                extmods.append(parts[-1])
+            continue
+        # Skip side-effect main modules.
+        if name.endswith("__main__"):
+            continue
+        try:
+            __import__(name)
+        except (ImportError, AttributeError):
+            # some modules might fail to import due to incompatible OS.
+            pass
     # Modules below are optional - expected to cause ImportError
     # in some build modes.
     optional_modnames = [
@@ -330,13 +205,12 @@ def _preimportmodules():
         # (ex. in `make oss` build).
         "sapling.eden_dirstate"
     ]
-    for name in optional_modnames:
-        try:
-            __import__(name)
-        except ImportError:
-            pass
     for extname in extmods:
-        extensions.preimport(extname)
+        try:
+            extensions.preimport(extname)
+        except (ImportError, AttributeError):
+            # some extensions might fail to import due to incompatible OS.
+            pass
 
 
 ischgserver = False
