@@ -88,7 +88,6 @@ pub struct MononokeTunables {
     /// Maximum age of bookmarks subscriptions.
     bookmark_subscription_max_age_ms: TunableI64,
     bookmark_subscription_protect_master: TunableBool,
-    max_scuba_msg_length: TunableI64,
     edenapi_large_tree_metadata_limit: TunableI64,
     edenapi_req_dumper_sample_ratio: TunableI64,
     command_monitor_interval: TunableI64,

@@ -29,9 +29,9 @@ use scuba::ScubaSample;
 use scuba::ScubaSampleBuilder;
 pub use scuba::ScubaValue;
 use time_ext::DurationExt;
-use tunables::tunables;
 
 const FILE_PREFIX: &str = "file://";
+const MAX_SCUBA_MSG_LEN: usize = 512000;
 
 /// An extensible wrapper struct around `ScubaSampleBuilder`
 #[derive(Clone)]
@@ -209,17 +209,10 @@ impl MononokeScubaSampleBuilder {
 
         self.inner.add("log_tag", log_tag);
         if let Some(mut msg) = msg.into() {
-            match tunables()
-                .max_scuba_msg_length()
-                .unwrap_or_default()
-                .try_into()
-            {
-                Ok(size) if size > 0 && msg.len() > size => {
-                    msg.truncate(size);
-                    msg.push_str(" (...)");
-                }
-                _ => {}
-            };
+            if MAX_SCUBA_MSG_LEN > 0 && msg.len() > MAX_SCUBA_MSG_LEN {
+                msg.truncate(MAX_SCUBA_MSG_LEN);
+                msg.push_str(" (...)");
+            }
 
             self.inner.add("msg", msg);
         }

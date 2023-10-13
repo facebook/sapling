@@ -16,7 +16,6 @@ rust_library(
         "//eden/mononoke/observability:observability",
         "//eden/mononoke/permission_checker:permission_checker",
         "//eden/mononoke/server/metadata:metadata",
-        "//eden/mononoke/tunables:tunables",
         "//eden/scm/lib/clientinfo:clientinfo",
     ],
 )
