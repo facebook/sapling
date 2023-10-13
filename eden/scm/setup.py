@@ -644,21 +644,6 @@ class buildembedded(Command):
     def finalize_options(self):
         pass
 
-    def _zip_pyc_files(self, zipname, package):
-        """Modify a zip archive to include our .pyc files"""
-        sourcedir = pjoin(scriptdir, package)
-        with zipfile.PyZipFile(zipname, "a") as z:
-            # Write .py files for better traceback.
-            for root, _dirs, files in os.walk(sourcedir):
-                for basename in files:
-                    sourcepath = pjoin(root, basename)
-                    if sourcepath.endswith(".py"):
-                        # relative to scriptdir
-                        inzippath = sourcepath[len(scriptdir) + 1 :]
-                        z.write(sourcepath, inzippath)
-            # Compile and write .pyc files.
-            z.writepy(sourcedir)
-
     def _copy_py_lib(self, dirtocopy):
         """Copy main Python shared library"""
         pyroot = os.path.realpath(pjoin(sys.executable, ".."))
@@ -723,10 +708,6 @@ class buildembedded(Command):
         # has the first priority in dynamic linker search path.
         self._copy_py_lib(embdir)
 
-        # Build everything into pythonXX.zip, which is in the default sys.path.
-        zippath = pjoin(embdir, f"python{PY_VERSION}.zip")
-        self._zip_pyc_files(zippath, "sapling")
-        self._zip_pyc_files(zippath, "ghstack")
         self._copy_hg_exe(embdir)
         self._copy_other(embdir)
 
