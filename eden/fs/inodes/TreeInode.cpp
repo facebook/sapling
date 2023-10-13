@@ -3857,6 +3857,12 @@ folly::Try<folly::Unit> TreeInode::invalidateChannelEntryCache(
     TreeInodeState&,
     PathComponentPiece name,
     FOLLY_MAYBE_UNUSED std::optional<InodeNumber> ino) {
+  auto faultTry = getMount()->getServerState()->getFaultInjector().checkTry(
+      "invalidateChannelEntryCache", name);
+  if (faultTry.hasException()) {
+    return folly::Try<folly::Unit>{faultTry.exception()};
+  }
+
 #ifndef _WIN32
   if (auto* fuseChannel = getMount()->getFuseChannel()) {
     fuseChannel->invalidateEntry(getNodeId(), name);

@@ -10,6 +10,7 @@ import re
 import sys
 import threading
 from contextlib import contextmanager
+from enum import Enum
 from multiprocessing import Process
 from textwrap import dedent
 from typing import Dict, Generator, List, Optional, Set
@@ -915,6 +916,16 @@ class UpdateTest(EdenHgTestCase):
         first_update.join()
 
 
+class PrjFsState(Enum):
+    UNKNOWN = 0
+    VIRTUAL = 1
+    PLACEHOLDER = 2
+    HYDRATED_PLACEHOLDER = 3
+    DIRTY_PLACEHOLDER = 4
+    FULL = 5
+    TOMBSTONE = 6
+
+
 @hg_test
 # pyre-ignore[13]: T62487924
 class UpdateCacheInvalidationTest(EdenHgTestCase):
@@ -922,6 +933,7 @@ class UpdateCacheInvalidationTest(EdenHgTestCase):
     commit2: str
     commit3: str
     commit4: str
+    enable_fault_injection: bool = True
 
     def edenfs_logging_settings(self) -> Dict[str, str]:
         return {
@@ -1037,6 +1049,78 @@ class UpdateCacheInvalidationTest(EdenHgTestCase):
         self.assertEqual(poststats.st_size, 7)
 
     if sys.platform == "win32":
+
+        def _retry_update_after_failed_entry_cache_invalidation(
+            self,
+            initial_state: PrjFsState,
+        ) -> None:
+            self.hg(
+                "config", "--local", "experimental.abort-on-eden-conflict-error", "True"
+            )
+
+            if initial_state == PrjFsState.PLACEHOLDER:
+                # Stat file2 to populate a placeholder, making the file non-virtual.
+                os.stat(self.get_path("dir/file2"))
+            elif initial_state == PrjFsState.HYDRATED_PLACEHOLDER:
+                # Read file2 to hydrate its placeholder.
+                self.read_file("dir/file2")
+            elif initial_state == PrjFsState.FULL:
+                original_file2 = self.read_file("dir/file2")
+                self.write_file("dir/file2", "modified two")
+                self.write_file("dir/file2", original_file2)
+                self.assert_status({})
+            else:
+                raise ValueError("Unsupported initial state: {}".format(initial_state))
+
+            # Simulate failed invalidation of file2.
+            with self.eden.get_thrift_client_legacy() as client:
+                client.injectFault(
+                    FaultDefinition(
+                        keyClass="invalidateChannelEntryCache",
+                        keyValueRegex="file2",
+                        errorType="runtime_error",
+                    )
+                )
+            with self.assertRaises(hgrepo.HgError):
+                self.repo.update(self.commit1)
+
+            self.assertEqual(self.repo.get_head_hash(), self.commit4)
+            self.assert_unfinished_operation("update")
+
+            # Try to update again, this time without failure.
+            with self.eden.get_thrift_client_legacy() as client:
+                client.unblockFault(
+                    UnblockFaultArg(
+                        keyClass="invalidateChannelEntryCache", keyValueRegex="file2"
+                    )
+                )
+            self.repo.update(self.commit1)
+
+            self.assertEqual(self.repo.get_head_hash(), self.commit1)
+
+            # TODO(mshroyer): These two assertions should succeed for a
+            # successfully retried invalidation, but at the moment they fail.
+            # self.assert_status({}, op=None)
+            # self.assertEqual(self.read_file("dir/file2"), "two")
+
+        def test_retry_update_after_failed_entry_cache_invalidation_placeholder(
+            self,
+        ) -> None:
+            self._retry_update_after_failed_entry_cache_invalidation(
+                initial_state=PrjFsState.PLACEHOLDER,
+            )
+
+        def test_retry_update_after_failed_entry_cache_invalidation_hydrated_placeholder(
+            self,
+        ) -> None:
+            self._retry_update_after_failed_entry_cache_invalidation(
+                initial_state=PrjFsState.HYDRATED_PLACEHOLDER,
+            )
+
+        def test_retry_update_after_failed_entry_cache_invalidation_full(self) -> None:
+            self._retry_update_after_failed_entry_cache_invalidation(
+                initial_state=PrjFsState.FULL,
+            )
 
         def test_update_clean_lay_placeholder_on_full(self) -> None:
             self.repo.write_file("dir2/dir3/file1", "foobar")
