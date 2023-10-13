@@ -15,6 +15,11 @@ extern "C" {
     fn PyInit_parsers() -> *mut ffi::PyObject;
     fn PyInit_bser() -> *mut ffi::PyObject;
 
+    #[cfg(windows)]
+    fn PyInit__curses() -> *mut ffi::PyObject;
+    #[cfg(windows)]
+    fn PyInit__curses_panel() -> *mut ffi::PyObject;
+
     fn traceprof_enable();
     fn traceprof_disable();
     fn traceprof_report_stderr();
@@ -37,6 +42,14 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add(py, "osutil", osutil)?;
     m.add(py, "parsers", parsers)?;
     m.add(py, "bser", bser)?;
+
+    #[cfg(windows)]
+    unsafe {
+        let curses = PyObject::from_borrowed_ptr(py, PyInit__curses());
+        let panel = PyObject::from_borrowed_ptr(py, PyInit__curses_panel());
+        m.add(py, "_curses", curses)?;
+        m.add(py, "_curses_panel", panel)?;
+    }
 
     m.add_class::<TraceProf>(py)?;
 

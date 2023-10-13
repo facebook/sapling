@@ -22,6 +22,14 @@ rust_python_library(
     },
     crate_root = "src/lib.rs",
     include_python_sys = True,
+    os_deps = [
+        (
+            "windows",
+            [
+                "//eden/scm/lib/third-party/windows-curses:windows-curses",
+            ],
+        ),
+    ],
     deps = [
         "//eden/scm:bser",
         "//eden/scm:traceprof",
