@@ -365,7 +365,7 @@ def _autopullphabdiff(
 ) -> Optional[pullattempt]:
     # Automation should use explicit commit hashes and do not depend on the
     # Dxxx autopull behavior.
-    if repo.ui.plain():
+    if repo.ui.plain(feature="phrevset"):
         return
 
     # Phrevset autopull is disabled.
