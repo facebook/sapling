@@ -231,9 +231,6 @@ pub struct MononokeTunables {
     // How many commits to walk back from the client heads before failing to rebuild SC
     segmented_changelog_client_max_commits_to_traverse: TunableI64,
 
-    // Timeout for is_present call for multiplexed blobstore
-    is_present_timeout_ms: TunableI64,
-
     // What timeout to use when doing filenode lookup.
     // Usually filenode lookup is used while generating hg changesets
     filenode_lookup_timeout_ms: TunableI64,
