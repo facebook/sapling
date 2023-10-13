@@ -742,9 +742,7 @@ impl EdenApiHandler for CommitMutationsHandler {
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
-        if !tunables().mutation_generate_for_draft().unwrap_or_default() {
-            return Ok(stream::empty().boxed());
-        }
+
         let commits = request
             .commits
             .into_iter()

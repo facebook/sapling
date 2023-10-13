@@ -84,7 +84,6 @@ use sha1::Sha1;
 use slog::debug;
 use slog::info;
 use slog::o;
-use tunables::tunables;
 
 use crate::errors::ErrorKind;
 
@@ -137,8 +136,7 @@ pub async fn create_getbundle_response(
             create_hg_changeset_part(ctx, blobrepo, commits_to_send.clone(), lfs_params).await?;
         parts.push(cg_part);
 
-        if !draft_commits.is_empty() && tunables().mutation_generate_for_draft().unwrap_or_default()
-        {
+        if !draft_commits.is_empty() {
             let mutations_fut = {
                 cloned!(ctx);
                 let hg_mutation_store = blobrepo.hg_mutation_store_arc();

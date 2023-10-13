@@ -9,15 +9,6 @@
 setup configuration
   $ INFINITEPUSH_NAMESPACE_REGEX='^scratch/.+$' setup_common_config
   $ cd $TESTTMP
-  $ merge_tunables <<EOF
-  > {
-  >   "killswitches": {
-  >     "mutation_advertise_for_infinitepush": true,
-  >     "mutation_accept_for_infinitepush": true,
-  >     "mutation_generate_for_draft": true
-  >   }
-  > }
-  > EOF
 
 setup common configuration for these tests
   $ enable amend infinitepush commitcloud remotenames

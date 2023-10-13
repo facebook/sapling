@@ -143,15 +143,10 @@ async fn run_push(
         hook_rejection_remapper,
     } = action;
 
-    if tunables()
-        .mutation_accept_for_infinitepush()
-        .unwrap_or_default()
-    {
-        repo.hg_mutation_store()
-            .add_entries(ctx, uploaded_hg_changeset_ids, mutations)
-            .await
-            .context("Failed to store mutation data")?;
-    }
+    repo.hg_mutation_store()
+        .add_entries(ctx, uploaded_hg_changeset_ids, mutations)
+        .await
+        .context("Failed to store mutation data")?;
 
     if bookmark_pushes.len() > 1 {
         return Err(anyhow!(
@@ -224,15 +219,10 @@ async fn run_infinitepush(
         uploaded_hg_changeset_ids,
     } = action;
 
-    if tunables()
-        .mutation_accept_for_infinitepush()
-        .unwrap_or_default()
-    {
-        repo.hg_mutation_store()
-            .add_entries(ctx, uploaded_hg_changeset_ids, mutations)
-            .await
-            .context("Failed to store mutation data")?;
-    }
+    repo.hg_mutation_store()
+        .add_entries(ctx, uploaded_hg_changeset_ids, mutations)
+        .await
+        .context("Failed to store mutation data")?;
 
     let bookmark = match maybe_bookmark_push {
         Some(bookmark_push) => {

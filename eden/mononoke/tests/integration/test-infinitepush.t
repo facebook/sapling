@@ -10,11 +10,6 @@ setup configuration
   $ INFINITEPUSH_NAMESPACE_REGEX='^scratch/.+$' setup_common_config
   $ merge_tunables <<EOF
   > {
-  >   "killswitches": {
-  >     "mutation_accept_for_infinitepush": true,
-  >     "mutation_advertise_for_infinitepush": true,
-  >     "mutation_generate_for_draft": true
-  >   },
   >   "ints": {
   >     "zstd_compression_level": 3
   >   }

@@ -40,17 +40,6 @@ setup configuration
   > CONFIG
   $ cd $TESTTMP
 
-setup tunables
-  $ merge_tunables <<EOF
-  > {
-  >   "killswitches": {
-  >     "mutation_advertise_for_infinitepush": true,
-  >     "mutation_accept_for_infinitepush": true,
-  >     "mutation_generate_for_draft": true
-  >   }
-  > }
-  > EOF
-
 setup common configuration for these tests
   $ cat >> $HGRCPATH <<EOF
   > [extensions]

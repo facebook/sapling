@@ -329,30 +329,20 @@ fn wireprotocaps() -> Vec<String> {
 }
 
 fn bundle2caps() -> String {
-    let caps = {
-        let mut caps = vec![
-            ("HG20", vec![]),
-            ("changegroup", vec!["02", "03"]),
-            ("b2x:infinitepush", vec![]),
-            ("b2x:infinitepushscratchbookmarks", vec![]),
-            ("pushkey", vec![]),
-            ("treemanifestserver", vec!["True"]),
-            ("b2x:rebase", vec![]),
-            ("b2x:rebasepackpart", vec![]),
-            ("phases", vec!["heads"]),
-            ("obsmarkers", vec!["V1"]),
-            ("listkeys", vec![]),
-        ];
-
-        if tunables()
-            .mutation_advertise_for_infinitepush()
-            .unwrap_or_default()
-        {
-            caps.push(("b2x:infinitepushmutation", vec![]));
-        }
-
-        caps
-    };
+    let caps = vec![
+        ("HG20", vec![]),
+        ("changegroup", vec!["02", "03"]),
+        ("b2x:infinitepush", vec![]),
+        ("b2x:infinitepushscratchbookmarks", vec![]),
+        ("pushkey", vec![]),
+        ("treemanifestserver", vec!["True"]),
+        ("b2x:rebase", vec![]),
+        ("b2x:rebasepackpart", vec![]),
+        ("phases", vec!["heads"]),
+        ("obsmarkers", vec!["V1"]),
+        ("listkeys", vec![]),
+        ("b2x:infinitepushmutation", vec![]),
+    ];
 
     let mut encodedcaps = vec![];
 

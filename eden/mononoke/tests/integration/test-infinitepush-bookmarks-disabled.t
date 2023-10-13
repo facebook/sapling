@@ -8,15 +8,6 @@
 
 setup configuration 
   $ INFINITEPUSH_ALLOW_WRITES=true setup_common_config
-  $ merge_tunables <<EOF
-  > {
-  >   "killswitches": {
-  >     "mutation_advertise_for_infinitepush": true,
-  >     "mutation_accept_for_infinitepush": true,
-  >     "mutation_generate_for_draft": true
-  >   }
-  > }
-  > EOF
   $ cd $TESTTMP
 
 setup common configuration for these tests

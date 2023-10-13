@@ -43,4 +43,3 @@ repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_deri
 sha1 = "0.10.5"
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 thiserror = "1.0.43"
-tunables = { version = "0.1.0", path = "../../tunables" }

@@ -16,15 +16,6 @@ Set up local hgrc and Mononoke config, with commit cloud, http pull and upload.
   $ INFINITEPUSH_ALLOW_WRITES=true \
   >   setup_common_config
   $ cd $TESTTMP
-  $ merge_tunables <<EOF
-  > {
-  >   "killswitches": {
-  >     "mutation_advertise_for_infinitepush": true,
-  >     "mutation_accept_for_infinitepush": true,
-  >     "mutation_generate_for_draft": true
-  >   }
-  > }
-  > EOF
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > amend =
