@@ -35,11 +35,7 @@ from sapling.pycompat import range
 
 from . import histedit
 
-
-try:
-    import curses
-except ImportError:
-    curses = None
+curses = util.import_curses()
 
 KEY_LIST = ["pick", "edit", "fold", "drop", "mess", "roll"]
 ACTION_LABELS = {"fold": "^fold", "roll": "^roll"}

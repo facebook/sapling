@@ -21,13 +21,7 @@ from . import encoding, pycompat, util
 from .i18n import _
 from .pycompat import decodeutf8, encodeutf8
 
-
-try:
-    import curses
-
-    curses.COLOR_BLACK
-except (ImportError, AttributeError):
-    curses = None
+curses = util.import_curses()
 
 # start and stop parameters for effects
 _defaulteffects = {

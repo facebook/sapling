@@ -4905,3 +4905,19 @@ def dedup(items):
 
     """
     return list(collections.OrderedDict.fromkeys(items))
+
+
+def import_curses():
+    if os.name == "nt" and "_curses" not in sys.modules:
+        sys.modules["_curses"] = bindings.cext._curses
+        sys.modules["_curses_panel"] = bindings.cext._curses_panel
+
+    try:
+        import curses
+
+        curses.error
+
+    except (AttributeError, ImportError):
+        curses = False
+
+    return curses
