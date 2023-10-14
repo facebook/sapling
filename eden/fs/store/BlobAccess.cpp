@@ -19,7 +19,7 @@ BlobAccess::BlobAccess(
     std::shared_ptr<BlobCache> blobCache)
     : objectStore_{std::move(objectStore)}, blobCache_{std::move(blobCache)} {}
 
-BlobAccess::~BlobAccess() {}
+BlobAccess::~BlobAccess() = default;
 
 folly::Future<BlobCache::GetResult> BlobAccess::getBlob(
     const ObjectId& hash,

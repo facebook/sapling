@@ -24,7 +24,7 @@ FilteredBackingStore::FilteredBackingStore(
     std::unique_ptr<Filter> filter)
     : backingStore_{std::move(backingStore)}, filter_{std::move(filter)} {};
 
-FilteredBackingStore::~FilteredBackingStore() {}
+FilteredBackingStore::~FilteredBackingStore() = default;
 
 ImmediateFuture<bool> FilteredBackingStore::pathAffectedByFilterChange(
     RelativePathPiece pathOne,

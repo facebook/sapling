@@ -284,7 +284,7 @@ void LocalStore::WriteBatch::putBlob(const ObjectId& id, const Blob* blob) {
   put(KeySpace::BlobFamily, hashSlice, bodySlices);
 }
 
-LocalStore::WriteBatch::~WriteBatch() {}
+LocalStore::WriteBatch::~WriteBatch() = default;
 
 void LocalStore::periodicManagementTask(const EdenConfig& /* config */) {
   // Individual store subclasses can provide their own implementations for

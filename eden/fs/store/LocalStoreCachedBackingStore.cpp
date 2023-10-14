@@ -28,7 +28,7 @@ LocalStoreCachedBackingStore::LocalStoreCachedBackingStore(
       cachingPolicy_, LocalStoreCachedBackingStore::CachingPolicy::NoCaching);
 }
 
-LocalStoreCachedBackingStore::~LocalStoreCachedBackingStore() {}
+LocalStoreCachedBackingStore::~LocalStoreCachedBackingStore() = default;
 
 ObjectComparison LocalStoreCachedBackingStore::compareObjectsById(
     const ObjectId& one,

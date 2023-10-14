@@ -26,7 +26,7 @@ constexpr PathComponentPiece kMountdSocketName{"mountd.socket"_pc};
 EdenStateDir::EdenStateDir(AbsolutePathPiece path)
     : path_(path), lockPath_(path + PathComponentPiece(kLockFileName)) {}
 
-EdenStateDir::~EdenStateDir() {}
+EdenStateDir::~EdenStateDir() = default;
 
 bool EdenStateDir::acquireLock() {
   auto lockFile =

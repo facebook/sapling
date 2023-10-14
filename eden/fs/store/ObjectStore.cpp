@@ -82,7 +82,7 @@ ObjectStore::ObjectStore(
   XCHECK(stats_);
 }
 
-ObjectStore::~ObjectStore() {}
+ObjectStore::~ObjectStore() = default;
 
 void ObjectStore::updateProcessFetch(
     const ObjectFetchContext& fetchContext) const {

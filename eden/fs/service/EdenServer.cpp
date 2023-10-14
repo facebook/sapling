@@ -32,12 +32,12 @@
 #include <folly/logging/xlog.h>
 #include <folly/portability/GFlags.h>
 #include <folly/stop_watch.h>
-#include <signal.h>
 #include <thrift/lib/cpp/concurrency/ThreadManager.h>
 #include <thrift/lib/cpp2/async/ServerPublisherStream.h>
 #include <thrift/lib/cpp2/async/ServerStream.h>
 #include <thrift/lib/cpp2/server/ThriftProcessor.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
+#include <csignal>
 
 #include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/fs/config/CheckoutConfig.h"
@@ -102,7 +102,6 @@
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/notifications/CommandNotifier.h"
 #include "eden/fs/takeover/TakeoverClient.h"
-#include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/takeover/TakeoverServer.h"
 #endif
 
@@ -1930,7 +1929,7 @@ EdenServer::getHgQueuedBackingStores() {
   std::unordered_set<std::shared_ptr<HgQueuedBackingStore>> hgBackingStores{};
   {
     auto lockedStores = this->backingStores_.rlock();
-    for (auto entry : *lockedStores) {
+    for (const auto& entry : *lockedStores) {
       // TODO: remove these dynamic casts in favor of a QueryInterface method
       if (auto store =
               std::dynamic_pointer_cast<HgQueuedBackingStore>(entry.second)) {
@@ -2415,8 +2414,7 @@ void EdenServer::detectNfsCrawl() {
                        (itr = processRecords.find(pid)) !=
                            processRecords.end()) {
                   pid = itr->second.ppid;
-                  hierarchy.push_back(
-                      std::make_pair(pid, std::move(itr->second)));
+                  hierarchy.emplace_back(pid, std::move(itr->second));
                 }
 
                 // Log process hierarchies

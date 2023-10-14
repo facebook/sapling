@@ -21,7 +21,7 @@ BackingStoreType toBackingStoreType(std::string_view type) {
     return BackingStoreType::RECAS;
   } else if (type == "http") {
     return BackingStoreType::HTTP;
-  } else if (type == "") {
+  } else if (type.empty()) {
     return BackingStoreType::EMPTY;
   } else {
     throwf<std::domain_error>("unsupported backing store type: ", type);

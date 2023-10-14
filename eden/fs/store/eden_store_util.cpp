@@ -72,7 +72,7 @@ class Command {
           "This utility cannot be used while edenfs is running.");
     }
   }
-  virtual ~Command() {}
+  virtual ~Command() = default;
 
   virtual void run() = 0;
 
@@ -108,7 +108,7 @@ class Command {
 
 class CommandFactory {
  public:
-  virtual ~CommandFactory() {}
+  virtual ~CommandFactory() = default;
   virtual StringPiece name() const = 0;
   virtual StringPiece help() const = 0;
   virtual std::unique_ptr<Command> create() = 0;

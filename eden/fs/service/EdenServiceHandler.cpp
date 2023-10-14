@@ -3253,13 +3253,12 @@ EdenServiceHandler::semifuture_debugGetBlob(
   std::vector<ImmediateFuture<ScmBlobWithOrigin>> blobFutures;
 
   if (originFlags.contains(FROMWHERE_MEMORY_CACHE)) {
-    blobFutures.emplace_back(
-        ImmediateFuture<ScmBlobWithOrigin>{transformToBlobFromOrigin(
-            edenMount,
-            id,
-            folly::Try<std::shared_ptr<const Blob>>{
-                edenMount->getBlobCache()->get(id).object},
-            DataFetchOrigin::MEMORY_CACHE)});
+    blobFutures.emplace_back(transformToBlobFromOrigin(
+        edenMount,
+        id,
+        folly::Try<std::shared_ptr<const Blob>>{
+            edenMount->getBlobCache()->get(id).object},
+        DataFetchOrigin::MEMORY_CACHE));
   }
   if (originFlags.contains(FROMWHERE_DISK_CACHE)) {
     auto localStore = server_->getLocalStore();
@@ -3279,25 +3278,23 @@ EdenServiceHandler::semifuture_debugGetBlob(
     std::shared_ptr<HgQueuedBackingStore> hgBackingStore =
         castToHgQueuedBackingStore(backingStore, edenMount->getPath());
 
-    blobFutures.emplace_back(
-        ImmediateFuture<ScmBlobWithOrigin>{transformToBlobFromOrigin(
-            edenMount,
-            id,
-            folly::Try<BlobPtr>{hgBackingStore->getHgBackingStore()
-                                    .getDatapackStore()
-                                    .getBlobLocal(proxyHash)},
-            DataFetchOrigin::LOCAL_BACKING_STORE)});
+    blobFutures.emplace_back(transformToBlobFromOrigin(
+        edenMount,
+        id,
+        folly::Try<BlobPtr>{
+            hgBackingStore->getHgBackingStore().getDatapackStore().getBlobLocal(
+                proxyHash)},
+        DataFetchOrigin::LOCAL_BACKING_STORE));
   }
   if (originFlags.contains(FROMWHERE_REMOTE_BACKING_STORE)) {
     // TODO(kmancini): implement
-    blobFutures.emplace_back(
-        ImmediateFuture<ScmBlobWithOrigin>{transformToBlobFromOrigin(
-            edenMount,
-            id,
-            folly::Try<std::unique_ptr<Blob>>(newEdenError(
-                EdenErrorType::GENERIC_ERROR,
-                "remote only fetching not yet supported.")),
-            DataFetchOrigin::REMOTE_BACKING_STORE)});
+    blobFutures.emplace_back(transformToBlobFromOrigin(
+        edenMount,
+        id,
+        folly::Try<std::unique_ptr<Blob>>(newEdenError(
+            EdenErrorType::GENERIC_ERROR,
+            "remote only fetching not yet supported.")),
+        DataFetchOrigin::REMOTE_BACKING_STORE));
   }
   if (originFlags.contains(FROMWHERE_ANYWHERE)) {
     blobFutures.emplace_back(
@@ -3340,9 +3337,8 @@ EdenServiceHandler::semifuture_debugGetBlobMetadata(
 
   if (originFlags.contains(FROMWHERE_MEMORY_CACHE)) {
     auto metadata = store->getBlobMetadataFromInMemoryCache(id, fetchContext);
-    blobFutures.emplace_back(ImmediateFuture<BlobMetadataWithOrigin>{
-        transformToBlobMetadataFromOrigin(
-            edenMount, id, metadata, DataFetchOrigin::MEMORY_CACHE)});
+    blobFutures.emplace_back(transformToBlobMetadataFromOrigin(
+        edenMount, id, metadata, DataFetchOrigin::MEMORY_CACHE));
   }
   if (originFlags.contains(FROMWHERE_DISK_CACHE)) {
     auto localStore = server_->getLocalStore();
@@ -3368,12 +3364,11 @@ EdenServiceHandler::semifuture_debugGetBlobMetadata(
     auto metadata = hgBackingStore->getHgBackingStore()
                         .getDatapackStore()
                         .getLocalBlobMetadata(proxyHash);
-    blobFutures.emplace_back(ImmediateFuture<BlobMetadataWithOrigin>{
-        transformToBlobMetadataFromOrigin(
-            edenMount,
-            id,
-            std::move(metadata),
-            DataFetchOrigin::LOCAL_BACKING_STORE)});
+    blobFutures.emplace_back(transformToBlobMetadataFromOrigin(
+        edenMount,
+        id,
+        std::move(metadata),
+        DataFetchOrigin::LOCAL_BACKING_STORE));
   }
   if (originFlags.contains(FROMWHERE_REMOTE_BACKING_STORE)) {
     auto proxyHash = HgProxyHash::load(
@@ -3706,7 +3701,7 @@ void EdenServiceHandler::debugStopRecordingActivity(
     result.path_ref() = outputPath.value();
   }
 
-  if (activityRecorder->getSubscribers().size() == 0) {
+  if (activityRecorder->getSubscribers().empty()) {
     lockedPtr->reset();
   }
 }
