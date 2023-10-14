@@ -16,6 +16,8 @@ import errno
 import gc
 import os
 import random
+
+import selectors
 import signal
 import socket
 import struct
@@ -27,12 +29,6 @@ import bindings
 
 from . import encoding, error, pycompat, util
 from .i18n import _
-
-
-if sys.version_info.major == 3:
-    import selectors as selectors2
-else:
-    from .thirdparty import selectors2
 
 
 logfile = None
@@ -528,8 +524,8 @@ class unixforkingservice:
     def _mainloop(self):
         exiting = False
         h = self._servicehandler
-        selector = selectors2.DefaultSelector()
-        selector.register(self._sock, selectors2.EVENT_READ)
+        selector = selectors.DefaultSelector()
+        selector.register(self._sock, selectors.EVENT_READ)
         while True:
             if not exiting and h.shouldexit():
                 # clients can no longer connect() to the domain socket, so
