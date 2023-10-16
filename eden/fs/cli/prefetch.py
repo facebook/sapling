@@ -154,13 +154,6 @@ class PrefetchCmd(Subcmd):
             default=False,
             action="store_true",
         )
-        # TODO: remove usages of --no-prefetch then remove this flag
-        parser.add_argument(
-            "--no-prefetch",
-            help="DEPRECATED: Do not prefetch; only match names",
-            default=False,
-            action="store_true",
-        )
         parser.add_argument(
             "--directories-only",
             help="Do not prefetch files; only prefetch directores",
@@ -177,15 +170,13 @@ class PrefetchCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         checkout_and_patterns = _find_checkout_and_patterns(args)
 
-        directories_only = args.no_prefetch or args.directories_only
-
         with checkout_and_patterns.instance.get_telemetry_logger().new_sample(
             "prefetch"
         ) as telemetry_sample:
             telemetry_sample.add_string(
                 "checkout", checkout_and_patterns.checkout.path.name
             )
-            telemetry_sample.add_bool("directories_only", directories_only)
+            telemetry_sample.add_bool("directories_only", args.directories_only)
             telemetry_sample.add_bool("background", args.background)
             if args.pattern_file:
                 telemetry_sample.add_string("pattern_file", args.pattern_file)
@@ -198,7 +189,7 @@ class PrefetchCmd(Subcmd):
                         PrefetchParams(
                             mountPoint=bytes(checkout_and_patterns.checkout.path),
                             globs=checkout_and_patterns.patterns,
-                            directoriesOnly=directories_only,
+                            directoriesOnly=args.directories_only,
                             background=args.background,
                         )
                     )
@@ -213,7 +204,7 @@ class PrefetchCmd(Subcmd):
                                 mountPoint=bytes(checkout_and_patterns.checkout.path),
                                 globs=checkout_and_patterns.patterns,
                                 includeDotfiles=args.include_dot_files,
-                                prefetchFiles=not directories_only,
+                                prefetchFiles=not args.directories_only,
                                 suppressFileList=args.silent,
                                 background=args.background,
                                 listOnlyFiles=args.list_only_files,
