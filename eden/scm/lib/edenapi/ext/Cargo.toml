@@ -13,7 +13,7 @@ crossbeam = "0.8"
 edenapi = { version = "0.1.0", path = ".." }
 edenapi_types = { version = "0.1.0", path = "../types" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
-itertools = "0.10.3"
+itertools = "0.11.0"
 minibytes = { version = "0.1.0", path = "../../minibytes" }
 tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
 types = { version = "0.1.0", path = "../../types" }

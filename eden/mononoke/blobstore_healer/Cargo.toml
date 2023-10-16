@@ -26,7 +26,7 @@ context = { version = "0.1.0", path = "../server/context" }
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 futures_03_ext = { package = "futures_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-itertools = "0.10.3"
+itertools = "0.11.0"
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_app = { version = "0.1.0", path = "../cmdlib/mononoke_app" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }

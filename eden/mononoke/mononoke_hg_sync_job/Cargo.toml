@@ -49,7 +49,7 @@ gotham_ext = { version = "0.1.0", path = "../gotham_ext" }
 http = "0.2"
 hyper = { version = "0.14.26", features = ["client", "http1", "http2", "stream"] }
 hyper-openssl = "0.9"
-itertools = "0.10.3"
+itertools = "0.11.0"
 lfs_protocol = { version = "0.1.0", path = "../lfs_protocol" }
 maplit = "1.0"
 mercurial_bundles = { version = "0.1.0", path = "../mercurial/bundles" }

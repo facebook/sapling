@@ -16,7 +16,7 @@ clap = { version = "4.3.5", features = ["derive", "env", "string", "unicode", "w
 context = { version = "0.1.0", path = "../../server/context" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-itertools = "0.10.3"
+itertools = "0.11.0"
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 once_cell = "1.12"

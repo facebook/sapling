@@ -65,7 +65,7 @@ git_symbolic_refs = { version = "0.1.0", path = "../../git_symbolic_refs" }
 git_types = { version = "0.1.0", path = "../../git/git_types" }
 gix-hash = "0.11"
 gix-object = "0.33"
-itertools = "0.10.3"
+itertools = "0.11.0"
 manifest = { version = "0.1.0", path = "../../manifest" }
 megarepo_api = { version = "0.1.0", path = "../../megarepo_api" }
 megarepo_error = { version = "0.1.0", path = "../../megarepo_api/megarepo_error" }

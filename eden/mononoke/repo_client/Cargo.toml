@@ -32,7 +32,7 @@ hgproto = { version = "0.1.0", path = "../hgproto" }
 hook_manager = { version = "0.1.0", path = "../repo_attributes/hook_manager/hook_manager" }
 hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 iterhelpers = { version = "0.1.0", path = "../common/iterhelpers" }
-itertools = "0.10.3"
+itertools = "0.11.0"
 lazy_static = "1.4"
 manifest = { version = "0.1.0", path = "../manifest" }
 maplit = "1.0"

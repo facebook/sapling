@@ -33,7 +33,7 @@ futures = { version = "0.3.28", features = ["async-await", "compat"] }
 gix-hash = "0.11"
 import_direct = { version = "0.1.0", path = "../git/import_direct" }
 import_tools = { version = "0.1.0", path = "../git/import_tools" }
-itertools = "0.10.3"
+itertools = "0.11.0"
 live_commit_sync_config = { version = "0.1.0", path = "../commit_rewriting/live_commit_sync_config" }
 manifest = { version = "0.1.0", path = "../manifest" }
 maplit = "1.0"
