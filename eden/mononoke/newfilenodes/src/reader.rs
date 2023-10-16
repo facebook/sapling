@@ -29,8 +29,6 @@ use mononoke_types::RepositoryId;
 use path_hash::PathBytes;
 use path_hash::PathHashBytes;
 use path_hash::PathWithHash;
-use rand::thread_rng;
-use rand::Rng;
 use sql::Connection;
 use sql_ext::mononoke_queries;
 use stats::prelude::*;
@@ -251,15 +249,15 @@ impl FilenodesReader {
                         }
                     }
 
-                    let ratio = tunables()
-                        .filenodes_master_fallback_ratio()
-                        .unwrap_or_default();
-                    if ratio > 0 {
-                        let mut rng = thread_rng();
-                        let n = rng.gen_range(0..ratio);
-                        if n > 0 {
-                            return Ok(FilenodeResult::Disabled);
-                        }
+                    let disable_fallback_to_master = justknobs::eval(
+                        "scm/mononoke:derived_data_disable_remote_derivation",
+                        None,
+                        None,
+                    )
+                    .unwrap_or(false);
+
+                    if disable_fallback_to_master {
+                        return Ok(FilenodeResult::Disabled);
                     }
 
                     STATS::gets_master.add_value(1);

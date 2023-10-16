@@ -29,6 +29,7 @@ rust_library(
         "fbsource//third-party/rust:tokio",
         "fbsource//third-party/rust:vec1",
         "//common/rust/shed/futures_stats:futures_stats",
+        "//common/rust/shed/justknobs_stub:justknobs",
         "//common/rust/shed/memcache_stub:memcache",
         "//common/rust/shed/sql:sql",
         "//common/rust/shed/stats:stats",
