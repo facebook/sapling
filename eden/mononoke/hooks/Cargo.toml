@@ -23,7 +23,7 @@ futures = { version = "0.3.28", features = ["async-await", "compat"] }
 hook_manager = { version = "0.1.0", path = "../repo_attributes/hook_manager/hook_manager" }
 hyper = { version = "0.14.26", features = ["client", "http1", "http2", "stream"] }
 hyper-tls = "0.5"
-ipnetwork = "0.15"
+ipnetwork = "0.20.0"
 itertools = "0.10.3"
 lazy_static = "1.4"
 manifest = { version = "0.1.0", path = "../manifest" }
