@@ -44,21 +44,20 @@ TEST(InodeLoader, load) {
   auto fetchContext = ObjectFetchContext::getNullContext();
 
   {
-    auto results =
-        collectAll(
-            applyToVirtualInode(
-                rootInode,
-                std::vector<std::string>{
-                    "dir/a.txt", "not/exist/a", "not/exist/b", "dir/sub/b.txt"},
-                [&](VirtualInode inode) -> folly::SemiFuture<Hash20> {
-                  return inode
-                      .getSHA1("INVALIDPATH"_relpath, objectStore, fetchContext)
-                      .semi();
-                },
-                objectStore,
-                fetchContext))
-            .get(0ms);
+    auto resultsFuture = collectAll(applyToVirtualInode(
+        rootInode,
+        std::vector<std::string>{
+            "dir/a.txt", "not/exist/a", "not/exist/b", "dir/sub/b.txt"},
+        [&](VirtualInode inode) -> folly::SemiFuture<Hash20> {
+          return inode.getSHA1("INVALIDPATH"_relpath, objectStore, fetchContext)
+              .semi();
+        },
+        objectStore,
+        fetchContext,
+        mount.getServerExecutor().get()));
+    mount.drainServerExecutor();
 
+    auto results = std::move(resultsFuture).get(0ms);
     EXPECT_EQ(Hash20::sha1("dir/a.txt"), results[0].value());
     EXPECT_THROW_ERRNO(results[1].value(), ENOENT);
     EXPECT_THROW_ERRNO(results[2].value(), ENOENT);
@@ -66,24 +65,24 @@ TEST(InodeLoader, load) {
   }
 
   {
-    auto results =
-        collectAll(
-            applyToVirtualInode(
-                rootInode,
-                std::vector<std::string>{
-                    "dir/sub/b.txt",
-                    "dir/a.txt",
-                    "not/exist/a",
-                    "not/exist/b",
-                    "dir/sub/b.txt"},
-                [&](VirtualInode inode) {
-                  return inode
-                      .getSHA1("INVALIDPATH"_relpath, objectStore, fetchContext)
-                      .semi();
-                },
-                objectStore,
-                ObjectFetchContext::getNullContext()))
-            .get(0ms);
+    auto resultsFuture = collectAll(applyToVirtualInode(
+        rootInode,
+        std::vector<std::string>{
+            "dir/sub/b.txt",
+            "dir/a.txt",
+            "not/exist/a",
+            "not/exist/b",
+            "dir/sub/b.txt"},
+        [&](VirtualInode inode) {
+          return inode.getSHA1("INVALIDPATH"_relpath, objectStore, fetchContext)
+              .semi();
+        },
+        objectStore,
+        fetchContext,
+        mount.getServerExecutor().get()));
+    mount.drainServerExecutor();
+
+    auto results = std::move(resultsFuture).get(0ms);
 
     EXPECT_EQ(Hash20::sha1("dir/sub/b.txt"), results[0].value());
     EXPECT_EQ(Hash20::sha1("dir/a.txt"), results[1].value());
@@ -94,20 +93,19 @@ TEST(InodeLoader, load) {
   }
 
   {
-    auto results =
-        collectAll(
-            applyToVirtualInode(
-                rootInode,
-                std::vector<std::string>{"dir/a.txt", "/invalid///exist/a"},
-                [&](VirtualInode inode) {
-                  return inode
-                      .getSHA1("INVALIDPATH"_relpath, objectStore, fetchContext)
-                      .semi();
-                },
-                objectStore,
-                ObjectFetchContext::getNullContext()))
-            .get(0ms);
+    auto resultsFuture = collectAll(applyToVirtualInode(
+        rootInode,
+        std::vector<std::string>{"dir/a.txt", "/invalid///exist/a"},
+        [&](VirtualInode inode) {
+          return inode.getSHA1("INVALIDPATH"_relpath, objectStore, fetchContext)
+              .semi();
+        },
+        objectStore,
+        fetchContext,
+        mount.getServerExecutor().get()));
+    mount.drainServerExecutor();
 
+    auto results = std::move(resultsFuture).get(0ms);
     EXPECT_EQ(Hash20::sha1("dir/a.txt"), results[0].value());
     EXPECT_THROW_RE(results[1].value(), std::domain_error, "absolute path");
   }
@@ -121,7 +119,6 @@ TEST(InodeLoader, notReady) {
   auto rootInode = mount.getTreeInode(RelativePathPiece());
   auto objectStore = mount.getEdenMount()->getObjectStore();
   auto fetchContext = ObjectFetchContext::getNullContext();
-  // auto executor = mount.getServerExecutor().get();
 
   {
     auto future = collectAll(applyToVirtualInode(
@@ -133,14 +130,16 @@ TEST(InodeLoader, notReady) {
               .semi();
         },
         objectStore,
-        ObjectFetchContext::getNullContext()));
+        fetchContext,
+        mount.getServerExecutor().get()));
 
     builder.setReady("dir");
     builder.setReady("dir/sub");
     builder.setReady("dir/a.txt");
     builder.setReady("dir/sub/b.txt");
 
-    auto& results = future.wait().value();
+    mount.drainServerExecutor();
+    auto results = std::move(future).get(0ms);
 
     EXPECT_EQ(Hash20::sha1("dir/a.txt"), results[0].value());
     EXPECT_THROW_ERRNO(results[1].value(), ENOENT);

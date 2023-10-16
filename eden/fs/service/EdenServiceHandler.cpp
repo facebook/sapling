@@ -2024,44 +2024,48 @@ EdenServiceHandler::semifuture_getEntryInformation(
   return wrapImmediateFuture(
              std::move(helper),
              waitForPendingWrites(mountHandle.getEdenMount(), *sync)
-                 .thenValue([mountHandle,
-                             paths = std::move(paths),
-                             fetchContext = fetchContext.copy()](auto&&) {
-                   bool windowsSymlinksEnabled =
-                       mountHandle.getEdenMount()
-                           .getCheckoutConfig()
-                           ->getEnableWindowsSymlinks();
-                   return collectAll(applyToVirtualInode(
-                                         mountHandle.getRootInode(),
-                                         *paths,
-                                         [windowsSymlinksEnabled](
-                                             const VirtualInode& inode) {
-                                           return filteredEntryDtype(
-                                               inode.getDtype(),
-                                               windowsSymlinksEnabled);
-                                         },
-                                         mountHandle.getObjectStorePtr(),
-                                         fetchContext))
-                       .deferValue([](vector<Try<dtype_t>> done) {
-                         auto out = std::make_unique<
-                             vector<EntryInformationOrError>>();
-                         out->reserve(done.size());
-                         for (auto& item : done) {
-                           EntryInformationOrError result;
-                           if (item.hasException()) {
-                             result.error_ref() =
-                                 newEdenError(item.exception());
-                           } else {
-                             EntryInformation info;
-                             info.dtype_ref() =
-                                 static_cast<Dtype>(item.value());
-                             result.info_ref() = info;
-                           }
-                           out->emplace_back(std::move(result));
-                         }
-                         return out;
-                       });
-                 }))
+                 .thenValue(
+                     [mountHandle,
+                      paths = std::move(paths),
+                      fetchContext = fetchContext.copy(),
+                      executor =
+                          server_->getServer()->getThreadManager()](auto&&) {
+                       bool windowsSymlinksEnabled =
+                           mountHandle.getEdenMount()
+                               .getCheckoutConfig()
+                               ->getEnableWindowsSymlinks();
+                       return collectAll(applyToVirtualInode(
+                                             mountHandle.getRootInode(),
+                                             *paths,
+                                             [windowsSymlinksEnabled](
+                                                 const VirtualInode& inode) {
+                                               return filteredEntryDtype(
+                                                   inode.getDtype(),
+                                                   windowsSymlinksEnabled);
+                                             },
+                                             mountHandle.getObjectStorePtr(),
+                                             fetchContext,
+                                             executor.get()))
+                           .deferValue([](vector<Try<dtype_t>> done) {
+                             auto out = std::make_unique<
+                                 vector<EntryInformationOrError>>();
+                             out->reserve(done.size());
+                             for (auto& item : done) {
+                               EntryInformationOrError result;
+                               if (item.hasException()) {
+                                 result.error_ref() =
+                                     newEdenError(item.exception());
+                               } else {
+                                 EntryInformation info;
+                                 info.dtype_ref() =
+                                     static_cast<Dtype>(item.value());
+                                 result.info_ref() = info;
+                               }
+                               out->emplace_back(std::move(result));
+                             }
+                             return out;
+                           });
+                     }))
       .semi();
 }
 
@@ -2083,7 +2087,10 @@ EdenServiceHandler::semifuture_getFileInformation(
                  .thenValue([mountHandle,
                              paths = std::move(paths),
                              lastCheckoutTime,
-                             fetchContext = fetchContext.copy()](auto&&) {
+                             fetchContext = fetchContext.copy(),
+                             executor =
+                                 server_->getServer()->getThreadManager()](
+                                auto&&) {
                    return collectAll(
                               applyToVirtualInode(
                                   mountHandle.getRootInode(),
@@ -2115,7 +2122,8 @@ EdenServiceHandler::semifuture_getFileInformation(
                                         .semi();
                                   },
                                   mountHandle.getObjectStorePtr(),
-                                  fetchContext))
+                                  fetchContext,
+                                  executor.get()))
                        .deferValue([](vector<Try<FileInformationOrError>>&&
                                           done) {
                          auto out =

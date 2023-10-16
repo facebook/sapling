@@ -27,7 +27,8 @@ namespace detail {
  */
 class VirtualInodeLoader {
  public:
-  VirtualInodeLoader() = default;
+  explicit VirtualInodeLoader(folly::Executor::KeepAlive<> executor)
+      : executor_{std::move(executor)} {}
 
   // Arrange to load the inode for the input path
   folly::Future<VirtualInode> load(RelativePathPiece path) {
@@ -104,12 +105,14 @@ class VirtualInodeLoader {
               loader->loaded(childInodeTreeTry, childPath, store, fetchContext);
             })
             .semi()
-            .via(&folly::QueuedImmediateExecutor::instance());
+            .via(executor_);
       }
     }
   }
 
  private:
+  // Executor on which to run the recursive loaded method invocation.
+  folly::Executor::KeepAlive<> executor_;
   // Any child nodes that we need to load.  We have to use a unique_ptr
   // for this to avoid creating a self-referential type and fail to
   // compile.  This happens to have the nice property of maintaining
@@ -125,7 +128,8 @@ class VirtualInodeLoader {
     if (child) {
       return child->get();
     }
-    auto ret = children_.emplace(name, std::make_unique<VirtualInodeLoader>());
+    auto ret = children_.emplace(
+        name, std::make_unique<VirtualInodeLoader>(executor_));
     return ret.first->second.get();
   }
 };
@@ -156,11 +160,12 @@ auto applyToVirtualInode(
     const std::vector<std::string>& paths,
     Func func,
     const std::shared_ptr<ObjectStore>& store,
-    const ObjectFetchContextPtr& fetchContext) {
+    const ObjectFetchContextPtr& fetchContext,
+    folly::Executor::KeepAlive<> executor) {
   using FuncRet = folly::invoke_result_t<Func&, VirtualInode&>;
   using Result = typename folly::isFutureOrSemiFuture<FuncRet>::Inner;
 
-  detail::VirtualInodeLoader loader;
+  detail::VirtualInodeLoader loader{std::move(executor)};
 
   // Func may not be copyable, so wrap it in a shared_ptr.
   auto cb = std::make_shared<Func>(std::move(func));
