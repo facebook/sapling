@@ -432,17 +432,15 @@ impl SqlShardedConstruct for SqlBlobstoreWal {
             mut read_master_connections,
             mut write_connections,
         } = connections;
-        if !tunables().disable_wal_read_committed().unwrap_or_default() {
-            for conn in read_master_connections
-                .iter_mut()
-                .chain(write_connections.iter_mut())
-            {
-                if let Connection::Mysql(conn) = conn {
-                    // We don't care about strong locking of the queries, we just a simple "bag".
-                    // Having stronger locking causes deadlocks. Let's use a weaker isolation level.
-                    // See https://fb.workplace.com/groups/mysql.users/posts/24130604319894856
-                    conn.set_isolation_level(Some(IsolationLevel::ReadCommitted));
-                }
+        for conn in read_master_connections
+            .iter_mut()
+            .chain(write_connections.iter_mut())
+        {
+            if let Connection::Mysql(conn) = conn {
+                // We don't care about strong locking of the queries, we just a simple "bag".
+                // Having stronger locking causes deadlocks. Let's use a weaker isolation level.
+                // See https://fb.workplace.com/groups/mysql.users/posts/24130604319894856
+                conn.set_isolation_level(Some(IsolationLevel::ReadCommitted));
             }
         }
         let write_connections = Arc::new(write_connections);
