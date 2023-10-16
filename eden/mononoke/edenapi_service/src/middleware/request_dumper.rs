@@ -25,13 +25,14 @@ use lazy_static::lazy_static;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::trace;
 use slog::warn;
-use tunables::tunables;
 
 use crate::middleware::RequestContext;
 
 static MAX_BODY_LEN: usize = 16 * 1024; // 16 KB
 static MAX_BODY_LEN_DEBUG: usize = 4 * 1024; // 4 KB
 const UPLOAD_PATH: &str = "/upload/";
+const SAMPLE_RATIO: u64 = 1000;
+const SLOW_REQUEST_THRESHOLD_MS: i64 = 10000;
 
 lazy_static! {
     static ref FILTERED_HEADERS: HashSet<&'static str> = {
@@ -230,19 +231,9 @@ impl Middleware for RequestDumperMiddleware {
                     } else {
                         0
                     };
-                    let threshold = tunables::tunables()
-                        .edenapi_req_dumper_unsampled_duration_threshold_ms()
-                        .unwrap_or_default();
-                    let slow_request: bool = (threshold > 0) && (dur_ms > threshold);
-                    let sample_ratio: u64 = tunables()
-                        .edenapi_req_dumper_sample_ratio()
-                        .unwrap_or_default()
-                        .try_into()
-                        .unwrap_or_default();
-                    // Do not sample slow requests if tunables say
-                    if !slow_request
-                        && (sample_ratio == 0 || (rand::random::<u64>() % sample_ratio) != 0)
-                    {
+                    let slow_request: bool = dur_ms > SLOW_REQUEST_THRESHOLD_MS;
+                    // Always log if slow, otherwise use sampling rate
+                    if !slow_request && (rand::random::<u64>() % SAMPLE_RATIO) != 0 {
                         trace!(logger, "Won't record this request");
                         return;
                     }
