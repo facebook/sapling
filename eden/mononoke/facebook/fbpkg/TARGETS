@@ -109,6 +109,16 @@ mononoke_fbpkg(
 )
 
 mononoke_fbpkg(
+    name = "mononoke.blob_cleanup",
+    compress_type = None,
+    path_actions = {
+        "blob_deletion": "//eden/mononoke/tools/admin:newadmin",
+        "blobkey_copy.par": "//eden/mononoke/facebook/blobstore_deletion:manifold_copy",
+        "blobkey_download.par": "//eden/mononoke/facebook/blobstore_deletion:manifold_key_download",
+    },
+)
+
+mononoke_fbpkg(
     name = "mononoke.statistics_collector",
     path_actions = {
         "statistics_collector": "//eden/mononoke:statistics_collector",
