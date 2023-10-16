@@ -40,6 +40,7 @@ rust_library(
     test_deps = [
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:maplit",
+        "fbsource//third-party/rust:rand",
         "fbsource//third-party/rust:tokio",
         "//common/rust/shed/borrowed:borrowed",
         "//common/rust/shed/fbinit:fbinit",
@@ -55,14 +56,12 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",
-        "fbsource//third-party/rust:rand",
         ":bonsai_globalrev_mapping",
         "//common/rust/shed/sql:sql",
         "//eden/mononoke/bookmarks:bookmarks",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/pushrebase:pushrebase_hook",
         "//eden/mononoke/server/context:context",
-        "//eden/mononoke/tunables:tunables",
     ],
 )
 
