@@ -46,12 +46,6 @@ pub async fn derive_filenodes(
     derivation_ctx: &DerivationContext,
     bcs: BonsaiChangeset,
 ) -> Result<FilenodesOnlyPublic> {
-    if tunables::tunables()
-        .filenodes_disabled()
-        .unwrap_or_default()
-    {
-        return Ok(FilenodesOnlyPublic::Disabled);
-    }
     let (_, public_filenode, non_roots) =
         prepare_filenodes_for_cs(ctx, derivation_ctx, bcs).await?;
     if !non_roots.is_empty() {
@@ -62,13 +56,6 @@ pub async fn derive_filenodes(
         {
             return Ok(FilenodesOnlyPublic::Disabled);
         }
-    }
-    // In case it got updated while deriving
-    if tunables::tunables()
-        .filenodes_disabled()
-        .unwrap_or_default()
-    {
-        return Ok(FilenodesOnlyPublic::Disabled);
     }
     Ok(public_filenode)
 }
@@ -309,13 +296,13 @@ mod tests {
     use derived_data_manager::BatchDeriveOptions;
     use fbinit::FacebookInit;
     use filenodes::FilenodeRange;
+    use filenodes::FilenodeResult;
     use filenodes::Filenodes;
     use filestore::FilestoreConfig;
     use fixtures::Linear;
     use fixtures::TestRepoFixture;
     use futures::compat::Stream01CompatExt;
     use manifest::ManifestOps;
-    use maplit::hashmap;
     use mercurial_derivation::DeriveHgChangeset;
     use mononoke_types::FileType;
     use repo_blobstore::RepoBlobstore;
@@ -326,8 +313,6 @@ mod tests {
     use test_repo_factory::TestRepoFactory;
     use tests_utils::resolve_cs_id;
     use tests_utils::CreateCommitContext;
-    use tunables::with_tunables;
-    use tunables::MononokeTunables;
 
     use super::*;
 
@@ -557,40 +542,6 @@ mod tests {
     fn derive_only_empty_commits(fb: FacebookInit) -> Result<()> {
         let runtime = tokio::runtime::Runtime::new()?;
         runtime.block_on(test_derive_only_empty_commits(fb))
-    }
-
-    #[fbinit::test]
-    fn derive_disabled_filenodes(fb: FacebookInit) -> Result<()> {
-        let tunables = MononokeTunables::default();
-        tunables.update_bools(&hashmap! {"filenodes_disabled".to_string() => true});
-
-        with_tunables(tunables, || {
-            let runtime = tokio::runtime::Builder::new_current_thread()
-                .enable_time()
-                .build()?;
-            runtime.block_on(test_derive_disabled_filenodes(fb))
-        })
-    }
-
-    async fn test_derive_disabled_filenodes(fb: FacebookInit) -> Result<()> {
-        let ctx = CoreContext::test_mock(fb);
-        let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
-        let cs = CreateCommitContext::new_root(&ctx, &repo).commit().await?;
-        let derived = repo
-            .repo_derived_data()
-            .derive::<FilenodesOnlyPublic>(&ctx, cs)
-            .await?;
-        assert_eq!(derived, FilenodesOnlyPublic::Disabled);
-
-        assert_eq!(
-            repo.repo_derived_data()
-                .fetch_derived::<FilenodesOnlyPublic>(&ctx, cs)
-                .await?
-                .unwrap(),
-            FilenodesOnlyPublic::Disabled
-        );
-
-        Ok(())
     }
 
     #[fbinit::test]

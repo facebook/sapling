@@ -7,7 +7,6 @@ rust_library(
     name = "filenodes_derivation",
     srcs = glob(["src/**/*.rs"]),
     test_deps = [
-        "fbsource//third-party/rust:maplit",
         "fbsource//third-party/rust:slog",
         "fbsource//third-party/rust:tokio",
         "//common/rust/shed/cloned:cloned",
