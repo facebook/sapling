@@ -514,6 +514,7 @@ rust_library(
         "//common/rust/shed/cachelib_stub:cachelib",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/futures_stats:futures_stats",
+        "//common/rust/shed/justknobs_stub:justknobs",
         "//common/rust/shed/shared_error:shared_error",
         "//common/rust/shed/stats:stats",
         "//common/rust/shed/time_ext:time_ext",

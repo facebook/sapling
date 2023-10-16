@@ -412,15 +412,18 @@ async fn shared_read<T: Blobstore + 'static>(
 
 fn report_deduplicated_put(ctx: &CoreContext, key: &str) {
     STATS::puts_deduped.add_value(1);
-
     let mut scuba = ctx.scuba().clone();
-    if let Ok(Some(v)) = tunables()
-        .deduplicated_put_sampling_rate()
-        .unwrap_or_default()
-        .try_into()
-        .map(NonZeroU64::new)
-    {
-        scuba.sampled(v);
+
+    const DEFAULT_SAMPLING_RATE: u64 = 100000;
+
+    if let Some(sampling_rate) = NonZeroU64::new(
+        justknobs::get_as::<u64>(
+            "scm/mononoke:blobstore_deduplicated_put_sampling_rate",
+            None,
+        )
+        .unwrap_or(DEFAULT_SAMPLING_RATE),
+    ) {
+        scuba.sampled(sampling_rate);
     }
     scuba.add("key", key).log_with_msg("Put deduplicated", None);
 
