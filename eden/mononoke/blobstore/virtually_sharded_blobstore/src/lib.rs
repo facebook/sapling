@@ -484,32 +484,17 @@ impl<T: Blobstore + 'static> Blobstore for VirtuallyShardedBlobstore<T> {
                     SemaphoreAcquisition::Cancelled(CacheData::NotStorable, ticket) => {
                         // The data cannot be cached. We'll have to go to the blobstore.
                         STATS::gets_not_storable.add_value(1);
-                        if !tunables()
-                            .disable_large_blob_read_deduplication()
-                            .unwrap_or_default()
-                        {
-                            // Attempt to share with other readers of this blob.
-                            return shared_read(&inner, &ctx, key, ticket).await;
-                        } else {
-                            ticket.finish().await?;
-                            None
-                        }
+                        // Attempt to share with other readers of this blob.
+                        return shared_read(&inner, &ctx, key, ticket).await;
                     }
                     SemaphoreAcquisition::Acquired(permit) => Some(permit),
                 }
             } else {
                 // We already know the data can't be cached, so we'll have to go to the
                 // blobstore.
-                if !tunables()
-                    .disable_large_blob_read_deduplication()
-                    .unwrap_or_default()
-                {
-                    // Attempt to share with other reads of this blob.
-                    return shared_read(&inner, &ctx, key, ticket).await;
-                } else {
-                    ticket.finish().await?;
-                    None
-                }
+
+                // Attempt to share with other reads of this blob.
+                return shared_read(&inner, &ctx, key, ticket).await;
             };
 
             // NOTE: This is a no-op, but it's here to ensure permit is still in scope at this
