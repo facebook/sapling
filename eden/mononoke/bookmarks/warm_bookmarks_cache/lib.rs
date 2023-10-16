@@ -775,39 +775,12 @@ impl BookmarksCoordinator {
 
         let cur_bookmarks = self.bookmarks.with_read(|bookmarks| bookmarks.clone());
 
-        let new_bookmarks = if tunables()
-            .warm_bookmark_cache_disable_subscription()
-            .unwrap_or_default()
-        {
-            let books = self
-                .repo
-                .bookmarks()
-                .list(
-                    ctx.clone(),
-                    Freshness::MaybeStale,
-                    &BookmarkPrefix::empty(),
-                    BookmarkCategory::ALL,
-                    BookmarkKind::ALL_PUBLISHING,
-                    &BookmarkPagination::FromStart,
-                    std::u64::MAX,
-                )
-                .map_ok(|(book, cs_id)| {
-                    let kind = *book.kind();
-                    (book.into_key(), (cs_id, kind))
-                })
-                .try_collect::<HashMap<_, _>>()
-                .await
-                .context("Error fetching bookmarks")?;
+        self.sub
+            .refresh(ctx)
+            .await
+            .context("Error refreshing subscription")?;
 
-            Cow::Owned(books)
-        } else {
-            self.sub
-                .refresh(ctx)
-                .await
-                .context("Error refreshing subscription")?;
-
-            Cow::Borrowed(self.sub.bookmarks())
-        };
+        let new_bookmarks = Cow::Borrowed(self.sub.bookmarks());
 
         let mut changed_bookmarks = vec![];
         // Find bookmarks that were moved/created and spawn an updater
