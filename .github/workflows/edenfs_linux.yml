@@ -28,6 +28,8 @@ jobs:
       run: sudo apt-get update
     - name: Install system deps
       run: sudo python3 build/fbcode_builder/getdeps.py --allow-system-packages install-system-deps --recursive eden
+    - name: Install packaging system deps
+      run: sudo python3 build/fbcode_builder/getdeps.py --allow-system-packages install-system-deps --recursive patchelf
     - name: Install Rust Stable
       uses: dtolnay/rust-toolchain@stable
     - name: Fetch ninja
