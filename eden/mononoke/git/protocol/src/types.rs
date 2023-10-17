@@ -5,14 +5,49 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::collections::HashSet;
+
+use anyhow::Result;
+use futures::stream::BoxStream;
+use gix_hash::ObjectId;
 use mononoke_types::ChangesetId;
 use packfile::pack::DeltaForm;
+use packfile::types::PackfileItem;
 
-/// The list of refs that are to be included in or excluded from the pack
+/// The set of refs that are to be included in or excluded from the pack
 #[derive(Debug, Clone)]
 pub enum RequestedRefs {
-    Include(Vec<String>),
-    Exclude(Vec<String>),
+    Included(HashSet<String>),
+    Excluded(HashSet<String>),
+}
+
+/// Enum defining how annotated tags should be included as a ref
+#[derive(Debug, Clone, Copy)]
+pub enum TagInclusion {
+    // Peel the tag and map it to the underlying Git commit
+    Peeled,
+    // Include the tag as-is without peeling and map it to
+    // the annotated Git tag object
+    AsIs,
+}
+
+/// Enum defining whether a delta should be included in the pack
+/// and if so, what kind of delta should be used
+#[derive(Debug, Clone, Copy)]
+pub enum DeltaInclusion {
+    /// Include deltas with the provided form and inclusion threshold
+    Include {
+        /// Whether the pack input should consist of RefDeltas or only OffsetDeltas
+        form: DeltaForm,
+        /// The percentage threshold which should be satisfied by the delta to be included
+        /// in the pack input stream. The threshold is expressed as percentage of the original (0.0 to 1.0)
+        /// uncompressed object size. e.g. If original object size is 100 bytes and the
+        /// delta_inclusion_threshold is 0.5, then the delta size should be less than 50 bytes
+        inclusion_threshold: f32,
+    },
+    /// Do not include deltas
+    Exclude,
 }
 
 /// The request parameters used to specify the constraints that need to be
@@ -21,30 +56,53 @@ pub enum RequestedRefs {
 #[allow(dead_code)]
 pub struct PackInputStreamRequest {
     /// The refs that are requested to be included/excluded from the pack
-    requested_refs: RequestedRefs,
+    pub requested_refs: RequestedRefs,
     /// The heads of the references that are present with the client
-    have_heads: Vec<ChangesetId>,
-    /// Whether the pack input should consist of RefDeltas or only OffsetDeltas
-    delta_form: DeltaForm,
-    /// The percentage threshold which should be satisfied by the delta to be included
-    /// in the pack input stream. The threshold is expressed as percentage of the original (0.0 to 1.0)
-    /// uncompressed object size. e.g. If original object size is 100 bytes and the
-    /// delta_inclusion_threshold is 0.5, then the delta size should be less than 50 bytes
-    delta_inclusion_threshold: f32,
+    pub have_heads: Vec<ChangesetId>,
+    /// The type of delta that should be included in the pack, if any
+    pub delta_inclusion: DeltaInclusion,
+    /// How annotated tags should be included in the pack
+    pub tag_inclusion: TagInclusion,
 }
 
 impl PackInputStreamRequest {
     pub fn new(
         requested_refs: RequestedRefs,
         have_heads: Vec<ChangesetId>,
-        delta_form: DeltaForm,
-        delta_inclusion_threshold: f32,
+        delta_inclusion: DeltaInclusion,
+        tag_inclusion: TagInclusion,
     ) -> Self {
         Self {
             requested_refs,
             have_heads,
-            delta_form,
-            delta_inclusion_threshold,
+            delta_inclusion,
+            tag_inclusion,
+        }
+    }
+}
+
+/// Struct representing the packfile item response generated for the
+/// given range of commits
+pub struct PackInputStreamResponse<'a> {
+    /// The stream of packfile items that were generated for the given range of commits
+    pub items: BoxStream<'a, Result<PackfileItem>>,
+    /// The number of packfile items that were generated for the given range of commits
+    pub num_items: usize,
+    /// The set of refs mapped to their Git commit ID or tag ID that are included in the
+    /// generated stream of packfile items
+    pub included_refs: HashMap<String, ObjectId>,
+}
+
+impl<'a> PackInputStreamResponse<'a> {
+    pub fn new(
+        items: BoxStream<'a, Result<PackfileItem>>,
+        num_items: usize,
+        included_refs: HashMap<String, ObjectId>,
+    ) -> Self {
+        Self {
+            items,
+            num_items,
+            included_refs,
         }
     }
 }

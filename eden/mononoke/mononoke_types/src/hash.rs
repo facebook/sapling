@@ -30,6 +30,7 @@ use edenapi_types::Sha1 as EdenapiSha1;
 use edenapi_types::Sha256 as EdenapiSha256;
 use faster_hex::hex_decode;
 use faster_hex::hex_encode;
+use gix_hash::ObjectId;
 use quickcheck::empty_shrinker;
 use quickcheck::Arbitrary;
 use quickcheck::Gen;
@@ -500,6 +501,18 @@ impl From<Sha1> for GitSha1 {
     }
 }
 
+impl GitSha1 {
+    pub fn to_object_id(&self) -> Result<ObjectId> {
+        use anyhow::Context;
+        ObjectId::from_hex(self.to_hex().as_bytes()).with_context(|| {
+            format!(
+                "Error in converting GitSha1 {:?} to GitObjectId",
+                self.to_hex()
+            )
+        })
+    }
+}
+
 impl Blake3 {
     #[inline]
     pub fn from_thrift(b: thrift::Blake3) -> Result<Self> {
@@ -567,6 +580,10 @@ impl RichGitSha1 {
 
     pub fn to_hex(&self) -> AsciiString {
         self.sha1.to_hex()
+    }
+
+    pub fn to_object_id(&self) -> Result<ObjectId> {
+        self.sha1.to_object_id()
     }
 
     /// Return the Git prefix bytes
