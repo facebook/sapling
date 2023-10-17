@@ -73,7 +73,6 @@ The following are configs to tune the behavior of copy tracing algorithm:
 import codecs
 import collections
 
-import dbm
 import os
 import time
 
@@ -84,6 +83,7 @@ from sapling import (
     extensions,
     filemerge,
     git,
+    hgdemandimport,
     json,
     node,
     phases,
@@ -198,16 +198,19 @@ def opendbm(repo, flag):
     On some platforms, dbm is available, on others it's not,
     but gdbm is unfortunately not available everywhere, like on Windows.
     """
-    dbms = [(dbm.open, "amendcopytrace", dbm.error)]
+    with hgdemandimport.deactivated():
+        import dbm
 
-    for opener, fname, error in dbms:
-        path = repo.localvfs.join(fname)
-        try:
-            return (opener(path, flag), error)
-        except error:
-            continue
-        except ImportError:
-            continue
+        dbms = [(dbm.open, "amendcopytrace", dbm.error)]
+
+        for opener, fname, error in dbms:
+            path = repo.localvfs.join(fname)
+            try:
+                return (opener(path, flag), error)
+            except error:
+                continue
+            except ImportError:
+                continue
 
     return None, None
 
