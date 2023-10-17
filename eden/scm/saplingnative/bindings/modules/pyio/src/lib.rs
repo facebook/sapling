@@ -13,6 +13,7 @@ use std::io::Seek;
 use std::io::Write;
 
 use cpython::*;
+use cpython_ext::wrap_rust_read;
 use cpython_ext::wrap_rust_write;
 use cpython_ext::PyNone;
 use cpython_ext::ResultPyErrExt;
@@ -87,6 +88,12 @@ py_class!(class IO |py| {
         let io = RustIO::main().map_pyerr(py)?;
         io.wait_pager().map_pyerr(py)?;
         Ok(PyNone)
+    }
+
+    /// Return the input stream as a Python object with "read" method.
+    def input(&self) -> PyResult<PyObject> {
+        let io = RustIO::main().map_pyerr(py)?;
+        Ok(wrap_rust_read(py, io.input())?.into_object())
     }
 
     /// Return the output stream as a Python object with "write" method.
