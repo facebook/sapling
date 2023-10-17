@@ -27,6 +27,10 @@ export const browserPlatform: Platform = {
     serverAPI.postMessage({type: 'platform/openFile', path, options});
   },
 
+  openContainingFolder: (path: RepoRelativePath) => {
+    serverAPI.postMessage({type: 'platform/openContainingFolder', path});
+  },
+
   openExternalLink(url: string): void {
     window.open(url, '_blank');
   },

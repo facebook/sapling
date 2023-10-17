@@ -374,6 +374,12 @@ function File({
       {label: t('Copy Filename'), onClick: () => platform.clipboardCopy(basename(file.path))},
       {label: t('Open File'), onClick: () => platform.openFile(file.path)},
     ];
+    if (platform.openContainingFolder != null) {
+      options.push({
+        label: t('Open Containing Folder'),
+        onClick: () => platform.openContainingFolder?.(file.path),
+      });
+    }
     if (platform.openDiff != null) {
       options.push({
         label: t('Open Diff View ($comparison)', {
