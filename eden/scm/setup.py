@@ -630,10 +630,29 @@ class buildembedded(Command):
             copy_to(pyzippath, pjoin(dirtocopy, pyzipname))
 
         # Copy native python modules
+
+        # Python adds these paths to sys.path:
+        # - Current EXE directory.
+        # - python310.dll directory + "\DLLs", "\lib", "\python310.zip".
+        # So if the main EXE is in a different directory, for example, in tests
+        # the main EXE might be copied to $TESTTMP/bin, and uses this
+        # python310.dll, it won't import stdlib native modules like
+        # unicodedata. Fix it by moving the native modules to DLLs/.
+        # Alternatively, the "embedded" windows python package should be built
+        # with `PYTHONPATH` C macro set to "." [1], but that's not what the
+        # official package provides.
+        # [1]: https://github.com/python/cpython/blob/3.10/PC/pyconfig.h#L71
+        dlls_dir = pjoin(dirtocopy, "DLLs")
+        ensureexists(dlls_dir)
         for pylibpath in glob.glob(os.path.join(pyroot, "*.pyd")):
-            copy_to(pylibpath, dirtocopy)
+            copy_to(pylibpath, dlls_dir)
         for pylibpath in glob.glob(os.path.join(pyroot, "*.dll")):
-            copy_to(pylibpath, dirtocopy)
+            name = os.path.basename(pylibpath)
+            if "python" in name or "vcruntime" in name:
+                dest = dirtocopy
+            else:
+                dest = dlls_dir
+            copy_to(pylibpath, dest)
 
     def _copy_hg_exe(self, dirtocopy):
         """Copy main mercurial executable which would load the embedded Python"""
