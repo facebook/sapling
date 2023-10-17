@@ -103,7 +103,7 @@
   /* when files are expanded with chunk selection, use position sticky to keep showing path at the top */
   position: sticky;
   top: 0;
-  background-color: var(--background);
+  background-color: var(--changed-files-overflow-color, var(--background));
   z-index: 10;
 }
 

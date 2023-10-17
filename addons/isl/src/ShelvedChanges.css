@@ -54,11 +54,9 @@
 
 .shelved-changes-item .changed-files {
   width: 100%;
-  /* margin-left: var(--halfpad); */
   margin-left: 0;
 }
 .shelved-changes-item vscode-button {
-  /* margin-left: var(--halfpad); */
   margin-left: 0;
 }
 
