@@ -7,14 +7,14 @@
 
 #![allow(non_camel_case_types)]
 
+mod rust_io;
+
 use std::cell::Cell;
 use std::cell::RefCell;
 use std::io::Seek;
 use std::io::Write;
 
 use cpython::*;
-use cpython_ext::wrap_rust_read;
-use cpython_ext::wrap_rust_write;
 use cpython_ext::PyNone;
 use cpython_ext::ResultPyErrExt;
 use io::time_interval;
@@ -93,19 +93,19 @@ py_class!(class IO |py| {
     /// Return the input stream as a Python object with "read" method.
     def input(&self) -> PyResult<PyObject> {
         let io = RustIO::main().map_pyerr(py)?;
-        Ok(wrap_rust_read(py, io.input())?.into_object())
+        Ok(rust_io::wrap_rust_read(py, io.input())?.into_object())
     }
 
     /// Return the output stream as a Python object with "write" method.
     def output(&self) -> PyResult<PyObject> {
         let io = RustIO::main().map_pyerr(py)?;
-        Ok(wrap_rust_write(py, io.output())?.into_object())
+        Ok(rust_io::wrap_rust_write(py, io.output())?.into_object())
     }
 
     /// Return the error stream as a Python object with "write" method.
     def error(&self) -> PyResult<PyObject> {
         let io = RustIO::main().map_pyerr(py)?;
-        Ok(wrap_rust_write(py, io.error())?.into_object())
+        Ok(rust_io::wrap_rust_write(py, io.error())?.into_object())
     }
 
     /// Flush pending changes.

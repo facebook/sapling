@@ -10,9 +10,8 @@ use std::io;
 use std::io::Read;
 
 use cpython::*;
-
-use crate::error::ResultPyErrExt;
-use crate::none::PyNone;
+use cpython_ext::PyNone;
+use cpython_ext::ResultPyErrExt;
 
 py_class!(pub class PyRustIO |py| {
     data r: RefCell<Option<Box<dyn ::io::Read + Send>>>;
@@ -152,11 +151,17 @@ impl ::io::IsTty for ClosedIO {
 }
 
 /// Wrap a Rust Write trait object into a Python object.
-pub fn wrap_rust_write(py: Python, w: impl ::io::Write + Send + 'static) -> PyResult<PyRustIO> {
+pub(crate) fn wrap_rust_write(
+    py: Python,
+    w: impl ::io::Write + Send + 'static,
+) -> PyResult<PyRustIO> {
     PyRustIO::create_instance(py, RefCell::new(None), RefCell::new(Some(Box::new(w))))
 }
 
 /// Wrap a Rust Read trait object into a Python object.
-pub fn wrap_rust_read(py: Python, r: impl ::io::Read + Send + 'static) -> PyResult<PyRustIO> {
+pub(crate) fn wrap_rust_read(
+    py: Python,
+    r: impl ::io::Read + Send + 'static,
+) -> PyResult<PyRustIO> {
     PyRustIO::create_instance(py, RefCell::new(Some(Box::new(r))), RefCell::new(None))
 }
