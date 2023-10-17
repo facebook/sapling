@@ -5,8 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::cell::Cell;
 use std::cell::RefCell;
 use std::io;
+use std::io::BufRead;
 use std::io::Read;
 
 use cpython::*;
@@ -14,8 +16,9 @@ use cpython_ext::PyNone;
 use cpython_ext::ResultPyErrExt;
 
 py_class!(pub class PyRustIO |py| {
-    data r: RefCell<Option<Box<dyn ::io::Read + Send>>>;
+    data r: RefCell<Option<io::BufReader<Box<dyn ::io::Read + Send>>>>;
     data w: RefCell<Option<Box<dyn ::io::Write + Send>>>;
+    data is_closed: Cell<bool>;
 
     /// Read at most `n` bytes from the input.
     /// If `n` is negative, read everything till the end.
@@ -33,6 +36,17 @@ py_class!(pub class PyRustIO |py| {
             let read_bytes = io.read(&mut buf).map_pyerr(py)?;
             buf.truncate(read_bytes);
         }
+        Ok(PyBytes::new(py, &buf))
+    }
+
+    def readline(&self) -> PyResult<PyBytes> {
+        let mut io = self.r(py).borrow_mut();
+        let io = match io.as_mut() {
+            Some(io) => io,
+            None => return Err(not_readable(py)),
+        };
+        let mut buf = Vec::<u8>::new();
+        io.read_until(b'\n', &mut buf).map_pyerr(py)?;
         Ok(PyBytes::new(py, &buf))
     }
 
@@ -64,7 +78,7 @@ py_class!(pub class PyRustIO |py| {
             None => {
                 let io = self.r(py).borrow();
                 match io.as_ref() {
-                    Some(io) => Ok(io.is_tty()),
+                    Some(io) => Ok(io.get_ref().is_tty()),
                     None => Ok(false),
                 }
             }
@@ -74,7 +88,7 @@ py_class!(pub class PyRustIO |py| {
     def isstdin(&self) -> PyResult<bool> {
         let io = self.r(py).borrow();
         match io.as_ref() {
-            Some(io) => Ok(io.is_stdin()),
+            Some(io) => Ok(io.get_ref().is_stdin()),
             None => Ok(false),
         }
     }
@@ -103,9 +117,40 @@ py_class!(pub class PyRustIO |py| {
         };
         let mut io = self.r(py).borrow_mut();
         if io.is_some() {
-            *io = Some(Box::new(ClosedIO));
+            *io = Some(io::BufReader::new(Box::new(ClosedIO)));
         }
+        self.is_closed(py).set(true);
         Ok(PyNone)
+    }
+
+    @property
+    def closed(&self) -> PyResult<bool> {
+        Ok(self.is_closed(py).get())
+    }
+
+    def readable(&self) -> PyResult<bool> {
+        Ok(self.r(py).borrow().is_some())
+    }
+
+    def seekable(&self) -> PyResult<bool> {
+        Ok(false)
+    }
+
+    def writable(&self) -> PyResult<bool> {
+        Ok(self.w(py).borrow().is_some())
+    }
+
+    def fileno(&self) -> PyResult<usize> {
+        // Emulated. Might be inaccurate.
+        if self.isstdin(py)? {
+            Ok(0)
+        } else if self.isstdout(py)? {
+            Ok(1)
+        } else if self.isstderr(py)? {
+            Ok(2)
+        } else {
+            Err(PyErr::new::<exc::IOError, _>(py, "stream does not have a fileno"))
+        }
     }
 });
 
@@ -155,7 +200,12 @@ pub(crate) fn wrap_rust_write(
     py: Python,
     w: impl ::io::Write + Send + 'static,
 ) -> PyResult<PyRustIO> {
-    PyRustIO::create_instance(py, RefCell::new(None), RefCell::new(Some(Box::new(w))))
+    PyRustIO::create_instance(
+        py,
+        RefCell::new(None),
+        RefCell::new(Some(Box::new(w))),
+        Cell::new(false),
+    )
 }
 
 /// Wrap a Rust Read trait object into a Python object.
@@ -163,5 +213,10 @@ pub(crate) fn wrap_rust_read(
     py: Python,
     r: impl ::io::Read + Send + 'static,
 ) -> PyResult<PyRustIO> {
-    PyRustIO::create_instance(py, RefCell::new(Some(Box::new(r))), RefCell::new(None))
+    PyRustIO::create_instance(
+        py,
+        RefCell::new(Some(io::BufReader::new(Box::new(r)))),
+        RefCell::new(None),
+        Cell::new(false),
+    )
 }
