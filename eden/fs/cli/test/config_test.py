@@ -14,16 +14,16 @@ import unittest
 from collections import namedtuple
 from pathlib import Path
 from typing import Dict
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import toml
 import toml.decoder
+from eden.fs.cli import configinterpolator
 from eden.fs.cli.config import EdenInstance
 from eden.fs.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
-from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 from eden.test_support.testcase import EdenTestCaseBase
 
-from .. import config as config_mod, configutil, util
+from .. import config as config_mod, configutil
 from ..configinterpolator import EdenConfigInterpolator
 from ..configutil import EdenConfigParser, UnexpectedType
 
@@ -517,7 +517,13 @@ class EdenInstanceConstructionTest(unittest.TestCase):
         self.assertEqual(instance.etc_eden_dir, Path("/etc/eden"))
         self.assertEqual(instance.home_dir, Path("/home/testuser/"))
 
-    def test_sparse_cmd_line(self) -> None:
+    @patch("eden.fs.cli.config.EdenInstance.read_configs")
+    def test_sparse_cmd_line(self, config: Mock) -> None:
+        # We need to mock out the config
+        # Otherwise it will priorize using the user's config on disk
+        config.return_value = configutil.EdenConfigParser(
+            interpolation=configinterpolator.EdenConfigInterpolator({})
+        )
         cmdline = [
             b"/usr/local/libexec/eden/edenfs",
             b"--edenfs",
