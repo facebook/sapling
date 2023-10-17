@@ -39,7 +39,6 @@ rust_binary(
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
-        "fbsource//third-party/rust:async-stream",
         "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:chrono",
@@ -47,7 +46,6 @@ rust_binary(
         "fbsource//third-party/rust:flate2",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:gix-hash",
-        "fbsource//third-party/rust:gix-object",
         "fbsource//third-party/rust:itertools",
         "fbsource//third-party/rust:prettytable-rs",
         "fbsource//third-party/rust:regex",
@@ -102,6 +100,7 @@ rust_binary(
         "//eden/mononoke/filestore:filestore",
         "//eden/mononoke/git/git_types:git_types",
         "//eden/mononoke/git/packfile:packfile",
+        "//eden/mononoke/git/protocol:protocol",
         "//eden/mononoke/git_symbolic_refs:git_symbolic_refs",
         "//eden/mononoke/manifest:manifest",
         "//eden/mononoke/megarepo_api:async_requests",

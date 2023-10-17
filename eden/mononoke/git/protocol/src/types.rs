@@ -54,7 +54,7 @@ pub enum DeltaInclusion {
 /// honored while generating the input PackfileItem stream
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
-pub struct PackInputStreamRequest {
+pub struct PackItemStreamRequest {
     /// The refs that are requested to be included/excluded from the pack
     pub requested_refs: RequestedRefs,
     /// The heads of the references that are present with the client
@@ -65,7 +65,7 @@ pub struct PackInputStreamRequest {
     pub tag_inclusion: TagInclusion,
 }
 
-impl PackInputStreamRequest {
+impl PackItemStreamRequest {
     pub fn new(
         requested_refs: RequestedRefs,
         have_heads: Vec<ChangesetId>,
@@ -79,11 +79,20 @@ impl PackInputStreamRequest {
             tag_inclusion,
         }
     }
+
+    pub fn full_repo(delta_inclusion: DeltaInclusion, tag_inclusion: TagInclusion) -> Self {
+        Self {
+            requested_refs: RequestedRefs::Excluded(HashSet::new()),
+            have_heads: vec![],
+            delta_inclusion,
+            tag_inclusion,
+        }
+    }
 }
 
 /// Struct representing the packfile item response generated for the
 /// given range of commits
-pub struct PackInputStreamResponse<'a> {
+pub struct PackItemStreamResponse<'a> {
     /// The stream of packfile items that were generated for the given range of commits
     pub items: BoxStream<'a, Result<PackfileItem>>,
     /// The number of packfile items that were generated for the given range of commits
@@ -93,7 +102,7 @@ pub struct PackInputStreamResponse<'a> {
     pub included_refs: HashMap<String, ObjectId>,
 }
 
-impl<'a> PackInputStreamResponse<'a> {
+impl<'a> PackItemStreamResponse<'a> {
     pub fn new(
         items: BoxStream<'a, Result<PackfileItem>>,
         num_items: usize,

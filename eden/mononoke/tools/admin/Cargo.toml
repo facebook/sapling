@@ -9,7 +9,6 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "=1.0.72"
-async-stream = "0.3"
 async-trait = "0.1.71"
 async_requests = { version = "0.1.0", path = "../../megarepo_api/async_requests" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
@@ -64,7 +63,6 @@ futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimen
 git_symbolic_refs = { version = "0.1.0", path = "../../git_symbolic_refs" }
 git_types = { version = "0.1.0", path = "../../git/git_types" }
 gix-hash = "0.11"
-gix-object = "0.33"
 itertools = "0.11.0"
 manifest = { version = "0.1.0", path = "../../manifest" }
 megarepo_api = { version = "0.1.0", path = "../../megarepo_api" }
@@ -83,6 +81,7 @@ phases = { version = "0.1.0", path = "../../phases" }
 preloaded_commit_graph_storage = { version = "0.1.0", path = "../../repo_attributes/commit_graph/preloaded_commit_graph_storage" }
 prettytable-rs = "0.10"
 print_graph = { version = "0.1.0", path = "../../cmdlib/displaying/graph" }
+protocol = { version = "0.1.0", path = "../../git/protocol" }
 pushrebase = { version = "0.1.0", path = "../../pushrebase" }
 pushrebase_mutation_mapping = { version = "0.1.0", path = "../../pushrebase_mutation_mapping" }
 redactedblobstore = { version = "0.1.0", path = "../../blobstore/redactedblobstore" }

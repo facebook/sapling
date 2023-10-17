@@ -47,8 +47,8 @@ use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 
 use crate::types::DeltaInclusion;
-use crate::types::PackInputStreamRequest;
-use crate::types::PackInputStreamResponse;
+use crate::types::PackItemStreamRequest;
+use crate::types::PackItemStreamResponse;
 use crate::types::RequestedRefs;
 use crate::types::TagInclusion;
 
@@ -70,7 +70,7 @@ pub trait Repo = RepoIdentityRef
 async fn bookmarks(
     ctx: &CoreContext,
     repo: &impl Repo,
-    request: &PackInputStreamRequest,
+    request: &PackItemStreamRequest,
 ) -> Result<HashMap<Bookmark, ChangesetId>> {
     repo.bookmarks()
         .list(
@@ -104,7 +104,7 @@ async fn object_count(
     ctx: &CoreContext,
     repo: &impl Repo,
     bookmarks: &HashMap<Bookmark, ChangesetId>,
-    request: &PackInputStreamRequest,
+    request: &PackItemStreamRequest,
 ) -> Result<(usize, HashSet<ObjectId>)> {
     // Get all the commits that are reachable from the bookmarks
     let target_commits = repo
@@ -193,7 +193,7 @@ async fn refs_to_include(
 ) -> Result<HashMap<String, ObjectId>> {
     stream::iter(bookmarks.iter())
         .map(|(bookmark, cs_id)| async move {
-            if let (BookmarkCategory::Tag, TagInclusion::Peeled) =
+            if let (BookmarkCategory::Tag, TagInclusion::AsIs) =
                 (bookmark.key().category(), tag_inclusion)
             {
                 let tag_name = bookmark.key().name().to_string();
@@ -415,7 +415,7 @@ async fn blob_and_tree_packfile_stream<'a>(
     ctx: &'a CoreContext,
     repo: &'a impl Repo,
     bookmarks: &HashMap<Bookmark, ChangesetId>,
-    request: &PackInputStreamRequest,
+    request: &PackItemStreamRequest,
     duplicated_objects: HashSet<ObjectId>,
 ) -> Result<BoxStream<'a, Result<PackfileItem>>> {
     let target_commits = repo
@@ -452,7 +452,7 @@ async fn commit_packfile_stream<'a>(
     ctx: &'a CoreContext,
     repo: &'a impl Repo,
     bookmarks: &HashMap<Bookmark, ChangesetId>,
-    request: &PackInputStreamRequest,
+    request: &PackItemStreamRequest,
 ) -> Result<BoxStream<'a, Result<PackfileItem>>> {
     let target_commits = repo
         .commit_graph()
@@ -552,8 +552,8 @@ async fn tag_packfile_stream<'a>(
 pub async fn generate_pack_item_stream<'a>(
     ctx: &'a CoreContext,
     repo: &'a impl Repo,
-    request: PackInputStreamRequest,
-) -> Result<PackInputStreamResponse<'a>> {
+    request: PackItemStreamRequest,
+) -> Result<PackItemStreamResponse<'a>> {
     // We need to include the bookmarks (i.e. branches, tags) in the pack based on the request parameters
     let bookmarks = bookmarks(ctx, repo, &request).await.with_context(|| {
         format!(
@@ -606,6 +606,6 @@ pub async fn generate_pack_item_stream<'a>(
         .chain(commit_stream)
         .chain(blob_and_tree_stream)
         .boxed();
-    let response = PackInputStreamResponse::new(packfile_stream, object_count, refs_to_include);
+    let response = PackItemStreamResponse::new(packfile_stream, object_count, refs_to_include);
     Ok(response)
 }
