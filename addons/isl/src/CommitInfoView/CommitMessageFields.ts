@@ -50,12 +50,16 @@ export function findFieldsBeingEdited(
   );
 }
 
+function isFieldNonEmpty(field: string | Array<string>) {
+  return Array.isArray(field) ? field.length > 0 : field && field.trim().length > 0;
+}
+
 export function commitMessageFieldsToString(
   schema: Array<FieldConfig>,
   fields: CommitMessageFields,
 ): string {
   return schema
-    .filter(config => config.key === 'Title' || fields[config.key])
+    .filter(config => config.key === 'Title' || isFieldNonEmpty(fields[config.key]))
     .map(
       config =>
         // stringified messages of the form Key: value, except the title or generic description don't need a label
