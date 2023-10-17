@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
-use std::collections::HashSet;
 use std::io::Write;
 use std::sync::Arc;
 
@@ -45,6 +43,8 @@ use packfile::types::PackfileItem;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
+use rustc_hash::FxHashMap;
+use rustc_hash::FxHashSet;
 
 use crate::types::DeltaInclusion;
 use crate::types::PackItemStreamRequest;
@@ -71,7 +71,7 @@ async fn bookmarks(
     ctx: &CoreContext,
     repo: &impl Repo,
     request: &PackItemStreamRequest,
-) -> Result<HashMap<Bookmark, ChangesetId>> {
+) -> Result<FxHashMap<Bookmark, ChangesetId>> {
     repo.bookmarks()
         .list(
             ctx.clone(),
@@ -92,7 +92,7 @@ async fn bookmarks(
                 }
             }
         })
-        .try_collect::<HashMap<_, _>>()
+        .try_collect::<FxHashMap<_, _>>()
         .await
 }
 
@@ -103,9 +103,9 @@ async fn bookmarks(
 async fn object_count(
     ctx: &CoreContext,
     repo: &impl Repo,
-    bookmarks: &HashMap<Bookmark, ChangesetId>,
+    bookmarks: &FxHashMap<Bookmark, ChangesetId>,
     request: &PackItemStreamRequest,
-) -> Result<(usize, HashSet<ObjectId>)> {
+) -> Result<(usize, FxHashSet<ObjectId>)> {
     // Get all the commits that are reachable from the bookmarks
     let target_commits = repo
         .commit_graph()
@@ -141,12 +141,12 @@ async fn object_count(
                             root_mf_id
                         )
                     })?;
-                // Get the hashset of the tree and blob object Ids that will be included
+                // Get the FxHashSet of the tree and blob object Ids that will be included
                 // in the packfile
                 let objects = delta_manifest
                     .into_subentries(ctx, &blobstore)
                     .map_ok(|(_, entry)| entry.full.oid)
-                    .try_collect::<HashSet<_>>()
+                    .try_collect::<FxHashSet<_>>()
                     .await
                     .with_context(|| {
                         format!(
@@ -159,8 +159,8 @@ async fn object_count(
         })
         .try_buffered(100)
         .try_fold(
-            (HashSet::new(), // The set of all unique objects to be included in the pack file
-                  HashSet::new(), // The set of objects that have repeated atleast once
+            (FxHashSet::default(), // The set of all unique objects to be included in the pack file
+                  FxHashSet::default(), // The set of objects that have repeated atleast once
                   0), // The number of commits whose delta manifests are being explored
             |(mut unique_objects, mut duplicate_objects, commit_count), objects_in_entry| async move {
                 for entry in objects_in_entry.into_iter() {
@@ -188,9 +188,9 @@ async fn object_count(
 async fn refs_to_include(
     ctx: &CoreContext,
     repo: &impl Repo,
-    bookmarks: &HashMap<Bookmark, ChangesetId>,
+    bookmarks: &FxHashMap<Bookmark, ChangesetId>,
     tag_inclusion: TagInclusion,
-) -> Result<HashMap<String, ObjectId>> {
+) -> Result<FxHashMap<String, ObjectId>> {
     stream::iter(bookmarks.iter())
         .map(|(bookmark, cs_id)| async move {
             if let (BookmarkCategory::Tag, TagInclusion::AsIs) =
@@ -237,7 +237,7 @@ async fn refs_to_include(
         })
         .boxed()
         .buffer_unordered(100)
-        .try_collect::<HashMap<_, _>>()
+        .try_collect::<FxHashMap<_, _>>()
         .await
 }
 
@@ -245,7 +245,7 @@ async fn refs_to_include(
 /// stored in the git_symbolic_refs. Fetch the mapping and add them to the list of refs to include
 async fn include_head_ref(
     repo: &impl Repo,
-    refs_to_include: &mut HashMap<String, ObjectId>,
+    refs_to_include: &mut FxHashMap<String, ObjectId>,
 ) -> Result<()> {
     // Get the branch that the HEAD symref points to
     let head_ref = repo
@@ -375,7 +375,7 @@ async fn blob_and_tree_packfile_items<'a>(
     repo: &'a impl Repo,
     delta_inclusion: DeltaInclusion,
     changeset_id: ChangesetId,
-    duplicated_objects: Arc<HashSet<ObjectId>>,
+    duplicated_objects: Arc<FxHashSet<ObjectId>>,
 ) -> Result<BoxStream<'a, Result<PackfileItem>>> {
     let blobstore = repo.repo_blobstore_arc();
     let root_mf_id = repo
@@ -414,9 +414,9 @@ async fn blob_and_tree_packfile_items<'a>(
 async fn blob_and_tree_packfile_stream<'a>(
     ctx: &'a CoreContext,
     repo: &'a impl Repo,
-    bookmarks: &HashMap<Bookmark, ChangesetId>,
+    bookmarks: &FxHashMap<Bookmark, ChangesetId>,
     request: &PackItemStreamRequest,
-    duplicated_objects: HashSet<ObjectId>,
+    duplicated_objects: FxHashSet<ObjectId>,
 ) -> Result<BoxStream<'a, Result<PackfileItem>>> {
     let target_commits = repo
         .commit_graph()
@@ -451,7 +451,7 @@ async fn blob_and_tree_packfile_stream<'a>(
 async fn commit_packfile_stream<'a>(
     ctx: &'a CoreContext,
     repo: &'a impl Repo,
-    bookmarks: &HashMap<Bookmark, ChangesetId>,
+    bookmarks: &FxHashMap<Bookmark, ChangesetId>,
     request: &PackItemStreamRequest,
 ) -> Result<BoxStream<'a, Result<PackfileItem>>> {
     let target_commits = repo
@@ -500,7 +500,7 @@ async fn commit_packfile_stream<'a>(
 async fn tag_packfile_stream<'a>(
     ctx: &'a CoreContext,
     repo: &'a impl Repo,
-    bookmarks: &HashMap<Bookmark, ChangesetId>,
+    bookmarks: &FxHashMap<Bookmark, ChangesetId>,
 ) -> Result<(BoxStream<'a, Result<PackfileItem>>, usize)> {
     // Since we need the count of items, we would have to consume the stream either for counting or collecting the items.
     // This is fine, since unlike commits, blobs and trees there will only be thousands of tags in the worst case.
@@ -606,6 +606,10 @@ pub async fn generate_pack_item_stream<'a>(
         .chain(commit_stream)
         .chain(blob_and_tree_stream)
         .boxed();
-    let response = PackItemStreamResponse::new(packfile_stream, object_count, refs_to_include);
+    let response = PackItemStreamResponse::new(
+        packfile_stream,
+        object_count,
+        refs_to_include.into_iter().collect(),
+    );
     Ok(response)
 }
