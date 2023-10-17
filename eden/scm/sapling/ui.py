@@ -220,9 +220,10 @@ class ui:
         else:
             self._uiconfig = uiconfig.uiconfig(rcfg=rcfg)
 
-            self.fout = util.refcell(util.get_main_io().output())
-            self.ferr = util.refcell(util.get_main_io().error())
-            self.fin = util.refcell(util.stdin)
+            main_io = util.get_main_io()
+            self.fout = util.refcell(main_io.output())
+            self.ferr = util.refcell(main_io.error())
+            self.fin = util.refcell(main_io.input())
             self.pageractive = False
             self._disablepager = False
             self._tweaked = False
