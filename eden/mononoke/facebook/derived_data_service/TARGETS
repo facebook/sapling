@@ -89,6 +89,7 @@ rust_library(
         "//eden/mononoke/common/facebook/thrift_client:thrift_client",
         "//eden/mononoke/derived_data:derived_data_remote",
         "//eden/mononoke/derived_data/remote/if:derived_data_service_if-rust",
+        "//eden/mononoke/server/context:context",
         "//eden/mononoke/tunables:tunables",
         "//fb303/thrift:fb303_core-rust",
     ],
@@ -109,6 +110,7 @@ rust_binary(
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//eden/mononoke/derived_data/remote/if:derived_data_service_if-rust",
         "//eden/mononoke/mononoke_api:mononoke_api",
+        "//eden/mononoke/server/context:context",
     ],
 )
 

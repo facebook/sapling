@@ -574,5 +574,6 @@ rust_library(
         "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:clap",
         "//eden/mononoke/derived_data/remote/if:derived_data_service_if-rust",
+        "//eden/mononoke/server/context:context",
     ],
 )

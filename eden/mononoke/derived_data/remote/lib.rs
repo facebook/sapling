@@ -8,6 +8,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Args;
+use context::CoreContext;
 use derived_data_service_if::types as thrift;
 
 #[derive(Clone, Debug)]
@@ -57,8 +58,13 @@ impl From<RemoteDerivationArgs> for RemoteDerivationOptions {
 pub trait DerivationClient: Send + Sync {
     async fn derive_remotely(
         &self,
+        ctx: &CoreContext,
         request: &thrift::DeriveRequest,
     ) -> Result<thrift::DeriveResponse>;
 
-    async fn poll(&self, request: &thrift::DeriveRequest) -> Result<thrift::DeriveResponse>;
+    async fn poll(
+        &self,
+        ctx: &CoreContext,
+        request: &thrift::DeriveRequest,
+    ) -> Result<thrift::DeriveResponse>;
 }

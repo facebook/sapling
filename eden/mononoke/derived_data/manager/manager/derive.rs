@@ -571,9 +571,9 @@ impl DerivedDataManager {
                         }
                         // not yet derived, so request derivation
                         derived_data_scuba.log_remote_derivation_start(ctx);
-                        client.derive_remotely(&request).await
+                        client.derive_remotely(ctx, &request).await
                     }
-                    DerivationState::InProgress => client.poll(&request).await,
+                    DerivationState::InProgress => client.poll(ctx, &request).await,
                 };
 
                 match service_response {
