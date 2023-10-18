@@ -54,3 +54,19 @@
 .commit-cloud-backup-list {
   margin-left: calc(3 * var(--pad));
 }
+
+.commit-cloud-workspace-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pad);
+  width: 100%;
+}
+
+.commit-cloud-new-workspace-input vscode-text-field {
+  flex-grow: 1;
+}
+.commit-cloud-new-workspace-input {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--halfpad);
+}

@@ -29,6 +29,7 @@ export type TrackEventName =
   | 'CommitCloudListCommand'
   | 'CommitCloudSyncBackupStatusCommand'
   | 'CommitCloudChangeWorkspaceOperation'
+  | 'CommitCloudCreateWorkspaceOperation'
   | 'CommitCloudSyncOperation'
   | 'CreateEmptyInitialCommit'
   | 'ClickSuggestedRebase'

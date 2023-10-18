@@ -14,16 +14,21 @@ import {ErrorNotice, InlineErrorBadge} from './ErrorNotice';
 import {Tooltip} from './Tooltip';
 import {T, t} from './i18n';
 import {CommitCloudChangeWorkspaceOperation} from './operations/CommitCloudChangeWorkspaceOperation';
+import {CommitCloudCreateWorkspaceOperation} from './operations/CommitCloudCreateWorkspaceOperation';
 import {CommitCloudSyncOperation} from './operations/CommitCloudSyncOperation';
 import {CommitPreview, treeWithPreviews, useMostRecentPendingOperation} from './previews';
 import {RelativeDate} from './relativeDate';
 import {useRunOperation} from './serverAPIState';
 import {CommitCloudBackupStatus} from './types';
-import {VSCodeButton, VSCodeDropdown, VSCodeOption} from '@vscode/webview-ui-toolkit/react';
-import {useCallback, useEffect} from 'react';
+import {
+  VSCodeButton,
+  VSCodeDropdown,
+  VSCodeOption,
+  VSCodeTextField,
+} from '@vscode/webview-ui-toolkit/react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import {atom, useRecoilState, useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
-import {notEmpty} from 'shared/utils';
 
 import './CommitCloud.css';
 
@@ -48,6 +53,7 @@ export function CommitCloudInfo() {
   const pendingOperation = useMostRecentPendingOperation();
   const isRunningSync = pendingOperation?.trackEventName === 'CommitCloudSyncOperation';
   const isLoading = cloudSyncState?.value?.isFetching === true;
+  const [enteredWorkspaceName, setEnteredWorkspaceName] = useState<null | string>(null);
 
   const refreshCommitCloudStatus = useCallback(() => {
     setCloudSyncState(old =>
@@ -64,6 +70,14 @@ export function CommitCloudInfo() {
     refreshCommitCloudStatus();
     return () => clearInterval(interval);
   }, [refreshCommitCloudStatus]);
+
+  const isMakingWorkspace = enteredWorkspaceName != null;
+  const newWorkspaceNameRef = useRef(null);
+  useEffect(() => {
+    if (isMakingWorkspace && newWorkspaceNameRef.current != null) {
+      (newWorkspaceNameRef.current as HTMLInputElement).focus();
+    }
+  }, [newWorkspaceNameRef, isMakingWorkspace]);
 
   return (
     <div className="commit-cloud-info">
@@ -118,7 +132,7 @@ export function CommitCloudInfo() {
             </T>
             <FlexSpacer />
             <VSCodeButton
-              onClick={async () => {
+              onClick={() => {
                 runOperation(new CommitCloudSyncOperation()).then(() => {
                   refreshCommitCloudStatus();
                 });
@@ -138,27 +152,89 @@ export function CommitCloudInfo() {
             <label htmlFor="stack-file-dropdown">
               <T>Current Workspace</T>
             </label>
-            <VSCodeDropdown
-              value={cloudSyncState?.value.currentWorkspace}
-              disabled={pendingOperation?.trackEventName === 'CommitCloudChangeWorkspaceOperation'}
-              onChange={event => {
-                const newChoice = (event.target as HTMLOptionElement).value;
-                runOperation(new CommitCloudChangeWorkspaceOperation(newChoice)).then(() => {
-                  refreshCommitCloudStatus();
-                });
-                if (cloudSyncState?.value) {
-                  // optimistically set the workspace choice
-                  setCloudSyncState({
-                    value: {...cloudSyncState?.value, currentWorkspace: newChoice},
-                  });
+            <div className="commit-cloud-workspace-actions">
+              <VSCodeDropdown
+                value={cloudSyncState?.value.currentWorkspace}
+                disabled={
+                  pendingOperation?.trackEventName === 'CommitCloudChangeWorkspaceOperation' ||
+                  pendingOperation?.trackEventName === 'CommitCloudCreateWorkspaceOperation'
                 }
-              }}>
-              {cloudSyncState?.value.workspaceChoices?.map(name => (
-                <VSCodeOption key={name} value={name}>
-                  {name}
-                </VSCodeOption>
-              ))}
-            </VSCodeDropdown>
+                onChange={event => {
+                  const newChoice = (event.target as HTMLOptionElement).value;
+                  runOperation(new CommitCloudChangeWorkspaceOperation(newChoice)).then(() => {
+                    refreshCommitCloudStatus();
+                  });
+                  if (cloudSyncState?.value) {
+                    // optimistically set the workspace choice
+                    setCloudSyncState({
+                      value: {...cloudSyncState?.value, currentWorkspace: newChoice},
+                    });
+                  }
+                }}>
+                {cloudSyncState?.value.workspaceChoices?.map(name => (
+                  <VSCodeOption key={name} value={name}>
+                    {name}
+                  </VSCodeOption>
+                ))}
+              </VSCodeDropdown>
+              {enteredWorkspaceName == null ? (
+                <VSCodeButton
+                  appearance="icon"
+                  onClick={e => {
+                    setEnteredWorkspaceName('');
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}>
+                  <Icon icon="plus" slot="start" />
+                  <T>Add Workspace</T>
+                </VSCodeButton>
+              ) : (
+                <div className="commit-cloud-new-workspace-input">
+                  <VSCodeTextField
+                    ref={newWorkspaceNameRef as React.MutableRefObject<null>}
+                    onChange={e => setEnteredWorkspaceName((e.target as HTMLInputElement).value)}>
+                    <T>New Workspace Name</T>
+                  </VSCodeTextField>
+                  <VSCodeButton
+                    appearance="secondary"
+                    onClick={e => {
+                      setEnteredWorkspaceName(null);
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}>
+                    <T>Cancel</T>
+                  </VSCodeButton>
+                  <VSCodeButton
+                    appearance="primary"
+                    onClick={e => {
+                      if (enteredWorkspaceName == null) {
+                        return;
+                      }
+                      const name = enteredWorkspaceName.trim().replace(' ', '_');
+                      // optimistically update the dropdown
+                      setCloudSyncState(old =>
+                        old?.value != null
+                          ? {
+                              value: {
+                                ...old.value,
+                                workspaceChoices: [...(old.value.workspaceChoices ?? []), name],
+                                currentWorkspace: name,
+                              },
+                            }
+                          : old,
+                      );
+                      runOperation(new CommitCloudCreateWorkspaceOperation(name)).then(() => {
+                        refreshCommitCloudStatus();
+                      });
+                      setEnteredWorkspaceName(null);
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}>
+                    <T>Create</T>
+                  </VSCodeButton>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -220,17 +296,21 @@ function CommitCloudSyncStatusBadge({statuses}: {statuses: Map<Hash, CommitCloud
 
 function BackupList({commits}: {commits: Array<Hash>}) {
   const treeMap = useRecoilValue(treeWithPreviews).treeMap;
-  const infos = commits.map(hash => treeMap.get(hash)?.info).filter(notEmpty);
+  const infos = commits.map(hash => treeMap.get(hash)?.info ?? hash);
   return (
     <div className="commit-cloud-backup-list">
-      {infos.map(commit => (
-        <Commit
-          commit={commit}
-          key={commit.hash}
-          hasChildren={false}
-          previewType={CommitPreview.NON_ACTIONABLE_COMMIT}
-        />
-      ))}
+      {infos.map(commit =>
+        typeof commit === 'string' ? (
+          <div>{commit}</div>
+        ) : (
+          <Commit
+            commit={commit}
+            key={commit.hash}
+            hasChildren={false}
+            previewType={CommitPreview.NON_ACTIONABLE_COMMIT}
+          />
+        ),
+      )}
     </div>
   );
 }
