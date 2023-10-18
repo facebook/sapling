@@ -376,7 +376,7 @@ describe('CommitStackState', () => {
           'y.txt': {data: 'yy'},
         },
         originalNodes: new Set(['A', 'B']),
-        text: 'Commit A\n\nCommit B',
+        text: 'Commit A, Commit B',
         parents: [],
       });
       expect(stack.stack.get(1)?.toJS()).toMatchObject({

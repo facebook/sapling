@@ -10,6 +10,7 @@ import type {CommitMessageFields, FieldConfig, FieldsBeingEdited} from './types'
 import {Internal} from '../Internal';
 import {clearOnCwdChange} from '../recoilUtils';
 import {atom} from 'recoil';
+import {notEmpty} from 'shared/utils';
 
 export function emptyCommitMessageFields(schema: Array<FieldConfig>): CommitMessageFields {
   return Object.fromEntries(schema.map(config => [config.key, config.type === 'field' ? [] : '']));
@@ -69,6 +70,42 @@ export function commitMessageFieldsToString(
           : fields[config.key]),
     )
     .join('\n\n');
+}
+
+export function mergeCommitMessageFields(
+  schema: Array<FieldConfig>,
+  a: CommitMessageFields,
+  b: CommitMessageFields,
+): CommitMessageFields {
+  return Object.fromEntries(
+    schema
+      .map(config => {
+        const isANonEmpty = isFieldNonEmpty(a[config.key]);
+        const isBNonEmpty = isFieldNonEmpty(b[config.key]);
+        if (!isANonEmpty && !isBNonEmpty) {
+          return undefined;
+        } else if (!isANonEmpty || !isBNonEmpty) {
+          return [config.key, isANonEmpty ? a[config.key] : b[config.key]];
+        } else if (Array.isArray(a[config.key])) {
+          const av = a[config.key] as Array<string>;
+          const bv = b[config.key] as Array<string>;
+          const merged = arraysEqual(av, bv) ? av : [...av, ...bv];
+          return [
+            config.key,
+            config.type === 'field' && config.maxTokens != null
+              ? merged.slice(0, config.maxTokens)
+              : merged,
+          ];
+        } else {
+          const av = a[config.key] as string;
+          const bv = b[config.key] as string;
+          const merged =
+            av.trim() === bv.trim() ? av : av + (config.type === 'title' ? ', ' : '\n') + bv;
+          return [config.key, merged];
+        }
+      })
+      .filter(notEmpty),
+  );
 }
 
 function joinWithComma(tokens: Array<string>): string {

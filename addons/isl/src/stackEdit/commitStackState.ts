@@ -17,8 +17,14 @@ import type {
   ImportAction,
 } from 'shared/types/stack';
 
+import {
+  commitMessageFieldsToString,
+  getDefaultCommitMessageSchema,
+  mergeCommitMessageFields,
+  parseCommitMessageFields,
+} from '../CommitInfoView/CommitMessageFields';
 import {t} from '../i18n';
-import {assert} from '../utils';
+import {assert, firstLine} from '../utils';
 import {FileStackState} from './fileStackState';
 import deepEqual from 'fast-deep-equal';
 import {Seq, List, Map as ImMap, Set as ImSet, Record, is} from 'immutable';
@@ -887,9 +893,25 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     });
 
     // Fold other properties to parent.
-    const newParentText = isMeaningfulText(commit.text)
-      ? `${parent.text.trim()}\n\n${commit.text}`
-      : parent.text;
+    let newParentText = parent.text;
+    if (isMeaningfulText(commit.text)) {
+      const schema = getDefaultCommitMessageSchema();
+      const parentTitle = firstLine(parent.text);
+      const parentFields = parseCommitMessageFields(
+        schema,
+        parentTitle,
+        parent.text.slice(parentTitle.length),
+      );
+      const commitTitle = firstLine(commit.text);
+      const commitFields = parseCommitMessageFields(
+        schema,
+        commitTitle,
+        commit.text.slice(commitTitle.length),
+      );
+      const merged = mergeCommitMessageFields(schema, parentFields, commitFields);
+      newParentText = commitMessageFieldsToString(schema, merged);
+    }
+
     const newParent = parent.merge({
       text: newParentText,
       date: commit.date,
