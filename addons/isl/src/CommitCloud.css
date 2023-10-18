@@ -15,3 +15,26 @@
 .commit-cloud-header {
   font-size: 90%;
 }
+
+.commit-cloud-dropdown-container {
+  margin-block: var(--pad);
+  width: 100%;
+  z-index: 3;
+  box-sizing: border-box;
+  display: flex;
+  flex-flow: column nowrap;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+.commit-cloud-dropdown-container label {
+  display: block;
+  color: var(--vscode-foreground);
+  cursor: pointer;
+  line-height: normal;
+  margin-bottom: 2px;
+}
+
+.commit-cloud-dropdown-container vscode-dropdown {
+  min-width: 200px;
+}

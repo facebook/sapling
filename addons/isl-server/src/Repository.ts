@@ -34,6 +34,8 @@ import type {
   FetchedUncommittedChanges,
   FetchedCommits,
   ShelvedChange,
+  CommitCloudSyncState,
+  Hash,
 } from 'isl/src/types';
 import type {Comparison} from 'shared/Comparison';
 
@@ -46,7 +48,7 @@ import {GitHubCodeReviewProvider} from './github/githubCodeReviewProvider';
 import {isGithubEnterprise} from './github/queryGraphQL';
 import {handleAbortSignalOnProcess, isExecaError, serializeAsyncCall} from './utils';
 import execa from 'execa';
-import {CommandRunner} from 'isl/src/types';
+import {CommitCloudBackupStatus, CommandRunner} from 'isl/src/types';
 import os from 'os';
 import path from 'path';
 import {revsetArgsForComparison} from 'shared/Comparison';
@@ -746,6 +748,106 @@ export class Repository {
       }s`,
     );
     return blame[0].lines.map(({node, line}) => [line, commits.get(node)]);
+  }
+
+  public async getCommitCloudState(cwd: string): Promise<CommitCloudSyncState> {
+    const lastChecked = new Date();
+
+    const [backupStatuses, cloudStatus] = await Promise.allSettled([
+      this.fetchCommitCloudBackupStatuses(cwd),
+      this.fetchCommitCloudStatus(cwd),
+    ]);
+
+    if (backupStatuses.status === 'rejected') {
+      return {
+        lastChecked,
+        syncError: backupStatuses.reason,
+      };
+    } else if (cloudStatus.status === 'rejected') {
+      return {
+        lastChecked,
+        workspaceError: cloudStatus.reason,
+      };
+    }
+
+    return {
+      lastChecked,
+      ...cloudStatus.value,
+      commitStatuses: backupStatuses.value,
+    };
+  }
+
+  private async fetchCommitCloudBackupStatuses(
+    cwd: string,
+  ): Promise<Map<Hash, CommitCloudBackupStatus>> {
+    const revset = 'smartlog() and draft()';
+    const commitCloudBackupStatusTemplate = `{dict(
+      hash="{node}",
+      status="{
+        ifcontains(
+          rev,
+          revset('notbackedup()'),
+          if(
+            backingup,
+            '${CommitCloudBackupStatus.InProgress}',
+            ifcontains(
+              rev,
+              revset('{rev} and age(\\'<10m\\')'),
+              '${CommitCloudBackupStatus.Pending}',
+              '${CommitCloudBackupStatus.Failed}'
+            )
+          ),
+          '${CommitCloudBackupStatus.Synced}'
+        )
+      }")|json}\n`;
+
+    const output = await this.runCommand(
+      ['log', '--rev', revset, '--template', commitCloudBackupStatusTemplate],
+      'CommitCloudSyncBackupStatusCommand',
+      cwd,
+    );
+
+    const rawObjects = output.stdout.trim().split('\n');
+    const parsedObjects = rawObjects
+      .map(rawObject => {
+        try {
+          return JSON.parse(rawObject);
+        } catch (err) {
+          return null;
+        }
+      })
+      .filter(notEmpty);
+
+    const statuses = new Map<Hash, CommitCloudBackupStatus>(
+      parsedObjects.map(obj => [obj.hash, obj.status]),
+    );
+    return statuses;
+  }
+
+  private async fetchCommitCloudStatus(cwd: string): Promise<{
+    lastBackup: Date | undefined;
+    currentWorkspace: string;
+    workspaceChoices: Array<string>;
+  }> {
+    const [cloudStatusOutput, cloudListOutput] = await Promise.all([
+      this.runCommand(['cloud', 'status'], 'CommitCloudStatusCommand', cwd),
+      this.runCommand(['cloud', 'list'], 'CommitCloudListCommand', cwd),
+    ]);
+
+    const currentWorkspace =
+      /Workspace: ([a-zA-Z/0-9._-]+)/.exec(cloudStatusOutput.stdout)?.[1] ?? 'default';
+    const lastSyncTimeStr = /Last Sync Time: (.*)/.exec(cloudStatusOutput.stdout)?.[1];
+    const lastBackup = lastSyncTimeStr != null ? new Date(lastSyncTimeStr) : undefined;
+    const workspaceChoices = cloudListOutput.stdout
+      .split('\n')
+      .map(line => /^ {8}([a-zA-Z/0-9._-]+)(?: \(connected\))?/.exec(line)?.[1] as string)
+      .filter(l => l != null);
+
+    return {
+      lastBackup,
+      currentWorkspace,
+      workspaceChoices,
+    };
   }
 
   private commitCache = new LRU<string, CommitInfo>(100); // TODO: normal commits fetched from smartlog() aren't put in this cache---this is mostly for blame right now.

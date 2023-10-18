@@ -561,6 +561,15 @@ export default class ServerToClientAPI {
           });
         break;
       }
+      case 'fetchCommitCloudState': {
+        repo.getCommitCloudState(cwd).then(state => {
+          this.postMessage({
+            type: 'fetchedCommitCloudState',
+            state: {value: state},
+          });
+        });
+        break;
+      }
       case 'typeahead': {
         // Current repo's code review provider should be able to handle all
         // TypeaheadKinds for the fields in its defined schema.

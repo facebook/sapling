@@ -12,7 +12,7 @@ import type {TrackEventName} from 'isl-server/src/analytics/eventNames';
 import type {TrackDataWithEventName} from 'isl-server/src/analytics/types';
 import type {GitHubDiffSummary} from 'isl-server/src/github/githubCodeReviewProvider';
 import type {Comparison} from 'shared/Comparison';
-import type {AllUndefined, Json} from 'shared/typeUtils';
+import type {AllUndefined, ExclusiveOr, Json} from 'shared/typeUtils';
 import type {Hash} from 'shared/types/common';
 import type {ExportStack, ImportedStack, ImportStack} from 'shared/types/stack';
 
@@ -275,6 +275,25 @@ export type ShelvedChange = {
   description: string;
 };
 
+export enum CommitCloudBackupStatus {
+  Synced = 'SYNCED',
+  InProgress = 'IN_PROGRESS',
+  Pending = 'PENDING',
+  Failed = 'FAILED',
+}
+export type CommitCloudSyncState = {
+  /** Last time we ran commands to check the cloud status */
+  lastChecked: Date;
+  /** Last time there was an actual sync */
+  lastBackup?: Date;
+  currentWorkspace?: string;
+  workspaceChoices?: Array<string>;
+  commitStatuses?: Map<Hash, CommitCloudBackupStatus>;
+  fetchError?: Error;
+  syncError?: Error;
+  workspaceError?: Error;
+};
+
 type ConflictInfo = {
   command: string;
   toContinue: string;
@@ -430,6 +449,7 @@ export type ClientToServerMessage =
   | {type: 'requestRepoInfo'}
   | {type: 'requestApplicationInfo'}
   | {type: 'fetchDiffSummaries'; diffIds?: Array<DiffId>}
+  | {type: 'fetchCommitCloudState'}
   | {type: 'getSuggestedReviewers'; context: {paths: Array<string>}; key: string}
   | {type: 'updateRemoteDiffMessage'; diffId: DiffId; title: string; description: string}
   | {type: 'pageVisibility'; state: PageVisibility}
@@ -490,6 +510,7 @@ export type ServerToClientMessage =
   | {type: 'repoInfo'; info: RepoInfo; cwd?: string}
   | {type: 'repoError'; error: RepositoryError | undefined}
   | {type: 'fetchedDiffSummaries'; summaries: Result<Map<DiffId, DiffSummary>>}
+  | {type: 'fetchedCommitCloudState'; state: Result<CommitCloudSyncState>}
   | {type: 'gotSuggestedReviewers'; reviewers: Array<string>; key: string}
   | {type: 'updatedRemoteDiffMessage'; diffId: DiffId; error?: string}
   | {type: 'uploadFileResult'; id: string; result: Result<string>}
