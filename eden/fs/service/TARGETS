@@ -331,6 +331,10 @@ cpp_library(
         "ThriftPermissionChecker.cpp",
     ],
     os_deps = [
+        # TODO: The edenfs_smartplatform_service dependency fans out to a ton
+        # of other dependencies, slowing down OSS builds and tests. We ideally
+        # should move it to facebook/main.cpp to avoid the cost in unit tests
+        # and OSS builds and tests.
         (
             "linux",
             [
