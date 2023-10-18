@@ -82,6 +82,13 @@ export function CommitCloudInfo() {
       {cloudSyncState?.value?.syncError == null ? null : (
         <div className="commit-cloud-row">
           <InlineErrorBadge error={cloudSyncState?.value?.syncError}>
+            <T>Failed to fetch commit cloud backup statuses</T>
+          </InlineErrorBadge>
+        </div>
+      )}
+      {cloudSyncState?.value?.workspaceError == null ? null : (
+        <div className="commit-cloud-row">
+          <InlineErrorBadge error={cloudSyncState?.value?.workspaceError}>
             <T>Failed to fetch commit cloud status</T>
           </InlineErrorBadge>
         </div>
@@ -187,12 +194,11 @@ function CommitCloudSyncStatusBadge({statuses}: {statuses: Map<Hash, CommitCloud
       </div>
     );
     renderTooltip = () => <BackupList commits={failed.map(([hash]) => hash)} />;
-  } else if (statusValues.length > 0) {
+  } else {
+    // Empty means all commits were backed up, since we don't fetch successfully backed up hashes.
+    // Note: this does mean we can't tell the difference between a commit we don't know about and a commit that is backed up.
     icon = 'check';
     content = <T>All commits backed up</T>;
-  } else {
-    icon = 'question';
-    content = <T>No commits found</T>;
   }
 
   return (

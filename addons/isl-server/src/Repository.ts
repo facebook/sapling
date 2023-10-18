@@ -780,26 +780,12 @@ export class Repository {
   private async fetchCommitCloudBackupStatuses(
     cwd: string,
   ): Promise<Map<Hash, CommitCloudBackupStatus>> {
-    const revset = 'smartlog() and draft()';
+    const revset = 'draft() - backedup()';
     const commitCloudBackupStatusTemplate = `{dict(
       hash="{node}",
-      status="{
-        ifcontains(
-          rev,
-          revset('notbackedup()'),
-          if(
-            backingup,
-            '${CommitCloudBackupStatus.InProgress}',
-            ifcontains(
-              rev,
-              revset('{rev} and age(\\'<10m\\')'),
-              '${CommitCloudBackupStatus.Pending}',
-              '${CommitCloudBackupStatus.Failed}'
-            )
-          ),
-          '${CommitCloudBackupStatus.Synced}'
-        )
-      }")|json}\n`;
+      backingup="{backingup}",
+      date="{date|isodatesec}"
+      )|json}\n`;
 
     const output = await this.runCommand(
       ['log', '--rev', revset, '--template', commitCloudBackupStatusTemplate],
@@ -811,15 +797,24 @@ export class Repository {
     const parsedObjects = rawObjects
       .map(rawObject => {
         try {
-          return JSON.parse(rawObject);
+          return JSON.parse(rawObject) as {hash: Hash; backingup: 'True' | 'False'; date: string};
         } catch (err) {
           return null;
         }
       })
       .filter(notEmpty);
 
+    const now = new Date();
+    const TEN_MIN = 10 * 60 * 1000;
     const statuses = new Map<Hash, CommitCloudBackupStatus>(
-      parsedObjects.map(obj => [obj.hash, obj.status]),
+      parsedObjects.map(obj => [
+        obj.hash,
+        obj.backingup === 'True'
+          ? CommitCloudBackupStatus.InProgress
+          : now.valueOf() - new Date(obj.date).valueOf() < TEN_MIN
+          ? CommitCloudBackupStatus.Pending
+          : CommitCloudBackupStatus.Failed,
+      ]),
     );
     return statuses;
   }

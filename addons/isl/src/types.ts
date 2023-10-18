@@ -276,7 +276,6 @@ export type ShelvedChange = {
 };
 
 export enum CommitCloudBackupStatus {
-  Synced = 'SYNCED',
   InProgress = 'IN_PROGRESS',
   Pending = 'PENDING',
   Failed = 'FAILED',
