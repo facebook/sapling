@@ -115,8 +115,8 @@ describe('Changed Files', () => {
         ],
       });
     });
-    expect(screen.getByText('\u200E.gitignore')).toBeInTheDocument();
-    expect(screen.getByText('\u200Esrc/.gitignore')).toBeInTheDocument();
+    expect(screen.getByText('\u200E.gitignore\u200E')).toBeInTheDocument();
+    expect(screen.getByText('\u200Esrc/.gitignore\u200E')).toBeInTheDocument();
   });
 
   describe('default changed files', () => {

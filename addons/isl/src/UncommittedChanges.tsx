@@ -465,7 +465,7 @@ function File({
  * To fix this, it's enough to add a left-to-right marker at the start of the path
  */
 function escapeForRTL(s: string): ReactNode {
-  return '\u200E' + s;
+  return '\u200E' + s + '\u200E';
 }
 
 function FileSelectionCheckbox({

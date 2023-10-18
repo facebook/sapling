@@ -233,5 +233,5 @@ function isInternalMessageFields(): boolean {
  * RTL marks at path boundaries.
  */
 export function ignoreRTL(s: string): RegExp {
-  return new RegExp(`^\u200E?${s}$`);
+  return new RegExp(`^\u200E?${s}\u200E?$`);
 }
