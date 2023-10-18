@@ -5,13 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {DropdownFields} from './DropdownFields';
+import {CommitCloudInfo} from './CommitCloud';
+import {DropdownFields, DropdownField} from './DropdownFields';
 import {Internal} from './Internal';
 import {Tooltip} from './Tooltip';
 import {t, T} from './i18n';
 import {PullRevOperation} from './operations/PullRevOperation';
 import {useRunOperation} from './serverAPIState';
-import {VSCodeButton, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
+import {VSCodeButton, VSCodeDivider, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
 import {useEffect, useRef, useState} from 'react';
 import {Icon} from 'shared/Icon';
 
@@ -78,6 +79,12 @@ function DownloadCommitsTooltip({dismiss}: {dismiss: () => unknown}) {
           <T>Pull</T>
         </VSCodeButton>
       </div>
+      {Internal.supportsCommitCloud && (
+        <>
+          <VSCodeDivider />
+          <CommitCloudInfo />
+        </>
+      )}
     </DropdownFields>
   );
 }
