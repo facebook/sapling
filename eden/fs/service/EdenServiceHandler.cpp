@@ -74,6 +74,7 @@
 #include "eden/fs/store/PathLoader.h"
 #include "eden/fs/store/ScmStatusDiffCallback.h"
 #include "eden/fs/store/TreeCache.h"
+#include "eden/fs/store/filter/WatchmanGlobFilter.h"
 #include "eden/fs/store/hg/HgQueuedBackingStore.h"
 #include "eden/fs/telemetry/SessionInfo.h"
 #include "eden/fs/telemetry/TaskTrace.h"
@@ -1899,8 +1900,133 @@ EdenServiceHandler::streamChangesSince(
 
 apache::thrift::ResponseAndServerStream<ChangesSinceResult, ChangedFileResult>
 EdenServiceHandler::streamSelectedChangesSince(
-    std::unique_ptr<StreamSelectedChangesSinceParams>) {
-  NOT_IMPLEMENTED();
+    std::unique_ptr<StreamSelectedChangesSinceParams> params) {
+  auto helper = INSTRUMENT_THRIFT_CALL_WITH_STAT(
+      DBG3,
+      &ThriftStats::streamSelectedChangesSince,
+      *params->changesParams_ref()->mountPoint_ref());
+  auto mountHandle = lookupMount(params->changesParams()->get_mountPoint());
+  const auto& fromPosition = *params->changesParams()->fromPosition_ref();
+  auto& fetchContext = helper->getFetchContext();
+
+  checkMountGeneration(
+      fromPosition, mountHandle.getEdenMount(), "fromPosition"sv);
+
+  auto summed = mountHandle.getJournal().accumulateRange(
+      *fromPosition.sequenceNumber_ref() + 1);
+
+  ChangesSinceResult result;
+  if (!summed) {
+    // No changes, just return the fromPosition and an empty stream.
+    result.toPosition_ref() = fromPosition;
+
+    return {
+        std::move(result),
+        apache::thrift::ServerStream<ChangedFileResult>::createEmpty()};
+  }
+
+  if (summed->isTruncated) {
+    throw newEdenError(
+        EDOM,
+        EdenErrorType::JOURNAL_TRUNCATED,
+        "Journal entry range has been truncated.");
+  }
+
+  auto cancellationSource = std::make_shared<folly::CancellationSource>();
+  auto [serverStream, publisher] =
+      apache::thrift::ServerStream<ChangedFileResult>::createPublisher(
+          [cancellationSource] { cancellationSource->requestCancellation(); });
+  auto sharedPublisher = std::make_shared<
+      folly::Synchronized<ThriftStreamPublisherOwner<ChangedFileResult>>>(
+      ThriftStreamPublisherOwner{std::move(publisher)});
+
+  RootIdCodec& rootIdCodec = mountHandle.getObjectStore();
+
+  JournalPosition toPosition;
+  toPosition.mountGeneration_ref() =
+      mountHandle.getEdenMount().getMountGeneration();
+  toPosition.sequenceNumber_ref() = summed->toSequence;
+  toPosition.snapshotHash_ref() =
+      rootIdCodec.renderRootId(summed->snapshotTransitions.back());
+  result.toPosition_ref() = toPosition;
+
+  sumUncommitedChanges(*summed, *sharedPublisher);
+
+  if (summed->snapshotTransitions.size() > 1) {
+    // create filtered backing store
+    std::shared_ptr<FilteredBackingStore> backingStore =
+        std::make_shared<FilteredBackingStore>(
+            mountHandle.getEdenMountPtr()->getObjectStore()->getBackingStore(),
+            std::make_unique<WatchmanGlobFilter>(
+                params->get_filter().get_globs(),
+                mountHandle.getObjectStorePtr(),
+                fetchContext,
+                mountHandle.getEdenMount()
+                    .getCheckoutConfig()
+                    ->getCaseSensitive()));
+    // pass filtered backing store to object store
+    auto objectStore = ObjectStore::create(
+        backingStore,
+        server_->getTreeCache(),
+        server_->getServerState()->getStats().copy(),
+        server_->getServerState()->getProcessInfoCache(),
+        server_->getServerState()->getStructuredLogger(),
+        server_->getServerState()->getEdenConfig(),
+        mountHandle.getEdenMount()
+            .getCheckoutConfig()
+            ->getEnableWindowsSymlinks(),
+        mountHandle.getEdenMount().getCheckoutConfig()->getCaseSensitive());
+    auto callback = std::make_shared<StreamingDiffCallback>(sharedPublisher);
+
+    std::vector<ImmediateFuture<folly::Unit>> futures;
+    // now iterate all commits
+    for (auto rootIt = summed->snapshotTransitions.begin();
+         std::next(rootIt) != summed->snapshotTransitions.end();
+         ++rootIt) {
+      const auto from =
+          backingStore->createFilteredRootId(rootIt->value(), rootIt->value());
+      const auto& toRootId = *(rootIt + 1);
+      const auto to = backingStore->createFilteredRootId(
+          toRootId.value(), toRootId.value());
+
+      futures.push_back(makeNotReadyImmediateFuture().thenValue(
+          [from,
+           to,
+           mountHandle,
+           objectStore,
+           token = cancellationSource->getToken(),
+           fetchContext = fetchContext.copy(),
+           callback = callback.get()](auto&&) {
+            return diffBetweenRoots(
+                RootId{from},
+                RootId{to},
+                *mountHandle.getEdenMount().getCheckoutConfig(),
+                objectStore,
+                token,
+                fetchContext,
+                callback);
+          }));
+    }
+
+    folly::futures::detachOn(
+        server_->getServerState()->getThreadPool().get(),
+        collectAllSafe(std::move(futures))
+            .thenTry(
+                [mountHandle,
+                 sharedPublisher,
+                 callback = std::move(callback),
+                 helper = std::move(helper),
+                 cancellationSource](
+                    folly::Try<std::vector<folly::Unit>>&& result) mutable {
+                  if (result.hasException()) {
+                    auto publisher = std::move(*sharedPublisher->wlock());
+                    std::move(publisher).next(
+                        newEdenError(std::move(result).exception()));
+                  }
+                })
+            .semi());
+  }
+  return {std::move(result), std::move(serverStream)};
 }
 
 void EdenServiceHandler::getFilesChangedSince(
