@@ -21,8 +21,8 @@ rust_library(
 )
 
 rust_unittest(
-    name = "partial_commit_graph_tests",
-    srcs = glob(["tests/gitexport_tools/partial_commit_graph/*.rs"]),
+    name = "tests",
+    srcs = glob(["tests/gitexport_tools/**/*.rs"]),
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:futures",
@@ -34,21 +34,6 @@ rust_unittest(
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//common/rust/shed/slog_glog_fmt:slog_glog_fmt",
-        "//eden/mononoke/mononoke_api:mononoke_api",
-        "//eden/mononoke/mononoke_types:mononoke_types",
-    ],
-)
-
-rust_unittest(
-    name = "commit_rewrite_tests",
-    srcs = glob(["tests/gitexport_tools/commit_rewrite/*.rs"]),
-    deps = [
-        "fbsource//third-party/rust:anyhow",
-        "fbsource//third-party/rust:futures",
-        ":gitexport_tools",
-        ":test_utils",
-        "//common/rust/shed/fbinit:fbinit",
-        "//common/rust/shed/fbinit:fbinit-tokio",
         "//eden/mononoke/mononoke_api:mononoke_api",
         "//eden/mononoke/mononoke_types:mononoke_types",
     ],

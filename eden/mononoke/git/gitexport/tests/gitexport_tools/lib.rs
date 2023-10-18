@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+#![cfg(test)]
+#![allow(non_snake_case)] // For test commits
+
 mod commit_rewrite;
 mod partial_commit_graph;
 
