@@ -583,6 +583,13 @@ impl<C: AsRef<[u8]>> FileContent<C> {
             _ => None,
         }
     }
+
+    fn is_empty(&self) -> bool {
+        match self {
+            FileContent::Inline(c) => c.as_ref().is_empty(),
+            _ => false,
+        }
+    }
 }
 
 /// Struct representing the diffed file. Contains all the information
@@ -647,6 +654,17 @@ where
     match file {
         Some(file) => file.file_type == FileType::GitSubmodule,
         _ => false,
+    }
+}
+
+fn file_is_empty<P, C>(file: &Option<DiffFile<P, C>>) -> bool
+where
+    P: AsRef<[u8]>,
+    C: AsRef<[u8]>,
+{
+    match file {
+        Some(file) => file.contents.is_empty(),
+        None => false,
     }
 }
 
@@ -780,6 +798,16 @@ where
             }
             _ => {}
         }
+        return state.collect();
+    }
+
+    // Don't print anything else when adding an empty file.
+    if old_file.is_none() && file_is_empty(&new_file) {
+        return state.collect();
+    }
+
+    // Don't print anything else when removing an empty file.
+    if file_is_empty(&old_file) && new_file.is_none() {
         return state.collect();
     }
 
@@ -1075,7 +1103,6 @@ Binary file x has changed
 
     #[test]
     fn test_diff_unified_adding_empty_file() {
-        // This is inconsistent with both hg and git.
         assert_eq!(
             String::from_utf8_lossy(&diff_unified(
                 None,
@@ -1091,17 +1118,12 @@ Binary file x has changed
             )),
             r"diff --git a/x b/x
 new file mode 100644
---- /dev/null
-+++ b/x
-@@ -0,0 +0,1 @@
-+
 "
         );
     }
 
     #[test]
     fn test_diff_unified_removing_empty_file() {
-        // This is inconsistent with both hg and git.
         assert_eq!(
             String::from_utf8_lossy(&diff_unified(
                 Some(DiffFile {
@@ -1117,10 +1139,6 @@ new file mode 100644
             )),
             r"diff --git a/x b/x
 deleted file mode 100644
---- a/x
-+++ /dev/null
-@@ -0,1 +0,0 @@
--
 "
         );
     }
