@@ -14,6 +14,7 @@ use context::CoreContext;
 use context::PerfCounters;
 use derived_data_constants::*;
 use futures_stats::FutureStats;
+use metadata::Metadata;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -93,6 +94,11 @@ impl<Derivable: BonsaiDerivable> DerivedDataScuba<Derivable> {
             .map(|bcs| bcs.file_changes_map().len())
             .sum::<usize>();
         self.scuba.add("changed_files_count", changed_files_count);
+    }
+
+    /// Add metadata to the logger
+    pub fn add_metadata(&mut self, metadata: &Metadata) {
+        self.scuba.add_metadata(metadata);
     }
 
     /// Add values for the parameters controlling batched derivation to the

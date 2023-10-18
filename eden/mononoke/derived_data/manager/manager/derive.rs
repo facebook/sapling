@@ -845,6 +845,7 @@ impl DerivedDataManager {
         let mut derived_data_scuba = self.derived_data_scuba::<Derivable>();
         derived_data_scuba.add_changesets(&bonsais);
         derived_data_scuba.log_batch_derivation_start(ctx);
+        derived_data_scuba.add_metadata(ctx.metadata());
         let (overall_stats, result) = async {
             let derivation_ctx_ref = &derivation_ctx;
             let (batch_stats, derived) = match batch_options {
