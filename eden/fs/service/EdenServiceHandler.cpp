@@ -83,6 +83,7 @@
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/EdenError.h"
 #include "eden/fs/utils/FaultInjector.h"
+#include "eden/fs/utils/GlobMatcher.h"
 #include "eden/fs/utils/NotImplemented.h"
 #include "eden/fs/utils/ProcUtil.h"
 #include "eden/fs/utils/SourceLocation.h"
@@ -1683,15 +1684,35 @@ void publishFile(
   publisher.rlock()->next(std::move(fileResult));
 }
 
+bool isStringMatch(
+    const std::vector<GlobMatcher>& matcher,
+    std::string_view path) {
+  for (const auto& m : matcher) {
+    if (m.match(path)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /**
  * This method computes all uncommited changes and save the result to publisher
  */
 void sumUncommitedChanges(
     const JournalDeltaRange& range,
     const folly::Synchronized<ThriftStreamPublisherOwner<ChangedFileResult>>&
-        publisher) {
+        publisher,
+    const std::optional<std::vector<GlobMatcher>>& matcher) {
   for (auto& entry : range.changedFilesInOverlay) {
     const auto& changeInfo = entry.second;
+
+    // glob matching
+    // if we have a matcher and matches file name
+    // let's keep the file
+    if (matcher.has_value() &&
+        !isStringMatch(matcher.value(), entry.first.view())) {
+      continue;
+    }
 
     ScmFileStatus status;
     if (!changeInfo.existedBefore && changeInfo.existedAfter) {
@@ -1706,6 +1727,9 @@ void sumUncommitedChanges(
   }
 
   for (const auto& name : range.uncleanPaths) {
+    if (matcher.has_value() && !isStringMatch(matcher.value(), name.view())) {
+      continue;
+    }
     publishFile(
         publisher, name.asString(), ScmFileStatus::MODIFIED, dtype_t::Unknown);
   }
@@ -1840,7 +1864,7 @@ EdenServiceHandler::streamChangesSince(
       rootIdCodec.renderRootId(summed->snapshotTransitions.back());
   result.toPosition_ref() = toPosition;
 
-  sumUncommitedChanges(*summed, *sharedPublisher);
+  sumUncommitedChanges(*summed, *sharedPublisher, std::nullopt);
 
   if (summed->snapshotTransitions.size() > 1) {
     auto callback = std::make_shared<StreamingDiffCallback>(sharedPublisher);
@@ -1949,8 +1973,24 @@ EdenServiceHandler::streamSelectedChangesSince(
   toPosition.snapshotHash_ref() =
       rootIdCodec.renderRootId(summed->snapshotTransitions.back());
   result.toPosition_ref() = toPosition;
+  std::vector<GlobMatcher> globMatchers;
+  GlobOptions options = GlobOptions::DEFAULT;
+  auto caseSensitivity =
+      mountHandle.getEdenMount().getCheckoutConfig()->getCaseSensitive();
+  for (auto& glob : params->get_filter().get_globs()) {
+    auto matcher = GlobMatcher::create(
+        glob,
+        caseSensitivity == CaseSensitivity::Insensitive
+            ? options | GlobOptions::CASE_INSENSITIVE
+            : options);
+    if (matcher) {
+      globMatchers.emplace_back(*matcher);
+    } else {
+      XLOG(ERR) << "Invalid glob " << glob;
+    }
+  }
 
-  sumUncommitedChanges(*summed, *sharedPublisher);
+  sumUncommitedChanges(*summed, *sharedPublisher, globMatchers);
 
   if (summed->snapshotTransitions.size() > 1) {
     // create filtered backing store
@@ -1961,9 +2001,7 @@ EdenServiceHandler::streamSelectedChangesSince(
                 params->get_filter().get_globs(),
                 mountHandle.getObjectStorePtr(),
                 fetchContext,
-                mountHandle.getEdenMount()
-                    .getCheckoutConfig()
-                    ->getCaseSensitive()));
+                caseSensitivity));
     // pass filtered backing store to object store
     auto objectStore = ObjectStore::create(
         backingStore,
@@ -1975,7 +2013,7 @@ EdenServiceHandler::streamSelectedChangesSince(
         mountHandle.getEdenMount()
             .getCheckoutConfig()
             ->getEnableWindowsSymlinks(),
-        mountHandle.getEdenMount().getCheckoutConfig()->getCaseSensitive());
+        caseSensitivity);
     auto callback = std::make_shared<StreamingDiffCallback>(sharedPublisher);
 
     std::vector<ImmediateFuture<folly::Unit>> futures;
