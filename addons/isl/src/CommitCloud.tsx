@@ -10,17 +10,19 @@ import type {CommitCloudSyncState, Hash, Result} from './types';
 import serverAPI from './ClientToServerAPI';
 import {Commit} from './Commit';
 import {FlexSpacer} from './ComponentUtils';
-import {ErrorNotice} from './ErrorNotice';
+import {ErrorNotice, InlineErrorBadge} from './ErrorNotice';
 import {OperationDisabledButton} from './OperationDisabledButton';
 import {Tooltip} from './Tooltip';
 import {T, t} from './i18n';
+import {CommitCloudChangeWorkspaceOperation} from './operations/CommitCloudChangeWorkspaceOperation';
 import {CommitCloudSyncOperation} from './operations/CommitCloudSyncOperation';
-import {CommitPreview, treeWithPreviews} from './previews';
+import {CommitPreview, treeWithPreviews, useMostRecentPendingOperation} from './previews';
 import {RelativeDate} from './relativeDate';
+import {useRunOperation} from './serverAPIState';
 import {CommitCloudBackupStatus} from './types';
-import {VSCodeButton, VSCodeDropdown, VSCodeOption} from '@vscode/webview-ui-toolkit/react';
+import {VSCodeDropdown, VSCodeOption} from '@vscode/webview-ui-toolkit/react';
 import {useEffect} from 'react';
-import {atom, useRecoilValue} from 'recoil';
+import {atom, useRecoilState, useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 import {notEmpty} from 'shared/utils';
 
@@ -36,30 +38,27 @@ const cloudSyncStateAtom = atom<Result<CommitCloudSyncState> | null>({
       });
       return () => disposable.dispose();
     },
-    () =>
-      serverAPI.onSetup(() =>
-        serverAPI.postMessage({
-          type: 'fetchCommitCloudState',
-        }),
-      ),
+    () => serverAPI.onSetup(() => refreshCommitCloudStatus()),
   ],
 });
 
-const MIN_TIME_TO_RECHECK_MS = 10 * 1000;
+function refreshCommitCloudStatus() {
+  serverAPI.postMessage({
+    type: 'fetchCommitCloudState',
+  });
+}
+
+const REFRESH_INTERVAL = 30 * 1000;
 
 export function CommitCloudInfo() {
-  const cloudSyncState = useRecoilValue(cloudSyncStateAtom);
+  const [cloudSyncState, setCloudSyncState] = useRecoilState(cloudSyncStateAtom);
+  const runOperation = useRunOperation();
+  const pendingOperation = useMostRecentPendingOperation();
 
   useEffect(() => {
-    if (
-      cloudSyncState?.value?.lastChecked &&
-      Date.now() - cloudSyncState?.value?.lastChecked.valueOf() > MIN_TIME_TO_RECHECK_MS
-    ) {
-      serverAPI.postMessage({
-        type: 'fetchCommitCloudState',
-      });
-    }
-  }, [cloudSyncState]);
+    const interval = setInterval(refreshCommitCloudStatus, REFRESH_INTERVAL);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="commit-cloud-info">
@@ -73,6 +72,14 @@ export function CommitCloudInfo() {
           <Icon icon="info" />
         </Tooltip>
       </div>
+
+      {cloudSyncState?.value?.syncError == null ? null : (
+        <div className="commit-cloud-row">
+          <InlineErrorBadge error={cloudSyncState?.value?.syncError}>
+            <T>Failed to fetch commit cloud status</T>
+          </InlineErrorBadge>
+        </div>
+      )}
       {cloudSyncState?.value?.commitStatuses == null ? null : (
         <CommitCloudSyncStatusBadge statuses={cloudSyncState?.value?.commitStatuses} />
       )}
@@ -85,38 +92,48 @@ export function CommitCloudInfo() {
             title={t('Failed to check Commit Cloud state')}
           />
         ) : cloudSyncState.value.lastBackup == null ? null : (
-          <T
-            replace={{
-              $relTimeAgo: (
-                <Tooltip title={cloudSyncState.value.lastBackup.toLocaleString()}>
-                  <RelativeDate date={cloudSyncState.value.lastBackup} />
-                </Tooltip>
-              ),
-            }}>
-            Last meaningful sync: $relTimeAgo
-          </T>
+          <>
+            <T
+              replace={{
+                $relTimeAgo: (
+                  <Tooltip title={cloudSyncState.value.lastBackup.toLocaleString()}>
+                    <RelativeDate date={cloudSyncState.value.lastBackup} />
+                  </Tooltip>
+                ),
+              }}>
+              Last meaningful sync: $relTimeAgo
+            </T>
+            <FlexSpacer />
+            <OperationDisabledButton
+              contextKey="cloud-sync"
+              runOperation={() => {
+                return new CommitCloudSyncOperation();
+              }}
+              appearance="secondary">
+              <T>Sync now</T>
+            </OperationDisabledButton>
+          </>
         )}
-        <FlexSpacer />
-        <OperationDisabledButton
-          contextKey="cloud-sync"
-          runOperation={() => {
-            return new CommitCloudSyncOperation();
-          }}
-          appearance="secondary">
-          <T>Sync now</T>
-        </OperationDisabledButton>
       </div>
 
       <div className="commit-cloud-row">
-        {cloudSyncState?.value == null ? null : (
+        {cloudSyncState?.value?.currentWorkspace == null ? null : (
           <div className="commit-cloud-dropdown-container">
             <label htmlFor="stack-file-dropdown">
               <T>Current Workspace</T>
             </label>
             <VSCodeDropdown
               value={cloudSyncState?.value.currentWorkspace}
+              disabled={pendingOperation?.trackEventName === 'CommitCloudChangeWorkspaceOperation'}
               onChange={event => {
-                // TODO
+                const newChoice = (event.target as HTMLOptionElement).value;
+                runOperation(new CommitCloudChangeWorkspaceOperation(newChoice));
+                if (cloudSyncState?.value) {
+                  // optimistically set the workspace choice
+                  setCloudSyncState({
+                    value: {...cloudSyncState?.value, currentWorkspace: newChoice},
+                  });
+                }
               }}>
               {cloudSyncState?.value.workspaceChoices?.map(name => (
                 <VSCodeOption key={name} value={name}>
