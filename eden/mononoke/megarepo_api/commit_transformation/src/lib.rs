@@ -13,6 +13,7 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Error;
+use anyhow::Result;
 use blobrepo::save_bonsai_changesets;
 use blobrepo_utils::convert_diff_result_into_file_change_for_diamond_merge;
 use blobstore::Loadable;
@@ -61,6 +62,13 @@ pub type DirectoryMultiMover = Arc<
         + Sync
         + 'static,
 >;
+
+// Functions that can be used to filter out irrelevant file changes from the commit
+// before getting its implicit deletes and calling the multi mover.
+// Getting implicit deletes requires doing manifest lookups that are O(file changes),
+// so removing unnecessary changes before can significantly speed up rewrites.
+pub type FileChangeFilter<'a> =
+    Arc<dyn Fn((&NonRootMPath, &FileChange)) -> bool + Send + Sync + 'a>;
 
 pub trait Repo = RepoIdentityRef
     + RepoBlobstoreArc
@@ -220,20 +228,23 @@ fn minimize_file_change_set<I: IntoIterator<Item = (NonRootMPath, FileChange)>>(
 /// `manifest/src/implici_deletes.rs`
 async fn get_renamed_implicit_deletes<'a, I: IntoIterator<Item = ChangesetId>>(
     ctx: &'a CoreContext,
-    cs: BonsaiChangesetMut,
+    file_changes: Vec<(&NonRootMPath, &FileChange)>,
     parent_changeset_ids: I,
     mover: MultiMover<'a>,
     source_repo: &'a impl Repo,
 ) -> Result<Vec<Vec<NonRootMPath>>, Error> {
     let parent_manifest_ids = get_manifest_ids(ctx, source_repo, parent_changeset_ids).await?;
-    let file_adds: Vec<_> = cs
-        .file_changes
-        .iter()
+
+    // Get all the paths that were added or modified and thus are capable of
+    // implicitly deleting existing directories.
+    let paths_added: Vec<_> = file_changes
+        .into_iter()
         .filter_map(|(mpath, file_change)| file_change.is_changed().then(|| mpath.clone()))
         .collect();
+
     let store = source_repo.repo_blobstore().clone();
     let implicit_deletes: Vec<NonRootMPath> =
-        get_implicit_deletes(ctx, store, file_adds, parent_manifest_ids)
+        get_implicit_deletes(ctx, store, paths_added, parent_manifest_ids)
             .try_collect()
             .await?;
     implicit_deletes.iter().map(|mpath| mover(mpath)).collect()
@@ -292,10 +303,42 @@ pub async fn rewrite_commit<'a>(
     force_first_parent: Option<ChangesetId>,
     rewrite_opts: RewriteOpts,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
-    let renamed_implicit_deletes = if !cs.file_changes.is_empty() {
+    rewrite_commit_with_file_changes_filter(
+        ctx,
+        cs,
+        remapped_parents,
+        mover,
+        source_repo,
+        force_first_parent,
+        rewrite_opts,
+        vec![], // No file change filters by default
+    )
+    .await
+}
+
+/// Implementation of `rewrite_commit` that can take a vector of filters to
+/// apply to the commit's file changes before getting its implicit deletes.
+pub async fn rewrite_commit_with_file_changes_filter<'a>(
+    ctx: &'a CoreContext,
+    cs: BonsaiChangesetMut,
+    remapped_parents: &'a HashMap<ChangesetId, ChangesetId>,
+    mover: MultiMover<'a>,
+    source_repo: &'a impl Repo,
+    force_first_parent: Option<ChangesetId>,
+    rewrite_opts: RewriteOpts,
+    file_change_filters: Vec<FileChangeFilter<'a>>,
+) -> Result<Option<BonsaiChangesetMut>, Error> {
+    let filtered_file_changes: Vec<(&NonRootMPath, &FileChange)> = cs
+        .file_changes
+        .iter()
+        // Keep file changes that pass all the filters
+        .filter(|fc| file_change_filters.iter().all(|filter| filter(*fc)))
+        .collect();
+
+    let renamed_implicit_deletes = if !filtered_file_changes.is_empty() {
         get_renamed_implicit_deletes(
             ctx,
-            cs.clone(),
+            filtered_file_changes,
             remapped_parents.keys().cloned(),
             mover.clone(),
             source_repo,
@@ -310,6 +353,7 @@ pub async fn rewrite_commit<'a>(
         cs,
         remapped_parents,
         mover,
+        file_change_filters,
         force_first_parent,
         renamed_implicit_deletes,
         rewrite_opts,
@@ -393,7 +437,7 @@ pub async fn rewrite_stack_no_merges<'a>(
                     let parents = cs.parents();
                     get_renamed_implicit_deletes(
                         ctx,
-                        cs.clone().into_mut(),
+                        cs.file_changes().collect(),
                         parents,
                         mover.clone(),
                         source_repo,
@@ -425,6 +469,7 @@ pub async fn rewrite_stack_no_merges<'a>(
             from_cs,
             &remapped_parents,
             mover.clone(),
+            vec![],
             force_first_parent,
             renamed_implicit_deletes,
             Default::default(),
@@ -451,6 +496,7 @@ pub fn internal_rewrite_commit_with_implicit_deletes<'a>(
     mut cs: BonsaiChangesetMut,
     remapped_parents: &'a HashMap<ChangesetId, ChangesetId>,
     mover: MultiMover,
+    file_change_filters: Vec<FileChangeFilter<'a>>,
     force_first_parent: Option<ChangesetId>,
     renamed_implicit_deletes: Vec<Vec<NonRootMPath>>,
     rewrite_opts: RewriteOpts,
@@ -463,6 +509,7 @@ pub fn internal_rewrite_commit_with_implicit_deletes<'a>(
         let path_rewritten_changes = cs
             .file_changes
             .iter()
+            .filter(|fc| file_change_filters.iter().all(|filter| filter(*fc)))
             .map(|(path, change)| {
                 // Just rewrite copy_from information, when we have it
                 fn rewrite_copy_from(
@@ -705,12 +752,14 @@ pub async fn copy_file_contents<'a>(
 #[cfg(test)]
 mod test {
     use std::collections::BTreeMap;
+    use std::collections::HashSet;
 
     use anyhow::bail;
     use blobrepo::save_bonsai_changesets;
     use fbinit::FacebookInit;
     use maplit::btreemap;
     use maplit::hashmap;
+    use maplit::hashset;
     use mononoke_types::ContentId;
     use mononoke_types::FileType;
     use test_repo_factory::TestRepoFactory;
@@ -1235,6 +1284,118 @@ mod test {
         Ok(())
     }
 
+    #[fbinit::test]
+    async fn test_rewrite_commit_with_file_changes_filter(fb: FacebookInit) -> Result<(), Error> {
+        let repo: blobrepo::BlobRepo = TestRepoFactory::new(fb)?.build().await?;
+
+        let ctx = CoreContext::test_mock(fb);
+        // This commit is not lossy because all paths will be mapped somewhere.
+        let first = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("foo/bar/a", "a")
+            .add_file("foo/bar/b/d", "d")
+            .add_file("foo/bar/b/e", "e")
+            .add_file("foo/bar/c/f", "f")
+            .add_file("foo/bar/c/g", "g")
+            .commit()
+            .await?;
+
+        // Create files at `foo/bar/b` and `foo/bar/c`, implicitely deleting all
+        // files under those directories.
+        let second = CreateCommitContext::new(&ctx, &repo, vec![first])
+            // Implicitly deletes `foo/bar/b/d` and `foo/bar/b/e`.
+            .add_file("foo/bar/b", "new b")
+            // Implicitly deletes `foo/bar/c/f` and `foo/bar/c/g`.
+            .add_file("foo/bar/c", "new c")
+            .commit()
+            .await?;
+
+        let identity_multi_mover = Arc::new(
+            move |path: &NonRootMPath| -> Result<Vec<NonRootMPath>, Error> {
+                Ok(vec![path.clone()])
+            },
+        );
+
+        let file_change_filter: Vec<FileChangeFilter<'_>> = vec![Arc::new(
+            |(source_path, _): (&NonRootMPath, &FileChange)| -> bool {
+                let ignored_path_prefix: NonRootMPath = NonRootMPath::new("foo/bar/b").unwrap();
+                !ignored_path_prefix.is_prefix_of(source_path)
+            },
+        )];
+
+        async fn verify_affected_paths(
+            ctx: &CoreContext,
+            repo: &blobrepo::BlobRepo,
+            rewritten_bcs_id: &ChangesetId,
+            expected_affected_paths: HashSet<NonRootMPath>,
+        ) -> Result<()> {
+            let bcs = rewritten_bcs_id.load(ctx, repo.repo_blobstore()).await?;
+
+            let affected_paths = bcs
+                .file_changes()
+                .map(|(p, _fc)| p.clone())
+                .collect::<HashSet<_>>();
+
+            assert_eq!(expected_affected_paths, affected_paths);
+            Ok(())
+        }
+
+        let first_rewritten_bcs_id = test_rewrite_commit_cs_id_with_file_change_filters(
+            &ctx,
+            &repo,
+            first,
+            HashMap::new(),
+            identity_multi_mover.clone(),
+            None,
+            file_change_filter.clone(),
+        )
+        .await?;
+
+        // Changes to `foo/bar/b` are filtered out.
+        let expected_affected_paths: HashSet<NonRootMPath> = hashset! {
+            NonRootMPath::new("foo/bar/a").unwrap(),
+            NonRootMPath::new("foo/bar/c/f").unwrap(),
+            NonRootMPath::new("foo/bar/c/g").unwrap()
+        };
+
+        verify_affected_paths(
+            &ctx,
+            &repo,
+            &first_rewritten_bcs_id,
+            expected_affected_paths,
+        )
+        .await?;
+
+        let second_rewritten_bcs_id = test_rewrite_commit_cs_id_with_file_change_filters(
+            &ctx,
+            &repo,
+            second,
+            hashmap! {
+                first => first_rewritten_bcs_id
+            },
+            identity_multi_mover.clone(),
+            None,
+            file_change_filter,
+        )
+        .await?;
+
+        // We expect only the added file to be affected. The delete of
+        // `foo/bar/c/g` and `foo/bar/c/f` will remain implicit because
+        // the change to `foo/bar/c` is present in the bonsai.
+        let expected_affected_paths: HashSet<NonRootMPath> = hashset! {
+            NonRootMPath::new("foo/bar/c").unwrap()
+        };
+
+        verify_affected_paths(
+            &ctx,
+            &repo,
+            &second_rewritten_bcs_id,
+            expected_affected_paths,
+        )
+        .await?;
+
+        Ok(())
+    }
+
     async fn test_rewrite_commit_cs_id<'a>(
         ctx: &'a CoreContext,
         repo: &'a impl Repo,
@@ -1243,10 +1404,31 @@ mod test {
         multi_mover: MultiMover<'a>,
         force_first_parent: Option<ChangesetId>,
     ) -> Result<ChangesetId, Error> {
+        test_rewrite_commit_cs_id_with_file_change_filters(
+            ctx,
+            repo,
+            bcs_id,
+            parents,
+            multi_mover,
+            force_first_parent,
+            vec![],
+        )
+        .await
+    }
+
+    async fn test_rewrite_commit_cs_id_with_file_change_filters<'a>(
+        ctx: &'a CoreContext,
+        repo: &'a impl Repo,
+        bcs_id: ChangesetId,
+        parents: HashMap<ChangesetId, ChangesetId>,
+        multi_mover: MultiMover<'a>,
+        force_first_parent: Option<ChangesetId>,
+        file_change_filters: Vec<FileChangeFilter<'a>>,
+    ) -> Result<ChangesetId, Error> {
         let bcs = bcs_id.load(ctx, &repo.repo_blobstore()).await?;
         let bcs = bcs.into_mut();
 
-        let maybe_rewritten = rewrite_commit(
+        let maybe_rewritten = rewrite_commit_with_file_changes_filter(
             ctx,
             bcs,
             &parents,
@@ -1254,6 +1436,7 @@ mod test {
             repo,
             force_first_parent,
             Default::default(),
+            file_change_filters,
         )
         .await?;
         let rewritten =

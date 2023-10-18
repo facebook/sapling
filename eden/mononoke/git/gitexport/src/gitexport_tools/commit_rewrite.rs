@@ -17,7 +17,7 @@ use blobstore::Loadable;
 use blobstore::PutBehaviour;
 use borrowed::borrowed;
 use changeset_info::ChangesetInfo;
-use commit_transformation::rewrite_commit;
+use commit_transformation::rewrite_commit_with_file_changes_filter;
 use commit_transformation::upload_commits;
 use commit_transformation::MultiMover;
 use derived_data_manager::BonsaiDerivable;
@@ -311,7 +311,17 @@ async fn create_bonsai_for_new_repo<'a>(
         };
     });
 
-    let rewritten_bcs_mut = rewrite_commit(
+    let file_filter = Arc::new(
+        move |(source_path, _): (&NonRootMPath, &FileChange)| -> bool {
+            export_paths.iter().any(|p|
+                    // Inside export path, so should be fully analysed
+                    p.is_prefix_of(source_path) ||
+                    // Not necessarily exported, but could implicitly delete
+                    // an export path, so implicitly deletes should be collected
+                    source_path.is_prefix_of(*p))
+        },
+    );
+    let rewritten_bcs_mut = rewrite_commit_with_file_changes_filter(
         source_repo_ctx.ctx(),
         mut_bcs,
         &remapped_parents,
@@ -319,6 +329,7 @@ async fn create_bonsai_for_new_repo<'a>(
         source_repo_ctx.repo(),
         None,
         Default::default(),
+        vec![file_filter],
     )
     .await?
     // This shouldn't happen because every changeset provided is modifying
