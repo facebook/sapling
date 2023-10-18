@@ -31,6 +31,8 @@ py_class!(pub class PyRustIO |py| {
         let mut buf = Vec::<u8>::new();
         if n < 0 {
             io.read_to_end(&mut buf).map_pyerr(py)?;
+        } else if n == 0 {
+            // Avoid BufReader::read(), which can block filling its buffer.
         } else {
             buf.resize(n as usize, 0u8);
             let read_bytes = io.read(&mut buf).map_pyerr(py)?;
