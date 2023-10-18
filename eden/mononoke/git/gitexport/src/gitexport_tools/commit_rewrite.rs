@@ -16,9 +16,11 @@ use anyhow::Result;
 use blobstore::Loadable;
 use blobstore::PutBehaviour;
 use borrowed::borrowed;
+use changeset_info::ChangesetInfo;
 use commit_transformation::rewrite_commit;
 use commit_transformation::upload_commits;
 use commit_transformation::MultiMover;
+use derived_data_manager::BonsaiDerivable;
 use fbinit::FacebookInit;
 use fileblob::Fileblob;
 use futures::stream::TryStreamExt;
@@ -26,6 +28,9 @@ use futures::stream::{self};
 use futures::StreamExt;
 use indicatif::ProgressBar;
 use indicatif::ProgressStyle;
+use maplit::hashmap;
+use maplit::hashset;
+use metaconfig_types::DerivedDataTypesConfig;
 use mononoke_api::BookmarkKey;
 use mononoke_api::ChangesetContext;
 use mononoke_api::CoreContext;
@@ -48,9 +53,10 @@ use slog::Logger;
 use sql::rusqlite::Connection as SqliteConnection;
 use test_repo_factory::TestRepoFactory;
 
+pub use crate::partial_commit_graph::build_partial_commit_graph_for_export;
 use crate::partial_commit_graph::ChangesetParents;
-use crate::partial_commit_graph::ExportPathInfo;
-use crate::partial_commit_graph::GitExportGraphInfo;
+pub use crate::partial_commit_graph::ExportPathInfo;
+pub use crate::partial_commit_graph::GitExportGraphInfo;
 
 pub const MASTER_BOOKMARK: &str = "master";
 
@@ -81,13 +87,13 @@ pub async fn rewrite_partial_changesets(
 
     let mb_progress_bar = if logger.is_enabled(slog::Level::Info) {
         let progress_bar = ProgressBar::new(num_changesets)
-         .with_message("Copying changesets")
-         .with_style(
-             ProgressStyle::with_template(
-                 "[{percent}%] {msg} [{bar:60.cyan}] (ETA: {eta}) ({human_pos}/{human_len}) ({per_sec}) ",
-             )?
-             .progress_chars("#>-"),
-         );
+        .with_message("Copying changesets")
+        .with_style(
+            ProgressStyle::with_template(
+                "[{percent}%] {msg} [{bar:60.cyan}] (ETA: {eta}) ({human_pos}/{human_len}) ({per_sec}) ",
+            )?
+            .progress_chars("#>-"),
+        );
         progress_bar.enable_steady_tick(std::time::Duration::from_secs(5));
         Some(progress_bar)
     } else {
@@ -431,10 +437,30 @@ async fn create_temp_repo(fb: FacebookInit, ctx: &CoreContext) -> Result<RepoCon
     let put_behaviour = PutBehaviour::IfAbsent;
     let file_blobstore = Arc::new(Fileblob::create(blobstore_path, put_behaviour)?);
 
+    let derived_data_types_config = DerivedDataTypesConfig {
+        types: hashset! {
+            ChangesetInfo::NAME.to_string(),
+            // TODO(T160787114): enable git data types derivation
+        },
+        ..Default::default()
+    };
+
+    let available_configs = hashmap! {
+        "default".to_string() => derived_data_types_config.clone(),
+        "backfilling".to_string() => derived_data_types_config
+    };
+
     let temp_repo = TestRepoFactory::with_sqlite_connection(fb, metadata_conn, hg_mutation_conn)?
         .with_blobstore(file_blobstore)
         .with_core_context_that_does_not_override_logger(ctx.clone())
         .with_name(temp_repo_name)
+        .with_config_override(|cfg| {
+            cfg.derived_data_config.available_configs = available_configs;
+
+            // If this isn't disabled the master bookmark creation will fail
+            // because skeleton manifests derivation is disabled.
+            cfg.pushrebase.flags.casefolding_check = false;
+        })
         .build()
         .await?;
     let temp_repo_ctx = RepoContext::new_test(ctx.clone(), temp_repo).await?;
