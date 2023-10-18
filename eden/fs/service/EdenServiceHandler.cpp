@@ -1684,17 +1684,6 @@ void publishFile(
   publisher.rlock()->next(std::move(fileResult));
 }
 
-bool isStringMatch(
-    const std::vector<GlobMatcher>& matcher,
-    std::string_view path) {
-  for (const auto& m : matcher) {
-    if (m.match(path)) {
-      return true;
-    }
-  }
-  return false;
-}
-
 /**
  * This method computes all uncommited changes and save the result to publisher
  */
@@ -1702,16 +1691,17 @@ void sumUncommitedChanges(
     const JournalDeltaRange& range,
     const folly::Synchronized<ThriftStreamPublisherOwner<ChangedFileResult>>&
         publisher,
-    const std::optional<std::vector<GlobMatcher>>& matcher) {
+    const std::optional<WatchmanGlobFilter>& filter) {
   for (auto& entry : range.changedFilesInOverlay) {
     const auto& changeInfo = entry.second;
 
-    // glob matching
-    // if we have a matcher and matches file name
-    // let's keep the file
-    if (matcher.has_value() &&
-        !isStringMatch(matcher.value(), entry.first.view())) {
-      continue;
+    // the path is filtered don't consider it
+    if (filter.has_value()) {
+      if (filter.value()
+              .isPathFiltered(entry.first, folly::StringPiece(""))
+              .get()) {
+        continue;
+      }
     }
 
     ScmFileStatus status;
@@ -1727,8 +1717,10 @@ void sumUncommitedChanges(
   }
 
   for (const auto& name : range.uncleanPaths) {
-    if (matcher.has_value() && !isStringMatch(matcher.value(), name.view())) {
-      continue;
+    if (filter.has_value()) {
+      if (filter.value().isPathFiltered(name, folly::StringPiece("")).get()) {
+        continue;
+      }
     }
     publishFile(
         publisher, name.asString(), ScmFileStatus::MODIFIED, dtype_t::Unknown);
@@ -1973,35 +1965,21 @@ EdenServiceHandler::streamSelectedChangesSince(
   toPosition.snapshotHash_ref() =
       rootIdCodec.renderRootId(summed->snapshotTransitions.back());
   result.toPosition_ref() = toPosition;
-  std::vector<GlobMatcher> globMatchers;
-  GlobOptions options = GlobOptions::DEFAULT;
+
   auto caseSensitivity =
       mountHandle.getEdenMount().getCheckoutConfig()->getCaseSensitive();
-  for (auto& glob : params->get_filter().get_globs()) {
-    auto matcher = GlobMatcher::create(
-        glob,
-        caseSensitivity == CaseSensitivity::Insensitive
-            ? options | GlobOptions::CASE_INSENSITIVE
-            : options);
-    if (matcher) {
-      globMatchers.emplace_back(*matcher);
-    } else {
-      XLOG(ERR) << "Invalid glob " << glob;
-    }
-  }
+  std::unique_ptr<WatchmanGlobFilter> filter =
+      std::make_unique<WatchmanGlobFilter>(
+          params->get_filter().get_globs(), caseSensitivity);
 
-  sumUncommitedChanges(*summed, *sharedPublisher, globMatchers);
+  sumUncommitedChanges(*summed, *sharedPublisher, *filter);
 
   if (summed->snapshotTransitions.size() > 1) {
     // create filtered backing store
     std::shared_ptr<FilteredBackingStore> backingStore =
         std::make_shared<FilteredBackingStore>(
             mountHandle.getEdenMountPtr()->getObjectStore()->getBackingStore(),
-            std::make_unique<WatchmanGlobFilter>(
-                params->get_filter().get_globs(),
-                mountHandle.getObjectStorePtr(),
-                fetchContext,
-                caseSensitivity));
+            std::move(filter));
     // pass filtered backing store to object store
     auto objectStore = ObjectStore::create(
         backingStore,

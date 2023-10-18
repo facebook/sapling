@@ -23,7 +23,7 @@ class FakeFilter final : public Filter {
    */
   ImmediateFuture<bool> isPathFiltered(
       RelativePathPiece path,
-      folly::StringPiece filterId) override {
+      folly::StringPiece filterId) const override {
     return ImmediateFuture<bool>{
         path.view().find(filterId) != std::string::npos};
   }

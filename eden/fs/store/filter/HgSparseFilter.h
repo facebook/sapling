@@ -36,7 +36,7 @@ class HgSparseFilter : public Filter {
    */
   ImmediateFuture<bool> isPathFiltered(
       RelativePathPiece path,
-      folly::StringPiece filterId) override;
+      folly::StringPiece filterId) const override;
 
  private:
   // TODO(cuev): We may want to use a F14FastMap instead since it doesn't matter

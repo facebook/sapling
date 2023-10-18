@@ -29,6 +29,7 @@ cpp_library(
         "//eden/fs/utils:case_sensitivity",
         "//eden/fs/utils:glob",
         "//eden/fs/utils:immediate_future",
+        "//eden/fs/utils:matcher",
         "//eden/fs/utils:path",
         "//folly:range",
     ],

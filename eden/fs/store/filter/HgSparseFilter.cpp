@@ -33,7 +33,7 @@ std::string parseFilterId(folly::StringPiece filterId) {
 
 ImmediateFuture<bool> HgSparseFilter::isPathFiltered(
     RelativePathPiece path,
-    folly::StringPiece id) {
+    folly::StringPiece id) const {
   // We check if the filter is cached. If so, we can avoid fetching the Filter
   // Profile from Mercurial.
   auto parsedFilterId = parseFilterId(id);

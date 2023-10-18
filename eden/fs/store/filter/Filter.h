@@ -27,6 +27,6 @@ class Filter {
    */
   virtual ImmediateFuture<bool> isPathFiltered(
       RelativePathPiece path,
-      folly::StringPiece filterId) = 0;
+      folly::StringPiece filterId) const = 0;
 };
 } // namespace facebook::eden

@@ -10,6 +10,7 @@
 #include <eden/fs/store/BackingStore.h>
 #include <eden/fs/utils/CaseSensitivity.h>
 #include "eden/fs/store/filter/Filter.h"
+#include "eden/fs/utils/GlobMatcher.h"
 #include "eden/fs/utils/GlobTree.h"
 
 namespace facebook::eden {
@@ -23,14 +24,18 @@ class WatchmanGlobFilter : public Filter {
  public:
   explicit WatchmanGlobFilter(
       const std::vector<std::string>& globs,
-      std::shared_ptr<ObjectStore> store,
-      const ObjectFetchContextPtr& context,
-      CaseSensitivity caseSensitive)
-      : store_{std::move(store)},
-        context_{context.copy()},
-        root_{std::make_shared<GlobTree>(true, caseSensitive)} {
+      CaseSensitivity caseSensitive) {
+    GlobOptions options = GlobOptions::DEFAULT;
+    if (caseSensitive == CaseSensitivity::Insensitive) {
+      options |= GlobOptions::CASE_INSENSITIVE;
+    }
     for (auto& globStr : globs) {
-      root_->parse(globStr);
+      auto matcher = GlobMatcher::create(globStr, options);
+      if (matcher.hasError()) {
+        throw std::runtime_error(
+            fmt::format("Invalid glob pattern {}", globStr));
+      }
+      matcher_.emplace_back(std::move(*matcher));
     }
   }
 
@@ -43,15 +48,10 @@ class WatchmanGlobFilter : public Filter {
    */
   ImmediateFuture<bool> isPathFiltered(
       RelativePathPiece path,
-      folly::StringPiece filterId) override;
+      folly::StringPiece filterId) const override;
 
  private:
-  std::shared_ptr<ObjectStore> store_;
-  const ObjectFetchContextPtr context_;
-
-  std::shared_ptr<GlobTree> root_;
-
-  // TODO: we likely need to cache compiled regexes somewhere
+  std::vector<GlobMatcher> matcher_;
 };
 
 } // namespace facebook::eden
