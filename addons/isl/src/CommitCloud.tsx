@@ -127,7 +127,9 @@ export function CommitCloudInfo() {
               disabled={pendingOperation?.trackEventName === 'CommitCloudChangeWorkspaceOperation'}
               onChange={event => {
                 const newChoice = (event.target as HTMLOptionElement).value;
-                runOperation(new CommitCloudChangeWorkspaceOperation(newChoice));
+                runOperation(new CommitCloudChangeWorkspaceOperation(newChoice)).then(() => {
+                  refreshCommitCloudStatus();
+                });
                 if (cloudSyncState?.value) {
                   // optimistically set the workspace choice
                   setCloudSyncState({

@@ -34,7 +34,7 @@ import {initialParams} from './urlParams';
 import {short} from './utils';
 import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD} from 'isl-server/src/constants';
 import {selectorFamily, atom, DefaultValue, selector, useRecoilCallback} from 'recoil';
-import {randomId} from 'shared/utils';
+import {defer, randomId} from 'shared/utils';
 
 const repositoryData = atom<{info: RepoInfo | undefined; cwd: string | undefined}>({
   key: 'repositoryData',
@@ -599,6 +599,10 @@ export const operationList = atom<OperationList>({
                 return current;
               }
 
+              const complete = operationCompletionCallbacks.get(currentOperation.operation.id);
+              complete?.();
+              operationCompletionCallbacks.delete(currentOperation.operation.id);
+
               return {
                 ...current,
                 currentOperation: {
@@ -632,10 +636,13 @@ export const inlineProgressByHash = selectorFamily<string | undefined, string>({
     },
 });
 
-// We don't send entire operations to the server, since not all fields are serializable.
-// Thus, when the server tells us about the queue of operations, we need to know which operation it's talking about.
-// Store recently run operations by id. Add to this map whenever a new operation is run. Remove when an operation process exits (successfully or unsuccessfully)
+/** We don't send entire operations to the server, since not all fields are serializable.
+ * Thus, when the server tells us about the queue of operations, we need to know which operation it's talking about.
+ * Store recently run operations by id. Add to this map whenever a new operation is run. Remove when an operation process exits (successfully or unsuccessfully)
+ */
 const operationsById = new Map<string, Operation>();
+/** Store callbacks to run when an operation completes. This is stored outside of the operation since Operations are typically Immutable. */
+const operationCompletionCallbacks = new Map<string, () => void>();
 
 export const queuedOperations = atom<Array<Operation>>({
   key: 'queuedOperations',
@@ -678,7 +685,7 @@ function runOperationImpl(
   snapshot: CallbackInterface['snapshot'],
   set: CallbackInterface['set'],
   operation: Operation,
-) {
+): Promise<void> {
   // TODO: check for hashes in arguments that are known to be obsolete already,
   // and mark those to not be rewritten.
   serverAPI.postMessage({
@@ -691,8 +698,12 @@ function runOperationImpl(
       trackEventName: operation.trackEventName,
     },
   });
+  const defered = defer<void>();
+  operationCompletionCallbacks.set(operation.id, () => defered.resolve());
+
   operationsById.set(operation.id, operation);
   const ongoing = snapshot.getLoadable(operationList).valueMaybe();
+
   if (ongoing?.currentOperation != null && ongoing.currentOperation.exitCode == null) {
     const queue = snapshot.getLoadable(queuedOperations).valueMaybe();
     // Add to the queue optimistically. The server will tell us the real state of the queue when it gets our run request.
@@ -701,17 +712,23 @@ function runOperationImpl(
     // start a new operation. We need to manage the previous operations
     set(operationList, list => startNewOperation(operation, list));
   }
+
+  return defered.promise;
 }
 
 /**
  * Returns callback to run an operation.
  * Will be queued by the server if other operations are already running.
+ * This returns a promise that resolves when this operation has exited
+ * (though its optimistic state may not have finished resolving yet).
+ * Note: There's no need to wait for this promise to resolve before starting another operation,
+ * successive operations will queue up with a nicer UX than if you awaited each one.
  */
 export function useRunOperation() {
   return useRecoilCallback(
     ({snapshot, set}) =>
-      (operation: Operation) => {
-        runOperationImpl(snapshot, set, operation);
+      (operation: Operation): Promise<void> => {
+        return runOperationImpl(snapshot, set, operation);
       },
     [],
   );
