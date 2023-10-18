@@ -119,7 +119,7 @@ TEST_F(HgQueuedBackingStoreTest, getBlob) {
   }
 }
 
-TEST(HgQueuedBackingStore_ObjectId, round_trip_object_IDs) {
+TEST(HgQueuedBackingStoreObjectId, round_trip_object_IDs) {
   Hash20 testHash{
       folly::StringPiece{"0123456789abcdef0123456789abcdef01234567"}};
 
