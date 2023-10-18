@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {CommitMessageFields} from '../../CommitInfoView/types';
 import type {CommitStackState} from '../commitStackState';
 import type {FileStackState, Rev} from '../fileStackState';
 import type {UseStackEditState} from './stackEditState';
@@ -12,6 +13,11 @@ import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 import type {RepoPath} from 'shared/types/common';
 
 import {BranchIndicator} from '../../BranchIndicator';
+import {commitMessageTemplate} from '../../CommitInfoView/CommitInfoState';
+import {
+  commitMessageFieldsSchema,
+  commitMessageFieldsToString,
+} from '../../CommitInfoView/CommitMessageFields';
 import {FileHeader} from '../../ComparisonView/SplitDiffView/SplitDiffFileHeader';
 import {useTokenizedContentsOnceVisible} from '../../ComparisonView/SplitDiffView/syntaxHighlighting';
 import {Column, Row, ScrollX, ScrollY} from '../../ComponentUtils';
@@ -26,6 +32,7 @@ import {bumpStackEditMetric, SplitRangeRecord, useStackEditState} from './stackE
 import {VSCodeButton, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
 import {Set as ImSet, Range} from 'immutable';
 import {useRef, useState, useEffect, useMemo} from 'react';
+import {useRecoilValue} from 'recoil';
 import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
 import {type LineIdx, splitLines, diffBlocks} from 'shared/diff';
@@ -39,6 +46,9 @@ export function SplitStackEditPanel() {
   const stackEdit = useStackEditState();
 
   const {commitStack} = stackEdit;
+
+  const messageTemplate = useRecoilValue(commitMessageTemplate);
+  const schema = useRecoilValue(commitMessageFieldsSchema);
 
   // Find the commits being split.
   const [startRev, endRev] = findStartEndRevs(stackEdit);
@@ -60,12 +70,18 @@ export function SplitStackEditPanel() {
 
   // Prepare a "dense" subStack with an extra empty commit to move right.
   const emptyTitle = getEmptyCommitTitle(commitStack.get(endRev)?.text ?? '');
+  const fields: CommitMessageFields = {...messageTemplate?.fields, Title: emptyTitle};
+  const message = commitMessageFieldsToString(schema, fields);
   const subStack = commitStack
-    .insertEmpty(endRev + 1, emptyTitle, endRev)
+    .insertEmpty(endRev + 1, message, endRev)
     .denseSubStack(Range(startRev, endRev + 2).toList());
 
   const insertBlankCommit = (rev: Rev) => {
-    const newStack = stackEdit.commitStack.insertEmpty(startRev + rev, t('New Commit'));
+    const fields: CommitMessageFields = {...messageTemplate?.fields, Title: t('New Commit')};
+    const message = commitMessageFieldsToString(schema, fields);
+
+    const newStack = stackEdit.commitStack.insertEmpty(startRev + rev, message);
+
     bumpStackEditMetric('splitInsertBlank');
 
     let {splitRange} = stackEdit;
