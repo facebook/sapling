@@ -8,6 +8,10 @@
   "confirmUnsavedEditsBeforeSplit_other": "You have unsaved edits to commit messages which must be saved before splitting by these commits. Do you want to save these edits first?",
   "confirmUnsavedEditsBeforeEditStack_one": "You have unsaved edits to a commit message which must be saved before editing this stack. Do you want to save these edits first?",
   "confirmUnsavedEditsBeforeEditStack_other": "You have unsaved edits to commit messages which must be saved before editing this stack. Do you want to save these edits first?",
+  "commitsBeingBackedUp_one": "1 commit being backed up...",
+  "commitsBeingBackedUp_other": "$count commits being backed up...",
+  "commitsFailedBackingUp_one": "1 commit failed to back up",
+  "commitsFailedBackingUp_other": "$count commits failed to back up",
   "whetherToSubmitDiffAsDraft_one": "Whether to submit this diff as a draft",
   "whetherToSubmitDiffAsDraft_other": "Whether to submit these $count diffs as a draft"
 }

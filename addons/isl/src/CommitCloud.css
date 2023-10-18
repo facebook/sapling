@@ -8,7 +8,7 @@
 .commit-cloud-info {
   display: flex;
   flex-direction: column;
-  gap: var(--halfpad);
+  gap: calc(1 * var(--pad));
   margin-top: calc(-1 * var(--pad));
 }
 
@@ -16,8 +16,20 @@
   font-size: 90%;
 }
 
+.commit-cloud-row {
+  display: flex;
+  flex-direction: row;
+  gap: var(--pad);
+  align-items: center;
+}
+
+.commit-cloud-sync-status-badge > * {
+  display: flex;
+  gap: var(--halfpad);
+  align-items: center;
+}
+
 .commit-cloud-dropdown-container {
-  margin-block: var(--pad);
   width: 100%;
   z-index: 3;
   box-sizing: border-box;
@@ -37,4 +49,8 @@
 
 .commit-cloud-dropdown-container vscode-dropdown {
   min-width: 200px;
+}
+
+.commit-cloud-backup-list {
+  margin-left: calc(3 * var(--pad));
 }

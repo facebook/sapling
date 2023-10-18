@@ -5,17 +5,22 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {CommitCloudSyncState, Result} from './types';
+import type {CommitCloudSyncState, Hash, Result} from './types';
 
 import serverAPI from './ClientToServerAPI';
+import {Commit} from './Commit';
 import {FlexSpacer} from './ComponentUtils';
 import {ErrorNotice} from './ErrorNotice';
 import {Tooltip} from './Tooltip';
 import {T, t} from './i18n';
+import {CommitPreview, treeWithPreviews} from './previews';
 import {RelativeDate} from './relativeDate';
+import {CommitCloudBackupStatus} from './types';
 import {VSCodeButton, VSCodeDropdown, VSCodeOption} from '@vscode/webview-ui-toolkit/react';
+import {useEffect} from 'react';
 import {atom, useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
+import {notEmpty} from 'shared/utils';
 
 import './CommitCloud.css';
 
@@ -38,8 +43,22 @@ const cloudSyncStateAtom = atom<Result<CommitCloudSyncState> | null>({
   ],
 });
 
+const MIN_TIME_TO_RECHECK_MS = 10 * 1000;
+
 export function CommitCloudInfo() {
   const cloudSyncState = useRecoilValue(cloudSyncStateAtom);
+
+  useEffect(() => {
+    if (
+      cloudSyncState?.value?.lastChecked &&
+      Date.now() - cloudSyncState?.value?.lastChecked.valueOf() > MIN_TIME_TO_RECHECK_MS
+    ) {
+      serverAPI.postMessage({
+        type: 'fetchCommitCloudState',
+      });
+    }
+  }, [cloudSyncState]);
+
   return (
     <div className="commit-cloud-info">
       <div className="dropdown-fields-header commit-cloud-header">
@@ -52,7 +71,10 @@ export function CommitCloudInfo() {
           <Icon icon="info" />
         </Tooltip>
       </div>
-      <div className="download-commits-input-row">
+      {cloudSyncState?.value?.commitStatuses == null ? null : (
+        <CommitCloudSyncStatusBadge statuses={cloudSyncState?.value?.commitStatuses} />
+      )}
+      <div className="commit-cloud-row">
         {cloudSyncState == null ? (
           <Icon icon="loading" />
         ) : cloudSyncState.error != null ? (
@@ -69,7 +91,7 @@ export function CommitCloudInfo() {
                 </Tooltip>
               ),
             }}>
-            Last backed up: $relTimeAgo
+            Last synced: $relTimeAgo
           </T>
         )}
         <FlexSpacer />
@@ -78,7 +100,7 @@ export function CommitCloudInfo() {
         </VSCodeButton>
       </div>
 
-      <div className="download-commits-input-row">
+      <div className="commit-cloud-row">
         {cloudSyncState?.value == null ? null : (
           <div className="commit-cloud-dropdown-container">
             <label htmlFor="stack-file-dropdown">
@@ -98,6 +120,76 @@ export function CommitCloudInfo() {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function CommitCloudSyncStatusBadge({statuses}: {statuses: Map<Hash, CommitCloudBackupStatus>}) {
+  const statusValues = [...statuses.entries()];
+  const pending = statusValues.filter(
+    ([_hash, status]) =>
+      status === CommitCloudBackupStatus.Pending || status === CommitCloudBackupStatus.InProgress,
+  );
+  const failed = statusValues.filter(
+    ([_hash, status]) => status === CommitCloudBackupStatus.Failed,
+  );
+
+  let icon;
+  let content;
+  let renderTooltip;
+  if (pending.length > 0) {
+    icon = 'sync';
+    content = <T count={pending.length}>commitsBeingBackedUp</T>;
+    renderTooltip = () => <BackupList commits={pending.map(([hash]) => hash)} />;
+  } else if (failed.length > 0) {
+    icon = 'sync';
+    content = (
+      <div className="inline-error-badge">
+        <span>
+          <Icon icon="error" slot="start" />
+          <T count={failed.length}>commitsFailedBackingUp</T>
+        </span>
+      </div>
+    );
+    renderTooltip = () => <BackupList commits={failed.map(([hash]) => hash)} />;
+  } else if (statusValues.length > 0) {
+    icon = 'check';
+    content = <T>All commits backed up</T>;
+  } else {
+    icon = 'question';
+    content = <T>No commits found</T>;
+  }
+
+  return (
+    <div className="commit-cloud-row commit-cloud-sync-status-badge">
+      {renderTooltip == null ? (
+        <div>
+          <Icon icon={icon} />
+          {content}
+        </div>
+      ) : (
+        <Tooltip component={renderTooltip}>
+          <Icon icon={icon} />
+          {content}
+        </Tooltip>
+      )}
+    </div>
+  );
+}
+
+function BackupList({commits}: {commits: Array<Hash>}) {
+  const treeMap = useRecoilValue(treeWithPreviews).treeMap;
+  const infos = commits.map(hash => treeMap.get(hash)?.info).filter(notEmpty);
+  return (
+    <div className="commit-cloud-backup-list">
+      {infos.map(commit => (
+        <Commit
+          commit={commit}
+          key={commit.hash}
+          hasChildren={false}
+          previewType={CommitPreview.NON_ACTIONABLE_COMMIT}
+        />
+      ))}
     </div>
   );
 }
