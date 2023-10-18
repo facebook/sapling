@@ -19,8 +19,15 @@ cpp_library(
 
 cpp_library(
     name = "filters",
-    headers = ["Filter.h"],
+    srcs = ["WatchmanGlobFilter.cpp"],
+    headers = [
+        "Filter.h",
+        "WatchmanGlobFilter.h",
+    ],
     exported_deps = [
+        "//eden/fs/store:backing_store_interface",
+        "//eden/fs/utils:case_sensitivity",
+        "//eden/fs/utils:glob",
         "//eden/fs/utils:immediate_future",
         "//eden/fs/utils:path",
         "//folly:range",
