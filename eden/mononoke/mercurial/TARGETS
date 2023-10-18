@@ -125,7 +125,6 @@ rust_library(
     srcs = glob(["bundles/src/**/*.rs"]),
     autocargo = {"cargo_toml_dir": "bundles"},
     named_deps = {
-        "async_compression": "//common/rust/shed/async_compression:async_compression-legacy-mononoke",
         "bytes-old": "fbsource//third-party/rust:bytes-old",
         "futures-old": "fbsource//third-party/rust:futures-old",
         "futures_ext": "//common/rust/shed/futures_01_ext:futures_01_ext",
@@ -158,6 +157,7 @@ rust_library(
         "fbsource//third-party/rust:tokio-io",
         ":mercurial_mutation",
         ":mercurial_types",
+        "//common/rust/shed/async_compression:async_compression",
         "//common/rust/shed/bytes_ext:bytes_ext",
         "//common/rust/shed/futures_stats:futures_stats",
         "//common/rust/shed/limited_async_read:limited_async_read",
