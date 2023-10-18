@@ -147,7 +147,7 @@ class PrefetchCmd(Subcmd):
 
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         _add_common_arguments(parser)
-        # TODO: replace --silent with --verbose, only to be used for console info logging
+        # TODO: replace --silent with --debug-print, only to be used for console info logging
         parser.add_argument(
             "--silent",
             help="DEPRECATED: Do not print the names of the matching files",
@@ -163,6 +163,12 @@ class PrefetchCmd(Subcmd):
         parser.add_argument(
             "--background",
             help="Run the prefetch in the background",
+            default=False,
+            action="store_true",
+        )
+        parser.add_argument(
+            "--debug-print",
+            help="Print the paths being prefetched. Does not work if using --background",
             default=False,
             action="store_true",
         )
@@ -183,8 +189,12 @@ class PrefetchCmd(Subcmd):
             if args.PATTERN:
                 telemetry_sample.add_normvector("patterns", args.PATTERN)
 
+            silent = args.silent or not args.debug_print
+
             with checkout_and_patterns.instance.get_thrift_client_legacy() as client:
-                try:
+                if args.background or silent:
+                    # TODO(T166554962): handle debug_print in prefetchFiles endpoint
+                    # instead of calling globFiles
                     client.prefetchFiles(
                         PrefetchParams(
                             mountPoint=bytes(checkout_and_patterns.checkout.path),
@@ -193,31 +203,22 @@ class PrefetchCmd(Subcmd):
                             background=args.background,
                         )
                     )
-                    return 0
-                except TApplicationException as e:
-                    # Fallback to globFiles in the case that this is running
-                    # against an older version of EdenFS in which prefetchFiles is
-                    # not known
-                    if e.type == TApplicationException.UNKNOWN_METHOD:
-                        result = client.globFiles(
-                            GlobParams(
-                                mountPoint=bytes(checkout_and_patterns.checkout.path),
-                                globs=checkout_and_patterns.patterns,
-                                includeDotfiles=args.include_dot_files,
-                                prefetchFiles=not args.directories_only,
-                                suppressFileList=args.silent,
-                                background=args.background,
-                                listOnlyFiles=args.list_only_files,
-                            )
+                else:
+                    # If debug print is requested, we call into globFiles instead to get the file list
+                    result = client.globFiles(
+                        GlobParams(
+                            mountPoint=bytes(checkout_and_patterns.checkout.path),
+                            globs=checkout_and_patterns.patterns,
+                            includeDotfiles=args.include_dot_files,
+                            prefetchFiles=not args.directories_only,
+                            suppressFileList=False,
+                            background=False,
+                            listOnlyFiles=args.list_only_files,
                         )
-                    else:
-                        raise
-                if args.background or args.silent:
-                    return 0
+                    )
 
-                telemetry_sample.add_int("files_fetched", len(result.matchingFiles))
+                    telemetry_sample.add_int("files_fetched", len(result.matchingFiles))
 
-                if not args.silent:
                     if checkout_and_patterns.patterns and not result.matchingFiles:
                         _eprintln(
                             f"No files were matched by the pattern{'s' if len(checkout_and_patterns.patterns) else ''} specified.\n"
