@@ -11,7 +11,6 @@
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
 #include <cpptoml.h>
-#include <folly/executors/QueuedImmediateExecutor.h>
 #include <folly/logging/xlog.h>
 #include <folly/stop_watch.h>
 #include <optional>

@@ -45,7 +45,6 @@ cpp_unittest(
         "//eden/fs/utils:utils",
         "//folly:range",
         "//folly:try",
-        "//folly/executors:queued_immediate_executor",
         "//folly/experimental:test_util",
         "//folly/futures:core",
         "//folly/logging:logging",

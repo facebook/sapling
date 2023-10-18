@@ -6,7 +6,6 @@
  */
 
 #include "eden/fs/store/BlobAccess.h"
-#include <folly/executors/QueuedImmediateExecutor.h>
 #include <folly/portability/GTest.h>
 #include <chrono>
 #include "eden/common/utils/ProcessInfoCache.h"

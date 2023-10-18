@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#include <folly/executors/QueuedImmediateExecutor.h>
 #include <folly/experimental/TestUtil.h>
 #include <folly/logging/xlog.h>
 #include <folly/portability/GTest.h>

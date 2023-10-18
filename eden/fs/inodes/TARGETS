@@ -169,7 +169,6 @@ cpp_library(
         "//folly:string",
         "//folly:unit",
         "//folly/chrono:conv",
-        "//folly/executors:queued_immediate_executor",
         "//folly/io:iobuf",
         "//folly/io/async:async_base",
         "//folly/portability:openssl",
