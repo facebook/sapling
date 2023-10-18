@@ -11,8 +11,10 @@ import serverAPI from './ClientToServerAPI';
 import {Commit} from './Commit';
 import {FlexSpacer} from './ComponentUtils';
 import {ErrorNotice} from './ErrorNotice';
+import {OperationDisabledButton} from './OperationDisabledButton';
 import {Tooltip} from './Tooltip';
 import {T, t} from './i18n';
+import {CommitCloudSyncOperation} from './operations/CommitCloudSyncOperation';
 import {CommitPreview, treeWithPreviews} from './previews';
 import {RelativeDate} from './relativeDate';
 import {CommitCloudBackupStatus} from './types';
@@ -91,13 +93,18 @@ export function CommitCloudInfo() {
                 </Tooltip>
               ),
             }}>
-            Last synced: $relTimeAgo
+            Last meaningful sync: $relTimeAgo
           </T>
         )}
         <FlexSpacer />
-        <VSCodeButton appearance="secondary">
+        <OperationDisabledButton
+          contextKey="cloud-sync"
+          runOperation={() => {
+            return new CommitCloudSyncOperation();
+          }}
+          appearance="secondary">
           <T>Sync now</T>
-        </VSCodeButton>
+        </OperationDisabledButton>
       </div>
 
       <div className="commit-cloud-row">
