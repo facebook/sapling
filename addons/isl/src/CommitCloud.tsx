@@ -11,7 +11,6 @@ import serverAPI from './ClientToServerAPI';
 import {Commit} from './Commit';
 import {FlexSpacer} from './ComponentUtils';
 import {ErrorNotice, InlineErrorBadge} from './ErrorNotice';
-import {OperationDisabledButton} from './OperationDisabledButton';
 import {Tooltip} from './Tooltip';
 import {T, t} from './i18n';
 import {CommitCloudChangeWorkspaceOperation} from './operations/CommitCloudChangeWorkspaceOperation';
@@ -21,7 +20,7 @@ import {RelativeDate} from './relativeDate';
 import {useRunOperation} from './serverAPIState';
 import {CommitCloudBackupStatus} from './types';
 import {VSCodeButton, VSCodeDropdown, VSCodeOption} from '@vscode/webview-ui-toolkit/react';
-import {useEffect} from 'react';
+import {useCallback, useEffect} from 'react';
 import {atom, useRecoilState, useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 import {notEmpty} from 'shared/utils';
@@ -38,15 +37,8 @@ const cloudSyncStateAtom = atom<Result<CommitCloudSyncState> | null>({
       });
       return () => disposable.dispose();
     },
-    () => serverAPI.onSetup(() => refreshCommitCloudStatus()),
   ],
 });
-
-function refreshCommitCloudStatus() {
-  serverAPI.postMessage({
-    type: 'fetchCommitCloudState',
-  });
-}
 
 const REFRESH_INTERVAL = 30 * 1000;
 
@@ -55,11 +47,23 @@ export function CommitCloudInfo() {
   const runOperation = useRunOperation();
   const pendingOperation = useMostRecentPendingOperation();
   const isRunningSync = pendingOperation?.trackEventName === 'CommitCloudSyncOperation';
+  const isLoading = cloudSyncState?.value?.isFetching === true;
+
+  const refreshCommitCloudStatus = useCallback(() => {
+    setCloudSyncState(old =>
+      old?.value != null ? {value: {...old.value, isFetching: true}} : old,
+    );
+    serverAPI.postMessage({
+      type: 'fetchCommitCloudState',
+    });
+  }, [setCloudSyncState]);
 
   useEffect(() => {
     const interval = setInterval(refreshCommitCloudStatus, REFRESH_INTERVAL);
+    // also call immediately on mount
+    refreshCommitCloudStatus();
     return () => clearInterval(interval);
-  }, []);
+  }, [refreshCommitCloudStatus]);
 
   return (
     <div className="commit-cloud-info">
@@ -72,6 +76,7 @@ export function CommitCloudInfo() {
           )}>
           <Icon icon="info" />
         </Tooltip>
+        {isLoading && <Icon icon="loading" />}
       </div>
 
       {cloudSyncState?.value?.syncError == null ? null : (

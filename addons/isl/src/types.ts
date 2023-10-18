@@ -282,6 +282,7 @@ export enum CommitCloudBackupStatus {
   Failed = 'FAILED',
 }
 export type CommitCloudSyncState = {
+  isFetching?: boolean;
   /** Last time we ran commands to check the cloud status */
   lastChecked: Date;
   /** Last time there was an actual sync */
