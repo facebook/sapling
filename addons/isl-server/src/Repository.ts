@@ -1118,6 +1118,7 @@ function getExecParams(
       SL_ENCODING: 'UTF-8',
       // override any custom aliases a user has defined.
       SL_AUTOMATION: 'true',
+      SL_AUTOMATION_EXCEPT: 'phrevset', // allow looking up diff numbers even in plain mode
       // Prevent user-specified merge tools from attempting to
       // open interactive editors.
       HGMERGE: ':merge3',
