@@ -44,6 +44,7 @@
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/inodes/VirtualInodeLoader.h"
 #include "eden/fs/journal/Journal.h"
+#include "eden/fs/journal/JournalDelta.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/BlobMetadata.h"
 #include "eden/fs/model/Hash.h"
@@ -1681,6 +1682,34 @@ void publishFile(
   publisher.rlock()->next(std::move(fileResult));
 }
 
+/**
+ * This method computes all uncommited changes and save the result to publisher
+ */
+void sumUncommitedChanges(
+    const JournalDeltaRange& range,
+    const folly::Synchronized<ThriftStreamPublisherOwner<ChangedFileResult>>&
+        publisher) {
+  for (auto& entry : range.changedFilesInOverlay) {
+    const auto& changeInfo = entry.second;
+
+    ScmFileStatus status;
+    if (!changeInfo.existedBefore && changeInfo.existedAfter) {
+      status = ScmFileStatus::ADDED;
+    } else if (changeInfo.existedBefore && !changeInfo.existedAfter) {
+      status = ScmFileStatus::REMOVED;
+    } else {
+      status = ScmFileStatus::MODIFIED;
+    }
+
+    publishFile(publisher, entry.first.asString(), status, dtype_t::Unknown);
+  }
+
+  for (const auto& name : range.uncleanPaths) {
+    publishFile(
+        publisher, name.asString(), ScmFileStatus::MODIFIED, dtype_t::Unknown);
+  }
+}
+
 class StreamingDiffCallback : public DiffCallback {
  public:
   explicit StreamingDiffCallback(
@@ -1810,29 +1839,7 @@ EdenServiceHandler::streamChangesSince(
       rootIdCodec.renderRootId(summed->snapshotTransitions.back());
   result.toPosition_ref() = toPosition;
 
-  for (auto& entry : summed->changedFilesInOverlay) {
-    const auto& changeInfo = entry.second;
-
-    ScmFileStatus status;
-    if (!changeInfo.existedBefore && changeInfo.existedAfter) {
-      status = ScmFileStatus::ADDED;
-    } else if (changeInfo.existedBefore && !changeInfo.existedAfter) {
-      status = ScmFileStatus::REMOVED;
-    } else {
-      status = ScmFileStatus::MODIFIED;
-    }
-
-    publishFile(
-        *sharedPublisher, entry.first.asString(), status, dtype_t::Unknown);
-  }
-
-  for (const auto& name : summed->uncleanPaths) {
-    publishFile(
-        *sharedPublisher,
-        name.asString(),
-        ScmFileStatus::MODIFIED,
-        dtype_t::Unknown);
-  }
+  sumUncommitedChanges(*summed, *sharedPublisher);
 
   if (summed->snapshotTransitions.size() > 1) {
     auto callback = std::make_shared<StreamingDiffCallback>(sharedPublisher);
