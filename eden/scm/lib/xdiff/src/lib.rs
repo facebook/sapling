@@ -1074,6 +1074,58 @@ Binary file x has changed
     }
 
     #[test]
+    fn test_diff_unified_adding_empty_file() {
+        // This is inconsistent with both hg and git.
+        assert_eq!(
+            String::from_utf8_lossy(&diff_unified(
+                None,
+                Some(DiffFile {
+                    contents: FileContent::Inline(&""),
+                    path: "x",
+                    file_type: FileType::Regular,
+                }),
+                DiffOpts {
+                    context: 10,
+                    copy_info: CopyInfo::None,
+                }
+            )),
+            r"diff --git a/x b/x
+new file mode 100644
+--- /dev/null
++++ b/x
+@@ -0,0 +0,1 @@
++
+"
+        );
+    }
+
+    #[test]
+    fn test_diff_unified_removing_empty_file() {
+        // This is inconsistent with both hg and git.
+        assert_eq!(
+            String::from_utf8_lossy(&diff_unified(
+                Some(DiffFile {
+                    contents: FileContent::Inline(&""),
+                    path: "x",
+                    file_type: FileType::Regular,
+                }),
+                None,
+                DiffOpts {
+                    context: 10,
+                    copy_info: CopyInfo::None,
+                }
+            )),
+            r"diff --git a/x b/x
+deleted file mode 100644
+--- a/x
++++ /dev/null
+@@ -0,1 +0,0 @@
+-
+"
+        );
+    }
+
+    #[test]
     fn test_blocks() {
         assert_eq!(
             blocks(b"a\nb\nc\nd\nx\ny\nz\n", b"b\nc\nd\ne\nf\nu\nv\nw\nx\n"),
