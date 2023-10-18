@@ -14,15 +14,20 @@
 
 .commit-cloud-header {
   font-size: 90%;
+  margin-bottom: calc(-1 * var(--pad));
 }
 
-.commit-cloud-row {
+.commit-cloud-row,
+.commit-cloud-row > .subtle {
   display: flex;
   flex-direction: row;
   gap: var(--pad);
   align-items: center;
 }
 
+.commit-cloud-sync-status-badge {
+  padding-block: var(--pad);
+}
 .commit-cloud-sync-status-badge > * {
   display: flex;
   gap: var(--halfpad);
@@ -45,6 +50,7 @@
   cursor: pointer;
   line-height: normal;
   margin-bottom: 2px;
+  font-size: 90%;
 }
 
 .commit-cloud-dropdown-container vscode-dropdown {

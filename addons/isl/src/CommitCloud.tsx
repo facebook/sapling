@@ -11,6 +11,7 @@ import serverAPI from './ClientToServerAPI';
 import {Commit} from './Commit';
 import {FlexSpacer} from './ComponentUtils';
 import {ErrorNotice, InlineErrorBadge} from './ErrorNotice';
+import {Subtle} from './Subtle';
 import {Tooltip} from './Tooltip';
 import {T, t} from './i18n';
 import {CommitCloudChangeWorkspaceOperation} from './operations/CommitCloudChangeWorkspaceOperation';
@@ -107,9 +108,6 @@ export function CommitCloudInfo() {
           </InlineErrorBadge>
         </div>
       )}
-      {cloudSyncState?.value?.commitStatuses == null ? null : (
-        <CommitCloudSyncStatusBadge statuses={cloudSyncState?.value?.commitStatuses} />
-      )}
       <div className="commit-cloud-row">
         {cloudSyncState == null ? (
           <Icon icon="loading" />
@@ -120,16 +118,18 @@ export function CommitCloudInfo() {
           />
         ) : cloudSyncState.value.lastBackup == null ? null : (
           <>
-            <T
-              replace={{
-                $relTimeAgo: (
-                  <Tooltip title={cloudSyncState.value.lastBackup.toLocaleString()}>
-                    <RelativeDate date={cloudSyncState.value.lastBackup} />
-                  </Tooltip>
-                ),
-              }}>
-              Last meaningful sync: $relTimeAgo
-            </T>
+            <Subtle>
+              <T
+                replace={{
+                  $relTimeAgo: (
+                    <Tooltip title={cloudSyncState.value.lastBackup.toLocaleString()}>
+                      <RelativeDate date={cloudSyncState.value.lastBackup} />
+                    </Tooltip>
+                  ),
+                }}>
+                Last meaningful sync: $relTimeAgo
+              </T>
+            </Subtle>
             <FlexSpacer />
             <VSCodeButton
               onClick={() => {
@@ -138,19 +138,27 @@ export function CommitCloudInfo() {
                 });
               }}
               disabled={isRunningSync}
-              appearance="secondary">
-              {isRunningSync && <Icon icon="loading" slot="start" />}
+              appearance="icon">
+              {isRunningSync ? (
+                <Icon icon="loading" slot="start" />
+              ) : (
+                <Icon icon="sync" slot="start" />
+              )}
               <T>Sync now</T>
             </VSCodeButton>
           </>
         )}
       </div>
 
+      {cloudSyncState?.value?.commitStatuses == null ? null : (
+        <CommitCloudSyncStatusBadge statuses={cloudSyncState?.value?.commitStatuses} />
+      )}
+
       <div className="commit-cloud-row">
         {cloudSyncState?.value?.currentWorkspace == null ? null : (
           <div className="commit-cloud-dropdown-container">
             <label htmlFor="stack-file-dropdown">
-              <T>Current Workspace</T>
+              <T>Commit Cloud Workspace</T>
             </label>
             <div className="commit-cloud-workspace-actions">
               <VSCodeDropdown
@@ -192,7 +200,7 @@ export function CommitCloudInfo() {
                 <div className="commit-cloud-new-workspace-input">
                   <VSCodeTextField
                     ref={newWorkspaceNameRef as React.MutableRefObject<null>}
-                    onChange={e => setEnteredWorkspaceName((e.target as HTMLInputElement).value)}>
+                    onInput={e => setEnteredWorkspaceName((e.target as HTMLInputElement).value)}>
                     <T>New Workspace Name</T>
                   </VSCodeTextField>
                   <VSCodeButton
@@ -206,8 +214,9 @@ export function CommitCloudInfo() {
                   </VSCodeButton>
                   <VSCodeButton
                     appearance="primary"
+                    disabled={!enteredWorkspaceName}
                     onClick={e => {
-                      if (enteredWorkspaceName == null) {
+                      if (!enteredWorkspaceName) {
                         return;
                       }
                       const name = enteredWorkspaceName.trim().replace(' ', '_');
