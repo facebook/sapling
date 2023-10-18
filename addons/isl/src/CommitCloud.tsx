@@ -20,7 +20,7 @@ import {CommitPreview, treeWithPreviews, useMostRecentPendingOperation} from './
 import {RelativeDate} from './relativeDate';
 import {useRunOperation} from './serverAPIState';
 import {CommitCloudBackupStatus} from './types';
-import {VSCodeDropdown, VSCodeOption} from '@vscode/webview-ui-toolkit/react';
+import {VSCodeButton, VSCodeDropdown, VSCodeOption} from '@vscode/webview-ui-toolkit/react';
 import {useEffect} from 'react';
 import {atom, useRecoilState, useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
@@ -54,6 +54,7 @@ export function CommitCloudInfo() {
   const [cloudSyncState, setCloudSyncState] = useRecoilState(cloudSyncStateAtom);
   const runOperation = useRunOperation();
   const pendingOperation = useMostRecentPendingOperation();
+  const isRunningSync = pendingOperation?.trackEventName === 'CommitCloudSyncOperation';
 
   useEffect(() => {
     const interval = setInterval(refreshCommitCloudStatus, REFRESH_INTERVAL);
@@ -104,14 +105,17 @@ export function CommitCloudInfo() {
               Last meaningful sync: $relTimeAgo
             </T>
             <FlexSpacer />
-            <OperationDisabledButton
-              contextKey="cloud-sync"
-              runOperation={() => {
-                return new CommitCloudSyncOperation();
+            <VSCodeButton
+              onClick={async () => {
+                runOperation(new CommitCloudSyncOperation()).then(() => {
+                  refreshCommitCloudStatus();
+                });
               }}
+              disabled={isRunningSync}
               appearance="secondary">
+              {isRunningSync && <Icon icon="loading" slot="start" />}
               <T>Sync now</T>
-            </OperationDisabledButton>
+            </VSCodeButton>
           </>
         )}
       </div>
