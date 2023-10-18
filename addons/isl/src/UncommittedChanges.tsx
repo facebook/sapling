@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {CommitMessageFields} from './CommitInfoView/types';
 import type {UseUncommittedSelection} from './partialSelection';
 import type {PathTree} from './pathTree';
 import type {ChangedFile, ChangedFileType, MergeConflicts, RepoRelativePath} from './types';
@@ -19,12 +20,14 @@ import {
 } from './ChangedFileDisplayTypePicker';
 import {
   commitFieldsBeingEdited,
+  commitMessageTemplate,
   commitMode,
   editedCommitMessages,
 } from './CommitInfoView/CommitInfoState';
 import {
   allFieldsBeingEdited,
   commitMessageFieldsSchema,
+  commitMessageFieldsToString,
 } from './CommitInfoView/CommitMessageFields';
 import {OpenComparisonViewButton} from './ComparisonView/OpenComparisonViewButton';
 import {ErrorNotice} from './ErrorNotice';
@@ -509,6 +512,7 @@ export function UncommittedChanges({place}: {place: Place}) {
   // TODO: use treeWithPreviews instead, and update CommitOperation
   const headCommit = useRecoilValue(latestHeadCommit);
   const schema = useRecoilValue(commitMessageFieldsSchema);
+  const template = useRecoilValue(commitMessageTemplate);
 
   const conflicts = useRecoilValue(optimisticMergeConflicts);
 
@@ -544,6 +548,21 @@ export function UncommittedChanges({place}: {place: Place}) {
       commitTitleRef.current != null && (commitTitleRef.current.value = '');
     }
   });
+
+  const onConfirmQuickCommit = () => {
+    const title =
+      (commitTitleRef.current as HTMLInputElement | null)?.value ||
+      template?.fields.Title ||
+      t('Temporary Commit');
+    // use the template, unless a specific quick title is given
+    const fields: CommitMessageFields = {...template?.fields, Title: title};
+    const message = commitMessageFieldsToString(schema, fields);
+    const hash = headCommit?.hash ?? '.';
+    const allFiles = uncommittedChanges.map(file => file.path);
+    const operation = getCommitOperation(message, hash, selection.selection, allFiles);
+    selection.discardPartialSelections();
+    runOperation(operation);
+  };
 
   if (error) {
     return <ErrorNotice title={t('Failed to fetch Uncommitted Changes')} error={error} />;
@@ -585,16 +604,6 @@ export function UncommittedChanges({place}: {place: Place}) {
       </VSCodeButton>
     </Tooltip>
   ) : null;
-
-  const onConfirmQuickCommit = () => {
-    const title =
-      (commitTitleRef.current as HTMLInputElement | null)?.value || t('Temporary Commit');
-    const hash = headCommit?.hash ?? '.';
-    const allFiles = uncommittedChanges.map(file => file.path);
-    const operation = getCommitOperation(title, hash, selection.selection, allFiles);
-    selection.discardPartialSelections();
-    runOperation(operation);
-  };
 
   const onShelve = () => {
     const title = (commitTitleRef.current as HTMLInputElement | null)?.value || undefined;

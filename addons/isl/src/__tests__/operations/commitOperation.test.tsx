@@ -6,16 +6,16 @@
  */
 
 import App from '../../App';
-import {CommitInfoTestUtils} from '../../testQueries';
 import {
   resetTestMessages,
   expectMessageSentToServer,
   simulateCommits,
   COMMIT,
   simulateUncommittedChangedFiles,
+  simulateMessageFromServer,
 } from '../../testUtils';
 import {CommandRunner} from '../../types';
-import {fireEvent, render, screen, within} from '@testing-library/react';
+import {fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {act} from 'react-dom/test-utils';
 
@@ -133,5 +133,29 @@ describe('CommitOperation', () => {
     expect(
       within(screen.getByTestId('committed-changes')).getByText(/file3.txt/),
     ).toBeInTheDocument();
+  });
+
+  it('uses commit template if provided', async () => {
+    await waitFor(() => {
+      expectMessageSentToServer({type: 'fetchCommitMessageTemplate'});
+    });
+    act(() => {
+      simulateMessageFromServer({
+        type: 'fetchedCommitMessageTemplate',
+        template: 'Template Title\n\nSummary: my template',
+      });
+    });
+
+    clickQuickCommit();
+
+    expectMessageSentToServer({
+      type: 'runOperation',
+      operation: {
+        args: ['commit', '--addremove', '--message', expect.stringContaining('Template Title')],
+        id: expect.anything(),
+        runner: CommandRunner.Sapling,
+        trackEventName: 'CommitOperation',
+      },
+    });
   });
 });
