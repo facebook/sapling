@@ -18,6 +18,7 @@ use context::CoreContext;
 use futures::stream;
 use futures::stream::TryStreamExt;
 use futures::try_join;
+use futures_stats::TimedFutureExt;
 use manifest::ManifestOps;
 use mononoke_types::blame_v2::BlameParent;
 use mononoke_types::blame_v2::BlameV2;
@@ -186,7 +187,13 @@ pub async fn blame(
 ) -> Result<(BlameV2, FileUnodeId), BlameError> {
     let path = path.ok_or_else(|| anyhow!("Blame is not available for directory: `/`"))?;
     if follow_mutable_file_history {
-        fetch_mutable_blame(ctx, repo, csid, path, &mut HashSet::new()).await
+        let (stats, result) = fetch_mutable_blame(ctx, repo, csid, path, &mut HashSet::new())
+            .timed()
+            .await;
+        let mut scuba = ctx.scuba().clone();
+        scuba.add_future_stats(&stats);
+        scuba.log_with_msg("Computed mutable blame", None);
+        result
     } else {
         fetch_immutable_blame(ctx, repo, csid, path).await
     }
