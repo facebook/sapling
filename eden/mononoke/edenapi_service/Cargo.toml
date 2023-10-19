@@ -30,6 +30,7 @@ gotham_ext = { version = "0.1.0", path = "../gotham_ext" }
 hooks = { version = "0.1.0", path = "../hooks" }
 http = "0.2"
 hyper = { version = "0.14.26", features = ["client", "http1", "http2", "stream"] }
+justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 lazy_static = "1.4"
 manifest = { version = "0.1.0", path = "../manifest" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
