@@ -39,7 +39,7 @@ unionconfig = { version = "0.1.0", path = "../union" }
 url = "2.2.2"
 util = { version = "0.1.0", path = "../../util" }
 version = { version = "0.1.0", path = "../../version" }
-zstd = { version = "0.11.2+zstd.1.5.2", features = ["experimental", "zstdmt"], optional = true }
+zstd = { version = "0.13", features = ["experimental", "zstdmt"], optional = true }
 
 [dev-dependencies]
 minibench = { version = "0.1.0", path = "../../minibench" }

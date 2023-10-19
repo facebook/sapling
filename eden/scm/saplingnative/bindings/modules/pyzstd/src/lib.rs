@@ -87,7 +87,7 @@ py_class!(pub class zstream |py| {
         let data = SimplePyBuf::new(py, data);
         let mut decoder = self.decoder(py).borrow_mut();
         let mut src = InBuffer::around(data.as_ref());
-        let mut dst = vec![0u8; zstd_safe::dstream_out_size()];
+        let mut dst = vec![0u8; zstd_safe::DStream::out_size()];
         let mut dst = OutBuffer::around(&mut dst);
 
         while src.pos < src.src.len() {
