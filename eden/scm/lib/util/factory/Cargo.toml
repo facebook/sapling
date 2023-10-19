@@ -7,5 +7,4 @@ edition = "2021"
 
 [dependencies]
 anyhow = "=1.0.72"
-ctor = "0.1"
 tracing = "0.1.35"

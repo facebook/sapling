@@ -37,7 +37,7 @@
 //! If the `impl1` and `impl2` register their constructors:
 //!
 //! ```ignore
-//! #[ctor]
+//! // Run this as part of startup.
 //! fn register_impl1() {
 //!     factory::register_constructor("impl1", |input: &str| -> Option<anyhow::Result<dyn Foo>> {
 //!         input.strip_prefix("impl1:").map(|rest| Some(FooImpl::new(rest)))
@@ -53,9 +53,6 @@ use std::collections::HashMap;
 use std::fmt;
 use std::sync::OnceLock;
 use std::sync::RwLock;
-
-// re-export
-pub use ctor::ctor;
 
 /// Register a constructor `func` to produce `Out` from `In`.
 ///

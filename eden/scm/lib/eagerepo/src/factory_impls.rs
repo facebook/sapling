@@ -9,14 +9,12 @@
 
 use std::sync::Arc;
 
-use factory::ctor;
 use storemodel::StoreInfo;
 use storemodel::StoreOutput;
 
 use crate::EagerRepoStore;
 
-#[ctor]
-fn setup_eagerepo_store_constructor() {
+pub(crate) fn setup_eagerepo_store_constructor() {
     fn construct_eagerepo_store(info: &dyn StoreInfo) -> anyhow::Result<Box<dyn StoreOutput>> {
         let store_path = info.store_path();
         // The hgcommits/v1 path shares objects with commits.

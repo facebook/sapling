@@ -10,14 +10,12 @@
 use std::sync::Arc;
 
 use anyhow::Context;
-use factory::ctor;
 use storemodel::StoreInfo;
 use storemodel::StoreOutput;
 
 use crate::GitStore;
 
-#[ctor]
-fn setup_git_store_constructor() {
+pub(crate) fn setup_git_store_constructor() {
     fn construct_git_store(info: &dyn StoreInfo) -> anyhow::Result<Box<dyn StoreOutput>> {
         const GIT_DIR_FILE: &str = "gitdir";
         let store_path = info.store_path();
