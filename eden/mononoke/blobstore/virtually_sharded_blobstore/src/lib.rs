@@ -43,7 +43,6 @@ use shard::Shards;
 use shared_error::anyhow::IntoSharedError;
 use shared_error::anyhow::SharedError;
 use stats::prelude::*;
-use tunables::tunables;
 use twox_hash::XxHash;
 
 use crate::ratelimit::AccessReason;
