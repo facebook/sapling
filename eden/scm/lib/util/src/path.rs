@@ -22,7 +22,6 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use crate::errors::IOContext;
-use crate::errors::IOResult;
 
 /// Pick a random file name `path.$RAND.atomic` as `real_path`. Write `data` to
 /// it.  Then modify the symlink `path` to point to `real_path`.  Attempt to
@@ -39,7 +38,7 @@ use crate::errors::IOResult;
 ///
 /// Attention: the deletion attempt is based on file name. So do not use
 /// confusing file names like `path.0001.atomic` in the same directory.
-pub fn atomic_write_symlink(path: &Path, data: &[u8]) -> IOResult<()> {
+pub fn atomic_write_symlink(path: &Path, data: &[u8]) -> io::Result<()> {
     let append_name = |suffix: &str| -> PathBuf {
         let mut s = path.to_path_buf().into_os_string();
         s.push(suffix);
@@ -90,7 +89,7 @@ pub fn atomic_write_symlink(path: &Path, data: &[u8]) -> IOResult<()> {
     fs::rename(symlink_tmp_path, path).path_context("error renaming temp atomic symlink", path)?;
 
     // Scan. Remove unreferenced files.
-    let _ = (|| -> IOResult<()> {
+    let _ = (|| -> io::Result<()> {
         let looks_like_atomic = |s: &OsStr, prefix: &OsStr| -> bool {
             if let (Some(s), Some(prefix)) = (s.to_str(), prefix.to_str()) {
                 s.starts_with(prefix) && s.ends_with(".atomic")
@@ -227,7 +226,7 @@ pub fn normalize(path: &Path) -> PathBuf {
 
 /// Given cwd, return `path` relative to `root`, or None if `path` is not under `root`.
 /// This is analagous to pathutil.canonpath() in Python.
-pub fn root_relative_path(root: &Path, cwd: &Path, path: &Path) -> IOResult<Option<PathBuf>> {
+pub fn root_relative_path(root: &Path, cwd: &Path, path: &Path) -> io::Result<Option<PathBuf>> {
     // Make `path` absolute. I'm not sure why `root` is included.
     // Maybe in case `cwd` is empty? Or to allow root-relative `cwd`?
     let path = normalize(&root.join(cwd).join(path));

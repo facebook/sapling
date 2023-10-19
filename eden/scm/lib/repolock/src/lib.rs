@@ -11,6 +11,7 @@ use std::fmt;
 use std::fs::File;
 #[cfg(unix)]
 use std::fs::Permissions;
+use std::io;
 use std::io::Write;
 use std::num::NonZeroU64;
 use std::ops::Add;
@@ -28,8 +29,6 @@ use configmodel::ConfigExt;
 use fs2::FileExt;
 use parking_lot::Mutex;
 use util::errors::IOContext;
-use util::errors::IOError;
-use util::errors::IOResult;
 use util::lock::PathLock;
 
 const WORKING_COPY_NAME: &str = "wlock";
@@ -493,7 +492,7 @@ pub struct LockHandle {
 }
 
 impl LockHandle {
-    pub fn unlock(&mut self) -> IOResult<()> {
+    pub fn unlock(&mut self) -> io::Result<()> {
         self.unlink_legacy();
         self.lock
             .unlock()
@@ -527,7 +526,7 @@ pub enum LockError {
     #[error(transparent)]
     Contended(#[from] LockContendedError),
     #[error(transparent)]
-    Io(#[from] IOError),
+    Io(#[from] io::Error),
     #[error("{0}")]
     OutOfOrder(String),
     #[error("lock is not held: {0}")]

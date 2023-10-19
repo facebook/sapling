@@ -7,6 +7,7 @@
 
 use std::env;
 use std::ffi::OsStr;
+use std::io;
 use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
@@ -27,7 +28,6 @@ use treestate::treestate::TreeState;
 use types::HgId;
 use types::RepoPath;
 use util::errors::IOContext;
-use util::errors::IOError;
 use util::file::atomic_write;
 use util::path::absolute;
 use util::path::expand_path;
@@ -61,7 +61,7 @@ pub enum WorkingCopyError {
     NoSuchTarget(HgId),
 
     #[error(transparent)]
-    Io(#[from] IOError),
+    Io(#[from] io::Error),
 
     #[error(transparent)]
     Other(#[from] anyhow::Error),
