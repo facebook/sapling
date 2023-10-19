@@ -451,9 +451,12 @@ pub fn try_lock(dir: &Path, name: &str, contents: &[u8]) -> anyhow::Result<LockH
             .into());
         }
         Err(err) => {
-            return Err(
-                IOError::from_path(err, "error locking lock file", &lock_paths.lock).into(),
-            );
+            return Err(util::errors::from_err_msg_path(
+                err,
+                "error locking lock file",
+                &lock_paths.lock,
+            )
+            .into());
         }
     };
 
