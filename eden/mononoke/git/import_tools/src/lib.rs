@@ -309,26 +309,36 @@ pub async fn gitimport_acc<Uploader: GitUploader>(
 
                 // Before generating the corresponding changeset at Mononoke end, upload the raw git commit
                 // and the git tree pointed to by the git commit.
-                let tree_for_commit = read_raw_object(reader, &extracted_commit.tree_oid)
-                    .await
-                    .with_context(|| {
-                        format_err!(
-                            "Failed to fetch git tree {} for commit {}",
-                            extracted_commit.tree_oid,
-                            oid
-                        )
-                    })?;
-                // Upload Git Tree
-                uploader
-                    .upload_object(ctx, extracted_commit.tree_oid, tree_for_commit)
-                    .await
-                    .with_context(|| {
-                        format_err!(
-                            "Failed to upload raw git tree {} for commit {}",
-                            extracted_commit.tree_oid,
-                            oid
-                        )
-                    })?;
+                extracted_commit
+                    .changed_trees(ctx, reader)
+                    .map_ok(|entry| {
+                        cloned!(oid);
+                        async move {
+                            let tree_for_commit =
+                                read_raw_object(reader, &entry.0).await.with_context(|| {
+                                    format_err!(
+                                        "Failed to fetch git tree {} for commit {}",
+                                        entry.0,
+                                        oid
+                                    )
+                                })?;
+                            // Upload Git Tree
+                            uploader
+                                .upload_object(ctx, entry.0, tree_for_commit)
+                                .await
+                                .with_context(|| {
+                                    format_err!(
+                                        "Failed to upload raw git tree {} for commit {}",
+                                        entry.0,
+                                        oid
+                                    )
+                                })?;
+                            anyhow::Ok(())
+                        }
+                    })
+                    .try_buffer_unordered(100)
+                    .try_collect()
+                    .await?;
                 // Upload Git commit
                 uploader
                     .upload_object(ctx, oid, extracted_commit.original_commit)

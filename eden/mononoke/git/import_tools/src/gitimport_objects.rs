@@ -31,6 +31,7 @@ use gix_object::Commit;
 use gix_object::Tag;
 use gix_object::Tree;
 use manifest::bonsai_diff;
+use manifest::find_intersection_of_diffs;
 use manifest::BonsaiDiffFileChange;
 use manifest::Entry;
 use manifest::Manifest;
@@ -546,6 +547,32 @@ impl ExtractedCommit {
             self.diff_for_submodules::<false>(ctx, reader)
                 .right_stream()
         }
+    }
+
+    /// Compare the tree for the commit against its parents and return all the trees and subtrees
+    /// that have changed w.r.t its parents
+    pub fn changed_trees(
+        &self,
+        ctx: &CoreContext,
+        reader: &GitRepoReader,
+    ) -> impl Stream<Item = Result<GitTree<true>, Error>> {
+        // When doing manifest diff over trees, submodules enabled or disabled doesn't matter
+        let tree = GitTree::<true>(self.tree_oid);
+        let parent_trees = self
+            .parent_tree_oids
+            .iter()
+            .cloned()
+            .map(GitTree::<true>)
+            .collect();
+        find_intersection_of_diffs(ctx.clone(), reader.clone(), tree, parent_trees)
+            .try_filter_map(|(_, entry)| async move {
+                let result = match entry {
+                    Entry::Tree(git_tree) => Some(git_tree),
+                    Entry::Leaf(_) => None,
+                };
+                anyhow::Ok(result)
+            })
+            .boxed()
     }
 
     /// Generic version of `diff_root` based on whether submodules are
