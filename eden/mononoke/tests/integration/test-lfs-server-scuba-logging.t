@@ -34,6 +34,7 @@
     "int": {
       "BlobGets": 1,
       "BlobGetsMaxLatency": *, (glob)
+      "BlobGetsMaxSize": 0,
       "BlobGetsNotFound": 1,
       "BlobGetsNotFoundMaxLatency": *, (glob)
       "BlobGetsTotalSize": 0,
@@ -41,10 +42,10 @@
       "BlobPresenceChecksMaxLatency": *, (glob)
       "BlobPuts": 0,
       "BlobPutsMaxLatency": *, (glob)
+      "BlobPutsMaxSize": 0,
       "BlobPutsTotalSize": 0,
       "BlobUnlinks": 0,
       "BlobUnlinksMaxLatency": *, (glob)
-      "BlobUnlinksTotalSize": 0,
       "CachelibHits": 0,
       "CachelibMisses": 0,
       "GetpackNumPossibleLFSFiles": 0,
@@ -93,6 +94,7 @@
     "int": {
       "BlobGets": 0,
       "BlobGetsMaxLatency": *, (glob)
+      "BlobGetsMaxSize": 0,
       "BlobGetsNotFound": 0,
       "BlobGetsNotFoundMaxLatency": *, (glob)
       "BlobGetsTotalSize": 0,
@@ -100,10 +102,10 @@
       "BlobPresenceChecksMaxLatency": *, (glob)
       "BlobPuts": 211,
       "BlobPutsMaxLatency": *, (glob)
+      "BlobPutsMaxSize": *, (glob)
       "BlobPutsTotalSize": *, (glob)
       "BlobUnlinks": 0,
       "BlobUnlinksMaxLatency": *, (glob)
-      "BlobUnlinksTotalSize": 0,
       "CachelibHits": 0,
       "CachelibMisses": 0,
       "GetpackNumPossibleLFSFiles": 0,
@@ -149,6 +151,7 @@
     "int": {
       "BlobGets": 2,
       "BlobGetsMaxLatency": *, (glob)
+      "BlobGetsMaxSize": *, (glob)
       "BlobGetsNotFound": 0,
       "BlobGetsNotFoundMaxLatency": *, (glob)
       "BlobGetsTotalSize": *, (glob)
@@ -156,10 +159,10 @@
       "BlobPresenceChecksMaxLatency": *, (glob)
       "BlobPuts": 0,
       "BlobPutsMaxLatency": *, (glob)
+      "BlobPutsMaxSize": 0,
       "BlobPutsTotalSize": 0,
       "BlobUnlinks": 0,
       "BlobUnlinksMaxLatency": *, (glob)
-      "BlobUnlinksTotalSize": 0,
       "CachelibHits": 0,
       "CachelibMisses": 0,
       "GetpackNumPossibleLFSFiles": 0,
@@ -210,6 +213,7 @@
     "int": {
       "BlobGets": 206,
       "BlobGetsMaxLatency": *, (glob)
+      "BlobGetsMaxSize": *, (glob)
       "BlobGetsNotFound": 0,
       "BlobGetsNotFoundMaxLatency": *, (glob)
       "BlobGetsTotalSize": 1*, (glob)
@@ -217,10 +221,10 @@
       "BlobPresenceChecksMaxLatency": *, (glob)
       "BlobPuts": 0,
       "BlobPutsMaxLatency": *, (glob)
+      "BlobPutsMaxSize": 0,
       "BlobPutsTotalSize": 0,
       "BlobUnlinks": 0,
       "BlobUnlinksMaxLatency": *, (glob)
-      "BlobUnlinksTotalSize": 0,
       "CachelibHits": 0,
       "CachelibMisses": 0,
       "GetpackNumPossibleLFSFiles": 0,
@@ -272,6 +276,7 @@
     "int": {
       "BlobGets": 0,
       "BlobGetsMaxLatency": *, (glob)
+      "BlobGetsMaxSize": 0,
       "BlobGetsNotFound": 0,
       "BlobGetsNotFoundMaxLatency": *, (glob)
       "BlobGetsTotalSize": 0,
@@ -279,10 +284,10 @@
       "BlobPresenceChecksMaxLatency": *, (glob)
       "BlobPuts": 0,
       "BlobPutsMaxLatency": *, (glob)
+      "BlobPutsMaxSize": 0,
       "BlobPutsTotalSize": 0,
       "BlobUnlinks": 0,
       "BlobUnlinksMaxLatency": *, (glob)
-      "BlobUnlinksTotalSize": 0,
       "CachelibHits": 0,
       "CachelibMisses": 0,
       "GetpackNumPossibleLFSFiles": 0,
@@ -322,7 +327,7 @@
 # Send an invalid request and check that this gets logged
   $ truncate -s 0 "$SCUBA"
   $ curl -fsSL "${lfs_root}/lfs1/download/bad" -o /dev/null
-  curl: (22) The requested URL returned error: 400 Bad Request
+  curl: (22) The requested URL returned error: 400* (glob)
   [22]
   $ wait_for_json_record_count "$SCUBA" 1
   $ jq -r .normal.error_msg < "$SCUBA"
