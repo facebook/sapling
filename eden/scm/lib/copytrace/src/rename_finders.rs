@@ -460,7 +460,7 @@ fn select_rename_candidates(
     // is a copy of the old_path.
     candidates.sort_by_key(|k| {
         let path = k.path.as_repo_path();
-        let score = file_path_similarity(path, source_path);
+        let score = (file_path_similarity(path, source_path) * 1000.0) as i32;
         (-score, path.to_owned())
     });
     let max_rename_candidates = config
