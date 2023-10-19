@@ -7,29 +7,26 @@
 
 mod create;
 
-use anyhow::Context;
 use anyhow::Result;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_tag_mapping::BonsaiTagMapping;
 use bookmarks::Bookmarks;
+use clap::Args;
 use clap::Parser;
 use clap::Subcommand;
 use commit_graph::CommitGraph;
 use git_symbolic_refs::GitSymbolicRefs;
-use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
 use repo_blobstore::RepoBlobstore;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
 
-use self::create::CreateBundleArgs;
+use self::create::FromPathArgs;
+use self::create::FromRepoArgs;
 
 /// Perform git related operations.
 #[derive(Parser)]
 pub struct CommandArgs {
-    #[clap(flatten)]
-    repo: RepoArgs,
-
     #[clap(subcommand)]
     subcommand: GitBundleSubcommand,
 }
@@ -60,14 +57,29 @@ pub enum GitBundleSubcommand {
     Create(CreateBundleArgs),
 }
 
+#[derive(Args)]
+/// Arguments for creating a Git bundle
+pub struct CreateBundleArgs {
+    #[clap(subcommand)]
+    commands: CreateBundleCommands,
+}
+
+#[derive(Subcommand)]
+enum CreateBundleCommands {
+    FromPath(FromPathArgs),
+    FromRepo(FromRepoArgs),
+}
+
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let ctx = app.new_basic_context();
-    let repo: Repo = app
-        .open_repo(&args.repo)
-        .await
-        .context("Failed to open repo")?;
     match args.subcommand {
-        GitBundleSubcommand::Create(create_args) => create::create(&ctx, create_args, repo).await?,
+        GitBundleSubcommand::Create(create_args) => match create_args.commands {
+            CreateBundleCommands::FromPath(create_args) => {
+                create::create_from_path(create_args).await
+            }
+            CreateBundleCommands::FromRepo(create_args) => {
+                create::create_from_mononoke_repo(&ctx, &app, create_args).await
+            }
+        },
     }
-    Ok(())
 }

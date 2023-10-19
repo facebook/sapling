@@ -20,6 +20,9 @@ use futures::Stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use gix_hash::ObjectId;
+use mononoke_api::ChangesetId;
+use mononoke_app::args::RepoArgs;
+use mononoke_app::MononokeApp;
 use packfile::bundle::BundleWriter;
 use packfile::pack::DeltaForm;
 use packfile::types::PackfileItem;
@@ -37,20 +40,39 @@ const OBJECTS_DIR: &str = "objects";
 const REFS_DIR: &str = "refs";
 const HEAD_REF: &str = "HEAD";
 
+/// Args for creating a Git bundle from a Mononoke repo
 #[derive(Args)]
-/// Arguments for creating a Git bundle
-pub struct CreateBundleArgs {
+pub struct FromRepoArgs {
+    /// The Mononoke repo for which the Git bundle should be created
+    #[clap(flatten)]
+    repo: RepoArgs,
+    /// The set of references that should be included in the bundle. If empty,
+    /// all the references will be included in the bundle
+    #[clap(long, value_delimiter = ',')]
+    included_refs: Vec<String>,
+    /// The set of commits/changesets that are already present and can be used as
+    /// prerequisites for the bundle. If empty, then the bundle will record the entire
+    /// history of the repo for the included_refs
+    #[clap(long, value_delimiter = ',')]
+    have_heads: Vec<ChangesetId>,
     /// The location, i.e. file_name + path, where the generated bundle will be stored
     #[clap(long, short = 'o', value_name = "FILE")]
     output_location: PathBuf,
-    /// The path to the Git repo where the required objects to be bundled are present
-    /// e.g. /repo/path/.git. If not provided, the command will use the Mononoke repo
-    /// for creating the bundle instead.
-    #[clap(long, value_name = "FILE")]
-    git_repo_path: Option<PathBuf>,
 }
 
-pub async fn create(ctx: &CoreContext, create_args: CreateBundleArgs, repo: Repo) -> Result<()> {
+/// Args for creating a Git bundle from an on-disk Git repo
+#[derive(Args)]
+pub struct FromPathArgs {
+    /// The path to the Git repo where the required objects to be bundled are present
+    /// e.g. /repo/path/.git
+    #[clap(long, value_name = "FILE")]
+    git_repo_path: PathBuf,
+    /// The location, i.e. file_name + path, where the generated bundle will be stored
+    #[clap(long, short = 'o', value_name = "FILE")]
+    output_location: PathBuf,
+}
+
+pub async fn create_from_path(create_args: FromPathArgs) -> Result<()> {
     // Open the output file for writing
     let output_file = tokio::fs::File::create(create_args.output_location.as_path())
         .await
@@ -60,17 +82,27 @@ pub async fn create(ctx: &CoreContext, create_args: CreateBundleArgs, repo: Repo
                 create_args.output_location.display()
             )
         })?;
-    match create_args.git_repo_path {
-        Some(path) => create_from_on_disk_repo(path, output_file).await,
-        None => create_from_mononoke_repo(ctx, repo, output_file).await,
-    }
+    create_from_on_disk_repo(create_args.git_repo_path, output_file).await
 }
 
-async fn create_from_mononoke_repo(
+pub async fn create_from_mononoke_repo(
     ctx: &CoreContext,
-    repo: Repo,
-    output_file: tokio::fs::File,
+    app: &MononokeApp,
+    create_args: FromRepoArgs,
 ) -> Result<()> {
+    // Open the output file for writing
+    let output_file = tokio::fs::File::create(create_args.output_location.as_path())
+        .await
+        .with_context(|| {
+            format!(
+                "Error in opening/creating output file {}",
+                create_args.output_location.display()
+            )
+        })?;
+    let repo: Repo = app
+        .open_repo(&create_args.repo)
+        .await
+        .context("Failed to open repo")?;
     let delta_inclusion = DeltaInclusion::Include {
         form: DeltaForm::RefAndOffset,
         inclusion_threshold: 0.6,
