@@ -52,7 +52,7 @@ pub fn repo_matcher_with_overrides(
     store: Arc<dyn ReadFileContents>,
     overrides: &HashMap<String, String>,
 ) -> anyhow::Result<Option<(DynMatcher, u64)>> {
-    let prof = match util::file::read(dot_path.join("sparse")) {
+    let prof = match fs_err::read(dot_path.join("sparse")) {
         Ok(contents) => sparse::Root::from_bytes(contents, ".hg/sparse".to_string())?,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
             return Ok(None);

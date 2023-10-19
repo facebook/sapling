@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 anyhow = "=1.0.72"
 configmodel = { version = "0.1.0", path = "../config/model" }
+fs-err = "2.6.0"
 fs2 = "0.4"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 thiserror = "1.0.43"

@@ -442,7 +442,7 @@ pub fn try_lock(dir: &Path, name: &str, contents: &[u8]) -> anyhow::Result<LockH
     match lock_file.try_lock_exclusive() {
         Ok(_) => {}
         Err(err) if err.kind() == fs2::lock_contended_error().kind() => {
-            let contents = util::file::read(&lock_paths.data)?;
+            let contents = fs_err::read(&lock_paths.data)?;
             return Err(LockContendedError {
                 path: lock_paths.data,
                 contents,

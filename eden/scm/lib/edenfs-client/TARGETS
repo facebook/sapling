@@ -25,6 +25,5 @@ rust_library(
         "//eden/scm/lib/clientinfo:clientinfo",
         "//eden/scm/lib/thrift-types:thrift-types",
         "//eden/scm/lib/types:types",
-        "//eden/scm/lib/util:util",
     ],
 )

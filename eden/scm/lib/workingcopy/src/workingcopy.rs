@@ -363,7 +363,7 @@ impl WorkingCopy {
             let git_modules_path = self.vfs.join(".gitmodules".try_into()?);
             if git_modules_path.exists() {
                 ignore_dirs.extend(
-                    parse_submodules(&util::file::read(&git_modules_path)?)?
+                    parse_submodules(&fs_err::read(&git_modules_path)?)?
                         .into_iter()
                         .map(|s| PathBuf::from(s.path)),
                 );

@@ -58,7 +58,7 @@ pub fn flush(
 
         let _lock = wait_for_wc_lock(dot_dir, locker, lock_timeout_secs)?;
 
-        let dirstate_input = util::file::read(&dirstate_path)?;
+        let dirstate_input = fs_err::read(&dirstate_path)?;
         let mut dirstate = Dirstate::deserialize(&mut dirstate_input.as_slice())?;
 
         // If the dirstate has changed since we last loaded it, don't flush since we might

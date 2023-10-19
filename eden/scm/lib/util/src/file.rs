@@ -9,7 +9,6 @@ use std::fs::File;
 use std::fs::OpenOptions;
 use std::io;
 use std::path::Path;
-use std::path::PathBuf;
 
 #[cfg(unix)]
 use once_cell::sync::Lazy;
@@ -67,20 +66,12 @@ pub fn create(path: impl AsRef<Path>) -> io::Result<File> {
     open(path, "wct")
 }
 
-pub fn read(path: impl AsRef<Path>) -> io::Result<Vec<u8>> {
-    std::fs::read(path.as_ref()).path_context("error reading file", path.as_ref())
-}
-
 pub fn exists(path: impl AsRef<Path>) -> io::Result<Option<std::fs::Metadata>> {
     match std::fs::metadata(path.as_ref()) {
         Ok(m) => Ok(Some(m)),
         Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(None),
         Err(err) => Err(err).path_context("error reading file", path.as_ref()),
     }
-}
-
-pub fn read_link(path: impl AsRef<Path>) -> io::Result<PathBuf> {
-    std::fs::read_link(path.as_ref()).path_context("error reading link", path.as_ref())
 }
 
 #[cfg(test)]

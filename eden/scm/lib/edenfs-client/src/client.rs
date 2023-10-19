@@ -224,13 +224,13 @@ impl EdenConfig {
             }
         }
 
-        let root = util::file::read_link(dot_eden.join("root"))?
+        let root = fs_err::read_link(dot_eden.join("root"))?
             .into_os_string()
             .into_string()
             .map_err(|path| anyhow!("couldn't stringify path {:?}", path))?;
         Ok(Self {
             root,
-            socket: util::file::read_link(dot_eden.join("socket"))?,
+            socket: fs_err::read_link(dot_eden.join("socket"))?,
         })
     }
 }

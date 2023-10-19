@@ -136,7 +136,7 @@ py_class!(pub class workingcopy |py| {
             Some((contents, source)) => sparse::Root::from_bytes(contents.into_bytes(), source).map_pyerr(py)?,
             None => {
                 let repo_sparse_path = wc.dot_hg_path().join("sparse");
-                match util::file::read(&repo_sparse_path) {
+                match fs_err::read(&repo_sparse_path) {
                     Ok(contents) => sparse::Root::from_bytes(contents, repo_sparse_path.display().to_string()).map_pyerr(py)?,
                     Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
                     Err(e) => return Err(e).map_pyerr(py),
