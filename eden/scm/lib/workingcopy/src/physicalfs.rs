@@ -40,7 +40,7 @@ use crate::walker::WalkEntry;
 use crate::walker::Walker;
 use crate::workingcopy::WorkingCopy;
 
-type ArcReadFileContents = Arc<dyn ReadFileContents + Send + Sync>;
+type ArcReadFileContents = Arc<dyn ReadFileContents>;
 type ArcReadTreeManifest = Arc<dyn ReadTreeManifest + Send + Sync>;
 
 pub struct PhysicalFileSystem {

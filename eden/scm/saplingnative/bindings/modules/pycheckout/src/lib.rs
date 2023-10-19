@@ -38,7 +38,7 @@ use pytreestate::treestate as PyTreeState;
 use storemodel::ReadFileContents;
 use vfs::VFS;
 
-type ArcReadFileContents = Arc<dyn ReadFileContents + Send + Sync>;
+type ArcReadFileContents = Arc<dyn ReadFileContents>;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "checkout"].join(".");

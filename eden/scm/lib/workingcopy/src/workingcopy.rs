@@ -56,7 +56,7 @@ use crate::status::compute_status;
 use crate::util::walk_treestate;
 use crate::watchmanfs::WatchmanFileSystem;
 
-type ArcReadFileContents = Arc<dyn ReadFileContents + Send + Sync>;
+type ArcReadFileContents = Arc<dyn ReadFileContents>;
 type ArcReadTreeManifest = Arc<dyn ReadTreeManifest + Send + Sync>;
 
 struct FileSystem {

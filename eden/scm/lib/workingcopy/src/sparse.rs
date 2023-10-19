@@ -40,7 +40,7 @@ pub fn repo_matcher(
     vfs: &VFS,
     dot_path: &Path,
     manifest: impl Manifest + Send + Sync + 'static,
-    store: Arc<dyn ReadFileContents + Send + Sync>,
+    store: Arc<dyn ReadFileContents>,
 ) -> anyhow::Result<Option<(DynMatcher, u64)>> {
     repo_matcher_with_overrides(vfs, dot_path, manifest, store, &disk_overrides(dot_path)?)
 }
@@ -49,7 +49,7 @@ pub fn repo_matcher_with_overrides(
     vfs: &VFS,
     dot_path: &Path,
     manifest: impl Manifest + Send + Sync + 'static,
-    store: Arc<dyn ReadFileContents + Send + Sync>,
+    store: Arc<dyn ReadFileContents>,
     overrides: &HashMap<String, String>,
 ) -> anyhow::Result<Option<(DynMatcher, u64)>> {
     let prof = match util::file::read(dot_path.join("sparse")) {
@@ -88,7 +88,7 @@ pub fn repo_matcher_with_overrides(
 pub fn build_matcher(
     prof: &sparse::Root,
     manifest: impl Manifest + Send + Sync + 'static,
-    store: Arc<dyn ReadFileContents + Send + Sync>,
+    store: Arc<dyn ReadFileContents>,
     overrides: &HashMap<String, String>,
 ) -> anyhow::Result<(sparse::Matcher, DefaultHasher)> {
     let manifest = Arc::new(manifest);

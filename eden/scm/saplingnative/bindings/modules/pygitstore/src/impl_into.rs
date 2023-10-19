@@ -27,7 +27,7 @@ impl gitstore {
         store.clone() as Arc<_>
     }
 
-    fn to_read_file_contents(&self, py: Python) -> Arc<dyn ReadFileContents + Send + Sync> {
+    fn to_read_file_contents(&self, py: Python) -> Arc<dyn ReadFileContents> {
         let store = self.inner(py).clone();
         store as Arc<_>
     }

@@ -33,7 +33,7 @@ use types::RepoPath;
 
 #[async_trait]
 #[auto_impl::auto_impl(Arc)]
-pub trait ReadFileContents {
+pub trait ReadFileContents: Send + Sync + 'static {
     /// Read the content of specified files.
     ///
     /// The returned content should be just the file contents. This means:
