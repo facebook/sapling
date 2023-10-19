@@ -333,9 +333,6 @@ pub struct MononokeTunables {
     disable_sql_auto_retries: TunableBool,
     // Disable SQL queries being cached using `cacheable` keyword
     disable_sql_auto_cache: TunableBool,
-    // Disable using rendezvous for batching WAL deletes.
-    // TODO: delete once it using WAL here shows to be stable
-    wal_disable_rendezvous_on_deletes: TunableBool,
     // Enable derivation on service per repo
     enable_remote_derivation: TunableBoolByRepo,
 

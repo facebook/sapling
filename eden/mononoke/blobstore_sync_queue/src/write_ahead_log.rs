@@ -45,7 +45,6 @@ use sql_common::mysql::IsolationLevel;
 use sql_construct::SqlShardedConstruct;
 use sql_ext::mononoke_queries;
 use sql_ext::SqlShardedConnections;
-use tunables::tunables;
 use vec1::Vec1;
 
 const SQL_WAL_WRITE_BUFFER_SIZE: usize = 1000;
@@ -399,24 +398,16 @@ impl BlobstoreWal for SqlBlobstoreWal {
     }
 
     async fn delete_by_key(&self, ctx: &CoreContext, entries: &[BlobstoreWalEntry]) -> Result<()> {
-        if !tunables()
-            .wal_disable_rendezvous_on_deletes()
-            .unwrap_or_default()
-        {
-            self.delete_rendezvous
-                .dispatch(ctx.fb, entries.iter().cloned().collect(), || {
-                    let connections = self.write_connections.clone();
-                    |keys| async move {
-                        Self::inner_delete_by_key(&connections, keys).await?;
-                        // We don't care about results
-                        Ok(HashMap::new())
-                    }
-                })
-                .await?;
-        } else {
-            Self::inner_delete_by_key(&self.write_connections, entries.iter().cloned().collect())
-                .await?;
-        }
+        self.delete_rendezvous
+            .dispatch(ctx.fb, entries.iter().cloned().collect(), || {
+                let connections = self.write_connections.clone();
+                |keys| async move {
+                    Self::inner_delete_by_key(&connections, keys).await?;
+                    // We don't care about results
+                    Ok(HashMap::new())
+                }
+            })
+            .await?;
         Ok(())
     }
 }
