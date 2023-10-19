@@ -8,6 +8,7 @@
 use std::collections::HashMap;
 use std::io::Write;
 use std::path::PathBuf;
+use std::str::FromStr;
 
 use anyhow::Context;
 use anyhow::Result;
@@ -41,16 +42,35 @@ const OBJECTS_DIR: &str = "objects";
 const REFS_DIR: &str = "refs";
 const HEAD_REF: &str = "HEAD";
 
+/// Parse a single key-value pair
+fn parse_key_val(s: &str) -> Result<(String, ChangesetId)> {
+    let pos = s
+        .find('=')
+        .ok_or_else(|| anyhow::anyhow!("invalid KEY=value: no `=` found in `{s}`"))?;
+    Ok((s[..pos].to_string(), ChangesetId::from_str(&s[pos + 1..])?))
+}
+
 /// Args for creating a Git bundle from a Mononoke repo
 #[derive(Args)]
 pub struct FromRepoArgs {
     /// The Mononoke repo for which the Git bundle should be created
     #[clap(flatten)]
     repo: RepoArgs,
-    /// The set of references that should be included in the bundle. If empty,
-    /// all the references will be included in the bundle
-    #[clap(long, value_delimiter = ',')]
+    /// The set of references that should be included in the bundle. The value of these refs
+    /// (i.e. the commits that the ref point to) would be as seen by the server. If empty,
+    /// (along with included_refs_with_value) all the references will be included in the bundle
+    /// with the value as seen by the server
+    #[clap(
+        long,
+        value_delimiter = ',',
+        conflicts_with = "included_refs_with_value"
+    )]
     included_refs: Vec<String>,
+    /// The set of references that should be included in the bundle along with the provided values
+    /// If empty, (along with included_refs) all the references will be included in the bundle with
+    /// the value as seen by the server
+    #[clap(long, value_delimiter = ',', value_parser = parse_key_val, conflicts_with = "included_refs")]
+    included_refs_with_value: Vec<(String, ChangesetId)>,
     /// The set of commits/changesets that are already present and can be used as
     /// prerequisites for the bundle. If empty, then the bundle will record the entire
     /// history of the repo for the included_refs
@@ -115,10 +135,15 @@ pub async fn create_from_mononoke_repo(
             inclusion_threshold: 0.6,
         }
     };
-    let requested_refs = if create_args.included_refs.is_empty() {
-        RequestedRefs::all()
-    } else {
+    // If references are specified without values, just take the ref names
+    let requested_refs = if !create_args.included_refs.is_empty() {
         RequestedRefs::Included(create_args.included_refs.into_iter().collect())
+    } else if !create_args.included_refs_with_value.is_empty() {
+        // Otherwise if refs are provided with values, take the ref name and its value
+        RequestedRefs::IncludedWithValue(create_args.included_refs_with_value.into_iter().collect())
+    } else {
+        // Otherwise include all the refs known by the server
+        RequestedRefs::all()
     };
     let request = PackItemStreamRequest::new(
         requested_refs,
