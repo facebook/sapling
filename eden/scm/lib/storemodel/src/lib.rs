@@ -21,6 +21,7 @@
 //! and history should probably be 3 different traits.
 
 use std::path::Path;
+use std::sync::Arc;
 
 use async_trait::async_trait;
 pub use futures;
@@ -121,4 +122,26 @@ pub trait StoreInfo: 'static {
     fn config(&self) -> &dyn configmodel::Config;
     /// Provide the "storage path", which is usually `.sl/store` in the backing repo.
     fn store_path(&self) -> &Path;
+}
+
+/// Provide ways to obtain file and tree stores.
+pub trait StoreOutput: 'static {
+    /// Obtain the file store.
+    fn file_store(&self) -> Arc<dyn ReadFileContents>;
+
+    /// Obtain the tree store.
+    ///
+    /// Based on the implementation, this might or might not be the same as the
+    /// file store under the hood.
+    fn tree_store(&self) -> Arc<dyn TreeStore>;
+}
+
+impl<T: ReadFileContents + TreeStore> StoreOutput for Arc<T> {
+    fn file_store(&self) -> Arc<dyn ReadFileContents> {
+        self.clone() as Arc<dyn ReadFileContents>
+    }
+
+    fn tree_store(&self) -> Arc<dyn TreeStore> {
+        self.clone() as Arc<dyn TreeStore>
+    }
 }
