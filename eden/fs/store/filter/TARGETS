@@ -24,10 +24,11 @@ cpp_library(
         "Filter.h",
         "WatchmanGlobFilter.h",
     ],
-    exported_deps = [
-        "//eden/fs/store:backing_store_interface",
-        "//eden/fs/utils:case_sensitivity",
+    deps = [
         "//eden/fs/utils:glob",
+    ],
+    exported_deps = [
+        "//eden/fs/utils:case_sensitivity",
         "//eden/fs/utils:immediate_future",
         "//eden/fs/utils:matcher",
         "//eden/fs/utils:path",

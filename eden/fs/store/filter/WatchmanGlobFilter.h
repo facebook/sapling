@@ -7,11 +7,9 @@
 
 #pragma once
 
-#include <eden/fs/store/BackingStore.h>
-#include <eden/fs/utils/CaseSensitivity.h>
 #include "eden/fs/store/filter/Filter.h"
+#include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/GlobMatcher.h"
-#include "eden/fs/utils/GlobTree.h"
 
 namespace facebook::eden {
 
