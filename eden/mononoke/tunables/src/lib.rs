@@ -336,8 +336,6 @@ pub struct MononokeTunables {
     // Enable derivation on service per repo
     enable_remote_derivation: TunableBoolByRepo,
 
-    // Enable using new commit graph in finding commit history
-    enable_new_commit_graph_commit_history: TunableBoolByRepo,
     // Enable using new commit graph in finding commit path history
     enable_new_commit_graph_commit_path_history: TunableBoolByRepo,
 
