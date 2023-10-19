@@ -746,6 +746,8 @@ def parseargs(args, parser):
     if options.verbose:
         verbose = ""
 
+    setup_sigtrace()
+
     if options.tmpdir:
         options.tmpdir = canonpath(options.tmpdir)
 
@@ -862,6 +864,41 @@ def vlog(*msg):
         return
 
     return log(*msg)
+
+
+def setup_sigtrace():
+    if os.name == "nt":
+        return
+
+    import traceback
+
+    pathformat = "/tmp/trace-%(pid)s-%(time)s.log"
+
+    def printstacks(sig, currentframe) -> None:
+        path = pathformat % {"time": time.time(), "pid": os.getpid()}
+        writesigtrace(path, writestderr=True)
+
+    def writesigtrace(path, writestderr: bool = False) -> None:
+        content = ""
+        for tid, frame in sys._current_frames().items():
+            tb = "".join(traceback.format_stack(frame))
+            content += "Thread %s:\n%s\n" % (
+                tid,
+                tb,
+            )
+
+        with open(path, "w") as f:
+            f.write(content)
+
+        # Also print to stderr
+        sys.stderr.write(content)
+        sys.stderr.write("\nStacktrace written to %s\n" % path)
+        sys.stderr.flush()
+
+    sig = getattr(signal, "SIGUSR1")
+    if sig is not None:
+        signal.signal(sig, printstacks)
+        vlog("sigtrace: use 'kill -USR1 %d' to dump stacktrace\n" % os.getpid())
 
 
 # Bytes that break XML even in a CDATA block: control characters 0-31
