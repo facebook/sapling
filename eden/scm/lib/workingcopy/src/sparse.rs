@@ -189,7 +189,7 @@ pub fn disk_overrides(dot_path: &Path) -> anyhow::Result<HashMap<String, String>
     ] {
         match util::file::open(dot_path.join(&loc), "r") {
             Ok(f) => return Ok(serde_json::from_reader(f)?),
-            Err(err) if !err.is_not_found() => return Err(err.into()),
+            Err(err) if err.kind() != std::io::ErrorKind::NotFound => return Err(err.into()),
             _ => continue,
         }
     }
