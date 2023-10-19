@@ -25,6 +25,7 @@ rust_library(
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:bitflags",
         "fbsource//third-party/rust:byteorder",
+        "fbsource//third-party/rust:fs-err",
         "fbsource//third-party/rust:fs2",
         "fbsource//third-party/rust:sha2",
         "fbsource//third-party/rust:thiserror",

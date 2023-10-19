@@ -9,7 +9,6 @@
 
 use std::borrow::Cow;
 use std::cell::RefCell;
-use std::fs::OpenOptions;
 use std::io::BufWriter;
 use std::io::Cursor;
 use std::io::Read;
@@ -27,6 +26,7 @@ use byteorder::BigEndian;
 use byteorder::ByteOrder;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
+use fs_err::OpenOptions;
 
 use crate::errors::ErrorKind;
 use crate::filereadwrite::FileReadWrite;
@@ -83,7 +83,8 @@ impl FileStore {
                 .write(true)
                 .create(true)
                 .truncate(true)
-                .open(path)?,
+                .open(path)?
+                .into(),
         );
         let mut file = FileReaderWriter::new(writer, path)?;
         file.write(&MAGIC)?;
@@ -131,7 +132,7 @@ impl FileStore {
                 read_only = true;
                 OpenOptions::new().read(true).open(path)
             })?;
-        let mut file = FileReaderWriter::new(BufWriter::new(file), path)?;
+        let mut file = FileReaderWriter::new(BufWriter::new(file.into()), path)?;
 
         // Check the file header is as expected.
         let mut buffer = [0; MAGIC_LEN];
@@ -284,9 +285,9 @@ impl StoreView for FileStore {
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
     use std::io::Write;
 
+    use fs_err as fs;
     use tempfile::tempdir;
 
     use crate::filestore::FileStore;

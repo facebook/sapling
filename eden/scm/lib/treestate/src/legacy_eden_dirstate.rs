@@ -7,7 +7,6 @@
 
 use std::collections::BTreeMap;
 use std::collections::HashMap;
-use std::fs::File;
 use std::io::Read;
 use std::io::Write;
 use std::path::Path;
@@ -18,6 +17,7 @@ use anyhow::Result;
 use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
+use fs_err::File;
 use sha2::Digest;
 use sha2::Sha256;
 use types::hgid::WriteHgIdExt;
