@@ -7,7 +7,6 @@
 
 use anyhow::anyhow;
 use anyhow::bail;
-use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
@@ -60,8 +59,19 @@ impl BonsaiDerivable for TreeHandle {
             bail!("Can't derive TreeHandle for snapshot")
         }
         let blobstore = derivation_ctx.blobstore().clone();
+        let cs_id = bonsai.get_changeset_id();
         let changes = get_file_changes(&blobstore, ctx, bonsai).await?;
-        derive_git_manifest(ctx, blobstore, parents, changes).await
+        // Check whether the git commit for this bonsai commit is already known.
+        // If so, then the raw git tree will also exist, as it would have been uploaded
+        // alongside the commit. If not, then the raw tree git may not already exist and
+        // we should derive it.
+        let derive_raw_tree = derivation_ctx
+            .bonsai_git_mapping()?
+            .get_git_sha1_from_bonsai(ctx, cs_id)
+            .await
+            .with_context(|| format!("Error in getting Git Sha1 for Bonsai Changeset {}", cs_id))?
+            .is_none();
+        derive_git_manifest(ctx, blobstore, parents, changes, derive_raw_tree).await
     }
 
     async fn store_mapping(
@@ -115,6 +125,7 @@ async fn derive_git_manifest<B: Blobstore + Clone + 'static>(
     blobstore: B,
     parents: Vec<TreeHandle>,
     changes: Vec<(NonRootMPath, Option<BlobHandle>)>,
+    derive_raw_tree: bool,
 ) -> Result<TreeHandle, Error> {
     let handle = derive_manifest(
         ctx.clone(),
@@ -133,19 +144,16 @@ async fn derive_git_manifest<B: Blobstore + Clone + 'static>(
 
                     let builder = TreeBuilder::new(members);
                     let (mut tree_bytes_without_header, tree) = builder.into_tree_with_bytes();
-                    // Store the raw git tree before storing the thrift version
-                    let oid = tree.handle().oid();
-                    let git_hash =
-                        gix_hash::oid::try_from_bytes(oid.as_ref()).with_context(|| {
-                            format_err!(
-                                "Failure while converting Git hash {} into Git Object ID",
-                                oid
-                            )
-                        })?;
-                    // Need to prepend the object header before storing the Git tree
-                    let mut raw_tree_bytes = oid.prefix();
-                    raw_tree_bytes.append(&mut tree_bytes_without_header);
-                    upload_git_object(&ctx, &blobstore, git_hash, raw_tree_bytes).await?;
+                    if derive_raw_tree {
+                        // Store the raw git tree before storing the thrift version
+                        let oid = tree.handle().oid();
+                        let git_hash = oid.to_object_id()?;
+                        // Need to prepend the object header before storing the Git tree
+                        let mut raw_tree_bytes = oid.prefix();
+                        raw_tree_bytes.append(&mut tree_bytes_without_header);
+                        upload_git_object(&ctx, &blobstore, git_hash.as_ref(), raw_tree_bytes)
+                            .await?;
+                    }
                     // Upload the thrift Git Tree
                     let handle = tree.store(&ctx, &blobstore).await?;
                     Ok(((), handle))
