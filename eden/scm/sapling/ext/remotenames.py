@@ -40,6 +40,7 @@ from sapling import (
     hg,
     localrepo,
     mutation,
+    push as pushmod,
     pycompat,
     rcutil,
     registrar,
@@ -47,7 +48,6 @@ from sapling import (
     scmutil,
     smartset,
     tracing,
-    util,
     vfs as vfsmod,
     visibility,
 )
@@ -1027,6 +1027,11 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
     if onto and not opts.get("create") and fullonto in repo:
         opargs["forcedmissing"] = list(
             repo.nodes("draft() & only(%n, %s)", node, fullonto)
+        )
+
+    if ui.configbool("push", "edenapi"):
+        return pushmod.push_rebase(
+            repo, other, force, revs=[node], bookmarks=(opargs["to"],), opargs=opargs
         )
 
     # NB: despite the name, 'revs' doesn't work if it's a numeric rev
