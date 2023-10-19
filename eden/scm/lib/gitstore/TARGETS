@@ -20,10 +20,12 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:fs-err",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:git2",
         "//eden/scm/lib/minibytes:minibytes",
         "//eden/scm/lib/storemodel:storemodel",
         "//eden/scm/lib/types:types",
+        "//eden/scm/lib/util/factory:factory",
     ],
 )

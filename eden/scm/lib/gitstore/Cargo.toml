@@ -12,6 +12,8 @@ harness = false
 [dependencies]
 anyhow = "=1.0.72"
 async-trait = "0.1.71"
+factory = { version = "0.1.0", path = "../util/factory" }
+fs-err = "2.6.0"
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 git2 = "0.14"
 minibytes = { version = "0.1.0", path = "../minibytes" }

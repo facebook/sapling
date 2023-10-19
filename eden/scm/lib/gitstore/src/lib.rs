@@ -9,6 +9,7 @@
 //!
 //! Git object store for various trait impls in Sapling.
 
+mod factory_impls;
 mod gitstore;
 mod trait_impls;
 
