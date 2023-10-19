@@ -24,6 +24,7 @@
 mod api;
 mod eager_repo;
 mod errors;
+mod factory_impls;
 mod trait_impls;
 
 pub use api::edenapi_from_config;
