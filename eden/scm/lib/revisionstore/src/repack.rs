@@ -6,7 +6,6 @@
  */
 
 use std::collections::HashSet;
-use std::fs;
 use std::io::Error as IoError;
 use std::io::ErrorKind as IoErrorKind;
 use std::path::Path;
@@ -19,6 +18,7 @@ use anyhow::Result;
 use configmodel::convert::ByteCount;
 use configmodel::Config;
 use configmodel::ConfigExt;
+use fs_err as fs;
 use minibytes::Bytes;
 use thiserror::Error;
 use types::Key;
@@ -494,11 +494,11 @@ pub fn repack(
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
-    use std::fs::set_permissions;
-    use std::fs::File;
-    use std::fs::OpenOptions;
     use std::io::Write;
 
+    use fs_err::set_permissions;
+    use fs_err::File;
+    use fs_err::OpenOptions;
     use minibytes::Bytes;
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;

@@ -81,7 +81,6 @@
 
 use std::cell::RefCell;
 use std::fmt;
-use std::fs::File;
 use std::io::Cursor;
 use std::io::Read;
 use std::mem::take;
@@ -94,6 +93,7 @@ use anyhow::Error;
 use anyhow::Result;
 use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
+use fs_err::File;
 use lz4_pyframe::decompress;
 use memmap2::Mmap;
 use memmap2::MmapOptions;

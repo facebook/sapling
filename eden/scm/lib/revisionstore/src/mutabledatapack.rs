@@ -352,10 +352,10 @@ impl LocalStore for MutableDataPack {
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
-    use std::fs::File;
     use std::io::Read;
 
+    use fs_err as fs;
+    use fs_err::File;
     use minibytes::Bytes;
     use tempfile::tempdir;
     use types::testutil::*;

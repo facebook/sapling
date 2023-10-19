@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::fs::read_to_string;
-use std::fs::OpenOptions;
 use std::io::ErrorKind;
 use std::io::Write;
 use std::path::Path;
@@ -16,6 +14,8 @@ use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use edenapi::Stats;
+use fs_err::read_to_string;
+use fs_err::OpenOptions;
 use hgtime::HgTime;
 use repo_name::encode_repo_name;
 use tracing::Span;

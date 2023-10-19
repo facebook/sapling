@@ -375,7 +375,7 @@ impl<'a> FileStoreBuilder<'a> {
 
         let activity_logger =
             if let Some(path) = self.config.get_opt::<String>("scmstore", "activitylog")? {
-                let f = std::fs::OpenOptions::new()
+                let f = fs_err::OpenOptions::new()
                     .append(true)
                     .create(true)
                     .open(path)?;

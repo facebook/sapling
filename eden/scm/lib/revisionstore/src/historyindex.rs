@@ -8,7 +8,6 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::fs::File;
 use std::io::Cursor;
 use std::io::Read;
 use std::io::Write;
@@ -18,6 +17,7 @@ use anyhow::Result;
 use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
+use fs_err::File;
 use memmap2::Mmap;
 use memmap2::MmapOptions;
 #[cfg(test)]

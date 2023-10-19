@@ -407,9 +407,9 @@ impl ToKeys for IndexedLogHgIdDataStore {
 
 #[cfg(test)]
 mod tests {
-    use std::fs::remove_file;
     use std::sync::Arc;
 
+    use fs_err::remove_file;
     use minibytes::Bytes;
     use tempfile::TempDir;
     use types::testutil::*;

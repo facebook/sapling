@@ -8,7 +8,6 @@
 use std::cmp::min;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::fs::File;
 use std::io::ErrorKind;
 use std::io::Read;
 use std::io::Write;
@@ -42,6 +41,7 @@ use clientinfo_async::with_client_request_info_scope;
 use configmodel::convert::ByteCount;
 use configmodel::Config;
 use configmodel::ConfigExt;
+use fs_err::File;
 use futures::future::FutureExt;
 use futures::stream::iter;
 use futures::stream::FuturesUnordered;

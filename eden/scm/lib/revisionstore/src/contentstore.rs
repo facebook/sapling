@@ -6,7 +6,6 @@
  */
 
 use std::collections::HashSet;
-use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -16,6 +15,7 @@ use anyhow::Result;
 use configmodel::convert::ByteCount;
 use configmodel::Config;
 use configmodel::ConfigExt;
+use fs_err as fs;
 use hgstore::strip_metadata;
 use hgtime::HgTime;
 use minibytes::Bytes;

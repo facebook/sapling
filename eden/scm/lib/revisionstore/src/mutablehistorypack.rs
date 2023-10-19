@@ -367,8 +367,7 @@ impl LocalStore for MutableHistoryPack {
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
-
+    use fs_err as fs;
     use quickcheck::quickcheck;
     use rand::seq::SliceRandom;
     use rand::SeedableRng;

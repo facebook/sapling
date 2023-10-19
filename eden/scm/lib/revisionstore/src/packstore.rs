@@ -9,8 +9,6 @@ use std::cell::RefCell;
 use std::collections::vec_deque::Iter;
 use std::collections::vec_deque::IterMut;
 use std::collections::VecDeque;
-use std::fs::read_dir;
-use std::fs::DirEntry;
 use std::io::ErrorKind;
 use std::path::Path;
 use std::path::PathBuf;
@@ -21,6 +19,8 @@ use std::time::Duration;
 use std::time::Instant;
 
 use anyhow::Result;
+use fs_err::read_dir;
+use fs_err::DirEntry;
 use parking_lot::Mutex;
 use types::Key;
 use types::NodeInfo;
@@ -709,9 +709,8 @@ impl HgIdMutableHistoryStore for MutableHistoryPackStore {
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
-    use std::fs::OpenOptions;
-
+    use fs_err as fs;
+    use fs_err::OpenOptions;
     use minibytes::Bytes;
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
@@ -1074,7 +1073,7 @@ mod tests {
         let datapack = OpenOptions::new().write(true).open(path)?;
         datapack.set_len(datapack.metadata()?.len() / 2)?;
 
-        assert_eq!(read_dir(&tempdir)?.count(), 2);
+        assert_eq!(read_dir(tempdir.path())?.count(), 2);
 
         let packstore = DataPackStore::new(
             &tempdir,
@@ -1085,7 +1084,7 @@ mod tests {
         let k1 = StoreKey::hgid(k1);
         assert_eq!(packstore.get(k1.clone())?, StoreResult::NotFound(k1));
 
-        assert_eq!(read_dir(&tempdir)?.count(), 2);
+        assert_eq!(read_dir(tempdir.path())?.count(), 2);
         Ok(())
     }
 

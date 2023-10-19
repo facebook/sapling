@@ -295,8 +295,7 @@ impl ToKeys for IndexedLogHgIdHistoryStore {
 
 #[cfg(test)]
 mod tests {
-    use std::fs::remove_file;
-
+    use fs_err::remove_file;
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
     use tempfile::TempDir;
