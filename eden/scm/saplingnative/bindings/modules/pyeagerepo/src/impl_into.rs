@@ -19,7 +19,7 @@ pub(crate) fn register(py: Python) {
 }
 
 impl EagerRepoStore {
-    fn to_dyn_treestore(&self, py: Python) -> Arc<dyn TreeStore + Send + Sync> {
+    fn to_dyn_treestore(&self, py: Python) -> Arc<dyn TreeStore> {
         let store = self.inner(py);
         Arc::new(store.clone())
     }

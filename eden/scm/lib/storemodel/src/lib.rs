@@ -71,7 +71,7 @@ pub trait ReadRootTreeIds {
 /// data is stored. This allows more easy iteration on serialization format. It also simplifies
 /// writing storage migration.
 #[auto_impl::auto_impl(Arc)]
-pub trait TreeStore {
+pub trait TreeStore: Send + Sync {
     /// Read the contents of a directory.
     ///
     /// The result is opaque bytes data, encoded using the format specified by `format()`.

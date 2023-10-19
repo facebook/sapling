@@ -37,7 +37,7 @@ py_class!(class pathhistory |py| {
         set: ImplInto<Set>,
         paths: Vec<PyPathBuf>,
         roottreereader: ImplInto<Arc<dyn ReadRootTreeIds + Send + Sync>>,
-        treestore: ImplInto<Arc<dyn TreeStore + Send + Sync>>,
+        treestore: ImplInto<Arc<dyn TreeStore>>,
     ) -> PyResult<Self> {
         let set = set.into();
         let paths: Vec<RepoPathBuf> = paths.into_iter().map(|p| p.to_repo_path_buf()).collect::<Result<Vec<_>, _>>().map_pyerr(py)?;

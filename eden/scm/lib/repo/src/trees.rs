@@ -17,12 +17,12 @@ use types::HgId;
 
 pub struct TreeManifestResolver {
     dag_commits: Arc<RwLock<Box<dyn DagCommits + Send + 'static>>>,
-    tree_store: Arc<dyn TreeStore + Send + Sync>,
+    tree_store: Arc<dyn TreeStore>,
 }
 impl TreeManifestResolver {
     pub fn new(
         dag_commits: Arc<RwLock<Box<dyn DagCommits + Send + 'static>>>,
-        tree_store: Arc<dyn TreeStore + Send + Sync>,
+        tree_store: Arc<dyn TreeStore>,
     ) -> Self {
         TreeManifestResolver {
             dag_commits,

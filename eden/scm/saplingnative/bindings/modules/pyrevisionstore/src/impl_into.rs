@@ -45,7 +45,7 @@ pub(crate) fn register(py: Python) {
 }
 
 impl contentstore {
-    fn to_dyn_treestore(&self, py: Python) -> Arc<dyn TreeStore + Send + Sync> {
+    fn to_dyn_treestore(&self, py: Python) -> Arc<dyn TreeStore> {
         let store = self.extract_inner(py) as Arc<dyn LegacyStore>;
         Arc::new(ManifestStore::new(store))
     }
@@ -72,7 +72,7 @@ impl pyfilescmstore {
 }
 
 impl treescmstore {
-    fn to_dyn_treestore(&self, py: Python) -> Arc<dyn TreeStore + Send + Sync> {
+    fn to_dyn_treestore(&self, py: Python) -> Arc<dyn TreeStore> {
         let store = self.extract_inner(py) as Arc<dyn LegacyStore>;
         Arc::new(ManifestStore::new(store))
     }
@@ -80,7 +80,7 @@ impl treescmstore {
 
 // Legacy support for store in Python.
 // XXX: Check if it's used and drop support for it.
-fn py_to_dyn_treestore(_py: Python, obj: PyObject) -> Arc<dyn TreeStore + Send + Sync> {
+fn py_to_dyn_treestore(_py: Python, obj: PyObject) -> Arc<dyn TreeStore> {
     let store = Arc::new(PythonHgIdDataStore::new(obj)) as Arc<dyn LegacyStore>;
     Arc::new(ManifestStore::new(store))
 }

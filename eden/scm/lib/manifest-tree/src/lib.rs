@@ -97,7 +97,7 @@ pub enum InsertErrorCause {
 
 impl TreeManifest {
     /// Instantiates a tree manifest that was stored with the specificed `HgId`
-    pub fn durable(store: Arc<dyn TreeStore + Send + Sync>, hgid: HgId) -> Self {
+    pub fn durable(store: Arc<dyn TreeStore>, hgid: HgId) -> Self {
         TreeManifest {
             store: InnerStore::new(store),
             root: Link::durable(hgid),
@@ -105,7 +105,7 @@ impl TreeManifest {
     }
 
     /// Instantiates a new tree manifest with no history
-    pub fn ephemeral(store: Arc<dyn TreeStore + Send + Sync>) -> Self {
+    pub fn ephemeral(store: Arc<dyn TreeStore>) -> Self {
         TreeManifest {
             store: InnerStore::new(store),
             root: Link::ephemeral(),
@@ -626,7 +626,7 @@ pub trait ReadTreeManifest {
 // The suggestion received in code review was also to consider making the return type more
 // simple (RepoPath, HgId) and letting the call sites deal with the Bytes.
 pub fn compat_subtree_diff(
-    store: Arc<dyn TreeStore + Send + Sync>,
+    store: Arc<dyn TreeStore>,
     path: &RepoPath,
     hgid: HgId,
     mut other_nodes: Vec<HgId>,
@@ -706,7 +706,7 @@ pub fn compat_subtree_diff(
 /// Assuming nothing is available locally, prefetch must make O(depth) serial
 /// round trips to the server.
 pub fn prefetch(
-    store: Arc<dyn TreeStore + Send + Sync>,
+    store: Arc<dyn TreeStore>,
     mf_nodes: &[HgId],
     matcher: impl 'static + Matcher + Sync + Send,
 ) -> Result<()> {

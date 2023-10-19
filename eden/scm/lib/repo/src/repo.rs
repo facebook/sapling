@@ -84,7 +84,7 @@ pub struct Repo {
     dag_commits: Option<Arc<RwLock<Box<dyn DagCommits + Send + 'static>>>>,
     file_store: Option<Arc<dyn RefreshableReadFileContents>>,
     file_scm_store: Option<Arc<scmstore::FileStore>>,
-    tree_store: Option<Arc<dyn RefreshableTreeStore + Send + Sync>>,
+    tree_store: Option<Arc<dyn RefreshableTreeStore>>,
     tree_scm_store: Option<Arc<scmstore::TreeStore>>,
     eager_store: Option<EagerRepoStore>,
     locker: Arc<RepoLocker>,
@@ -516,7 +516,7 @@ impl Repo {
         self.file_scm_store.clone()
     }
 
-    pub fn tree_store(&mut self) -> Result<Arc<dyn TreeStore + Send + Sync>> {
+    pub fn tree_store(&mut self) -> Result<Arc<dyn TreeStore>> {
         if let Some(ts) = &self.tree_store {
             return Ok(Arc::new(ts.clone()));
         }
@@ -709,7 +709,7 @@ impl Repo {
     /// Return Some((file_store, tree_store)) if they are constructed.
     fn try_construct_file_tree_store(
         &mut self,
-    ) -> Result<Option<(Arc<dyn ReadFileContents>, Arc<dyn TreeStore + Send + Sync>)>> {
+    ) -> Result<Option<(Arc<dyn ReadFileContents>, Arc<dyn TreeStore>)>> {
         if self.storage_format().is_git() {
             let git_store = Arc::new(
                 gitstore::GitStore::open(&self.git_dir()?).context("opening git tree store")?,

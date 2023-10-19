@@ -50,7 +50,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
         py_fn!(
             py,
             subdir_diff(
-                store: ImplInto<Arc<dyn TreeStore + Send + Sync>>,
+                store: ImplInto<Arc<dyn TreeStore>>,
                 path: PyPathBuf,
                 binnode: &PyBytes,
                 other_binnodes: &PyList,
@@ -64,7 +64,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
         py_fn!(
             py,
             prefetch(
-                store: ImplInto<Arc<dyn TreeStore + Send + Sync>>,
+                store: ImplInto<Arc<dyn TreeStore>>,
                 node: Vec<PyBytes>,
                 paths: Option<Vec<PyPathBuf>> = None,
             )
@@ -79,7 +79,7 @@ py_class!(pub class treemanifest |py| {
 
     def __new__(
         _cls,
-        store: ImplInto<Arc<dyn TreeStore + Send + Sync>>,
+        store: ImplInto<Arc<dyn TreeStore>>,
         node: Option<&PyBytes> = None
     ) -> PyResult<treemanifest> {
         let manifest_store = store.into();
@@ -527,7 +527,7 @@ impl treemanifest {
 
 pub fn subdir_diff(
     py: Python,
-    store: ImplInto<Arc<dyn TreeStore + Send + Sync>>,
+    store: ImplInto<Arc<dyn TreeStore>>,
     path: PyPathBuf,
     binnode: &PyBytes,
     other_binnodes: &PyList,
@@ -568,7 +568,7 @@ pub fn subdir_diff(
 
 pub fn prefetch(
     py: Python,
-    store: ImplInto<Arc<dyn TreeStore + Send + Sync>>,
+    store: ImplInto<Arc<dyn TreeStore>>,
     nodes: Vec<PyBytes>,
     paths: Option<Vec<PyPathBuf>>,
 ) -> PyResult<PyNone> {

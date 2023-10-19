@@ -24,11 +24,11 @@ use types::RepoPath;
 
 #[derive(Clone)]
 pub struct InnerStore {
-    tree_store: Arc<dyn TreeStore + Send + Sync>,
+    tree_store: Arc<dyn TreeStore>,
 }
 
 impl InnerStore {
-    pub fn new(tree_store: Arc<dyn TreeStore + Send + Sync>) -> Self {
+    pub fn new(tree_store: Arc<dyn TreeStore>) -> Self {
         InnerStore { tree_store }
     }
 

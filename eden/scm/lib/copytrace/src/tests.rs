@@ -48,7 +48,7 @@ struct CopyTraceTestCaseInner {
     /// Commits that change trees.
     commit_to_tree: HashMap<Vertex, HgId>,
     /// In memory tree store
-    tree_store: Arc<dyn TreeStore + Send + Sync>,
+    tree_store: Arc<dyn TreeStore>,
     /// Dag algorithm
     dagalgo: Arc<dyn DagAlgorithm + Send + Sync>,
     /// Copies info: dest -> src mapping
@@ -121,7 +121,7 @@ impl CopyTraceTestCase {
 
     async fn build_tree(
         dag: &MemDag,
-        tree_store: Arc<dyn TreeStore + Send + Sync>,
+        tree_store: Arc<dyn TreeStore>,
         commit_to_tree: &mut HashMap<Vertex, HgId>,
         copies: &mut HashMap<Key, Key>,
         commit: Vertex,

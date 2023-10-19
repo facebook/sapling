@@ -66,7 +66,7 @@ py_class!(pub class dagcopytrace |py| {
     def __new__(
         _cls,
         root_tree_reader: ImplInto<Arc<dyn ReadRootTreeIds + Send + Sync>>,
-        tree_store: ImplInto<Arc<dyn TreeStore + Send + Sync>>,
+        tree_store: ImplInto<Arc<dyn TreeStore>>,
         file_reader: ImplInto<Arc<dyn ReadFileContents>>,
         dag: ImplInto<Arc<dyn DagAlgorithm + Send + Sync>>,
         config: ImplInto<Arc<dyn Config + Send + Sync>>,

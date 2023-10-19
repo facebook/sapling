@@ -31,7 +31,7 @@ impl RenameTracer {
         set: Set,
         path: RepoPathBuf,
         root_tree_reader: Arc<dyn ReadRootTreeIds + Send + Sync>,
-        tree_store: Arc<dyn TreeStore + Send + Sync>,
+        tree_store: Arc<dyn TreeStore>,
     ) -> Result<Self> {
         let paths = vec![path];
         let ignore_file_content = true;
