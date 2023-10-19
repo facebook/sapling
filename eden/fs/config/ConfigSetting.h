@@ -45,12 +45,7 @@ class ConfigSettingBase {
   ConfigSettingBase(
       std::string_view key,
       const std::type_info& valueType,
-      ConfigSettingManager* csm)
-      : key_{key}, valueType_{valueType} {
-    if (csm) {
-      csm->registerConfiguration(this);
-    }
-  }
+      ConfigSettingManager* csm);
 
   ConfigSettingBase(const ConfigSettingBase& source) = default;
 
@@ -108,9 +103,29 @@ class ConfigSettingBase {
     return valueType_;
   }
 
+  /**
+   * Mapping of ConfigSourceType to the corresponding precedence. A higer value
+   * means higher precedence.
+   */
+  static size_t getIdx(ConfigSourceType cs) {
+    switch (cs) {
+      case ConfigSourceType::Default:
+        return 0;
+      case ConfigSourceType::SystemConfig:
+        return 1;
+      case ConfigSourceType::UserConfig:
+        return 2;
+      case ConfigSourceType::CommandLine:
+        return 3;
+    }
+    throwf<std::invalid_argument>(
+        "invalid config source value: {}", static_cast<size_t>(cs));
+  }
+
  protected:
   std::string key_;
   std::type_index valueType_;
+  std::vector<ConfigSourceType> orderedConfigSources_;
 };
 
 /**
@@ -144,7 +159,7 @@ class ConfigSetting final : private ConfigSettingBase {
   /** Get the highest priority ConfigSourceType (we ignore unpopulated
    * values).*/
   ConfigSourceType getSourceType() const override {
-    return static_cast<ConfigSourceType>(getHighestPriorityIdx());
+    return getHighestPriorityConfigSource();
   }
 
   /** Get the highest priority value for this setting.*/
@@ -227,25 +242,6 @@ class ConfigSetting final : private ConfigSettingBase {
   static constexpr size_t kConfigSourceLastIndex =
       static_cast<size_t>(apache::thrift::TEnumTraits<ConfigSourceType>::max());
 
-  /**
-   * Mapping of ConfigSourceType to the corresponding precedence. A higer value
-   * means higher precedence.
-   */
-  static size_t getIdx(ConfigSourceType cs) {
-    switch (cs) {
-      case ConfigSourceType::Default:
-        return 0;
-      case ConfigSourceType::SystemConfig:
-        return 1;
-      case ConfigSourceType::UserConfig:
-        return 2;
-      case ConfigSourceType::CommandLine:
-        return 3;
-    }
-    throwf<std::invalid_argument>(
-        "invalid config source value: {}", static_cast<size_t>(cs));
-  }
-
   std::optional<T>& getSlot(ConfigSourceType source) {
     return configValueArray_[getIdx(source)];
   }
@@ -254,17 +250,23 @@ class ConfigSetting final : private ConfigSettingBase {
   }
 
   /**
+   *  Get the ConfigSourceType of the highest priority source that is populated.
+   */
+  ConfigSourceType getHighestPriorityConfigSource() const {
+    for (auto configSource : orderedConfigSources_) {
+      auto idx = getIdx(configSource);
+      if (configValueArray_[idx].has_value()) {
+        return configSource;
+      }
+    }
+    return ConfigSourceType::Default;
+  }
+
+  /**
    *  Get the index of the highest priority source that is populated.
    */
   size_t getHighestPriorityIdx() const {
-    for (auto idx = kConfigSourceLastIndex;
-         idx > getIdx(ConfigSourceType::Default);
-         --idx) {
-      if (configValueArray_[idx].has_value()) {
-        return idx;
-      }
-    }
-    return getIdx(ConfigSourceType::Default);
+    getIdx(getHighestPriorityConfigSource());
   }
 
   /**
