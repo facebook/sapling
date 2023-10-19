@@ -382,8 +382,7 @@ fn normalize_path_pattern(pattern: &str) -> String {
 #[cfg(test)]
 mod tests {
 
-    use std::fs;
-
+    use fs_err as fs;
     use tempfile::TempDir;
     use PatternKind::*;
 

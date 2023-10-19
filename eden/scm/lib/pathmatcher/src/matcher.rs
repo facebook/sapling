@@ -376,7 +376,7 @@ mod tests {
         let dir = tempfile::TempDir::new()?;
 
         let listfile = dir.path().join("listfile");
-        std::fs::write(&listfile, "")?;
+        fs_err::write(&listfile, "")?;
 
         let m = cli_matcher(
             &vec![format!("listfile:{}", listfile.to_str().unwrap())],
@@ -398,7 +398,7 @@ mod tests {
         let dir = tempfile::TempDir::new()?;
 
         let listfile = dir.path().join("listfile");
-        std::fs::write(&listfile, "")?;
+        fs_err::write(&listfile, "")?;
 
         let m = cli_matcher_with_filesets(
             &vec![
@@ -459,10 +459,10 @@ mod tests {
         let dir = tempfile::TempDir::new()?;
 
         let foo1 = dir.path().join("foo1");
-        std::fs::write(&foo1, "")?;
+        fs_err::write(&foo1, "")?;
 
         let foo2 = dir.path().join("foo2");
-        std::fs::write(&foo2, "")?;
+        fs_err::write(&foo2, "")?;
 
         let foo_glob = dir
             .path()

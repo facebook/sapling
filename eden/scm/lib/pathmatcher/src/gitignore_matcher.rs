@@ -340,10 +340,10 @@ impl Matcher for GitignoreMatcher {
 
 #[cfg(test)]
 mod tests {
-    use std::fs::create_dir_all;
-    use std::fs::File;
     use std::io::Write;
 
+    use fs_err::create_dir_all;
+    use fs_err::File;
     use tempfile::tempdir;
 
     use super::*;
@@ -533,7 +533,7 @@ c/f/g: ignored by rule g/ from c/f/.gitignore (overrides previous rules)
         assert_eq!(m.explain("c/h/1", true), "c/h/1: not ignored\n");
     }
 
-    fn write<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) {
+    fn write<P: Into<PathBuf>, C: AsRef<[u8]>>(path: P, contents: C) {
         File::create(path)
             .expect("create")
             .write_all(contents.as_ref())
