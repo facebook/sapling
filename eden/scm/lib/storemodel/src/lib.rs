@@ -20,6 +20,8 @@
 //! Traits can be combined later. For example, reading file content, metadata,
 //! and history should probably be 3 different traits.
 
+use std::path::Path;
+
 use async_trait::async_trait;
 pub use futures;
 use futures::stream::BoxStream;
@@ -109,4 +111,14 @@ pub enum TreeFormat {
     // MODE: '40000' (tree), '100644' (regular), '100755' (executable),
     //       '120000' (symlink), '160000' (gitlink)
     Git,
+}
+
+/// Provide information about how to build a file and tree store.
+pub trait StoreInfo: 'static {
+    /// Check requirement. Return `true` if the requirement is present.
+    fn has_requirement(&self, requirement: &str) -> bool;
+    /// Provides the config.
+    fn config(&self) -> &dyn configmodel::Config;
+    /// Provide the "storage path", which is usually `.sl/store` in the backing repo.
+    fn store_path(&self) -> &Path;
 }
