@@ -18,7 +18,11 @@ use packfile::types::PackfileItem;
 /// The set of refs that are to be included in or excluded from the pack
 #[derive(Debug, Clone)]
 pub enum RequestedRefs {
+    /// Include the following refs with values known by the server
     Included(HashSet<String>),
+    /// Include the following refs with values provided by the caller
+    IncludedWithValue(HashMap<String, ChangesetId>),
+    /// Exclude the following refs
     Excluded(HashSet<String>),
 }
 

@@ -82,14 +82,23 @@ async fn bookmarks(
             &BookmarkPagination::FromStart,
             u64::MAX,
         )
-        .try_filter(|(bookmark, _)| {
+        .try_filter_map(|(bookmark, cs_id)| {
             let refs = request.requested_refs.clone();
-            let bookmark = bookmark.name().to_string();
+            let name = bookmark.name().to_string();
             async move {
-                match refs {
-                    RequestedRefs::Included(refs) => refs.contains(&bookmark),
-                    RequestedRefs::Excluded(refs) => !refs.contains(&bookmark),
-                }
+                let result = match refs {
+                    RequestedRefs::Included(refs) if refs.contains(&name) => {
+                        Some((bookmark, cs_id))
+                    }
+                    RequestedRefs::Excluded(refs) if !refs.contains(&name) => {
+                        Some((bookmark, cs_id))
+                    }
+                    RequestedRefs::IncludedWithValue(refs) => {
+                        refs.get(&name).map(|cs_id| (bookmark, cs_id.clone()))
+                    }
+                    _ => None,
+                };
+                anyhow::Ok(result)
             }
         })
         .try_collect::<FxHashMap<_, _>>()
