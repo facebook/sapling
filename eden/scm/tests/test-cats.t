@@ -1,21 +1,14 @@
 #chg-compatible
 
-#if no-windows
+#require linux serve bucktest
 
   $ configure dummyssh
-#require serve
-#require bucktest
 
   $ hg init test
   $ cd test
 
-  $ echo foo>foo
-  $ hg addremove
-  adding foo
-  $ hg commit -m 1
-
-  $ hg verify
-  warning: verify does not actually check anything in this repo
+  $ echo foo > foo
+  $ hg commit -Am 1
 
   $ cert="${HGTEST_CERTDIR}/localhost.crt"
   $ cert_key="${HGTEST_CERTDIR}/localhost.key"
@@ -28,5 +21,3 @@
   $ cats_file="$(pwd)/cats"
   $ hg push --config http.verbose=True --config cats.some.priority=1 --config cats.some.path="$cats_file" --insecure --config paths.default=mononoke://localhost:$PROXY_PORT/test --config auth.mononoke.cert=$cert --config auth.mononoke.key=$cert_key --config auth.mononoke.prefix=mononoke://* 2> /dev/null | grep -o "x-forwarded-cats: cats"
   x-forwarded-cats: cats
-
-#endif
