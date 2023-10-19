@@ -305,7 +305,7 @@ where
             if kind.is_glob() || kind.is_path() || kind.is_regex() {
                 result.push(Pattern::new(kind, pat).with_exact_file(exact_file));
             } else if matches!(kind, PatternKind::ListFile | PatternKind::ListFile0) {
-                let contents = util::file::read_to_string(&pat)?;
+                let contents = fs_err::read_to_string(&pat)?;
 
                 let (patterns, listfile_warnings) = if kind == PatternKind::ListFile {
                     normalize_patterns(contents.lines(), default_kind, root, cwd, false)?

@@ -66,7 +66,7 @@ pub fn repo_matcher_with_overrides(
 
     let mut matcher: DynMatcher = Arc::new(matcher);
 
-    match util::file::read_to_string(dot_path.join(MERGE_FILE_OVERRIDES)) {
+    match fs_err::read_to_string(dot_path.join(MERGE_FILE_OVERRIDES)) {
         Ok(temp) => {
             temp.hash(&mut hasher);
             let exact = ExactMatcher::new(

@@ -462,9 +462,9 @@ impl Repo {
         }
 
         const GIT_DIR_FILE: &str = "gitdir";
-        Ok(self.store_path.join(util::file::read_to_string(
-            self.store_path.join(GIT_DIR_FILE),
-        )?))
+        Ok(self
+            .store_path
+            .join(fs_err::read_to_string(self.store_path.join(GIT_DIR_FILE))?))
     }
 
     pub fn file_store(&mut self) -> Result<Arc<dyn ReadFileContents>> {

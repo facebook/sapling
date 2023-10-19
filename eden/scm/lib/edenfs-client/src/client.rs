@@ -6,6 +6,7 @@
  */
 
 use std::collections::BTreeMap;
+use std::io;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -206,7 +207,7 @@ impl EdenConfig {
         if cfg!(windows) {
             let toml_path = dot_eden.join("config");
 
-            match util::file::read_to_string(toml_path) {
+            match fs_err::read_to_string(toml_path) {
                 Ok(toml_contents) => {
                     #[derive(Deserialize)]
                     struct Outer {
@@ -218,7 +219,7 @@ impl EdenConfig {
                     return Ok(outer.config);
                 }
                 // Fallthrough and try symlinks just in case.
-                Err(err) if err.is_not_found() => {}
+                Err(err) if err.kind() == io::ErrorKind::NotFound => {}
                 Err(err) => return Err(err.into()),
             }
         }

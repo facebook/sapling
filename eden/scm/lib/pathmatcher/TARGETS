@@ -8,13 +8,13 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     crate_root = "src/lib.rs",
     test_deps = [
-        "fbsource//third-party/rust:fs-err",
         "fbsource//third-party/rust:tempfile",
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:bitflags",
         "fbsource//third-party/rust:fancy-regex",
+        "fbsource//third-party/rust:fs-err",
         "fbsource//third-party/rust:glob",
         "fbsource//third-party/rust:globset",
         "fbsource//third-party/rust:ignore",
