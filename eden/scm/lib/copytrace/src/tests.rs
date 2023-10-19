@@ -185,13 +185,11 @@ impl ReadRootTreeIds for CopyTraceTestCase {
 
 #[async_trait]
 impl ReadFileContents for CopyTraceTestCase {
-    type Error = anyhow::Error;
-
     #[allow(dead_code)]
     async fn read_file_contents(
         &self,
         _keys: Vec<Key>,
-    ) -> stream::BoxStream<Result<(storemodel::minibytes::Bytes, Key), Self::Error>> {
+    ) -> stream::BoxStream<anyhow::Result<(storemodel::minibytes::Bytes, Key)>> {
         // We will need this for computing content similarity score later.
         todo!()
     }
@@ -199,7 +197,7 @@ impl ReadFileContents for CopyTraceTestCase {
     async fn read_rename_metadata(
         &self,
         keys: Vec<Key>,
-    ) -> stream::BoxStream<Result<(Key, Option<Key>), Self::Error>> {
+    ) -> stream::BoxStream<anyhow::Result<(Key, Option<Key>)>> {
         let renames: Vec<_> = {
             keys.iter()
                 .map(|k| Ok((k.clone(), self.inner.copies.get(k).cloned())))

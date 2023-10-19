@@ -28,12 +28,10 @@ use crate::EagerRepoStore;
 
 #[async_trait]
 impl ReadFileContents for EagerRepoStore {
-    type Error = anyhow::Error;
-
     async fn read_file_contents(
         &self,
         keys: Vec<Key>,
-    ) -> BoxStream<Result<(minibytes::Bytes, Key), Self::Error>> {
+    ) -> BoxStream<anyhow::Result<(minibytes::Bytes, Key)>> {
         let iter = keys.into_iter().map(|k| {
             let id = k.hgid;
             let data = match self.get_content(id)? {
@@ -48,7 +46,7 @@ impl ReadFileContents for EagerRepoStore {
     async fn read_rename_metadata(
         &self,
         keys: Vec<Key>,
-    ) -> BoxStream<Result<(Key, Option<Key>), Self::Error>> {
+    ) -> BoxStream<anyhow::Result<(Key, Option<Key>)>> {
         let iter = keys.into_iter().map(|k| {
             let id = k.hgid;
             let copy_from = match self.get_content(id)? {
@@ -80,7 +78,7 @@ impl TreeStore for EagerRepoStore {
 }
 
 impl RefreshableReadFileContents for EagerRepoStore {
-    fn refresh(&self) -> Result<(), Self::Error> {
+    fn refresh(&self) -> anyhow::Result<()> {
         let mut inner = self.inner.write();
         inner.flush()?;
         Ok(())

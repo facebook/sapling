@@ -82,7 +82,7 @@ pub struct Repo {
     metalog: Option<Arc<RwLock<MetaLog>>>,
     eden_api: Option<Arc<dyn EdenApi>>,
     dag_commits: Option<Arc<RwLock<Box<dyn DagCommits + Send + 'static>>>>,
-    file_store: Option<Arc<dyn RefreshableReadFileContents<Error = anyhow::Error> + Send + Sync>>,
+    file_store: Option<Arc<dyn RefreshableReadFileContents + Send + Sync>>,
     file_scm_store: Option<Arc<scmstore::FileStore>>,
     tree_store: Option<Arc<dyn RefreshableTreeStore + Send + Sync>>,
     tree_scm_store: Option<Arc<scmstore::TreeStore>>,
@@ -469,9 +469,7 @@ impl Repo {
         )?))
     }
 
-    pub fn file_store(
-        &mut self,
-    ) -> Result<Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>> {
+    pub fn file_store(&mut self) -> Result<Arc<dyn ReadFileContents + Send + Sync>> {
         if let Some(fs) = &self.file_store {
             return Ok(Arc::new(fs.clone()));
         }
@@ -713,7 +711,7 @@ impl Repo {
         &mut self,
     ) -> Result<
         Option<(
-            Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
+            Arc<dyn ReadFileContents + Send + Sync>,
             Arc<dyn TreeStore + Send + Sync>,
         )>,
     > {

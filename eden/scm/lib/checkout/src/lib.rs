@@ -221,10 +221,7 @@ impl CheckoutPlan {
     ///
     /// This function fails fast and returns error when first checkout operation fails.
     /// Pending storage futures are dropped when error is returned
-    pub async fn apply_store(
-        &self,
-        store: &dyn ReadFileContents<Error = anyhow::Error>,
-    ) -> Result<CheckoutStats> {
+    pub async fn apply_store(&self, store: &dyn ReadFileContents) -> Result<CheckoutStats> {
         let vfs = &self.checkout.vfs;
         debug!(
             "Skipping checking out {} files since they're already written",
@@ -305,17 +302,11 @@ impl CheckoutPlan {
     }
 
     #[instrument(skip_all, err)]
-    pub fn blocking_apply_store(
-        &self,
-        store: &dyn ReadFileContents<Error = anyhow::Error>,
-    ) -> Result<CheckoutStats> {
+    pub fn blocking_apply_store(&self, store: &dyn ReadFileContents) -> Result<CheckoutStats> {
         block_on(self.apply_store(store))
     }
 
-    pub async fn apply_store_dry_run(
-        &self,
-        store: &dyn ReadFileContents<Error = anyhow::Error>,
-    ) -> Result<(usize, u64)> {
+    pub async fn apply_store_dry_run(&self, store: &dyn ReadFileContents) -> Result<(usize, u64)> {
         let keys = self
             .filtered_update_content
             .iter()
@@ -344,7 +335,7 @@ impl CheckoutPlan {
     pub async fn check_unknown_files(
         &self,
         manifest: &impl Manifest,
-        store: &dyn ReadFileContents<Error = anyhow::Error>,
+        store: &dyn ReadFileContents,
         tree_state: &mut TreeState,
         status: &Status,
     ) -> Result<Vec<RepoPathBuf>> {
@@ -1312,8 +1303,6 @@ mod test {
 
     #[async_trait::async_trait]
     impl ReadFileContents for DummyFileContentStore {
-        type Error = anyhow::Error;
-
         async fn read_file_contents(&self, keys: Vec<Key>) -> BoxStream<Result<(Bytes, Key)>> {
             stream::iter(keys)
                 .map(|key| Ok((hgid_file(&key.hgid).into(), key)))
@@ -1323,7 +1312,7 @@ mod test {
         async fn read_rename_metadata(
             &self,
             _keys: Vec<Key>,
-        ) -> BoxStream<Result<(Key, Option<Key>), Self::Error>> {
+        ) -> BoxStream<anyhow::Result<(Key, Option<Key>)>> {
             stream::empty().boxed()
         }
     }

@@ -50,10 +50,7 @@ impl contentstore {
         Arc::new(ManifestStore::new(store))
     }
 
-    fn to_read_file_contents(
-        &self,
-        py: Python,
-    ) -> Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync> {
+    fn to_read_file_contents(&self, py: Python) -> Arc<dyn ReadFileContents + Send + Sync> {
         let store = self.extract_inner(py) as Arc<dyn LegacyStore>;
         let store = ArcRemoteDataStore(store as Arc<_>);
         Arc::new(store)
@@ -61,10 +58,7 @@ impl contentstore {
 }
 
 impl filescmstore {
-    fn to_read_file_contents(
-        &self,
-        py: Python,
-    ) -> Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync> {
+    fn to_read_file_contents(&self, py: Python) -> Arc<dyn ReadFileContents + Send + Sync> {
         let store = self.extract_inner(py);
         let store = ArcFileStore(store);
         Arc::new(store)
@@ -72,10 +66,7 @@ impl filescmstore {
 }
 
 impl pyfilescmstore {
-    fn to_read_file_contents(
-        &self,
-        py: Python,
-    ) -> Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync> {
+    fn to_read_file_contents(&self, py: Python) -> Arc<dyn ReadFileContents + Send + Sync> {
         self.extract_inner(py)
     }
 }

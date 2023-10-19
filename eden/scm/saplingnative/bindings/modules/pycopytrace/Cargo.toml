@@ -6,7 +6,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "=1.0.72"
 async-runtime = { version = "0.1.0", path = "../../../../lib/async-runtime" }
 configmodel = { version = "0.1.0", path = "../../../../lib/config/model" }
 copytrace = { version = "0.1.0", path = "../../../../lib/copytrace" }

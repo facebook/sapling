@@ -86,7 +86,7 @@ pub struct ContentSimilarityRenameFinder {
 /// It is introduced for code reuse between those two file based rename finders.
 struct RenameFinderInner {
     // Read content and rename metadata of a file
-    file_reader: Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
+    file_reader: Arc<dyn ReadFileContents + Send + Sync>,
     // Read configs
     config: Arc<dyn Config + Send + Sync>,
     // Dir move caused rename candidates
@@ -97,7 +97,7 @@ type CacheKey = (Vertex, RepoPathBuf);
 
 impl MetadataRenameFinder {
     pub fn new(
-        file_reader: Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
+        file_reader: Arc<dyn ReadFileContents + Send + Sync>,
         config: Arc<dyn Config + Send + Sync>,
     ) -> Result<Self> {
         let cache_size = get_rename_cache_size(&config)?;
@@ -179,7 +179,7 @@ impl RenameFinder for MetadataRenameFinder {
 
 impl ContentSimilarityRenameFinder {
     pub fn new(
-        file_reader: Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
+        file_reader: Arc<dyn ReadFileContents + Send + Sync>,
         config: Arc<dyn Config + Send + Sync>,
     ) -> Result<Self> {
         let cache_size = get_rename_cache_size(&config)?;

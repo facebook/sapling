@@ -40,7 +40,7 @@ pub fn repo_matcher(
     vfs: &VFS,
     dot_path: &Path,
     manifest: impl Manifest + Send + Sync + 'static,
-    store: Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
+    store: Arc<dyn ReadFileContents + Send + Sync>,
 ) -> anyhow::Result<Option<(DynMatcher, u64)>> {
     repo_matcher_with_overrides(vfs, dot_path, manifest, store, &disk_overrides(dot_path)?)
 }
@@ -49,7 +49,7 @@ pub fn repo_matcher_with_overrides(
     vfs: &VFS,
     dot_path: &Path,
     manifest: impl Manifest + Send + Sync + 'static,
-    store: Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
+    store: Arc<dyn ReadFileContents + Send + Sync>,
     overrides: &HashMap<String, String>,
 ) -> anyhow::Result<Option<(DynMatcher, u64)>> {
     let prof = match util::file::read(dot_path.join("sparse")) {
@@ -88,7 +88,7 @@ pub fn repo_matcher_with_overrides(
 pub fn build_matcher(
     prof: &sparse::Root,
     manifest: impl Manifest + Send + Sync + 'static,
-    store: Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
+    store: Arc<dyn ReadFileContents + Send + Sync>,
     overrides: &HashMap<String, String>,
 ) -> anyhow::Result<(sparse::Matcher, DefaultHasher)> {
     let manifest = Arc::new(manifest);
@@ -516,12 +516,10 @@ inc
 
     #[async_trait::async_trait]
     impl ReadFileContents for StubCommit {
-        type Error = anyhow::Error;
-
         async fn read_file_contents(
             &self,
             keys: Vec<Key>,
-        ) -> BoxStream<Result<(storemodel::minibytes::Bytes, Key), Self::Error>> {
+        ) -> BoxStream<anyhow::Result<(storemodel::minibytes::Bytes, Key)>> {
             stream::iter(keys.into_iter().map(|k| match self.file_id(&k.path) {
                 None => Err(anyhow!("no such path")),
                 Some(id) if id == k.hgid => {
@@ -535,7 +533,7 @@ inc
         async fn read_rename_metadata(
             &self,
             _keys: Vec<Key>,
-        ) -> BoxStream<Result<(Key, Option<Key>), Self::Error>> {
+        ) -> BoxStream<anyhow::Result<(Key, Option<Key>)>> {
             stream::empty().boxed()
         }
     }

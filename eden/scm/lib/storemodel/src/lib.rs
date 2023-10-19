@@ -34,8 +34,6 @@ use types::RepoPath;
 #[async_trait]
 #[auto_impl::auto_impl(Arc)]
 pub trait ReadFileContents {
-    type Error;
-
     /// Read the content of specified files.
     ///
     /// The returned content should be just the file contents. This means:
@@ -47,7 +45,7 @@ pub trait ReadFileContents {
     async fn read_file_contents(
         &self,
         keys: Vec<Key>,
-    ) -> BoxStream<Result<(minibytes::Bytes, Key), Self::Error>>;
+    ) -> BoxStream<anyhow::Result<(minibytes::Bytes, Key)>>;
 
     /// Read rename metadata of sepcified files.
     ///
@@ -55,11 +53,11 @@ pub trait ReadFileContents {
     async fn read_rename_metadata(
         &self,
         keys: Vec<Key>,
-    ) -> BoxStream<Result<(Key, Option<Key>), Self::Error>>;
+    ) -> BoxStream<anyhow::Result<(Key, Option<Key>)>>;
 }
 
 pub trait RefreshableReadFileContents: ReadFileContents {
-    fn refresh(&self) -> Result<(), Self::Error>;
+    fn refresh(&self) -> anyhow::Result<()>;
 }
 
 #[async_trait]

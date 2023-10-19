@@ -20,7 +20,6 @@ rust_python_library(
     },
     crate_root = "src/lib.rs",
     deps = [
-        "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:parking_lot",
         "//eden/scm/lib/async-runtime:async-runtime",
         "//eden/scm/lib/config/model:configmodel",

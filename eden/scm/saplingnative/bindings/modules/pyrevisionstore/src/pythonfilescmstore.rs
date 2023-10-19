@@ -37,12 +37,7 @@ impl PythonFileScmStore {
 
 #[async_trait]
 impl ReadFileContents for PythonFileScmStore {
-    type Error = anyhow::Error;
-
-    async fn read_file_contents(
-        &self,
-        keys: Vec<Key>,
-    ) -> BoxStream<Result<(Bytes, Key), Self::Error>> {
+    async fn read_file_contents(&self, keys: Vec<Key>) -> BoxStream<anyhow::Result<(Bytes, Key)>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
         let contents = keys
@@ -66,7 +61,7 @@ impl ReadFileContents for PythonFileScmStore {
     async fn read_rename_metadata(
         &self,
         _keys: Vec<Key>,
-    ) -> BoxStream<Result<(Key, Option<Key>), Self::Error>> {
+    ) -> BoxStream<anyhow::Result<(Key, Option<Key>)>> {
         futures::stream::empty().boxed()
     }
 }

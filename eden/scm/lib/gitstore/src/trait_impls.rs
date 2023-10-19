@@ -23,12 +23,10 @@ use crate::GitStore;
 
 #[async_trait]
 impl ReadFileContents for GitStore {
-    type Error = anyhow::Error;
-
     async fn read_file_contents(
         &self,
         keys: Vec<Key>,
-    ) -> BoxStream<Result<(minibytes::Bytes, Key), Self::Error>> {
+    ) -> BoxStream<anyhow::Result<(minibytes::Bytes, Key)>> {
         let iter = keys.into_iter().map(|k| {
             let id = k.hgid;
             let data = self.read_obj(id, git2::ObjectType::Blob)?;
@@ -40,13 +38,13 @@ impl ReadFileContents for GitStore {
     async fn read_rename_metadata(
         &self,
         _keys: Vec<Key>,
-    ) -> BoxStream<Result<(Key, Option<Key>), Self::Error>> {
+    ) -> BoxStream<anyhow::Result<(Key, Option<Key>)>> {
         futures::stream::empty().boxed()
     }
 }
 
 impl RefreshableReadFileContents for GitStore {
-    fn refresh(&self) -> Result<(), Self::Error> {
+    fn refresh(&self) -> anyhow::Result<()> {
         // We don't hold state in memory, so no need to refresh.
         Ok(())
     }

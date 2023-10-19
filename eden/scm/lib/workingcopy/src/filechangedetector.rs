@@ -27,7 +27,7 @@ use crate::metadata;
 use crate::metadata::HgModifiedTime;
 use crate::metadata::Metadata;
 
-pub type ArcReadFileContents = Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>;
+pub type ArcReadFileContents = Arc<dyn ReadFileContents + Send + Sync>;
 
 pub(crate) enum FileChangeResult {
     Yes(PendingChange),

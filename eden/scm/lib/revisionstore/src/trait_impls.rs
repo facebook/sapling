@@ -42,8 +42,6 @@ impl<T> ReadFileContents for ArcRemoteDataStore<T>
 where
     T: RemoteDataStore + 'static + ?Sized,
 {
-    type Error = anyhow::Error;
-
     async fn read_file_contents(&self, keys: Vec<Key>) -> BoxStream<Result<(Bytes, Key)>> {
         stream_data_from_remote_data_store(self.0.clone(), keys)
             .map(|result| match result {
@@ -56,7 +54,7 @@ where
     async fn read_rename_metadata(
         &self,
         keys: Vec<Key>,
-    ) -> BoxStream<Result<(Key, Option<Key>), Self::Error>> {
+    ) -> BoxStream<anyhow::Result<(Key, Option<Key>)>> {
         stream_data_from_remote_data_store(self.0.clone(), keys)
             .map(|result| match result {
                 Ok((_data, key, copy_from)) => Ok((key, copy_from)),
@@ -68,8 +66,6 @@ where
 
 #[async_trait]
 impl ReadFileContents for ArcFileStore {
-    type Error = anyhow::Error;
-
     async fn read_file_contents(&self, keys: Vec<Key>) -> BoxStream<Result<(Bytes, Key)>> {
         stream_data_from_scmstore(self.0.clone(), keys)
             .map(|result| match result {
@@ -82,7 +78,7 @@ impl ReadFileContents for ArcFileStore {
     async fn read_rename_metadata(
         &self,
         keys: Vec<Key>,
-    ) -> BoxStream<Result<(Key, Option<Key>), Self::Error>> {
+    ) -> BoxStream<anyhow::Result<(Key, Option<Key>)>> {
         stream_data_from_scmstore(self.0.clone(), keys)
             .map(|result| match result {
                 Ok((_data, key, copy_from)) => Ok((key, copy_from)),
