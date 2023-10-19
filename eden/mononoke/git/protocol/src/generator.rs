@@ -193,9 +193,7 @@ async fn refs_to_include(
 ) -> Result<FxHashMap<String, ObjectId>> {
     stream::iter(bookmarks.iter())
         .map(|(bookmark, cs_id)| async move {
-            if let (BookmarkCategory::Tag, TagInclusion::AsIs) =
-                (bookmark.key().category(), tag_inclusion)
-            {
+            if bookmark.key().is_tag() && tag_inclusion == TagInclusion::AsIs {
                 let tag_name = bookmark.key().name().to_string();
                 let entry = repo
                     .bonsai_tag_mapping()
@@ -509,7 +507,7 @@ async fn tag_packfile_stream<'a>(
             // If the bookmark is actually a tag but there is no mapping in bonsai_tag_mapping table for it, then it
             // means that its a simple tag and won't be included in the packfile as an object. If a mapping exists, then
             // it will be included in the packfile as a raw Git object
-            if let BookmarkCategory::Tag = bookmark.key().category() {
+            if bookmark.key().is_tag() {
                 let tag_name = bookmark.key().name().to_string();
                 repo.bonsai_tag_mapping()
                     .get_entry_by_tag_name(tag_name.clone())

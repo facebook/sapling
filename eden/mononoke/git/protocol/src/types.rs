@@ -33,7 +33,7 @@ impl RequestedRefs {
 }
 
 /// Enum defining how annotated tags should be included as a ref
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TagInclusion {
     // Peel the tag and map it to the underlying Git commit
     Peeled,
