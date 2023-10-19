@@ -34,6 +34,7 @@ class EdenConfigTest : public ::testing::Test {
   // Default paths for when the path does not have to exist
   std::string testUser_{"bob"};
   AbsolutePath testHomeDir_;
+  AbsolutePath systemConfigDir_;
   AbsolutePath defaultUserConfigPath_;
   AbsolutePath defaultSystemConfigPath_;
 
@@ -50,11 +51,12 @@ class EdenConfigTest : public ::testing::Test {
 
   void SetUp() override {
     testHomeDir_ = canonicalPath("/home") + PathComponentPiece{testUser_};
+    systemConfigDir_ = canonicalPath("/etc/eden");
     defaultUserConfigPath_ = testHomeDir_ + ".edenrc"_pc;
-    defaultSystemConfigPath_ = canonicalPath("/etc/eden/edenfs.rc");
+    defaultSystemConfigPath_ = systemConfigDir_ + "edenfs.rc"_pc;
 
     defaultUserIgnoreFilePath_ = testHomeDir_ + ".edenignore"_pc;
-    defaultSystemIgnoreFilePath_ = canonicalPath("/etc/eden/ignore");
+    defaultSystemIgnoreFilePath_ = systemConfigDir_ + "ignore"_pc;
     defaultEdenDirPath_ = testHomeDir_ + ".eden"_pc;
 
     rootTestTempDir_ =
@@ -127,12 +129,10 @@ class EdenConfigTest : public ::testing::Test {
 } // namespace
 
 TEST_F(EdenConfigTest, defaultTest) {
-  AbsolutePath systemConfigDir = canonicalPath("/etc/eden");
-
   auto edenConfig = std::make_shared<EdenConfig>(
       ConfigVariables{},
       testHomeDir_,
-      systemConfigDir,
+      systemConfigDir_,
       EdenConfig::SourceVector{
           std::make_shared<TomlFileConfigSource>(
               defaultSystemConfigPath_, ConfigSourceType::SystemConfig),
@@ -193,8 +193,6 @@ TEST_F(EdenConfigTest, simpleSetGetTest) {
 }
 
 TEST_F(EdenConfigTest, cloneTest) {
-  AbsolutePath systemConfigDir = canonicalPath("/etc/eden");
-
   AbsolutePath ignoreFile = canonicalPath("/NON_DEFAULT_IGNORE_FILE");
   AbsolutePath systemIgnoreFile =
       canonicalPath("/NON_DEFAULT_SYSTEM_IGNORE_FILE");
@@ -212,7 +210,7 @@ TEST_F(EdenConfigTest, cloneTest) {
     auto edenConfig = std::make_shared<EdenConfig>(
         std::move(substitutions),
         testHomeDir_,
-        systemConfigDir,
+        systemConfigDir_,
         EdenConfig::SourceVector{
             std::make_shared<TomlFileConfigSource>(
                 defaultSystemConfigPath_, ConfigSourceType::SystemConfig),
@@ -260,12 +258,10 @@ TEST_F(EdenConfigTest, cloneTest) {
 }
 
 TEST_F(EdenConfigTest, clearAllTest) {
-  AbsolutePath systemConfigDir = canonicalPath("/etc/eden");
-
   auto edenConfig = std::make_shared<EdenConfig>(
       getDefaultVariables(),
       testHomeDir_,
-      systemConfigDir,
+      systemConfigDir_,
       EdenConfig::SourceVector{
           std::make_shared<TomlFileConfigSource>(
               defaultSystemConfigPath_, ConfigSourceType::SystemConfig),
@@ -274,7 +270,8 @@ TEST_F(EdenConfigTest, clearAllTest) {
 
   AbsolutePath fromUserConfigPath =
       defaultUserConfigPath_ + "FROM_USER_CONFIG"_pc;
-  AbsolutePath fromSystemConfigPath = systemConfigDir + "FROM_SYSTEM_CONFIG"_pc;
+  AbsolutePath fromSystemConfigPath =
+      systemConfigDir_ + "FROM_SYSTEM_CONFIG"_pc;
   AbsolutePath fromCommandLine =
       defaultUserConfigPath_ + "alt/FROM_COMMAND_LINE"_relpath;
 
@@ -317,12 +314,10 @@ TEST_F(EdenConfigTest, clearAllTest) {
 }
 
 TEST_F(EdenConfigTest, overRideNotAllowedTest) {
-  AbsolutePath systemConfigDir = canonicalPath("/etc/eden");
-
   auto edenConfig = std::make_shared<EdenConfig>(
       getDefaultVariables(),
       testHomeDir_,
-      systemConfigDir,
+      systemConfigDir_,
       EdenConfig::SourceVector{
           std::make_shared<TomlFileConfigSource>(
               defaultSystemConfigPath_, ConfigSourceType::SystemConfig),
@@ -352,11 +347,10 @@ TEST_F(EdenConfigTest, overRideNotAllowedTest) {
 }
 
 TEST_F(EdenConfigTest, loadSystemUserConfigTest) {
-  // TODO: GET THE BASE NAME FOR THE SYSTEM CONFIG DIR!
   auto edenConfig = std::make_shared<EdenConfig>(
       getDefaultVariables(),
       testHomeDir_,
-      testPathMap_[simpleOverRideTest_].second,
+      systemConfigDir_,
       EdenConfig::SourceVector{
           std::make_shared<TomlFileConfigSource>(
               testPathMap_[simpleOverRideTest_].first,
@@ -383,13 +377,12 @@ TEST_F(EdenConfigTest, loadSystemUserConfigTest) {
 
 TEST_F(EdenConfigTest, nonExistingConfigFiles) {
   auto userConfigPath = testHomeDir_ + ".FILE_DOES_NOT_EXIST"_pc;
-  auto systemConfigDir = canonicalPath("/etc/eden");
-  auto systemConfigPath = systemConfigDir + "FILE_DOES_NOT_EXIST.rc"_pc;
+  auto systemConfigPath = systemConfigDir_ + "FILE_DOES_NOT_EXIST.rc"_pc;
 
   auto edenConfig = std::make_shared<EdenConfig>(
       getDefaultVariables(),
       testHomeDir_,
-      systemConfigDir,
+      systemConfigDir_,
       EdenConfig::SourceVector{
           std::make_shared<TomlFileConfigSource>(
               systemConfigPath, ConfigSourceType::SystemConfig),
@@ -489,8 +482,6 @@ TEST_F(EdenConfigTest, missing_config_files_never_change) {
 }
 
 TEST_F(EdenConfigTest, clientCertIsFirstAvailable) {
-  AbsolutePath systemConfigDir = canonicalPath("/etc/eden");
-
   // cert1 and cert2 are both be avialable, so they could be returned from
   // getConfig. However, cert3 is not available, so it can not be.
   AbsolutePath clientCertificate1 = rootTestDir_ + "cert1"_pc;
@@ -502,7 +493,7 @@ TEST_F(EdenConfigTest, clientCertIsFirstAvailable) {
   auto edenConfig = std::make_shared<EdenConfig>(
       ConfigVariables{},
       testHomeDir_,
-      systemConfigDir,
+      systemConfigDir_,
       EdenConfig::SourceVector{
           std::make_shared<TomlFileConfigSource>(
               defaultSystemConfigPath_, ConfigSourceType::SystemConfig),
@@ -545,8 +536,6 @@ TEST_F(EdenConfigTest, clientCertIsFirstAvailable) {
 }
 
 TEST_F(EdenConfigTest, fallbackToOldSingleCertConfig) {
-  AbsolutePath systemConfigDir = canonicalPath("/etc/eden");
-
   // used in list cert
   AbsolutePath clientCertificate1 = rootTestDir_ + "cert1"_pc;
   writeFile(clientCertificate1, folly::StringPiece{"test"}).value();
@@ -560,7 +549,7 @@ TEST_F(EdenConfigTest, fallbackToOldSingleCertConfig) {
   auto edenConfig = std::make_shared<EdenConfig>(
       getDefaultVariables(),
       testHomeDir_,
-      systemConfigDir,
+      systemConfigDir_,
       EdenConfig::SourceVector{
           std::make_shared<TomlFileConfigSource>(
               defaultSystemConfigPath_, ConfigSourceType::SystemConfig),
@@ -597,7 +586,7 @@ TEST_F(EdenConfigTest, getValueByFullKey) {
   auto edenConfig = std::make_shared<EdenConfig>(
       ConfigVariables{},
       testHomeDir_,
-      canonicalPath("/etc/eden"),
+      systemConfigDir_,
       EdenConfig::SourceVector{
           std::make_shared<TomlFileConfigSource>(
               defaultSystemConfigPath_, ConfigSourceType::SystemConfig),
