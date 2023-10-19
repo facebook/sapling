@@ -311,12 +311,12 @@ exc",
         // Test the config override.
         assert!(!matcher.matches_file("inc/exc/foo".try_into()?)?);
 
-        std::fs::write(
+        fs_err::write(
             root_dir.path().join(MERGE_FILE_OVERRIDES),
             "merge/a\nmerge/b",
         )?;
 
-        std::fs::write(root_dir.path().join("sparse"), "%include tools/sparse/base")?;
+        fs_err::write(root_dir.path().join("sparse"), "%include tools/sparse/base")?;
 
         let (matcher, _hash) = repo_matcher(
             &vfs,
