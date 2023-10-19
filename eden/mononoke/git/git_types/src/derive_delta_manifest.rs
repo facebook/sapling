@@ -324,6 +324,10 @@ impl BonsaiDerivable for RootGitDeltaManifestId {
         if bonsai.is_snapshot() {
             anyhow::bail!("Can't derive GitDeltaManifest for snapshot")
         }
+        // Ensure that the dependent Git commit is derived at this point
+        derivation_ctx
+            .derive_dependency::<MappedGitCommitId>(ctx, bonsai.get_changeset_id())
+            .await?;
         // Derive the Git tree manifest for the current commit
         let tree_handle = derivation_ctx
             .derive_dependency::<TreeHandle>(ctx, bonsai.get_changeset_id())
