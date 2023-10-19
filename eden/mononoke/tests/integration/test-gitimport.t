@@ -113,9 +113,10 @@
   * Ref: "refs/remotes/origin/master": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044))) (glob)
   * Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044))) (glob)
 
-# Add an empty tag
+# Add an empty tag and a simple tag (i.e. non-annotated tag)
   $ cd "$GIT_REPO"
   $ git tag -a empty_tag -m ""
+  $ git tag simple_tag
 # Check its ref can be parsed
   $ cd "$TESTTMP"
   $ gitimport "$GIT_REPO" --generate-bookmarks full-repo
@@ -127,6 +128,7 @@
   * Ref: "refs/remotes/origin/master": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044))) (glob)
   * Ref: "refs/tags/empty_tag": Some(ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c))) (glob)
   * Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044))) (glob)
+  * Ref: "refs/tags/simple_tag": Some(ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c))) (glob)
   * Initializing repo: repo (glob)
   * Initialized repo: repo (glob)
   * All repos initialized. * (glob)
@@ -134,6 +136,7 @@
   * Bookmark: "heads/master": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (moved from ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c))) (glob)
   * Bookmark: "tags/empty_tag": ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)) (created) (glob)
   * Bookmark: "tags/first_tag": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (created) (glob)
+  * Bookmark: "tags/simple_tag": ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)) (created) (glob)
 
 # Generating bookmarks should upload the raw tag object to blobstore.
 # The id of the blob should be the same as the tag object id
@@ -177,6 +180,10 @@
   Changeset pointed to by the tag bookmark tags/empty_tag
   da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c
 
+# This should show up as empty since we don't record simple tags as tags in the bookmarks table
+  $ mononoke_newadmin bookmarks -R repo get tags/simple_tag --category tag
+  (not set)
+
 # Importing a second time should still work
   $ gitimport "$GIT_REPO" --generate-bookmarks full-repo
   * using repo "repo" repoid RepositoryId(0) (glob)
@@ -187,6 +194,7 @@
   * Ref: "refs/remotes/origin/master": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044))) (glob)
   * Ref: "refs/tags/empty_tag": Some(ChangesetId(Blake2(*))) (glob)
   * Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(*))) (glob)
+  * Ref: "refs/tags/simple_tag": Some(ChangesetId(Blake2(*))) (glob)
   * Initializing repo: repo (glob)
   * Initialized repo: repo (glob)
   * All repos initialized. * (glob)
@@ -194,6 +202,7 @@
   * Bookmark: "heads/master": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (moved from ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c))) (glob)
   * Bookmark: "tags/empty_tag": ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)) (already up-to-date) (glob)
   * Bookmark: "tags/first_tag": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (already up-to-date) (glob)
+  * Bookmark: "tags/simple_tag": ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)) (already up-to-date) (glob)
 
 
 # Start Mononoke
@@ -221,3 +230,4 @@
   * heads/master * (glob)
   * tags/empty_tag * e7f52161c612 (glob)
   * tags/first_tag * b48ed4600785 (glob)
+  * tags/simple_tag * e7f52161c612 (glob)
