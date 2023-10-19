@@ -11,7 +11,6 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::anyhow;
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
 use configloader::config::ConfigSet;
@@ -39,6 +38,8 @@ use revisionstore::EdenApiTreeStore;
 use revsets::errors::RevsetLookupError;
 use revsets::utils as revset_utils;
 use storemodel::ReadFileContents;
+use storemodel::StoreInfo;
+use storemodel::StoreOutput;
 use storemodel::TreeStore;
 #[cfg(feature = "wdir")]
 use treestate::dirstate::Dirstate;
@@ -71,7 +72,7 @@ pub struct Repo {
     config: ConfigSet,
     shared_path: PathBuf,
     shared_ident: identity::Identity,
-    store_path: PathBuf,
+    pub(crate) store_path: PathBuf,
     dot_hg_path: PathBuf,
     shared_dot_hg_path: PathBuf,
     pub requirements: Requirements,
@@ -456,17 +457,6 @@ impl Repo {
         format
     }
 
-    fn git_dir(&self) -> Result<PathBuf> {
-        if !self.storage_format().is_git() {
-            bail!("repo is not using git");
-        }
-
-        const GIT_DIR_FILE: &str = "gitdir";
-        Ok(self
-            .store_path
-            .join(fs_err::read_to_string(self.store_path.join(GIT_DIR_FILE))?))
-    }
-
     pub fn file_store(&mut self) -> Result<Arc<dyn ReadFileContents>> {
         if let Some(fs) = &self.file_store {
             return Ok(Arc::new(fs.clone()));
@@ -548,7 +538,9 @@ impl Repo {
 
     // This should only be used to share stores with Python.
     pub fn eager_store(&self) -> Option<EagerRepoStore> {
-        self.eager_store.clone()
+        let store = self.file_store.as_ref()?;
+        let store = store.maybe_as_any()?.downcast_ref::<EagerRepoStore>()?;
+        Some(store.clone())
     }
 
     pub fn tree_resolver(&mut self) -> Result<TreeManifestResolver> {
@@ -708,26 +700,25 @@ impl Repo {
     fn try_construct_file_tree_store(
         &mut self,
     ) -> Result<Option<(Arc<dyn ReadFileContents>, Arc<dyn TreeStore>)>> {
-        if self.storage_format().is_git() {
-            let git_store = Arc::new(
-                gitstore::GitStore::open(&self.git_dir()?).context("opening git tree store")?,
-            );
-            // Set both stores to share underlying git store.
-            self.file_store = Some(git_store.clone());
-            self.tree_store = Some(git_store.clone());
-            tracing::trace!(target: "repo::file_store", "creating git file and tree store");
-            return Ok(Some((git_store.clone(), git_store)));
+        let info: &dyn StoreInfo = self;
+        match factory::call_constructor::<_, Box<dyn StoreOutput>>(info) {
+            Err(e) => {
+                if factory::is_error_from_constructor(&e) {
+                    Err(e)
+                } else {
+                    // Try other store constructors. Once revisionstore is migrated to
+                    // use factory and abstraction, we can drop this.
+                    Ok(None)
+                }
+            }
+            Ok(out) => {
+                let file_store = out.file_store();
+                let tree_store = out.tree_store();
+                self.file_store = Some(file_store.clone());
+                self.tree_store = Some(tree_store.clone());
+                Ok(Some((file_store, tree_store)))
+            }
         }
-        if self.storage_format().is_eager() {
-            let store = EagerRepoStore::open(&self.store_path.join("hgcommits").join("v1"))?;
-            self.eager_store = Some(store.clone());
-            let store = Arc::new(store);
-            self.file_store = Some(store.clone());
-            self.tree_store = Some(store.clone());
-            tracing::trace!(target: "repo::file_store", "creating EagerRepo file and tree store");
-            return Ok(Some((store.clone(), store)));
-        }
-        Ok(None)
     }
 }
 

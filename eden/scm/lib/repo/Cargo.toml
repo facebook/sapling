@@ -12,9 +12,9 @@ configloader = { version = "0.1.0", path = "../config/loader" }
 configmodel = { version = "0.1.0", path = "../config/model" }
 eagerepo = { version = "0.1.0", path = "../eagerepo" }
 edenapi = { version = "0.1.0", path = "../edenapi" }
+factory = { version = "0.1.0", path = "../util/factory" }
 fail = { version = "0.4", features = ["failpoints"] }
 fs-err = "2.6.0"
-gitstore = { version = "0.1.0", path = "../gitstore" }
 hgcommits = { version = "0.1.0", path = "../hgcommits" }
 identity = { version = "0.1.0", path = "../identity" }
 manifest-tree = { version = "0.1.0", path = "../manifest-tree" }

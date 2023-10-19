@@ -13,4 +13,5 @@ pub mod errors;
 mod init;
 pub mod repo;
 mod requirements;
+mod trait_impls;
 pub mod trees;
