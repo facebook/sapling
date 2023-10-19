@@ -207,6 +207,10 @@ pub trait EdenApi: Send + Sync + 'static {
     }
 
     /// Create, delete, or move a bookmark
+    ///
+    /// Both `from` and `to` can be None, but not both:
+    ///   * if `from` is None, the bookmark will be created at `to`.
+    ///   * if `to` is None, the bookmark will be deleted.
     async fn set_bookmark(
         &self,
         bookmark: String,
@@ -220,6 +224,13 @@ pub trait EdenApi: Send + Sync + 'static {
 
     /// Land a stack of commits, rebasing them onto the specified bookmark
     /// and updating the bookmark to the top of the rebased stack.
+    ///
+    /// * bookmark: the name of the bookmark to land to.
+    /// * head: the head commit of the stack that is to be landed.
+    /// * base: the parent of the bottom of the stack that is to be landed. This must
+    ///   match the merge base of the head commit with respect to the current
+    ///   bookmark location.
+    /// * pushvars: the pushvars to use when landing the stack.
     async fn land_stack(
         &self,
         bookmark: String,
