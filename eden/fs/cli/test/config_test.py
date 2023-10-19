@@ -544,7 +544,11 @@ class EdenInstanceConstructionTest(unittest.TestCase):
         self.assertEqual(instance.etc_eden_dir, Path("/etc/eden"))
         self.assertEqual(instance.home_dir, Path("/home/testuser/"))
 
-    def test_malformed_cmd_line(self) -> None:
+    @patch("eden.fs.cli.config.EdenInstance.read_configs")
+    def test_malformed_cmd_line(self, config: Mock) -> None:
+        config.return_value = configutil.EdenConfigParser(
+            interpolation=configinterpolator.EdenConfigInterpolator({})
+        )
         cmdline = [
             b"/usr/local/libexec/eden/edenfs",
             b"--configPath",
