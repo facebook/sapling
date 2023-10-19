@@ -5,12 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use edenapi::EdenApi;
+use fs_err as fs;
 use hgcommits::DagCommits;
 use hgcommits::DoubleWriteCommits;
 use hgcommits::Error as CommitError;

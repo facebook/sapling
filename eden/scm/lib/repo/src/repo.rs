@@ -6,7 +6,6 @@
  */
 
 use std::collections::BTreeMap;
-use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -23,6 +22,7 @@ use eagerepo::EagerRepoStore;
 use edenapi::Builder;
 use edenapi::EdenApi;
 use edenapi::EdenApiError;
+use fs_err as fs;
 use hgcommits::DagCommits;
 use metalog::MetaLog;
 use once_cell::sync::Lazy;

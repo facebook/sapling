@@ -6,12 +6,12 @@
  */
 
 use std::collections::HashSet;
-use std::fs;
 use std::io;
 use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 
+use fs_err as fs;
 use util::errors::IOContext;
 use util::errors::IOResult;
 
