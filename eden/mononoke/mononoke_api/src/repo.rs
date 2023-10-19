@@ -157,7 +157,6 @@ use streaming_clone::StreamingCloneBuilder;
 use synced_commit_mapping::ArcSyncedCommitMapping;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 use test_repo_factory::TestRepoFactory;
-use tunables::tunables;
 use unbundle::PushRedirector;
 use unbundle::PushRedirectorArgs;
 use warm_bookmarks_cache::BookmarksCache;
@@ -288,9 +287,6 @@ async fn maybe_push_redirector(
     repo: &Arc<Repo>,
     repos: &MononokeRepos<Repo>,
 ) -> Result<Option<PushRedirector<Repo>>, MononokeError> {
-    if tunables().disable_scs_pushredirect().unwrap_or_default() {
-        return Ok(None);
-    }
     let base = match repo.repo_handler_base().maybe_push_redirector_base.as_ref() {
         None => return Ok(None),
         Some(base) => base,

@@ -315,9 +315,6 @@ pub struct MononokeTunables {
     // Force local pushrebase instead of talking to SCS or Land Service
     force_local_pushrebase: TunableBool,
 
-    // Disable SCS pushredirecting commits landed on a small repo to a big one
-    disable_scs_pushredirect: TunableBool,
-
     // Enable usage of basename_suffix_skeleton_manifest in commit_find_files
     disable_basename_suffix_skeleton_manifest: TunableBool,
     // Enable using BSSM for suffix queries. Might be inneficient for broad suffixes (like .php)
