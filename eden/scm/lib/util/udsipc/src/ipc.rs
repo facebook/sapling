@@ -9,11 +9,11 @@
 //! - Use `NodeIpc` to support structured messages and fd sending.
 //! - Maintains file deletion transparently.
 
-use std::fs;
 use std::io;
 use std::path::Path;
 use std::path::PathBuf;
 
+use fs_err as fs;
 use nodeipc::NodeIpc;
 
 use crate::uds;

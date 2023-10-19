@@ -24,6 +24,7 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:fn-error-context",
+        "fbsource//third-party/rust:fs-err",
         "//eden/scm/lib/util/nodeipc:nodeipc",
     ],
 )

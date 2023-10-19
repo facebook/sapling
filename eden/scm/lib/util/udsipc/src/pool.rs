@@ -7,13 +7,13 @@
 
 //! Connection "pool" by having multiple uds files in a directory.
 
-use std::fs;
 use std::io;
 use std::path::Path;
 use std::path::PathBuf;
 use std::time::Duration;
 
 use fn_error_context::context;
+use fs_err as fs;
 use nodeipc::NodeIpc;
 
 use crate::ipc;
@@ -33,7 +33,7 @@ macro_rules! or {
 /// The callsite might want to use `is_alive` to check if it should exit.
 #[context("Serving at directory {}", dir.display())]
 pub fn serve(dir: &Path, prefix: &str) -> anyhow::Result<ipc::Incoming> {
-    std::fs::create_dir_all(dir)?;
+    fs_err::create_dir_all(dir)?;
     let path = dir.join(format!("{}-{}", prefix, std::process::id()));
     ipc::serve(path)
 }
