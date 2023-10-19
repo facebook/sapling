@@ -125,6 +125,7 @@ members = [
   "lib/types",
   "lib/util",
   "lib/util/atexit",
+  "lib/util/factory",
   "lib/util/hgplain",
   "lib/util/nodeipc",
   "lib/util/nodeipc/derive",
