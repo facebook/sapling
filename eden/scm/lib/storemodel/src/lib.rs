@@ -54,10 +54,11 @@ pub trait ReadFileContents: Send + Sync + 'static {
         &self,
         keys: Vec<Key>,
     ) -> BoxStream<anyhow::Result<(Key, Option<Key>)>>;
-}
 
-pub trait RefreshableReadFileContents: ReadFileContents {
-    fn refresh(&self) -> anyhow::Result<()>;
+    /// Refresh the store so it might pick up new contents written by other processes.
+    fn refresh(&self) -> anyhow::Result<()> {
+        Ok(())
+    }
 }
 
 #[async_trait]
@@ -93,10 +94,11 @@ pub trait TreeStore: Send + Sync {
     fn format(&self) -> TreeFormat {
         TreeFormat::Hg
     }
-}
 
-pub trait RefreshableTreeStore: TreeStore {
-    fn refresh(&self) -> anyhow::Result<()>;
+    /// Refresh the store so it might pick up new contents written by other processes.
+    fn refresh(&self) -> anyhow::Result<()> {
+        Ok(())
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]

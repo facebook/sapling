@@ -11,8 +11,6 @@ use async_trait::async_trait;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use storemodel::ReadFileContents;
-use storemodel::RefreshableReadFileContents;
-use storemodel::RefreshableTreeStore;
 use storemodel::TreeFormat;
 use storemodel::TreeStore;
 use types::HgId;
@@ -41,9 +39,7 @@ impl ReadFileContents for GitStore {
     ) -> BoxStream<anyhow::Result<(Key, Option<Key>)>> {
         futures::stream::empty().boxed()
     }
-}
 
-impl RefreshableReadFileContents for GitStore {
     fn refresh(&self) -> anyhow::Result<()> {
         // We don't hold state in memory, so no need to refresh.
         Ok(())
@@ -67,9 +63,7 @@ impl TreeStore for GitStore {
     fn format(&self) -> TreeFormat {
         TreeFormat::Git
     }
-}
 
-impl RefreshableTreeStore for GitStore {
     fn refresh(&self) -> anyhow::Result<()> {
         // We don't hold state in memory, so no need to refresh.
         Ok(())

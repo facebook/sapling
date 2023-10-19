@@ -20,7 +20,6 @@ use futures::StreamExt;
 use hgstore::strip_metadata;
 use minibytes::Bytes;
 use storemodel::ReadFileContents;
-use storemodel::RefreshableReadFileContents;
 use tokio::runtime::Handle;
 use types::Key;
 
@@ -86,9 +85,7 @@ impl ReadFileContents for ArcFileStore {
             })
             .boxed()
     }
-}
 
-impl RefreshableReadFileContents for ArcFileStore {
     fn refresh(&self) -> Result<()> {
         FileStore::refresh(&self.0)
     }

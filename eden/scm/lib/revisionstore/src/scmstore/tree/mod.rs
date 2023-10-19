@@ -547,9 +547,7 @@ impl storemodel::TreeStore for TreeStore {
     fn insert(&self, _path: &RepoPath, _node: Node, _data: Bytes) -> Result<()> {
         unimplemented!("not needed yet");
     }
-}
 
-impl storemodel::RefreshableTreeStore for TreeStore {
     fn refresh(&self) -> Result<()> {
         self.refresh()
     }

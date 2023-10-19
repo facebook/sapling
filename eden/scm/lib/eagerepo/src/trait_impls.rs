@@ -14,8 +14,6 @@ use hgstore::separate_metadata;
 use hgstore::strip_metadata;
 use storemodel::types;
 use storemodel::ReadFileContents;
-use storemodel::RefreshableReadFileContents;
-use storemodel::RefreshableTreeStore;
 use storemodel::TreeFormat;
 use storemodel::TreeStore;
 use types::HgId;
@@ -57,6 +55,12 @@ impl ReadFileContents for EagerRepoStore {
         });
         futures::stream::iter(iter).boxed()
     }
+
+    fn refresh(&self) -> anyhow::Result<()> {
+        let mut inner = self.inner.write();
+        inner.flush()?;
+        Ok(())
+    }
 }
 
 impl TreeStore for EagerRepoStore {
@@ -75,17 +79,7 @@ impl TreeStore for EagerRepoStore {
     fn format(&self) -> TreeFormat {
         TreeFormat::Hg
     }
-}
 
-impl RefreshableReadFileContents for EagerRepoStore {
-    fn refresh(&self) -> anyhow::Result<()> {
-        let mut inner = self.inner.write();
-        inner.flush()?;
-        Ok(())
-    }
-}
-
-impl RefreshableTreeStore for EagerRepoStore {
     fn refresh(&self) -> anyhow::Result<()> {
         let mut inner = self.inner.write();
         inner.flush()?;

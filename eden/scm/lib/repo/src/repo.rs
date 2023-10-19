@@ -39,8 +39,6 @@ use revisionstore::EdenApiTreeStore;
 use revsets::errors::RevsetLookupError;
 use revsets::utils as revset_utils;
 use storemodel::ReadFileContents;
-use storemodel::RefreshableReadFileContents;
-use storemodel::RefreshableTreeStore;
 use storemodel::TreeStore;
 #[cfg(feature = "wdir")]
 use treestate::dirstate::Dirstate;
@@ -82,9 +80,9 @@ pub struct Repo {
     metalog: Option<Arc<RwLock<MetaLog>>>,
     eden_api: Option<Arc<dyn EdenApi>>,
     dag_commits: Option<Arc<RwLock<Box<dyn DagCommits + Send + 'static>>>>,
-    file_store: Option<Arc<dyn RefreshableReadFileContents>>,
+    file_store: Option<Arc<dyn ReadFileContents>>,
     file_scm_store: Option<Arc<scmstore::FileStore>>,
-    tree_store: Option<Arc<dyn RefreshableTreeStore>>,
+    tree_store: Option<Arc<dyn TreeStore>>,
     tree_scm_store: Option<Arc<scmstore::TreeStore>>,
     eager_store: Option<EagerRepoStore>,
     locker: Arc<RepoLocker>,
