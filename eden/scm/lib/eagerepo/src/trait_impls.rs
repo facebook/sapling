@@ -61,6 +61,10 @@ impl ReadFileContents for EagerRepoStore {
         inner.flush()?;
         Ok(())
     }
+
+    fn maybe_as_any(&self) -> Option<&dyn std::any::Any> {
+        Some(self)
+    }
 }
 
 impl TreeStore for EagerRepoStore {

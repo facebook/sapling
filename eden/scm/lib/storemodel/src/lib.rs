@@ -20,6 +20,7 @@
 //! Traits can be combined later. For example, reading file content, metadata,
 //! and history should probably be 3 different traits.
 
+use std::any::Any;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -59,6 +60,12 @@ pub trait ReadFileContents: Send + Sync + 'static {
     /// Refresh the store so it might pick up new contents written by other processes.
     fn refresh(&self) -> anyhow::Result<()> {
         Ok(())
+    }
+
+    /// Optional downcasting. If a store wants downcasting support, implement this
+    /// as `Some(self)` explicitly.
+    fn maybe_as_any(&self) -> Option<&dyn Any> {
+        None
     }
 }
 
