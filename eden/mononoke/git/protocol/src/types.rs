@@ -22,6 +22,16 @@ pub enum RequestedRefs {
     Excluded(HashSet<String>),
 }
 
+impl RequestedRefs {
+    pub fn all() -> Self {
+        RequestedRefs::Excluded(HashSet::new())
+    }
+
+    pub fn none() -> Self {
+        RequestedRefs::Included(HashSet::new())
+    }
+}
+
 /// Enum defining how annotated tags should be included as a ref
 #[derive(Debug, Clone, Copy)]
 pub enum TagInclusion {

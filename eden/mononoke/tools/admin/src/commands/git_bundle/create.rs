@@ -29,6 +29,7 @@ use packfile::types::PackfileItem;
 use protocol::generator::generate_pack_item_stream;
 use protocol::types::DeltaInclusion;
 use protocol::types::PackItemStreamRequest;
+use protocol::types::RequestedRefs;
 use protocol::types::TagInclusion;
 use walkdir::WalkDir;
 
@@ -58,6 +59,9 @@ pub struct FromRepoArgs {
     /// The location, i.e. file_name + path, where the generated bundle will be stored
     #[clap(long, short = 'o', value_name = "FILE")]
     output_location: PathBuf,
+    /// Flag controlling whether the generated bundle can contains deltas or just full object
+    #[clap(long)]
+    exclude_deltas: bool,
 }
 
 /// Args for creating a Git bundle from an on-disk Git repo
@@ -103,11 +107,25 @@ pub async fn create_from_mononoke_repo(
         .open_repo(&create_args.repo)
         .await
         .context("Failed to open repo")?;
-    let delta_inclusion = DeltaInclusion::Include {
-        form: DeltaForm::RefAndOffset,
-        inclusion_threshold: 0.6,
+    let delta_inclusion = if create_args.exclude_deltas {
+        DeltaInclusion::Exclude
+    } else {
+        DeltaInclusion::Include {
+            form: DeltaForm::RefAndOffset,
+            inclusion_threshold: 0.6,
+        }
     };
-    let request = PackItemStreamRequest::full_repo(delta_inclusion, TagInclusion::AsIs);
+    let requested_refs = if create_args.included_refs.is_empty() {
+        RequestedRefs::all()
+    } else {
+        RequestedRefs::Included(create_args.included_refs.into_iter().collect())
+    };
+    let request = PackItemStreamRequest::new(
+        requested_refs,
+        create_args.have_heads,
+        delta_inclusion,
+        TagInclusion::AsIs,
+    );
     let response = generate_pack_item_stream(ctx, &repo, request)
         .await
         .context("Error in generating pack item stream")?;
