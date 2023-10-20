@@ -20,7 +20,6 @@ use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
 use slog::debug;
 use slog::info;
-use slog::trace;
 use slog::Logger;
 
 pub type ChangesetParents = HashMap<ChangesetId, Vec<ChangesetId>>;
@@ -78,10 +77,6 @@ pub async fn build_partial_commit_graph_for_export(
         "Number of changsets to export: {0:?}",
         sorted_changesets.len()
     );
-
-    // TODO(gustavoavena): remove these prints for debugging after adding tests
-    let cs_msgs: Vec<_> = try_join_all(sorted_changesets.iter().map(|csc| csc.message())).await?;
-    trace!(logger, "changeset messages: {0:#?}", cs_msgs);
 
     info!(logger, "Partial commit graph built!");
     Ok(GitExportGraphInfo {

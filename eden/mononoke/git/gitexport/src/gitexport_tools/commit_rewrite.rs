@@ -12,6 +12,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::anyhow;
+use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use blobstore::Loadable;
@@ -46,7 +47,6 @@ use rand::distributions::Alphanumeric;
 use rand::distributions::DistString;
 use repo_blobstore::RepoBlobstoreArc;
 use slog::debug;
-use slog::error;
 use slog::info;
 use slog::trace;
 use slog::warn;
@@ -179,15 +179,17 @@ pub async fn rewrite_partial_changesets(
     let all_export_paths: HashSet<NonRootMPath> =
         export_paths.iter().cloned().map(|p| p.0).collect();
 
-    let (new_bonsai_changesets, _, _) = stream::iter(changesets_with_implicit_deletes)
+    // `mb_head_cs_id` keeps track of the id of the last commit to set the
+    // master bookmark after all commits have been copied.
+    let (mb_head_cs_id, _, _) = stream::iter(changesets_with_implicit_deletes)
         .try_fold(
-            (Vec::new(), HashMap::new(), all_export_paths),
-            |(mut new_bonsai_changesets, remapped_parents, export_paths_not_created),
-             changeset_rewrite_info| {
+            (None, HashMap::new(), all_export_paths),
+            |(_head_cs_id, remapped_parents, export_paths_not_created), changeset_rewrite_info| {
                 let changeset = changeset_rewrite_info.changeset_context;
                 let export_paths = changeset_rewrite_info.export_paths;
                 let implicit_deletes = changeset_rewrite_info.implicit_deletes;
                 borrowed!(source_repo_ctx);
+                borrowed!(temp_repo_ctx);
                 borrowed!(mb_progress_bar);
 
                 borrowed!(logger);
@@ -206,15 +208,21 @@ pub async fn rewrite_partial_changesets(
                             implicit_deletes,
                         )
                         .await?;
-                    new_bonsai_changesets.push(new_bcs);
+
+                    let new_bcs_id = new_bcs.get_changeset_id();
+
+                    upload_commits(
+                        source_repo_ctx.ctx(),
+                        vec![new_bcs],
+                        source_repo_ctx.repo(),
+                        temp_repo_ctx.repo(),
+                    )
+                    .await?;
+
                     if let Some(progress_bar) = mb_progress_bar {
                         progress_bar.inc(1);
                     }
-                    Ok((
-                        new_bonsai_changesets,
-                        remapped_parents,
-                        export_paths_not_created,
-                    ))
+                    Ok((Some(new_bcs_id), remapped_parents, export_paths_not_created))
                 }
             },
         )
@@ -222,35 +230,14 @@ pub async fn rewrite_partial_changesets(
     if let Some(progress_bar) = mb_progress_bar {
         progress_bar.finish();
     }
-    trace!(
-        logger,
-        "new_bonsai_changesets: {:#?}",
-        &new_bonsai_changesets
-    );
 
-    let head_cs_id = new_bonsai_changesets
-        .last()
-        .ok_or(Error::msg("No changesets were moved"))?
-        .get_changeset_id();
-
-    info!(logger, "Uploading copied changesets...");
-
-    upload_commits(
-        source_repo_ctx.ctx(),
-        new_bonsai_changesets,
-        source_repo_ctx.repo(),
-        temp_repo_ctx.repo(),
-    )
-    .await?;
+    let head_cs_id = mb_head_cs_id.ok_or(Error::msg("No changesets were moved"))?;
 
     // Set master bookmark to point to the latest changeset
-    if let Err(err) = temp_repo_ctx
+    temp_repo_ctx
         .create_bookmark(&BookmarkKey::from_str(MASTER_BOOKMARK)?, head_cs_id, None)
         .await
-    {
-        // TODO(T161902005): stop failing silently on bookmark creation
-        error!(logger, "Failed to create master bookmark: {:?}", err);
-    }
+        .with_context(|| "Failed to create master bookmark")?;
 
     info!(logger, "Finished copying all changesets!");
     Ok(temp_repo_ctx)
