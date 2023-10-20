@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::borrow::Borrow;
 use std::collections::HashSet;
 use std::collections::VecDeque;
 
@@ -249,7 +248,6 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
         }));
 
         (async_stream::stream! {
-            let ctx = ctx.borrow();
             let blobstore = &blobstore;
             let s: BoxStream<'_, Result<(Option<NonRootMPath>, Self::Id), Error>> = bounded_traversal_stream(
                 256,
@@ -355,7 +353,6 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
     ) -> BoxStream<'a, Result<(MPath, Self::Id), Error>> {
         let root_id = self.id().clone();
         (async_stream::stream! {
-            let ctx = ctx.borrow();
             let blobstore = &blobstore;
             let s = bounded_traversal_stream(256, Some((MPath::ROOT, root_id)), move |(path, manifest_id)| {
                 async move {
