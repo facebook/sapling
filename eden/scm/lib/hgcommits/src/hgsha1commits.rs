@@ -100,7 +100,7 @@ impl AppendCommits for HgCommits {
             let text = text_with_header(&commit.raw_text, &commit.parents)?;
             let vertex = Vertex::copy_from(self.commits.write().insert(&text, &[])?.as_ref());
             if vertex != commit.vertex {
-                return Err(crate::Error::HashMismatch(vertex, commit.vertex.clone()));
+                return Err(crate::errors::hash_mismatch(&vertex, &commit.vertex));
             }
         }
 

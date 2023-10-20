@@ -13,7 +13,6 @@ use edenapi::EdenApi;
 use fs_err as fs;
 use hgcommits::DagCommits;
 use hgcommits::DoubleWriteCommits;
-use hgcommits::Error as CommitError;
 use hgcommits::GitSegmentedCommits;
 use hgcommits::HgCommits;
 use hgcommits::HybridCommits;
@@ -82,16 +81,15 @@ pub(crate) fn open_dag_commits(
 fn open_git(
     store_path: &Path,
     metalog: Arc<RwLock<MetaLog>>,
-) -> Result<Box<dyn DagCommits + Send + 'static>, CommitError> {
-    let git_path =
-        calculate_git_path(store_path).map_err(|err| CommitError::FileReadError("gitdir", err))?;
+) -> anyhow::Result<Box<dyn DagCommits + Send + 'static>> {
+    let git_path = calculate_git_path(store_path)?;
     let segments_path = calculate_segments_path(store_path);
     let git_segmented_commits = GitSegmentedCommits::new(&git_path, &segments_path)?;
     git_segmented_commits.git_references_to_metalog(&mut metalog.write())?;
     Ok(Box::new(git_segmented_commits))
 }
 
-fn open_double(store_path: &Path) -> Result<Box<dyn DagCommits + Send + 'static>, CommitError> {
+fn open_double(store_path: &Path) -> anyhow::Result<Box<dyn DagCommits + Send + 'static>> {
     let segments_path = calculate_segments_path(store_path);
     let hg_commits_path = store_path.join(HG_COMMITS_PATH);
     let double_commits = DoubleWriteCommits::new(
@@ -107,7 +105,7 @@ fn open_hybrid(
     eden_api: Arc<dyn EdenApi>,
     lazy_hash: bool,
     use_revlog: bool,
-) -> Result<Box<dyn DagCommits + Send + 'static>, CommitError> {
+) -> anyhow::Result<Box<dyn DagCommits + Send + 'static>> {
     let segments_path = calculate_segments_path(store_path);
     let hg_commits_path = store_path.join(HG_COMMITS_PATH);
     let lazy_hash_path = get_path_from_file(store_path, LAZY_HASH_PATH);
@@ -143,7 +141,7 @@ fn get_path_from_file(store_path: &Path, target_file: &str) -> Result<PathBuf, s
     fs::read_to_string(path_file).map(PathBuf::from)
 }
 
-fn open_segments(store_path: &Path) -> Result<Box<dyn DagCommits + Send + 'static>, CommitError> {
+fn open_segments(store_path: &Path) -> anyhow::Result<Box<dyn DagCommits + Send + 'static>> {
     let commits = HgCommits::new(
         &calculate_segments_path(store_path),
         &store_path.join(HG_COMMITS_PATH),

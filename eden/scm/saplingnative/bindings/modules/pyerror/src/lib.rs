@@ -87,8 +87,6 @@ fn register_error_handlers() {
         let mut dag_error = None;
         if let Some(e) = e.downcast_ref::<dag::Error>() {
             dag_error = Some(e);
-        } else if let Some(hgcommits::Error::Dag(e)) = e.downcast_ref::<hgcommits::Error>() {
-            dag_error = Some(e);
         }
 
         if let Some(e) = dag_error {

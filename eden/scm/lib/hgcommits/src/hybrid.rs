@@ -293,9 +293,11 @@ impl AppendCommits for HybridCommits {
 
     async fn add_graph_nodes(&mut self, graph_nodes: &[crate::GraphNode]) -> Result<()> {
         if self.revlog.is_some() {
-            return Err(crate::Error::Unsupported(
+            return Err(io::Error::new(
+                io::ErrorKind::Unsupported,
                 "add_graph_nodes is not supported for revlog backend",
-            ));
+            )
+            .into());
         }
         self.commits.add_graph_nodes(graph_nodes).await?;
         Ok(())
@@ -303,19 +305,25 @@ impl AppendCommits for HybridCommits {
 
     async fn import_clone_data(&mut self, clone_data: CloneData<Vertex>) -> Result<()> {
         if self.revlog.is_some() {
-            return Err(crate::Error::Unsupported(
+            return Err(io::Error::new(
+                io::ErrorKind::Unsupported,
                 "import_clone_data is not supported for revlog backend",
-            ));
+            )
+            .into());
         }
         if self.commits.dag.all().await?.count().await? > 0 {
-            return Err(crate::Error::Unsupported(
+            return Err(io::Error::new(
+                io::ErrorKind::Unsupported,
                 "import_clone_data can only be used in an empty repo",
-            ));
+            )
+            .into());
         }
         if !self.commits.dag.is_vertex_lazy() {
-            return Err(crate::Error::Unsupported(
+            return Err(io::Error::new(
+                io::ErrorKind::Unsupported,
                 "import_clone_data can only be used in commit graph with lazy vertexes",
-            ));
+            )
+            .into());
         }
         self.commits.dag.import_clone_data(clone_data).await?;
         Ok(())
@@ -327,14 +335,18 @@ impl AppendCommits for HybridCommits {
         heads: &VertexListWithOptions,
     ) -> Result<()> {
         if self.revlog.is_some() {
-            return Err(crate::Error::Unsupported(
+            return Err(io::Error::new(
+                io::ErrorKind::Unsupported,
                 "import_pull_data is not supported for revlog backend",
-            ));
+            )
+            .into());
         }
         if !self.commits.dag.is_vertex_lazy() {
-            return Err(crate::Error::Unsupported(
+            return Err(io::Error::new(
+                io::ErrorKind::Unsupported,
                 "import_pull_data can only be used in commit graph with lazy vertexes",
-            ));
+            )
+            .into());
         }
         self.commits.dag.import_pull_data(clone_data, heads).await?;
         Ok(())

@@ -230,9 +230,9 @@ impl AppendCommits for GitSegmentedCommits {
             for commit in commits {
                 let oid = odb.write(git2::ObjectType::Commit, commit.raw_text.as_ref())?;
                 if oid.as_ref() != commit.vertex.as_ref() {
-                    return Err(crate::Error::HashMismatch(
-                        Vertex::copy_from(oid.as_ref()),
-                        commit.vertex.clone(),
+                    return Err(crate::errors::hash_mismatch(
+                        &Vertex::copy_from(oid.as_ref()),
+                        &commit.vertex,
                     ));
                 }
             }
@@ -352,7 +352,7 @@ impl StreamCommitText for GitSegmentedCommits {
 #[async_trait::async_trait]
 impl StripCommits for GitSegmentedCommits {
     async fn strip_commits(&mut self, _set: Set) -> Result<()> {
-        Err(crate::Error::Unsupported("strip for git backend"))
+        Err(io::Error::new(io::ErrorKind::Unsupported, "strip for git backend").into())
     }
 }
 

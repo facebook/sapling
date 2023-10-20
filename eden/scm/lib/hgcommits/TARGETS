@@ -22,7 +22,6 @@ rust_library(
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:parking_lot",
         "fbsource//third-party/rust:serde",
-        "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tracing",
         "//eden/scm/lib/dag:dag",
         "//eden/scm/lib/dag/gitdag:gitdag",

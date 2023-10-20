@@ -26,7 +26,6 @@ rust_python_library(
         "//eden/scm/lib/cpython-ext:cpython-ext",
         "//eden/scm/lib/dag:dag",
         "//eden/scm/lib/edenapi:edenapi",
-        "//eden/scm/lib/hgcommits:hgcommits",
         "//eden/scm/lib/http-client:http-client",
         "//eden/scm/lib/indexedlog:indexedlog",
         "//eden/scm/lib/metalog:metalog",

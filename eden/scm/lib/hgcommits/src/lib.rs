@@ -90,18 +90,22 @@ pub trait AppendCommits: Send + Sync {
     /// Use `flush` to write changes to disk.
     async fn add_graph_nodes(&mut self, graph_nodes: &[GraphNode]) -> Result<()> {
         let _ = graph_nodes;
-        Err(crate::Error::Unsupported(
+        Err(io::Error::new(
+            io::ErrorKind::Unsupported,
             "add_graph_nodes is not supported by this backend",
-        ))
+        )
+        .into())
     }
 
     /// Import clone data and flush.
     /// This is only supported by lazy backends and can only be used in an empty repo.
     async fn import_clone_data(&mut self, clone_data: CloneData<Vertex>) -> Result<()> {
         let _ = clone_data;
-        Err(crate::Error::Unsupported(
+        Err(io::Error::new(
+            io::ErrorKind::Unsupported,
             "import_clone_data is not supported by this backend",
-        ))
+        )
+        .into())
     }
 
     /// Import data from master fast forward pull.
@@ -112,9 +116,11 @@ pub trait AppendCommits: Send + Sync {
         heads: &VertexListWithOptions,
     ) -> Result<()> {
         let _ = (clone_data, heads);
-        Err(crate::Error::Unsupported(
+        Err(io::Error::new(
+            io::ErrorKind::Unsupported,
             "import_pull_data is not supported by this backend",
-        ))
+        )
+        .into())
     }
 
     /// Update references to match metalog.
@@ -195,12 +201,11 @@ mod strip;
 pub mod trait_impls;
 mod utils;
 
+pub use anyhow::Result;
 pub use doublewrite::DoubleWriteCommits;
-pub use errors::CommitError as Error;
 pub use git::GitSegmentedCommits;
 pub use hgsha1commits::HgCommits;
 pub use hybrid::HybridCommits;
 pub use memhgcommits::MemHgCommits;
 pub use revlog::RevlogCommits;
 pub use strip::StripCommits;
-pub type Result<T> = std::result::Result<T, Error>;

@@ -12,7 +12,6 @@ cpython = { version = "0.7.1", default-features = false }
 cpython_ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
 dag = { version = "0.1.0", path = "../../../../lib/dag" }
 edenapi = { version = "0.1.0", path = "../../../../lib/edenapi" }
-hgcommits = { version = "0.1.0", path = "../../../../lib/hgcommits" }
 http-client = { version = "0.1.0", path = "../../../../lib/http-client" }
 indexedlog = { version = "0.1.0", path = "../../../../lib/indexedlog" }
 metalog = { version = "0.1.0", path = "../../../../lib/metalog" }

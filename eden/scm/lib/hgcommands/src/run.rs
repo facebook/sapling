@@ -94,6 +94,7 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
             .chain(rest_args.iter().cloned())
             .collect();
         let mut hgpython = HgPython::new(&args);
+        init_abstraction_impls();
         return hgpython.run_python(&args, io) as i32;
     }
 
