@@ -62,6 +62,7 @@ use crate::app::MononokeApp;
 use crate::args::parse_config_spec_to_path;
 use crate::args::AclArgs;
 use crate::args::ConfigArgs;
+use crate::args::JustKnobsArgs;
 use crate::args::MysqlArgs;
 use crate::args::RuntimeArgs;
 use crate::args::TunablesArgs;
@@ -99,6 +100,9 @@ pub struct EnvironmentArgs {
 
     #[clap(flatten, next_help_heading = "TUNABLES OPTIONS")]
     tunables_args: TunablesArgs,
+
+    #[clap(flatten, next_help_heading = "JUST KNOBS OPTIONS")]
+    just_knobs_args: JustKnobsArgs,
 
     #[clap(flatten, next_help_heading = "BLOBSTORE OPTIONS")]
     blobstore_args: BlobstoreArgs,
@@ -286,6 +290,7 @@ impl MononokeAppBuilder {
             remote_derivation_args,
             rendezvous_args,
             tunables_args,
+            just_knobs_args,
         } = env_args;
 
         let log_level = logging_args.create_log_level();
@@ -357,6 +362,12 @@ impl MononokeAppBuilder {
 
         init_tunables_worker(
             &tunables_args,
+            &config_store,
+            logger.clone(),
+            runtime.handle().clone(),
+        )?;
+        init_just_knobs_worker(
+            &just_knobs_args,
             &config_store,
             logger.clone(),
             runtime.handle().clone(),
@@ -547,6 +558,21 @@ fn init_tunables_worker(
         config_store.get_config_handle(parse_config_spec_to_path(&tunables_config)?)?;
 
     tunables::init_tunables_worker(logger, config_handle, handle)
+}
+
+fn init_just_knobs_worker(
+    just_knobs_args: &JustKnobsArgs,
+    config_store: &ConfigStore,
+    logger: Logger,
+    handle: Handle,
+) -> Result<()> {
+    if let Some(just_knobs_config_path) = &just_knobs_args.just_knobs_config_path {
+        let config_handle =
+            config_store.get_config_handle(parse_config_spec_to_path(just_knobs_config_path)?)?;
+        justknobs::cached_config::init_just_knobs_worker(logger, config_handle, handle)
+    } else {
+        Ok(())
+    }
 }
 
 fn create_acl_provider(fb: FacebookInit, acl_args: &AclArgs) -> Result<Arc<dyn AclProvider>> {
