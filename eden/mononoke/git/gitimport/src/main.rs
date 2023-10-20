@@ -120,6 +120,9 @@ struct GitimportArgs {
     /// When set, the gitimport tool would bypass the read-only check while creating and moving bookmarks.
     #[clap(long)]
     bypass_readonly: bool,
+    /// The concurrency to be used while importing commits in Mononoke
+    #[clap(long, default_value_t = 20)]
+    concurrency: usize,
     /// Set the path to the git binary - preset to git.real
     #[clap(long)]
     git_command_path: Option<String>,
@@ -166,8 +169,10 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     let logger = app.logger();
     let ctx = CoreContext::new_with_logger(app.fb, logger.clone());
     let args: GitimportArgs = app.args()?;
-    let mut prefs = GitimportPreferences::default();
-
+    let mut prefs = GitimportPreferences {
+        concurrency: args.concurrency,
+        ..Default::default()
+    };
     // if we are readonly, then we'll set up some overrides to still be able to do meaningful
     // things below.
     let dry_run = app.readonly_storage().0;
