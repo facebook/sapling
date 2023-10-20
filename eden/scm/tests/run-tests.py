@@ -116,7 +116,6 @@ if os.environ.get("RTUNICODEPEDANTRY", False):
         pass
 
 origenviron = os.environ.copy()
-processlock = threading.Lock()
 
 pygmentspresent = False
 # ANSI color is unsupported prior to Windows 10
@@ -262,19 +261,18 @@ else:
 
 def Popen4(cmd, wd, timeout, env=None):
     shell = not isinstance(cmd, list)
-    with processlock:
-        p = subprocess.Popen(
-            cmd,
-            shell=shell,
-            bufsize=-1,
-            cwd=wd,
-            env=env,
-            close_fds=closefds,
-            preexec_fn=preexec,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-        )
+    p = subprocess.Popen(
+        cmd,
+        shell=shell,
+        bufsize=-1,
+        cwd=wd,
+        env=env,
+        close_fds=closefds,
+        preexec_fn=preexec,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
 
     p.fromchild = p.stdout
     p.tochild = p.stdin
