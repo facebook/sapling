@@ -75,7 +75,7 @@ pub fn generate_code(python: &Path, sys_path: Option<&Path>) -> String {
     let version_major: usize = output_lines[0].trim().parse().unwrap();
     let version_minor: usize = output_lines[1].trim().parse().unwrap();
     let module_infos: Vec<ModuleInfo> = output_lines[2..]
-        .chunks_exact(5)
+        .chunks_exact(6)
         .map(ModuleInfo::from_lines)
         .collect();
 
@@ -104,18 +104,19 @@ pub fn generate_code(python: &Path, sys_path: Option<&Path>) -> String {
         "pub static VERSION_MINOR: usize = {};",
         version_minor
     ));
-    generated_lines.push("pub static MODULES: ::phf::Map<&'static str, (&'static str, &'static [u8], bool, usize, usize)> = ::phf::phf_map! {".to_string());
+    generated_lines.push("pub static MODULES: ::phf::Map<&'static str, (&'static str, &'static [u8], bool, usize, usize, bool)> = ::phf::phf_map! {".to_string());
     let mut source_offset = 0;
     for m in module_infos {
         let next_source_offset = source_offset + m.source.len();
         generated_lines.push(format!(
-            r#"    "{}" => ("{}\0", b"{}", {}, {}, {}),"#,
+            r#"    "{}" => ("{}\0", b"{}", {}, {}, {}, {}),"#,
             m.name,
             m.name,
             escape_bytes(&m.byte_code),
             m.is_package(),
             source_offset,
-            next_source_offset
+            next_source_offset,
+            m.is_stdlib,
         ));
         source_offset = next_source_offset;
     }
@@ -138,6 +139,7 @@ struct ModuleInfo {
     path: String,
     source: Vec<u8>,
     byte_code: Vec<u8>,
+    is_stdlib: bool,
 }
 
 impl ModuleInfo {
@@ -146,12 +148,14 @@ impl ModuleInfo {
         let path = String::from_utf8(from_hex(lines[1].as_bytes())).unwrap();
         let source = from_hex(lines[2].as_bytes());
         let byte_code = from_hex(lines[3].as_bytes());
-        assert!(lines[4].is_empty());
+        let is_stdlib = lines[4].starts_with('T');
+        assert!(lines[5].is_empty());
         Self {
             name,
             path,
             source,
             byte_code,
+            is_stdlib,
         }
     }
 

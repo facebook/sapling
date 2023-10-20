@@ -23,7 +23,7 @@ pub fn list_modules() -> Vec<&'static str> {
 }
 
 #[derive(Copy, Clone)]
-pub struct ModuleInfo(&'static (&'static str, &'static [u8], bool, usize, usize));
+pub struct ModuleInfo(&'static (&'static str, &'static [u8], bool, usize, usize, bool));
 
 impl ModuleInfo {
     pub fn c_name(&self) -> &'static [u8] {
@@ -40,6 +40,10 @@ impl ModuleInfo {
 
     pub fn is_package(&self) -> bool {
         self.0.2
+    }
+
+    pub fn is_stdlib(&self) -> bool {
+        self.0.5
     }
 
     pub fn source_code(&self) -> Option<&'static str> {

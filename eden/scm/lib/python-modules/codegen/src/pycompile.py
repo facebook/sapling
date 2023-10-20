@@ -18,6 +18,7 @@ Then, for each module, print 5 lines:
 - File path in HEX, (/path/to/foo/bar.py).
 - Source code in HEX, one line.
 - Compiled bytecode in HEX, one line.
+- True if it's stdlib.
 - Empty line.
 
 Using HEX because:
@@ -279,6 +280,7 @@ def main():
 
     print(sys.version_info.major)
     print(sys.version_info.minor)
+    stdlib_names = set(sys.stdlib_module_names)
 
     for module_name, path, source, code in find_modules(root_modules):
         if code is None:
@@ -297,6 +299,8 @@ def main():
         print(hex(path.encode()))
         print(hex(source))
         print(hex(code))
+        is_stdlib = module_name.split(".", 1)[0] in stdlib_names
+        print(is_stdlib)
         print()
 
 
