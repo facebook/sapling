@@ -61,6 +61,8 @@ export ACL_FILE="$TESTTMP/acls.json"
 
 # The path for tunables. Do not write directly to this! Use merge_tunables instead.
 export MONONOKE_TUNABLES_PATH="${LOCAL_CONFIGERATOR_PATH}/mononoke_tunables.json"
+export MONONOKE_JUST_KNOBS_OVERRIDES_PATH="${LOCAL_CONFIGERATOR_PATH}/just_knobs.json"
+cp "${TEST_FIXTURES}/just_knobs.json" "$MONONOKE_JUST_KNOBS_OVERRIDES_PATH"
 
 function get_configerator_relative_path {
   realpath --relative-to "${LOCAL_CONFIGERATOR_PATH}" "$1"
@@ -79,6 +81,7 @@ fi
 COMMON_ARGS=(
   --mysql-master-only
   --tunables-config "$(get_configerator_relative_path "${MONONOKE_TUNABLES_PATH}")"
+  --just-knobs-config-path "$(get_configerator_relative_path "${MONONOKE_JUST_KNOBS_OVERRIDES_PATH}")"
   --local-configerator-path "${LOCAL_CONFIGERATOR_PATH}"
   --log-exclude-tag "futures_watchdog"
   --with-test-megarepo-configs-client=true
@@ -2271,6 +2274,12 @@ function merge_tunables() {
   printf "%s" "$new" > "$MONONOKE_TUNABLES_PATH"
   # This may fail if Mononoke is not started. No big deal.
   force_update_configerator >/dev/null 2>&1 || true
+}
+
+function merge_just_knobs() {
+  local new
+  new="$(jq -s '.[0] * .[1]' "$MONONOKE_JUST_KNOBS_OVERRIDES_PATH" -)"
+  printf "%s" "$new" > "$MONONOKE_JUST_KNOBS_OVERRIDES_PATH"
 }
 
 function init_tunables() {
