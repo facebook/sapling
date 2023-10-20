@@ -31,6 +31,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
 
 use crate::errors::MononokeGitError;
+use crate::fetch_git_object;
 use crate::upload_git_object;
 use crate::BlobHandle;
 use crate::Tree;
@@ -144,15 +145,28 @@ async fn derive_git_manifest<B: Blobstore + Clone + 'static>(
 
                     let builder = TreeBuilder::new(members);
                     let (mut tree_bytes_without_header, tree) = builder.into_tree_with_bytes();
+                    let oid = tree.handle().oid();
+                    let git_hash = oid.to_object_id()?;
                     if derive_raw_tree {
                         // Store the raw git tree before storing the thrift version
-                        let oid = tree.handle().oid();
-                        let git_hash = oid.to_object_id()?;
                         // Need to prepend the object header before storing the Git tree
                         let mut raw_tree_bytes = oid.prefix();
                         raw_tree_bytes.append(&mut tree_bytes_without_header);
                         upload_git_object(&ctx, &blobstore, git_hash.as_ref(), raw_tree_bytes)
                             .await?;
+                    } else {
+                        // We don't need to store the raw git tree because it already exists. Validate that the existing tree
+                        // is present in the blobstore with the same hash as we computed. If not, then it means that we computed
+                        // a thirft Git tree that is different than the stored raw tree. This could be due to a bug so we need to
+                        // fail before storing the thrift tree
+                        fetch_git_object(&ctx, &blobstore, git_hash.as_ref())
+                            .await
+                            .with_context(|| {
+                                format!(
+                                    "Raw Git tree with hash {} should have been present already",
+                                    git_hash.to_hex()
+                                )
+                            })?;
                     }
                     // Upload the thrift Git Tree
                     let handle = tree.store(&ctx, &blobstore).await?;
