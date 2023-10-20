@@ -88,10 +88,7 @@ except (ImportError, AttributeError):
 
     shellquote = pipes.quote
 
-try:
-    from bindings.threading import Condition as RLock
-except ImportError:
-    RLock = threading.RLock
+RLock = threading.RLock
 
 try:
     import libfb.py.pathutils as pathutils
