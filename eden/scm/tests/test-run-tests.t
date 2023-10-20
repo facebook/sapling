@@ -958,7 +958,7 @@ test --record support
 timeouts
 ========
   $ cat > test-timeout.t <<EOF
-  >   $ sleep 2
+  >   $ sleep 10
   >   $ echo pass
   >   pass
   > EOF
