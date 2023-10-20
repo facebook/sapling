@@ -157,10 +157,7 @@ async fn test_rewriting_fails_with_irrelevant_changeset(fb: FacebookInit) -> Res
             .await
             .unwrap_err();
 
-    assert_eq!(
-        error.to_string(),
-        "internal error: Commit wasn't rewritten because it had no signficant changes"
-    );
+    assert_eq!(error.to_string(), "No relevant file changes in changeset");
 
     Ok(())
 }

@@ -11,13 +11,15 @@ use std::env;
 use std::str::FromStr;
 use std::sync::Arc;
 
+use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
 use blobstore::Loadable;
 use blobstore::PutBehaviour;
 use borrowed::borrowed;
 use changeset_info::ChangesetInfo;
-use commit_transformation::rewrite_commit_with_file_changes_filter;
+use commit_transformation::get_renamed_implicit_deletes;
+use commit_transformation::rewrite_commit_with_implicit_deletes;
 use commit_transformation::upload_commits;
 use commit_transformation::MultiMover;
 use derived_data_manager::BonsaiDerivable;
@@ -60,6 +62,12 @@ pub use crate::partial_commit_graph::GitExportGraphInfo;
 
 pub const MASTER_BOOKMARK: &str = "master";
 
+struct ChangesetRewriteInfo<'a> {
+    changeset_context: ChangesetContext,
+    export_paths: Vec<&'a NonRootMPath>,
+    implicit_deletes: Vec<Vec<NonRootMPath>>,
+}
+
 /// Given a list of changesets, their parents and a list of paths, create
 /// copies in a target mononoke repository containing only changes that
 /// were made on the given paths.
@@ -82,23 +90,84 @@ pub async fn rewrite_partial_changesets(
     let temp_repo_ctx = create_temp_repo(fb, ctx).await?;
 
     let num_changesets = changesets.len().try_into().unwrap();
-    let cs_results: Vec<Result<ChangesetContext, MononokeError>> =
-        changesets.into_iter().map(Ok).collect::<Vec<_>>();
 
-    let mb_progress_bar = if logger.is_enabled(slog::Level::Info) {
-        let progress_bar = ProgressBar::new(num_changesets)
-        .with_message("Copying changesets")
-        .with_style(
-            ProgressStyle::with_template(
-                "[{percent}%] {msg} [{bar:60.cyan}] (ETA: {eta}) ({human_pos}/{human_len}) ({per_sec}) ",
-            )?
-            .progress_chars("#>-"),
-        );
-        progress_bar.enable_steady_tick(std::time::Duration::from_secs(5));
-        Some(progress_bar)
-    } else {
-        None
-    };
+    info!(logger, "Pre-fetching implicit deletes from changesets");
+
+    let mb_progress_bar = get_progress_bar(
+        logger,
+        num_changesets,
+        "Pre-fetching implicit deletes from changesets",
+    )?;
+
+    let changesets_with_implicit_deletes: Vec<Result<ChangesetRewriteInfo>> =
+        stream::iter(changesets)
+            .map(|cs| {
+                borrowed!(export_paths);
+                borrowed!(source_repo_ctx);
+                borrowed!(mb_progress_bar);
+
+                let blobstore = source_repo_ctx.blob_repo().repo_blobstore_arc();
+                async move {
+                    let export_paths = get_export_paths_for_changeset(&cs, export_paths).await?;
+                    let bcs = cs
+                        .id()
+                        .load(source_repo_ctx.ctx(), &blobstore)
+                        .await
+                        .map_err(MononokeError::from)?;
+
+                    // Before getting implicit deletes, filter the file changes
+                    // to remove irrelevant ones that slow down the process.
+                    let file_changes: Vec<(&NonRootMPath, &FileChange)> = bcs
+                        .file_changes()
+                        .filter(|(source_path, _fc): &(&NonRootMPath, &FileChange)| {
+                            export_paths.iter().any(|p|
+                                // Inside export path, so should be fully analysed
+                                p.is_prefix_of(*source_path) ||
+                                // Not necessarily exported, but could implicitly delete
+                                // an export path, so implicitly deletes should be collected
+                                source_path.is_prefix_of(*p))
+                        })
+                        .collect::<Vec<_>>();
+
+                    let multi_mover =
+                        build_multi_mover_for_changeset(logger, export_paths.as_slice())?;
+
+                    if file_changes.is_empty() {
+                        return Err(anyhow!("No relevant file changes in changeset"));
+                    };
+
+                    let renamed_implicit_deletes = get_renamed_implicit_deletes(
+                        ctx,
+                        file_changes,
+                        bcs.parents(),
+                        multi_mover,
+                        source_repo_ctx.repo(),
+                    )
+                    .await?;
+                    if let Some(progress_bar) = mb_progress_bar {
+                        progress_bar.inc(1);
+                    }
+
+                    Ok(ChangesetRewriteInfo {
+                        changeset_context: cs,
+                        export_paths,
+                        implicit_deletes: renamed_implicit_deletes,
+                    })
+                }
+            })
+            .buffered(1000)
+            .collect::<Vec<_>>()
+            .await;
+    if let Some(progress_bar) = mb_progress_bar {
+        progress_bar.finish();
+    }
+
+    info!(
+        logger,
+        "Finished pre-fetching implicit deletes from changesets"
+    );
+
+    let mb_progress_bar = get_progress_bar(logger, num_changesets, "Copying changesets")?;
 
     // Commits are copied from oldest to newest. In the situation where an
     // export paths is created by copying a file from a non-export path, we
@@ -110,19 +179,20 @@ pub async fn rewrite_partial_changesets(
     let all_export_paths: HashSet<NonRootMPath> =
         export_paths.iter().cloned().map(|p| p.0).collect();
 
-    let (new_bonsai_changesets, _, _) = stream::iter(cs_results)
+    let (new_bonsai_changesets, _, _) = stream::iter(changesets_with_implicit_deletes)
         .try_fold(
             (Vec::new(), HashMap::new(), all_export_paths),
-            |(mut new_bonsai_changesets, remapped_parents, export_paths_not_created), changeset| {
+            |(mut new_bonsai_changesets, remapped_parents, export_paths_not_created),
+             changeset_rewrite_info| {
+                let changeset = changeset_rewrite_info.changeset_context;
+                let export_paths = changeset_rewrite_info.export_paths;
+                let implicit_deletes = changeset_rewrite_info.implicit_deletes;
                 borrowed!(source_repo_ctx);
                 borrowed!(mb_progress_bar);
-                borrowed!(export_paths);
+
                 borrowed!(logger);
 
                 async move {
-                    let export_paths =
-                        get_export_paths_for_changeset(&changeset, export_paths).await?;
-
                     let multi_mover = build_multi_mover_for_changeset(logger, &export_paths)?;
                     let (new_bcs, remapped_parents, export_paths_not_created) =
                         create_bonsai_for_new_repo(
@@ -133,6 +203,7 @@ pub async fn rewrite_partial_changesets(
                             changeset,
                             &export_paths,
                             export_paths_not_created,
+                            implicit_deletes,
                         )
                         .await?;
                     new_bonsai_changesets.push(new_bcs);
@@ -148,7 +219,9 @@ pub async fn rewrite_partial_changesets(
             },
         )
         .await?;
-
+    if let Some(progress_bar) = mb_progress_bar {
+        progress_bar.finish();
+    }
     trace!(
         logger,
         "new_bonsai_changesets: {:#?}",
@@ -160,7 +233,8 @@ pub async fn rewrite_partial_changesets(
         .ok_or(Error::msg("No changesets were moved"))?
         .get_changeset_id();
 
-    debug!(logger, "Uploading copied changesets...");
+    info!(logger, "Uploading copied changesets...");
+
     upload_commits(
         source_repo_ctx.ctx(),
         new_bonsai_changesets,
@@ -192,6 +266,7 @@ async fn create_bonsai_for_new_repo<'a>(
     changeset_ctx: ChangesetContext,
     export_paths: &'a [&'a NonRootMPath],
     mut export_paths_not_created: HashSet<NonRootMPath>,
+    implicit_deletes: Vec<Vec<NonRootMPath>>,
 ) -> Result<
     (
         BonsaiChangeset,
@@ -311,27 +386,17 @@ async fn create_bonsai_for_new_repo<'a>(
         };
     });
 
-    let file_filter = Arc::new(
-        move |(source_path, _): (&NonRootMPath, &FileChange)| -> bool {
-            export_paths.iter().any(|p|
-                    // Inside export path, so should be fully analysed
-                    p.is_prefix_of(source_path) ||
-                    // Not necessarily exported, but could implicitly delete
-                    // an export path, so implicitly deletes should be collected
-                    source_path.is_prefix_of(*p))
-        },
-    );
-    let rewritten_bcs_mut = rewrite_commit_with_file_changes_filter(
-        source_repo_ctx.ctx(),
+    let rewritten_bcs_mut = rewrite_commit_with_implicit_deletes(
+        logger,
         mut_bcs,
         &remapped_parents,
         multi_mover,
-        source_repo_ctx.repo(),
+        vec![],
         None,
+        implicit_deletes,
         Default::default(),
-        vec![file_filter],
-    )
-    .await?
+        source_repo_ctx.repo(),
+    )?
     // This shouldn't happen because every changeset provided is modifying
     // at least one of the exported files.
     .ok_or(Error::msg(
@@ -477,4 +542,25 @@ async fn create_temp_repo(fb: FacebookInit, ctx: &CoreContext) -> Result<RepoCon
     let temp_repo_ctx = RepoContext::new_test(ctx.clone(), temp_repo).await?;
 
     Ok(temp_repo_ctx)
+}
+
+fn get_progress_bar(
+    logger: &Logger,
+    num_changesets: u64,
+    message: &'static str,
+) -> Result<Option<ProgressBar>> {
+    if logger.is_enabled(slog::Level::Info) {
+        let progress_bar = ProgressBar::new(num_changesets)
+  .with_message(message)
+  .with_style(
+      ProgressStyle::with_template(
+          "[{percent}%][elapsed: {elapsed}] {msg} [{bar:60.cyan}] (ETA: {eta}) ({pos}/{len}) ({per_sec}) ",
+      )?
+      .progress_chars("#>-"),
+  );
+        progress_bar.enable_steady_tick(std::time::Duration::from_secs(3));
+        Ok(Some(progress_bar))
+    } else {
+        Ok(None)
+    }
 }

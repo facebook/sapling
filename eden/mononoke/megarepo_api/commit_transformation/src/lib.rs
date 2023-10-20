@@ -226,7 +226,7 @@ fn minimize_file_change_set<I: IntoIterator<Item = (NonRootMPath, FileChange)>>(
 /// to naive `NonRootMPath` rewriting in `cs.file_changes`. For
 /// more information about implicit deletes, please see
 /// `manifest/src/implici_deletes.rs`
-async fn get_renamed_implicit_deletes<'a, I: IntoIterator<Item = ChangesetId>>(
+pub async fn get_renamed_implicit_deletes<'a, I: IntoIterator<Item = ChangesetId>>(
     ctx: &'a CoreContext,
     file_changes: Vec<(&NonRootMPath, &FileChange)>,
     parent_changeset_ids: I,
@@ -348,7 +348,7 @@ pub async fn rewrite_commit_with_file_changes_filter<'a>(
         vec![]
     };
 
-    internal_rewrite_commit_with_implicit_deletes(
+    rewrite_commit_with_implicit_deletes(
         ctx.logger(),
         cs,
         remapped_parents,
@@ -464,7 +464,7 @@ pub async fn rewrite_stack_no_merges<'a>(
             remapped_parents.insert(*parent, rewritten_parent);
         }
 
-        let maybe_cs = internal_rewrite_commit_with_implicit_deletes(
+        let maybe_cs = rewrite_commit_with_implicit_deletes(
             ctx.logger(),
             from_cs,
             &remapped_parents,
@@ -491,7 +491,7 @@ pub async fn rewrite_stack_no_merges<'a>(
     Ok(res)
 }
 
-pub fn internal_rewrite_commit_with_implicit_deletes<'a>(
+pub fn rewrite_commit_with_implicit_deletes<'a>(
     logger: &Logger,
     mut cs: BonsaiChangesetMut,
     remapped_parents: &'a HashMap<ChangesetId, ChangesetId>,
