@@ -179,7 +179,14 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
         // pushrebase operation, and then once more as part of the pushrebase
         // bookmark update transaction, to check if the repo got locked while
         // we were peforming the pushrebase.
-        check_repo_lock(repo, kind, self.pushvars, ctx.metadata().identities()).await?;
+        check_repo_lock(
+            repo,
+            kind,
+            self.pushvars,
+            ctx.metadata().identities(),
+            authz,
+        )
+        .await?;
 
         if let Some(hook) = RepoLockPushrebaseHook::new(
             repo.repo_identity().id(),
@@ -187,6 +194,7 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
             self.pushvars,
             repo.repo_permission_checker(),
             ctx.metadata().identities(),
+            authz,
         )
         .await
         {

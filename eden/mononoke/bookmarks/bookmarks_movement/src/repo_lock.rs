@@ -23,6 +23,7 @@ use pushrebase_hook::PushrebaseCommitHook;
 use pushrebase_hook::PushrebaseHook;
 use pushrebase_hook::PushrebaseTransactionHook;
 use pushrebase_hook::RebasedChangesets;
+use repo_authorization::AuthorizationContext;
 use repo_lock::RepoLockRef;
 use repo_lock::RepoLockState;
 use repo_lock::TransactionRepoLock;
@@ -38,15 +39,19 @@ async fn should_check_repo_lock(
     pushvars: Option<&HashMap<String, Bytes>>,
     repo_perm_checker: &dyn RepoPermissionChecker,
     idents: &MononokeIdentitySet,
+    authz: &AuthorizationContext,
 ) -> bool {
     match kind {
         BookmarkKind::Scratch => false,
         BookmarkKind::Publishing | BookmarkKind::PullDefaultPublishing => {
             if let Some(pushvars) = pushvars {
                 if let Some(value) = pushvars.get("BYPASS_READONLY") {
-                    let bypass_allowed = repo_perm_checker
+                    let mut bypass_allowed = repo_perm_checker
                         .check_if_read_only_bypass_allowed(idents)
                         .await;
+                    // If this operation is executing in an internal admin-only context (e.g. gitimport)
+                    // then we allow it to bypass repo lock check
+                    bypass_allowed |= authz == &AuthorizationContext::FullAccess;
 
                     let enforce_acl_check =
                         tunables().enforce_bypass_readonly_acl().unwrap_or_default();
@@ -70,8 +75,17 @@ pub(crate) async fn check_repo_lock(
     kind: BookmarkKind,
     pushvars: Option<&HashMap<String, Bytes>>,
     idents: &MononokeIdentitySet,
+    authz: &AuthorizationContext,
 ) -> Result<(), BookmarkMovementError> {
-    if should_check_repo_lock(kind, pushvars, repo.repo_permission_checker(), idents).await {
+    if should_check_repo_lock(
+        kind,
+        pushvars,
+        repo.repo_permission_checker(),
+        idents,
+        authz,
+    )
+    .await
+    {
         let state = repo
             .repo_lock()
             .check_repo_lock()
@@ -97,8 +111,9 @@ impl RepoLockPushrebaseHook {
         pushvars: Option<&HashMap<String, Bytes>>,
         repo_perm_checker: &dyn RepoPermissionChecker,
         idents: &MononokeIdentitySet,
+        authz: &AuthorizationContext,
     ) -> Option<Box<dyn PushrebaseHook>> {
-        if should_check_repo_lock(kind, pushvars, repo_perm_checker, idents).await {
+        if should_check_repo_lock(kind, pushvars, repo_perm_checker, idents, authz).await {
             let hook = Box::new(RepoLockPushrebaseHook {
                 transaction_repo_lock: TransactionRepoLock::new(repo_id),
             });
