@@ -2428,7 +2428,10 @@ if showprogress and os.name == "nt":
 class IOLockWithProgress:
     def __enter__(self):
         _iolock.acquire()
-        progress.clear()
+        try:
+            progress.clear()
+        except:  # no re-raises
+            _iolock.release()
 
     def __exit__(self, exc_type, exc_value, traceback):
         _iolock.release()
