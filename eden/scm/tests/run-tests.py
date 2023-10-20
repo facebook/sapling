@@ -287,7 +287,7 @@ def Popen4(cmd, wd, timeout, env=None):
         def t():
             start = time.time()
             while time.time() - start < timeout and p.returncode is None:
-                time.sleep(0.1)
+                time.sleep(5)
             p.timeout = True
             if p.returncode is None:
                 terminate(p)
@@ -1656,21 +1656,26 @@ class Test(unittest.TestCase):
             killdaemons(env["DAEMON_PIDS"])
             return ret
 
-        output = b""
         proc.tochild.close()
+        lines = []
 
         try:
             f = proc.fromchild
             while True:
-                line = f.readline()
+                # defend against very long line outputs
+                line = f.readline(5000)
                 # Make the test abort faster if other tests are Ctrl+C-ed.
                 # Code path: for test in runtests: test.abort()
                 if self._aborted:
                     raise KeyboardInterrupt()
+                if not line:
+                    break
                 if linecallback:
                     linecallback(line)
-                output += line
-                if not line:
+                lines.append(line)
+                if len(lines) > 50000:
+                    log(f"Test command '{cmd}' outputs too many lines")
+                    cleanup()
                     break
 
         except KeyboardInterrupt:
@@ -1680,6 +1685,8 @@ class Test(unittest.TestCase):
 
         finally:
             proc.fromchild.close()
+
+        output = b"".join(lines)
 
         ret = proc.wait()
         if wifexited(ret):
