@@ -62,6 +62,14 @@ scribe-cat = "/usr/local/bin/scribe_cat"
     return cfg_file
 
 
+def get_toml_test_file_dynamic_rc() -> str:
+    cfg_file = """
+[core]
+ignoreFile = "/bad/path/to/.gitignore-override"
+"""
+    return cfg_file
+
+
 def get_toml_test_file_system_rc() -> str:
     cfg_file = """
 ["telemetry"]
@@ -95,6 +103,9 @@ class TomlConfigTest(EdenTestCaseBase):
         path = self._home_dir / ".edenrc"
         path.write_text(get_toml_test_file_user_rc())
 
+        path = self._etc_eden_dir / "edenfs_dynamic.rc"
+        path.write_text(get_toml_test_file_dynamic_rc())
+
         path = self._etc_eden_dir / "edenfs.rc"
         path.write_text(get_toml_test_file_system_rc())
 
@@ -118,6 +129,10 @@ class TomlConfigTest(EdenTestCaseBase):
 
     def assert_config_precedence(self, cfg: EdenInstance) -> None:
         self.assertEqual(
+            cfg.get_config_value("core.ignoreFile", default=""),
+            f"/home/{self._user}/.gitignore-override",
+        )
+        self.assertEqual(
             cfg.get_config_value("telemetry.scribe-cat", default=""),
             "/usr/local/bin/scribe_cat",
         )
@@ -134,6 +149,7 @@ class TomlConfigTest(EdenTestCaseBase):
         exp_rc_files = [
             self._config_d / "defaults.toml",
             self._etc_eden_dir / "edenfs.rc",
+            self._etc_eden_dir / "edenfs_dynamic.rc",
             self._home_dir / ".edenrc",
         ]
         self.assertEqual(cfg.get_rc_files(), exp_rc_files)
@@ -151,7 +167,7 @@ class TomlConfigTest(EdenTestCaseBase):
         )
         self.assertEqual(
             cfg.get_config_value("core.ignoreFile", default=""),
-            f"/home/{self._user}/.gitignore",
+            "/bad/path/to/.gitignore-override",
         )
         self.assertEqual(
             cfg.get_config_value("core.systemIgnoreFile", default=""),

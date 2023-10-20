@@ -70,6 +70,7 @@ std::shared_ptr<EdenConfig> EdenConfig::createTestEdenConfig() {
       /*systemConfigDir=*/canonicalPath("/tmp"),
       SourceVector{
           std::make_shared<NullConfigSource>(ConfigSourceType::SystemConfig),
+          std::make_shared<NullConfigSource>(ConfigSourceType::Dynamic),
           std::make_shared<NullConfigSource>(ConfigSourceType::UserConfig)});
 }
 
@@ -77,6 +78,7 @@ std::string EdenConfig::toString(ConfigSourceType cs) const {
   switch (cs) {
     case ConfigSourceType::Default:
       return "default";
+    case ConfigSourceType::Dynamic:
     case ConfigSourceType::SystemConfig:
     case ConfigSourceType::UserConfig:
       if (const auto& source = configSources_[ConfigSettingBase::getIdx(cs)]) {

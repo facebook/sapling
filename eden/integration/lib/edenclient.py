@@ -107,6 +107,10 @@ class EdenFS:
         return self._home_dir / ".edenrc"
 
     @property
+    def dynamic_rc_path(self) -> Path:
+        return self._etc_eden_dir / "edenfs_dynamic.rc"
+
+    @property
     def system_rc_path(self) -> Path:
         return self._etc_eden_dir / "edenfs.rc"
 

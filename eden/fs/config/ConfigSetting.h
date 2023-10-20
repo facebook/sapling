@@ -113,10 +113,12 @@ class ConfigSettingBase {
         return 0;
       case ConfigSourceType::SystemConfig:
         return 1;
-      case ConfigSourceType::UserConfig:
+      case ConfigSourceType::Dynamic:
         return 2;
-      case ConfigSourceType::CommandLine:
+      case ConfigSourceType::UserConfig:
         return 3;
+      case ConfigSourceType::CommandLine:
+        return 4;
     }
     throwf<std::invalid_argument>(
         "invalid config source value: {}", static_cast<size_t>(cs));

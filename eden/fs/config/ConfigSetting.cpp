@@ -12,6 +12,7 @@ namespace facebook::eden {
 static const std::vector<ConfigSourceType> kConfigSourcesInPriorityOrder = {
     ConfigSourceType::CommandLine,
     ConfigSourceType::UserConfig,
+    ConfigSourceType::Dynamic,
     ConfigSourceType::SystemConfig,
     ConfigSourceType::Default};
 

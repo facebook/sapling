@@ -158,6 +158,10 @@ fn load_system_rcs(loader: &mut EdenFsConfigLoader, etc_dir: &Path) -> Result<()
     Ok(())
 }
 
+fn load_dynamic(loader: &mut EdenFsConfigLoader, etc_dir: &Path) -> Result<()> {
+    load_path(loader, &etc_dir.join("edenfs_dynamic.rc"))
+}
+
 pub fn load_user(loader: &mut EdenFsConfigLoader, home_dir: &Path) -> Result<()> {
     let home_rc = home_dir.join(".edenrc");
     load_path(loader, &home_rc)
@@ -189,6 +193,17 @@ pub fn load_config(
         );
     } else {
         event!(Level::DEBUG, "System RC configurations loaded");
+    }
+
+    if let Err(e) = load_dynamic(&mut loader, etc_eden_dir) {
+        event!(
+            Level::INFO,
+            etc_eden_dir = ?etc_eden_dir,
+            "Unable to load dynamic configuration, skipped: {:?}",
+            e
+        );
+    } else {
+        event!(Level::DEBUG, "Dynamic configuration loaded");
     }
 
     if let Some(home) = home_dir {

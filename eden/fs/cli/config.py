@@ -72,8 +72,9 @@ else:
 CONFIG_DOT_D = "config.d"
 # USER_CONFIG is relative to the HOME dir for the user
 USER_CONFIG = ".edenrc"
-# SYSTEM_CONFIG is relative to the etc eden dir
+# SYSTEM_CONFIG and DYNAMIC_CONFIG are relative to the etc eden dir
 SYSTEM_CONFIG = "edenfs.rc"
+DYNAMIC_CONFIG = "edenfs_dynamic.rc"
 
 # These paths are relative to the user's client directory.
 CLIENTS_DIR = "clients"
@@ -251,6 +252,7 @@ class EdenInstance(AbstractEdenInstance):
     _telemetry_logger: Optional[telemetry.TelemetryLogger] = None
     _home_dir: Path
     _user_config_path: Path
+    _dynamic_config_path: Path
     _system_config_path: Path
     _config_dir: Path
 
@@ -264,6 +266,7 @@ class EdenInstance(AbstractEdenInstance):
         self._etc_eden_dir = Path(etc_eden_dir or DEFAULT_ETC_EDEN_DIR)
         self._home_dir = Path(home_dir) if home_dir is not None else util.get_home_dir()
         self._user_config_path = self._home_dir / USER_CONFIG
+        self._dynamic_config_path = self._etc_eden_dir / DYNAMIC_CONFIG
         self._system_config_path = self._etc_eden_dir / SYSTEM_CONFIG
         self._interpolate_dict = interpolate_dict
 
@@ -375,6 +378,7 @@ class EdenInstance(AbstractEdenInstance):
                 result.append(config_d / name)
         result.sort()
         result.append(self._system_config_path)
+        result.append(self._dynamic_config_path)
         result.append(self._user_config_path)
         return result
 
