@@ -89,6 +89,7 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures::try_join;
 use futures::Future;
+use git_symbolic_refs::GitSymbolicRefs;
 use hook_manager::manager::HookManager;
 use hook_manager::manager::HookManagerArc;
 use itertools::Itertools;
@@ -235,6 +236,7 @@ pub struct Repo {
         RepoSparseProfiles,
         StreamingClone,
         CommitGraph,
+        dyn GitSymbolicRefs,
     )]
     pub inner: InnerRepo,
 

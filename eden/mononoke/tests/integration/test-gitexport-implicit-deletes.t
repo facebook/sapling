@@ -44,36 +44,55 @@ Set some env vars that will be used frequently
   C=5bfc3bc38a36db879cf0c7215f91df159c4b6cf9ebb9fc6e33faf17ed00a1860
 
   $ start_and_wait_for_mononoke_server
+  $ hgmn_clone mononoke://$(mononoke_address)/repo repo
+  $ cd repo
+  $ hg -q co master
+  $ SOURCE_REPO_LOG=$TESTTMP/source_repo_log
+  $ hg log --git --template "{firstline(desc)}\n{stat()}\n" | sed -E 's/\s+\|\s+([0-9]+).+/ \| \1/' > $SOURCE_REPO_LOG
+
 
 
 # -------------------- Use the gitexport tool --------------------
 
 
-  $ SOURCE_GRAPH_OUTPUT=$TESTTMP/source_graph_output
-  $ PARTIAL_GRAPH_OUTPUT=$TESTTMP/partial_graph_output
-
+  $ GIT_REPO_OUTPUT="$TESTTMP/git_bundle"
+  $ GIT_REPO_LOG=$TESTTMP/git_repo_log
 
 
 Run the tool without passing the old name as an export path
 
-  $ gitexport --log-level ERROR --repo-name "repo" -B "master" -p "foo/a" -p "bar" --source-graph-output "$SOURCE_GRAPH_OUTPUT" --partial-graph-output "$PARTIAL_GRAPH_OUTPUT"
+  $ gitexport --log-level ERROR --repo-name "repo" -B "master" -p "foo/a" -p "bar" -o "$GIT_REPO_OUTPUT"
 
-  $ diff --old-line-format="- %L" --new-line-format="+ %L" "$SOURCE_GRAPH_OUTPUT" "$PARTIAL_GRAPH_OUTPUT"
-  o  message: C
-  │   File changes:
-  │  	 ADDED/MODIFIED: bar 2d94831a5f092c12e63b2ad909ca07a673aa166792d2a2024a786911c9e56f80
-  │
-  o  message: B
-  │   File changes:
-  - │  	 ADDED/MODIFIED: foo 2d94831a5f092c12e63b2ad909ca07a673aa166792d2a2024a786911c9e56f80
-  + │  	 REMOVED: foo/a/c
-  + │  	 REMOVED: foo/a/d
-  │
-  o  message: A
-      File changes:
-     	 ADDED/MODIFIED: bar/f/g 6691ce7f2f393958665fc2c0ceba62d392676ba6599674d4e2d581336a366aa1
-     	 ADDED/MODIFIED: bar/h/i ab427c4f5720c8cc1ad19b7fee41e18ad535e3da92cdbfd7259d21ec856b50f2
-     	 ADDED/MODIFIED: foo/a/c 000a1a9b74aa3da71fcceb653a62cb6987ae440c2b5c3d7e5d08d7c526b1dca8
-     	 ADDED/MODIFIED: foo/a/d 05c656843a2628dcc13b383c1028c59dc9adb362ffc7cff0506f6e4afc850fe8
-  -    	 ADDED/MODIFIED: foo/b/e 1aeca865722255fcab5e8906eca61bf338ff57cc31b10ee097255ea43fd267e1
+
+  $ git clone "$GIT_REPO_OUTPUT" git_repo
+  Cloning into 'git_repo'...
+  $ cd git_repo
+
+  $ git log --stat --pretty=format:"%s" | sed -E 's/\s+\|\s+([0-9]+).+/ \| \1/' > $GIT_REPO_LOG
+
+  $ diff --old-line-format="- %L" --new-line-format="+ %L" "$SOURCE_REPO_LOG" "$GIT_REPO_LOG"
+  C
+   bar | 1
+   bar/f/g | 1
+   bar/h/i | 1
+  -  3 files changed, 1 insertions(+), 2 deletions(-)
+  +  3 files changed, 1 insertion(+), 2 deletions(-)
+  
+  B
+  -  foo | 1
+   foo/a/c | 1
+   foo/a/d | 1
+  -  foo/b/e | 1
+  -  4 files changed, 1 insertions(+), 3 deletions(-)
+  +  2 files changed, 2 deletions(-)
+  
+  A
+   bar/f/g | 1
+   bar/h/i | 1
+   foo/a/c | 1
+   foo/a/d | 1
+  -  foo/b/e | 1
+  -  5 files changed, 5 insertions(+), 0 deletions(-)
+  - 
+  +  4 files changed, 4 insertions(+)
   [1]

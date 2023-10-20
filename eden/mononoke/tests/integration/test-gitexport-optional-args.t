@@ -49,63 +49,154 @@ Set some env vars that will be used frequently
 
 
   $ start_and_wait_for_mononoke_server
-
-
-  $ MASTER_CS_OUTPUT=$TESTTMP/master_cs_graph_output
-  $ LATEST_CS_OUTPUT=$TESTTMP/latest_cs_graph_output
-  $ OLDEST_COMMIT_TS_OUTPUT=$TESTTMP/oldest_commit_ts_graph_output
-  $ LATEST_CS_AND_OLDEST_COMMIT_OUTPUT=$TESTTMP/latest_cs_and_oldest_commit_output
+  $ hgmn_clone mononoke://$(mononoke_address)/repo repo
+  $ cd repo
+  $ hg -q co master
+  $ SOURCE_REPO_LOG=$TESTTMP/source_repo_log
+  $ hg log --git --template "{firstline(desc)}\n{stat()}\n" | sed -E 's/\s+\|\s+([0-9]+).+/ \| \1/' > $SOURCE_REPO_LOG
 
   $ B_AUTHOR_TS=1451613600
 
+  $ GIT_BUNDLE_OUTPUT=git_bundle
+  $ GIT_REPO=git_repo
+  $ GIT_REPO_LOG=$TESTTMP/git_repo_log
+
 
 Specify a bookmark
-  $ gitexport --log-level ERROR --repo-name "repo" -B "master" -p $EXPORT_DIR --partial-graph-output "$MASTER_CS_OUTPUT" --distance-limit 30
+  $ gitexport --log-level ERROR --repo-name "repo" -B "master" -p $EXPORT_DIR -o "$GIT_BUNDLE_OUTPUT"
+  $ git clone $GIT_BUNDLE_OUTPUT $GIT_REPO
+  Cloning into 'git_repo'...
+  $ cd $GIT_REPO
 
-  $ cat $MASTER_CS_OUTPUT
-  o  message: Add files to all directories
-  │   File changes:
-  │  	 ADDED/MODIFIED: export_dir/C.txt 3e8ba6ef6107965afc1446b5b24533d9865204f1ea617672930d202f932bb892
-  │  	 ADDED/MODIFIED: export_dir/subdir_to_export/second_subdir_export.txt e6d9f9d3bdd71e9c2dddec53da3bf447734da86b3897a7f7afd69cc7ac0cf3f1
-  │
-  o  message: Add subdirectory to export dir
-  │   File changes:
-  │  	 ADDED/MODIFIED: export_dir/subdir_to_export/export_file_in_subdir.txt e6d9f9d3bdd71e9c2dddec53da3bf447734da86b3897a7f7afd69cc7ac0cf3f1
-  │
-  o  message: Add files to export dir
-      File changes:
-     	 ADDED/MODIFIED: export_dir/B.txt 3e8ba6ef6107965afc1446b5b24533d9865204f1ea617672930d202f932bb892
+  $ git log --stat --pretty=format:"%s" | sed -E 's/\s+\|\s+([0-9]+).+/ \| \1/' > $GIT_REPO_LOG
+
+  $ diff --old-line-format="- %L" --new-line-format="+ %L" "$SOURCE_REPO_LOG" "$GIT_REPO_LOG"
+  Add files to all directories
+   export_dir/C.txt | 1
+   export_dir/subdir_to_export/second_subdir_export.txt | 1
+  -  internal_dir/another_internal.txt | 1
+  -  3 files changed, 3 insertions(+), 0 deletions(-)
+  +  2 files changed, 2 insertions(+)
+  
+  Add subdirectory to export dir
+   export_dir/subdir_to_export/export_file_in_subdir.txt | 1
+  -  1 files changed, 1 insertions(+), 0 deletions(-)
+  - 
+  - Add file to internal_dir
+  -  internal_dir/internal.txt | 1
+  -  1 files changed, 1 insertions(+), 0 deletions(-)
+  +  1 file changed, 1 insertion(+)
+  
+  Add files to export dir
+   export_dir/B.txt | 1
+  -  1 files changed, 1 insertions(+), 0 deletions(-)
+  - 
+  +  1 file changed, 1 insertion(+)
+  [1]
+
+
+
+
+  $ rm -rf $GIT_BUNDLE_OUTPUT $GIT_REPO $GIT_REPO_LOG
 
 
 Specify a changeset id
-  $ gitexport --log-level ERROR --repo-name "repo" -p $EXPORT_DIR -i "$C" --partial-graph-output "$LATEST_CS_OUTPUT" --distance-limit 30
+  $ gitexport --log-level ERROR --repo-name "repo" -p $EXPORT_DIR -i "$C" -o "$GIT_BUNDLE_OUTPUT"
+  $ git clone $GIT_BUNDLE_OUTPUT $GIT_REPO
+  Cloning into 'git_repo'...
+  $ cd $GIT_REPO
 
-  $ cat $LATEST_CS_OUTPUT
-  o  message: Add subdirectory to export dir
-  │   File changes:
-  │  	 ADDED/MODIFIED: export_dir/subdir_to_export/export_file_in_subdir.txt e6d9f9d3bdd71e9c2dddec53da3bf447734da86b3897a7f7afd69cc7ac0cf3f1
-  │
-  o  message: Add files to export dir
-      File changes:
-     	 ADDED/MODIFIED: export_dir/B.txt 3e8ba6ef6107965afc1446b5b24533d9865204f1ea617672930d202f932bb892
+  $ git log --stat --pretty=format:"%s" | sed -E 's/\s+\|\s+([0-9]+).+/ \| \1/' > $GIT_REPO_LOG
+
+  $ diff --old-line-format="- %L" --new-line-format="+ %L" "$SOURCE_REPO_LOG" "$GIT_REPO_LOG"
+  - Add files to all directories
+  -  export_dir/C.txt | 1
+  -  export_dir/subdir_to_export/second_subdir_export.txt | 1
+  -  internal_dir/another_internal.txt | 1
+  -  3 files changed, 3 insertions(+), 0 deletions(-)
+  - 
+  Add subdirectory to export dir
+   export_dir/subdir_to_export/export_file_in_subdir.txt | 1
+  -  1 files changed, 1 insertions(+), 0 deletions(-)
+  - 
+  - Add file to internal_dir
+  -  internal_dir/internal.txt | 1
+  -  1 files changed, 1 insertions(+), 0 deletions(-)
+  +  1 file changed, 1 insertion(+)
+  
+  Add files to export dir
+   export_dir/B.txt | 1
+  -  1 files changed, 1 insertions(+), 0 deletions(-)
+  - 
+  +  1 file changed, 1 insertion(+)
+  [1]
+
+
+  $ rm -rf $GIT_BUNDLE_OUTPUT $GIT_REPO $GIT_REPO_LOG
+
 
 Test oldest commit timestamp arg
-  $ gitexport --log-level ERROR --repo-name "repo" -B "master" -p $EXPORT_DIR --oldest-commit-ts $B_AUTHOR_TS --partial-graph-output "$OLDEST_COMMIT_TS_OUTPUT" --distance-limit 30
+  $ gitexport --log-level ERROR --repo-name "repo" -B "master" -p $EXPORT_DIR --oldest-commit-ts $B_AUTHOR_TS -o "$GIT_BUNDLE_OUTPUT"
+  $ git clone $GIT_BUNDLE_OUTPUT $GIT_REPO
+  Cloning into 'git_repo'...
+  $ cd $GIT_REPO
 
-  $ cat $OLDEST_COMMIT_TS_OUTPUT
-  o  message: Add files to all directories
-  │   File changes:
-  │  	 ADDED/MODIFIED: export_dir/C.txt 3e8ba6ef6107965afc1446b5b24533d9865204f1ea617672930d202f932bb892
-  │  	 ADDED/MODIFIED: export_dir/subdir_to_export/second_subdir_export.txt e6d9f9d3bdd71e9c2dddec53da3bf447734da86b3897a7f7afd69cc7ac0cf3f1
-  │
-  o  message: Add subdirectory to export dir
-      File changes:
-     	 ADDED/MODIFIED: export_dir/subdir_to_export/export_file_in_subdir.txt e6d9f9d3bdd71e9c2dddec53da3bf447734da86b3897a7f7afd69cc7ac0cf3f1
+  $ git log --stat --pretty=format:"%s" | sed -E 's/\s+\|\s+([0-9]+).+/ \| \1/' > $GIT_REPO_LOG
+
+  $ diff --old-line-format="- %L" --new-line-format="+ %L" "$SOURCE_REPO_LOG" "$GIT_REPO_LOG"
+  Add files to all directories
+   export_dir/C.txt | 1
+   export_dir/subdir_to_export/second_subdir_export.txt | 1
+  -  internal_dir/another_internal.txt | 1
+  -  3 files changed, 3 insertions(+), 0 deletions(-)
+  +  2 files changed, 2 insertions(+)
+  
+  Add subdirectory to export dir
+   export_dir/subdir_to_export/export_file_in_subdir.txt | 1
+  -  1 files changed, 1 insertions(+), 0 deletions(-)
+  - 
+  - Add file to internal_dir
+  -  internal_dir/internal.txt | 1
+  -  1 files changed, 1 insertions(+), 0 deletions(-)
+  - 
+  - Add files to export dir
+  -  export_dir/B.txt | 1
+  -  1 files changed, 1 insertions(+), 0 deletions(-)
+  - 
+  +  1 file changed, 1 insertion(+)
+  [1]
+
+
+  $ rm -rf $GIT_BUNDLE_OUTPUT $GIT_REPO $GIT_REPO_LOG
+
+
 
 Test both latest changeset and commit timestamp arg
-  $ gitexport --log-level ERROR --repo-name "repo" -p $EXPORT_DIR -i "$C" --oldest-commit-ts $B_AUTHOR_TS --partial-graph-output "$LATEST_CS_AND_OLDEST_COMMIT_OUTPUT" --distance-limit 30
+  $ gitexport --log-level ERROR --repo-name "repo" -p $EXPORT_DIR -i "$C" --oldest-commit-ts $B_AUTHOR_TS -o "$GIT_BUNDLE_OUTPUT"
+  $ git clone $GIT_BUNDLE_OUTPUT $GIT_REPO
+  Cloning into 'git_repo'...
+  $ cd $GIT_REPO
 
-  $ cat $LATEST_CS_AND_OLDEST_COMMIT_OUTPUT
-  o  message: Add subdirectory to export dir
-      File changes:
-     	 ADDED/MODIFIED: export_dir/subdir_to_export/export_file_in_subdir.txt e6d9f9d3bdd71e9c2dddec53da3bf447734da86b3897a7f7afd69cc7ac0cf3f1
+  $ git log --stat --pretty=format:"%s" | sed -E 's/\s+\|\s+([0-9]+).+/ \| \1/' > $GIT_REPO_LOG
+
+  $ diff --old-line-format="- %L" --new-line-format="+ %L" "$SOURCE_REPO_LOG" "$GIT_REPO_LOG"
+  - Add files to all directories
+  -  export_dir/C.txt | 1
+  -  export_dir/subdir_to_export/second_subdir_export.txt | 1
+  -  internal_dir/another_internal.txt | 1
+  -  3 files changed, 3 insertions(+), 0 deletions(-)
+  - 
+  Add subdirectory to export dir
+   export_dir/subdir_to_export/export_file_in_subdir.txt | 1
+  -  1 files changed, 1 insertions(+), 0 deletions(-)
+  - 
+  - Add file to internal_dir
+  -  internal_dir/internal.txt | 1
+  -  1 files changed, 1 insertions(+), 0 deletions(-)
+  - 
+  - Add files to export dir
+  -  export_dir/B.txt | 1
+  -  1 files changed, 1 insertions(+), 0 deletions(-)
+  - 
+  +  1 file changed, 1 insertion(+)
+  [1]

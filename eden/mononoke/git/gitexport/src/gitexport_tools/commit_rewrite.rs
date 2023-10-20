@@ -29,6 +29,9 @@ use fileblob::Fileblob;
 use futures::stream::TryStreamExt;
 use futures::stream::{self};
 use futures::StreamExt;
+use git_types::MappedGitCommitId;
+use git_types::RootGitDeltaManifestId;
+use git_types::TreeHandle;
 use indicatif::ProgressBar;
 use indicatif::ProgressStyle;
 use maplit::hashmap;
@@ -46,6 +49,7 @@ use mononoke_types::NonRootMPath;
 use rand::distributions::Alphanumeric;
 use rand::distributions::DistString;
 use repo_blobstore::RepoBlobstoreArc;
+use repo_derived_data::RepoDerivedDataRef;
 use slog::debug;
 use slog::info;
 use slog::trace;
@@ -54,13 +58,15 @@ use slog::Drain;
 use slog::Logger;
 use sql::rusqlite::Connection as SqliteConnection;
 use test_repo_factory::TestRepoFactory;
+use unodes::RootUnodeManifestId;
 
+pub use crate::git_repo::create_git_repo_on_disk;
 pub use crate::partial_commit_graph::build_partial_commit_graph_for_export;
 use crate::partial_commit_graph::ChangesetParents;
 pub use crate::partial_commit_graph::ExportPathInfo;
 pub use crate::partial_commit_graph::GitExportGraphInfo;
 
-pub const MASTER_BOOKMARK: &str = "master";
+pub const MASTER_BOOKMARK: &str = "heads/master";
 
 struct ChangesetRewriteInfo<'a> {
     changeset_context: ChangesetContext,
@@ -102,9 +108,7 @@ pub async fn rewrite_partial_changesets(
     let changesets_with_implicit_deletes: Vec<Result<ChangesetRewriteInfo>> =
         stream::iter(changesets)
             .map(|cs| {
-                borrowed!(export_paths);
-                borrowed!(source_repo_ctx);
-                borrowed!(mb_progress_bar);
+                borrowed!(export_paths, source_repo_ctx, mb_progress_bar);
 
                 let blobstore = source_repo_ctx.blob_repo().repo_blobstore_arc();
                 async move {
@@ -188,11 +192,7 @@ pub async fn rewrite_partial_changesets(
                 let changeset = changeset_rewrite_info.changeset_context;
                 let export_paths = changeset_rewrite_info.export_paths;
                 let implicit_deletes = changeset_rewrite_info.implicit_deletes;
-                borrowed!(source_repo_ctx);
-                borrowed!(temp_repo_ctx);
-                borrowed!(mb_progress_bar);
-
-                borrowed!(logger);
+                borrowed!(source_repo_ctx, temp_repo_ctx, mb_progress_bar, logger);
 
                 async move {
                     let multi_mover = build_multi_mover_for_changeset(logger, &export_paths)?;
@@ -218,6 +218,18 @@ pub async fn rewrite_partial_changesets(
                         temp_repo_ctx.repo(),
                     )
                     .await?;
+
+                    temp_repo_ctx
+                        .repo()
+                        .repo_derived_data()
+                        .derive::<RootGitDeltaManifestId>(ctx, new_bcs_id)
+                        .await
+                        .with_context(|| {
+                            format!(
+                                "Error in deriving RootGitDeltaManifestId for Bonsai commit {:?}",
+                                new_bcs_id
+                            )
+                        })?;
 
                     if let Some(progress_bar) = mb_progress_bar {
                         progress_bar.inc(1);
@@ -503,7 +515,10 @@ async fn create_temp_repo(fb: FacebookInit, ctx: &CoreContext) -> Result<RepoCon
     let derived_data_types_config = DerivedDataTypesConfig {
         types: hashset! {
             ChangesetInfo::NAME.to_string(),
-            // TODO(T160787114): enable git data types derivation
+            MappedGitCommitId::NAME.to_string(),
+            TreeHandle::NAME.to_string(),
+            RootGitDeltaManifestId::NAME.to_string(),
+            RootUnodeManifestId::NAME.to_string(),
         },
         ..Default::default()
     };

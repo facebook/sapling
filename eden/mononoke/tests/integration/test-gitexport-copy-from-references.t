@@ -88,131 +88,166 @@ Set some env vars that will be used frequently
   K=5281096a3beb73fb6530c3fe4f25e7ae184822df90bc91942b33987103bf192f
 
   $ start_and_wait_for_mononoke_server
+  $ hgmn_clone mononoke://$(mononoke_address)/repo repo
+  $ cd repo
+  $ hg -q co master
+  $ SOURCE_REPO_LOG=$TESTTMP/source_repo_log
+  $ hg log --git --template "{firstline(desc)}\n{stat()}\n" | sed -E 's/\s+\|\s+([0-9]+).+/ \| \1/' > $SOURCE_REPO_LOG
 
 
 # -------------------- Use the gitexport tool --------------------
 
-
-  $ SOURCE_GRAPH_OUTPUT=$TESTTMP/source_graph_output
-  $ PARTIAL_GRAPH_OUTPUT=$TESTTMP/partial_graph_output
+  $ GIT_BUNDLE_OUTPUT=git_bundle
+  $ GIT_REPO=git_repo
+  $ GIT_REPO_LOG=$TESTTMP/git_repo_log
 
 Run the tool without passing the old name as an export path
 
-  $ gitexport --log-level WARN --repo-name "repo" -B "master" -p "$EXPORT_DIR" --source-graph-output "$SOURCE_GRAPH_OUTPUT" --partial-graph-output "$PARTIAL_GRAPH_OUTPUT" --distance-limit 30
+  $ gitexport --log-level WARN --repo-name "repo" -B "master" -p "$EXPORT_DIR" -o "$GIT_BUNDLE_OUTPUT"
   *] Changeset 6fc3f51f797aecf2a419fb70362d7da614bf5a7c1fc7ca067af0bdccff817493 might have created the exported path export_dir by moving/copying files from a commit that might not be exported (id 659ed19d0148b13710d4d466e39a5d86d52e6dabfe3becd8dbfb7e02fe327abc). (glob)
 
-  $ diff --old-line-format="- %L" --new-line-format="+ %L" "$SOURCE_GRAPH_OUTPUT" "$PARTIAL_GRAPH_OUTPUT"
-  - o  message: Add file to repo root
-  - │   File changes:
-  - │  	 COPY/MOVE: root_file.txt ac6ac47201405136170fea99eff9e0e589a14e51b92253d2105327af3ce51892
-  - │
-  o  message: Delete internal and exported files
-  │   File changes:
-  │  	 REMOVED: export_dir/second_subdir_export.txt
-  - │  	 REMOVED: internal_dir/another_internal.txt
-  - │
-  - o  message: Modify only file in internal root
-  - │   File changes:
-  - │  	 ADDED/MODIFIED: internal_dir/another_internal.txt a6ef1a0dddad73cbfd4ce3bd9642f5aab0c4ae1fcb58af3cacda2f0ed914efd8
-  │
-  o  message: Modify only file in export directory
-  │   File changes:
-  │  	 COPY/MOVE: export_dir/second_subdir_export.txt 641106875cd2090a0019d25d920cf9015eb4036f1ece30b8fbb7dd5be785f9c4
-  │
-  o  message: Modify only exported file
-  │   File changes:
-  │  	 ADDED/MODIFIED: export_dir/B.txt a6ef1a0dddad73cbfd4ce3bd9642f5aab0c4ae1fcb58af3cacda2f0ed914efd8
-  │
-  o  message: Modify internal and exported files
-  │   File changes:
-  │  	 ADDED/MODIFIED: export_dir/A.txt a6ef1a0dddad73cbfd4ce3bd9642f5aab0c4ae1fcb58af3cacda2f0ed914efd8
-  - │  	 COPY/MOVE: internal_dir/copied_internal.txt dbc317c4f0146e8a455e9bc8eea646248145c962b3f4689c22285d3c8b25fd5e
-  │
-  o  message: Rename export directory
-  - │   File changes:
-  - │  	 COPY/MOVE: export_dir/B.txt 3e8ba6ef6107965afc1446b5b24533d9865204f1ea617672930d202f932bb892
-  - │  	 COPY/MOVE: export_dir/C.txt 641106875cd2090a0019d25d920cf9015eb4036f1ece30b8fbb7dd5be785f9c4
-  - │  	 REMOVED: old_export_dir/B.txt
-  - │  	 REMOVED: old_export_dir/C.txt
-  - │
-  - o  message: Add file to internal_dir
-  - │   File changes:
-  - │  	 ADDED/MODIFIED: internal_dir/internal.txt dbc317c4f0146e8a455e9bc8eea646248145c962b3f4689c22285d3c8b25fd5e
-  - │
-  - o  message: Modify files in both directories
-  - │   File changes:
-  - │  	 ADDED/MODIFIED: internal_dir/another_internal.txt dbc317c4f0146e8a455e9bc8eea646248145c962b3f4689c22285d3c8b25fd5e
-  - │  	 ADDED/MODIFIED: old_export_dir/C.txt 641106875cd2090a0019d25d920cf9015eb4036f1ece30b8fbb7dd5be785f9c4
-  - │
-  - o  message: Add another export file
-  - │   File changes:
-  - │  	 ADDED/MODIFIED: old_export_dir/C.txt bc10fa4c7856280755c757a75dafadb36d7e5f105cdfeedbcdbc76dab37a708a
-  - │
-  - o  message: Add files to export dir before rename
-      File changes:
-  -    	 ADDED/MODIFIED: old_export_dir/B.txt 3e8ba6ef6107965afc1446b5b24533d9865204f1ea617672930d202f932bb892
-  +    	 ADDED/MODIFIED: export_dir/B.txt 3e8ba6ef6107965afc1446b5b24533d9865204f1ea617672930d202f932bb892
-  +    	 ADDED/MODIFIED: export_dir/C.txt 641106875cd2090a0019d25d920cf9015eb4036f1ece30b8fbb7dd5be785f9c4
+  $ git clone $GIT_BUNDLE_OUTPUT $GIT_REPO
+  Cloning into 'git_repo'...
+  $ cd $GIT_REPO
+  $ git log --stat --pretty=format:"%s" | sed -E 's/\s+\|\s+([0-9]+).+/ \| \1/' > $GIT_REPO_LOG
+  $ diff --old-line-format="- %L" --new-line-format="+ %L" "$SOURCE_REPO_LOG" "$GIT_REPO_LOG"
+  - Add file to repo root
+  -  root_file.txt | 1
+  -  1 files changed, 1 insertions(+), 0 deletions(-)
+  - 
+  Delete internal and exported files
+   export_dir/second_subdir_export.txt | 1
+  -  internal_dir/another_internal.txt | 1
+  -  2 files changed, 0 insertions(+), 2 deletions(-)
+  - 
+  - Modify only file in internal root
+  -  internal_dir/another_internal.txt | 2
+  -  1 files changed, 1 insertions(+), 1 deletions(-)
+  +  1 file changed, 1 deletion(-)
+  
+  Modify only file in export directory
+   export_dir/second_subdir_export.txt | 1
+  -  1 files changed, 1 insertions(+), 0 deletions(-)
+  +  1 file changed, 1 insertion(+)
+  
+  Modify only exported file
+   export_dir/B.txt | 2
+  -  1 files changed, 1 insertions(+), 1 deletions(-)
+  +  1 file changed, 1 insertion(+), 1 deletion(-)
+  
+  Modify internal and exported files
+   export_dir/A.txt | 1
+  -  internal_dir/copied_internal.txt | 1
+  -  2 files changed, 2 insertions(+), 0 deletions(-)
+  +  1 file changed, 1 insertion(+)
+  
+  Rename export directory
+   export_dir/B.txt | 1
+   export_dir/C.txt | 1
+  -  old_export_dir/B.txt | 1
+  -  old_export_dir/C.txt | 1
+  -  4 files changed, 2 insertions(+), 2 deletions(-)
+  - 
+  - Add file to internal_dir
+  -  internal_dir/internal.txt | 1
+  -  1 files changed, 1 insertions(+), 0 deletions(-)
+  - 
+  - Modify files in both directories
+  -  internal_dir/another_internal.txt | 1
+  -  old_export_dir/C.txt | 2
+  -  2 files changed, 2 insertions(+), 1 deletions(-)
+  - 
+  - Add another export file
+  -  old_export_dir/C.txt | 1
+  -  1 files changed, 1 insertions(+), 0 deletions(-)
+  - 
+  - Add files to export dir before rename
+  -  old_export_dir/B.txt | 1
+  -  1 files changed, 1 insertions(+), 0 deletions(-)
+  - 
+  +  2 files changed, 2 insertions(+)
   [1]
 
+  $ rm -rf $GIT_BUNDLE_OUTPUT $GIT_REPO $GIT_REPO_LOG
 
 Run the tool and pass the old name manually as an export path using the bounded export paths file arg
 
-  $ rm $SOURCE_GRAPH_OUTPUT $PARTIAL_GRAPH_OUTPUT
   $ BOUNDED_EXPORT_PATHS_FILE=$TESTTMP/bounded_export_paths.json
   $ echo '[ { "path": '"\"$OLD_EXPORT_DIR\""', "head": { "ID": '"\"$E\""' }  } ]' > $BOUNDED_EXPORT_PATHS_FILE
 
-  $ gitexport --log-level ERROR --repo-name "repo" -B "master" -p $EXPORT_DIR --source-graph-output "$SOURCE_GRAPH_OUTPUT" --partial-graph-output "$PARTIAL_GRAPH_OUTPUT" --distance-limit 30 -f "$BOUNDED_EXPORT_PATHS_FILE"
+  $ gitexport --log-level ERROR --repo-name "repo" -B "master" -p $EXPORT_DIR -f "$BOUNDED_EXPORT_PATHS_FILE" -o "$GIT_BUNDLE_OUTPUT"
 
+  $ git clone $GIT_BUNDLE_OUTPUT $GIT_REPO
+  Cloning into 'git_repo'...
+  $ cd $GIT_REPO
+  $ git log --stat --pretty=format:"%s" | sed -E 's/\s+\|\s+([0-9]+).+/ \| \1/' > $GIT_REPO_LOG
 
-  $ diff --old-line-format="- %L" --new-line-format="+ %L" "$SOURCE_GRAPH_OUTPUT" "$PARTIAL_GRAPH_OUTPUT"
-  - o  message: Add file to repo root
-  - │   File changes:
-  - │  	 COPY/MOVE: root_file.txt ac6ac47201405136170fea99eff9e0e589a14e51b92253d2105327af3ce51892
-  - │
-  o  message: Delete internal and exported files
-  │   File changes:
-  │  	 REMOVED: export_dir/second_subdir_export.txt
-  - │  	 REMOVED: internal_dir/another_internal.txt
-  - │
-  - o  message: Modify only file in internal root
-  - │   File changes:
-  - │  	 ADDED/MODIFIED: internal_dir/another_internal.txt a6ef1a0dddad73cbfd4ce3bd9642f5aab0c4ae1fcb58af3cacda2f0ed914efd8
-  │
-  o  message: Modify only file in export directory
-  │   File changes:
-  │  	 COPY/MOVE: export_dir/second_subdir_export.txt 641106875cd2090a0019d25d920cf9015eb4036f1ece30b8fbb7dd5be785f9c4
-  │
-  o  message: Modify only exported file
-  │   File changes:
-  │  	 ADDED/MODIFIED: export_dir/B.txt a6ef1a0dddad73cbfd4ce3bd9642f5aab0c4ae1fcb58af3cacda2f0ed914efd8
-  │
-  o  message: Modify internal and exported files
-  │   File changes:
-  │  	 ADDED/MODIFIED: export_dir/A.txt a6ef1a0dddad73cbfd4ce3bd9642f5aab0c4ae1fcb58af3cacda2f0ed914efd8
-  - │  	 COPY/MOVE: internal_dir/copied_internal.txt dbc317c4f0146e8a455e9bc8eea646248145c962b3f4689c22285d3c8b25fd5e
-  │
-  o  message: Rename export directory
-  │   File changes:
-  │  	 COPY/MOVE: export_dir/B.txt 3e8ba6ef6107965afc1446b5b24533d9865204f1ea617672930d202f932bb892
-  │  	 COPY/MOVE: export_dir/C.txt 641106875cd2090a0019d25d920cf9015eb4036f1ece30b8fbb7dd5be785f9c4
-  │  	 REMOVED: old_export_dir/B.txt
-  │  	 REMOVED: old_export_dir/C.txt
-  │
-  - o  message: Add file to internal_dir
-  - │   File changes:
-  - │  	 ADDED/MODIFIED: internal_dir/internal.txt dbc317c4f0146e8a455e9bc8eea646248145c962b3f4689c22285d3c8b25fd5e
-  - │
-  o  message: Modify files in both directories
-  │   File changes:
-  - │  	 ADDED/MODIFIED: internal_dir/another_internal.txt dbc317c4f0146e8a455e9bc8eea646248145c962b3f4689c22285d3c8b25fd5e
-  │  	 ADDED/MODIFIED: old_export_dir/C.txt 641106875cd2090a0019d25d920cf9015eb4036f1ece30b8fbb7dd5be785f9c4
-  │
-  o  message: Add another export file
-  │   File changes:
-  │  	 ADDED/MODIFIED: old_export_dir/C.txt bc10fa4c7856280755c757a75dafadb36d7e5f105cdfeedbcdbc76dab37a708a
-  │
-  o  message: Add files to export dir before rename
-      File changes:
-     	 ADDED/MODIFIED: old_export_dir/B.txt 3e8ba6ef6107965afc1446b5b24533d9865204f1ea617672930d202f932bb892
+  $ diff --old-line-format="- %L" --new-line-format="+ %L" "$SOURCE_REPO_LOG" "$GIT_REPO_LOG"
+  - Add file to repo root
+  -  root_file.txt | 1
+  -  1 files changed, 1 insertions(+), 0 deletions(-)
+  - 
+  Delete internal and exported files
+   export_dir/second_subdir_export.txt | 1
+  -  internal_dir/another_internal.txt | 1
+  -  2 files changed, 0 insertions(+), 2 deletions(-)
+  - 
+  - Modify only file in internal root
+  -  internal_dir/another_internal.txt | 2
+  -  1 files changed, 1 insertions(+), 1 deletions(-)
+  +  1 file changed, 1 deletion(-)
+  
+  Modify only file in export directory
+   export_dir/second_subdir_export.txt | 1
+  -  1 files changed, 1 insertions(+), 0 deletions(-)
+  +  1 file changed, 1 insertion(+)
+  
+  Modify only exported file
+   export_dir/B.txt | 2
+  -  1 files changed, 1 insertions(+), 1 deletions(-)
+  +  1 file changed, 1 insertion(+), 1 deletion(-)
+  
+  Modify internal and exported files
+   export_dir/A.txt | 1
+  -  internal_dir/copied_internal.txt | 1
+  -  2 files changed, 2 insertions(+), 0 deletions(-)
+  +  1 file changed, 1 insertion(+)
+  
+  Rename export directory
+  -  export_dir/B.txt | 1
+  -  export_dir/C.txt | 1
+  -  old_export_dir/B.txt | 1
+  -  old_export_dir/C.txt | 1
+  -  4 files changed, 2 insertions(+), 2 deletions(-)
+  - 
+  - Add file to internal_dir
+  -  internal_dir/internal.txt | 1
+  -  1 files changed, 1 insertions(+), 0 deletions(-)
+  +  {old_export_dir => export_dir}/B.txt | 0
+  +  {old_export_dir => export_dir}/C.txt | 0
+  +  2 files changed, 0 insertions(+), 0 deletions(-)
+  
+  Modify files in both directories
+  -  internal_dir/another_internal.txt | 1
+   old_export_dir/C.txt | 2
+  -  2 files changed, 2 insertions(+), 1 deletions(-)
+  +  1 file changed, 1 insertion(+), 1 deletion(-)
+  
+  Add another export file
+   old_export_dir/C.txt | 1
+  -  1 files changed, 1 insertions(+), 0 deletions(-)
+  +  1 file changed, 1 insertion(+)
+  
+  Add files to export dir before rename
+   old_export_dir/B.txt | 1
+  -  1 files changed, 1 insertions(+), 0 deletions(-)
+  - 
+  +  1 file changed, 1 insertion(+)
   [1]
+
+
+
+
+
+
+

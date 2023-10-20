@@ -6,7 +6,9 @@
  */
 
 mod commit_rewrite;
+mod git_repo;
 mod partial_commit_graph;
 
 pub use crate::commit_rewrite::*;
+pub use crate::git_repo::*;
 pub use crate::partial_commit_graph::*;

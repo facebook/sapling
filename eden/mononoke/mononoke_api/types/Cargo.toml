@@ -23,6 +23,7 @@ ephemeral_blobstore = { version = "0.1.0", path = "../../blobstore/ephemeral_blo
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filenodes = { version = "0.1.0", path = "../../filenodes" }
 filestore = { version = "0.1.0", path = "../../filestore" }
+git_symbolic_refs = { version = "0.1.0", path = "../../git_symbolic_refs" }
 mercurial_mutation = { version = "0.1.0", path = "../../mercurial/mutation" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mutable_counters = { version = "0.1.0", path = "../../mutable_counters" }

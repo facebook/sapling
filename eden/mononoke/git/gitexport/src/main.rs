@@ -20,6 +20,7 @@ use futures::stream::TryStreamExt;
 use futures::stream::{self};
 use futures::StreamExt;
 use gitexport_tools::build_partial_commit_graph_for_export;
+use gitexport_tools::create_git_repo_on_disk;
 use gitexport_tools::rewrite_partial_changesets;
 use gitexport_tools::ExportPathInfo;
 use gitexport_tools::MASTER_BOOKMARK;
@@ -78,8 +79,8 @@ pub mod types {
         pub hg_repo_args: RepoArgs,
 
         /// Path to the git repo being created
-        #[clap(long)]
-        pub output: Option<PathBuf>, // TODO(T160787114): Make this required
+        #[clap(long = "git-output", short = 'o')]
+        pub git_repo_path: PathBuf,
 
         /// List of directories in `hg_repo` to be exported to a git repo
         #[clap(long, short('p'))]
@@ -244,7 +245,12 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         .await?;
     };
 
-    // TODO(T160787114): export temporary repo to git repo
+    create_git_repo_on_disk(
+        temp_repo_ctx.ctx(),
+        temp_repo_ctx.repo(),
+        args.git_repo_path,
+    )
+    .await?;
 
     Ok(())
 }

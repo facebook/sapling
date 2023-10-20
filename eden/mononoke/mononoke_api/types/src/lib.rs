@@ -21,6 +21,7 @@ use commit_graph::CommitGraph;
 use ephemeral_blobstore::RepoEphemeralStore;
 use filenodes::Filenodes;
 use filestore::FilestoreConfig;
+use git_symbolic_refs::GitSymbolicRefs;
 use mercurial_mutation::HgMutationStore;
 use metaconfig_types::RepoConfig;
 use mutable_counters::MutableCounters;
@@ -67,6 +68,7 @@ pub struct InnerRepo {
         dyn RepoPermissionChecker,
         dyn RepoLock,
         CommitGraph,
+        dyn GitSymbolicRefs,
     )]
     pub blob_repo: BlobRepo,
 

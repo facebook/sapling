@@ -69,6 +69,12 @@ Set some env vars that will be used frequently
   K=ca1b7e33632b3b9a89abe7f820b590f1185cf7e187386e9bddf4c1cbe62dc324
 
   $ start_and_wait_for_mononoke_server
+  $ hgmn_clone mononoke://$(mononoke_address)/repo repo
+  $ cd repo
+  $ hg -q co master
+  $ SOURCE_REPO_LOG=$TESTTMP/source_repo_log
+  $ hg log --git --template "{firstline(desc)}\n{stat()}\n" | sed -E 's/\s+\|\s+([0-9]+).+/ \| \1/' > $SOURCE_REPO_LOG
+
 
 # Finish creating commits
 
@@ -78,10 +84,9 @@ Set location of binary, resources and options (e.g. output path, directories)
 # Path that should be exported to the git repo
   $ EXPORT_PATHS=($EXPORT_DIR $SECOND_EXPORT_DIR)
 
-  $ SOURCE_GRAPH_OUTPUT=$TESTTMP/source_graph_output
-  $ PARTIAL_GRAPH_OUTPUT=$TESTTMP/partial_graph_output
+  $ GIT_REPO_OUTPUT="$TESTTMP/git_bundle"
+  $ GIT_REPO_LOG=$TESTTMP/git_repo_log
 
-  $ GIT_REPO_OUTPUT="$TESTTMP/git_repo"
 
 # TODO(T160600443): support optional start/end date arguments
   $ START_DATE="2023-01-01"
@@ -90,65 +95,71 @@ Set location of binary, resources and options (e.g. output path, directories)
 
 Run the tool
 
-  $ gitexport --log-level ERROR --repo-name "repo" -B "master" $(printf -- '-p %s ' "${EXPORT_PATHS[@]}") --source-graph-output "$SOURCE_GRAPH_OUTPUT" --partial-graph-output "$PARTIAL_GRAPH_OUTPUT" --distance-limit 30
+  $ gitexport --log-level ERROR --repo-name "repo" -B "master" $(printf -- '-p %s ' "${EXPORT_PATHS[@]}") --git-output "$GIT_REPO_OUTPUT"
 
-  $ diff --old-line-format="- %L" --new-line-format="+ %L" "$SOURCE_GRAPH_OUTPUT" "$PARTIAL_GRAPH_OUTPUT"
-  - o  message: Add file to repo root
-  - │   File changes:
-  - │  	 ADDED/MODIFIED: root_file.txt 1fc392f47d2822cab18c09dd980ea6bff4c0af4f55249fd01696b5ae04b8f30f
-  - │
-  o  message: Delete internal and exported files
-  │   File changes:
-  │  	 REMOVED: export_dir/subdir_to_export/second_subdir_export.txt
-  - │  	 REMOVED: internal_dir/another_internal.txt
-  - │
-  - o  message: Modify only file in internal root
-  - │   File changes:
-  - │  	 ADDED/MODIFIED: internal_dir/another_internal.txt a6ef1a0dddad73cbfd4ce3bd9642f5aab0c4ae1fcb58af3cacda2f0ed914efd8
-  │
-  o  message: Modify only file in export subdirectory
-  │   File changes:
-  │  	 ADDED/MODIFIED: export_dir/subdir_to_export/second_subdir_export.txt a6ef1a0dddad73cbfd4ce3bd9642f5aab0c4ae1fcb58af3cacda2f0ed914efd8
-  │
-  o  message: Modify only exported file
-  │   File changes:
-  │  	 ADDED/MODIFIED: export_dir/B.txt a6ef1a0dddad73cbfd4ce3bd9642f5aab0c4ae1fcb58af3cacda2f0ed914efd8
-  │
-  o  message: Modify internal and exported files
-  │   File changes:
-  │  	 ADDED/MODIFIED: export_dir/A.txt a6ef1a0dddad73cbfd4ce3bd9642f5aab0c4ae1fcb58af3cacda2f0ed914efd8
-  │  	 ADDED/MODIFIED: export_dir/subdir_to_export/exception_from_export_dir.txt a6ef1a0dddad73cbfd4ce3bd9642f5aab0c4ae1fcb58af3cacda2f0ed914efd8
-  - │  	 ADDED/MODIFIED: internal_dir/internal.txt a6ef1a0dddad73cbfd4ce3bd9642f5aab0c4ae1fcb58af3cacda2f0ed914efd8
-  │
-  o  message: Create another export directory
-  │   File changes:
-  │  	 ADDED/MODIFIED: second_export_dir/another_file.txt 5edfe2d7d203cc580278e40f794da385c8895e8cad8803e176d305a5bf48e406
-  │
-  o  message: Add files to all directories
-  │   File changes:
-  │  	 ADDED/MODIFIED: export_dir/C.txt 3e8ba6ef6107965afc1446b5b24533d9865204f1ea617672930d202f932bb892
-  │  	 ADDED/MODIFIED: export_dir/subdir_to_export/second_subdir_export.txt e6d9f9d3bdd71e9c2dddec53da3bf447734da86b3897a7f7afd69cc7ac0cf3f1
-  - │  	 ADDED/MODIFIED: internal_dir/another_internal.txt dbc317c4f0146e8a455e9bc8eea646248145c962b3f4689c22285d3c8b25fd5e
-  │
-  o  message: Add subdirectory to export dir
-  │   File changes:
-  │  	 ADDED/MODIFIED: export_dir/subdir_to_export/export_file_in_subdir.txt e6d9f9d3bdd71e9c2dddec53da3bf447734da86b3897a7f7afd69cc7ac0cf3f1
-  - │
-  - o  message: Add file to internal_dir
-  - │   File changes:
-  - │  	 ADDED/MODIFIED: internal_dir/internal.txt dbc317c4f0146e8a455e9bc8eea646248145c962b3f4689c22285d3c8b25fd5e
-  │
-  o  message: Add files to export dir
-      File changes:
-     	 ADDED/MODIFIED: export_dir/B.txt 3e8ba6ef6107965afc1446b5b24533d9865204f1ea617672930d202f932bb892
+
+  $ git clone "$GIT_REPO_OUTPUT" git_repo
+  Cloning into 'git_repo'...
+  $ cd git_repo
+
+  $ git log --stat --pretty=format:"%s" | sed -E 's/\s+\|\s+([0-9]+).+/ \| \1/' > $GIT_REPO_LOG
+
+  $ diff --old-line-format="- %L" --new-line-format="+ %L" "$SOURCE_REPO_LOG" "$GIT_REPO_LOG"
+  - Add file to repo root
+  -  root_file.txt | 1
+  -  1 files changed, 1 insertions(+), 0 deletions(-)
+  - 
+  Delete internal and exported files
+   export_dir/subdir_to_export/second_subdir_export.txt | 1
+  -  internal_dir/another_internal.txt | 1
+  -  2 files changed, 0 insertions(+), 2 deletions(-)
+  - 
+  - Modify only file in internal root
+  -  internal_dir/another_internal.txt | 2
+  -  1 files changed, 1 insertions(+), 1 deletions(-)
+  +  1 file changed, 1 deletion(-)
+  
+  Modify only file in export subdirectory
+   export_dir/subdir_to_export/second_subdir_export.txt | 2
+  -  1 files changed, 1 insertions(+), 1 deletions(-)
+  +  1 file changed, 1 insertion(+), 1 deletion(-)
+  
+  Modify only exported file
+   export_dir/B.txt | 2
+  -  1 files changed, 1 insertions(+), 1 deletions(-)
+  +  1 file changed, 1 insertion(+), 1 deletion(-)
+  
+  Modify internal and exported files
+   export_dir/A.txt | 1
+   export_dir/subdir_to_export/exception_from_export_dir.txt | 1
+  -  internal_dir/internal.txt | 2
+  -  3 files changed, 3 insertions(+), 1 deletions(-)
+  +  2 files changed, 2 insertions(+)
+  
+  Create another export directory
+   second_export_dir/another_file.txt | 1
+  -  1 files changed, 1 insertions(+), 0 deletions(-)
+  +  1 file changed, 1 insertion(+)
+  
+  Add files to all directories
+   export_dir/C.txt | 1
+   export_dir/subdir_to_export/second_subdir_export.txt | 1
+  -  internal_dir/another_internal.txt | 1
+  -  3 files changed, 3 insertions(+), 0 deletions(-)
+  +  2 files changed, 2 insertions(+)
+  
+  Add subdirectory to export dir
+   export_dir/subdir_to_export/export_file_in_subdir.txt | 1
+  -  1 files changed, 1 insertions(+), 0 deletions(-)
+  - 
+  - Add file to internal_dir
+  -  internal_dir/internal.txt | 1
+  -  1 files changed, 1 insertions(+), 0 deletions(-)
+  +  1 file changed, 1 insertion(+)
+  
+  Add files to export dir
+   export_dir/B.txt | 1
+  -  1 files changed, 1 insertions(+), 0 deletions(-)
+  - 
+  +  1 file changed, 1 insertion(+)
   [1]
-
-# -------------------- Run checks on the git repo --------------------
-
-
-# $ cd "$GIT_REPO_OUTPUT"
-
-
-# TODO(T160600934): count number of commits
-# TODO(T160600934): assert paths are correct
-# TODO(T160600934): confirm no internal files are there

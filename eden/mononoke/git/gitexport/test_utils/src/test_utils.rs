@@ -24,6 +24,8 @@ use tests_utils::bookmark;
 use tests_utils::drawdag::changes;
 use tests_utils::drawdag::create_from_dag_with_changes;
 
+const MASTER_BOOKMARK: &str = "heads/master";
+
 // Directory and file constants.
 // By convention, directories with uppercase names are exported.
 const EXPORT_DIR: &str = "EXP";
@@ -136,7 +138,7 @@ pub async fn build_test_repo(
 
     let commit_id_map = create_from_dag_with_changes(ctx, &source_repo, dag, dag_changes).await?;
 
-    let bookmark_update_ctx = bookmark(ctx, source_repo, "master");
+    let bookmark_update_ctx = bookmark(ctx, source_repo, MASTER_BOOKMARK);
     let _master_bookmark_key = bookmark_update_ctx.set_to(commit_id_map["J"]).await?;
 
     Ok(GitExportTestData {
@@ -219,7 +221,7 @@ pub async fn repo_with_renamed_export_path(
     )
     .await?;
 
-    let bookmark_update_ctx = bookmark(ctx, source_repo, "master");
+    let bookmark_update_ctx = bookmark(ctx, source_repo, MASTER_BOOKMARK);
     let _master_bookmark_key = bookmark_update_ctx.set_to(commit_id_map[HEAD_ID]).await?;
 
     Ok(GitExportTestData {
@@ -310,7 +312,7 @@ pub async fn repo_with_multiple_renamed_export_directories(
     )
     .await?;
 
-    let bookmark_update_ctx = bookmark(ctx, source_repo, "master");
+    let bookmark_update_ctx = bookmark(ctx, source_repo, MASTER_BOOKMARK);
     let _master_bookmark_key = bookmark_update_ctx.set_to(commit_id_map[HEAD_ID]).await?;
 
     Ok(GitExportTestData {

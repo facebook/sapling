@@ -22,6 +22,7 @@ rust_library(
         "//eden/mononoke/changesets:changesets",
         "//eden/mononoke/filenodes:filenodes",
         "//eden/mononoke/filestore:filestore",
+        "//eden/mononoke/git_symbolic_refs:git_symbolic_refs",
         "//eden/mononoke/mercurial:mercurial_mutation",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mutable_counters:mutable_counters",

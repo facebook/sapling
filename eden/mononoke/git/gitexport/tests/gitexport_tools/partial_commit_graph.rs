@@ -20,6 +20,7 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures::stream::{self};
 use gitexport_tools::build_partial_commit_graph_for_export;
+use gitexport_tools::MASTER_BOOKMARK;
 use maplit::hashmap;
 use mononoke_api::BookmarkFreshness;
 use mononoke_api::BookmarkKey;
@@ -68,7 +69,7 @@ async fn test_partial_commit_graph_for_single_export_path(fb: FacebookInit) -> R
 
     let master_cs = source_repo_ctx
         .resolve_bookmark(
-            &BookmarkKey::from_str("master")?,
+            &BookmarkKey::from_str(MASTER_BOOKMARK)?,
             BookmarkFreshness::MostRecent,
         )
         .await?
@@ -112,7 +113,7 @@ async fn test_directories_with_merge_commits_fail_hard(fb: FacebookInit) -> Resu
 
     let master_cs = source_repo_ctx
         .resolve_bookmark(
-            &BookmarkKey::from_str("master")?,
+            &BookmarkKey::from_str(MASTER_BOOKMARK)?,
             BookmarkFreshness::MostRecent,
         )
         .await?
@@ -179,7 +180,7 @@ async fn test_partial_commit_graph_for_multiple_export_paths(fb: FacebookInit) -
 
     let master_cs = source_repo_ctx
         .resolve_bookmark(
-            &BookmarkKey::from_str("master")?,
+            &BookmarkKey::from_str(MASTER_BOOKMARK)?,
             BookmarkFreshness::MostRecent,
         )
         .await?
@@ -248,7 +249,7 @@ async fn test_oldest_commit_ts_option(fb: FacebookInit) -> Result<()> {
 
     let master_cs = source_repo_ctx
         .resolve_bookmark(
-            &BookmarkKey::from_str("master")?,
+            &BookmarkKey::from_str(MASTER_BOOKMARK)?,
             BookmarkFreshness::MostRecent,
         )
         .await?
