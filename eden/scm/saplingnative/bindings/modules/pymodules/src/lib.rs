@@ -87,16 +87,18 @@ py_class!(pub class BindingsModuleFinder |py| {
         match python_modules::find_module(name) {
             None => Ok(None),
             Some(info) => {
-                let home = self.home(py);
-                if let Some(home) = home {
-                    let path = if info.is_package() {
-                        format!("{}/{}/__init__.py", home, name.replace('.', "/"))
-                    } else {
-                        format!("{}/{}.py", home, name.replace('.', "/"))
-                    };
-                    if Path::new(&path).exists() {
-                        // Fallback to other finders.
-                        return Ok(None);
+                if !info.is_stdlib() {
+                    let home = self.home(py);
+                    if let Some(home) = home {
+                        let path = if info.is_package() {
+                            format!("{}/{}/__init__.py", home, name.replace('.', "/"))
+                        } else {
+                            format!("{}/{}.py", home, name.replace('.', "/"))
+                        };
+                        if Path::new(&path).exists() {
+                            // Fallback to other finders.
+                            return Ok(None);
+                        }
                     }
                 }
                 // ModuleSpec(name, loader, *, origin=None, loader_state=None, is_package=None)
