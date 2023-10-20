@@ -96,6 +96,7 @@ use super::app::DISABLE_TUNABLES;
 use super::app::ENABLE_MCROUTER;
 use super::app::GET_MEAN_DELAY_SECS_ARG;
 use super::app::GET_STDDEV_DELAY_SECS_ARG;
+use super::app::JUST_KNOBS_CONFIG_PATH;
 use super::app::LOCAL_CONFIGERATOR_PATH_ARG;
 use super::app::LOGVIEW_ADDITIONAL_LEVEL_FILTER;
 use super::app::LOGVIEW_CATEGORY;
@@ -201,6 +202,13 @@ impl<'a> MononokeMatches<'a> {
             runtime.handle().clone(),
         )
         .context("Failed to initialize tunables")?;
+        init_just_knobs(
+            &matches,
+            &config_store,
+            logger.clone(),
+            runtime.handle().clone(),
+        )
+        .context("Failed to initialize JustKnobs")?;
 
         let mysql_options =
             parse_mysql_options(&matches, &app_data).context("Failed to parse MySQL options")?;
@@ -940,6 +948,21 @@ fn init_tunables<'a>(
         config_store.get_config_handle(parse_config_spec_to_path(tunables_spec)?)?;
 
     init_tunables_worker(logger, config_handle, handle)
+}
+
+fn init_just_knobs<'a>(
+    matches: &'a ArgMatches<'a>,
+    config_store: &'a ConfigStore,
+    logger: Logger,
+    handle: Handle,
+) -> Result<()> {
+    if let Some(just_knobs_cached_config_path) = matches.value_of(JUST_KNOBS_CONFIG_PATH) {
+        let config_handle = config_store
+            .get_config_handle(parse_config_spec_to_path(just_knobs_cached_config_path)?)?;
+        justknobs::cached_config::init_just_knobs_worker(logger, config_handle, handle)
+    } else {
+        Ok(())
+    }
 }
 
 /// Initialize a new `Runtime` with thread number parsed from the CLI

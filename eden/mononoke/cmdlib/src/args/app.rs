@@ -57,6 +57,7 @@ pub const MYSQL_SQLBLOB_POOL_AGE_TIMEOUT: &str = "mysql-sqblob-pool-age-timeout"
 pub const MYSQL_SQLBLOB_POOL_IDLE_TIMEOUT: &str = "mysql-sqblob-pool-idle-timeout";
 pub const RUNTIME_THREADS: &str = "runtime-threads";
 pub const TUNABLES_CONFIG: &str = "tunables-config";
+pub const JUST_KNOBS_CONFIG_PATH: &str = "just-knobs-config-path";
 pub const TUNABLES_LOCAL_PATH: &str = "tunables-local-path";
 pub const DISABLE_TUNABLES: &str = "disable-tunables";
 pub const SCRIBE_LOGGING_DIRECTORY: &str = "scribe-logging-directory";
@@ -122,6 +123,8 @@ pub enum ArgType {
     Runtime,
     /// Adds options related to mononoke tunables
     Tunables,
+    /// Adds options related to just knobs
+    JustKnobs,
     /// Adds options to select a repo. If not present then all repos.
     Repo,
     /// Adds options for scrubbing blobstores
@@ -164,6 +167,7 @@ const DEFAULT_ARG_TYPES: &[ArgType] = &[
     ArgType::Repo,
     ArgType::Runtime,
     ArgType::Tunables,
+    ArgType::JustKnobs,
     ArgType::RendezVous,
     ArgType::Derivation,
     ArgType::Acls,
@@ -647,6 +651,9 @@ impl MononokeAppBuilder {
         if self.arg_types.contains(&ArgType::Tunables) {
             app = add_tunables_args(app);
         }
+        if self.arg_types.contains(&ArgType::JustKnobs) {
+            app = add_justknobs_args(app);
+        }
         if self.arg_types.contains(&ArgType::ShutdownTimeouts) {
             app = add_shutdown_timeout_args(app);
         }
@@ -923,6 +930,18 @@ fn add_tunables_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             .long(DISABLE_TUNABLES)
             .conflicts_with_all(&[TUNABLES_CONFIG, TUNABLES_LOCAL_PATH])
             .help("Use the default values for all tunables (useful for tests)"),
+    )
+}
+fn add_justknobs_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+    app.arg(
+        Arg::with_name(JUST_KNOBS_CONFIG_PATH)
+            .long(JUST_KNOBS_CONFIG_PATH)
+            .takes_value(true)
+            .help(
+                "Path to a config that contains JustKnob values. Enables
+            cached_config-based JustKnobs implementation instead of the default
+            one",
+            ),
     )
 }
 fn add_runtime_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {

@@ -26,6 +26,7 @@ rust_library(
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/hostname:hostname",
+        "//common/rust/shed/justknobs_stub:justknobs",
         "//common/rust/shed/panichandler:panichandler",
         "//common/rust/shed/services:services",
         "//common/rust/shed/slog_glog_fmt:slog_glog_fmt",
