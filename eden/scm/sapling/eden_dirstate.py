@@ -16,6 +16,7 @@ from . import (
     encoding,
     localrepo,
     match as matchmod,
+    scmutil,
     ui as ui_mod,
     util,
 )
@@ -239,3 +240,17 @@ class eden_dirstate(dirstate.dirstate):
         # Ideally we should replace self.normal() too; we should be able to
         # avoid the filesystem stat call in self.normal() anyway.
         self.normal(f)
+
+    def _ruststatus(self, *args) -> scmutil.status:
+        # If a transaction is currently in progress, make sure it has flushed
+        # pending commit data to disk so that eden will be able to access it.
+        #
+        # This was copied from EdenThriftClient.py to fix "requested parent
+        # commit is out-of-date" errors asking Eden for "status". However, it
+        # doesn't seem like a good idea to randomly commit the current
+        # transaction.
+        txn = self._repo.currenttransaction()
+        if txn is not None:
+            txn.writepending()
+
+        return super()._ruststatus(*args)

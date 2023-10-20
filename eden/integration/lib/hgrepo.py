@@ -236,6 +236,11 @@ class HgRepository(repobase.Repository):
         hgrc["remotefilelog"]["server"] = "false"
         hgrc["remotefilelog"]["reponame"] = "test"
         hgrc["remotefilelog"]["cachepath"] = cachepath
+
+        # Use Rust status internally for all commands.
+        hgrc.setdefault("workingcopy", {})
+        hgrc["workingcopy"]["rust-status"] = "true"
+
         self.write_hgrc(hgrc)
 
         storerequirespath = os.path.join(self.path, ".hg", "store", "requires")

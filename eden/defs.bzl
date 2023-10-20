@@ -85,6 +85,7 @@ def get_test_env_and_deps(suffix = ""):
     })
 
     envs = {
+        "CHGDISABLE": "1",
         "EDENFS_SUFFIX": suffix,
     }
     deps = []
