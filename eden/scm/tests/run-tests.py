@@ -2321,7 +2321,23 @@ class DebugRunTestTest(Test):
 
 firsterror = False
 
-_iolock = RLock()
+
+class NoopLock:
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        pass
+
+    def acquire(self):
+        pass
+
+    def release(self):
+        pass
+
+
+showprogress = sys.stderr.isatty()
+_iolock = showprogress and RLock() or NoopLock()
 
 
 class Progress:
@@ -2362,7 +2378,6 @@ class Progress:
 
 
 progress = Progress()
-showprogress = sys.stderr.isatty()
 
 if os.name == "nt":
     import ctypes
@@ -2430,7 +2445,7 @@ class IOLockWithProgress:
         _iolock.release()
 
 
-iolock = IOLockWithProgress()
+iolock = showprogress and IOLockWithProgress() or _iolock
 
 
 class TestResult(unittest._TextTestResult):
@@ -3555,6 +3570,8 @@ class TestRunner:
                 "extensions.logexceptions=%s" % logexceptions.decode("utf-8")
             )
 
+        vlog(f"# Show progress: {showprogress}")
+        vlog(f"# IO lock: {type(_iolock).__name__}")
         vlog("# Using TESTDIR", self._testdir)
         vlog("# Using RUNTESTDIR", os.environ["RUNTESTDIR"])
         vlog("# Using HGTMP", self._hgtmp)
