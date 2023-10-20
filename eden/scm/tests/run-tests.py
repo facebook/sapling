@@ -292,7 +292,7 @@ def Popen4(cmd, wd, timeout, env=None):
             if p.returncode is None:
                 terminate(p)
 
-        threading.Thread(target=t).start()
+        threading.Thread(target=t, name=f"Timeout tracker {cmd=}").start()
 
     return p
 
@@ -872,20 +872,18 @@ def setup_sigtrace():
 
     import traceback
 
-    pathformat = "/tmp/trace-%(pid)s-%(time)s.log"
-
     def printstacks(sig, currentframe) -> None:
-        path = pathformat % {"time": time.time(), "pid": os.getpid()}
-        writesigtrace(path, writestderr=True)
+        path = os.path.join(
+            tempfile.gettempdir(), f"trace-{os.getpid()}-{int(time.time())}.log"
+        )
+        writesigtrace(path)
 
-    def writesigtrace(path, writestderr: bool = False) -> None:
+    def writesigtrace(path) -> None:
         content = ""
+        tid_name = {t.ident: t.name for t in threading.enumerate()}
         for tid, frame in sys._current_frames().items():
             tb = "".join(traceback.format_stack(frame))
-            content += "Thread %s:\n%s\n" % (
-                tid,
-                tb,
-            )
+            content += f"Thread {tid_name.get(tid) or 'unnamed'} {tid}:\n{tb}\n"
 
         with open(path, "w") as f:
             f.write(content)
