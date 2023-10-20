@@ -542,9 +542,12 @@ impl DerivedDataManager {
             // Try to perform remote derivation.  Capture the error so that we
             // can decide what to do.
             let derivation_error = loop {
-                if !tunables()
-                    .by_repo_enable_remote_derivation(self.repo_name())
-                    .unwrap_or_default()
+                if justknobs::eval(
+                    "scm/mononoke:derived_data_disable_remote_derivation",
+                    None,
+                    Some(self.repo_name()),
+                )
+                .unwrap_or_default()
                 {
                     // Remote derivation has been disabled, fall back to local derivation.
                     return Ok(None);
