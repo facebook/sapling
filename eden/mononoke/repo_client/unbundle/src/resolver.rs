@@ -1183,6 +1183,23 @@ impl<'r> Bundle2Resolver<'r> {
         maybe_backup_repo_source: Option<BackupSourceRepo>,
     ) -> Result<(UploadedBonsais, UploadedHgChangesetIds), Error> {
         let changesets = toposort_changesets(cg_push.changesets)?;
+        // Get the list of Hg changeset for which Bonsai changeset mapping already exists based on the input.
+        // These changesets won't be re-uploaded and instead the stored existing bonsai changesets will be returned
+        let existing_changesets = self
+            .repo
+            .get_hg_bonsai_mapping(
+                self.ctx.clone(),
+                changesets
+                    .iter()
+                    .map(|(hg_cs_id, _)| *hg_cs_id)
+                    .collect::<Vec<_>>(),
+            )
+            .await
+            .context("Error fetching bonsai_hg_mapping")?
+            .into_iter()
+            .map(|(hg_id, _)| hg_id)
+            .collect::<HashSet<_>>();
+
         let filelogs = cg_push.filelogs;
 
         self.ctx
@@ -1216,19 +1233,31 @@ impl<'r> Bundle2Resolver<'r> {
         for chunk in changesets.chunks(chunk_size) {
             let mut uploaded_changesets: HashMap<HgChangesetId, ChangesetHandle> = HashMap::new();
             for (node, revlog_cs) in chunk {
-                uploaded_changesets = upload_changeset(
-                    self.ctx.clone(),
-                    self.repo.clone(),
-                    self.ctx.scuba().clone(),
-                    *node,
-                    revlog_cs,
-                    uploaded_changesets,
-                    &filelogs,
-                    &manifests,
-                    maybe_backup_repo_source.clone(),
-                )
-                .await
-                .with_context(err_context)?;
+                uploaded_changesets = if existing_changesets.contains(node) {
+                    // If the mapping was already created in the past, do not create a new bonsai changeset to upload
+                    // but reuse the existing one to create the ChangesetHandle
+                    let existing_changeset_handle = ChangesetHandle::ready_cs_handle(
+                        self.ctx.clone(),
+                        self.repo.clone(),
+                        *node,
+                    );
+                    uploaded_changesets.insert(*node, existing_changeset_handle);
+                    uploaded_changesets
+                } else {
+                    upload_changeset(
+                        self.ctx.clone(),
+                        self.repo.clone(),
+                        self.ctx.scuba().clone(),
+                        *node,
+                        revlog_cs,
+                        uploaded_changesets,
+                        &filelogs,
+                        &manifests,
+                        maybe_backup_repo_source.clone(),
+                    )
+                    .await
+                    .with_context(err_context)?
+                };
             }
 
             let uploaded: Vec<(BonsaiChangeset, HgChangesetId)> = stream::iter(uploaded_changesets)
