@@ -1333,13 +1333,12 @@ class Test(unittest.TestCase):
                         f.write(line)
 
             # The result object handles diff calculation for us.
-            with firstlock:
-                if self._result.addOutputMismatch(self, ret, out, self._refout):
-                    # change was accepted, skip failing
-                    return
-                if self._first:
-                    global firsterror
-                    firsterror = True
+            if self._result.addOutputMismatch(self, ret, out, self._refout):
+                # change was accepted, skip failing
+                return
+            if self._first:
+                global firsterror
+                firsterror = True
 
             if ret:
                 msg = "output changed and " + describe(ret)
@@ -2320,7 +2319,6 @@ class DebugRunTestTest(Test):
         return exitcode, out
 
 
-firstlock = RLock()
 firsterror = False
 
 _iolock = RLock()
