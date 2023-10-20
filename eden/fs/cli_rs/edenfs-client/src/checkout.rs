@@ -1056,7 +1056,7 @@ fn get_checkout_root_state(path: &Path) -> Result<(Option<PathBuf>, Option<PathB
     let mut checkout_state_dir = None;
 
     // On Windows, walk backwards through the path until you find the `.eden` folder
-    let mut curr_dir = Some(path.clone());
+    let mut curr_dir = Some(path);
     while let Some(candidate_dir) = curr_dir {
         if candidate_dir.join(".eden").exists() {
             let config_file = candidate_dir.join(".eden").join("config");
