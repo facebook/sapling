@@ -20,14 +20,13 @@
     "signsource": "node ./scripts/signsource.js"
   },
   "dependencies": {
-    "@docusaurus/core": "2.1.0",
-    "@docusaurus/preset-classic": "2.1.0",
+    "@docusaurus/core": "2.4.3",
+    "@docusaurus/preset-classic": "2.4.3",
     "@mdx-js/react": "^1.6.22",
     "async-mutex": "^0.4.0",
     "clsx": "^1.2.1",
     "deep-equal": "^2.1.0",
-    "docusaurus-lunr-search": "^2.2.0",
-    "docusaurus-plugin-internaldocs-fb": "1.4.0",
+    "docusaurus-plugin-internaldocs-fb": "1.16.2",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "react-simple-code-editor": "^0.13.1",
@@ -36,7 +35,7 @@
   },
   "devDependencies": {
     "@babel/eslint-parser": "^7.18.2",
-    "@docusaurus/module-type-aliases": "2.1.0",
+    "@docusaurus/module-type-aliases": "2.4.3",
     "@tsconfig/docusaurus": "^1.0.5",
     "eslint": "^8.19.0",
     "eslint-config-airbnb": "^19.0.4",
