@@ -14,4 +14,4 @@ tracing = "0.1.35"
 util = { version = "0.1.0", path = "../../util" }
 
 [dev-dependencies]
-tempfile = "3.5"
+tempfile = "3.8"

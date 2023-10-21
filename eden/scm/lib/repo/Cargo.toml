@@ -35,7 +35,7 @@ vfs = { version = "0.1.0", path = "../vfs" }
 workingcopy = { version = "0.1.0", path = "../workingcopy", optional = true }
 
 [dev-dependencies]
-tempfile = "3.5"
+tempfile = "3.8"
 
 [features]
 default = []

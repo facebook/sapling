@@ -20,4 +20,4 @@ vfs = { version = "0.1.0", path = "../../../../lib/vfs" }
 memmap2 = "0.5.10"
 minibytes = { version = "0.1.0", path = "../../../../lib/minibytes" }
 quickcheck = "1.0"
-tempfile = "3.5"
+tempfile = "3.8"

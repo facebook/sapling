@@ -12,4 +12,4 @@ dag = { version = "0.1.0", path = ".." }
 mincode = { version = "0.1.0", path = "../../mincode" }
 minibench = { version = "0.1.0", path = "../../minibench" }
 nonblocking = { version = "0.1.0", path = "../../nonblocking" }
-tempfile = "3.5"
+tempfile = "3.8"

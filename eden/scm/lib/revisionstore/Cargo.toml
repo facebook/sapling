@@ -52,7 +52,7 @@ sha1 = "0.10.5"
 sha2 = "0.10.6"
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main", optional = true }
 storemodel = { version = "0.1.0", path = "../storemodel" }
-tempfile = "3.5"
+tempfile = "3.8"
 thiserror = "1.0.43"
 tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
 tokio-stream = { version = "0.1.14", features = ["fs", "io-util", "net", "signal", "sync", "time"] }

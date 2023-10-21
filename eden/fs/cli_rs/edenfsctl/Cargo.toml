@@ -16,7 +16,7 @@ tracing = "0.1.35"
 tracing-subscriber = { version = "0.3.17", features = ["ansi", "env-filter", "fmt", "json", "local-time", "parking_lot", "registry"] }
 
 [dev-dependencies]
-tempfile = "3.5"
+tempfile = "3.8"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 edenfs-utils = { version = "0.1.0", path = "../edenfs-utils" }

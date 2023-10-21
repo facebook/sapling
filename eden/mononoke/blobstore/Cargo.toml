@@ -38,4 +38,4 @@ fileblob = { version = "0.1.0", path = "fileblob" }
 memblob = { version = "0.1.0", path = "memblob" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 sqlblob = { version = "0.1.0", path = "sqlblob" }
-tempfile = "3.5"
+tempfile = "3.8"

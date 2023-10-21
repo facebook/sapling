@@ -24,7 +24,7 @@ nonblocking = { version = "0.1.0", path = "../nonblocking" }
 rand = { version = "0.8", features = ["small_rng"] }
 renderdag = { version = "0.1.0", path = "../renderdag", optional = true }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
-tempfile = { version = "3.5", optional = true }
+tempfile = { version = "3.8", optional = true }
 thiserror = "1.0.43"
 tracing = "0.1.35"
 vlqencoding = { version = "0.1.0", path = "../vlqencoding" }
@@ -37,7 +37,7 @@ indexedlog = { version = "0.1.0", path = "../indexedlog" }
 once_cell = "1.12"
 quickcheck = "1.0"
 renderdag = { version = "0.1.0", path = "../renderdag" }
-tempfile = "3.5"
+tempfile = "3.8"
 tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
 
 [features]

@@ -41,7 +41,7 @@ watchman_client = { version = "0.8.0", git = "https://github.com/facebook/watchm
 
 [dev-dependencies]
 async-trait = "0.1.71"
-tempfile = "3.5"
+tempfile = "3.8"
 
 [features]
 eden = ["edenfs-client", "thrift-types"]

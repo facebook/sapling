@@ -21,4 +21,4 @@ util = { version = "0.1.0", path = "../util" }
 vfs = { version = "0.1.0", path = "../vfs" }
 
 [dev-dependencies]
-tempfile = "3.5"
+tempfile = "3.8"

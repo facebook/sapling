@@ -32,7 +32,7 @@ serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_de
 serde_urlencoded = { version = "0.7", optional = true }
 sha2 = { version = "0.10.6", optional = true }
 staticconfig = { version = "0.1.0", path = "../static" }
-tempfile = { version = "3.5", optional = true }
+tempfile = { version = "3.8", optional = true }
 tracing = "0.1.35"
 types = { version = "0.1.0", path = "../../types", optional = true }
 unionconfig = { version = "0.1.0", path = "../union" }
@@ -44,7 +44,7 @@ zstd = { version = "0.13", features = ["experimental", "zstdmt"], optional = tru
 [dev-dependencies]
 minibench = { version = "0.1.0", path = "../../minibench" }
 once_cell = "1.12"
-tempfile = "3.5"
+tempfile = "3.8"
 testutil = { version = "0.1.0", path = "../../util/testutil" }
 
 [features]

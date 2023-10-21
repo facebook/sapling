@@ -18,5 +18,5 @@ vlqencoding = { version = "0.1.0", path = "../vlqencoding" }
 drawdag = { version = "0.1.0", path = "../drawdag" }
 rand = { version = "0.8", features = ["small_rng"] }
 rand_chacha = "0.3"
-tempfile = "3.5"
+tempfile = "3.8"
 types = { version = "0.1.0", path = "../types", features = ["for-tests"], default-features = false }
