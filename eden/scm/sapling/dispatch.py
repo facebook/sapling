@@ -180,9 +180,21 @@ def _preimportmodules():
     extmods = []
     extprefix = "sapling.ext."
     modnames = sorted(bindings.modules.list())
+
+    is_win = pycompat.iswindows
+    win_modnames = {
+        "sapling.scmwindows",
+        "sapling.win32",
+        "sapling.windows_socket",
+        "sapling.windows",
+    }
+
     for name in modnames:
         # Skip other modules.
         if not any(name.startswith(p) for p in ("ghstack", "sapling")):
+            continue
+        # Skip windows modules on non-windows platforms
+        if not is_win and name in win_modnames:
             continue
         # Extensions are handled below.
         if name.startswith(extprefix):
