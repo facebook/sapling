@@ -14,7 +14,7 @@ use anyhow::anyhow;
 use anyhow::Context;
 use async_runtime::spawn;
 use async_runtime::spawn_blocking;
-use cxx::SharedPtr;
+use cxx::UniquePtr;
 use futures::StreamExt;
 use manifest::FileMetadata;
 use manifest::FsNodeMetadata;
@@ -97,7 +97,10 @@ impl MercurialMatcher {
 
 // It's safe to move MatcherPromises between threads
 unsafe impl Send for MatcherPromise {}
-unsafe impl Sync for MatcherPromise {}
+
+// NOTE: While MercurialPromises are safe to move between threads, they cannot be shared between threads.
+// Ex: calling setPromise from multiple threads is undefined. Therefore we should avoid marking
+// MercurialMatcher as Sync. More info here: https://doc.rust-lang.org/stable/std/marker/trait.Sync.html
 
 #[cxx::bridge]
 mod ffi {
@@ -116,12 +119,12 @@ mod ffi {
 
         #[namespace = "facebook::eden"]
         fn set_matcher_promise_result(
-            promise: SharedPtr<MatcherPromise>,
+            promise: UniquePtr<MatcherPromise>,
             value: Box<MercurialMatcher>,
         );
 
         #[namespace = "facebook::eden"]
-        fn set_matcher_promise_error(promise: SharedPtr<MatcherPromise>, error: String);
+        fn set_matcher_promise_error(promise: UniquePtr<MatcherPromise>, error: String);
     }
 
     #[namespace = "facebook::eden"]
@@ -136,7 +139,7 @@ mod ffi {
         fn profile_from_filter_id(
             id: &str,
             checkout_path: &str,
-            promise: SharedPtr<MatcherPromise>,
+            promise: UniquePtr<MatcherPromise>,
         ) -> Result<()>;
 
         // Returns true if the given path and all of its children are unfiltered.
@@ -163,7 +166,7 @@ impl From<DirectoryMatch> for ffi::FilterDirectoryMatch {
 async fn profile_contents_from_repo(
     id: FilterId,
     abs_repo_path: PathBuf,
-    promise: SharedPtr<MatcherPromise>,
+    promise: UniquePtr<MatcherPromise>,
 ) {
     match _profile_contents_from_repo(id, abs_repo_path).await {
         Ok(res) => {
@@ -246,7 +249,7 @@ async fn _profile_contents_from_repo(
 pub fn profile_from_filter_id(
     id: &str,
     checkout_path: &str,
-    promise: SharedPtr<MatcherPromise>,
+    promise: UniquePtr<MatcherPromise>,
 ) -> Result<(), anyhow::Error> {
     // Parse the FilterID
     let filter_id = FilterId::from_str(id)?;

@@ -24,11 +24,10 @@ class MatcherPromise {
 };
 
 void set_matcher_promise_result(
-    std::shared_ptr<MatcherPromise> promise,
+    std::unique_ptr<MatcherPromise> promise,
     rust::Box<::facebook::eden::MercurialMatcher>);
 
 void set_matcher_promise_error(
-    std::shared_ptr<MatcherPromise> promise,
+    std::unique_ptr<MatcherPromise> promise,
     rust::String error);
-
 } // namespace facebook::eden

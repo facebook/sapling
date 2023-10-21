@@ -62,7 +62,7 @@ ImmediateFuture<FilterCoverage> HgSparseFilter::getFilterCoverageForPath(
       rust::Str{checkoutPath_.view().data(), checkoutPath_.view().size()};
   auto [promise, rootFuture] =
       folly::makePromiseContract<rust::Box<MercurialMatcher>>();
-  auto rootPromise = std::make_shared<MatcherPromise>(std::move(promise));
+  auto rootPromise = std::make_unique<MatcherPromise>(std::move(promise));
   profile_from_filter_id(filterId, pathToMount, std::move(rootPromise));
 
   return ImmediateFuture{

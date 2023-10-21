@@ -12,14 +12,14 @@
 namespace facebook::eden {
 
 void set_matcher_promise_result(
-    std::shared_ptr<MatcherPromise> matcherPromise,
+    std::unique_ptr<MatcherPromise> matcherPromise,
     rust::Box<MercurialMatcher> matcher) {
   matcherPromise->promise.setValue(std::move(matcher));
   return;
 }
 
 void set_matcher_promise_error(
-    std::shared_ptr<MatcherPromise> matcherPromise,
+    std::unique_ptr<MatcherPromise> matcherPromise,
     rust::String error) {
   matcherPromise->promise.setException(
       std::runtime_error(std::move(error).c_str()));
