@@ -13,22 +13,22 @@
 
 namespace facebook::eden {
 
-struct SparseProfileRoot;
+struct MercurialMatcher;
 
-class RootPromise {
+class MatcherPromise {
  public:
-  explicit RootPromise(folly::Promise<rust::Box<SparseProfileRoot>> root)
-      : promise(std::move(root)) {}
+  explicit MatcherPromise(folly::Promise<rust::Box<MercurialMatcher>> matcher)
+      : promise(std::move(matcher)) {}
 
-  folly::Promise<rust::Box<SparseProfileRoot>> promise;
+  folly::Promise<rust::Box<MercurialMatcher>> promise;
 };
 
-void set_root_promise_result(
-    std::shared_ptr<RootPromise> promise,
-    rust::Box<::facebook::eden::SparseProfileRoot>);
+void set_matcher_promise_result(
+    std::shared_ptr<MatcherPromise> promise,
+    rust::Box<::facebook::eden::MercurialMatcher>);
 
-void set_root_promise_error(
-    std::shared_ptr<RootPromise> promise,
+void set_matcher_promise_error(
+    std::shared_ptr<MatcherPromise> promise,
     rust::String error);
 
 } // namespace facebook::eden

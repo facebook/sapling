@@ -20,32 +20,28 @@
 namespace facebook::eden {
 
 // Extern "Rust"
-struct SparseProfileRoot;
+struct MercurialMatcher;
 
 class HgSparseFilter : public Filter {
  public:
   explicit HgSparseFilter(AbsolutePath checkoutPath)
       : checkoutPath_{std::move(checkoutPath)} {
-    profiles_ =
-        std::make_shared<folly::Synchronized<SparseMatcherMap>>(std::in_place);
+    profiles_ = std::make_shared<folly::Synchronized<MercurialMatcherMap>>(
+        std::in_place);
   }
   ~HgSparseFilter() override {}
 
   /*
    * Checks whether a path is filtered by the given filter.
    */
-  ImmediateFuture<bool> isPathFiltered(
+  ImmediateFuture<FilterCoverage> getFilterCoverageForPath(
       RelativePathPiece path,
       folly::StringPiece filterId) const override;
 
  private:
-  // TODO(cuev): We may want to use a F14FastMap instead since it doesn't matter
-  // if the string or rust::Box are moved. We'll hold off on investigating for
-  // now since in the future we may store a Matcher in the map instead of a
-  // SparseProfileRoot object. See fbcode/folly/container/F14.md for more info.
-  using SparseMatcherMap = folly::
-      F14NodeMap<std::string, rust::Box<facebook::eden::SparseProfileRoot>>;
-  std::shared_ptr<folly::Synchronized<SparseMatcherMap>> profiles_;
+  using MercurialMatcherMap = folly::
+      F14NodeMap<std::string, rust::Box<facebook::eden::MercurialMatcher>>;
+  std::shared_ptr<folly::Synchronized<MercurialMatcherMap>> profiles_;
   AbsolutePath checkoutPath_;
 };
 } // namespace facebook::eden

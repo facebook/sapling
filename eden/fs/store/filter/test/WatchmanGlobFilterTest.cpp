@@ -31,13 +31,13 @@ TEST(WatchmanGlobFilterTest, testGlobbingNotExists) {
       std::make_shared<WatchmanGlobFilter>(globs, CaseSensitivity::Sensitive);
   auto pass =
       filter
-          ->isPathFiltered(
+          ->getFilterCoverageForPath(
               RelativePathPiece{"tree2/tree1/README"}, folly::StringPiece(""))
           .semi()
           .via(folly::Executor::getKeepAliveToken(executor));
   executor.drain();
 
-  EXPECT_TRUE(std::move(pass).get());
+  EXPECT_EQ(std::move(pass).get(0ms), FilterCoverage::RECURSIVELY_FILTERED);
 }
 
 TEST(WatchmanGlobFilterTest, testGlobbingExists) {
@@ -47,13 +47,13 @@ TEST(WatchmanGlobFilterTest, testGlobbingExists) {
   auto filter =
       std::make_shared<WatchmanGlobFilter>(globs, CaseSensitivity::Sensitive);
   auto pass = filter
-                  ->isPathFiltered(
+                  ->getFilterCoverageForPath(
                       RelativePathPiece{"content2.rs"}, folly::StringPiece(""))
                   .semi()
                   .via(folly::Executor::getKeepAliveToken(executor));
   executor.drain();
 
-  EXPECT_FALSE(std::move(pass).get());
+  EXPECT_EQ(std::move(pass).get(0ms), FilterCoverage::UNFILTERED);
 }
 
 TEST(WatchmanGlobFilterTest, testAnother) {
@@ -64,13 +64,13 @@ TEST(WatchmanGlobFilterTest, testAnother) {
   auto filter =
       std::make_shared<WatchmanGlobFilter>(globs, CaseSensitivity::Sensitive);
   auto pass = filter
-                  ->isPathFiltered(
+                  ->getFilterCoverageForPath(
                       RelativePathPiece{"tree3/README"}, folly::StringPiece(""))
                   .semi()
                   .via(folly::Executor::getKeepAliveToken(executor));
   executor.drain();
 
-  EXPECT_FALSE(std::move(pass).get());
+  EXPECT_EQ(std::move(pass).get(0ms), FilterCoverage::UNFILTERED);
 }
 
 TEST(WatchmanGlobFilterTest, testGlobs) {
@@ -81,11 +81,11 @@ TEST(WatchmanGlobFilterTest, testGlobs) {
   auto filter =
       std::make_shared<WatchmanGlobFilter>(globs, CaseSensitivity::Sensitive);
   auto pass = filter
-                  ->isPathFiltered(
+                  ->getFilterCoverageForPath(
                       RelativePathPiece{"tree3/README"}, folly::StringPiece(""))
                   .semi()
                   .via(folly::Executor::getKeepAliveToken(executor));
   executor.drain();
 
-  EXPECT_FALSE(std::move(pass).get());
+  EXPECT_EQ(std::move(pass).get(0ms), FilterCoverage::UNFILTERED);
 }

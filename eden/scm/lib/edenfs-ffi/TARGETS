@@ -34,6 +34,7 @@ rust_library(
         "//eden/scm/lib/identity:identity",
         "//eden/scm/lib/manifest:manifest",
         "//eden/scm/lib/manifest-tree:manifest-tree",
+        "//eden/scm/lib/pathmatcher:pathmatcher",
         "//eden/scm/lib/repo:repo",
         "//eden/scm/lib/sparse:sparse",
         "//eden/scm/lib/types:types",

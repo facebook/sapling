@@ -38,13 +38,13 @@ class WatchmanGlobFilter : public Filter {
   }
 
   /*
-   * Check whether a path is filtered by the given filter.
-   * Note this method could potentially slow
-   * Returns true if the path is filtered out by globs
+   * Check whether a path is filtered by the given filter. NOTE: this method
+   * could potentially be slow. Returns a FilterCoverage enum that indicates the
+   * extent of the path's filtering.
    *
    * @param filterId, we use filterId as rootId here
    */
-  ImmediateFuture<bool> isPathFiltered(
+  ImmediateFuture<FilterCoverage> getFilterCoverageForPath(
       RelativePathPiece path,
       folly::StringPiece filterId) const override;
 

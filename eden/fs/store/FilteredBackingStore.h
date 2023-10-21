@@ -133,13 +133,14 @@ class FilteredBackingStore
   ImmediateFuture<std::unique_ptr<PathMap<TreeEntry>>> filterImpl(
       const TreePtr unfilteredTree,
       RelativePathPiece treePath,
-      folly::StringPiece filterId);
+      folly::StringPiece filterId,
+      FilteredObjectIdType treeType);
 
   /*
    * Determine whether a path is affected by a filter change from One -> Two or
    * vice versa.
    */
-  ImmediateFuture<bool> pathAffectedByFilterChange(
+  ImmediateFuture<ObjectComparison> pathAffectedByFilterChange(
       RelativePathPiece pathOne,
       RelativePathPiece pathTwo,
       folly::StringPiece filterIdOne,

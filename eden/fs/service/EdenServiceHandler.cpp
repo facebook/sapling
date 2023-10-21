@@ -1697,9 +1697,12 @@ void sumUncommitedChanges(
 
     // the path is filtered don't consider it
     if (filter.has_value()) {
+      // TODO(T167750650): This .get() will block Thrift threads and could lead
+      // to Queue Timeouts. Instead of calling .get(), we should chain futures
+      // together.
       if (filter.value()
-              .isPathFiltered(entry.first, folly::StringPiece(""))
-              .get()) {
+              .getFilterCoverageForPath(entry.first, folly::StringPiece(""))
+              .get() == FilterCoverage::RECURSIVELY_FILTERED) {
         continue;
       }
     }
@@ -1718,7 +1721,12 @@ void sumUncommitedChanges(
 
   for (const auto& name : range.uncleanPaths) {
     if (filter.has_value()) {
-      if (filter.value().isPathFiltered(name, folly::StringPiece("")).get()) {
+      // TODO(T167750650): This .get() will block Thrift threads and could lead
+      // to Queue Timeouts. Instead of calling .get(), we should chain futures
+      // together.
+      if (filter.value()
+              .getFilterCoverageForPath(name, folly::StringPiece(""))
+              .get() == FilterCoverage::RECURSIVELY_FILTERED) {
         continue;
       }
     }

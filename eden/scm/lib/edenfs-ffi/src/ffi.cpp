@@ -11,17 +11,17 @@
 
 namespace facebook::eden {
 
-void set_root_promise_result(
-    std::shared_ptr<RootPromise> rootPromise,
-    rust::Box<SparseProfileRoot> root) {
-  rootPromise->promise.setValue(std::move(root));
+void set_matcher_promise_result(
+    std::shared_ptr<MatcherPromise> matcherPromise,
+    rust::Box<MercurialMatcher> matcher) {
+  matcherPromise->promise.setValue(std::move(matcher));
   return;
 }
 
-void set_root_promise_error(
-    std::shared_ptr<RootPromise> rootPromise,
+void set_matcher_promise_error(
+    std::shared_ptr<MatcherPromise> matcherPromise,
     rust::String error) {
-  rootPromise->promise.setException(
+  matcherPromise->promise.setException(
       std::runtime_error(std::move(error).c_str()));
   return;
 }

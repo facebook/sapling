@@ -8,19 +8,40 @@
 #pragma once
 
 #include <string>
+
 #include "eden/fs/model/ObjectId.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
+
+// FilteredObjectId types start at 0x10 so that they can be distinguished
+// from HgProxyHash types that start at 0x01 and extend until 0x02. In the
+// future, this could help migrate HgProxyHash-based ObjectIds to
+// FilteredObjectIds. See comment below for more details on what objects of each
+// type contain.
+enum FilteredObjectIdType : uint8_t {
+  // If the Object ID's type is 0x10, then it represents a blob object and is of
+  // the form <blob_type_byte><ObjectId>
+  OBJECT_TYPE_BLOB = 0x10,
+
+  // If the Object ID's type is 0x11, then it represents a tree object and is of
+  // the form <tree_type_byte><filter_set_id><path><ObjectId>
+  OBJECT_TYPE_TREE = 0x11,
+
+  // If the Object ID's type is 0x12, then it represents an *unfiltered* tree
+  // object and is of the form <unfiltered_tree_type_byte><ObjectId>
+  OBJECT_TYPE_UNFILTERED_TREE = 0x12,
+};
 
 /**
  * FilteredBackingStores need to keep track of a few extra pieces of state with
  * each ObjectId in order to properly filter objects across their lifetime.
  *
  * The first crucial piece of information they need is whether the given object
- * is a tree or a blob. This is defined in the first byte of the ObjectId. The
- * rest of the FilteredObjectId (FOID for short) is different depending on the
- * object's type (tree or blob).
+ * is a tree, blob, or unfiltered object. This is defined in the first byte of
+ * the ObjectId (see FilteredObjectIdType above). The rest of the
+ * FilteredObjectId (FOID for short) is different depending on the object's type
+ * (tree, blob, or unfiltered).
  *
  * ============= Blob FOIDs =============
  *
@@ -32,7 +53,7 @@ namespace facebook::eden {
  * This means Blob FOIDs don't need any extra information associated with them
  * besides the type byte mentioned above. Our Blob FOIDs are in the form:
  *
- * <blob_or_tree_type_byte><ObjectId>
+ * <foid_type_byte><ObjectId>
  *
  * The ObjectId mentioned above can be used in whatever BackingStore the
  * FilteredBackingStore is wrapped around. In most cases, this will be an
@@ -54,7 +75,19 @@ namespace facebook::eden {
  * them at the end of the ObjectID. Therefore we should always know where they
  * end. This gives us the form:
  *
- * <blob_or_tree_type_byte><VarInt><filter_set_id><varint><path><ObjectId>
+ * <foid_type_byte><VarInt><filter_set_id><varint><path><ObjectId>
+ *
+ * ========= Unfiltered Tree FOIDs =========
+ *
+ * To optimize the common case of not having to filter a tree or its
+ * descendents, we also have a special type for unfiltered TREE objects. This
+ * type is the exact same as a Blob FOID, except it has a different type byte.
+ *
+ * <foid_type_byte><ObjectId>
+ *
+ * Differentiating between partially-filtered vs recursively-unfiltered trees
+ * allows us to avoid recursive descendent checks in checkout/diff when filter
+ * changes occur in unrelated parts of the repository.
  */
 class FilteredObjectId {
  public:
@@ -65,10 +98,17 @@ class FilteredObjectId {
   FilteredObjectId() = delete;
 
   /**
-   * Construct a filtered *blob* object id.
+   * Construct a filtered blob or unfiltered tree object id.
    */
-  explicit FilteredObjectId(const ObjectId& edenObjectId)
-      : value_{serializeBlob(edenObjectId)} {
+  explicit FilteredObjectId(
+      const ObjectId& edenObjectId,
+      FilteredObjectIdType objectType) {
+    XCHECK_NE(objectType, FilteredObjectIdType::OBJECT_TYPE_TREE);
+    if (objectType == FilteredObjectIdType::OBJECT_TYPE_BLOB) {
+      value_ = serializeBlob(edenObjectId);
+    } else {
+      value_ = serializeUnfilteredTree(edenObjectId);
+    }
     validate();
   }
 
@@ -133,20 +173,6 @@ class FilteredObjectId {
    */
   ObjectId object() const;
 
-  // We start FilteredObjectId types at 0x10 so that they can be distinguished
-  // from HgProxyHash types that start at 0x01 and extend until 0x02. In the
-  // future, this could help us migrate HgProxyHash-based ObjectIds to
-  // FilteredObjectIds.
-  enum FilteredObjectIdType : uint8_t {
-    // If the Object ID's type is 16, then it represents a blob object and is of
-    // the form <blob_type_byte><ObjectId>
-    OBJECT_TYPE_BLOB = 0x10,
-
-    // If the Object ID's type is 17, then it represents a tree object and is of
-    // the form <tree_type_byte><filter_set_id><path><ObjectId>
-    OBJECT_TYPE_TREE = 0x11,
-  };
-
   /*
    * Returns the type of the FilteredObjectId. NOTE: This function works for
    * BOTH Blob and Tree FOIDs.
@@ -167,8 +193,8 @@ class FilteredObjectId {
   }
 
   /**
-   * Serialize the tree path, filter, and object data into a buffer that will
-   * be stored in the LocalStore.
+   * Serialize the tree path, filter, and object data into a buffer that
+   * will be stored in the LocalStore.
    */
   static std::string serializeTree(
       RelativePathPiece path,
@@ -180,6 +206,12 @@ class FilteredObjectId {
    * LocalStore.
    */
   static std::string serializeBlob(const ObjectId& object);
+
+  /**
+   * Serialize the unfiltered tree object data into a buffer that will be
+   * stored in the LocalStore.
+   */
+  static std::string serializeUnfilteredTree(const ObjectId& object);
 
   /**
    * Validate data found in value_.

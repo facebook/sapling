@@ -11,15 +11,15 @@
 
 namespace facebook::eden {
 
-ImmediateFuture<bool> WatchmanGlobFilter::isPathFiltered(
+ImmediateFuture<FilterCoverage> WatchmanGlobFilter::getFilterCoverageForPath(
     RelativePathPiece path,
     folly::StringPiece) const {
   for (const auto& matcher : matcher_) {
     if (matcher.match(path.view())) {
-      return false;
+      return FilterCoverage::UNFILTERED;
     }
   }
-  return true;
+  return FilterCoverage::RECURSIVELY_FILTERED;
 }
 
 } // namespace facebook::eden

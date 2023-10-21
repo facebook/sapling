@@ -78,11 +78,11 @@ struct TestRepo {
   }
 };
 
-class FakeFilteredBackingStoreTest : public ::testing::Test {
+class FakeSubstringFilteredBackingStoreTest : public ::testing::Test {
  protected:
   void SetUp() override {
     wrappedStore_ = std::make_shared<FakeBackingStore>();
-    auto fakeFilter = std::make_unique<FakeFilter>();
+    auto fakeFilter = std::make_unique<FakeSubstringFilter>();
     filteredStore_ = std::make_shared<FilteredBackingStore>(
         wrappedStore_, std::move(fakeFilter));
   }
@@ -145,7 +145,7 @@ std::string blobContents(const Blob& blob) {
   return c.readFixedString(blob.getContents().computeChainDataLength());
 }
 
-TEST_F(FakeFilteredBackingStoreTest, getNonExistent) {
+TEST_F(FakeSubstringFilteredBackingStoreTest, getNonExistent) {
   // getRootTree()/getTree()/getBlob() should throw immediately
   // when called on non-existent objects.
   EXPECT_THROW_RE(
@@ -155,7 +155,8 @@ TEST_F(FakeFilteredBackingStoreTest, getNonExistent) {
       std::domain_error,
       "commit 1 not found");
   auto hash = makeTestHash("1");
-  auto blobFilterId = FilteredObjectId(hash);
+  auto blobFilterId =
+      FilteredObjectId(hash, FilteredObjectIdType::OBJECT_TYPE_BLOB);
   EXPECT_THROW_RE(
       filteredStore_->getBlob(
           ObjectId{blobFilterId.getValue()},
@@ -172,10 +173,12 @@ TEST_F(FakeFilteredBackingStoreTest, getNonExistent) {
       "tree 0.*1 not found");
 }
 
-TEST_F(FakeFilteredBackingStoreTest, getBlob) {
+TEST_F(FakeSubstringFilteredBackingStoreTest, getBlob) {
   // Add a blob to the tree
   auto hash = makeTestHash("1");
-  auto filteredHash = ObjectId{FilteredObjectId{hash}.getValue()};
+  auto filteredHash =
+      ObjectId{FilteredObjectId{hash, FilteredObjectIdType::OBJECT_TYPE_BLOB}
+                   .getValue()};
   auto* storedBlob = wrappedStore_->putBlob(hash, "foobar");
   EXPECT_EQ("foobar", blobContents(storedBlob->get()));
 
@@ -240,7 +243,7 @@ TEST_F(FakeFilteredBackingStoreTest, getBlob) {
   EXPECT_EQ("foobar", blobContents(*std::move(future6).get(0ms).blob));
 }
 
-TEST_F(FakeFilteredBackingStoreTest, getTree) {
+TEST_F(FakeSubstringFilteredBackingStoreTest, getTree) {
   // Populate some files in the store
   auto [runme, runme_id] =
       wrappedStore_->putBlob("#!/bin/sh\necho 'hello world!'\n");
@@ -318,7 +321,8 @@ TEST_F(FakeFilteredBackingStoreTest, getTree) {
   // We expect runme to exist in the subtree
   auto [runmeName, runmeTreeEntry] = *subTree->find("runme"_pc);
   EXPECT_EQ("runme"_pc, runmeName);
-  auto runmeFOID = FilteredObjectId(runme_id);
+  auto runmeFOID =
+      FilteredObjectId(runme_id, FilteredObjectIdType::OBJECT_TYPE_BLOB);
   if (folly::kIsWindows) {
     // Windows executables show up as regular files
     EXPECT_EQ(TreeEntryType::REGULAR_FILE, runmeTreeEntry.getType());
@@ -332,7 +336,8 @@ TEST_F(FakeFilteredBackingStoreTest, getTree) {
 
   // Finally, test that all other entries in the root tree are valid.
   EXPECT_EQ("bar"_pc, barName);
-  auto barFOID = FilteredObjectId(bar_id);
+  auto barFOID =
+      FilteredObjectId(bar_id, FilteredObjectIdType::OBJECT_TYPE_BLOB);
   EXPECT_EQ(barFOID.getValue(), barTreeEntry.getHash().asString());
   EXPECT_EQ(TreeEntryType::REGULAR_FILE, barTreeEntry.getType());
 
@@ -349,7 +354,8 @@ TEST_F(FakeFilteredBackingStoreTest, getTree) {
   EXPECT_EQ(TreeEntryType::TREE, readonlyTreeEntry.getType());
 
   EXPECT_EQ("zzz"_pc, zzzName);
-  auto zzzFOID = FilteredObjectId{foo_id};
+  auto zzzFOID =
+      FilteredObjectId{foo_id, FilteredObjectIdType::OBJECT_TYPE_BLOB};
   EXPECT_EQ(zzzFOID.getValue(), zzzTreeEntry.getHash().asString());
   EXPECT_EQ(TreeEntryType::REGULAR_FILE, zzzTreeEntry.getType());
 
@@ -368,7 +374,7 @@ TEST_F(FakeFilteredBackingStoreTest, getTree) {
   EXPECT_EQ(treeOID, std::move(future5).get(0ms).tree->getHash());
 }
 
-TEST_F(FakeFilteredBackingStoreTest, getRootTree) {
+TEST_F(FakeSubstringFilteredBackingStoreTest, getRootTree) {
   // Set up one commit with a root tree
   auto dir1Hash = makeTestHash("abc");
   auto dir1FOID = FilteredObjectId(RelativePath{""}, kTestFilter1, dir1Hash);
@@ -440,7 +446,7 @@ TEST_F(FakeFilteredBackingStoreTest, getRootTree) {
       "tree .* for commit .* not found");
 }
 
-TEST_F(FakeFilteredBackingStoreTest, testCompareBlobObjectsById) {
+TEST_F(FakeSubstringFilteredBackingStoreTest, testCompareBlobObjectsById) {
   // Populate some blobs for testing.
   //
   // NOTE: FakeBackingStore is very dumb and implements its
@@ -561,7 +567,7 @@ TEST_F(FakeFilteredBackingStoreTest, testCompareBlobObjectsById) {
       ObjectComparison::Identical);
 }
 
-TEST_F(FakeFilteredBackingStoreTest, testCompareTreeObjectsById) {
+TEST_F(FakeSubstringFilteredBackingStoreTest, testCompareTreeObjectsById) {
   // Populate some blobs for testing.
   //
   // NOTE: FakeBackingStore is very dumb and implements its

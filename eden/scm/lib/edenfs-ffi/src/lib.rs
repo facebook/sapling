@@ -21,16 +21,19 @@ use manifest::FsNodeMetadata;
 use manifest::Manifest;
 use manifest_tree::TreeManifest;
 use once_cell::sync::Lazy;
+use pathmatcher::DirectoryMatch;
 use repo::repo::Repo;
+use sparse::Matcher;
 use sparse::Root;
 use tokio::sync::Mutex;
 use types::HgId;
 use types::Key;
+use types::RepoPath;
 use types::RepoPathBuf;
 
-use crate::ffi::set_root_promise_error;
-use crate::ffi::set_root_promise_result;
-use crate::ffi::RootPromise;
+use crate::ffi::set_matcher_promise_error;
+use crate::ffi::set_matcher_promise_result;
+use crate::ffi::MatcherPromise;
 
 static REPO_HASHMAP: Lazy<Mutex<HashMap<PathBuf, Repo>>> = Lazy::new(|| Mutex::new(HashMap::new()));
 
@@ -38,12 +41,11 @@ static REPO_HASHMAP: Lazy<Mutex<HashMap<PathBuf, Repo>>> = Lazy::new(|| Mutex::n
 struct FilterId {
     pub repo_path: RepoPathBuf,
     pub hg_id: HgId,
-    src: String,
 }
 
 impl fmt::Display for FilterId {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", &self.src)
+        write!(f, "{}:{}", &self.repo_path, &self.hg_id)
     }
 }
 
@@ -67,50 +69,64 @@ impl FromStr for FilterId {
             })?;
         let hg_id = HgId::from_str(id_components[1])
             .with_context(|| anyhow!("Invalid HgID found in FilterId: {:?}", id_components[1]))?;
-        Ok(FilterId {
-            repo_path,
-            hg_id,
-            src: s.to_string(),
-        })
+        Ok(FilterId { repo_path, hg_id })
     }
 }
 
 // CXX only allows exposing structures that are defined in the bridge crate.
-// Therefore, SparseProfileRoot simply serves as a wrapper around the actual Root object that's
+// Therefore, MercurialMatcher simply serves as a wrapper around the actual Matcher object that's
 // passed to C++ and back to Rust
-pub struct SparseProfileRoot {
-    root: Root,
+pub struct MercurialMatcher {
+    matcher: Matcher,
 }
 
-impl SparseProfileRoot {
-    // Returns true if the profile excludes the given path.
-    fn is_path_excluded(self: &SparseProfileRoot, path: &str) -> bool {
-        self.root.is_path_excluded(path)
+impl MercurialMatcher {
+    // Returns true if the given path and all of its children are unfiltered
+    fn is_recursively_unfiltered(
+        self: &MercurialMatcher,
+        path: &str,
+    ) -> Result<ffi::FilterDirectoryMatch, anyhow::Error> {
+        let repo_path = RepoPath::from_str(path)?;
+        // This is tricky -- a filter file defines which files should be *excluded* from the repo.
+        // The filtered files are put in the [exclude] section of the file. So, if something is
+        // recursively unfiltered, then it means that there are no exclude patterns that match it.
+        let res = pathmatcher::Matcher::matches_directory(&self.matcher, repo_path)?;
+        Ok(res.into())
     }
 }
 
-// It's safe to move RootPromises between threads
-unsafe impl Send for RootPromise {}
-unsafe impl Sync for RootPromise {}
+// It's safe to move MatcherPromises between threads
+unsafe impl Send for MatcherPromise {}
+unsafe impl Sync for MatcherPromise {}
 
 #[cxx::bridge]
 mod ffi {
+
+    pub enum FilterDirectoryMatch {
+        RecursivelyFiltered,
+        RecursivelyUnfiltered,
+        Unfiltered,
+    }
+
     unsafe extern "C++" {
         include!("eden/scm/lib/edenfs-ffi/src/ffi.h");
 
         #[namespace = "facebook::eden"]
-        type RootPromise;
+        type MatcherPromise;
 
         #[namespace = "facebook::eden"]
-        fn set_root_promise_result(promise: SharedPtr<RootPromise>, value: Box<SparseProfileRoot>);
+        fn set_matcher_promise_result(
+            promise: SharedPtr<MatcherPromise>,
+            value: Box<MercurialMatcher>,
+        );
 
         #[namespace = "facebook::eden"]
-        fn set_root_promise_error(promise: SharedPtr<RootPromise>, error: String);
+        fn set_matcher_promise_error(promise: SharedPtr<MatcherPromise>, error: String);
     }
 
     #[namespace = "facebook::eden"]
     extern "Rust" {
-        type SparseProfileRoot;
+        type MercurialMatcher;
 
         // Takes a filter_id that corresponds to a filter file that's checked
         // into the repo.
@@ -120,37 +136,50 @@ mod ffi {
         fn profile_from_filter_id(
             id: &str,
             checkout_path: &str,
-            promise: SharedPtr<RootPromise>,
+            promise: SharedPtr<MatcherPromise>,
         ) -> Result<()>;
 
-        // Returns true if the profile excludes the given path.
-        fn is_path_excluded(self: &SparseProfileRoot, path: &str) -> bool;
+        // Returns true if the given path and all of its children are unfiltered.
+        fn is_recursively_unfiltered(
+            self: &MercurialMatcher,
+            path: &str,
+        ) -> Result<FilterDirectoryMatch>;
     }
 }
 
-// As mentioned below, we return the SparseProfileRoot via a promise to circumvent some async
+impl From<DirectoryMatch> for ffi::FilterDirectoryMatch {
+    fn from(dm: DirectoryMatch) -> Self {
+        match dm {
+            DirectoryMatch::Everything => Self::RecursivelyUnfiltered,
+            DirectoryMatch::Nothing => Self::RecursivelyFiltered,
+            DirectoryMatch::ShouldTraverse => Self::Unfiltered,
+        }
+    }
+}
+
+// As mentioned below, we return the MercurialMatcher via a promise to circumvent some async
 // limitations in CXX. This function wraps the bulk of the Sparse logic and provides a single
-// place for returning result/error info via the RootPromise.
+// place for returning result/error info via the MatcherPromise.
 async fn profile_contents_from_repo(
     id: FilterId,
     abs_repo_path: PathBuf,
-    promise: SharedPtr<RootPromise>,
+    promise: SharedPtr<MatcherPromise>,
 ) {
     match _profile_contents_from_repo(id, abs_repo_path).await {
         Ok(res) => {
-            set_root_promise_result(promise, res);
+            set_matcher_promise_result(promise, res);
         }
         Err(e) => {
-            set_root_promise_error(promise, format!("Failed to get filter: {}", e));
+            set_matcher_promise_error(promise, format!("Failed to get filter: {}", e));
         }
     }
 }
 
-// Fetches the content of a filter file and turns it into a SparseProfileRoot
+// Fetches the content of a filter file and turns it into a MercurialMatcher
 async fn _profile_contents_from_repo(
     id: FilterId,
     abs_repo_path: PathBuf,
-) -> Result<Box<SparseProfileRoot>, anyhow::Error> {
+) -> Result<Box<MercurialMatcher>, anyhow::Error> {
     let mut repo_hash = REPO_HASHMAP.lock().await;
     if !repo_hash.contains_key(&abs_repo_path) {
         // Load the repo and store it for later use
@@ -202,9 +231,9 @@ async fn _profile_contents_from_repo(
     match stream.next().await {
         Some(Ok((bytes, _key))) => {
             let bytes = bytes.into_vec();
-            Ok(Box::new(SparseProfileRoot {
-                root: Root::from_bytes(bytes, id.repo_path.to_string()).unwrap(),
-            }))
+            let root = Root::from_bytes(bytes, id.repo_path.to_string()).unwrap();
+            let matcher = root.matcher(|_| async move { Ok(Some(vec![])) }).await?;
+            Ok(Box::new(MercurialMatcher { matcher }))
         }
         Some(Err(err)) => Err(err),
         None => Err(anyhow!("no contents for filter file {}", &id.repo_path)),
@@ -217,7 +246,7 @@ async fn _profile_contents_from_repo(
 pub fn profile_from_filter_id(
     id: &str,
     checkout_path: &str,
-    promise: SharedPtr<RootPromise>,
+    promise: SharedPtr<MatcherPromise>,
 ) -> Result<(), anyhow::Error> {
     // Parse the FilterID
     let filter_id = FilterId::from_str(id)?;
