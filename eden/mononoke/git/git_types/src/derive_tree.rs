@@ -242,7 +242,7 @@ mod test {
     use manifest::ManifestOps;
     use repo_blobstore::RepoBlobstoreArc;
     use repo_derived_data::RepoDerivedDataRef;
-    use tempdir::TempDir;
+    use tempfile::TempDir;
 
     use super::*;
 
@@ -267,7 +267,7 @@ mod test {
             .try_collect::<Vec<_>>()
             .await?;
 
-        let tmp_dir = TempDir::new("git_types_test")?;
+        let tmp_dir = TempDir::with_prefix("git_types_test.")?;
         let root_path = tmp_dir.path();
         let git = Repository::init(root_path)?;
         let mut index = git.index()?;

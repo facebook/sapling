@@ -11,7 +11,7 @@ rust_library(
         "fbsource//third-party/rust:git2",
         "fbsource//third-party/rust:rand",
         "fbsource//third-party/rust:serde_json",
-        "fbsource//third-party/rust:tempdir",
+        "fbsource//third-party/rust:tempfile",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//eden/mononoke/blobrepo:repo_blobstore",

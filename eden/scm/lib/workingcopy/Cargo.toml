@@ -41,7 +41,6 @@ watchman_client = { version = "0.8.0", git = "https://github.com/facebook/watchm
 
 [dev-dependencies]
 async-trait = "0.1.71"
-tempdir = "0.3"
 tempfile = "3.5"
 
 [features]

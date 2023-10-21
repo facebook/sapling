@@ -18,7 +18,7 @@ thiserror = "1.0.43"
 
 [dev-dependencies]
 memmap2 = "0.5.10"
-tempdir = "0.3"
+tempfile = "3.5"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 libc = "0.2.139"

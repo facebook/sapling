@@ -289,7 +289,7 @@ mod tests {
     use pathmatcher::Matcher;
     use status::FileStatus;
     use status::Status;
-    use tempdir::TempDir;
+    use tempfile::TempDir;
     use treestate::filestate::FileStateV2;
     use types::RepoPath;
     use types::RepoPathBuf;
@@ -376,7 +376,7 @@ mod tests {
     /// * `changes` is a list of (path, deleted).
     fn status_helper(treestate: &[(&str, StateFlags)], changes: &[(&str, bool)]) -> Result<Status> {
         // Build the TreeState.
-        let dir = TempDir::new("treestate").expect("tempdir");
+        let dir = TempDir::with_prefix("treestate.").expect("tempdir");
         let mut state = TreeState::new(dir.path(), true).expect("open").0;
         let mut manifest_files = vec![];
         for (path, flags) in treestate {

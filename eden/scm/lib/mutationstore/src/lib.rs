@@ -422,14 +422,14 @@ mod tests {
     use dag::DagAlgorithm;
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
-    use tempdir::TempDir;
+    use tempfile::TempDir;
 
     use super::*;
 
     #[test]
     fn test_basic_store() {
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
-        let dir = TempDir::new("mutationstore").unwrap();
+        let dir = TempDir::with_prefix("mutationstore.").unwrap();
         let nodes = Node::random_distinct(&mut rng, 20);
 
         {
@@ -525,7 +525,7 @@ mod tests {
 
     #[test]
     fn test_dag() -> Result<()> {
-        let dir = TempDir::new("mutationstore")?;
+        let dir = TempDir::with_prefix("mutationstore.")?;
         let mut ms = MutationStore::open(dir.path())?;
         let parents = drawdag::parse(
             r#"
@@ -577,7 +577,7 @@ mod tests {
 
     #[test]
     fn test_dag_cycle() -> Result<()> {
-        let dir = TempDir::new("mutationstore")?;
+        let dir = TempDir::with_prefix("mutationstore.")?;
         let mut ms = MutationStore::open(dir.path())?;
 
         for (pred, succ) in [("A", "B"), ("B", "C"), ("C", "A")] {
@@ -610,7 +610,7 @@ mod tests {
 
     #[test]
     fn test_copy_entries() -> Result<()> {
-        let dir = TempDir::new("mutationstore")?;
+        let dir = TempDir::with_prefix("mutationstore.")?;
         let mut ms = MutationStore::open(dir.path())?;
 
         for (pred, succ) in [("P", "E"), ("E", "X")] {
@@ -658,7 +658,7 @@ mod tests {
 
     #[test]
     fn test_calculate_obsolete() -> Result<()> {
-        let dir = TempDir::new("mutationstore")?;
+        let dir = TempDir::with_prefix("mutationstore.")?;
         let mut ms = MutationStore::open(dir.path())?;
 
         // C   F  # C -> F

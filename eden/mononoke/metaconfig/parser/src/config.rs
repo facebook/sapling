@@ -550,7 +550,7 @@ mod test {
     use pretty_assertions::assert_eq;
     use regex::Regex;
     use repos::RawCommitSyncConfig;
-    use tempdir::TempDir;
+    use tempfile::TempDir;
 
     use super::*;
 
@@ -570,7 +570,7 @@ mod test {
     fn write_files(
         files: impl IntoIterator<Item = (impl AsRef<Path>, impl AsRef<[u8]>)>,
     ) -> TempDir {
-        let tmp_dir = TempDir::new("mononoke_test_config").expect("tmp_dir failed");
+        let tmp_dir = TempDir::with_prefix("mononoke_test_config.").expect("tmp_dir failed");
 
         // Always create repos directory and repo_definitions directory
         create_dir_all(tmp_dir.path().join("repos")).expect("create repos failed");

@@ -32,7 +32,7 @@ rust_library(
     test_deps = [
         "fbsource//third-party/rust:rand",
         "fbsource//third-party/rust:rand_chacha",
-        "fbsource//third-party/rust:tempdir",
+        "fbsource//third-party/rust:tempfile",
         "//eden/scm/lib/drawdag:drawdag",
     ],
     deps = [

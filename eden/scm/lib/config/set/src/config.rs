@@ -597,7 +597,7 @@ pub(crate) mod tests {
     use std::io::Write;
 
     use configmodel::ConfigExt;
-    use tempdir::TempDir;
+    use tempfile::TempDir;
 
     use super::*;
     use crate::convert::ByteCount;
@@ -905,7 +905,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_parse_include() {
-        let dir = TempDir::new("test_parse_include").unwrap();
+        let dir = TempDir::with_prefix("test_parse_include.").unwrap();
         write_file(
             dir.path().join("rootrc"),
             "[x]\n\
@@ -970,7 +970,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_parse_include_builtin() {
-        let dir = TempDir::new("test_parse_include").unwrap();
+        let dir = TempDir::with_prefix("test_parse_include.").unwrap();
         write_file(dir.path().join("rootrc"), "%include builtin:git.rc\n");
 
         let mut cfg = ConfigSet::new();
@@ -988,7 +988,7 @@ pub(crate) mod tests {
         use std::env;
         env::set_var("FOO", "f");
 
-        let dir = TempDir::new("test_parse_include_expand").unwrap();
+        let dir = TempDir::with_prefix("test_parse_include_expand.").unwrap();
         write_file(
             dir.path().join("rootrc"),
             "%include ./${FOO}1/$FOO/3.rc\n\

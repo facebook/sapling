@@ -8,7 +8,7 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     crate_root = "src/lib.rs",
     test_deps = [
-        "fbsource//third-party/rust:tempdir",
+        "fbsource//third-party/rust:tempfile",
     ],
     deps = [
         "fbsource//third-party/rust:indexmap",

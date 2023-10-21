@@ -57,7 +57,7 @@ rust_library(
     features = ["fb"],
     test_deps = [
         "fbsource//third-party/rust:once_cell",
-        "fbsource//third-party/rust:tempdir",
+        "fbsource//third-party/rust:tempfile",
         "//eden/scm/lib/util/testutil:testutil",
     ] + ([] if rust_oss.is_oss_build() else [
         "fbsource//third-party/rust:tempfile",

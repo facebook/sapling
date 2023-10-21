@@ -117,7 +117,7 @@ rust_unittest(
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:strum",
-        "fbsource//third-party/rust:tempdir",
+        "fbsource//third-party/rust:tempfile",
         ":blobstore",
         ":cacheblob",
         ":fileblob",

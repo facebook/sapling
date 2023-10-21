@@ -51,7 +51,7 @@ rust_library(
     ],
     test_deps = [
         "fbsource//third-party/rust:memmap2",
-        "fbsource//third-party/rust:tempdir",
+        "fbsource//third-party/rust:tempfile",
     ],
     test_os_deps = [
         (

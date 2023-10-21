@@ -955,7 +955,7 @@ mod tests {
 
     use identity::RCPATH_SEP;
     use once_cell::sync::Lazy;
-    use tempdir::TempDir;
+    use tempfile::TempDir;
     use testutil::envs::lock_env;
 
     use super::*;
@@ -1082,7 +1082,7 @@ mod tests {
     fn test_config_path() {
         let mut env = lock_env();
 
-        let dir = TempDir::new("test_config_path").unwrap();
+        let dir = TempDir::with_prefix("test_config_path.").unwrap();
 
         write_file(dir.path().join("1.rc"), "[x]\na=1");
         write_file(dir.path().join("2.rc"), "[y]\nb=2");
@@ -1112,7 +1112,7 @@ mod tests {
     fn test_load_user() {
         let _env = lock_env();
 
-        let dir = TempDir::new("test_hgrcpath").unwrap();
+        let dir = TempDir::with_prefix("test_hgrcpath.").unwrap();
         let path = dir.path().join("1.rc");
 
         write_file(path.clone(), "[ui]\nmerge=x");
@@ -1153,7 +1153,7 @@ mod tests {
 
     #[test]
     fn test_load_hgrc() {
-        let dir = TempDir::new("test_hgrcpath").unwrap();
+        let dir = TempDir::with_prefix("test_hgrcpath.").unwrap();
         let path = dir.path().join("1.rc");
 
         write_file(path.clone(), "[x]\na=1\n[alias]\nb=c\n");
@@ -1260,7 +1260,7 @@ mod tests {
         // Skip real dynamic config.
         env.set("TESTTMP", Some("1"));
 
-        let dir = TempDir::new("test_load").unwrap();
+        let dir = TempDir::with_prefix("test_load.").unwrap();
 
         let repo_rc = dir.path().join(".hg/hgrc");
         write_file(repo_rc, "[s]\na=orig\nb=orig\nc=orig");

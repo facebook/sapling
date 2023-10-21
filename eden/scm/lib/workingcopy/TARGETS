@@ -28,7 +28,6 @@ rust_library(
     test_deps = [
         "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:serde_json",
-        "fbsource//third-party/rust:tempdir",
         "fbsource//third-party/rust:tempfile",
     ],
     deps = [

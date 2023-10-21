@@ -179,7 +179,7 @@ mod tests {
     use std::thread::spawn;
 
     use serde_json::json;
-    use tempdir::TempDir;
+    use tempfile::TempDir;
 
     use super::*;
 
@@ -187,7 +187,7 @@ mod tests {
     fn test_wait() {
         let timeout = Duration::from_millis(5000);
 
-        let dir = TempDir::new("testdir").expect("tempdir");
+        let dir = TempDir::with_prefix("testdir.").expect("tempdir");
         let file = dir.path().join("control_point_file");
         let response_file = file.with_extension("response");
         std::env::set_var(FILE_NAME_ENV, &file);
