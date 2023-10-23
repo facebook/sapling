@@ -9,6 +9,7 @@
 
 mod config;
 pub mod simple;
+pub mod structured;
 mod unit;
 
 use std::fmt::Display;
