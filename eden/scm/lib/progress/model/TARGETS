@@ -11,6 +11,7 @@ rust_library(
         "fbsource//third-party/rust:once_cell",
         "fbsource//third-party/rust:parking_lot",
         "fbsource//third-party/rust:paste",
+        "fbsource//third-party/rust:thread_local",
         "fbsource//third-party/rust:tokio",
         "fbsource//third-party/rust:tracing",
     ],
