@@ -21,6 +21,8 @@ PYTHON := python
 endif
 PYTHON3 := python3
 
+PYTHON_MINOR_VERSION=$(shell $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) -c "import sys; print(sys.version_info.minor)")
+
 ifeq ($(RUST_DEBUG),1)
 RUST_FLAG = --debug
 endif
@@ -76,7 +78,7 @@ oss: local
 install-oss: oss
 	$(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup.py $(PURE) \
 	  install --root="$(DESTDIR)/" --prefix="$(PREFIX)" \
-	  --install-lib="$(PREFIX)"/lib/python3.$(shell $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) -c "import sys; print(sys.version_info.minor)")/site-packages \
+	  --install-lib="$(PREFIX)"/lib/python3.$(PYTHON_MINOR_VERSION)/site-packages \
 	  --install-scripts="$(PREFIX)/bin" --force
 
 local:
@@ -87,10 +89,10 @@ local:
 	  build_rust_ext -i -l $(RUST_FLAG) \
 	  build_mo
 ifeq ($(OS),Windows_NT)
-	cp build/scripts-3*/$(HGNAME).exe $(HGNAME).exe
+	cp build/scripts-3.$(PYTHON_MINOR_VERSION)/$(HGNAME).exe $(HGNAME).exe
 else
 	$(RM) $(HGNAME)
-	cp build/scripts-3*/$(HGNAME) $(HGNAME)
+	cp build/scripts-3.$(PYTHON_MINOR_VERSION)/$(HGNAME) $(HGNAME)
 endif
 
 hg:
@@ -99,10 +101,10 @@ hg:
 	  build_rust_ext -i -l $(RUST_FLAG) \
 	  build_mo
 ifeq ($(OS),Windows_NT)
-	cp build/scripts-3*/$(HGNAME).exe $(HGNAME).exe
+	cp build/scripts-3.$(PYTHON_MINOR_VERSION)/$(HGNAME).exe $(HGNAME).exe
 else
 	$(RM) $(HGNAME)
-	cp build/scripts-3*/$(HGNAME) $(HGNAME)
+	cp build/scripts-3.$(PYTHON_MINOR_VERSION)/$(HGNAME) $(HGNAME)
 endif
 
 build:
