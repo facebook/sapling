@@ -33,6 +33,15 @@ pub struct ProgressBar {
     total: AtomicU64,
     unit: Cow<'static, str>,
     created_at: Instant,
+    started_at: ArcSwapOption<Instant>,
+    finished_at: ArcSwapOption<Instant>,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum BarState {
+    Pending,
+    Running,
+    Complete,
 }
 
 impl ProgressBar {
@@ -49,6 +58,8 @@ impl ProgressBar {
             pos: Default::default(),
             message: Default::default(),
             created_at: Instant::now(),
+            started_at: Default::default(),
+            finished_at: Default::default(),
         };
         Arc::new(bar)
     }
@@ -62,6 +73,14 @@ impl ProgressBar {
         let bar = Self::new(topic, total, unit);
         Registry::main().register_progress_bar(&bar);
         bar
+    }
+
+    pub(crate) fn start(&self) {
+        self.started_at.store(Some(Arc::new(Instant::now())));
+    }
+
+    pub(crate) fn finish(&self) {
+        self.finished_at.store(Some(Arc::new(Instant::now())));
     }
 
     /// Get the progress bar topic.
@@ -112,8 +131,30 @@ impl ProgressBar {
     }
 
     /// Time since the creation of the progress bar.
-    pub fn elapsed(&self) -> Duration {
+    pub fn since_creation(&self) -> Duration {
         self.created_at.elapsed()
+    }
+
+    /// Time since the progress bar started, up to `finished_at` if finished,
+    /// else now.
+    pub fn since_start(&self) -> Option<Duration> {
+        let started_at = self.started_at.load();
+        let started_at = started_at.as_ref()?;
+        if let Some(finished_at) = self.finished_at.load().as_ref() {
+            Some(finished_at.duration_since(**started_at))
+        } else {
+            Some(started_at.elapsed())
+        }
+    }
+
+    pub fn state(&self) -> BarState {
+        if self.started_at.load().is_none() {
+            BarState::Pending
+        } else if self.finished_at.load().is_none() {
+            BarState::Running
+        } else {
+            BarState::Complete
+        }
     }
 }
 
@@ -199,5 +240,29 @@ mod tests {
         Registry::main().remove_orphan_progress_bar();
 
         assert_eq!((0, 0), agg.create_or_extend(0).position_total());
+    }
+
+    #[test]
+    fn test_elapsed() {
+        let bar = ProgressBar::new("", 0, "");
+
+        assert_eq!(bar.state(), BarState::Pending);
+        assert_eq!(bar.since_start(), None);
+
+        bar.start();
+
+        assert_eq!(bar.state(), BarState::Running);
+
+        let elapsed_running = bar.since_start().unwrap();
+
+        bar.finish();
+
+        assert_eq!(bar.state(), BarState::Complete);
+
+        let elapsed_complete = bar.since_start().unwrap();
+        // Elapsed advanced further as we were running.
+        assert!(elapsed_complete > elapsed_running);
+        // But doesn't advance any further now that we are complete.
+        assert_eq!(elapsed_complete, bar.since_start().unwrap());
     }
 }

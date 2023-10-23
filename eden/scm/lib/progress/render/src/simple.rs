@@ -105,7 +105,7 @@ fn render_progress_bars(
     let mut hidden = 0;
     let mut shown = 0;
     for bar in bars.iter() {
-        if config.delay.as_millis() > 0 && bar.elapsed() < config.delay {
+        if config.delay.as_millis() > 0 && bar.since_creation() < config.delay {
             continue;
         }
 
@@ -146,7 +146,7 @@ fn render_progress_bars(
             let pos = if cfg!(test) {
                 5
             } else {
-                bar.elapsed().as_millis() / 200
+                bar.since_creation().as_millis() / 200
             };
             let spaceship = "<=>";
             let left_max = width - spaceship.len();
