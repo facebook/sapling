@@ -10,6 +10,7 @@ anyhow = "=1.0.72"
 async-trait = "0.1.71"
 auto_impl = "1.1.0"
 configmodel = { version = "0.1.0", path = "../config/model" }
+edenapi_trait = { version = "0.1.0", path = "../edenapi/trait" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 minibytes = { version = "0.1.0", path = "../minibytes" }
 types = { version = "0.1.0", path = "../types" }

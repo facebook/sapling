@@ -6,7 +6,9 @@
  */
 
 use std::path::Path;
+use std::sync::Arc;
 
+use edenapi::EdenApi;
 use storemodel::StoreInfo;
 
 use crate::repo::Repo;
@@ -25,5 +27,9 @@ impl StoreInfo for Repo {
 
     fn store_path(&self) -> &Path {
         &self.store_path
+    }
+
+    fn remote_peer(&self) -> anyhow::Result<Option<Arc<dyn EdenApi>>> {
+        Ok(self.optional_eden_api()?)
     }
 }

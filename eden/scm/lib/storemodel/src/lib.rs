@@ -25,6 +25,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use edenapi_trait::EdenApi;
 pub use futures;
 use futures::stream::BoxStream;
 pub use minibytes;
@@ -129,6 +130,8 @@ pub trait StoreInfo: 'static {
     fn config(&self) -> &dyn configmodel::Config;
     /// Provide the "storage path", which is usually `.sl/store` in the backing repo.
     fn store_path(&self) -> &Path;
+    /// Provide the remote peer.
+    fn remote_peer(&self) -> anyhow::Result<Option<Arc<dyn EdenApi>>>;
 }
 
 /// Provide ways to obtain file and tree stores.

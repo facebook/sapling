@@ -12,6 +12,7 @@ rust_library(
         "fbsource//third-party/rust:auto_impl",
         "fbsource//third-party/rust:futures",
         "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/edenapi/trait:edenapi_trait",
         "//eden/scm/lib/minibytes:minibytes",
         "//eden/scm/lib/types:types",
     ],
