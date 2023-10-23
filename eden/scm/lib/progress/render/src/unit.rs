@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use crate::maybe_pad;
+
 pub fn unit_phrase(unit: &str, pos: u64, total: u64) -> String {
     match unit {
         "%" => {
@@ -23,10 +25,10 @@ pub fn unit_phrase(unit: &str, pos: u64, total: u64) -> String {
                 if pos == 0 {
                     String::new()
                 } else {
-                    format!("{} {}", pos, unit)
+                    format!("{}{}", pos, maybe_pad(unit))
                 }
             } else {
-                format!("{}/{} {}", pos, total, unit)
+                format!("{}/{}{}", pos, total, maybe_pad(unit))
             }
         }
     }
