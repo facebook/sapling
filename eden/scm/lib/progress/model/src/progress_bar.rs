@@ -15,6 +15,7 @@ use std::sync::atomic::Ordering::AcqRel;
 use std::sync::atomic::Ordering::Acquire;
 use std::sync::atomic::Ordering::Release;
 use std::sync::Arc;
+use std::sync::OnceLock;
 use std::sync::Weak;
 use std::time::Duration;
 use std::time::Instant;
@@ -39,8 +40,8 @@ pub struct ProgressBar {
     total: AtomicU64,
     unit: Cow<'static, str>,
     created_at: Instant,
-    started_at: ArcSwapOption<Instant>,
-    finished_at: ArcSwapOption<Instant>,
+    started_at: OnceLock<Instant>,
+    finished_at: OnceLock<Instant>,
 
     // Note that this is a strong reference, which could slow down orphaned bar
     // cleanup. In practice we probably could use a weak reference here, but if
@@ -254,11 +255,11 @@ impl ProgressBar {
     }
 
     fn start(&self) {
-        self.started_at.store(Some(Arc::new(Instant::now())));
+        let _ = self.started_at.set(Instant::now());
     }
 
     fn finish(&self) {
-        self.finished_at.store(Some(Arc::new(Instant::now())));
+        let _ = self.finished_at.set(Instant::now());
     }
 
     /// Get the progress bar topic.
@@ -316,19 +317,18 @@ impl ProgressBar {
     /// Time since the progress bar started, up to `finished_at` if finished,
     /// else now.
     pub fn since_start(&self) -> Option<Duration> {
-        let started_at = self.started_at.load();
-        let started_at = started_at.as_ref()?;
-        if let Some(finished_at) = self.finished_at.load().as_ref() {
-            Some(finished_at.duration_since(**started_at))
+        let started_at = self.started_at.get()?;
+        if let Some(finished_at) = self.finished_at.get() {
+            Some(finished_at.duration_since(*started_at))
         } else {
             Some(started_at.elapsed())
         }
     }
 
     pub fn state(&self) -> BarState {
-        if self.started_at.load().is_none() {
+        if self.started_at.get().is_none() {
             BarState::Pending
-        } else if self.finished_at.load().is_none() {
+        } else if self.finished_at.get().is_none() {
             BarState::Running
         } else {
             BarState::Complete
