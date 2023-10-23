@@ -21,6 +21,7 @@ pub use commits_trait::StripCommits;
 
 mod doublewrite;
 pub(crate) mod errors;
+mod factory_impls;
 mod git;
 mod hgsha1commits;
 mod hybrid;
@@ -45,3 +46,7 @@ impl DagCommits for RevlogCommits {}
 impl DagCommits for DoubleWriteCommits {}
 impl DagCommits for GitSegmentedCommits {}
 
+/// Initialization. Register abstraction implementations.
+pub fn init() {
+    factory_impls::setup_commits_constructor();
+}

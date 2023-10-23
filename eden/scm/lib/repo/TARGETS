@@ -8,6 +8,11 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     autocargo = {
         "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "constructors": {"default-features": False},
+                },
+            },
             "features": {
                 "default": [],
                 "fb": ["configloader/fb"],
@@ -34,9 +39,10 @@ rust_library(
         "//eden/scm/lib/async-runtime:async-runtime",
         "//eden/scm/lib/config/loader:configloader",
         "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/constructors:constructors",
         "//eden/scm/lib/eagerepo:eagerepo",
         "//eden/scm/lib/edenapi:edenapi",
-        "//eden/scm/lib/hgcommits:hgcommits",
+        "//eden/scm/lib/hgcommits/trait:commits-trait",
         "//eden/scm/lib/identity:identity",
         "//eden/scm/lib/manifest-tree:manifest-tree",
         "//eden/scm/lib/metalog:metalog",

@@ -8,7 +8,7 @@
 use std::sync::Arc;
 
 use anyhow::Result;
-use hgcommits::DagCommits;
+use commits_trait::DagCommits;
 use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
 use manifest_tree::TreeStore;

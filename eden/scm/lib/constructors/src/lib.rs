@@ -15,6 +15,7 @@ pub fn init() {
         #[cfg(feature = "git")]
         gitstore::init();
         eagerepo::init();
+        hgcommits::init();
         edenapi::Builder::register_customize_build_func(eagerepo::edenapi_from_config);
     });
 

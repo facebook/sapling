@@ -7,7 +7,6 @@
 
 #![allow(dead_code)]
 
-mod commits;
 pub mod constants;
 pub mod errors;
 mod init;

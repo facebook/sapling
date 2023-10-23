@@ -20,5 +20,6 @@ rust_library(
         "//eden/scm/lib/eagerepo:eagerepo",
         "//eden/scm/lib/edenapi:edenapi",
         "//eden/scm/lib/gitstore:gitstore",
+        "//eden/scm/lib/hgcommits:hgcommits",
     ],
 )

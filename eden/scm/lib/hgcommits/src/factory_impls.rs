@@ -5,22 +5,23 @@
  * GNU General Public License version 2.
  */
 
+//! Register factory constructors.
+
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use commits_trait::DagCommits;
 use edenapi::EdenApi;
 use fs_err as fs;
-use hgcommits::DagCommits;
-use hgcommits::DoubleWriteCommits;
-use hgcommits::GitSegmentedCommits;
-use hgcommits::HgCommits;
-use hgcommits::HybridCommits;
-use hgcommits::RevlogCommits;
 use metalog::MetaLog;
-use parking_lot::RwLock;
+use storemodel::StoreInfo;
 
-use crate::repo::Repo;
+use crate::DoubleWriteCommits;
+use crate::GitSegmentedCommits;
+use crate::HgCommits;
+use crate::HybridCommits;
+use crate::RevlogCommits;
 
 macro_rules! concat_os_path {
     ($p1:literal, $p2:literal) => {
@@ -33,59 +34,84 @@ macro_rules! concat_os_path {
     };
 }
 
-static HG_COMMITS_PATH: &str = concat_os_path!("hgcommits", "v1");
-static LAZY_HASH_PATH: &str = "lazyhashdir";
-static SEGMENTS_PATH: &str = concat_os_path!("segments", "v1");
+const HG_COMMITS_PATH: &str = concat_os_path!("hgcommits", "v1");
+const LAZY_HASH_PATH: &str = "lazyhashdir";
+const SEGMENTS_PATH: &str = concat_os_path!("segments", "v1");
 
-static DOUBLE_WRITE_REQUIREMENT: &str = "doublewritechangelog";
-static HYBRID_REQUIREMENT: &str = "hybridchangelog";
-static LAZY_TEXT_REQUIREMENT: &str = "lazytextchangelog";
-static GIT_STORE_REQUIREMENT: &str = "git-store";
-static LAZY_STORE_REQUIREMENT: &str = "lazychangelog";
-static SEGMENTS_REQUIREMENT: &str = "segmentedchangelog";
+const DOUBLE_WRITE_REQUIREMENT: &str = "doublewritechangelog";
+const HYBRID_REQUIREMENT: &str = "hybridchangelog";
+const LAZY_TEXT_REQUIREMENT: &str = "lazytextchangelog";
+const GIT_STORE_REQUIREMENT: &str = "git-store";
+const LAZY_STORE_REQUIREMENT: &str = "lazychangelog";
+const SEGMENTS_REQUIREMENT: &str = "segmentedchangelog";
 
-static GIT_FILE: &str = "gitdir";
+const GIT_FILE: &str = "gitdir";
 
-pub(crate) fn open_dag_commits(
-    repo: &mut Repo,
-) -> anyhow::Result<Box<dyn DagCommits + Send + 'static>> {
-    let commits = if repo.store_requirements.contains(GIT_STORE_REQUIREMENT) {
-        let metalog = repo.metalog()?;
-        tracing::info!(target: "changelog_info", changelog_backend="git");
-        open_git(repo.store_path(), metalog)?
-    } else if repo.store_requirements.contains(LAZY_STORE_REQUIREMENT) {
-        let eden_api = repo.eden_api()?;
-        tracing::info!(target: "changelog_info", changelog_backend="lazy");
-        open_hybrid(repo.store_path(), eden_api, true, false)?
-    } else if repo.store_requirements.contains(DOUBLE_WRITE_REQUIREMENT) {
-        tracing::info!(target: "changelog_info", changelog_backend="doublewrite");
-        open_double(repo.store_path())?
-    } else if repo.store_requirements.contains(HYBRID_REQUIREMENT) {
-        let eden_api = repo.eden_api()?;
-        tracing::info!(target: "changelog_info", changelog_backend="hybrid");
-        open_hybrid(repo.store_path(), eden_api, false, true)?
-    } else if repo.store_requirements.contains(LAZY_TEXT_REQUIREMENT) {
-        let eden_api = repo.eden_api()?;
-        tracing::info!(target: "changelog_info", changelog_backend="lazytext");
-        open_hybrid(repo.store_path(), eden_api, false, false)?
-    } else if repo.store_requirements.contains(SEGMENTS_REQUIREMENT) {
-        tracing::info!(target: "changelog_info", changelog_backend="segments");
-        open_segments(repo.store_path())?
-    } else {
-        tracing::info!(target: "changelog_info", changelog_backend="rustrevlog");
-        Box::new(RevlogCommits::new(repo.store_path())?)
-    };
-    Ok(commits)
+pub(crate) fn setup_commits_constructor() {
+    factory::register_constructor("20-hgcommits", maybe_construct_commits);
 }
 
-fn open_git(
-    store_path: &Path,
-    metalog: Arc<RwLock<MetaLog>>,
-) -> anyhow::Result<Box<dyn DagCommits + Send + 'static>> {
+fn get_required_edenapi(info: &dyn StoreInfo) -> anyhow::Result<Arc<dyn EdenApi>> {
+    match info.remote_peer()? {
+        Some(p) => Ok(p),
+        None => {
+            anyhow::bail!("The commit graph requires a remote peer but the repo does not have one.")
+        }
+    }
+}
+
+fn maybe_construct_commits(
+    info: &dyn StoreInfo,
+) -> anyhow::Result<Option<Box<dyn DagCommits + Send + 'static>>> {
+    if info.has_requirement(GIT_STORE_REQUIREMENT) {
+        tracing::info!(target: "changelog_info", changelog_backend="git");
+        Ok(Some(open_git(info.store_path())?))
+    } else if info.has_requirement(LAZY_STORE_REQUIREMENT) {
+        let eden_api = get_required_edenapi(info)?;
+        tracing::info!(target: "changelog_info", changelog_backend="lazy");
+        Ok(Some(open_hybrid(info.store_path(), eden_api, true, false)?))
+    } else if info.has_requirement(DOUBLE_WRITE_REQUIREMENT) {
+        tracing::info!(target: "changelog_info", changelog_backend="doublewrite");
+        Ok(Some(open_double(info.store_path())?))
+    } else if info.has_requirement(HYBRID_REQUIREMENT) {
+        let eden_api = get_required_edenapi(info)?;
+        tracing::info!(target: "changelog_info", changelog_backend="hybrid");
+        Ok(Some(open_hybrid(info.store_path(), eden_api, false, true)?))
+    } else if info.has_requirement(LAZY_TEXT_REQUIREMENT) {
+        let eden_api = get_required_edenapi(info)?;
+        tracing::info!(target: "changelog_info", changelog_backend="lazytext");
+        Ok(Some(open_hybrid(
+            info.store_path(),
+            eden_api,
+            false,
+            false,
+        )?))
+    } else if info.has_requirement(SEGMENTS_REQUIREMENT) {
+        tracing::info!(target: "changelog_info", changelog_backend="segments");
+        Ok(Some(open_segments(info.store_path())?))
+    } else {
+        tracing::info!(target: "changelog_info", changelog_backend="rustrevlog");
+        Ok(Some(Box::new(RevlogCommits::new(info.store_path())?)))
+    }
+}
+
+fn open_git(store_path: &Path) -> anyhow::Result<Box<dyn DagCommits + Send + 'static>> {
+    // This is a hacky way to sync back from git references to metalog so we
+    // pick up effects after git commands like `push` or `fetch`, or if the
+    // user manually run git commands in the repo.
+    //
+    // Ideally we do this after running the git commands, or just use our own
+    // store without needing to sync with git references.
+    //
+    // Since this is considered as a temporary hack, the metalog requirement
+    // does not justify a `StoreInfo::get_metalog` API. So we construct a
+    // metalog directly here.
+    let metalog_path = store_path.join("metalog");
+    let mut metalog = MetaLog::open_from_env(&metalog_path)?;
     let git_path = calculate_git_path(store_path)?;
     let segments_path = calculate_segments_path(store_path);
     let git_segmented_commits = GitSegmentedCommits::new(&git_path, &segments_path)?;
-    git_segmented_commits.git_references_to_metalog(&mut metalog.write())?;
+    git_segmented_commits.git_references_to_metalog(&mut metalog)?;
     Ok(Box::new(git_segmented_commits))
 }
 

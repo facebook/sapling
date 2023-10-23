@@ -13,6 +13,7 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
+use commits_trait::DagCommits;
 use configloader::config::ConfigSet;
 use configloader::Config;
 use configmodel::ConfigExt;
@@ -22,7 +23,6 @@ use edenapi::Builder;
 use edenapi::EdenApi;
 use edenapi::EdenApiError;
 use fs_err as fs;
-use hgcommits::DagCommits;
 use metalog::MetaLog;
 use once_cell::sync::Lazy;
 use once_cell::sync::OnceCell;
@@ -59,7 +59,6 @@ use workingcopy::filesystem::FileSystemType;
 #[cfg(feature = "wdir")]
 use workingcopy::workingcopy::WorkingCopy;
 
-use crate::commits::open_dag_commits;
 use crate::constants::SUPPORTED_DEFAULT_REQUIREMENTS;
 use crate::constants::SUPPORTED_STORE_REQUIREMENTS;
 use crate::errors;
@@ -140,6 +139,8 @@ impl Repo {
     {
         let path = path.into();
         assert!(path.is_absolute());
+
+        constructors::init();
 
         assert!(
             config.is_none() || (extra_config_values.is_empty() && extra_config_files.is_empty()),
@@ -392,7 +393,9 @@ impl Repo {
         match &self.dag_commits {
             Some(commits) => Ok(commits.clone()),
             None => {
-                let commits = open_dag_commits(self)?;
+                let info: &dyn StoreInfo = self;
+                let commits: Box<dyn DagCommits + Send + 'static> =
+                    factory::call_constructor(info)?;
                 let commits = Arc::new(RwLock::new(commits));
                 self.dag_commits = Some(commits.clone());
                 Ok(commits)
@@ -404,7 +407,10 @@ impl Repo {
         if let Some(dag_commits) = &mut self.dag_commits {
             let dag_commits = dag_commits.clone();
             let mut dag_commits = dag_commits.write();
-            *dag_commits = open_dag_commits(self)?;
+            let info: &dyn StoreInfo = self;
+            let new_commits: Box<dyn DagCommits + Send + 'static> =
+                factory::call_constructor(info)?;
+            *dag_commits = new_commits;
         }
         Ok(())
     }
