@@ -37,6 +37,74 @@ pub struct ProgressBar {
     finished_at: ArcSwapOption<Instant>,
 }
 
+struct Builder {
+    registry: Registry,
+    register: bool,
+    topic: Cow<'static, str>,
+    total: u64,
+    unit: Cow<'static, str>,
+}
+
+impl Builder {
+    fn new() -> Self {
+        Builder {
+            registry: Registry::main().clone(),
+            register: true,
+            topic: "".into(),
+            total: 0,
+            unit: "".into(),
+        }
+    }
+
+    fn registry(mut self, r: &Registry) -> Self {
+        self.registry = r.clone();
+        self
+    }
+
+    fn topic(mut self, t: impl Into<Cow<'static, str>>) -> Self {
+        self.topic = t.into();
+        self
+    }
+
+    fn total(mut self, t: u64) -> Self {
+        self.total = t;
+        self
+    }
+
+    fn unit(mut self, u: impl Into<Cow<'static, str>>) -> Self {
+        self.unit = u.into();
+        self
+    }
+
+    fn register(mut self, r: bool) -> Self {
+        self.register = r;
+        self
+    }
+
+    fn started(self) -> Arc<ProgressBar> {
+        let bar = self.pending();
+        bar.start();
+        bar
+    }
+
+    fn pending(self) -> Arc<ProgressBar> {
+        let bar = Arc::new(ProgressBar {
+            topic: self.topic,
+            unit: self.unit,
+            total: AtomicU64::new(self.total),
+            pos: Default::default(),
+            message: Default::default(),
+            created_at: Instant::now(),
+            started_at: Default::default(),
+            finished_at: Default::default(),
+        });
+        if self.register {
+            self.registry.register_progress_bar(&bar);
+        }
+        bar
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub enum BarState {
     Pending,
@@ -51,17 +119,12 @@ impl ProgressBar {
         total: u64,
         unit: impl Into<Cow<'static, str>>,
     ) -> Arc<Self> {
-        let bar = Self {
-            topic: topic.into(),
-            unit: unit.into(),
-            total: AtomicU64::new(total),
-            pos: Default::default(),
-            message: Default::default(),
-            created_at: Instant::now(),
-            started_at: Default::default(),
-            finished_at: Default::default(),
-        };
-        Arc::new(bar)
+        Builder::new()
+            .topic(topic)
+            .total(total)
+            .unit(unit)
+            .register(false)
+            .pending()
     }
 
     /// Create a new progress bar and register with default registry.
@@ -70,16 +133,18 @@ impl ProgressBar {
         total: u64,
         unit: impl Into<Cow<'static, str>>,
     ) -> Arc<Self> {
-        let bar = Self::new(topic, total, unit);
-        Registry::main().register_progress_bar(&bar);
-        bar
+        Builder::new()
+            .topic(topic)
+            .total(total)
+            .unit(unit)
+            .started()
     }
 
-    pub(crate) fn start(&self) {
+    fn start(&self) {
         self.started_at.store(Some(Arc::new(Instant::now())));
     }
 
-    pub(crate) fn finish(&self) {
+    fn finish(&self) {
         self.finished_at.store(Some(Arc::new(Instant::now())));
     }
 
@@ -264,5 +329,19 @@ mod tests {
         assert!(elapsed_complete > elapsed_running);
         // But doesn't advance any further now that we are complete.
         assert_eq!(elapsed_complete, bar.since_start().unwrap());
+    }
+
+    #[test]
+    fn test_builder() {
+        let reg = Registry::default();
+
+        let bar = Builder::new()
+            .topic("hello")
+            // We can override registry.
+            .registry(&reg)
+            .started();
+        assert_eq!(reg.list_progress_bar().len(), 1);
+        assert!(bar.since_start().is_some());
+        assert_eq!(bar.topic(), "hello");
     }
 }

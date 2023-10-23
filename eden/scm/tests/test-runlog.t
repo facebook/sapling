@@ -4,6 +4,7 @@
   $ eagerepo
   $ enable progress
   $ setconfig extensions.rustprogresstest="$TESTDIR/runlogtest.py" runlog.enable=True runlog.progress-refresh=0
+  $ export LOG=runlog=warn
 
   $ waitforrunlog() {
   >   while ! cat .hg/runlog/*.json 2> /dev/null; do
