@@ -61,6 +61,7 @@ members = [
   "lib/hg-metrics",
   "lib/hgcommands",
   "lib/hgcommits",
+  "lib/hgcommits/trait",
   "lib/hgtime",
   "lib/http-client",
   "lib/identity",

@@ -132,26 +132,35 @@ impl AppendCommits for HgCommits {
 #[async_trait::async_trait]
 impl ReadCommitText for HgCommits {
     async fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
-        self.commits.get_commit_raw_text(vertex).await
+        let store = self.commits.read();
+        get_commit_raw_text(&store, vertex)
     }
 
     fn to_dyn_read_commit_text(&self) -> Arc<dyn ReadCommitText + Send + Sync> {
-        self.commits.to_dyn_read_commit_text()
+        ArcRwLockZstore(self.commits.clone()).to_dyn_read_commit_text()
     }
 }
 
+#[derive(Clone)]
+struct ArcRwLockZstore(Arc<RwLock<Zstore>>);
+
 #[async_trait::async_trait]
-impl ReadCommitText for Arc<RwLock<Zstore>> {
+impl ReadCommitText for ArcRwLockZstore {
     async fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
-        let id = Id20::from_slice(vertex.as_ref())?;
-        match self.read().get(id)? {
-            Some(bytes) => Ok(Some(bytes.slice(Id20::len() * 2..))),
-            None => Ok(crate::revlog::get_hard_coded_commit_text(vertex)),
-        }
+        let store = self.0.read();
+        get_commit_raw_text(&store, vertex)
     }
 
     fn to_dyn_read_commit_text(&self) -> Arc<dyn ReadCommitText + Send + Sync> {
         Arc::new(self.clone())
+    }
+}
+
+fn get_commit_raw_text(store: &Zstore, vertex: &Vertex) -> Result<Option<Bytes>> {
+    let id = Id20::from_slice(vertex.as_ref())?;
+    match store.get(id)? {
+        Some(bytes) => Ok(Some(bytes.slice(Id20::len() * 2..))),
+        None => Ok(crate::revlog::get_hard_coded_commit_text(vertex)),
     }
 }
 

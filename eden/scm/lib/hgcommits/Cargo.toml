@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 anyhow = "=1.0.72"
 async-trait = "0.1.71"
+commits-trait = { version = "0.1.0", path = "trait" }
 dag = { version = "0.1.0", path = "../dag", features = ["indexedlog-backend"] }
 edenapi = { version = "0.1.0", path = "../edenapi" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
@@ -17,7 +18,6 @@ minibytes = { version = "0.1.0", path = "../minibytes", features = ["frombytes"]
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 refencode = { version = "0.1.0", path = "../refencode" }
 revlogindex = { version = "0.1.0", path = "../revlogindex" }
-serde = { version = "1.0.185", features = ["derive", "rc"] }
 storemodel = { version = "0.1.0", path = "../storemodel" }
 streams = { version = "0.1.0", path = "../streams" }
 tracing = "0.1.35"

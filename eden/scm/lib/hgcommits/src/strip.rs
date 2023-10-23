@@ -20,14 +20,6 @@ use crate::HgCommit;
 use crate::ReadCommitText;
 use crate::Result;
 
-#[async_trait::async_trait]
-pub trait StripCommits {
-    /// Strip commits. This is for legacy tests only that wouldn't be used
-    /// much in production. The callsite should take care of locking or
-    /// otherwise risk data race and loss.
-    async fn strip_commits(&mut self, set: Set) -> Result<()>;
-}
-
 /// Enumerate all commits in `orig`, re-insert them to `new` except for `strip_set::`.
 /// This has unacceptable time complexity so it can only be used in tests.
 pub(crate) async fn migrate_commits(

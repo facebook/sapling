@@ -267,11 +267,12 @@ impl AppendCommits for GitSegmentedCommits {
 #[async_trait::async_trait]
 impl ReadCommitText for GitSegmentedCommits {
     async fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
-        self.git_repo.get_commit_raw_text(vertex).await
+        let repo = self.git_repo.lock();
+        get_commit_raw_text(&repo, vertex)
     }
 
     fn to_dyn_read_commit_text(&self) -> Arc<dyn ReadCommitText + Send + Sync> {
-        self.git_repo.to_dyn_read_commit_text()
+        ArcMutexGitRepo(self.git_repo.clone()).to_dyn_read_commit_text()
     }
 
     fn to_dyn_read_root_tree_ids(&self) -> Arc<dyn ReadRootTreeIds + Send + Sync> {
@@ -281,28 +282,35 @@ impl ReadCommitText for GitSegmentedCommits {
     }
 }
 
+#[derive(Clone)]
+struct ArcMutexGitRepo(Arc<Mutex<git2::Repository>>);
+
 #[async_trait::async_trait]
-impl ReadCommitText for Arc<Mutex<git2::Repository>> {
+impl ReadCommitText for ArcMutexGitRepo {
     async fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
-        let oid = match git2::Oid::from_bytes(vertex.as_ref()) {
-            Ok(oid) => oid,
-            Err(_) => return Ok(None),
-        };
-        let repo = self.lock();
-        let commit = match repo.find_commit(oid) {
-            Ok(commit) => commit,
-            Err(e) if e.code() == git2::ErrorCode::NotFound => {
-                return Ok(crate::revlog::get_hard_coded_commit_text(vertex));
-            }
-            Err(e) => return Err(e.into()),
-        };
-        let text = to_hg_text(&commit);
-        Ok(Some(text))
+        let repo = self.0.lock();
+        get_commit_raw_text(&repo, vertex)
     }
 
     fn to_dyn_read_commit_text(&self) -> Arc<dyn ReadCommitText + Send + Sync> {
         Arc::new(self.clone())
     }
+}
+
+fn get_commit_raw_text(repo: &git2::Repository, vertex: &Vertex) -> Result<Option<Bytes>> {
+    let oid = match git2::Oid::from_bytes(vertex.as_ref()) {
+        Ok(oid) => oid,
+        Err(_) => return Ok(None),
+    };
+    let commit = match repo.find_commit(oid) {
+        Ok(commit) => commit,
+        Err(e) if e.code() == git2::ErrorCode::NotFound => {
+            return Ok(crate::revlog::get_hard_coded_commit_text(vertex));
+        }
+        Err(e) => return Err(e.into()),
+    };
+    let text = to_hg_text(&commit);
+    Ok(Some(text))
 }
 
 // Workaround orphan rule
