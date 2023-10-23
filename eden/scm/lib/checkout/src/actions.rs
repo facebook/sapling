@@ -95,7 +95,7 @@ impl ActionMap {
         old_manifest: &impl Manifest,
         new_manifest: &impl Manifest,
     ) -> Result<Self> {
-        let _prog = ProgressBar::register_new("sparse config", 0, "");
+        let _prog = ProgressBar::new_adhoc("sparse config", 0, "");
 
         // First - remove all the files that were scheduled for update, but actually aren't in new sparse profile
         let mut result = Ok(());

@@ -343,7 +343,7 @@ impl CheckoutPlan {
 
         let unknown: Vec<&RepoPathBuf> = status.unknown().collect();
 
-        let bar = ProgressBar::register_new("Checking untracked", unknown.len() as u64, "files");
+        let bar = ProgressBar::new_adhoc("Checking untracked", unknown.len() as u64, "files");
 
         for file in unknown {
             bar.increase_position(1);
@@ -672,7 +672,7 @@ impl CheckoutProgress {
         actions: &HashMap<RepoPathBuf, UpdateContentAction>,
     ) -> HashMap<RepoPathBuf, UpdateContentAction> {
         // TODO: This should be done in parallel. Maybe with the new vfs async batch APIs?
-        let bar = ProgressBar::register_new("Filtering existing", actions.len() as u64, "files");
+        let bar = ProgressBar::new_adhoc("Filtering existing", actions.len() as u64, "files");
         actions
             .iter()
             .filter(move |(path, action)| {
@@ -940,7 +940,7 @@ fn create_plan(
 }
 
 fn record_updates(plan: &CheckoutPlan, vfs: &VFS, treestate: &mut TreeState) -> Result<()> {
-    let bar = ProgressBar::register_new("recording", plan.all_files().count() as u64, "files");
+    let bar = ProgressBar::new_adhoc("recording", plan.all_files().count() as u64, "files");
 
     for removed in plan.removed_files() {
         treestate.remove(removed)?;

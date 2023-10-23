@@ -43,19 +43,26 @@ pub struct ProgressBar {
     // we do "lose" a child progress bar to another thread, it would be useful
     // to see the child's ancestor bars (even if they have gone out of scope).
     parent: Option<Arc<ProgressBar>>,
+
+    // If `true`, bar is transient (i.e. expected to show up as it
+    // starts and disappear when it finishes). If `false`, bar is is
+    // intended to be a planned "phase" that is displayed to the user
+    // before it starts and after it finishes. Only impacts rendering.
+    adhoc: bool,
 }
 
-struct Builder {
+pub struct Builder {
     registry: Registry,
     register: bool,
     topic: Cow<'static, str>,
     total: u64,
     unit: Cow<'static, str>,
     parent: Option<Arc<ProgressBar>>,
+    adhoc: bool,
 }
 
 impl Builder {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Builder {
             registry: Registry::main().clone(),
             register: true,
@@ -63,46 +70,56 @@ impl Builder {
             total: 0,
             unit: "".into(),
             parent: None,
+            adhoc: false,
         }
     }
 
-    fn registry(mut self, r: &Registry) -> Self {
+    pub fn registry(mut self, r: &Registry) -> Self {
         self.registry = r.clone();
         self
     }
 
-    fn topic(mut self, t: impl Into<Cow<'static, str>>) -> Self {
+    pub fn topic(mut self, t: impl Into<Cow<'static, str>>) -> Self {
         self.topic = t.into();
         self
     }
 
-    fn total(mut self, t: u64) -> Self {
+    pub fn total(mut self, t: u64) -> Self {
         self.total = t;
         self
     }
 
-    fn unit(mut self, u: impl Into<Cow<'static, str>>) -> Self {
+    pub fn unit(mut self, u: impl Into<Cow<'static, str>>) -> Self {
         self.unit = u.into();
         self
     }
 
-    fn register(mut self, r: bool) -> Self {
+    pub fn register(mut self, r: bool) -> Self {
         self.register = r;
         self
     }
 
-    fn thread_local_parent(mut self) -> Self {
+    pub fn thread_local_parent(mut self) -> Self {
         self.parent = self.registry.get_active_progress_bar();
         self
     }
 
-    fn active(self) -> ActiveProgressBar {
+    pub fn adhoc(mut self, a: bool) -> Self {
+        self.adhoc = a;
+        self
+    }
+
+    pub fn active(self) -> ActiveProgressBar {
         let registry = self.registry.clone();
-        let bar = self.thread_local_parent().pending();
+        let bar = self
+            .thread_local_parent()
+            .register(true)
+            .adhoc(true)
+            .pending();
         ProgressBar::push_active(bar, &registry)
     }
 
-    fn pending(self) -> Arc<ProgressBar> {
+    pub fn pending(self) -> Arc<ProgressBar> {
         let bar = Arc::new(ProgressBar {
             topic: self.topic,
             unit: self.unit,
@@ -113,6 +130,7 @@ impl Builder {
             started_at: Default::default(),
             finished_at: Default::default(),
             parent: self.parent,
+            adhoc: self.adhoc,
         });
         if self.register {
             self.registry.register_progress_bar(&bar);
@@ -130,6 +148,7 @@ pub enum BarState {
 
 impl ProgressBar {
     /// Create a new progress bar of the given topic (ex. "writing files").
+    /// Will not be displayed until you register it.
     pub fn new(
         topic: impl Into<Cow<'static, str>>,
         total: u64,
@@ -143,19 +162,47 @@ impl ProgressBar {
             .pending()
     }
 
-    /// Create a new progress bar and register with default registry.
-    pub fn register_new(
+    /// Create, register, and start a progress bar as a child of the thread's
+    /// active progress bar. Bar will get cleaned up when it goes out of scope.
+    /// Most places should use this.
+    pub fn new_adhoc(
+        topic: impl Into<Cow<'static, str>>,
+        total: u64,
+        unit: impl Into<Cow<'static, str>>,
+    ) -> ActiveProgressBar {
+        Builder::new().topic(topic).total(total).unit(unit).active()
+    }
+
+    /// Create and register a progress bar as a child of the thread's active
+    /// progress bar, but don't start it. Call push_active to start it. This is
+    /// useful to pre-register a list of phases which will show up before/after
+    /// they've started/finished.
+    pub fn new_pending(
         topic: impl Into<Cow<'static, str>>,
         total: u64,
         unit: impl Into<Cow<'static, str>>,
     ) -> Arc<Self> {
-        let bar = Builder::new()
+        Builder::new()
             .topic(topic)
             .total(total)
             .unit(unit)
-            .pending();
-        bar.start();
-        bar
+            .thread_local_parent()
+            .pending()
+    }
+
+    /// Create and register a progress bar that displays as a detached
+    /// progress bar (i.e. not a child of another bar). Bar is not
+    /// started, so will not display elapsed time.
+    pub fn new_detached(
+        topic: impl Into<Cow<'static, str>>,
+        total: u64,
+        unit: impl Into<Cow<'static, str>>,
+    ) -> Arc<Self> {
+        Builder::new()
+            .topic(topic)
+            .total(total)
+            .unit(unit)
+            .pending()
     }
 
     /// Start `bar` and set as active. When returned guard is dropped, progress
@@ -350,7 +397,7 @@ impl AggregatingProgressBar {
                 bar
             }
             None => {
-                let new_bar = ProgressBar::register_new(
+                let new_bar = ProgressBar::new_detached(
                     self.topic.clone(),
                     additional_total,
                     self.unit.clone(),

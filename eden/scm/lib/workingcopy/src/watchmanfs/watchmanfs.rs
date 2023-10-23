@@ -145,7 +145,7 @@ impl WatchmanFileSystem {
         }
 
         // The crawl is done - display a generic "we're querying" spinner.
-        let _bar = ProgressBar::register_new("querying watchman", 0, "");
+        let _bar = ProgressBar::new_adhoc("querying watchman", 0, "");
 
         let result = client
             .query::<StatusQuery>(
@@ -167,7 +167,7 @@ impl WatchmanFileSystem {
 
 async fn crawl_progress(root: PathBuf, approx_file_count: u64) -> Result<()> {
     let client = {
-        let _bar = ProgressBar::register_new("connecting watchman", 0, "");
+        let _bar = ProgressBar::new_detached("connecting watchman", 0, "");
 
         // If watchman just started (and we issued "watch-project" from
         // query_files), this connect gets stuck indefinitely. Work around by
@@ -197,7 +197,7 @@ async fn crawl_progress(root: PathBuf, approx_file_count: u64) -> Result<()> {
         }) = response.root_status
         {
             bar.get_or_insert_with(|| {
-                ProgressBar::register_new("crawling", approx_file_count, "files (approx)")
+                ProgressBar::new_detached("crawling", approx_file_count, "files (approx)")
             })
             .set_position(stats);
         } else if bar.is_some() {
@@ -689,7 +689,7 @@ pub struct WatchmanPendingChanges {
 impl WatchmanPendingChanges {
     #[tracing::instrument(skip_all)]
     pub fn update_treestate(&mut self, ts: &mut TreeState) -> Result<bool> {
-        let bar = ProgressBar::register_new(
+        let bar = ProgressBar::new_adhoc(
             "recording files",
             (self.needs_clear.len() + self.needs_mark.len()) as u64,
             "entries",

@@ -10,7 +10,6 @@ use std::collections::VecDeque;
 use std::sync::mpsc::channel;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
-use std::sync::Arc;
 use std::thread::JoinHandle;
 use std::time::Duration;
 
@@ -20,6 +19,7 @@ use manifest::DirDiffEntry;
 use manifest::File;
 use pathmatcher::DirectoryMatch;
 use pathmatcher::Matcher;
+use progress_model::ActiveProgressBar;
 use progress_model::ProgressBar;
 use types::RepoPath;
 
@@ -92,7 +92,7 @@ pub struct Diff<'a> {
     output: VecDeque<DiffEntry>,
     store: &'a InnerStore,
     matcher: &'a dyn Matcher,
-    progress_bar: Arc<ProgressBar>,
+    progress_bar: ActiveProgressBar,
     #[allow(dead_code)]
     fetch_thread: JoinHandle<()>,
     sender: Sender<DiffItem>,
@@ -132,7 +132,7 @@ impl<'a> Diff<'a> {
             output: VecDeque::new(),
             store: &left.store,
             matcher,
-            progress_bar: ProgressBar::register_new("diffing tree", 18, "depth"),
+            progress_bar: ProgressBar::new_adhoc("diffing tree", 18, "depth"),
             fetch_thread,
             sender: send_prefetch,
             receiver: receive_done,

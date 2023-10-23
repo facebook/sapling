@@ -200,7 +200,7 @@ impl CheckoutState {
 #[instrument(skip_all, err)]
 fn update_dirstate(plan: &CheckoutPlan, ts: &mut TreeState, vfs: &VFS) -> anyhow::Result<()> {
     let (update_count, remove_count) = plan.stats();
-    let bar = ProgressBar::register_new("recording", (update_count + remove_count) as u64, "files");
+    let bar = ProgressBar::new_adhoc("recording", (update_count + remove_count) as u64, "files");
 
     // Probably not required for clone.
     for removed in plan.removed_files() {

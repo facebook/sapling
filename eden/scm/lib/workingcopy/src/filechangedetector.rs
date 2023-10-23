@@ -14,6 +14,7 @@ use manifest::Manifest;
 use manifest_tree::TreeManifest;
 use parking_lot::RwLock;
 use pathmatcher::ExactMatcher;
+use progress_model::ActiveProgressBar;
 use progress_model::ProgressBar;
 use storemodel::minibytes::Bytes;
 use storemodel::ReadFileContents;
@@ -72,7 +73,7 @@ pub(crate) struct FileChangeDetector {
     manifest: Arc<RwLock<TreeManifest>>,
     store: ArcReadFileContents,
     worker_count: usize,
-    progress: Arc<ProgressBar>,
+    progress: ActiveProgressBar,
 }
 
 impl FileChangeDetector {
@@ -92,7 +93,7 @@ impl FileChangeDetector {
             manifest,
             store,
             worker_count: worker_count.unwrap_or(10),
-            progress: ProgressBar::register_new("comparing", 0, "files"),
+            progress: ProgressBar::new_adhoc("comparing", 0, "files"),
         }
     }
 }

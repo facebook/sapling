@@ -26,7 +26,16 @@ py_class!(pub class ProgressBar |py| {
     ) -> PyResult<Self> {
         let unit = unit.unwrap_or_default();
         let total = total.unwrap_or_default();
-        let bar = ProgressBarModel::register_new(topic, total, unit);
+        let reg = Registry::main();
+        let bar = progress_model::ProgressBarBuilder::new()
+            .registry(reg)
+            .topic(topic)
+            .total(total)
+            .unit(unit)
+            .adhoc(true)
+            .thread_local_parent()
+            .pending();
+        ProgressBarModel::set_active(&bar, reg);
         Self::create_instance(py, bar)
     }
 
@@ -56,6 +65,11 @@ py_class!(pub class ProgressBar |py| {
 
     def set_message(&self, message: String) -> PyResult<PyNone> {
         self.model(py).set_message(message);
+        Ok(PyNone)
+    }
+
+    def cleanup(&self) -> PyResult<PyNone> {
+        ProgressBarModel::pop_active(self.model(py), Registry::main());
         Ok(PyNone)
     }
 });

@@ -171,7 +171,7 @@ py_class!(class checkoutplan |py| {
         let vfs = plan.vfs();
         let state = state.get_state(py);
         py.allow_threads(move || -> Result<()> {
-            let bar = ProgressBar::register_new("recording", plan.all_files().count() as u64, "files");
+            let bar = ProgressBar::new_adhoc("recording", plan.all_files().count() as u64, "files");
 
             let mut state = state.lock();
 

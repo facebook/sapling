@@ -338,6 +338,7 @@ class basebar:
             _tracer.edit(spanid, [("total", str(total))])
         _tracer.exit(spanid)
 
+        self._rust_model.cleanup()
         self._rust_model = None
 
         return self.exit(exctype, excvalue, traceback)

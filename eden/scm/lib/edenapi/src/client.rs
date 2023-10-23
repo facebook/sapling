@@ -1032,7 +1032,7 @@ impl EdenApi for Client {
             .cbor(&wire_graph_req)
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
-        let prog = ProgressBar::register_new("commit graph", 0, "commits fetched");
+        let prog = ProgressBar::new_detached("commit graph", 0, "commits fetched");
         self.fetch_vec_with_retry_and_prog::<CommitGraphEntry>(vec![req], prog)
             .await
     }

@@ -126,14 +126,13 @@ pub trait EdenApiPyExt: EdenApi {
         let keys = to_keys(py, &keys)?;
         let store = as_deltastore(py, store)?;
 
+        let prog =
+            ProgressBar::new_adhoc("Downloading trees over HTTP", keys.len() as u64, "trees");
+        let prog = (*prog).clone();
+
         let stats = py
             .allow_threads(|| {
                 block_unless_interrupted(async move {
-                    let prog = ProgressBar::register_new(
-                        "Downloading trees over HTTP",
-                        keys.len() as u64,
-                        "trees",
-                    );
                     let response = self.trees(keys, attributes).await?;
                     write_trees(response, store, prog).await
                 })

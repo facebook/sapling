@@ -55,7 +55,7 @@ impl RemoteDataStore for EdenApiDataStore<File> {
         let hgidkeys = hgid_keys(keys);
 
         let response = async move {
-            let prog = ProgressBar::register_new(
+            let prog = ProgressBar::new_adhoc(
                 "Downloading files over HTTP",
                 hgidkeys.len() as u64,
                 "files",
@@ -125,7 +125,7 @@ impl RemoteDataStore for EdenApiDataStore<Tree> {
         let hgidkeys = hgid_keys(keys);
 
         let response = async move {
-            let prog = ProgressBar::register_new(
+            let prog = ProgressBar::new_adhoc(
                 "Downloading trees over HTTP",
                 hgidkeys.len() as u64,
                 "trees",

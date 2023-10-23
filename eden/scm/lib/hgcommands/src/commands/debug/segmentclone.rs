@@ -76,7 +76,7 @@ pub fn run(ctx: ReqCtx<StatusOpts>, config: &mut ConfigSet) -> Result<u8> {
         .context("error opening segmented changelog")?;
 
     let len = clone_data.idmap.len();
-    let bar = ProgressBar::register_new("Building", len as _, "commits");
+    let bar = ProgressBar::new_adhoc("Building", len as _, "commits");
     let idmap: BTreeMap<_, _> = clone_data
         .idmap
         .into_iter()
