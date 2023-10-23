@@ -25,6 +25,7 @@ bookmarks_types = { version = "0.1.0", path = "../../bookmarks/bookmarks_types" 
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 changeset_info = { version = "0.1.0", path = "../../derived_data/changeset_info" }
 clap = { version = "4.3.5", features = ["derive", "env", "string", "unicode", "wrap_help"] }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 commit_id = { version = "0.1.0", path = "../../cmdlib/commit_id" }
 commit_transformation = { version = "0.1.0", path = "../../megarepo_api/commit_transformation" }
 derived_data_manager = { version = "0.1.0", path = "../../derived_data/manager" }

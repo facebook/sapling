@@ -54,6 +54,7 @@ rust_library(
         "fbsource//third-party/rust:slog",
         "fbsource//third-party/rust:tokio",
         "//common/rust/shed/borrowed:borrowed",
+        "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/sql:sql",
         "//eden/mononoke/blobrepo:repo_blobstore",

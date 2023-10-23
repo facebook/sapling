@@ -127,6 +127,11 @@ pub mod types {
         // Graph printing args for debugging and tests
         #[clap(flatten)]
         pub print_graph_args: PrintGraphArgs,
+
+        /// Size of the buffer in the stream that pre-fetches implicit deletes
+        /// of each commit before its rewritten.
+        #[clap(long = "impl-del-concurrency", short = 'b', default_value_t = 100)]
+        pub implicit_delete_prefetch_buffer_size: usize,
     }
 
     /// Data type used  to get upper bound changesets for export paths through
@@ -226,8 +231,14 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     trace!(logger, "changesets: {:#?}", &graph_info.changesets);
     trace!(logger, "changeset parents: {:#?}", &graph_info.parents_map);
 
-    let temp_repo_ctx =
-        rewrite_partial_changesets(app.fb, repo_ctx, graph_info, export_path_infos).await?;
+    let temp_repo_ctx = rewrite_partial_changesets(
+        app.fb,
+        repo_ctx,
+        graph_info,
+        export_path_infos,
+        args.implicit_delete_prefetch_buffer_size,
+    )
+    .await?;
 
     let temp_master_csc = temp_repo_ctx
         .resolve_bookmark(

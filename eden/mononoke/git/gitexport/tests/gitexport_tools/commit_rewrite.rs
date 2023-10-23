@@ -34,6 +34,8 @@ use test_utils::repo_with_multiple_renamed_export_directories;
 use test_utils::repo_with_renamed_export_path;
 use test_utils::GitExportTestRepoOptions;
 
+const IMPLICIT_DELETE_BUFFER_SIZE: usize = 100;
+
 #[fbinit::test]
 async fn test_rewrite_partial_changesets(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
@@ -91,9 +93,14 @@ async fn test_rewrite_partial_changesets(fb: FacebookInit) -> Result<(), Error> 
         (second_export_dir.clone(), master_cs),
     ];
 
-    let temp_repo_ctx =
-        rewrite_partial_changesets(fb, source_repo_ctx.clone(), graph_info, export_path_infos)
-            .await?;
+    let temp_repo_ctx = rewrite_partial_changesets(
+        fb,
+        source_repo_ctx.clone(),
+        graph_info,
+        export_path_infos,
+        IMPLICIT_DELETE_BUFFER_SIZE,
+    )
+    .await?;
 
     let expected_message_and_affected_files: Vec<(String, Vec<NonRootMPath>)> = vec![
         build_expected_tuple("A", vec![export_file]),
@@ -152,10 +159,15 @@ async fn test_rewriting_fails_with_irrelevant_changeset(fb: FacebookInit) -> Res
         .ok_or(anyhow!("Couldn't find master bookmark in temporary repo."))?;
 
     let export_path_infos = vec![(export_dir.clone(), master_cs)];
-    let error =
-        rewrite_partial_changesets(fb, source_repo_ctx.clone(), graph_info, export_path_infos)
-            .await
-            .unwrap_err();
+    let error = rewrite_partial_changesets(
+        fb,
+        source_repo_ctx.clone(),
+        graph_info,
+        export_path_infos,
+        IMPLICIT_DELETE_BUFFER_SIZE,
+    )
+    .await
+    .unwrap_err();
 
     assert_eq!(error.to_string(), "No relevant file changes in changeset");
 
@@ -229,6 +241,7 @@ async fn test_renamed_export_paths_are_followed_with_manual_input(fb: FacebookIn
             (new_export_dir.clone(), master_cs),
             (old_export_dir, rename_csc),
         ],
+        IMPLICIT_DELETE_BUFFER_SIZE,
     )
     .await?;
 
@@ -297,6 +310,7 @@ async fn test_multiple_renamed_export_directories(fb: FacebookInit) -> Result<()
             (new_bar.clone(), master_cs.clone()),
             (new_foo.clone(), master_cs),
         ],
+        IMPLICIT_DELETE_BUFFER_SIZE,
     )
     .await?;
 

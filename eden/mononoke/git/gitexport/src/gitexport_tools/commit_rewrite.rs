@@ -19,6 +19,7 @@ use blobstore::Loadable;
 use blobstore::PutBehaviour;
 use borrowed::borrowed;
 use changeset_info::ChangesetInfo;
+use cloned::cloned;
 use commit_transformation::get_renamed_implicit_deletes;
 use commit_transformation::rewrite_commit_with_implicit_deletes;
 use commit_transformation::upload_commits;
@@ -58,6 +59,7 @@ use slog::Drain;
 use slog::Logger;
 use sql::rusqlite::Connection as SqliteConnection;
 use test_repo_factory::TestRepoFactory;
+use tokio::task;
 use unodes::RootUnodeManifestId;
 
 pub use crate::git_repo::create_git_repo_on_disk;
@@ -68,9 +70,9 @@ pub use crate::partial_commit_graph::GitExportGraphInfo;
 
 pub const MASTER_BOOKMARK: &str = "heads/master";
 
-struct ChangesetRewriteInfo<'a> {
+struct ChangesetRewriteInfo {
     changeset_context: ChangesetContext,
-    export_paths: Vec<&'a NonRootMPath>,
+    export_paths: Vec<NonRootMPath>,
     implicit_deletes: Vec<Vec<NonRootMPath>>,
 }
 
@@ -82,8 +84,10 @@ pub async fn rewrite_partial_changesets(
     source_repo_ctx: RepoContext,
     graph_info: GitExportGraphInfo,
     export_paths: Vec<ExportPathInfo>,
+    implicit_delete_prefetch_buffer_size: usize,
 ) -> Result<RepoContext> {
-    let ctx: &CoreContext = source_repo_ctx.ctx();
+    let source_repo_ctx = Arc::new(source_repo_ctx);
+    let ctx = source_repo_ctx.ctx().clone();
     let changesets = graph_info.changesets;
     let changeset_parents = &graph_info.parents_map;
     let logger = ctx.logger();
@@ -93,26 +97,32 @@ pub async fn rewrite_partial_changesets(
     debug!(logger, "export_paths: {:#?}", &export_paths);
 
     // Repo that will hold the partial changesets that will be exported to git
-    let temp_repo_ctx = create_temp_repo(fb, ctx).await?;
+    let temp_repo_ctx = create_temp_repo(fb, &ctx).await?;
 
     let num_changesets = changesets.len().try_into().unwrap();
 
-    info!(logger, "Pre-fetching implicit deletes from changesets");
+    // Commits are copied from oldest to newest. In the situation where an
+    // export paths is created by copying a file from a non-export path, we
+    // print a warning to the user informing the path being created, the commit
+    // creating it and the commit from which the file is being copied.
+    //
+    // This set keeps track of the paths that haven't yet had a warning printed
+    // for their creation during the rewrite of the commits.
+    let all_export_paths: HashSet<NonRootMPath> =
+        export_paths.iter().cloned().map(|p| p.0).collect();
 
-    let mb_progress_bar = get_progress_bar(
-        logger,
-        num_changesets,
-        "Pre-fetching implicit deletes from changesets",
-    )?;
+    let mb_progress_bar = get_progress_bar(logger, num_changesets, "Copying changesets")?;
 
-    let changesets_with_implicit_deletes: Vec<Result<ChangesetRewriteInfo>> =
-        stream::iter(changesets)
-            .map(|cs| {
-                borrowed!(export_paths, source_repo_ctx, mb_progress_bar);
+    let export_paths = Arc::new(export_paths);
 
-                let blobstore = source_repo_ctx.blob_repo().repo_blobstore_arc();
-                async move {
-                    let export_paths = get_export_paths_for_changeset(&cs, export_paths).await?;
+    let (mb_head_cs_id, _, _) = stream::iter(changesets)
+        .map(|cs| {
+            cloned!(source_repo_ctx, export_paths);
+
+            let blobstore = source_repo_ctx.blob_repo().repo_blobstore_arc();
+            async move {
+                task::spawn(async move {
+                    let export_paths = get_export_paths_for_changeset(&cs, &export_paths).await?;
                     let bcs = cs
                         .id()
                         .load(source_repo_ctx.ctx(), &blobstore)
@@ -129,76 +139,53 @@ pub async fn rewrite_partial_changesets(
                                 p.is_prefix_of(*source_path) ||
                                 // Not necessarily exported, but could implicitly delete
                                 // an export path, so implicitly deletes should be collected
-                                source_path.is_prefix_of(*p))
+                                source_path.is_prefix_of(p))
                         })
                         .collect::<Vec<_>>();
 
-                    let multi_mover =
-                        build_multi_mover_for_changeset(logger, export_paths.as_slice())?;
+                    let multi_mover = build_multi_mover_for_changeset(
+                        source_repo_ctx.ctx().logger(),
+                        export_paths.as_slice(),
+                    )?;
 
                     if file_changes.is_empty() {
                         return Err(anyhow!("No relevant file changes in changeset"));
                     };
 
                     let renamed_implicit_deletes = get_renamed_implicit_deletes(
-                        ctx,
+                        source_repo_ctx.ctx(),
                         file_changes,
                         bcs.parents(),
                         multi_mover,
                         source_repo_ctx.repo(),
                     )
                     .await?;
-                    if let Some(progress_bar) = mb_progress_bar {
-                        progress_bar.inc(1);
-                    }
 
                     Ok(ChangesetRewriteInfo {
                         changeset_context: cs,
                         export_paths,
                         implicit_deletes: renamed_implicit_deletes,
                     })
-                }
-            })
-            .buffered(1000)
-            .collect::<Vec<_>>()
-            .await;
-    if let Some(progress_bar) = mb_progress_bar {
-        progress_bar.finish();
-    }
-
-    info!(
-        logger,
-        "Finished pre-fetching implicit deletes from changesets"
-    );
-
-    let mb_progress_bar = get_progress_bar(logger, num_changesets, "Copying changesets")?;
-
-    // Commits are copied from oldest to newest. In the situation where an
-    // export paths is created by copying a file from a non-export path, we
-    // print a warning to the user informing the path being created, the commit
-    // creating it and the commit from which the file is being copied.
-    //
-    // This set keeps track of the paths that haven't yet had a warning printed
-    // for their creation during the rewrite of the commits.
-    let all_export_paths: HashSet<NonRootMPath> =
-        export_paths.iter().cloned().map(|p| p.0).collect();
-
-    // `mb_head_cs_id` keeps track of the id of the last commit to set the
-    // master bookmark after all commits have been copied.
-    let (mb_head_cs_id, _, _) = stream::iter(changesets_with_implicit_deletes)
+                })
+                .await?
+            }
+        })
+        .buffered(implicit_delete_prefetch_buffer_size)
         .try_fold(
             (None, HashMap::new(), all_export_paths),
             |(_head_cs_id, remapped_parents, export_paths_not_created), changeset_rewrite_info| {
                 let changeset = changeset_rewrite_info.changeset_context;
                 let export_paths = changeset_rewrite_info.export_paths;
                 let implicit_deletes = changeset_rewrite_info.implicit_deletes;
-                borrowed!(source_repo_ctx, temp_repo_ctx, mb_progress_bar, logger);
+                cloned!(source_repo_ctx);
+                borrowed!(temp_repo_ctx, mb_progress_bar);
 
                 async move {
-                    let multi_mover = build_multi_mover_for_changeset(logger, &export_paths)?;
+                    let ctx: &CoreContext = source_repo_ctx.ctx();
+                    let multi_mover = build_multi_mover_for_changeset(ctx.logger(), &export_paths)?;
                     let (new_bcs, remapped_parents, export_paths_not_created) =
                         create_bonsai_for_new_repo(
-                            source_repo_ctx,
+                            &source_repo_ctx,
                             multi_mover,
                             changeset_parents,
                             remapped_parents,
@@ -239,11 +226,14 @@ pub async fn rewrite_partial_changesets(
             },
         )
         .await?;
+
     if let Some(progress_bar) = mb_progress_bar {
         progress_bar.finish();
     }
 
     let head_cs_id = mb_head_cs_id.ok_or(Error::msg("No changesets were moved"))?;
+
+    info!(logger, "Setting master bookmark to the latest changeset");
 
     // Set master bookmark to point to the latest changeset
     temp_repo_ctx
@@ -263,7 +253,7 @@ async fn create_bonsai_for_new_repo<'a>(
     changeset_parents: &ChangesetParents,
     mut remapped_parents: HashMap<ChangesetId, ChangesetId>,
     changeset_ctx: ChangesetContext,
-    export_paths: &'a [&'a NonRootMPath],
+    export_paths: &'a [NonRootMPath],
     mut export_paths_not_created: HashSet<NonRootMPath>,
     implicit_deletes: Vec<Vec<NonRootMPath>>,
 ) -> Result<
@@ -416,16 +406,16 @@ async fn create_bonsai_for_new_repo<'a>(
 async fn get_export_paths_for_changeset<'a>(
     processed_cs: &ChangesetContext,
     export_path_infos: &'a Vec<ExportPathInfo>,
-) -> Result<Vec<&'a NonRootMPath>> {
+) -> Result<Vec<NonRootMPath>> {
     // Get the export paths for the changeset being processed considering its
     // head commit.
-    let export_paths: Vec<&NonRootMPath> = stream::iter(export_path_infos)
+    let export_paths: Vec<NonRootMPath> = stream::iter(export_path_infos)
         .then(|(exp_path, head_cs)| async move {
             // If the processed changeset is older than a path's head commit,
             // then this path should be exported when rewriting this changeset.
             let is_ancestor_of_head_cs = processed_cs.is_ancestor_of(head_cs.id()).await?;
             if is_ancestor_of_head_cs {
-                return anyhow::Ok::<Option<&NonRootMPath>>(Some(exp_path));
+                return anyhow::Ok::<Option<NonRootMPath>>(Some(exp_path.clone()));
             }
             // Otherwise the changeset is a descendant of this path's head, so
             // the path should NOT be exported.
@@ -435,7 +425,7 @@ async fn get_export_paths_for_changeset<'a>(
         .await?
         .into_iter()
         .flatten()
-        .collect::<Vec<&NonRootMPath>>();
+        .collect::<Vec<NonRootMPath>>();
 
     Ok(export_paths)
 }
@@ -465,7 +455,7 @@ async fn get_export_paths_for_changeset<'a>(
 ///
 fn build_multi_mover_for_changeset<'a>(
     logger: &'a Logger,
-    export_paths: &'a [&'a NonRootMPath],
+    export_paths: &'a [NonRootMPath],
 ) -> Result<MultiMover<'a>> {
     let multi_mover: MultiMover = Arc::new(
         move |source_path: &NonRootMPath| -> Result<Vec<NonRootMPath>> {
