@@ -3357,15 +3357,15 @@ def debugprogress(
                     ui.write(_x("processed %d items\n") % i)
     else:
         with progress.bar(ui, _("progressing"), total=num, formatfunc=formatfunc) as p:
-            for i in range(num):
+            for i in range(1, num + 1):
                 if nested:
                     with progress.bar(
                         ui, _("nested progressing"), total=5, formatfunc=formatfunc
                     ) as p2:
-                        for j in range(5):
-                            p2.value = (j, "item %s" % j)
+                        for j in range(1, 6):
                             if sleep:
                                 time.sleep(sleep)
+                            p2.value = (j, "item %s" % j)
 
                 if sleep:
                     time.sleep(sleep)
