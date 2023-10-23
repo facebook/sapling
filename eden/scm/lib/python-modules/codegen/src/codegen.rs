@@ -95,7 +95,7 @@ pub fn generate_code(python: &Path, sys_path: Option<&Path>) -> String {
 
     // Render the generated code.
     let mut generated_lines = Vec::<String>::new();
-    generated_lines.push(format!("// {}enerated by cpython-builder/codegen.", "@g"));
+    generated_lines.push(format!("// {}enerated by python-modules/codegen.", "@g"));
     generated_lines.push(format!(
         "pub static VERSION_MAJOR: usize = {};",
         version_major
