@@ -4,7 +4,7 @@
   $ eagerepo
   $ enable progress
   $ setconfig extensions.progresstest="$TESTDIR/progresstest.py"
-  $ setconfig progress.delay=0 progress.assume-tty=true progress.lockstep=True progress.renderer=rust:simple
+  $ setconfig progress.delay=0 progress.assume-tty=true progress.lockstep=True progress.renderer=simple
 
 simple test
   $ hg progresstest 4 4

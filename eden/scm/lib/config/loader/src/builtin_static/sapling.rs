@@ -468,7 +468,7 @@ threaded=False
 merge=internal:merge
 
 [progress]
-renderer=rust:simple
+renderer=simple
 
 [verify]
 skipmanifests=True

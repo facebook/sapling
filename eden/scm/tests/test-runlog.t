@@ -145,7 +145,7 @@ Make sure runlog works with progress disabled.
 
 Make sure runlog works with rust renderer.
   $ rm $TESTTMP/go
-  $ hg progresstest --waitfile=$TESTTMP/go --config progress.renderer=rust:simple 2 &
+  $ hg progresstest --waitfile=$TESTTMP/go --config progress.renderer=simple 2 &
   $ waitforrunlog
   {
     "id": ".*", (re)
@@ -153,7 +153,7 @@ Make sure runlog works with rust renderer.
       "progresstest",
       "--waitfile=$TESTTMP/go",
       "--config",
-      "progress.renderer=rust:simple",
+      "progress.renderer=simple",
       "2"
     ],
     "pid": \d+, (re)
@@ -171,7 +171,7 @@ Make sure runlog works with rust renderer.
       "progresstest",
       "--waitfile=$TESTTMP/go",
       "--config",
-      "progress.renderer=rust:simple",
+      "progress.renderer=simple",
       "2"
     ],
     "pid": \d+, (re)
@@ -196,7 +196,7 @@ Make sure runlog works with rust renderer.
       "progresstest",
       "--waitfile=$TESTTMP/go",
       "--config",
-      "progress.renderer=rust:simple",
+      "progress.renderer=simple",
       "2"
     ],
     "pid": \d+, (re)
@@ -221,7 +221,7 @@ Make sure runlog works with rust renderer.
       "progresstest",
       "--waitfile=$TESTTMP/go",
       "--config",
-      "progress.renderer=rust:simple",
+      "progress.renderer=simple",
       "2"
     ],
     "pid": \d+, (re)
