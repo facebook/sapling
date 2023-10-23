@@ -116,13 +116,13 @@ py_class!(pub class repo |py| {
     }
 
     def edenapi(&self) -> PyResult<PyEdenApi> {
-        let mut repo_ref = self.inner(py).write();
+        let repo_ref = self.inner(py).read();
         let edenapi_ref = repo_ref.eden_api().map_pyerr(py)?;
         PyEdenApi::create_instance(py, edenapi_ref)
     }
 
     def nullableedenapi(&self) -> PyResult<Option<PyEdenApi>> {
-        let mut repo_ref = self.inner(py).write();
+        let repo_ref = self.inner(py).read();
         match repo_ref.optional_eden_api().map_pyerr(py)? {
             Some(api) => Ok(Some(PyEdenApi::create_instance(py, api)?)),
             None => Ok(None),

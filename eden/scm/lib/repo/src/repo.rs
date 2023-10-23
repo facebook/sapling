@@ -25,6 +25,7 @@ use fs_err as fs;
 use hgcommits::DagCommits;
 use metalog::MetaLog;
 use once_cell::sync::Lazy;
+use once_cell::sync::OnceCell;
 #[cfg(feature = "wdir")]
 use parking_lot::Mutex;
 use parking_lot::RwLock;
@@ -79,7 +80,7 @@ pub struct Repo {
     pub store_requirements: Requirements,
     repo_name: Option<String>,
     metalog: Option<Arc<RwLock<MetaLog>>>,
-    eden_api: Option<Arc<dyn EdenApi>>,
+    eden_api: OnceCell<Arc<dyn EdenApi>>,
     dag_commits: Option<Arc<RwLock<Box<dyn DagCommits + Send + 'static>>>>,
     file_store: Option<Arc<dyn ReadFileContents>>,
     file_scm_store: Option<Arc<scmstore::FileStore>>,
@@ -198,7 +199,7 @@ impl Repo {
             store_requirements,
             repo_name,
             metalog: None,
-            eden_api: None,
+            eden_api: Default::default(),
             dag_commits: None,
             file_store: None,
             file_scm_store: None,
@@ -302,7 +303,7 @@ impl Repo {
     /// constructed.
     ///
     /// Use `optional_eden_api` if `EdenAPI` is optional.
-    pub fn eden_api(&mut self) -> Result<Arc<dyn EdenApi>, EdenApiError> {
+    pub fn eden_api(&self) -> Result<Arc<dyn EdenApi>, EdenApiError> {
         match self.optional_eden_api()? {
             Some(v) => Ok(v),
             None => Err(EdenApiError::Other(anyhow!(
@@ -313,24 +314,22 @@ impl Repo {
 
     /// Private API used by `optional_eden_api` that bypasses checks about whether
     /// EdenAPI should be used or not.
-    fn force_construct_eden_api(&mut self) -> Result<Arc<dyn EdenApi>, EdenApiError> {
-        match &self.eden_api {
-            Some(eden_api) => Ok(eden_api.clone()),
-            None => {
-                tracing::trace!(target: "repo::eden_api", "creating edenapi");
-                tracing::trace!(target: "repo::eden_api", "getting edenapi builder");
-                let eden_api = Builder::from_config(&self.config)?.build()?;
-                tracing::info!(url=eden_api.url(), path=?self.path, "EdenApi built");
-                self.eden_api = Some(eden_api.clone());
-                Ok(eden_api)
-            }
-        }
+    fn force_construct_eden_api(&self) -> Result<Arc<dyn EdenApi>, EdenApiError> {
+        let eden_api =
+            self.eden_api
+                .get_or_try_init(|| -> Result<Arc<dyn EdenApi>, EdenApiError> {
+                    tracing::trace!(target: "repo::eden_api", "creating edenapi");
+                    let eden_api = Builder::from_config(&self.config)?.build()?;
+                    tracing::info!(url=eden_api.url(), path=?self.path, "EdenApi built");
+                    Ok(eden_api)
+                })?;
+        Ok(eden_api.clone())
     }
 
     /// Constructs EdenAPI client if it should be constructed.
     ///
     /// Returns `None` if EdenAPI should not be used.
-    pub fn optional_eden_api(&mut self) -> Result<Option<Arc<dyn EdenApi>>, EdenApiError> {
+    pub fn optional_eden_api(&self) -> Result<Option<Arc<dyn EdenApi>>, EdenApiError> {
         if self.store_requirements.contains("git") {
             tracing::trace!(target: "repo::eden_api", "disabled because of git");
             return Ok(None);
