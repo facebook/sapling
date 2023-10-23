@@ -5,6 +5,211 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::sync::Arc;
+
+use progress_model::BarState;
+use progress_model::ProgressBar;
+use progress_model::Registry;
+use termwiz::cell::AttributeChange;
+use termwiz::cell::Intensity;
+use termwiz::color::AnsiColor;
+use termwiz::color::ColorAttribute;
+use termwiz::surface::change::ChangeSequence;
+use termwiz::surface::Change;
+use unicode_segmentation::UnicodeSegmentation;
+
+use crate::maybe_pad;
+use crate::unit::human_duration;
+use crate::RenderingConfig;
+
+const SPINNER: &[&str] = &["⠉", "⠙", "⠹", "⠸", "⠼", "⠴", "⠤", "⠦", "⠧", "⠇", "⠏", "⠋"];
+const SPINNER_INTERVAL_MS: u128 = 100;
+
+const MAX_TOPIC_LENGTH: usize = 50;
+const MIN_TOPIC_LENGTH: usize = 30;
+
+pub fn render(registry: &Registry, config: &RenderingConfig) -> Vec<Change> {
+    let mut changes = ChangeSequence::new(config.term_width, config.term_height);
+    render_progress_bars(&mut changes, &registry.list_progress_bar(), config);
+    changes.consume()
+}
+
+fn render_progress_bars(
+    changes: &mut ChangeSequence,
+    bars: &[Arc<ProgressBar>],
+    config: &RenderingConfig,
+) {
+    let mut children = HashMap::<u64, Vec<Arc<ProgressBar>>>::new();
+    for bar in bars {
+        if let Some(parent) = bar.parent() {
+            children.entry(parent.id()).or_default().push(bar.clone());
+        }
+    }
+
+    // Note that we "lose" some topic length as bars nest since they get shorter.
+    let topic_length = bars
+        .iter()
+        .map(|b| b.topic().graphemes(true).count())
+        .max()
+        .unwrap_or_default()
+        .min(MAX_TOPIC_LENGTH)
+        .max(MIN_TOPIC_LENGTH);
+
+    let root_bars = bars.iter().filter(|bar| bar.parent().is_none());
+
+    let mut renderer = Renderer {
+        changes,
+        config,
+        topic_length,
+        rendered_so_far: 0,
+    };
+    renderer.render_bars(root_bars, &children, 0, 0);
+}
+
+struct Renderer<'a> {
+    changes: &'a mut ChangeSequence,
+    config: &'a RenderingConfig,
+    topic_length: usize,
+    rendered_so_far: usize,
+}
+
+impl Renderer<'_> {
+    fn render_bars<'a>(
+        &mut self,
+        bars: impl IntoIterator<Item = &'a Arc<ProgressBar>>,
+        id_to_children: &HashMap<u64, Vec<Arc<ProgressBar>>>,
+        depth: usize,
+        pop_out: usize,
+    ) {
+        let bars = bars.into_iter().collect::<Vec<_>>();
+
+        // Are we the first bar being rendered (at this depth).
+        let mut is_first = true;
+
+        for (idx, bar) in bars.iter().enumerate() {
+            // Non-adhoc bars are created in advance and should be shown with no
+            // delay (like a checklist of work).
+            if bar.adhoc()
+                && self.config.delay.as_millis() > 0
+                && bar.since_start().unwrap_or_default() < self.config.delay
+            {
+                continue;
+            }
+
+            if self.rendered_so_far >= self.config.max_bar_count {
+                return;
+            }
+
+            self.rendered_so_far += 1;
+
+            match bar.state() {
+                BarState::Pending => self.changes.add(" "),
+                BarState::Running => {
+                    let spin_idx = (bar.since_creation().as_millis() / SPINNER_INTERVAL_MS)
+                        as usize
+                        % SPINNER.len();
+                    self.changes
+                        .add(AttributeChange::Intensity(Intensity::Half));
+                    self.changes.add(SPINNER[spin_idx]);
+                }
+                BarState::Complete => {
+                    self.changes
+                        .add(AttributeChange::Foreground(AnsiColor::Green.into()));
+                    self.changes.add("✓");
+                }
+            }
+
+            self.changes.add(Change::AllAttributes(Default::default()));
+            self.changes.add(" ");
+
+            // See `bar_prefix` for a description of these values.
+            let (pop_out, is_last) = if self.rendered_so_far >= self.config.max_bar_count {
+                (0, true)
+            } else {
+                (
+                    pop_out,
+                    idx == bars.len() - 1 && id_to_children.get(&bar.id()).is_none(),
+                )
+            };
+
+            self.changes
+                .add(bar_prefix(depth, is_last, is_first, pop_out));
+
+            // Trim off topic length based on depth. The left side of bar is
+            // indented, but we keep the right side of bars aligned (causing
+            // nested bars to get shorter).
+            let topic_length = self.topic_length - 2 * depth;
+
+            let since_start = bar.since_start().map(human_duration).unwrap_or_default();
+
+            let (pos, total) = bar.position_total();
+            if total > 0 {
+                // Here we draw the actual advancing progress bar. We use a
+                // green background to represent the progress.
+
+                self.changes
+                    .add(AttributeChange::Background(AnsiColor::Green.into()));
+                self.changes
+                    .add(AttributeChange::Foreground(AnsiColor::Black.into()));
+
+                let bg_len = ((pos as f64 / total as f64) * topic_length as f64) as usize;
+                let mut graphemes = bar.topic().graphemes(true);
+
+                for i in 0..topic_length {
+                    if i == bg_len {
+                        self.changes
+                            .add(AttributeChange::Background(ColorAttribute::Default));
+                        self.changes
+                            .add(AttributeChange::Foreground(ColorAttribute::Default));
+                    }
+
+                    if topic_length - i == since_start.len() {
+                        // Here we mix in the elapsed time so it shows up
+                        // right-justified within the progress bar. This will
+                        // cut off a long topic.
+                        graphemes = since_start.graphemes(true);
+                        self.changes
+                            .add(AttributeChange::Intensity(Intensity::Half));
+                    }
+
+                    self.changes.add(graphemes.next().unwrap_or(" "));
+                }
+            } else {
+                // We are a spinner with no real progress.
+                self.changes.add(format!(
+                    "{:length$}",
+                    bar.topic(),
+                    length = topic_length - since_start.len()
+                ));
+                self.changes
+                    .add(AttributeChange::Intensity(Intensity::Half));
+                self.changes.add(since_start);
+            }
+
+            self.changes.add(Change::AllAttributes(Default::default()));
+
+            self.changes.add(format!(
+                "{}{}{}\r\n",
+                bar_suffix(depth, is_last, is_first, pop_out),
+                maybe_pad(crate::unit::unit_phrase(bar.unit(), pos, total)),
+                maybe_pad(bar.message().unwrap_or_default().as_ref()),
+            ));
+
+            if let Some(children) = id_to_children.get(&bar.id()) {
+                self.render_bars(
+                    children,
+                    id_to_children,
+                    depth + 1,
+                    compute_pop_out(pop_out, idx == bars.len() - 1),
+                );
+            }
+
+            is_first = false;
+        }
+    }
+}
+
 // Compute pop_out value for our children bars.
 // - `pop_out` is our pop_out value (from our parents).
 // - `is_final_bar` is whether we are the last bar at our depth.

@@ -334,6 +334,18 @@ impl ProgressBar {
             BarState::Complete
         }
     }
+
+    pub fn parent(&self) -> Option<Arc<Self>> {
+        self.parent.clone()
+    }
+
+    pub fn id(&self) -> u64 {
+        self.id
+    }
+
+    pub fn adhoc(&self) -> bool {
+        self.adhoc
+    }
 }
 
 impl fmt::Debug for ProgressBar {
