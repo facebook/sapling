@@ -39,8 +39,11 @@
 //! ```ignore
 //! // Run this as part of startup.
 //! fn register_impl1() {
-//!     factory::register_constructor("impl1", |input: &str| -> Option<anyhow::Result<dyn Foo>> {
-//!         input.strip_prefix("impl1:").map(|rest| Some(FooImpl::new(rest)))
+//!     factory::register_constructor("impl1", |input: &str| -> anyhow::Result<Option<Box<dyn Foo>>> {
+//!         match input.strip_prefix("impl1:") {
+//!             None => Ok(None),
+//!             Some(rest) => Ok(FooImpl::new(rest)?),
+//!         }
 //!     });
 //! }
 //! ```
@@ -60,15 +63,15 @@ use std::sync::RwLock;
 /// input/output type, but the `name` is unique per input/output type.
 ///
 /// The return value of `func` could be:
-/// - `None`: continue try other registered functions.
-/// - `Some(Err(...))`: error out and stop trying other functions.
+/// - `Ok(None)`: continue try other registered functions.
+/// - `Err(...)`: error out and stop trying other functions.
 /// - `Ok(...)`: success and stop trying other functions.
 ///
 /// When there are multiple constructors for the given input/output types, the
 /// execution order is based on name.
 pub fn register_constructor<In: 'static + ?Sized, Out: 'static>(
     name: &'static str,
-    func: fn(&In) -> Option<anyhow::Result<Out>>,
+    func: fn(&In) -> anyhow::Result<Option<Out>>,
 ) {
     tracing::debug!(
         in_type = any::type_name::<In>(),
@@ -106,12 +109,12 @@ pub fn call_constructor<In: 'static + ?Sized, Out: 'static>(input: &In) -> anyho
     if let Some(registered) = table.get(&key) {
         for (name, dyn_func) in registered {
             tracing::trace!(" trying {}", name);
-            let func: &fn(&In) -> Option<anyhow::Result<Out>> =
+            let func: &fn(&In) -> anyhow::Result<Option<Out>> =
                 dyn_func.downcast_ref().expect("typechecked by TypeId");
             match func(input) {
-                None => error_context.attempted_func_names.push(name),
-                Some(Ok(v)) => return Ok(v),
-                Some(Err(e)) => {
+                Ok(None) => error_context.attempted_func_names.push(name),
+                Ok(Some(v)) => return Ok(v),
+                Err(e) => {
                     error_context.error_func_name = Some(name);
                     return Err(e.context(error_context));
                 }
@@ -192,8 +195,8 @@ mod tests {
     #[test]
     fn test_single_constructor() {
         struct S(&'static str);
-        register_constructor("parse int", |s: &S| -> Option<anyhow::Result<u32>> {
-            Some(s.0.parse::<u32>().map_err(Into::into))
+        register_constructor("parse int", |s: &S| -> anyhow::Result<Option<u32>> {
+            Ok(Some(s.0.parse::<u32>()?))
         });
         assert_eq!(call_constructor::<_, u32>(&S("12")).unwrap(), 12);
 
@@ -209,16 +212,18 @@ mod tests {
     #[test]
     fn test_multiple_constructors() {
         struct S(&'static str);
-        register_constructor("1 parse dec", |s: &S| -> Option<anyhow::Result<u32>> {
+        register_constructor("1 parse dec", |s: &S| -> anyhow::Result<Option<u32>> {
             if s.0.contains('x') {
-                None
+                Ok(None)
             } else {
-                Some(s.0.parse::<u32>().map_err(Into::into))
+                Ok(Some(s.0.parse::<u32>()?))
             }
         });
-        register_constructor("2 parse hex", |s: &S| -> Option<anyhow::Result<u32>> {
-            s.0.strip_prefix("0x")
-                .map(|rest| u32::from_str_radix(rest, 16).map_err(Into::into))
+        register_constructor("2 parse hex", |s: &S| -> anyhow::Result<Option<u32>> {
+            match s.0.strip_prefix("0x") {
+                None => Ok(None),
+                Some(rest) => Ok(Some(u32::from_str_radix(rest, 16)?)),
+            }
         });
         assert!(call_constructor::<_, u32>(&S("z")).is_err());
         assert!(call_constructor::<_, i32>(&S("12")).is_err());
@@ -230,8 +235,8 @@ mod tests {
     fn test_unsized() {
         #[derive(Debug)]
         struct O(usize);
-        register_constructor("unsized", |s: &str| -> Option<anyhow::Result<O>> {
-            Some(Ok(O(s.len())))
+        register_constructor("unsized", |s: &str| -> anyhow::Result<Option<O>> {
+            Ok(Some(O(s.len())))
         });
         assert_eq!(call_constructor::<str, O>("foo").unwrap().0, 3);
     }
