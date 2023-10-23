@@ -15,6 +15,7 @@ rust_library(
         "cargo_toml_config": {
             "dependencies_override": {
                 "dependencies": {
+                    "constructors": {"default-features": False},
                     "indexedlog": {"features": ["configurable"]},
                     "revisionstore": {"features": ["ods"]},
                 },
@@ -45,6 +46,7 @@ rust_library(
         "fbsource//third-party/rust:tracing",
         "fbsource//third-party/rust:tracing-subscriber",
         "//eden/scm/lib/config/loader:configloader",
+        "//eden/scm/lib/constructors:constructors",
         "//eden/scm/lib/eagerepo:eagerepo",
         "//eden/scm/lib/edenapi:edenapi",
         "//eden/scm/lib/identity:identity",

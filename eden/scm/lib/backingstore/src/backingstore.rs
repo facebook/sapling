@@ -38,6 +38,8 @@ pub struct BackingStore {
 
 impl BackingStore {
     pub fn new<P: AsRef<Path>>(root: P, allow_retries: bool) -> Result<Self> {
+        constructors::init();
+
         let root = root.as_ref();
         let mut config = configloader::hg::load(Some(root), &[], &[])?;
 

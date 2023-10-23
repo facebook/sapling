@@ -12,6 +12,7 @@ crate-type = ["lib", "staticlib"]
 [dependencies]
 anyhow = "=1.0.72"
 configloader = { version = "0.1.0", path = "../config/loader" }
+constructors = { version = "0.1.0", path = "../constructors", default-features = false }
 eagerepo = { version = "0.1.0", path = "../eagerepo" }
 edenapi = { version = "0.1.0", path = "../edenapi" }
 env_logger = "0.10"

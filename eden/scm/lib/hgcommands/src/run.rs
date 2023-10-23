@@ -38,7 +38,6 @@ use configloader::config::ConfigSet;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use fail::FailScenario;
-use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use progress_model::Registry;
 use repo::repo::Repo;
@@ -94,7 +93,7 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
             .chain(rest_args.iter().cloned())
             .collect();
         let mut hgpython = HgPython::new(&args);
-        init_abstraction_impls();
+        constructors::init();
         return hgpython.run_python(&args, io) as i32;
     }
 
@@ -119,7 +118,7 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
     setup_ctrlc();
 
     let scenario = setup_fail_points();
-    init_abstraction_impls();
+    constructors::init();
 
     // This is intended to be "process start". "exec/hgmain" seems to be
     // a better place for it. However, chg makes it tricky. Because if hgmain
@@ -870,16 +869,6 @@ fn setup_http(global_opts: &HgGlobalOpts) {
     if global_opts.insecure {
         hg_http::enable_insecure_mode();
     }
-}
-
-fn init_abstraction_impls() {
-    static REGISTERED: Lazy<()> = Lazy::new(|| {
-        gitstore::init();
-        eagerepo::init();
-        edenapi::Builder::register_customize_build_func(eagerepo::edenapi_from_config);
-    });
-
-    *REGISTERED
 }
 
 static FAIL_SETUP: AtomicBool = AtomicBool::new(false);
