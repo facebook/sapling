@@ -827,24 +827,28 @@ EdenServiceHandler::semifuture_getSHA1(
   return wrapImmediateFuture(
              std::move(helper),
              std::move(notificationFuture)
-                 .thenValue([this,
-                             mountHandle,
-                             paths = std::move(paths),
-                             fetchContext =
-                                 fetchContext.copy()](auto&&) mutable {
-                   std::vector<ImmediateFuture<Hash20>> futures;
-                   futures.reserve(paths->size());
-                   for (auto& path : *paths) {
-                     futures.push_back(makeImmediateFutureWith([&]() mutable {
-                       return getSHA1ForPath(
-                           mountHandle.getEdenMount(),
-                           RelativePath{std::move(path)},
-                           fetchContext);
-                     }));
-                   }
-
-                   return collectAll(std::move(futures));
-                 })
+                 .thenValue(
+                     [mountHandle,
+                      paths = std::move(paths),
+                      fetchContext = fetchContext.copy(),
+                      executor = server_->getServer()->getThreadManager()](
+                         auto&&) mutable {
+                       return collectAll(applyToVirtualInode(
+                           mountHandle.getRootInode(),
+                           *paths,
+                           [mountHandle, fetchContext = fetchContext.copy()](
+                               const VirtualInode& inode, RelativePath path) {
+                             return inode
+                                 .getSHA1(
+                                     path,
+                                     mountHandle.getObjectStorePtr(),
+                                     fetchContext)
+                                 .semi();
+                           },
+                           mountHandle.getObjectStorePtr(),
+                           fetchContext,
+                           executor.get()));
+                     })
                  .ensure([mountHandle] {})
                  .thenValue([](std::vector<folly::Try<Hash20>> results) {
                    auto out = std::make_unique<std::vector<SHA1Result>>();
@@ -882,27 +886,6 @@ ImmediateFuture<Hash32> EdenServiceHandler::getBlake3ForPath(
        objectStore = std::move(objectStore),
        fetchContext = fetchContext.copy()](const VirtualInode& virtualInode) {
         return virtualInode.getBlake3(path, objectStore, fetchContext);
-      });
-}
-
-ImmediateFuture<Hash20> EdenServiceHandler::getSHA1ForPath(
-    const EdenMount& edenMount,
-    RelativePath path,
-    const ObjectFetchContextPtr& fetchContext) {
-  if (path.empty()) {
-    return ImmediateFuture<Hash20>(newEdenError(
-        EINVAL,
-        EdenErrorType::ARGUMENT_ERROR,
-        "path cannot be the empty string"));
-  }
-
-  auto objectStore = edenMount.getObjectStore();
-  auto inodeFut = edenMount.getVirtualInode(path, fetchContext);
-  return std::move(inodeFut).thenValue(
-      [path = std::move(path),
-       objectStore = std::move(objectStore),
-       fetchContext = fetchContext.copy()](const VirtualInode& virtualInode) {
-        return virtualInode.getSHA1(path, objectStore, fetchContext);
       });
 }
 
