@@ -6332,6 +6332,9 @@ def update(
     inactive=None,
     **opts,
 ):
+
+    ui.log("checkout_info", checkout_mode="python")
+
     if opts.get("continue"):
         with repo.wlock():
             if repo.localvfs.exists("updatemergestate"):
