@@ -31,7 +31,7 @@ class VirtualInodeLoader {
       : executor_{std::move(executor)} {}
 
   // Arrange to load the inode for the input path
-  folly::Future<VirtualInode> load(RelativePathPiece path) {
+  folly::SemiFuture<VirtualInode> load(RelativePathPiece path) {
     VirtualInodeLoader* parent = this;
 
     // Build out the tree if VirtualInodeLoaders to match the input path
@@ -47,14 +47,7 @@ class VirtualInodeLoader {
     // is the root.
 
     parent->promises_.emplace_back();
-    return parent->promises_.back().getFuture();
-  }
-
-  // Arrange to load the inode for the input path, given
-  // a stringy input.  If the path is not well formed then
-  // the error is recorded in the returned future.
-  folly::Future<VirtualInode> load(folly::StringPiece path) {
-    return folly::makeFutureWith([&] { return load(RelativePathPiece(path)); });
+    return parent->promises_.back().getSemiFuture();
   }
 
   // Called to signal that a load attempt has completed.
@@ -162,7 +155,7 @@ auto applyToVirtualInode(
     const std::shared_ptr<ObjectStore>& store,
     const ObjectFetchContextPtr& fetchContext,
     folly::Executor::KeepAlive<> executor) {
-  using FuncRet = folly::invoke_result_t<Func&, VirtualInode&>;
+  using FuncRet = folly::invoke_result_t<Func&, VirtualInode, RelativePath>;
   using Result = typename folly::isFutureOrSemiFuture<FuncRet>::Inner;
 
   detail::VirtualInodeLoader loader{std::move(executor)};
@@ -173,8 +166,14 @@ auto applyToVirtualInode(
   std::vector<folly::SemiFuture<Result>> results;
   results.reserve(paths.size());
   for (const auto& path : paths) {
-    results.emplace_back(loader.load(path).thenValue(
-        [cb, path](VirtualInode&& inode) { return (*cb)(inode); }));
+    auto result = folly::makeSemiFutureWith([&] {
+      auto relPath = RelativePathPiece{path};
+      return loader.load(relPath).deferValue(
+          [cb, relPath = relPath.copy()](VirtualInode&& inode) mutable {
+            return (*cb)(std::move(inode), std::move(relPath));
+          });
+    });
+    results.push_back(std::move(result));
   }
 
   loader.loaded(

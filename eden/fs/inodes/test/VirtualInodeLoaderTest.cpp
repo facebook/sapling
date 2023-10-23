@@ -48,9 +48,9 @@ TEST(InodeLoader, load) {
         rootInode,
         std::vector<std::string>{
             "dir/a.txt", "not/exist/a", "not/exist/b", "dir/sub/b.txt"},
-        [&](VirtualInode inode) -> folly::SemiFuture<Hash20> {
-          return inode.getSHA1("INVALIDPATH"_relpath, objectStore, fetchContext)
-              .semi();
+        [&](VirtualInode inode,
+            RelativePath path) -> folly::SemiFuture<Hash20> {
+          return inode.getSHA1(path, objectStore, fetchContext).semi();
         },
         objectStore,
         fetchContext,
@@ -73,9 +73,8 @@ TEST(InodeLoader, load) {
             "not/exist/a",
             "not/exist/b",
             "dir/sub/b.txt"},
-        [&](VirtualInode inode) {
-          return inode.getSHA1("INVALIDPATH"_relpath, objectStore, fetchContext)
-              .semi();
+        [&](VirtualInode inode, RelativePath path) {
+          return inode.getSHA1(path, objectStore, fetchContext).semi();
         },
         objectStore,
         fetchContext,
@@ -96,9 +95,8 @@ TEST(InodeLoader, load) {
     auto resultsFuture = collectAll(applyToVirtualInode(
         rootInode,
         std::vector<std::string>{"dir/a.txt", "/invalid///exist/a"},
-        [&](VirtualInode inode) {
-          return inode.getSHA1("INVALIDPATH"_relpath, objectStore, fetchContext)
-              .semi();
+        [&](VirtualInode inode, RelativePath path) {
+          return inode.getSHA1(path, objectStore, fetchContext).semi();
         },
         objectStore,
         fetchContext,
@@ -125,9 +123,9 @@ TEST(InodeLoader, notReady) {
         rootInode,
         std::vector<std::string>{
             "dir/a.txt", "not/exist/a", "not/exist/b", "dir/sub/b.txt"},
-        [&](VirtualInode inode) -> folly::SemiFuture<Hash20> {
-          return inode.getSHA1("INVALIDPATH"_relpath, objectStore, fetchContext)
-              .semi();
+        [&](VirtualInode inode,
+            RelativePath path) -> folly::SemiFuture<Hash20> {
+          return inode.getSHA1(path, objectStore, fetchContext).semi();
         },
         objectStore,
         fetchContext,
