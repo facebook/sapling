@@ -22,6 +22,8 @@ import {unwrap} from 'shared/utils';
  */
 export interface ServerPlatform {
   platformName: string;
+  /** Override the analytics Session ID. Should be globally unique. */
+  sessionId?: string;
   handleMessageFromClient(
     repo: Repository | undefined,
     message: PlatformSpecificClientToServerMessages,

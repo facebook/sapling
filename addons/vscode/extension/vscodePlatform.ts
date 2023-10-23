@@ -21,6 +21,7 @@ import * as vscode from 'vscode';
 
 export const VSCodePlatform: ServerPlatform = {
   platformName: 'vscode',
+  sessionId: vscode.env.sessionId,
   handleMessageFromClient: async (
     repo: Repository | undefined,
     message: PlatformSpecificClientToServerMessages,
