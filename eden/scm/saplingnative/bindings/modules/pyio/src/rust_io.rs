@@ -151,7 +151,7 @@ py_class!(pub class PyRustIO |py| {
         } else if self.isstderr(py)? {
             Ok(2)
         } else {
-            Err(PyErr::new::<exc::IOError, _>(py, "stream does not have a fileno"))
+            Err(PyErr::from_instance(py, py.import("io")?.get(py, "UnsupportedOperation")?))
         }
     }
 });
