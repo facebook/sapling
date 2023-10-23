@@ -512,9 +512,11 @@ fn spawn_progress_thread(
 
     let progress = io.progress();
 
+    let (term_width, term_height) = progress.term_size();
     let mut config = progress_render::RenderingConfig {
         delay: Duration::from_secs_f64(config.get_or("progress", "delay", || 3.0)?),
-        term_width: progress.term_size().0,
+        term_width,
+        term_height,
         ..Default::default()
     };
 
@@ -536,7 +538,9 @@ fn spawn_progress_thread(
             }
 
             if !disable_rendering {
-                config.term_width = progress.term_size().0;
+                let (term_width, term_height) = progress.term_size();
+                config.term_width = term_width;
+                config.term_height = term_height;
 
                 let changes = (render_function)(registry, &config);
                 if changes != last_changes {
