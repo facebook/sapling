@@ -157,6 +157,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 }
 
 async fn async_main(app: MononokeApp) -> Result<(), Error> {
+    let start_time = std::time::Instant::now();
+
     let args: GitExportArgs = app.args()?;
     let logger = app.logger();
     let ctx = app.new_basic_context();
@@ -251,6 +253,12 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         args.git_repo_path,
     )
     .await?;
+
+    info!(
+        logger,
+        "Finished export in {} seconds",
+        start_time.elapsed().as_secs()
+    );
 
     Ok(())
 }

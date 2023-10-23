@@ -1,3 +1,4 @@
+load("@fbcode_macros//build_defs:native_rules.bzl", "buck_command_alias")
 load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
 load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
 load("@fbcode_macros//build_defs:rust_unittest.bzl", "rust_unittest")
@@ -97,4 +98,29 @@ rust_binary(
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/repo_authorization:repo_authorization",
     ],
+)
+
+# Some helper targets to facilitate quick runs exporting directories from
+# production repos
+
+buck_command_alias(
+    name = "quick_prod_run",
+    args = [
+        "--log-level=INFO",
+        "--prod",
+        "--with-readonly-storage=true",
+        "--derive-remotely",
+    ],
+    exe = ":gitexport",
+)
+
+buck_command_alias(
+    name = "quick_fbsource_run",
+    args = [
+        "-R",
+        "fbsource",
+        "-B",
+        "master",
+    ],
+    exe = ":quick_prod_run",
 )
