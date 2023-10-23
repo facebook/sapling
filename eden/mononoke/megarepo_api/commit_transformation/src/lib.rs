@@ -16,14 +16,12 @@ use anyhow::Error;
 use anyhow::Result;
 use blobrepo::save_bonsai_changesets;
 use blobrepo_utils::convert_diff_result_into_file_change_for_diamond_merge;
-use blobstore::Loadable;
 use blobsync::copy_content;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarksRef;
 use borrowed::borrowed;
 use changeset_fetcher::ChangesetFetcherArc;
 use changesets::ChangesetsRef;
-use cloned::cloned;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use filestore::FilestoreConfigRef;
@@ -33,8 +31,6 @@ use futures::StreamExt;
 use futures::TryStreamExt;
 use manifest::get_implicit_deletes;
 use megarepo_configs::types::SourceMappingRules;
-use mercurial_derivation::DeriveHgChangeset;
-use mercurial_types::HgManifestId;
 use mononoke_types::non_root_mpath_element_iter;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
@@ -42,12 +38,14 @@ use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::FileChange;
 use mononoke_types::NonRootMPath;
+use mononoke_types::SkeletonManifestId;
 use mononoke_types::TrackedFileChange;
 use pushrebase::find_bonsai_diff;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
+use skeleton_manifest::RootSkeletonManifestId;
 use slog::debug;
 use slog::Logger;
 use sorted_vector_map::SortedVectorMap;
@@ -176,21 +174,22 @@ pub fn create_directory_source_to_target_multi_mover(
     ))
 }
 
-/// Get `HgManifestId`s for a set of `ChangesetId`s
+/// Get `SkeletonManifestId`s for a set of `ChangesetId`s
 /// This is needed for the purposes of implicit delete detection
-async fn get_manifest_ids<'a, I: IntoIterator<Item = ChangesetId>>(
+async fn get_skeleton_manifest_ids<'a, I: IntoIterator<Item = ChangesetId>>(
     ctx: &'a CoreContext,
     repo: &'a impl Repo,
     bcs_ids: I,
-) -> Result<Vec<HgManifestId>, Error> {
+) -> Result<Vec<SkeletonManifestId>, Error> {
     try_join_all(bcs_ids.into_iter().map({
-        |bcs_id| {
-            cloned!(ctx, repo);
-            async move {
-                let cs_id = repo.derive_hg_changeset(&ctx, bcs_id).await?;
-                let hg_blob_changeset = cs_id.load(&ctx, repo.repo_blobstore()).await?;
-                Ok(hg_blob_changeset.manifestid())
-            }
+        |bcs_id| async move {
+            let repo_derived_data = repo.repo_derived_data();
+
+            let root_skeleton_manifest_id = repo_derived_data
+                .derive::<RootSkeletonManifestId>(ctx, bcs_id)
+                .await?;
+
+            Ok(root_skeleton_manifest_id.into_skeleton_manifest_id())
         }
     }))
     .await
@@ -233,7 +232,8 @@ pub async fn get_renamed_implicit_deletes<'a, I: IntoIterator<Item = ChangesetId
     mover: MultiMover<'a>,
     source_repo: &'a impl Repo,
 ) -> Result<Vec<Vec<NonRootMPath>>, Error> {
-    let parent_manifest_ids = get_manifest_ids(ctx, source_repo, parent_changeset_ids).await?;
+    let parent_manifest_ids =
+        get_skeleton_manifest_ids(ctx, source_repo, parent_changeset_ids).await?;
 
     // Get all the paths that were added or modified and thus are capable of
     // implicitly deleting existing directories.
@@ -756,6 +756,7 @@ mod test {
 
     use anyhow::bail;
     use blobrepo::save_bonsai_changesets;
+    use blobstore::Loadable;
     use fbinit::FacebookInit;
     use maplit::btreemap;
     use maplit::hashmap;

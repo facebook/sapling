@@ -17,7 +17,6 @@ use futures::stream;
 use futures::Stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
-use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
 
 use crate::Entry;
@@ -45,20 +44,20 @@ use crate::ManifestOps;
 /// ```
 /// Dir `/p1/p2` was implicitly delted (meaning files `/p1/p2/p3` and
 /// `/p1/p2/p4` were implicitly delted)
-fn get_implicit_deletes_single_parent<ManifestId, FileId, Store, I>(
+fn get_implicit_deletes_single_parent<ManifestId, Store, I, L>(
     ctx: CoreContext,
     store: Store,
     paths_added_in_a_child: I,
     parent: ManifestId,
 ) -> impl Stream<Item = Result<NonRootMPath>>
 where
-    FileId: Hash + Eq + Send + Sync + Unpin + 'static,
     ManifestId: Hash + Eq + StoreLoadable<Store> + Send + Sync + ManifestOps<Store> + 'static,
     Store: Send + Sync + Clone + 'static,
     <ManifestId as StoreLoadable<Store>>::Value:
-        Manifest<TreeId = ManifestId, LeafId = (FileType, FileId)> + Send + Sync,
+        Manifest<TreeId = ManifestId, LeafId = L> + Send + Sync,
     <<ManifestId as StoreLoadable<Store>>::Value as Manifest>::LeafId: Send + Copy + Eq,
     I: IntoIterator<Item = NonRootMPath>,
+    L: Unpin,
 {
     parent
         .find_entries(ctx.clone(), store.clone(), paths_added_in_a_child)
@@ -96,21 +95,21 @@ where
 
 /// Get implicit deletes in parent manifests,
 /// caused by introducing new paths into a child
-pub fn get_implicit_deletes<'a, ManifestId, FileId, Store, I, M>(
+pub fn get_implicit_deletes<'a, ManifestId, Store, I, M, L>(
     ctx: &'a CoreContext,
     store: Store,
     paths_added_in_a_child: I,
     parents: M,
 ) -> impl Stream<Item = Result<NonRootMPath>> + 'a
 where
-    FileId: Hash + Eq + Send + Sync + Unpin + 'static,
     ManifestId: Hash + Eq + StoreLoadable<Store> + Send + Sync + ManifestOps<Store> + 'static,
     Store: Send + Sync + Clone + 'static,
     <ManifestId as StoreLoadable<Store>>::Value:
-        Manifest<TreeId = ManifestId, LeafId = (FileType, FileId)> + Send + Sync,
+        Manifest<TreeId = ManifestId, LeafId = L> + Send + Sync,
     <<ManifestId as StoreLoadable<Store>>::Value as Manifest>::LeafId: Send + Copy + Eq,
     I: IntoIterator<Item = NonRootMPath> + Clone + 'a,
     M: IntoIterator<Item = ManifestId> + 'a,
+    L: Unpin,
 {
     stream::iter(parents)
         .map(move |parent| {
@@ -136,6 +135,7 @@ mod test {
 
     use fbinit::FacebookInit;
     use maplit::hashmap;
+    use mononoke_types::FileType;
 
     use super::*;
     use crate::tests::ctx;
