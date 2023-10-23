@@ -7,6 +7,8 @@
 
 use std::borrow::Cow;
 use std::fmt;
+use std::marker::PhantomData;
+use std::rc::Rc;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering::AcqRel;
 use std::sync::atomic::Ordering::Acquire;
@@ -35,6 +37,12 @@ pub struct ProgressBar {
     created_at: Instant,
     started_at: ArcSwapOption<Instant>,
     finished_at: ArcSwapOption<Instant>,
+
+    // Note that this is a strong reference, which could slow down orphaned bar
+    // cleanup. In practice we probably could use a weak reference here, but if
+    // we do "lose" a child progress bar to another thread, it would be useful
+    // to see the child's ancestor bars (even if they have gone out of scope).
+    parent: Option<Arc<ProgressBar>>,
 }
 
 struct Builder {
@@ -43,6 +51,7 @@ struct Builder {
     topic: Cow<'static, str>,
     total: u64,
     unit: Cow<'static, str>,
+    parent: Option<Arc<ProgressBar>>,
 }
 
 impl Builder {
@@ -53,6 +62,7 @@ impl Builder {
             topic: "".into(),
             total: 0,
             unit: "".into(),
+            parent: None,
         }
     }
 
@@ -81,10 +91,15 @@ impl Builder {
         self
     }
 
-    fn started(self) -> Arc<ProgressBar> {
-        let bar = self.pending();
-        bar.start();
-        bar
+    fn thread_local_parent(mut self) -> Self {
+        self.parent = self.registry.get_active_progress_bar();
+        self
+    }
+
+    fn active(self) -> ActiveProgressBar {
+        let registry = self.registry.clone();
+        let bar = self.thread_local_parent().pending();
+        ProgressBar::push_active(bar, &registry)
     }
 
     fn pending(self) -> Arc<ProgressBar> {
@@ -97,6 +112,7 @@ impl Builder {
             created_at: Instant::now(),
             started_at: Default::default(),
             finished_at: Default::default(),
+            parent: self.parent,
         });
         if self.register {
             self.registry.register_progress_bar(&bar);
@@ -133,11 +149,56 @@ impl ProgressBar {
         total: u64,
         unit: impl Into<Cow<'static, str>>,
     ) -> Arc<Self> {
-        Builder::new()
+        let bar = Builder::new()
             .topic(topic)
             .total(total)
             .unit(unit)
-            .started()
+            .pending();
+        bar.start();
+        bar
+    }
+
+    /// Start `bar` and set as active. When returned guard is dropped, progress
+    /// bar will be marked finished and unset as the active bar.
+    pub fn push_active(bar: Arc<Self>, registry: &Registry) -> ActiveProgressBar {
+        Self::set_active(&bar, registry);
+        ActiveProgressBar {
+            bar,
+            registry: registry.clone(),
+            _phantom: PhantomData,
+        }
+    }
+
+    /// Mark `bar` as finished and unset it as the active progress bar. This is
+    /// exposed for Python use - you probably don't want to call it directly.
+    pub fn pop_active(bar: &Arc<Self>, registry: &Registry) {
+        bar.finish();
+
+        if let Some(active) = registry.get_active_progress_bar() {
+            // Only update things if we are the active bar.
+            if Arc::ptr_eq(&active, bar) {
+                let mut parent = bar.parent.as_ref();
+
+                // Bars could have been dropped out of order. Set our first
+                // non-finished ancestor as the active bar.
+                while let Some(bar) = parent {
+                    if bar.state() != BarState::Complete {
+                        break;
+                    }
+                    parent = bar.parent.as_ref();
+                }
+
+                registry.set_active_progress_bar(parent.cloned());
+            }
+        }
+    }
+
+    /// Start `bar` and set as active. It is up to the caller to call
+    /// pop_active. This is exposed for Python use - you probably don't want to
+    /// call it directly.
+    pub fn set_active(bar: &Arc<Self>, registry: &Registry) {
+        bar.start();
+        registry.set_active_progress_bar(Some(bar.clone()));
     }
 
     fn start(&self) {
@@ -231,6 +292,27 @@ impl fmt::Debug for ProgressBar {
             write!(f, " {}", message)?;
         }
         Ok(())
+    }
+}
+
+impl std::ops::Deref for ActiveProgressBar {
+    type Target = Arc<ProgressBar>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.bar
+    }
+}
+
+pub struct ActiveProgressBar {
+    bar: Arc<ProgressBar>,
+    registry: Registry,
+    // Disallow Sending to other threads.
+    _phantom: PhantomData<Rc<()>>,
+}
+
+impl Drop for ActiveProgressBar {
+    fn drop(&mut self) {
+        ProgressBar::pop_active(&self.bar, &self.registry);
     }
 }
 
@@ -339,9 +421,128 @@ mod tests {
             .topic("hello")
             // We can override registry.
             .registry(&reg)
-            .started();
+            .pending();
         assert_eq!(reg.list_progress_bar().len(), 1);
-        assert!(bar.since_start().is_some());
+        assert!(bar.since_start().is_none());
         assert_eq!(bar.topic(), "hello");
+    }
+
+    #[test]
+    fn test_active_bar_per_thread() {
+        let reg = Registry::default();
+
+        assert!(reg.get_active_progress_bar().is_none());
+
+        let bar = Builder::new().registry(&reg).active();
+        assert!(Arc::ptr_eq(&reg.get_active_progress_bar().unwrap(), &*bar));
+
+        let reg2 = reg.clone();
+        std::thread::spawn(|| {
+            let reg = reg2;
+
+            assert!(reg.get_active_progress_bar().is_none());
+
+            {
+                let bar = Builder::new().registry(&reg).active();
+                assert!(Arc::ptr_eq(&reg.get_active_progress_bar().unwrap(), &*bar));
+            }
+
+            assert!(reg.get_active_progress_bar().is_none());
+        })
+        .join()
+        .unwrap();
+
+        assert!(Arc::ptr_eq(&reg.get_active_progress_bar().unwrap(), &*bar));
+
+        drop(bar);
+
+        assert!(reg.get_active_progress_bar().is_none());
+    }
+
+    #[test]
+    fn test_active_bar_nested() {
+        let reg = Registry::default();
+
+        let bar1 = Builder::new().registry(&reg).active();
+        assert!(Arc::ptr_eq(&reg.get_active_progress_bar().unwrap(), &*bar1));
+
+        let bar2 = Builder::new().registry(&reg).active();
+        assert!(Arc::ptr_eq(&reg.get_active_progress_bar().unwrap(), &*bar2));
+
+        drop(bar2);
+        assert!(Arc::ptr_eq(&reg.get_active_progress_bar().unwrap(), &*bar1));
+
+        drop(bar1);
+        assert!(&reg.get_active_progress_bar().is_none());
+    }
+
+    #[test]
+    fn test_active_bar_dont_leak() {
+        let reg = Registry::default();
+
+        let bar = Builder::new().registry(&reg).pending();
+        assert!(reg.get_active_progress_bar().is_none());
+
+        ProgressBar::set_active(&bar, &reg);
+        assert!(Arc::ptr_eq(&reg.get_active_progress_bar().unwrap(), &bar));
+
+        // Didn't pop_active for whatever reason.
+        drop(bar);
+
+        // We are still active.
+        assert!(reg.get_active_progress_bar().is_some());
+
+        // But eventually we will get cleaned up.
+        reg.remove_orphan_models();
+        assert!(reg.get_active_progress_bar().is_none());
+        assert!(reg.list_progress_bar().is_empty());
+    }
+
+    #[test]
+    fn test_active_bar_manual_management() {
+        let reg = Registry::default();
+
+        let bar1 = Builder::new().registry(&reg).pending();
+        assert!(reg.get_active_progress_bar().is_none());
+
+        ProgressBar::set_active(&bar1, &reg);
+        assert!(Arc::ptr_eq(&reg.get_active_progress_bar().unwrap(), &bar1));
+
+        let bar2 = Builder::new()
+            .registry(&reg)
+            .thread_local_parent()
+            .pending();
+        ProgressBar::set_active(&bar2, &reg);
+        assert!(Arc::ptr_eq(&reg.get_active_progress_bar().unwrap(), &bar2));
+
+        ProgressBar::pop_active(&bar2, &reg);
+        assert!(Arc::ptr_eq(&reg.get_active_progress_bar().unwrap(), &bar1));
+
+        ProgressBar::pop_active(&bar1, &reg);
+        assert!(&reg.get_active_progress_bar().is_none());
+    }
+
+    #[test]
+    fn test_active_bar_out_of_order() {
+        let reg = Registry::default();
+
+        let bar1 = Builder::new().registry(&reg).active();
+        let bar2 = Builder::new().registry(&reg).active();
+        let bar3 = Builder::new().registry(&reg).active();
+
+        // Pop out of order.
+        drop(bar2);
+
+        // bar3 is still active.
+        assert!(Arc::ptr_eq(&reg.get_active_progress_bar().unwrap(), &bar3));
+
+        drop(bar3);
+
+        // bar1 becomes active since bar2 is already finished.
+        assert!(Arc::ptr_eq(&reg.get_active_progress_bar().unwrap(), &bar1));
+
+        drop(bar1);
+
+        assert!(reg.get_active_progress_bar().is_none());
     }
 }
