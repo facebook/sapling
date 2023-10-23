@@ -774,24 +774,28 @@ EdenServiceHandler::semifuture_getBlake3(
   return wrapImmediateFuture(
              std::move(helper),
              std::move(notificationFuture)
-                 .thenValue([this,
-                             mountHandle,
-                             paths = std::move(paths),
-                             fetchContext =
-                                 fetchContext.copy()](auto&&) mutable {
-                   std::vector<ImmediateFuture<Hash32>> futures;
-                   futures.reserve(paths->size());
-                   for (auto& path : *paths) {
-                     futures.push_back(makeImmediateFutureWith([&]() mutable {
-                       return getBlake3ForPath(
-                           mountHandle.getEdenMount(),
-                           RelativePath{std::move(path)},
-                           fetchContext);
-                     }));
-                   }
-
-                   return collectAll(std::move(futures));
-                 })
+                 .thenValue(
+                     [mountHandle,
+                      paths = std::move(paths),
+                      fetchContext = fetchContext.copy(),
+                      executor = server_->getServer()->getThreadManager()](
+                         auto&&) mutable {
+                       return collectAll(applyToVirtualInode(
+                           mountHandle.getRootInode(),
+                           *paths,
+                           [mountHandle, fetchContext = fetchContext.copy()](
+                               const VirtualInode& inode, RelativePath path) {
+                             return inode
+                                 .getBlake3(
+                                     path,
+                                     mountHandle.getObjectStorePtr(),
+                                     fetchContext)
+                                 .semi();
+                           },
+                           mountHandle.getObjectStorePtr(),
+                           fetchContext,
+                           executor.get()));
+                     })
                  .ensure([mountHandle] {})
                  .thenValue([](std::vector<folly::Try<Hash32>> results) {
                    auto out = std::make_unique<std::vector<Blake3Result>>();
@@ -866,27 +870,6 @@ EdenServiceHandler::semifuture_getSHA1(
                    return out;
                  }))
       .semi();
-}
-
-ImmediateFuture<Hash32> EdenServiceHandler::getBlake3ForPath(
-    const EdenMount& edenMount,
-    RelativePath path,
-    const ObjectFetchContextPtr& fetchContext) {
-  if (path.empty()) {
-    return ImmediateFuture<Hash32>(newEdenError(
-        EINVAL,
-        EdenErrorType::ARGUMENT_ERROR,
-        "path cannot be the empty string"));
-  }
-
-  auto objectStore = edenMount.getObjectStore();
-  auto inodeFut = edenMount.getVirtualInode(path, fetchContext);
-  return std::move(inodeFut).thenValue(
-      [path = std::move(path),
-       objectStore = std::move(objectStore),
-       fetchContext = fetchContext.copy()](const VirtualInode& virtualInode) {
-        return virtualInode.getBlake3(path, objectStore, fetchContext);
-      });
 }
 
 folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_addBindMount(

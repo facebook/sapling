@@ -237,7 +237,7 @@ class ThriftTest(testcase.EdenRepoTest):
                 self.mount_path_bytes, [b""], sync=SyncBehavior()
             )
         self.assertEqual(1, len(results))
-        self.assert_blake3_error(results[0], "path cannot be the empty string")
+        self.assert_blake3_error(results[0], ": Is a directory")
 
     def test_get_sha1_throws_for_directory(self) -> None:
         with self.get_thrift_client_legacy() as client:
