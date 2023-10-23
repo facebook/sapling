@@ -13,6 +13,16 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use anyhow::Result;
+use commits_trait::AppendCommits;
+use commits_trait::DagCommits;
+use commits_trait::DescribeBackend;
+use commits_trait::GraphNode;
+use commits_trait::HgCommit;
+use commits_trait::ParentlessHgCommit;
+use commits_trait::ReadCommitText;
+use commits_trait::StreamCommitText;
+use commits_trait::StripCommits;
 use dag::delegate;
 use dag::errors::NotFoundError;
 use dag::ops::DagPersistent;
@@ -31,15 +41,6 @@ use storemodel::ReadRootTreeIds;
 use types::HgId;
 
 use crate::utils;
-use crate::AppendCommits;
-use crate::DescribeBackend;
-use crate::GraphNode;
-use crate::HgCommit;
-use crate::ParentlessHgCommit;
-use crate::ReadCommitText;
-use crate::Result;
-use crate::StreamCommitText;
-use crate::StripCommits;
 
 /// Git Commits with segments index.
 ///
@@ -61,6 +62,8 @@ pub struct GitSegmentedCommits {
     dag_path: PathBuf,
     git_path: PathBuf,
 }
+
+impl DagCommits for GitSegmentedCommits {}
 
 impl GitSegmentedCommits {
     pub fn new(git_dir: &Path, dag_dir: &Path) -> Result<Self> {
@@ -305,7 +308,7 @@ fn get_commit_raw_text(repo: &git2::Repository, vertex: &Vertex) -> Result<Optio
     let commit = match repo.find_commit(oid) {
         Ok(commit) => commit,
         Err(e) if e.code() == git2::ErrorCode::NotFound => {
-            return Ok(crate::revlog::get_hard_coded_commit_text(vertex));
+            return Ok(get_hard_coded_commit_text(vertex));
         }
         Err(e) => return Err(e.into()),
     };
@@ -479,4 +482,14 @@ fn to_hg_text(commit: &git2::Commit) -> Bytes {
 
 fn hgid_to_git_oid(id: HgId) -> git2::Oid {
     git2::Oid::from_bytes(id.as_ref()).expect("HgId should convert to git2::Oid")
+}
+
+/// Hardcoded commit hashes defined by hg.
+fn get_hard_coded_commit_text(vertex: &Vertex) -> Option<Bytes> {
+    let vertex = vertex.as_ref();
+    if vertex == HgId::null_id().as_ref() || vertex == HgId::wdir_id().as_ref() {
+        Some(Default::default())
+    } else {
+        None
+    }
 }

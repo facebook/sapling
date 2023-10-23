@@ -22,7 +22,6 @@ pub use commits_trait::StripCommits;
 mod doublewrite;
 pub(crate) mod errors;
 mod factory_impls;
-mod git;
 mod hgsha1commits;
 mod hybrid;
 mod memhgcommits;
@@ -33,7 +32,6 @@ mod utils;
 
 pub use anyhow::Result;
 pub use doublewrite::DoubleWriteCommits;
-pub use git::GitSegmentedCommits;
 pub use hgsha1commits::HgCommits;
 pub use hybrid::HybridCommits;
 pub use memhgcommits::MemHgCommits;
@@ -44,7 +42,6 @@ impl DagCommits for HybridCommits {}
 impl DagCommits for MemHgCommits {}
 impl DagCommits for RevlogCommits {}
 impl DagCommits for DoubleWriteCommits {}
-impl DagCommits for GitSegmentedCommits {}
 
 /// Initialization. Register abstraction implementations.
 pub fn init() {

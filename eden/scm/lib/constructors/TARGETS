@@ -9,7 +9,10 @@ rust_library(
         "cargo_toml_config": {
             "features": {
                 "default": ["git"],
-                "git": ["gitstore"],
+                "git": [
+                    "gitstore",
+                    "commits-git",
+                ],
             },
         },
     },
@@ -21,5 +24,6 @@ rust_library(
         "//eden/scm/lib/edenapi:edenapi",
         "//eden/scm/lib/gitstore:gitstore",
         "//eden/scm/lib/hgcommits:hgcommits",
+        "//eden/scm/lib/hgcommits/git:commits-git",
     ],
 )
