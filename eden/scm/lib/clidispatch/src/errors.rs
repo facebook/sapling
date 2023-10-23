@@ -45,9 +45,16 @@ pub struct RepoRequired(pub String);
 #[error("malformed --config option: '{0}' (use --config section.name=value)")]
 pub struct MalformedConfigOption(pub String);
 
-#[derive(Debug, Error)]
-#[error("{0}")]
+#[derive(Debug)]
 pub struct Abort(pub Cow<'static, str>);
+
+impl std::error::Error for Abort {}
+
+impl std::fmt::Display for Abort {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", identity::default().punch(&self.0))
+    }
+}
 
 /// Print an error suitable for end-user consumption.
 ///

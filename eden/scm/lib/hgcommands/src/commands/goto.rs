@@ -7,6 +7,7 @@
 
 use anyhow::bail;
 use anyhow::Result;
+use clidispatch::abort;
 use clidispatch::fallback;
 use clidispatch::ReqCtx;
 use cliparser::define_flags;
@@ -85,9 +86,7 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
     }
 
     if dest.is_empty() {
-        bail!(identity::default().punch(
-            r#"You must specify a destination to update to, for example "@prog@ goto main"."#,
-        ));
+        abort!(r#"You must specify a destination to update to, for example "@prog@ goto main"."#);
     }
     if dest.len() > 1 {
         bail!(
