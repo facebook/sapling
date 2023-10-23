@@ -644,7 +644,6 @@ _hg_cmd_grep() {
   '(--ignore-case -i)'{-i,--ignore-case}'[ignore case when matching]' \
   '(--files-with-matches -l)'{-l,--files-with-matches}'[print only filenames and revs that match]' \
   '(--line-number -n)'{-n,--line-number}'[print matching line numbers]' \
-  '*'{-r+,--rev=}'[search in given revision range]:revision:_hg_revrange' \
   '(--user -u)'{-u,--user}'[print user who committed change]' \
   '(--date -d)'{-d,--date}'[print date of a changeset]' \
   '1:search pattern:' \
@@ -668,6 +667,7 @@ _hg_cmd_help() {
 
 _hg_cmd_hide() {
   _arguments -s -w : $_hg_global_opts \
+  '*:revision:_hg_revrange' \
   '*'{-r+,--rev=}'[hide these revisions]:revision:_hg_revrange' \
   '(--cleanup -c)'{-c,--cleanup}'[clean up commits with newer versions]' \
   '(--bookmark -B)'{-B+,--bookmark=}'[specify bookmark(s)]:bookmark:_hg_bookmarks' \
@@ -953,6 +953,7 @@ _hg_cmd_update() {
 
 _hg_cmd_unhide() {
   _arguments -s -w : $_hg_global_opts \
+  '*:revision:_hg_revrange' \
   '*'{-r+,--rev=}'[unhide these revisions]:revision:_hg_revrange' \
   ':revision:_hg_labels'
 }
