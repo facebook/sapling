@@ -13,7 +13,7 @@ python_binary(
     name = "run_tests",
     srcs = ["unittestify.py"] + glob(["**/*.t"]),
     base_module = "",
-    main_module = "unittestify",
+    main_function = "unittestify.main",
     package_style = "inplace",
     resources = {
         "//eden/scm/tests:dummyssh3": "dummyssh3.par",

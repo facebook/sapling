@@ -51,7 +51,7 @@ python_binary(
     # @autodeps-skip
     name = "edenfs_restarter",
     srcs = ["edenfs_restarter.py"],
-    main_module = "eden.fs.facebook.edenfs_restarter",
+    main_function = "eden.fs.facebook.edenfs_restarter.main",
     os_deps = [(
         "linux",
         ["//eden/fs/cli/facebook:telemetry"],
@@ -68,13 +68,13 @@ python_binary(
     # @autodeps-skip
     name = "make-release",
     srcs = ["make-release.py"],
-    main_module = "eden.fs.facebook.make-release",
+    main_function = "eden.fs.facebook.make-release.main_2",
 )
 
 python_binary(
     name = "fix-windows-eden",
     srcs = ["fix-windows-eden.py"],
-    main_module = "eden.fs.facebook.fix-windows-eden",
+    main_function = "eden.fs.facebook.fix-windows-eden.main_2",
     deps = [
         "fbsource//third-party/pypi/colorama:colorama",
         "fbsource//third-party/pypi/pip:pip",

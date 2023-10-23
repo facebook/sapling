@@ -8,7 +8,7 @@ python_binary(
     compatible_with = [
         "ovr_config//os:linux",
     ],
-    main_module = "eden.fs.cli.facebook.trace",
+    main_function = "eden.fs.cli.facebook.trace.dump_to_artillery",
     deps = [
         ":trace",
     ],
@@ -40,7 +40,7 @@ python_library(
 
 python_binary(
     name = "test_hostcaps",
-    main_module = "eden.fs.cli.facebook.hostcaps",
+    main_function = "eden.fs.cli.facebook.hostcaps.main",
     deps = [":hostcaps"],
 )
 

@@ -24,7 +24,7 @@ python_library(
 python_binary(
     name = "gen_snapshot",
     srcs = ["gen_snapshot.py"],
-    main_module = "eden.integration.snapshot.gen_snapshot",
+    main_function = "eden.integration.snapshot.gen_snapshot.main_2",
     deps = [
         ":snapshot",
         "//eden/integration/lib:lib",
@@ -34,7 +34,7 @@ python_binary(
 python_binary(
     name = "unpack_snapshot",
     srcs = ["unpack_snapshot.py"],
-    main_module = "eden.integration.snapshot.unpack_snapshot",
+    main_function = "eden.integration.snapshot.unpack_snapshot.main",
     deps = [
         ":snapshot",
     ],

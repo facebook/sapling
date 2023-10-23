@@ -5,7 +5,7 @@ oncall("mononoke")
 python_binary(
     name = "manifold_copy",
     srcs = ["manifold_copy.py"],
-    main_module = "eden.mononoke.facebook.blobstore_deletion.manifold_copy",
+    main_function = "eden.mononoke.facebook.blobstore_deletion.manifold_copy.main",
     deps = [
         "//manifold/clients/python:manifold_client",
     ],
@@ -14,7 +14,7 @@ python_binary(
 python_binary(
     name = "manifold_key_download",
     srcs = ["manifold_key_download.py"],
-    main_module = "eden.mononoke.facebook.blobstore_deletion.manifold_key_download",
+    main_function = "eden.mononoke.facebook.blobstore_deletion.manifold_key_download.main",
     deps = [
         "//datainfra/presto/py:client_lib",
     ],

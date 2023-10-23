@@ -9,7 +9,7 @@ oncall("scm_client_infra")
 python_binary(
     name = "gen_wrapper_location",
     srcs = ["facebook/gen_wrapper_location.py"],
-    main_module = "eden/fs/cli_rs/facebook/gen_wrapper_location",
+    main_function = "eden.fs.cli_rs.facebook.gen_wrapper_location.main_2",
 )
 
 buck_genrule(

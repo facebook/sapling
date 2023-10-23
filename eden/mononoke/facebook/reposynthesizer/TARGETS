@@ -5,7 +5,7 @@ oncall("mononoke")
 python_binary(
     name = "reposynthesizer",
     srcs = ["reposynthesizer.py"],
-    main_module = "eden.mononoke.facebook.reposynthesizer.reposynthesizer",
+    main_function = "eden.mononoke.facebook.reposynthesizer.reposynthesizer.main",
     deps = [
         "//scm/lib:repo",
     ],

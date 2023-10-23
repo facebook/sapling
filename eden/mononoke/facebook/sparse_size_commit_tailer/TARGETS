@@ -8,7 +8,7 @@ python_binary(
     srcs = [
         "tailer.py",
     ],
-    main_module = "eden.mononoke.facebook.sparse_size_commit_tailer.tailer",
+    main_function = "eden.mononoke.facebook.sparse_size_commit_tailer.tailer.main",
     deps = [
         "//configerator/distribution/api/py:configerator_config",
         "//configerator/structs/scm/mononoke/repos:repos-py",

@@ -6,7 +6,7 @@ oncall("mononoke")
 python_binary(
     name = "fbsource_commit_tailer",
     srcs = glob(["*.py"]),
-    main_module = "eden.mononoke.facebook.fbsource_commit_tailer.tailer",
+    main_function = "eden.mononoke.facebook.fbsource_commit_tailer.tailer.main",
     deps = [
         "fbsource//third-party/pypi/aiohttp:aiohttp",
         "//eden/mononoke/facebook/mononoke_config:mononoke_config",

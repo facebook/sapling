@@ -45,7 +45,7 @@ buck_command_alias(
 python_binary(
     name = "edenfsctl-with-privhelper",
     srcs = [],
-    main_module = "eden/fs/cli/main",
+    main_function = "eden.fs.cli.main.zipapp_main",
     deps = [
         ":main_lib",
         "//eden/fs/privhelper:privhelper",
@@ -55,7 +55,7 @@ python_binary(
 python_binary(
     name = "edenfsctl",
     srcs = [],
-    main_module = "eden/fs/cli/main",
+    main_function = "eden.fs.cli.main.zipapp_main",
     deps = [
         ":main_lib",
     ],
@@ -64,7 +64,7 @@ python_binary(
 python_binary(
     name = "repl",
     srcs = ["repl.py"],
-    main_module = "eden/fs/cli/repl",
+    main_function = "eden.fs.cli.repl.main",
     deps = [
         "fbsource//third-party/pypi/ipython:ipython",
         ":main_lib",  # @manual

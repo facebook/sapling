@@ -7,7 +7,7 @@ python_binary(
     srcs = glob([
         "*.py",
     ]),
-    main_module = "eden.mononoke.facebook.sqlblob_gc_py.main",
+    main_function = "eden.mononoke.facebook.sqlblob_gc_py.main.main",
     deps = [
         "//configerator/common:crypto_utils",
         "//configerator/configo/client/thrift_py3:client",

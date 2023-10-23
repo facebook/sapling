@@ -6,7 +6,7 @@ oncall("mononoke")
 python_binary(
     name = "get_bundle",
     srcs = ["get_bundle.py"],
-    main_module = "eden.mononoke.facebook.get_bundle.get_bundle",
+    main_function = "eden.mononoke.facebook.get_bundle.get_bundle.get_bundle",
     deps = [
         "fbsource//third-party/pypi/click:click",
         ":bundle_store_lib",

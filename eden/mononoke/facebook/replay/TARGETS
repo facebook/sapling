@@ -7,7 +7,7 @@ cogwheel_test(
     srcs = [
         "EdenAPIReplayTest.py",
     ],
-    main_module = "eden.mononoke.facebook.replay.EdenAPIReplayTest",
+    main_function = "eden.mononoke.facebook.replay.EdenAPIReplayTest.main",
     workload_config = create_cogwheel_config(
         ab_test = True,
         configerator_path_prefix_triggers = [

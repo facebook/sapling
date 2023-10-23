@@ -23,7 +23,7 @@ python_library(
 python_binary(
     name = "edenfs_config_manager",
     srcs = ["edenfs_config_manager.py"],
-    main_module = "eden.fs.config.facebook.edenfs_config_manager",
+    main_function = "eden.fs.config.facebook.edenfs_config_manager.main",
     deps = [
         ":edenfs_config_manager_lib",
     ],

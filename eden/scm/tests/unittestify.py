@@ -178,8 +178,12 @@ class hgtests(unittest.TestCase):
                 setattr(cls, method_name, gettestmethod(name, port))
 
 
-if __name__ == "__main__":
+def main() -> None:
     args, env = prepareargsenv(os.getcwd())
     os.execvpe(args[0], args + sys.argv[1:], env)
+
+
+if __name__ == "__main__":
+    main()
 else:
     hgtests.collecttests(os.environ.get("HGTEST_DIR", "."))

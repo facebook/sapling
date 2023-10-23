@@ -22,7 +22,7 @@ python_binary(
     srcs = [
         "example_tailer.py",
     ],
-    main_module = "eden.mononoke.facebook.post_commit_tailer.example_tailer",
+    main_function = "eden.mononoke.facebook.post_commit_tailer.example_tailer.main",
     deps = [
         ":post_commit_tailer",
     ],

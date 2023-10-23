@@ -9,7 +9,7 @@ python_binary(
     srcs = [
         "gen_workflows.py",
     ],
-    main_module = "eden.oss.ci.gen_workflows",
+    main_function = "eden.oss.ci.gen_workflows.main",
     deps = [
         "fbsource//third-party/pypi/pyyaml:pyyaml",
     ],

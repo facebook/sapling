@@ -10,7 +10,7 @@ python_binary(
     srcs = [
         "review_bookmarks.py",
     ],
-    main_module = "eden.mononoke.facebook.monitoring.review_bookmarks",
+    main_function = "eden.mononoke.facebook.monitoring.review_bookmarks.main_2",
     deps = [
         ":lib",
         "//libfb/py:log",

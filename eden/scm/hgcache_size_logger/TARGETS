@@ -8,7 +8,7 @@ python_binary(
         "hgcache_size_logger.py",
     ],
     base_module = "eden.scm",
-    main_module = "eden.scm.hgcache_size_logger",
+    main_function = "eden.scm.hgcache_size_logger.main",
     deps = [
         "//libfb/py:log",
         "//rfe/scubadata:scubadata_py_DEPRECATED_USE_py3_INSTEAD",

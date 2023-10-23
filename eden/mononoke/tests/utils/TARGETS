@@ -9,7 +9,7 @@ python_binary(
     srcs = [
         "generate_buck_target_deps.py",
     ],
-    main_module = "eden.mononoke.tests.utils.generate_buck_target_deps",
+    main_function = "eden.mononoke.tests.utils.generate_buck_target_deps.main",
 )
 
 rust_library(

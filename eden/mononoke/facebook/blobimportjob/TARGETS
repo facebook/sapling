@@ -5,7 +5,7 @@ oncall("mononoke")
 python_binary(
     name = "blobimportjob",
     srcs = ["main.py"],
-    main_module = "eden.mononoke.facebook.blobimportjob.main",
+    main_function = "eden.mononoke.facebook.blobimportjob.main.main",
     deps = [
         "//configerator/distribution/api/py:configerator_config",
         "//configerator/structs/scm/mononoke/blobimport:blobimport_state-py",

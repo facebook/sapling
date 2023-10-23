@@ -8,7 +8,7 @@ python_binary(
     srcs = [
         "main.py",
     ],
-    main_module = "eden.mononoke.facebook.backup_verifier.main",
+    main_function = "eden.mononoke.facebook.backup_verifier.main.main_2",
     deps = [
         "//configerator/distribution/api/py:configerator_config",
         "//configerator/structs/scm/mononoke/repos:repos-py",

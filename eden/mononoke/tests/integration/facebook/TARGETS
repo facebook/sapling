@@ -49,7 +49,7 @@ buck_filegroup(
 python_binary(
     name = "generate_manifest",
     srcs = ["generate_manifest.py"],
-    main_module = "eden.mononoke.tests.integration.facebook.generate_manifest",
+    main_function = "eden.mononoke.tests.integration.facebook.generate_manifest.main",
     deps = [
         ":lib_buck",
     ],

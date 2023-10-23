@@ -40,7 +40,7 @@ python_binary(
     # @autodeps-skip
     name = "integration_runner_real",
     srcs = ["integration_runner_real.py"],
-    main_module = "eden.mononoke.tests.integration.integration_runner_real",
+    main_function = "eden.mononoke.tests.integration.integration_runner_real.run",
     deps = [
         "fbsource//third-party/pypi/click:click",
         "//eden/mononoke/tests/integration/facebook:lib_buck",

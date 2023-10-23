@@ -20,7 +20,7 @@ python_binary(
     srcs = [
         "mononoke_find_repo_id.py",
     ],
-    main_module = "eden.mononoke.facebook.mononoke_config.mononoke_find_repo_id",
+    main_function = "eden.mononoke.facebook.mononoke_config.mononoke_find_repo_id.main_2",
     deps = [
         ":mononoke_config",
     ],
