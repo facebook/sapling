@@ -221,7 +221,8 @@ impl CheckoutPlan {
     ///
     /// This function fails fast and returns error when first checkout operation fails.
     /// Pending storage futures are dropped when error is returned
-    pub async fn apply_store(&self, store: &dyn ReadFileContents) -> Result<CheckoutStats> {
+    #[instrument(skip_all, err)]
+    pub fn apply_store(&self, store: &dyn ReadFileContents) -> Result<CheckoutStats> {
         let vfs = &self.checkout.vfs;
         debug!(
             "Skipping checking out {} files since they're already written",
@@ -231,79 +232,77 @@ impl CheckoutPlan {
         let bar = &ProgressBar::new("Updating", total as u64, "files");
         Registry::main().register_progress_bar(bar);
         let async_vfs = &AsyncVfsWriter::spawn_new(vfs.clone(), 16);
-        let stats = CheckoutStats::default();
-        let stats_ref = &stats;
 
-        let remove_files = stream::iter(self.remove.clone().into_iter())
-            .chunks(VFS_BATCH_SIZE)
-            .map(|paths| Self::remove_files(async_vfs, stats_ref, paths, bar));
-        let remove_files = remove_files.buffer_unordered(self.checkout.concurrency);
+        block_on(async move {
+            let stats = CheckoutStats::default();
+            let stats_ref = &stats;
 
-        Self::process_work_stream(remove_files).await?;
+            let remove_files = stream::iter(self.remove.clone().into_iter())
+                .chunks(VFS_BATCH_SIZE)
+                .map(|paths| Self::remove_files(async_vfs, &stats, paths, bar));
+            let remove_files = remove_files.buffer_unordered(self.checkout.concurrency);
 
-        let actions: HashMap<_, _> = self
-            .filtered_update_content
-            .iter()
-            .map(|(p, u)| (Key::new(p.clone(), u.content_hgid.clone()), u.clone()))
-            .collect();
-        let keys: Vec<_> = actions.keys().cloned().collect();
+            Self::process_work_stream(remove_files).await?;
 
-        let data_stream = store.read_file_contents(keys).await;
+            let actions: HashMap<_, _> = self
+                .filtered_update_content
+                .iter()
+                .map(|(p, u)| (Key::new(p.clone(), u.content_hgid.clone()), u.clone()))
+                .collect();
+            let keys: Vec<_> = actions.keys().cloned().collect();
 
-        let update_content = data_stream.map(|result| -> Result<_> {
-            let (data, key) = result?;
-            let action = actions
-                .get(&key)
-                .ok_or_else(|| format_err!("Storage returned unknown key {}", key))?;
-            let path = key.path.clone();
-            let flag = type_to_flag(&action.file_type);
-            Ok((path, action.content_hgid, data, flag))
-        });
+            let data_stream = store.read_file_contents(keys).await;
 
-        let progress_ref = self.progress.as_ref();
-        let update_content = update_content
-            .chunks(VFS_BATCH_SIZE)
-            .map(|actions| async move {
-                let actions: Result<Vec<_>, _> = actions.into_iter().collect();
-                Self::write_files(async_vfs, stats_ref, actions?, progress_ref, bar).await
+            let update_content = data_stream.map(|result| -> Result<_> {
+                let (data, key) = result?;
+                let action = actions
+                    .get(&key)
+                    .ok_or_else(|| format_err!("Storage returned unknown key {}", key))?;
+                let path = key.path.clone();
+                let flag = type_to_flag(&action.file_type);
+                Ok((path, action.content_hgid, data, flag))
             });
 
-        let update_content = update_content.buffer_unordered(self.checkout.concurrency);
+            let progress_ref = self.progress.as_ref();
+            let update_content = update_content
+                .chunks(VFS_BATCH_SIZE)
+                .map(|actions| async move {
+                    let actions: Result<Vec<_>, _> = actions.into_iter().collect();
+                    Self::write_files(async_vfs, stats_ref, actions?, progress_ref, bar).await
+                });
 
-        let update_meta = stream::iter(self.update_meta.iter()).map(|action| {
-            Self::set_exec_on_file(async_vfs, stats_ref, &action.path, action.set_x_flag, bar)
-        });
-        let update_meta = update_meta.buffer_unordered(self.checkout.concurrency);
+            let update_content = update_content.buffer_unordered(self.checkout.concurrency);
 
-        let update_content = Self::process_work_stream(update_content);
-        let update_meta = Self::process_work_stream(update_meta);
+            let update_meta = stream::iter(self.update_meta.iter()).map(|action| {
+                Self::set_exec_on_file(async_vfs, &stats, &action.path, action.set_x_flag, bar)
+            });
+            let update_meta = update_meta.buffer_unordered(self.checkout.concurrency);
 
-        try_join!(update_content, update_meta)?;
+            let update_content = Self::process_work_stream(update_content);
+            let update_meta = Self::process_work_stream(update_meta);
 
-        #[cfg(windows)]
-        {
-            if vfs.supports_symlinks() {
-                let symlinks = self
-                    .filtered_update_content
-                    .iter()
-                    .filter_map(|(p, a)| {
-                        if a.file_type == FileType::Symlink {
-                            Some(p.as_str().to_owned())
-                        } else {
-                            None
-                        }
-                    })
-                    .collect::<Vec<_>>();
-                update_symlinks(&symlinks, vfs)?;
+            try_join!(update_content, update_meta)?;
+
+            #[cfg(windows)]
+            {
+                if vfs.supports_symlinks() {
+                    let symlinks = self
+                        .filtered_update_content
+                        .iter()
+                        .filter_map(|(p, a)| {
+                            if a.file_type == FileType::Symlink {
+                                Some(p.as_str().to_owned())
+                            } else {
+                                None
+                            }
+                        })
+                        .collect::<Vec<_>>();
+                    update_symlinks(&symlinks, vfs)?;
+                }
             }
-        }
 
-        Ok(stats)
-    }
-
-    #[instrument(skip_all, err)]
-    pub fn blocking_apply_store(&self, store: &dyn ReadFileContents) -> Result<CheckoutStats> {
-        block_on(self.apply_store(store))
+            Ok(stats)
+        })
     }
 
     pub async fn apply_store_dry_run(&self, store: &dyn ReadFileContents) -> Result<(usize, u64)> {
@@ -332,7 +331,7 @@ impl CheckoutPlan {
         conflicts
     }
 
-    pub async fn check_unknown_files(
+    pub fn check_unknown_files(
         &self,
         manifest: &impl Manifest,
         store: &dyn ReadFileContents,
@@ -402,23 +401,23 @@ impl CheckoutPlan {
             return Ok(unknowns);
         }
 
-        let check_content = store
-            .read_file_contents(check_content)
-            .await
-            .chunks(VFS_BATCH_SIZE)
-            .map(|v| {
-                let vfs = vfs.clone();
-                Handle::current().spawn_blocking(move || -> Result<Vec<RepoPathBuf>> {
-                    let v: std::result::Result<Vec<_>, _> = v.into_iter().collect();
-                    Self::check_content(&vfs, v?)
+        block_on(async move {
+            let check_content = store
+                .read_file_contents(check_content)
+                .await
+                .chunks(VFS_BATCH_SIZE)
+                .map(|v| {
+                    let vfs = vfs.clone();
+                    Handle::current().spawn_blocking(move || -> Result<Vec<RepoPathBuf>> {
+                        let v: std::result::Result<Vec<_>, _> = v.into_iter().collect();
+                        Self::check_content(&vfs, v?)
+                    })
                 })
-            })
-            .buffer_unordered(self.checkout.concurrency)
-            .map(|r| r?);
+                .buffer_unordered(self.checkout.concurrency)
+                .map(|r| r?);
 
-        let unknowns = Self::process_vec_work_stream(check_content).await?;
-
-        Ok(unknowns)
+            Self::process_vec_work_stream(check_content).await
+        })
     }
 
     /// Drains stream returning error if one of futures fail
@@ -822,12 +821,12 @@ pub fn checkout(
         io,
     )?;
 
-    let unknown_conflicts = block_on(plan.check_unknown_files(
+    let unknown_conflicts = plan.check_unknown_files(
         &*target_mf.read(),
         &repo.file_store()?,
         &mut wc.treestate().lock(),
         &status,
-    ))?;
+    )?;
     if !unknown_conflicts.is_empty() {
         for unknown in unknown_conflicts {
             let _ = writeln!(io.error(), "{unknown}: untracked file differs");
@@ -850,7 +849,7 @@ pub fn checkout(
     }
 
     // 3. Execute the plan
-    block_on(plan.apply_store(&repo.file_store()?))?;
+    plan.apply_store(&repo.file_store()?)?;
 
     // 4. Update the treestate parents, dirstate
     wc.set_parents(&mut [target_commit].iter())?;
@@ -1029,8 +1028,8 @@ mod test {
 
     use super::*;
 
-    #[tokio::test]
-    async fn test_basic_checkout() -> Result<()> {
+    #[test]
+    fn test_basic_checkout() -> Result<()> {
         // Pattern - lowercase_path_[hgid!=1]_[flags!=normal]
         let a = (rp("A"), FileMetadata::regular(hgid(1)));
         let a_2 = (rp("A"), FileMetadata::regular(hgid(2)));
@@ -1041,34 +1040,34 @@ mod test {
         let cd = (rp("C/D"), FileMetadata::regular(hgid(1)));
 
         // update file
-        assert_checkout(&[a.clone()], &[a_2.clone()]).await?;
+        assert_checkout(&[a.clone()], &[a_2.clone()])?;
         // mv file
-        assert_checkout(&[a.clone()], &[b.clone()]).await?;
+        assert_checkout(&[a.clone()], &[b.clone()])?;
         // add / rm file
-        assert_checkout_symmetrical(&[a.clone()], &[a.clone(), b.clone()]).await?;
+        assert_checkout_symmetrical(&[a.clone()], &[a.clone(), b.clone()])?;
         // regular<->exec
-        assert_checkout_symmetrical(&[a.clone()], &[a_e.clone()]).await?;
+        assert_checkout_symmetrical(&[a.clone()], &[a_e.clone()])?;
         // regular<->symlink
-        assert_checkout_symmetrical(&[a.clone()], &[a_s.clone()]).await?;
+        assert_checkout_symmetrical(&[a.clone()], &[a_s.clone()])?;
         // dir <-> file with the same name
-        assert_checkout_symmetrical(&[ab.clone()], &[a.clone()]).await?;
+        assert_checkout_symmetrical(&[ab.clone()], &[a.clone()])?;
         // create / rm dir
-        assert_checkout_symmetrical(&[ab.clone()], &[b.clone()]).await?;
+        assert_checkout_symmetrical(&[ab.clone()], &[b.clone()])?;
         // mv file between dirs
-        assert_checkout(&[ab.clone()], &[cd.clone()]).await?;
+        assert_checkout(&[ab.clone()], &[cd.clone()])?;
 
         Ok(())
     }
 
-    #[tokio::test]
-    async fn test_checkout_generated() -> Result<()> {
+    #[test]
+    fn test_checkout_generated() -> Result<()> {
         let trees = generate_trees(6, 50);
         for a in trees.iter() {
             for b in trees.iter() {
                 if a == b {
                     continue;
                 }
-                assert_checkout(a, b).await?;
+                assert_checkout(a, b)?;
             }
         }
         Ok(())
@@ -1120,20 +1119,20 @@ mod test {
         HgId::from_byte_array(r)
     }
 
-    async fn assert_checkout_symmetrical(
+    fn assert_checkout_symmetrical(
         a: &[(RepoPathBuf, FileMetadata)],
         b: &[(RepoPathBuf, FileMetadata)],
     ) -> Result<()> {
-        assert_checkout(a, b).await?;
-        assert_checkout(b, a).await
+        assert_checkout(a, b)?;
+        assert_checkout(b, a)
     }
 
-    async fn assert_checkout(
+    fn assert_checkout(
         from: &[(RepoPathBuf, FileMetadata)],
         to: &[(RepoPathBuf, FileMetadata)],
     ) -> Result<()> {
         let tempdir = tempfile::tempdir()?;
-        if let Err(e) = assert_checkout_impl(from, to, &tempdir).await {
+        if let Err(e) = assert_checkout_impl(from, to, &tempdir) {
             eprintln!("===");
             eprintln!("Failed transitioning from tree");
             print_tree(from);
@@ -1149,7 +1148,7 @@ mod test {
         Ok(())
     }
 
-    async fn assert_checkout_impl(
+    fn assert_checkout_impl(
         from: &[(RepoPathBuf, FileMetadata)],
         to: &[(RepoPathBuf, FileMetadata)],
         tempdir: &TempDir,
@@ -1171,7 +1170,6 @@ mod test {
 
         // Use clean vfs for test
         plan.apply_store(&DummyFileContentStore)
-            .await
             .context("Plan execution failed")?;
 
         assert_fs(&working_path, to)

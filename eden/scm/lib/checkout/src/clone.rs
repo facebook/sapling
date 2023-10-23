@@ -179,7 +179,7 @@ impl CheckoutState {
             f.write_all(target.to_hex().as_bytes())
         })?;
 
-        plan.blocking_apply_store(&file_store)?;
+        plan.apply_store(&file_store)?;
 
         ts.set_metadata(BTreeMap::from([("p1".to_string(), target.to_hex())]))?;
 

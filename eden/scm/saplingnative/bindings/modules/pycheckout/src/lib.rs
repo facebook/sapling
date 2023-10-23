@@ -128,8 +128,7 @@ py_class!(class checkoutplan |py| {
         let unknown = py.allow_threads(move || -> Result<_> {
             let mut state = state.lock();
             let manifest = manifest.read();
-            try_block_unless_interrupted(
-            plan.check_unknown_files(&*manifest, store.as_ref(), &mut state, status))
+            plan.check_unknown_files(&*manifest, store.as_ref(), &mut state, status)
         }).map_pyerr(py)?;
         Ok(unknown.into_iter().map(|p|p.to_string()).collect())
     }
@@ -145,9 +144,9 @@ py_class!(class checkoutplan |py| {
     def apply(&self, store: ImplInto<ArcReadFileContents>) -> PyResult<PyNone> {
         let plan = self.plan(py);
         let store = store.into();
-        py.allow_threads(|| try_block_unless_interrupted(
+        py.allow_threads(||
             plan.apply_store(store.as_ref())
-        )).map_pyerr(py)?;
+        ).map_pyerr(py)?;
         Ok(PyNone)
     }
 
