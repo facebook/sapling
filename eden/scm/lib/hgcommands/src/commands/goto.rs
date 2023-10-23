@@ -74,6 +74,11 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
         fallback!("checkout.use-rust is False");
     }
 
+    if wc.dot_hg_path().join("updatemergestate").exists() {
+        tracing::debug!(target: "checkout_info", checkout_detail="updatemergestate");
+        fallback!("updatemergestate exists");
+    }
+
     let mut dest: Vec<&String> = ctx.opts.args.iter().collect();
     if !ctx.opts.rev.is_empty() {
         dest.push(&ctx.opts.rev);
