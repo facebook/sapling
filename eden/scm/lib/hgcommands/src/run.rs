@@ -537,6 +537,8 @@ fn spawn_progress_thread(
                 registry.wait();
             }
 
+            registry.remove_orphan_progress_bar();
+
             if !disable_rendering {
                 let (term_width, term_height) = progress.term_size();
                 config.term_width = term_width;
@@ -565,8 +567,6 @@ fn spawn_progress_thread(
                     last_runlog_time = Some(now);
                 }
             }
-
-            registry.remove_orphan_progress_bar();
 
             if !lockstep {
                 thread::sleep(interval);
