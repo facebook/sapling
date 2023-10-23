@@ -10,6 +10,7 @@ use std::fmt;
 use std::marker::PhantomData;
 use std::rc::Rc;
 use std::sync::atomic::AtomicU64;
+use std::sync::atomic::Ordering;
 use std::sync::atomic::Ordering::AcqRel;
 use std::sync::atomic::Ordering::Acquire;
 use std::sync::atomic::Ordering::Release;
@@ -23,12 +24,15 @@ use parking_lot::Mutex;
 
 use crate::Registry;
 
+static ID_COUNTER: AtomicU64 = AtomicU64::new(0);
+
 /// A progress bar. It has multiple `Metric`s and a `Metric`.
 ///
 /// ```plain,ignore
 /// topic [ message ] [ pos / total unit1 ], [ pos / total unit2 ], ...
 /// ```
 pub struct ProgressBar {
+    id: u64,
     topic: Cow<'static, str>,
     message: ArcSwapOption<String>,
     pos: AtomicU64,
@@ -121,6 +125,7 @@ impl Builder {
 
     pub fn pending(self) -> Arc<ProgressBar> {
         let bar = Arc::new(ProgressBar {
+            id: ID_COUNTER.fetch_add(1, Ordering::Relaxed),
             topic: self.topic,
             unit: self.unit,
             total: AtomicU64::new(self.total),
