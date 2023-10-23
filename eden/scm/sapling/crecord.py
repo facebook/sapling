@@ -1099,6 +1099,7 @@ class curseschunkselector:
     def updatescreen(self):
         self.statuswin.erase()
         self.chunkpad.erase()
+        self.chunkpad.clear()
 
         printstring = self.printstring
 
