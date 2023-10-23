@@ -204,6 +204,7 @@ Show debug commands if there are no other candidates
   debugstatus
   debugstore
   debugstrip
+  debugstructuredprogress
   debugsuccessorssets
   debugtemplate
   debugthrowexception
@@ -533,6 +534,7 @@ Show all commands + options
   debugstatus: nonnormal
   debugstore: content
   debugstrip: rev, force, no-backup, keep, bookmark
+  debugstructuredprogress: layout
   debugsuccessorssets: closest
   debugtemplate: rev, define
   debugthrowexception: 
