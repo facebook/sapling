@@ -231,7 +231,7 @@ async def update_commits_in_stack(
             partitions, index, workflow, pr_numbers_and_num_commits, repository, ui
         )
         for index in range(len(partitions))
-    ] + [
+    ] + ([
         add_commit_to_archives(
             oid_to_archive=tip,
             ui=ui,
@@ -239,7 +239,7 @@ async def update_commits_in_stack(
             repository=repository,
             get_gitdir=get_gitdir,
         )
-    ]
+    ] if not ui.configbool('github', 'no-archive', 'false') else [])
     await asyncio.gather(*rewrite_and_archive_requests)
     return 0
 
