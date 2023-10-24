@@ -279,7 +279,9 @@ ImmediateFuture<bool> PrjfsDispatcherImpl::isFinalSymlinkPathDirectory(
                                context,
                                remainingRecursionDepth - 1);
                          });
-                   });
+                   })
+               .thenError(
+                   [](const folly::exception_wrapper& _ew) { return false; });
          })
       .ensure([this, symlink] {
         auto sptr = symlinkCheck_.wlock();

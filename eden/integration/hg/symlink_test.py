@@ -309,6 +309,19 @@ new file mode 120000
             os.readlink(self.get_path("slink")), os.sep.join(["", "foo", "bar"])
         )
 
+    def test_non_existing_symlink_targets(self) -> None:
+        self.repo.symlink("slink2", os.sep.join(["asdf", "aoeu"]))
+        self.repo.symlink("slink3", os.sep.join(["..", "snth"]))
+        slinkcommit = self.repo.commit("non-existing targets")
+        self.repo.update(self.simple_commit)
+        self.repo.update(slinkcommit)
+        self.assertEqual(
+            os.readlink(self.get_path("slink2")), os.sep.join(["asdf", "aoeu"])
+        )
+        self.assertEqual(
+            os.readlink(self.get_path("slink3")), os.sep.join(["..", "snth"])
+        )
+
 
 @hg_test
 # pyre-ignore[13]: T62487924
