@@ -1342,7 +1342,7 @@ ImmediateFuture<folly::Unit> EdenMount::waitForPendingWrites() const {
   }
 }
 
-folly::Future<CheckoutResult> EdenMount::checkout(
+ImmediateFuture<CheckoutResult> EdenMount::checkout(
     TreeInodePtr rootInode,
     const RootId& snapshotHash,
     const ObjectFetchContextPtr& fetchContext,
@@ -1406,29 +1406,26 @@ folly::Future<CheckoutResult> EdenMount::checkout(
   setLastCheckoutTime(EdenTimestamp{clock_->getRealtime()});
 
   auto journalDiffCallback = std::make_shared<JournalDiffCallback>();
+
+  using RootTreeTuple = std::
+      tuple<ObjectStore::GetRootTreeResult, ObjectStore::GetRootTreeResult>;
+
   return serverState_->getFaultInjector()
       .checkAsync("checkout", getPath().view())
-      .semi()
-      .via(getServerThreadPool().get())
       .thenValue([this, ctx, parent1Hash = oldParent, snapshotHash](auto&&) {
         XLOG(DBG7) << "Checkout: getRoots";
         auto fromTreeFuture =
             objectStore_->getRootTree(parent1Hash, ctx->getFetchContext());
         auto toTreeFuture =
             objectStore_->getRootTree(snapshotHash, ctx->getFetchContext());
-        return collectAllSafe(fromTreeFuture, toTreeFuture)
-            .semi()
-            .via(&folly::QueuedImmediateExecutor::instance());
+        return collectAllSafe(fromTreeFuture, toTreeFuture);
       })
-      .thenValue([this](std::tuple<
-                        ObjectStore::GetRootTreeResult,
-                        ObjectStore::GetRootTreeResult> treeResults) {
+      .thenValue([this](RootTreeTuple treeResults) {
         XLOG(DBG7) << "Checkout: waitForPendingWrites";
-        return waitForPendingWrites()
-            .thenValue([treeResults = std::move(treeResults)](auto&&) {
+        return waitForPendingWrites().thenValue(
+            [treeResults = std::move(treeResults)](auto&&) {
               return treeResults;
-            })
-            .semi();
+            });
       })
       .thenValue(
           [this,
@@ -1440,9 +1437,7 @@ folly::Future<CheckoutResult> EdenMount::checkout(
            resumingCheckout =
                std::holds_alternative<ParentCommitState::InterruptedCheckout>(
                    oldState)](
-              std::tuple<
-                  IObjectStore::GetRootTreeResult,
-                  IObjectStore::GetRootTreeResult> treeResults) {
+              RootTreeTuple treeResults) -> ImmediateFuture<RootTreeTuple> {
             XLOG(DBG7) << "Checkout: performDiff";
             checkoutTimes->didLookupTrees = stopWatch.elapsed();
             // Call JournalDiffCallback::performDiff() to compute the changes
@@ -1452,7 +1447,7 @@ folly::Future<CheckoutResult> EdenMount::checkout(
             // If we are doing a dry-run update we aren't going to create a
             // journal entry, so we can skip this step entirely.
             if (ctx->isDryRun()) {
-              return folly::makeFuture(treeResults);
+              return treeResults;
             }
 
             auto& fromTree = std::get<0>(treeResults);
@@ -1466,14 +1461,10 @@ folly::Future<CheckoutResult> EdenMount::checkout(
                                const StatsFetchContext& diffFetchContext) {
                   ctx->getStatsContext().merge(diffFetchContext);
                   return treeResults;
-                })
-                .semi()
-                .via(&folly::QueuedImmediateExecutor::instance());
+                });
           })
       .thenValue([this, rootInode, ctx, checkoutTimes, stopWatch, snapshotHash](
-                     std::tuple<
-                         ObjectStore::GetRootTreeResult,
-                         ObjectStore::GetRootTreeResult> treeResults) {
+                     RootTreeTuple treeResults) {
         checkoutTimes->didDiff = stopWatch.elapsed();
 
         // Perform the requested checkout operation after the journal diff
@@ -1517,9 +1508,7 @@ folly::Future<CheckoutResult> EdenMount::checkout(
                            auto&&) mutable {
               auto& [fromTree, toTree] = treeResults;
               return rootInode->checkout(ctx.get(), fromTree.tree, toTree.tree);
-            })
-            .semi()
-            .via(&folly::QueuedImmediateExecutor::instance());
+            });
       })
       .thenValue([ctx, checkoutTimes, stopWatch, snapshotHash](auto&&) {
         checkoutTimes->didCheckout = stopWatch.elapsed();

@@ -62,6 +62,7 @@ TEST(
                         ObjectFetchContext::getNullContext(),
                         __func__,
                         CheckoutMode::FORCE)
+                    .semi()
                     .via(executor)
                     .getVia(executor);
   EXPECT_EQ(1, result.conflicts.size());
@@ -124,7 +125,8 @@ TEST(Dematerialize, test_dematerialization_migrates_to_the_new_ID_scheme) {
                         RootId{"2"},
                         ObjectFetchContext::getNullContext(),
                         __func__)
-                    //.via(executor)
+                    .semi()
+                    .via(executor)
                     .getVia(executor);
 
   // There should be no conflicts, as the file is not modified.

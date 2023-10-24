@@ -757,7 +757,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * This updates the checkedOutRootId as well as the workingCopyParentRootId to
    * the passed in snapshotHash.
    */
-  folly::Future<CheckoutResult> checkout(
+  ImmediateFuture<CheckoutResult> checkout(
       TreeInodePtr rootInode,
       const RootId& snapshotHash,
       const ObjectFetchContextPtr& fetchContext,

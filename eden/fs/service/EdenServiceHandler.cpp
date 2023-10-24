@@ -646,16 +646,13 @@ EdenServiceHandler::semifuture_checkOutRevision(
   hash.reset();
 
   auto mountPath = absolutePathFromThrift(*mountPoint);
-  auto checkoutFuture =
-      ImmediateFuture{server_
-                          ->checkOutRevision(
-                              mountPath,
-                              parsedHash,
-                              params->hgRootManifest_ref().to_optional(),
-                              fetchContext,
-                              helper->getFunctionName(),
-                              checkoutMode)
-                          .semi()};
+  auto checkoutFuture = server_->checkOutRevision(
+      mountPath,
+      parsedHash,
+      params->hgRootManifest_ref().to_optional(),
+      fetchContext,
+      helper->getFunctionName(),
+      checkoutMode);
 
   return wrapImmediateFuture(
              std::move(helper),

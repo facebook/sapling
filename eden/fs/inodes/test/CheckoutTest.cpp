@@ -261,6 +261,7 @@ void testAddFile(
                                 RootId{"2"},
                                 ObjectFetchContext::getNullContext(),
                                 __func__)
+                            .semi()
                             .via(executor);
   testMount.drainServerExecutor();
   ASSERT_TRUE(checkoutResult.isReady());
@@ -320,6 +321,8 @@ void testRemoveFile(folly::StringPiece filePath, LoadBehavior loadType) {
                                 RootId{"2"},
                                 ObjectFetchContext::getNullContext(),
                                 __func__)
+                            .semi()
+                            .via(executor)
                             .waitVia(executor);
   ASSERT_TRUE(checkoutResult.isReady());
   auto result = std::move(checkoutResult).get();
@@ -395,6 +398,8 @@ void testModifyFile(
                                 RootId{"2"},
                                 ObjectFetchContext::getNullContext(),
                                 __func__)
+                            .semi()
+                            .via(executor)
                             .waitVia(executor);
   ASSERT_TRUE(checkoutResult.isReady());
   auto result = std::move(checkoutResult).get();
@@ -530,7 +535,8 @@ TEST(Checkout, modifyLoadedButNotReadyFileWithConflict) {
   // Mark builder1 as ready and confirm that the checkout completes
   builder1.setAllReady();
   auto executor = mount.getServerExecutor().get();
-  auto waitedCheckoutFuture = std::move(checkoutFuture).waitVia(executor);
+  auto waitedCheckoutFuture =
+      std::move(checkoutFuture).semi().via(executor).waitVia(executor);
   ASSERT_TRUE(waitedCheckoutFuture.isReady());
   auto result = std::move(waitedCheckoutFuture).get();
   EXPECT_THAT(
@@ -596,6 +602,8 @@ void testModifyConflict(
                                 ObjectFetchContext::getNullContext(),
                                 __func__,
                                 checkoutMode)
+                            .semi()
+                            .via(executor)
                             .waitVia(executor);
   ASSERT_TRUE(checkoutResult.isReady());
   auto result = std::move(checkoutResult).get();
@@ -715,6 +723,8 @@ TEST(Checkout, modifyThenRevert) {
                                 ObjectFetchContext::getNullContext(),
                                 __func__,
                                 CheckoutMode::FORCE)
+                            .semi()
+                            .via(executor)
                             .waitVia(executor);
   ASSERT_TRUE(checkoutResult.isReady());
   // The checkout should report a/test.txt as a conflict
@@ -753,6 +763,8 @@ TEST(Checkout, modifyThenCheckoutRevisionWithoutFile) {
                              RootId("2"),
                              ObjectFetchContext::getNullContext(),
                              __func__)
+                         .semi()
+                         .via(executor)
                          .waitVia(executor);
   ASSERT_TRUE(checkoutTo2.isReady());
 
@@ -763,6 +775,8 @@ TEST(Checkout, modifyThenCheckoutRevisionWithoutFile) {
                              RootId("1"),
                              ObjectFetchContext::getNullContext(),
                              __func__)
+                         .semi()
+                         .via(executor)
                          .waitVia(executor);
   ASSERT_TRUE(checkoutTo1.isReady());
 
@@ -790,6 +804,8 @@ TEST(Checkout, createUntrackedFileAndCheckoutAsTrackedFile) {
                              RootId("1"),
                              ObjectFetchContext::getNullContext(),
                              __func__)
+                         .semi()
+                         .via(executor)
                          .waitVia(executor);
   ASSERT_TRUE(checkoutTo1.isReady());
 
@@ -800,6 +816,8 @@ TEST(Checkout, createUntrackedFileAndCheckoutAsTrackedFile) {
                              RootId("2"),
                              ObjectFetchContext::getNullContext(),
                              __func__)
+                         .semi()
+                         .via(executor)
                          .waitVia(executor);
   ASSERT_TRUE(checkoutTo2.isReady());
 
@@ -834,6 +852,8 @@ TEST(
                              RootId("1"),
                              ObjectFetchContext::getNullContext(),
                              __func__)
+                         .semi()
+                         .via(executor)
                          .waitVia(executor);
   ASSERT_TRUE(checkoutTo1.isReady());
 
@@ -845,6 +865,8 @@ TEST(
                              RootId("2"),
                              ObjectFetchContext::getNullContext(),
                              __func__)
+                         .semi()
+                         .via(executor)
                          .waitVia(executor);
   ASSERT_TRUE(checkoutTo2.isReady());
 
@@ -880,6 +902,8 @@ void testAddSubdirectory(folly::StringPiece newDirPath, LoadBehavior loadType) {
                                 RootId("2"),
                                 ObjectFetchContext::getNullContext(),
                                 __func__)
+                            .semi()
+                            .via(executor)
                             .waitVia(executor);
   ASSERT_TRUE(checkoutResult.isReady());
   auto result = std::move(checkoutResult).get();
@@ -935,6 +959,8 @@ void testRemoveSubdirectory(LoadBehavior loadType) {
                                 RootId("2"),
                                 ObjectFetchContext::getNullContext(),
                                 __func__)
+                            .semi()
+                            .via(executor)
                             .waitVia(executor);
   ASSERT_TRUE(checkoutResult.isReady());
   auto results = std::move(checkoutResult).get();
@@ -999,7 +1025,8 @@ TEST(Checkout, checkoutModifiesDirectoryDuringLoad) {
   EXPECT_TRUE(inodeFuture.isReady());
 
   auto executor = testMount.getServerExecutor().get();
-  auto waitedCheckoutResult = std::move(checkoutResult).waitVia(executor);
+  auto waitedCheckoutResult =
+      std::move(checkoutResult).semi().via(executor).waitVia(executor);
   ASSERT_TRUE(waitedCheckoutResult.isReady());
   auto result = std::move(waitedCheckoutResult).get();
   EXPECT_EQ(0, result.conflicts.size());
@@ -1036,6 +1063,8 @@ TEST(Checkout, checkoutCaseChanged) {
                                        RootId{"2"},
                                        ObjectFetchContext::getNullContext(),
                                        __func__)
+                                   .semi()
+                                   .via(executor)
                                    .getVia(executor);
   EXPECT_EQ(checkoutToLowerResult.conflicts.size(), 0);
 
@@ -1045,6 +1074,8 @@ TEST(Checkout, checkoutCaseChanged) {
                                        RootId{"3"},
                                        ObjectFetchContext::getNullContext(),
                                        __func__)
+                                   .semi()
+                                   .via(executor)
                                    .getVia(executor);
   EXPECT_EQ(checkoutToUpperResult.conflicts.size(), 0);
 
@@ -1101,6 +1132,8 @@ TEST(Checkout, checkoutRemovingDirectoryDeletesOverlayFile) {
                                 RootId("2"),
                                 ObjectFetchContext::getNullContext(),
                                 __func__)
+                            .semi()
+                            .via(executor)
                             .getVia(executor);
   EXPECT_EQ(0, checkoutResult.conflicts.size());
 
@@ -1147,6 +1180,8 @@ TEST(Checkout, checkoutUpdatesUnlinkedStatusForLoadedTrees) {
                                 RootId("2"),
                                 ObjectFetchContext::getNullContext(),
                                 __func__)
+                            .semi()
+                            .via(executor)
                             .getVia(executor);
   EXPECT_EQ(0, checkoutResult.conflicts.size());
 
@@ -1198,6 +1233,8 @@ TEST(Checkout, checkoutRemembersInodeNumbersAfterCheckoutAndTakeover) {
                                 RootId("2"),
                                 ObjectFetchContext::getNullContext(),
                                 __func__)
+                            .semi()
+                            .via(executor)
                             .getVia(executor);
   EXPECT_EQ(0, checkoutResult.conflicts.size());
 
@@ -1594,6 +1631,8 @@ TYPED_TEST(
                                 RootId{"2"},
                                 ObjectFetchContext::getNullContext(),
                                 __func__)
+                            .semi()
+                            .via(executor)
                             .getVia(executor);
   EXPECT_EQ(0, checkoutResult.conflicts.size());
 
@@ -1679,7 +1718,8 @@ TEST(Checkout, diffFailsOnInProgressCheckout) {
   // Unblock checkout
   testMount.getServerState()->getFaultInjector().unblock("checkout", ".*");
 
-  auto waitedCheckoutTo1 = std::move(checkoutTo1).waitVia(executor);
+  auto waitedCheckoutTo1 =
+      std::move(checkoutTo1).semi().via(executor).waitVia(executor);
   EXPECT_TRUE(waitedCheckoutTo1.isReady());
 
   // Try to diff again just to make sure we don't block again.
@@ -1714,6 +1754,8 @@ TEST(Checkout, conflict_when_directory_containing_modified_file_is_removed) {
                                 ObjectFetchContext::getNullContext(),
                                 __func__,
                                 CheckoutMode::DRY_RUN)
+                            .semi()
+                            .via(executor)
                             .waitVia(executor);
   ASSERT_TRUE(checkoutResult.isReady());
   auto result = std::move(checkoutResult).get();
@@ -1757,8 +1799,9 @@ TEST(Checkout, checkoutFailsOnInProgressCheckout) {
             ObjectFetchContext::getNullContext(),
             __func__,
             CheckoutMode::NORMAL)
-        .waitVia(executor)
-        .get();
+        .semi()
+        .via(executor)
+        .getVia(executor);
     FAIL() << "checkout should have failed with "
               "EdenErrorType::CHECKOUT_IN_PROGRESS";
   } catch (const EdenError& exception) {
@@ -1768,7 +1811,7 @@ TEST(Checkout, checkoutFailsOnInProgressCheckout) {
   // Unblock original checkout and make sure it completes
   testMount.getServerState()->getFaultInjector().unblock("checkout", ".*");
 
-  EXPECT_NO_THROW(std::move(checkout1).getVia(executor));
+  EXPECT_NO_THROW(std::move(checkout1).semi().via(executor).getVia(executor));
 
   // Try to checkout again just to make sure we don't block again.
   testMount.getServerState()->getFaultInjector().removeFault("checkout", ".*");
@@ -1778,6 +1821,8 @@ TEST(Checkout, checkoutFailsOnInProgressCheckout) {
                            RootId("1"),
                            ObjectFetchContext::getNullContext(),
                            __func__)
+                       .semi()
+                       .via(executor)
                        .waitVia(executor);
   EXPECT_TRUE(checkout2.isReady());
   EXPECT_NO_THROW(std::move(checkout2).get());
@@ -1814,6 +1859,8 @@ TEST(Checkout, changing_hash_scheme_does_not_conflict_if_contents_are_same) {
                         RootId{"2"},
                         ObjectFetchContext::getNullContext(),
                         __func__)
+                    .semi()
+                    .via(executor)
                     .getVia(executor);
   EXPECT_EQ(0, result.conflicts.size());
 
@@ -1828,6 +1875,8 @@ TEST(Checkout, changing_hash_scheme_does_not_conflict_if_contents_are_same) {
                    RootId{"2"},
                    ObjectFetchContext::getNullContext(),
                    __func__)
+               .semi()
+               .via(executor)
                .getVia(executor);
   EXPECT_EQ(0, result.conflicts.size());
 }
@@ -1902,6 +1951,7 @@ TEST(Checkout, concurrent_crawl_during_checkout) {
                      RootId{"2"},
                      ObjectFetchContext::getNullContext(),
                      __func__)
+                 .semi()
                  .via(mount.getServerExecutor().get());
 
   // Several executors are involved in checkout, some of which aren't the
@@ -1953,6 +2003,7 @@ TEST(Checkout, concurrent_file_to_directory_during_checkout) {
                      RootId{"2"},
                      ObjectFetchContext::getNullContext(),
                      __func__)
+                 .semi()
                  .via(mount.getServerExecutor().get());
 
   // Several executors are involved in checkout, some of which aren't the
@@ -2008,6 +2059,7 @@ TEST(Checkout, concurrent_new_file_during_checkout) {
                      RootId{"2"},
                      ObjectFetchContext::getNullContext(),
                      __func__)
+                 .semi()
                  .via(mount.getServerExecutor().get());
 
   // Several executors are involved in checkout, some of which aren't the
@@ -2065,6 +2117,7 @@ TEST(Checkout, concurrent_recreation_during_checkout) {
                      ObjectFetchContext::getNullContext(),
                      __func__,
                      CheckoutMode::FORCE)
+                 .semi()
                  .via(mount.getServerExecutor().get());
 
   // Several executors are involved in checkout, some of which aren't the

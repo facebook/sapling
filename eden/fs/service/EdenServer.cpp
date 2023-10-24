@@ -1796,7 +1796,7 @@ EdenMountHandle EdenServer::getMount(AbsolutePathPiece mountPath) const {
   return {mount, mount->getRootInodeUnchecked()};
 }
 
-Future<CheckoutResult> EdenServer::checkOutRevision(
+ImmediateFuture<CheckoutResult> EdenServer::checkOutRevision(
     AbsolutePathPiece mountPath,
     std::string& rootHash,
     std::optional<folly::StringPiece> rootHgManifest,
@@ -1891,7 +1891,6 @@ Future<CheckoutResult> EdenServer::checkOutRevision(
         }
         return std::move(result);
       })
-      .via(getServerState()->getThreadPool().get())
       .ensure([mountHandle] {});
 }
 
