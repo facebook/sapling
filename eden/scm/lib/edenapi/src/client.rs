@@ -477,7 +477,7 @@ impl Client {
         keys: Vec<Key>,
         attributes: Option<TreeAttributes>,
     ) -> Result<Response<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
-        tracing::info!("Requesting {} tree(s)", keys.len());
+        tracing::info!("Requesting fetching of {} tree(s)", keys.len());
 
         if keys.is_empty() {
             return Ok(Response::empty());
@@ -509,7 +509,10 @@ impl Client {
         &self,
         reqs: Vec<FileSpec>,
     ) -> Result<Response<FileResponse>, EdenApiError> {
-        tracing::info!("Requesting attributes for {} file(s)", reqs.len());
+        tracing::info!(
+            "Requesting fetching of attributes for {} file(s)",
+            reqs.len()
+        );
 
         if reqs.is_empty() {
             return Ok(Response::empty());
