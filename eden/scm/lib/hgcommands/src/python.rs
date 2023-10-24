@@ -68,10 +68,24 @@ pub fn py_set_program_name(name: &str) {
     }
 }
 
+fn need_python_site() -> bool {
+    match std::env::var_os("SL_PYTHON_SITE") {
+        Some(v) => v != "0",
+        None => {
+            if cfg!(feature = "fb") && cfg!(target_os = "macos") {
+                // Need sitecustomize to set up openssl properly.
+                // https://fburl.com/code/dnmhzci9
+                return true;
+            }
+            false
+        }
+    }
+}
+
 pub fn py_initialize() {
     unsafe {
-        // Disable importing "site".
-        ffi::Py_NoSiteFlag = 1;
+        // Disable importing "site" unless it's required.
+        ffi::Py_NoSiteFlag = if need_python_site() { 0 } else { 1 };
         // Avoid overriding exiting Ctrl+C signal handlers.
         Py_InitializeEx(0);
     }
