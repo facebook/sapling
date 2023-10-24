@@ -71,7 +71,7 @@ function CwdDetails({dismiss}: {dismiss: () => unknown}) {
   const cwd = useRecoilValue(serverCwd);
   return (
     <DropdownFields title={<T>Repository info</T>} icon="folder" data-testid="cwd-details-dropdown">
-      <CwdSelections dismiss={dismiss} />
+      <CwdSelections dismiss={dismiss} divider />
       <DropdownField title={<T>Active repository</T>}>
         <code>{cwd}</code>
       </DropdownField>
@@ -89,7 +89,7 @@ function CwdDetails({dismiss}: {dismiss: () => unknown}) {
   );
 }
 
-function CwdSelections({dismiss}: {dismiss: () => unknown}) {
+export function CwdSelections({dismiss, divider}: {dismiss: () => unknown; divider?: boolean}) {
   const currentCwd = useRecoilValue(serverCwd);
   const cwdOptions = useRecoilValue(availableCwds);
   if (cwdOptions.length < 2) {
@@ -131,7 +131,7 @@ function CwdSelections({dismiss}: {dismiss: () => unknown}) {
           );
         })}
       </VSCodeRadioGroup>
-      <VSCodeDivider />
+      {divider && <VSCodeDivider />}
     </DropdownField>
   );
 }

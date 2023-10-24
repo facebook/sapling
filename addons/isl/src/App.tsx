@@ -13,6 +13,7 @@ import {CommandHistoryAndProgress} from './CommandHistoryAndProgress';
 import {CommitInfoSidebar} from './CommitInfoView/CommitInfoView';
 import {CommitTreeList} from './CommitTreeList';
 import {ComparisonViewModal} from './ComparisonView/ComparisonViewModal';
+import {CwdSelections} from './CwdSelector';
 import {EmptyState} from './EmptyState';
 import {ErrorBoundary, ErrorNotice} from './ErrorNotice';
 import {ISLCommandContext, useCommand} from './ISLShortcuts';
@@ -156,16 +157,19 @@ function ISLNullState({repoError}: {repoError: RepositoryError}) {
   if (repoError != null) {
     if (repoError.type === 'cwdNotARepository') {
       content = (
-        <EmptyState>
-          <div>
-            <T>Not a valid repository</T>
-          </div>
-          <p>
-            <T replace={{$cwd: <code>{repoError.cwd}</code>}}>
-              $cwd is not a valid Sapling repository. Clone or init a repository to use ISL.
-            </T>
-          </p>
-        </EmptyState>
+        <>
+          <EmptyState>
+            <div>
+              <T>Not a valid repository</T>
+            </div>
+            <p>
+              <T replace={{$cwd: <code>{repoError.cwd}</code>}}>
+                $cwd is not a valid Sapling repository. Clone or init a repository to use ISL.
+              </T>
+            </p>
+          </EmptyState>
+          <CwdSelections dismiss={() => null} />
+        </>
       );
     } else if (repoError.type === 'invalidCommand') {
       content = (
