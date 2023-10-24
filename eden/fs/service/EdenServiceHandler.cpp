@@ -777,10 +777,8 @@ EdenServiceHandler::semifuture_getBlake3(
                  .thenValue(
                      [mountHandle,
                       paths = std::move(paths),
-                      fetchContext = fetchContext.copy(),
-                      executor = server_->getServer()->getThreadManager()](
-                         auto&&) mutable {
-                       return collectAll(applyToVirtualInode(
+                      fetchContext = fetchContext.copy()](auto&&) mutable {
+                       return applyToVirtualInode(
                            mountHandle.getRootInode(),
                            *paths,
                            [mountHandle, fetchContext = fetchContext.copy()](
@@ -793,8 +791,7 @@ EdenServiceHandler::semifuture_getBlake3(
                                  .semi();
                            },
                            mountHandle.getObjectStorePtr(),
-                           fetchContext,
-                           executor.get()));
+                           fetchContext);
                      })
                  .ensure([mountHandle] {})
                  .thenValue([](std::vector<folly::Try<Hash32>> results) {
@@ -834,10 +831,8 @@ EdenServiceHandler::semifuture_getSHA1(
                  .thenValue(
                      [mountHandle,
                       paths = std::move(paths),
-                      fetchContext = fetchContext.copy(),
-                      executor = server_->getServer()->getThreadManager()](
-                         auto&&) mutable {
-                       return collectAll(applyToVirtualInode(
+                      fetchContext = fetchContext.copy()](auto&&) mutable {
+                       return applyToVirtualInode(
                            mountHandle.getRootInode(),
                            *paths,
                            [mountHandle, fetchContext = fetchContext.copy()](
@@ -850,8 +845,7 @@ EdenServiceHandler::semifuture_getSHA1(
                                  .semi();
                            },
                            mountHandle.getObjectStorePtr(),
-                           fetchContext,
-                           executor.get()));
+                           fetchContext);
                      })
                  .ensure([mountHandle] {})
                  .thenValue([](std::vector<folly::Try<Hash20>> results) {
@@ -2149,46 +2143,38 @@ EdenServiceHandler::semifuture_getEntryInformation(
              waitForPendingWrites(mountHandle.getEdenMount(), *sync)
                  .thenValue([mountHandle,
                              paths = std::move(paths),
-                             fetchContext = fetchContext.copy(),
-                             executor =
-                                 server_->getServer()->getThreadManager()](
-                                auto&&) {
+                             fetchContext = fetchContext.copy()](auto&&) {
                    bool windowsSymlinksEnabled =
                        mountHandle.getEdenMount()
                            .getCheckoutConfig()
                            ->getEnableWindowsSymlinks();
-                   return collectAll(
-                              applyToVirtualInode(
-                                  mountHandle.getRootInode(),
-                                  *paths,
-                                  [windowsSymlinksEnabled](
-                                      const VirtualInode& inode, RelativePath) {
-                                    return filteredEntryDtype(
-                                        inode.getDtype(),
-                                        windowsSymlinksEnabled);
-                                  },
-                                  mountHandle.getObjectStorePtr(),
-                                  fetchContext,
-                                  executor.get()))
-                       .deferValue([](vector<Try<dtype_t>> done) {
-                         auto out = std::make_unique<
-                             vector<EntryInformationOrError>>();
-                         out->reserve(done.size());
-                         for (auto& item : done) {
-                           EntryInformationOrError result;
-                           if (item.hasException()) {
-                             result.error_ref() =
-                                 newEdenError(item.exception());
-                           } else {
-                             EntryInformation info;
-                             info.dtype_ref() =
-                                 static_cast<Dtype>(item.value());
-                             result.info_ref() = info;
-                           }
-                           out->emplace_back(std::move(result));
-                         }
-                         return out;
-                       });
+                   return applyToVirtualInode(
+                       mountHandle.getRootInode(),
+                       *paths,
+                       [windowsSymlinksEnabled](
+                           const VirtualInode& inode, RelativePath) {
+                         return filteredEntryDtype(
+                             inode.getDtype(), windowsSymlinksEnabled);
+                       },
+                       mountHandle.getObjectStorePtr(),
+                       fetchContext);
+                 })
+                 .thenValue([](vector<Try<dtype_t>> done) {
+                   auto out =
+                       std::make_unique<vector<EntryInformationOrError>>();
+                   out->reserve(done.size());
+                   for (auto& item : done) {
+                     EntryInformationOrError result;
+                     if (item.hasException()) {
+                       result.error_ref() = newEdenError(item.exception());
+                     } else {
+                       EntryInformation info;
+                       info.dtype_ref() = static_cast<Dtype>(item.value());
+                       result.info_ref() = info;
+                     }
+                     out->emplace_back(std::move(result));
+                   }
+                   return out;
                  }))
       .semi();
 }
@@ -2211,60 +2197,51 @@ EdenServiceHandler::semifuture_getFileInformation(
                  .thenValue([mountHandle,
                              paths = std::move(paths),
                              lastCheckoutTime,
-                             fetchContext = fetchContext.copy(),
-                             executor =
-                                 server_->getServer()->getThreadManager()](
-                                auto&&) {
-                   return collectAll(
-                              applyToVirtualInode(
-                                  mountHandle.getRootInode(),
-                                  *paths,
-                                  [mountHandle,
-                                   lastCheckoutTime,
-                                   fetchContext = fetchContext.copy()](
-                                      const VirtualInode& inode, RelativePath) {
-                                    return inode
-                                        .stat(
-                                            lastCheckoutTime,
-                                            mountHandle.getObjectStorePtr(),
-                                            fetchContext)
-                                        .thenValue([](struct stat st) {
-                                          FileInformation info;
-                                          info.size_ref() = st.st_size;
-                                          auto ts = stMtime(st);
-                                          info.mtime_ref()->seconds_ref() =
-                                              ts.tv_sec;
-                                          info.mtime_ref()->nanoSeconds_ref() =
-                                              ts.tv_nsec;
-                                          info.mode_ref() = st.st_mode;
+                             fetchContext = fetchContext.copy()](auto&&) {
+                   return applyToVirtualInode(
+                       mountHandle.getRootInode(),
+                       *paths,
+                       [mountHandle,
+                        lastCheckoutTime,
+                        fetchContext = fetchContext.copy()](
+                           const VirtualInode& inode, RelativePath) {
+                         return inode
+                             .stat(
+                                 lastCheckoutTime,
+                                 mountHandle.getObjectStorePtr(),
+                                 fetchContext)
+                             .thenValue([](struct stat st) {
+                               FileInformation info;
+                               info.size_ref() = st.st_size;
+                               auto ts = stMtime(st);
+                               info.mtime_ref()->seconds_ref() = ts.tv_sec;
+                               info.mtime_ref()->nanoSeconds_ref() = ts.tv_nsec;
+                               info.mode_ref() = st.st_mode;
 
-                                          FileInformationOrError result;
-                                          result.info_ref() = info;
+                               FileInformationOrError result;
+                               result.info_ref() = info;
 
-                                          return result;
-                                        })
-                                        .semi();
-                                  },
-                                  mountHandle.getObjectStorePtr(),
-                                  fetchContext,
-                                  executor.get()))
-                       .deferValue([](vector<Try<FileInformationOrError>>&&
-                                          done) {
-                         auto out =
-                             std::make_unique<vector<FileInformationOrError>>();
-                         out->reserve(done.size());
-                         for (auto& item : done) {
-                           if (item.hasException()) {
-                             FileInformationOrError result;
-                             result.error_ref() =
-                                 newEdenError(item.exception());
-                             out->emplace_back(std::move(result));
-                           } else {
-                             out->emplace_back(item.value());
-                           }
-                         }
-                         return out;
-                       });
+                               return result;
+                             })
+                             .semi();
+                       },
+                       mountHandle.getObjectStorePtr(),
+                       fetchContext);
+                 })
+                 .thenValue([](vector<Try<FileInformationOrError>>&& done) {
+                   auto out =
+                       std::make_unique<vector<FileInformationOrError>>();
+                   out->reserve(done.size());
+                   for (auto& item : done) {
+                     if (item.hasException()) {
+                       FileInformationOrError result;
+                       result.error_ref() = newEdenError(item.exception());
+                       out->emplace_back(std::move(result));
+                     } else {
+                       out->emplace_back(item.value());
+                     }
+                   }
+                   return out;
                  }))
       .ensure([mountHandle] {})
       .semi();

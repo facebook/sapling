@@ -27,8 +27,7 @@ namespace detail {
  */
 class VirtualInodeLoader {
  public:
-  explicit VirtualInodeLoader(folly::Executor::KeepAlive<> executor)
-      : executor_{std::move(executor)} {}
+  VirtualInodeLoader() = default;
 
   // Arrange to load the inode for the input path
   folly::SemiFuture<VirtualInode> load(RelativePathPiece path) {
@@ -55,7 +54,7 @@ class VirtualInodeLoader {
   // this inode to be loaded.
   // In the failure case this will propagate the failure to
   // any children of this node, too.
-  void loaded(
+  ImmediateFuture<folly::Unit> loaded(
       folly::Try<VirtualInode> inodeTreeTry,
       RelativePathPiece path,
       const std::shared_ptr<ObjectStore>& store,
@@ -66,6 +65,8 @@ class VirtualInodeLoader {
 
     auto isTree = inodeTreeTry.hasValue() ? inodeTreeTry->isDirectory() : false;
 
+    std::vector<ImmediateFuture<folly::Unit>> futures;
+    futures.reserve(children_.size());
     for (auto& entry : children_) {
       auto& childName = entry.first;
       auto& childLoader = entry.second;
@@ -73,39 +74,42 @@ class VirtualInodeLoader {
 
       if (inodeTreeTry.hasException()) {
         // The attempt failed, so propagate the failure to our children
-        childLoader->loaded(inodeTreeTry, childPath, store, fetchContext);
+        futures.push_back(
+            childLoader->loaded(inodeTreeTry, childPath, store, fetchContext));
       } else if (!isTree) {
         // This inode is not a tree but we're trying to load
         // children; generate failures for these
-        childLoader->loaded(
+        futures.push_back(childLoader->loaded(
             folly::Try<VirtualInode>(
                 folly::make_exception_wrapper<std::system_error>(
                     ENOENT, std::generic_category())),
             childPath,
             store,
-            fetchContext);
-        continue;
+            fetchContext));
       } else {
-        makeImmediateFutureWith([&] {
-          return inodeTreeTry.value().getOrFindChild(
-              childName, childPath, store, fetchContext);
-        })
-            .thenTry([loader = std::move(childLoader),
+        futures.push_back(
+            makeImmediateFutureWith([&] {
+              return inodeTreeTry.value().getOrFindChild(
+                  childName, childPath, store, fetchContext);
+            })
+                .thenTry([loader = std::move(childLoader),
+                          childPath,
+                          store,
+                          fetchContext = fetchContext.copy()](
+                             folly::Try<VirtualInode>&& childInodeTreeTry) {
+                  return loader->loaded(
+                      std::move(childInodeTreeTry),
                       childPath,
                       store,
-                      fetchContext = fetchContext.copy()](
-                         folly::Try<VirtualInode>&& childInodeTreeTry) {
-              loader->loaded(childInodeTreeTry, childPath, store, fetchContext);
-            })
-            .semi()
-            .via(executor_);
+                      fetchContext);
+                }));
       }
     }
+
+    return collectAllSafe(std::move(futures)).unit();
   }
 
  private:
-  // Executor on which to run the recursive loaded method invocation.
-  folly::Executor::KeepAlive<> executor_;
   // Any child nodes that we need to load.  We have to use a unique_ptr
   // for this to avoid creating a self-referential type and fail to
   // compile.  This happens to have the nice property of maintaining
@@ -121,8 +125,7 @@ class VirtualInodeLoader {
     if (child) {
       return child->get();
     }
-    auto ret = children_.emplace(
-        name, std::make_unique<VirtualInodeLoader>(executor_));
+    auto ret = children_.emplace(name, std::make_unique<VirtualInodeLoader>());
     return ret.first->second.get();
   }
 };
@@ -153,12 +156,11 @@ auto applyToVirtualInode(
     const std::vector<std::string>& paths,
     Func func,
     const std::shared_ptr<ObjectStore>& store,
-    const ObjectFetchContextPtr& fetchContext,
-    folly::Executor::KeepAlive<> executor) {
+    const ObjectFetchContextPtr& fetchContext) {
   using FuncRet = folly::invoke_result_t<Func&, VirtualInode, RelativePath>;
   using Result = typename folly::isFutureOrSemiFuture<FuncRet>::Inner;
 
-  detail::VirtualInodeLoader loader{std::move(executor)};
+  detail::VirtualInodeLoader loader;
 
   // Func may not be copyable, so wrap it in a shared_ptr.
   auto cb = std::make_shared<Func>(std::move(func));
@@ -176,13 +178,15 @@ auto applyToVirtualInode(
     results.push_back(std::move(result));
   }
 
-  loader.loaded(
-      folly::Try<VirtualInode>(VirtualInode{std::move(rootInode)}),
-      RelativePath(),
-      store,
-      fetchContext);
-
-  return results;
+  return loader
+      .loaded(
+          folly::Try<VirtualInode>(VirtualInode{std::move(rootInode)}),
+          RelativePath(),
+          store,
+          fetchContext)
+      .thenValue([results = std::move(results)](auto&&) mutable {
+        return folly::collectAll(std::move(results));
+      });
 }
 
 } // namespace facebook::eden
