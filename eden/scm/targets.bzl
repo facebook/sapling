@@ -1,18 +1,27 @@
+load("@fbcode_macros//build_defs:native_rules.bzl", "alias")
 load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
 load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
 load("@fbcode_macros//build_defs:rust_universal_binary.bzl", "rust_universal_binary")
 load("@fbsource//tools/build_defs:buckconfig.bzl", "read_bool")
 
-def rust_maybe_universal_binary(name, *args, **kwargs):
-    if not read_bool("fbcode", "mode_mac_enabled", False):
-        rust_binary(name = name, *args, **kwargs)
-        return
+def rust_maybe_universal_binary(name, **kwargs):
     rust_name = "rust_" + name
-    rust_binary(name = rust_name, *args, **kwargs)
-    rust_universal_binary(
-        name = name,
-        source = ":" + rust_name,
+    rust_binary(
+        name = rust_name,
+        **kwargs
     )
+    if read_bool("fbcode", "mode_mac_enabled", False):
+        rust_universal_binary(
+            name = name,
+            source = ":{}".format(rust_name),
+            visibility = kwargs.get("visibility", None),
+        )
+    else:
+        alias(
+            name = name,
+            actual = ":{}".format(rust_name),
+            visibility = kwargs.get("visibility", None),
+        )
 
 def rust_python_library(deps = None, include_python_sys = False, include_cpython = True, **kwargs):
     if "versions" not in kwargs:
