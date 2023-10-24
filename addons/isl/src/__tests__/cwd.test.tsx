@@ -109,4 +109,15 @@ describe('cwd', () => {
 
     expect(screen.queryByText('sl goto --rev a')).not.toBeInTheDocument();
   });
+
+  it('dismisses dropdown when changing cwd', () => {
+    openCwdDropdown();
+
+    const dropdown = screen.getByTestId('cwd-details-dropdown');
+    act(() => {
+      fireEvent.click(within(dropdown).getByText('repo2'));
+    });
+
+    expect(screen.queryByTestId('cwd-details-dropdown')).not.toBeInTheDocument();
+  });
 });

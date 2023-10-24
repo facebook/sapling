@@ -52,7 +52,10 @@ export function CwdSelector() {
   }
   const repoBasename = basename(info.repoRoot);
   return (
-    <Tooltip trigger="click" component={() => <CwdDetails />} placement="bottom">
+    <Tooltip
+      trigger="click"
+      component={dismiss => <CwdDetails dismiss={dismiss} />}
+      placement="bottom">
       <VSCodeButton appearance="icon" data-testid="cwd-dropdown-button">
         <Icon icon="folder" slot="start" />
         {repoBasename}
@@ -61,14 +64,14 @@ export function CwdSelector() {
   );
 }
 
-function CwdDetails() {
+function CwdDetails({dismiss}: {dismiss: () => unknown}) {
   const info = useRecoilValue(repositoryInfo);
   const repoRoot = info?.type === 'success' ? info.repoRoot : null;
   const provider = useRecoilValue(codeReviewProvider);
   const cwd = useRecoilValue(serverCwd);
   return (
     <DropdownFields title={<T>Repository info</T>} icon="folder" data-testid="cwd-details-dropdown">
-      <CwdSelections />
+      <CwdSelections dismiss={dismiss} />
       <DropdownField title={<T>Active repository</T>}>
         <code>{cwd}</code>
       </DropdownField>
@@ -86,7 +89,7 @@ function CwdDetails() {
   );
 }
 
-function CwdSelections() {
+function CwdSelections({dismiss}: {dismiss: () => unknown}) {
   const currentCwd = useRecoilValue(serverCwd);
   const cwdOptions = useRecoilValue(availableCwds);
   if (cwdOptions.length < 2) {
@@ -111,6 +114,7 @@ function CwdSelections() {
             cwd: newCwd,
           });
           serverAPI.cwdChanged();
+          dismiss();
         }}>
         {paths.map((shortCwd, index) => {
           const fullCwd = cwdOptions[index];
