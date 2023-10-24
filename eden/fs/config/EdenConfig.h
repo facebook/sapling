@@ -1247,6 +1247,14 @@ class EdenConfig : private ConfigSettingManager {
       {},
       this};
 
+  /**
+   * Whether edenfsctl doctor should check for Kerberos certificate issues.
+   */
+  ConfigSetting<bool> doctorEnableKerberosCheck{
+      "doctor:enable-kerberos-check",
+      false,
+      this};
+
   // [hash]
   /**
    * The key to use for blake3 hash computation.
