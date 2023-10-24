@@ -1513,13 +1513,13 @@ folly::Future<CheckoutResult> EdenMount::checkout(
 
         return serverState_->getFaultInjector()
             .checkAsync("inodeCheckout", getPath().view())
-            .semi()
-            .via(getServerThreadPool().get())
             .thenValue([ctx, treeResults = std::move(treeResults), rootInode](
                            auto&&) mutable {
               auto& [fromTree, toTree] = treeResults;
               return rootInode->checkout(ctx.get(), fromTree.tree, toTree.tree);
-            });
+            })
+            .semi()
+            .via(&folly::QueuedImmediateExecutor::instance());
       })
       .thenValue([ctx, checkoutTimes, stopWatch, snapshotHash](auto&&) {
         checkoutTimes->didCheckout = stopWatch.elapsed();

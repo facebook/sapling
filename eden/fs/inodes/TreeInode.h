@@ -13,9 +13,9 @@
 #include <optional>
 #include "eden/common/utils/FileOffset.h"
 #include "eden/fs/fuse/Invalidation.h"
-#include "eden/fs/inodes/CheckoutAction.h"
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/InodeBase.h"
+#include "eden/fs/model/Tree.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
@@ -350,7 +350,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * @return Returns a future that will be fulfilled once this tree and all of
    *     its children have been updated.
    */
-  FOLLY_NODISCARD folly::Future<folly::Unit> checkout(
+  FOLLY_NODISCARD ImmediateFuture<folly::Unit> checkout(
       CheckoutContext* ctx,
       std::shared_ptr<const Tree> fromTree,
       std::shared_ptr<const Tree> toTree);
@@ -489,7 +489,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    *     This entry will refer to a tree if and only if the newTree parameter
    *     is non-null.
    */
-  FOLLY_NODISCARD folly::Future<InvalidationRequired> checkoutUpdateEntry(
+  FOLLY_NODISCARD ImmediateFuture<InvalidationRequired> checkoutUpdateEntry(
       CheckoutContext* ctx,
       PathComponentPiece name,
       InodePtr inode,
@@ -778,7 +778,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       CheckoutContext* ctx,
       const Tree* fromTree,
       const Tree* toTree,
-      std::vector<std::unique_ptr<CheckoutAction>>& actions,
+      std::vector<std::shared_ptr<CheckoutAction>>& actions,
       std::vector<IncompleteInodeLoad>& pendingLoads,
       bool& wasDirectoryListModified);
 
@@ -787,9 +787,9 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * modified the directory contents, which implies the return value is nullptr.
    *
    * This function could return a std::variant of InvalidationRequired and
-   * std::unique_ptr<CheckoutAction> instead of setting a boolean.
+   * std::shared_ptr<CheckoutAction> instead of setting a boolean.
    */
-  std::unique_ptr<CheckoutAction> processCheckoutEntry(
+  std::shared_ptr<CheckoutAction> processCheckoutEntry(
       CheckoutContext* ctx,
       TreeInodeState& contents,
       const Tree::value_type* oldScmEntry,
@@ -797,7 +797,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       std::vector<IncompleteInodeLoad>& pendingLoads,
       bool& wasDirectoryListModified);
 
-  std::unique_ptr<CheckoutAction> processAbsentCheckoutEntry(
+  std::shared_ptr<CheckoutAction> processAbsentCheckoutEntry(
       CheckoutContext* ctx,
       TreeInodeState& state,
       const Tree::value_type* oldScmEntry,

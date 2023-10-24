@@ -3029,7 +3029,7 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
       });
 }
 
-Future<Unit> TreeInode::checkout(
+ImmediateFuture<Unit> TreeInode::checkout(
     CheckoutContext* ctx,
     std::shared_ptr<const Tree> fromTree,
     std::shared_ptr<const Tree> toTree) {
@@ -3038,8 +3038,8 @@ Future<Unit> TreeInode::checkout(
              << " --> "
              << (toTree ? toTree->getHash().toLogString() : "<none>");
 
-  vector<unique_ptr<CheckoutAction>> actions;
-  vector<IncompleteInodeLoad> pendingLoads;
+  std::vector<std::shared_ptr<CheckoutAction>> actions;
+  std::vector<IncompleteInodeLoad> pendingLoads;
 
   // This default to true on Windows to always make sure that the directory is
   // a placeholder and is safe to be dematerialized. On Windows, adding a
@@ -3062,21 +3062,19 @@ Future<Unit> TreeInode::checkout(
   }
 
   // Now start all of the checkout actions
-  vector<Future<InvalidationRequired>> actionFutures;
+  std::vector<ImmediateFuture<InvalidationRequired>> actionFutures;
+  actionFutures.reserve(actions.size());
   for (const auto& action : actions) {
     actionFutures.emplace_back(action->run(ctx, &getObjectStore()));
   }
 
-  ImmediateFuture<Unit> faultFuture =
+  auto faultFuture =
       getMount()->getServerState()->getFaultInjector().checkAsync(
           "TreeInode::checkout", getLogPath(), ctx->isDryRun());
-  folly::SemiFuture<vector<folly::Try<facebook::eden::InvalidationRequired>>>
-      collectFuture = folly::collectAll(actionFutures);
+  auto collectFuture = collectAll(std::move(actionFutures));
 
   // Wait for all of the actions, and record any errors.
   return std::move(faultFuture)
-      .semi()
-      .toUnsafeFuture()
       .thenValue([collectFuture = std::move(collectFuture)](auto&&) mutable {
         return std::move(collectFuture);
       })
@@ -3086,7 +3084,8 @@ Future<Unit> TreeInode::checkout(
            toTree = std::move(toTree),
            actions = std::move(actions),
            shouldInvalidateDirectory](
-              vector<folly::Try<InvalidationRequired>> actionResults) mutable {
+              vector<folly::Try<InvalidationRequired>> actionResults) mutable
+          -> ImmediateFuture<folly::Unit> {
             // Record any errors that occurred
             size_t numErrors = 0;
             for (size_t n = 0; n < actionResults.size(); ++n) {
@@ -3127,25 +3126,16 @@ Future<Unit> TreeInode::checkout(
                       });
             }
 
-            auto fut = std::move(invalidation)
-                           .thenValue([self,
-                                       ctx,
-                                       toTree = std::move(toTree),
-                                       numErrors](auto&&) {
-                             // Update our state in the overlay
-                             self->saveOverlayPostCheckout(ctx, toTree.get());
+            return std::move(invalidation)
+                .thenValue(
+                    [self, ctx, toTree = std::move(toTree), numErrors](auto&&) {
+                      // Update our state in the overlay
+                      self->saveOverlayPostCheckout(ctx, toTree.get());
 
-                             XLOG(DBG4) << "checkout: finished update of "
-                                        << self->getLogPath() << ": "
-                                        << numErrors << " errors";
-                           });
-
-            if (fut.isReady()) {
-              return folly::makeFuture(std::move(fut).getTry());
-            } else {
-              return std::move(fut).semi().via(
-                  self->getMount()->getServerThreadPool().get());
-            }
+                      XLOG(DBG4) << "checkout: finished update of "
+                                 << self->getLogPath() << ": " << numErrors
+                                 << " errors";
+                    });
           });
 }
 
@@ -3206,7 +3196,7 @@ void TreeInode::computeCheckoutActions(
     CheckoutContext* ctx,
     const Tree* fromTree,
     const Tree* toTree,
-    vector<unique_ptr<CheckoutAction>>& actions,
+    vector<std::shared_ptr<CheckoutAction>>& actions,
     vector<IncompleteInodeLoad>& pendingLoads,
     bool& wasDirectoryListModified) {
   // Grab the contents_ lock for the duration of this function
@@ -3234,7 +3224,7 @@ void TreeInode::computeCheckoutActions(
   auto newIter = toTree ? toTree->cbegin() : emptyEntries.cbegin();
   auto newEnd = toTree ? toTree->cend() : emptyEntries.cend();
   while (true) {
-    unique_ptr<CheckoutAction> action;
+    std::shared_ptr<CheckoutAction> action;
 
     if (oldIter == oldEnd) {
       if (newIter == newEnd) {
@@ -3304,7 +3294,7 @@ void TreeInode::computeCheckoutActions(
   }
 }
 
-unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
+std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
     CheckoutContext* ctx,
     TreeInodeState& state,
     const Tree::value_type* oldScmEntry,
@@ -3357,7 +3347,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
   auto& entry = it->second;
   if (auto childPtr = entry.getInodePtr()) {
     // If the inode is already loaded, create a CheckoutAction to process it
-    return make_unique<CheckoutAction>(
+    return std::make_shared<CheckoutAction>(
         ctx, oldScmEntry, newScmEntry, std::move(childPtr));
   }
 
@@ -3383,7 +3373,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
     // CheckoutAction to process it once it is loaded.
     auto inodeFuture = loadChildLocked(
         contents, name, entry, pendingLoads, ctx->getFetchContext());
-    return make_unique<CheckoutAction>(
+    return std::make_shared<CheckoutAction>(
         ctx, oldScmEntry, newScmEntry, std::move(inodeFuture));
   } else {
     XLOG(DBG6) << "not loading child: inode=" << getNodeId()
@@ -3415,7 +3405,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
         // for sure is to load the inode.
         auto inodeFuture = loadChildLocked(
             contents, name, entry, pendingLoads, ctx->getFetchContext());
-        return make_unique<CheckoutAction>(
+        return std::make_shared<CheckoutAction>(
             ctx, oldScmEntry, newScmEntry, std::move(inodeFuture));
       }
       case ObjectComparison::Identical:
@@ -3435,7 +3425,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
     if (entry.isDirectory()) {
       auto inodeFuture = loadChildLocked(
           contents, name, entry, pendingLoads, ctx->getFetchContext());
-      return make_unique<CheckoutAction>(
+      return std::make_shared<CheckoutAction>(
           ctx, oldScmEntry, newScmEntry, std::move(inodeFuture));
     }
 
@@ -3475,7 +3465,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
                    << getNodeId() << " child=" << name;
         auto inodeFuture = loadChildLocked(
             contents, name, entry, pendingLoads, ctx->getFetchContext());
-        return make_unique<CheckoutAction>(
+        return std::make_shared<CheckoutAction>(
             ctx, oldScmEntry, newScmEntry, std::move(inodeFuture));
       }
     }
@@ -3520,7 +3510,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
   return nullptr;
 }
 
-std::unique_ptr<CheckoutAction> TreeInode::processAbsentCheckoutEntry(
+std::shared_ptr<CheckoutAction> TreeInode::processAbsentCheckoutEntry(
     CheckoutContext* ctx,
     TreeInodeState& state,
     const Tree::value_type* oldScmEntry,
@@ -3602,7 +3592,7 @@ PathComponent getInodeName(CheckoutContext* ctx, const InodePtr& inode) {
 }
 } // namespace
 
-Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
+ImmediateFuture<InvalidationRequired> TreeInode::checkoutUpdateEntry(
     CheckoutContext* ctx,
     PathComponentPiece name,
     InodePtr inode,
@@ -3722,7 +3712,8 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
            parentInode = inodePtrFromThis(),
            treeInode,
            windowsSymlinksEnabled,
-           newScmEntry](auto&&) mutable -> folly::Future<InvalidationRequired> {
+           newScmEntry](
+              auto&&) mutable -> ImmediateFuture<InvalidationRequired> {
             if (ctx->isDryRun()) {
               // If this is a dry run, simply report conflicts and don't update
               // or invalidate the inode.
