@@ -9,9 +9,9 @@ import App from '../App';
 import platform from '../platform';
 import {
   clearAllRecoilSelectorCaches,
-  closeCommitInfoSidebar,
   COMMIT,
   expectMessageSentToServer,
+  openCommitInfoSidebar,
   resetTestMessages,
   simulateCommits,
   simulateMessageFromServer,
@@ -97,7 +97,7 @@ describe('ComparisonView', () => {
     resetTestMessages();
     render(<App />);
     act(() => {
-      closeCommitInfoSidebar();
+      openCommitInfoSidebar();
       simulateCommits({
         value: [
           COMMIT('1', 'some public base', '0', {phase: 'public'}),
