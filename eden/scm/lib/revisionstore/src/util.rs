@@ -10,10 +10,12 @@ use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 
+use anyhow::Context;
 use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use edenapi::Stats;
+use fn_error_context::context;
 use fs_err::read_to_string;
 use fs_err::OpenOptions;
 use hgtime::HgTime;
@@ -26,16 +28,20 @@ pub fn get_repo_name(config: &dyn Config) -> Result<String> {
     Ok(config.must_get("remotefilelog", "reponame")?)
 }
 
+#[context("failed to get config cache path")]
 fn get_config_cache_path(config: &dyn Config) -> Result<PathBuf> {
     let reponame = get_repo_name(config)?;
     let mut path: PathBuf = config.must_get("remotefilelog", "cachepath")?;
-    create_shared_dir(&path)?;
+    create_shared_dir(&path)
+        .with_context(|| format!("Unable to create shared dir at {:?}", path))?;
     path.push(encode_repo_name(reponame));
-    create_shared_dir(&path)?;
+    create_shared_dir(&path)
+        .with_context(|| format!("Unable to create repo shared dir at {:?}", path))?;
 
     Ok(path)
 }
 
+#[context("failed to get cache path with suffix {:?}", suffix.as_ref().map_or_else(|| PathBuf::from("unknown"), |p| p.as_ref().to_path_buf()))]
 pub fn get_cache_path(config: &dyn Config, suffix: &Option<impl AsRef<Path>>) -> Result<PathBuf> {
     let mut path = get_config_cache_path(config)?;
 
@@ -47,18 +53,20 @@ pub fn get_cache_path(config: &dyn Config, suffix: &Option<impl AsRef<Path>>) ->
     Ok(path)
 }
 
+#[context("failed to get local path")]
 pub fn get_local_path(local_path: PathBuf, suffix: &Option<impl AsRef<Path>>) -> Result<PathBuf> {
     let mut path = local_path;
     create_dir(&path)?;
 
     if let Some(ref suffix) = suffix {
         path.push(suffix);
-        create_dir(&path)?;
+        create_dir(&path).with_context(|| format!("failed to create path {:?}", &path))?;
     }
 
     Ok(path)
 }
 
+#[context("failed to get indexedlog data store path {:?}", path.as_ref())]
 pub fn get_indexedlogdatastore_path(path: impl AsRef<Path>) -> Result<PathBuf> {
     let mut path = path.as_ref().to_owned();
     path.push("indexedlogdatastore");
@@ -66,6 +74,7 @@ pub fn get_indexedlogdatastore_path(path: impl AsRef<Path>) -> Result<PathBuf> {
     Ok(path)
 }
 
+#[context("failed to get indexedlog aux path {:?}", path.as_ref())]
 pub fn get_indexedlogdatastore_aux_path(path: impl AsRef<Path>) -> Result<PathBuf> {
     let mut path = path.as_ref().to_owned();
     path.push("indexedlogdatastore_aux");
@@ -73,6 +82,7 @@ pub fn get_indexedlogdatastore_aux_path(path: impl AsRef<Path>) -> Result<PathBu
     Ok(path)
 }
 
+#[context("failed to get indexedlog history path {:?}", path.as_ref())]
 pub fn get_indexedloghistorystore_path(path: impl AsRef<Path>) -> Result<PathBuf> {
     let mut path = path.as_ref().to_owned();
     path.push("indexedloghistorystore");
@@ -80,6 +90,7 @@ pub fn get_indexedloghistorystore_path(path: impl AsRef<Path>) -> Result<PathBuf
     Ok(path)
 }
 
+#[context("failed to get packs path {:?} with suffix {:?}", &path.as_ref(), option_path_to_pathbuf(suffix))]
 pub fn get_packs_path(path: impl AsRef<Path>, suffix: &Option<PathBuf>) -> Result<PathBuf> {
     let mut path = path.as_ref().to_owned();
     path.push("packs");
@@ -93,10 +104,12 @@ pub fn get_packs_path(path: impl AsRef<Path>, suffix: &Option<PathBuf>) -> Resul
     Ok(path)
 }
 
+#[context("failed to get cache packs path {:?}", option_path_to_pathbuf(suffix))]
 pub fn get_cache_packs_path(config: &dyn Config, suffix: &Option<PathBuf>) -> Result<PathBuf> {
     get_packs_path(get_config_cache_path(config)?, suffix)
 }
 
+#[context("failed to get lfs store path {:?}", store_path.as_ref())]
 fn get_lfs_path(store_path: impl AsRef<Path>) -> Result<PathBuf> {
     let mut path = store_path.as_ref().to_owned();
     path.push("lfs");
@@ -105,6 +118,7 @@ fn get_lfs_path(store_path: impl AsRef<Path>) -> Result<PathBuf> {
     Ok(path)
 }
 
+#[context("failed to get lfs pointers path")]
 pub fn get_lfs_pointers_path(store_path: impl AsRef<Path>) -> Result<PathBuf> {
     let mut path = get_lfs_path(store_path)?;
     path.push("pointers");
@@ -113,6 +127,7 @@ pub fn get_lfs_pointers_path(store_path: impl AsRef<Path>) -> Result<PathBuf> {
     Ok(path)
 }
 
+#[context("failed to get lfs objects path")]
 pub fn get_lfs_objects_path(store_path: impl AsRef<Path>) -> Result<PathBuf> {
     let mut path = get_lfs_path(store_path)?;
     path.push("objects");
@@ -121,6 +136,7 @@ pub fn get_lfs_objects_path(store_path: impl AsRef<Path>) -> Result<PathBuf> {
     Ok(path)
 }
 
+#[context("failed to get lfs blobs path")]
 pub fn get_lfs_blobs_path(store_path: impl AsRef<Path>) -> Result<PathBuf> {
     let mut path = get_lfs_path(store_path)?;
     path.push("blobs");
@@ -177,4 +193,10 @@ pub fn record_edenapi_stats(span: &Span, stats: &Stats) {
     let time = stats.time.as_millis() as f64 / 1000.0;
     let size = stats.downloaded as f64 / 1024.0 / 1024.0;
     span.record("download_speed", format!("{:.2}", size / time).as_str());
+}
+
+fn option_path_to_pathbuf(option_path: &Option<PathBuf>) -> PathBuf {
+    option_path
+        .as_ref()
+        .map_or_else(|| PathBuf::from("unknown"), |p| p.to_owned())
 }

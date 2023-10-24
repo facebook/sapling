@@ -14,6 +14,7 @@ use configmodel::convert::ByteCount;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use edenapi::Builder;
+use fn_error_context::context;
 use parking_lot::Mutex;
 use progress_model::AggregatingProgressBar;
 use regex::Regex;
@@ -121,6 +122,7 @@ impl<'a> FileStoreBuilder<'a> {
         self
     }
 
+    #[context("Get ExtStored Policy somehow failed")]
     fn get_extstored_policy(&self) -> Result<ExtStoredPolicy> {
         // This is to keep compatibility w/ the Python lfs extension.
         // Contentstore would "upgrade" Python LFS pointers from the pack store
@@ -130,6 +132,7 @@ impl<'a> FileStoreBuilder<'a> {
         Ok(ExtStoredPolicy::Use)
     }
 
+    #[context("unable to get LFS threshold")]
     fn get_lfs_threshold(&self) -> Result<Option<ByteCount>> {
         let enable_lfs = self.config.get_or_default::<bool>("remotefilelog", "lfs")?;
         let lfs_threshold = if enable_lfs {
@@ -147,6 +150,7 @@ impl<'a> FileStoreBuilder<'a> {
             .unwrap_or_default()
     }
 
+    #[context("unable to determine whether use edenapi")]
     fn use_edenapi(&self) -> Result<bool> {
         Ok(if let Some(use_edenapi) = self.override_edenapi {
             use_edenapi
@@ -155,16 +159,19 @@ impl<'a> FileStoreBuilder<'a> {
         })
     }
 
+    #[context("unable to determine whether to use lfs")]
     fn use_lfs(&self) -> Result<bool> {
         Ok(self.get_lfs_threshold()?.is_some())
     }
 
+    #[context("unable to build edenapi")]
     fn build_edenapi(&self) -> Result<Arc<EdenApiFileStore>> {
         let client = Builder::from_config(self.config)?.build()?;
 
         Ok(EdenApiFileStore::new(client))
     }
 
+    #[context("failed to build local indexedlog")]
     pub fn build_indexedlog_local(&self) -> Result<Option<Arc<IndexedLogHgIdDataStore>>> {
         Ok(if let Some(local_path) = self.local_path.clone() {
             let local_path = get_local_path(local_path, &self.suffix)?;
@@ -184,6 +191,7 @@ impl<'a> FileStoreBuilder<'a> {
         })
     }
 
+    #[context("failed to build indexedlog cache")]
     pub fn build_indexedlog_cache(&self) -> Result<Option<Arc<IndexedLogHgIdDataStore>>> {
         let cache_path = match cache_path(self.config, &self.suffix)? {
             Some(p) => p,
@@ -212,6 +220,7 @@ impl<'a> FileStoreBuilder<'a> {
         )?)))
     }
 
+    #[context("failed to build aux local")]
     pub fn build_aux_local(&self) -> Result<Option<Arc<AuxStore>>> {
         Ok(if let Some(local_path) = self.local_path.clone() {
             let local_path = get_local_path(local_path, &self.suffix)?;
@@ -226,6 +235,7 @@ impl<'a> FileStoreBuilder<'a> {
         })
     }
 
+    #[context("failed to build aux cache")]
     pub fn build_aux_cache(&self) -> Result<Option<Arc<AuxStore>>> {
         let cache_path = match cache_path(self.config, &self.suffix)? {
             Some(p) => p,
@@ -240,6 +250,7 @@ impl<'a> FileStoreBuilder<'a> {
         )?)))
     }
 
+    #[context("failed to build lfs local")]
     pub fn build_lfs_local(&self) -> Result<Option<Arc<LfsStore>>> {
         if !self.use_lfs()? {
             return Ok(None);
@@ -253,6 +264,7 @@ impl<'a> FileStoreBuilder<'a> {
         })
     }
 
+    #[context("failed to build lfs cache")]
     pub fn build_lfs_cache(&self) -> Result<Option<Arc<LfsStore>>> {
         if !self.use_lfs()? {
             return Ok(None);
@@ -266,6 +278,7 @@ impl<'a> FileStoreBuilder<'a> {
         Ok(Some(Arc::new(LfsStore::shared(cache_path, self.config)?)))
     }
 
+    #[context("failed to build config revisionstore")]
     pub fn build(mut self) -> Result<FileStore> {
         tracing::trace!(target: "revisionstore::filestore", "checking cache");
         if self.contentstore.is_none() {
@@ -417,6 +430,7 @@ impl<'a> FileStoreBuilder<'a> {
 
 // Return remotefilelog cache path, or None if there is no cache path
 // (e.g. because we have no repo name).
+#[context("failed to get cache path")]
 fn cache_path(config: &dyn Config, suffix: &Option<PathBuf>) -> Result<Option<PathBuf>> {
     match crate::util::get_cache_path(config, suffix) {
         Ok(p) => Ok(Some(p)),
@@ -506,6 +520,7 @@ impl<'a> TreeStoreBuilder<'a> {
         self
     }
 
+    #[context("failed to determine whether to use edenapi")]
     fn use_edenapi(&self) -> Result<bool> {
         Ok(if let Some(use_edenapi) = self.override_edenapi {
             use_edenapi
@@ -514,12 +529,14 @@ impl<'a> TreeStoreBuilder<'a> {
         })
     }
 
+    #[context("failed to build EdenAPI from config")]
     fn build_edenapi(&self) -> Result<Arc<EdenApiTreeStore>> {
         let client = Builder::from_config(self.config)?.build()?;
 
         Ok(EdenApiTreeStore::new(client))
     }
 
+    #[context("failed to build local indexedlog")]
     pub fn build_indexedlog_local(&self) -> Result<Option<Arc<IndexedLogHgIdDataStore>>> {
         Ok(if let Some(local_path) = self.local_path.clone() {
             let local_path = get_local_path(local_path, &self.suffix)?;
@@ -539,6 +556,7 @@ impl<'a> TreeStoreBuilder<'a> {
         })
     }
 
+    #[context("failed to build indexedlog cache")]
     pub fn build_indexedlog_cache(&self) -> Result<Option<Arc<IndexedLogHgIdDataStore>>> {
         let cache_path = match cache_path(self.config, &self.suffix)? {
             Some(p) => p,
@@ -568,6 +586,7 @@ impl<'a> TreeStoreBuilder<'a> {
         )?)))
     }
 
+    #[context("failed to build revision store")]
     pub fn build(mut self) -> Result<TreeStore> {
         // TODO(meyer): Clean this up, just copied and pasted from the other version & did some ugly hacks to get this
         // (the EdenApiAdapter stuff needs to be fixed in particular)
@@ -626,6 +645,7 @@ impl<'a> TreeStoreBuilder<'a> {
     }
 }
 
+#[context("failed to get edenapi via config")]
 fn use_edenapi_via_config(config: &dyn Config) -> Result<bool> {
     let mut use_edenapi: bool = config.get_or_default("remotefilelog", "http")?;
     if use_edenapi {
