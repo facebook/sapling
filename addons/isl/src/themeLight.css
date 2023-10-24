@@ -11,6 +11,7 @@ html .vscode-light {
   --scm-modified-foreground: #895503;
   --scm-added-foreground: #007100;
   --scm-removed-foreground: #ad0707;
+  --scm-missing-foreground: #418c91;
   --selected-commit-background: rgba(0, 0, 0, 0.1);
   --tooltip-background: var(--vscode-editorWidget-background, #f3f3f3);
   --tooltip-border: var(--vscode-editorWidget-border, #c8c8c8);

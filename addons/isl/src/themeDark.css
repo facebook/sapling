@@ -10,6 +10,7 @@ html .vscode-dark {
   --scm-modified-foreground: #e2c08d;
   --scm-added-foreground: #73c991;
   --scm-removed-foreground: #f3674f;
+  --scm-missing-foreground: #b4eaed;
   --selected-commit-background: rgba(255, 255, 255, 0.1);
 
   --error-fg-color: #f3674f;
