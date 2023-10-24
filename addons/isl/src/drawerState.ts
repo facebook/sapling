@@ -7,6 +7,7 @@
 
 import type {AllDrawersState} from 'shared/Drawers';
 
+import {persistAtomToLocalStorageEffect} from './persistAtomToConfigEffect';
 import {getWindowWidthInPixels} from './utils';
 import {atom} from 'recoil';
 
@@ -22,4 +23,5 @@ export const islDrawerState = atom<AllDrawersState>({
     top: {size: 200, collapsed: true},
     bottom: {size: 200, collapsed: true},
   },
+  effects: [persistAtomToLocalStorageEffect('isl.drawer-state')],
 });

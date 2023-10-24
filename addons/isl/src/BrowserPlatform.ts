@@ -38,4 +38,21 @@ export const browserPlatform: Platform = {
   clipboardCopy(data: string): void {
     navigator.clipboard.writeText(data);
   },
+
+  getTemporaryState<T>(key: string): T | null {
+    try {
+      const found = localStorage.getItem(key) as string | null;
+      if (found == null) {
+        return null;
+      }
+      return JSON.parse(found) as T;
+    } catch {
+      return null;
+    }
+  },
+  setTemporaryState<T>(key: string, value: T): void {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch {}
+  },
 };
