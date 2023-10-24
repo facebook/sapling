@@ -86,7 +86,7 @@ HgImporter::HgImporter(
     cmd.push_back(repoPath.stringWithoutUNC());
   } else {
     cmd.push_back(FLAGS_hgPath);
-    cmd.push_back("debugedenimporthelper");
+    cmd.emplace_back("debugedenimporthelper");
   }
 
   SpawnedProcess::Options opts;
@@ -96,14 +96,14 @@ HgImporter::HgImporter(
   // Send commands to the child on this pipe
   Pipe childInPipe;
   auto inFd = opts.inheritDescriptor(std::move(childInPipe.read));
-  cmd.push_back("--in-fd");
+  cmd.emplace_back("--in-fd");
   cmd.push_back(folly::to<string>(inFd));
   helperIn_ = std::move(childInPipe.write);
 
   // Read responses from this pipe
   Pipe childOutPipe;
   auto outFd = opts.inheritDescriptor(std::move(childOutPipe.write));
-  cmd.push_back("--out-fd");
+  cmd.emplace_back("--out-fd");
   cmd.push_back(folly::to<string>(outFd));
   helperOut_ = std::move(childOutPipe.read);
 

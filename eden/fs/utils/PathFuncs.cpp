@@ -344,7 +344,7 @@ AbsolutePath expandUser(
         "Unable to expand ~ in path because homeDir is not set");
   }
 
-  if (homeDir->size() == 0) {
+  if (homeDir->empty()) {
     throw std::runtime_error(
         "Unable to expand ~ in path because homeDir is the empty string");
   }

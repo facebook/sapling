@@ -96,7 +96,7 @@ class FakeSubstringFilteredBackingStoreTest : public ::testing::Test {
 };
 
 struct HgFilteredBackingStoreTest : TestRepo, ::testing::Test {
-  HgFilteredBackingStoreTest() {}
+  HgFilteredBackingStoreTest() = default;
 
   void SetUp() override {
     auto hgFilter = std::make_unique<HgSparseFilter>(repo.path().copy());

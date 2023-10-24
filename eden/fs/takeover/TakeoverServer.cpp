@@ -309,7 +309,7 @@ TakeoverServer::TakeoverServer(
   start();
 }
 
-TakeoverServer::~TakeoverServer() {}
+TakeoverServer::~TakeoverServer() = default;
 
 void TakeoverServer::start() {
   // Build the address for the takeover socket.
