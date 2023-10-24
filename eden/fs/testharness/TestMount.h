@@ -25,8 +25,6 @@
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
-template <typename T>
-class Future;
 struct Unit;
 class ManualExecutor;
 
@@ -314,13 +312,13 @@ class TestMount {
    * Walk the entire tree and load all inode objects.
    */
   void loadAllInodes();
-  FOLLY_NODISCARD folly::Future<folly::Unit> loadAllInodesFuture();
+  FOLLY_NODISCARD ImmediateFuture<folly::Unit> loadAllInodesFuture();
 
   /**
    * Load all inodes [recursively] under the specified subdirectory.
    */
   static void loadAllInodes(const TreeInodePtr& treeInode);
-  FOLLY_NODISCARD static folly::Future<folly::Unit> loadAllInodesFuture(
+  FOLLY_NODISCARD static ImmediateFuture<folly::Unit> loadAllInodesFuture(
       const TreeInodePtr& treeInode);
 
   /** Convenience method for getting the Tree for the root of the mount. */

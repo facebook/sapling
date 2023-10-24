@@ -9,7 +9,6 @@
 
 #include <folly/FileUtil.h>
 #include <folly/executors/ManualExecutor.h>
-#include <folly/executors/QueuedImmediateExecutor.h>
 #include <folly/experimental/TestUtil.h>
 #include <folly/io/IOBuf.h>
 #include <folly/logging/xlog.h>
@@ -54,8 +53,6 @@
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 #include "eden/fs/utils/UserInfo.h"
 
-using folly::Future;
-using folly::makeFuture;
 using folly::Unit;
 using namespace std::chrono_literals;
 using namespace std::string_literals;
@@ -835,12 +832,12 @@ VirtualInode TestMount::getVirtualInode(folly::StringPiece path) const {
 }
 
 void TestMount::loadAllInodes() {
-  auto fut = loadAllInodesFuture().via(getServerExecutor().get());
+  auto fut = loadAllInodesFuture().semi().via(getServerExecutor().get());
   drainServerExecutor();
   std::move(fut).get(std::chrono::milliseconds(1));
 }
 
-Future<Unit> TestMount::loadAllInodesFuture() {
+ImmediateFuture<Unit> TestMount::loadAllInodesFuture() {
   return loadAllInodesFuture(edenMount_->getRootInode());
 }
 
@@ -848,7 +845,8 @@ void TestMount::loadAllInodes(const TreeInodePtr& treeInode) {
   loadAllInodesFuture(treeInode).get();
 }
 
-Future<Unit> TestMount::loadAllInodesFuture(const TreeInodePtr& treeInode) {
+ImmediateFuture<Unit> TestMount::loadAllInodesFuture(
+    const TreeInodePtr& treeInode) {
   // Build a list of child names to load.
   // (If necessary we could make a more efficient version of this that starts
   // all the child loads while holding the lock.  However, we don't really care
@@ -862,22 +860,20 @@ Future<Unit> TestMount::loadAllInodesFuture(const TreeInodePtr& treeInode) {
   }
 
   // Now start all the loads.
-  std::vector<Future<Unit>> childFutures;
+  std::vector<ImmediateFuture<Unit>> childFutures;
   for (const auto& name : childNames) {
     auto childFuture =
         treeInode->getOrLoadChild(name, ObjectFetchContext::getNullContext())
-            .semi()
-            .via(&folly::QueuedImmediateExecutor::instance())
-            .thenValue([](InodePtr child) {
+            .thenValue([](InodePtr child) -> ImmediateFuture<folly::Unit> {
               TreeInodePtr childTree = child.asTreePtrOrNull();
               if (childTree) {
                 return loadAllInodesFuture(childTree);
               }
-              return makeFuture();
+              return folly::unit;
             });
     childFutures.emplace_back(std::move(childFuture));
   }
-  return folly::collectUnsafe(childFutures).unit();
+  return collectAllSafe(std::move(childFutures)).unit();
 }
 
 std::shared_ptr<const Tree> TestMount::getRootTree() const {

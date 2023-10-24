@@ -31,7 +31,6 @@ cpp_library(
         "//eden/fs/utils:user_info",
         "//eden/fs/utils:utils",
         "//folly:file_util",
-        "//folly/executors:queued_immediate_executor",
         "//folly/experimental:test_util",
         "//folly/io:iobuf",
         "//folly/logging:logging",
