@@ -19,7 +19,7 @@ using std::string;
 
 namespace facebook::eden {
 
-FakeTreeBuilder::FakeTreeBuilder() {}
+FakeTreeBuilder::FakeTreeBuilder() = default;
 
 /**
  * Create a clone of this FakeTreeBuilder.

@@ -224,9 +224,13 @@ describe('CommitTreeList', () => {
           const ignoredFileCheckboxes = document.querySelectorAll(
             '.changed-files .changed-file.file-ignored input[type="checkbox"]',
           );
-          expect(ignoredFileCheckboxes).toHaveLength(2); // file_untracked.js and file_missing.js
+          const missingFileCheckboxes = document.querySelectorAll(
+            '.changed-files .changed-file.file-missing input[type="checkbox"]',
+          );
+          expect(ignoredFileCheckboxes).toHaveLength(1); // file_untracked.js
+          expect(missingFileCheckboxes).toHaveLength(1); // file_missing.js
           act(() => {
-            fireEvent.click(ignoredFileCheckboxes[0]);
+            fireEvent.click(missingFileCheckboxes[0]);
           });
 
           const addremove = screen.getByTestId('addremove-button');

@@ -1150,7 +1150,7 @@ const nameAndIconForFileStatus: Record<VisualChangedFileType, [string, string]> 
   M: ['modified', 'diff-modified'],
   R: ['removed', 'diff-removed'],
   '?': ['ignored', 'question'],
-  '!': ['ignored', 'warning'],
+  '!': ['missing', 'warning'],
   U: ['unresolved', 'diff-ignored'],
   Resolved: ['resolved', 'pass'],
   Renamed: ['modified', 'diff-renamed'],

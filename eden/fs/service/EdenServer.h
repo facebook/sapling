@@ -329,7 +329,7 @@ class EdenServer : private TakeoverHandler {
    */
   EdenMountHandle getMount(AbsolutePathPiece mountPath) const;
 
-  folly::Future<CheckoutResult> checkOutRevision(
+  ImmediateFuture<CheckoutResult> checkOutRevision(
       AbsolutePathPiece mountPath,
       std::string& rootHash,
       std::optional<folly::StringPiece> rootHgManifest,

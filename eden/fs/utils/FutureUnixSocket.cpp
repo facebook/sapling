@@ -22,7 +22,7 @@ namespace facebook::eden {
 
 class FutureUnixSocket::SendCallback : public UnixSocket::SendCallback {
  public:
-  SendCallback() {}
+  SendCallback() = default;
 
   Future<Unit> getFuture() {
     return promise_.getFuture();
@@ -98,7 +98,7 @@ class FutureUnixSocket::ConnectCallback : public UnixSocket::ConnectCallback {
   Promise<Unit> promise_;
 };
 
-FutureUnixSocket::FutureUnixSocket() {}
+FutureUnixSocket::FutureUnixSocket() = default;
 
 FutureUnixSocket::FutureUnixSocket(UnixSocket::UniquePtr socket)
     : socket_{std::move(socket)} {}

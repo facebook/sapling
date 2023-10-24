@@ -1102,6 +1102,8 @@ Test list of internal help commands
    debugstatus   common performance issues for status
    debugstore    print information about blobstore
    debugstrip    strip commits and all their descendants from the repository
+   debugstructuredprogress
+                 play around with look/behavior of structured progress bars
    debugsuccessorssets
                  show set of successors for revision
    debugtemplate

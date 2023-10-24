@@ -1119,6 +1119,9 @@ function getExecParams(
       HGMERGE: ':merge3',
       SL_MERGE: ':merge3',
       EDITOR: undefined,
+      VISUAL: undefined,
+      HGUSER: undefined,
+      HGEDITOR: undefined,
     } as unknown as NodeJS.ProcessEnv,
     cwd,
   };

@@ -10,6 +10,7 @@ rust_library(
     ],
     deps = [
         "fbsource//third-party/rust:termwiz",
+        "fbsource//third-party/rust:unicode-segmentation",
         "fbsource//third-party/rust:unicode-width",
         "//eden/scm/lib/progress/model:progress-model",
     ],

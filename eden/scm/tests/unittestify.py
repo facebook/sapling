@@ -102,6 +102,7 @@ def prepareargsenv(runtestsdir, port=None):
 
 def gettestmethod(name, port):
     def runsingletest(self):
+        sys.tracebacklimit = 1000  # Unhide stacktraces.
         reportskips = os.getenv("HGTEST_REPORT_SKIPS")
         with chdir(self._runtests_dir):
             args, env = prepareargsenv(self._runtests_dir, port)
@@ -126,9 +127,9 @@ def gettestmethod(name, port):
                     reason = b"skipped by run-tests.py"
                 raise unittest.SkipTest(reason)
             elif returncode != 0:
-                raise self.failureException(
-                    message.decode("utf-8", errors="surrogateescape")
-                )
+                decoded_message = message.decode("utf-8", errors="surrogateescape")
+                sys.tracebacklimit = 0  # Hide stacktraces.
+                raise self.failureException(decoded_message)
 
     return runsingletest
 

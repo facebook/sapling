@@ -22,6 +22,7 @@ commands! {
     mod fsync;
     mod http;
     mod networkdoctor;
+    mod structuredprogress;
     mod python;
     mod racyoutput;
     mod revsets;

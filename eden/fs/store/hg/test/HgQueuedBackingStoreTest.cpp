@@ -48,7 +48,7 @@ struct TestRepo {
 };
 
 struct HgQueuedBackingStoreTest : TestRepo, ::testing::Test {
-  HgQueuedBackingStoreTest() {}
+  HgQueuedBackingStoreTest() = default;
 
   std::shared_ptr<ReloadableConfig> edenConfig{
       std::make_shared<ReloadableConfig>(EdenConfig::createTestEdenConfig())};

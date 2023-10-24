@@ -188,6 +188,9 @@
 .file-removed {
   color: var(--scm-removed-foreground);
 }
+.file-missing {
+  color: var(--scm-missing-foreground);
+}
 .file-unresolved {
   color: var(--scm-modified-foreground);
 }

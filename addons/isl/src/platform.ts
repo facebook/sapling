@@ -16,6 +16,7 @@ import type {
 } from './types';
 import type {LazyExoticComponent} from 'react';
 import type {Comparison} from 'shared/Comparison';
+import type {Json} from 'shared/typeUtils';
 
 import {browserPlatform} from './BrowserPlatform';
 
@@ -33,6 +34,15 @@ export interface Platform {
   openExternalLink(url: string): void;
   clipboardCopy(value: string): void;
   chooseFile?(title: string, multi: boolean): Promise<Array<File>>;
+
+  /**
+   * Get stored data from local persistant cache (usually browser local storage).
+   * Note: Some platforms may not support this (e.g. browser with localStorage disabled),
+   * or it may not be persisted indefinitely---usual localStorage caveats apply.
+   */
+  getTemporaryState<T extends Json>(key: string): T | null;
+  /** see getTemporaryState  */
+  setTemporaryState<T extends Json>(key: string, value: T): void;
 
   handleServerMessage?: (message: ServerToClientMessage) => void;
 

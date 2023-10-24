@@ -7,7 +7,8 @@
 
 use anyhow::bail;
 use anyhow::Result;
-use clidispatch::errors;
+use clidispatch::abort;
+use clidispatch::fallback;
 use clidispatch::ReqCtx;
 use cliparser::define_flags;
 use configmodel::ConfigExt;
@@ -71,8 +72,13 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
     // - --merge, --inactive, --date, --check
 
     if !repo.config().get_or_default("checkout", "use-rust")? {
-        return Err(errors::FallbackToPython("checkout.use-rust is False".to_owned()).into());
-    };
+        fallback!("checkout.use-rust is False");
+    }
+
+    if wc.dot_hg_path().join("updatemergestate").exists() {
+        tracing::debug!(target: "checkout_info", checkout_detail="updatemergestate");
+        fallback!("updatemergestate exists");
+    }
 
     let mut dest: Vec<&String> = ctx.opts.args.iter().collect();
     if !ctx.opts.rev.is_empty() {
@@ -80,9 +86,7 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
     }
 
     if dest.is_empty() {
-        bail!(identity::default().punch(
-            r#"You must specify a destination to update to, for example "@prog@ goto main"."#,
-        ));
+        abort!(r#"You must specify a destination to update to, for example "@prog@ goto main"."#);
     }
     if dest.len() > 1 {
         bail!(
@@ -98,22 +102,19 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
         || !ctx.opts.date.is_empty()
         || ctx.opts.r#continue
     {
-        tracing::debug!(target: "checkout_info", status_detail="unsupported_args");
-        return Err(errors::FallbackToPython(
-            "one or more unsupported options in Rust checkout".to_owned(),
-        )
-        .into());
+        tracing::debug!(target: "checkout_info", checkout_detail="unsupported_args");
+        fallback!("one or more unsupported options in Rust checkout");
     }
 
     let target = match repo.resolve_commit(Some(&wc.treestate().lock()), &dest) {
         Ok(target) => target,
         Err(_) => {
-            return Err(errors::FallbackToPython(
-                "unable to resolve checkout destination".to_owned(),
-            )
-            .into());
+            tracing::debug!(target: "checkout_info", checkout_detail="resolve_commit");
+            fallback!("unable to resolve checkout destination");
         }
     };
+
+    tracing::debug!(target: "checkout_info", checkout_mode="rust");
 
     let _wlock = wc.lock();
     let _lock = repo.lock();

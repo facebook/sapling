@@ -419,6 +419,7 @@ export type ClientToServerMessageWithPayload = {
 
 export type SubscriptionKind = 'uncommittedChanges' | 'smartlogCommits' | 'mergeConflicts';
 
+/** sl configs written by ISL */
 export type ConfigName =
   // these config names are for compatibility.
   | 'isl.submitAsDraft'
@@ -430,6 +431,9 @@ export type ConfigName =
   | 'isl.show-diff-number'
   | 'isl.render-compact'
   | 'isl.experimental-features';
+
+/** local storage keys written by ISL */
+export type LocalStorageName = 'isl.drawer-state';
 
 export type ClientToServerMessage =
   | {type: 'heartbeat'; id: string}

@@ -493,11 +493,15 @@ fn spawn_progress_thread(
         disable_rendering = true;
     }
 
-    let render_function = progress_render::simple::render;
-    let renderer_name = config.get_or("progress", "renderer", || "simple".to_string())?;
+    let renderer_name = config.get_or_default::<String>("progress", "renderer")?;
     if renderer_name == "none" {
         disable_rendering = true;
     }
+
+    let render_function = match renderer_name.as_str() {
+        "structured" => progress_render::structured::render,
+        _ => progress_render::simple::render,
+    };
 
     let interval = Duration::from_secs_f64(config.get_or("progress", "refresh", || 0.1)?)
         .max(Duration::from_millis(50));

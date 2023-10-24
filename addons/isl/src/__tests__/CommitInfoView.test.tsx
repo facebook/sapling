@@ -19,6 +19,7 @@ import {
   closeCommitInfoSidebar,
   simulateUncommittedChangedFiles,
   simulateMessageFromServer,
+  openCommitInfoSidebar,
 } from '../testUtils';
 import {CommandRunner, SucceedableRevset} from '../types';
 import {fireEvent, render, screen, waitFor, within} from '@testing-library/react';
@@ -65,6 +66,7 @@ describe('CommitInfoView', () => {
     beforeEach(() => {
       render(<App />);
       act(() => {
+        openCommitInfoSidebar();
         expectMessageSentToServer({
           type: 'subscribe',
           kind: 'smartlogCommits',
@@ -81,11 +83,6 @@ describe('CommitInfoView', () => {
     });
 
     describe('drawer', () => {
-      it('starts with commit info open', () => {
-        expect(screen.getByTestId('commit-info-view')).toBeInTheDocument();
-        expect(screen.getByText('Commit Info')).toBeInTheDocument();
-      });
-
       it('can close commit info sidebar by clicking label', () => {
         expect(screen.getByTestId('commit-info-view')).toBeInTheDocument();
         expect(screen.getByText('Commit Info')).toBeInTheDocument();

@@ -41,6 +41,14 @@ const androidStudioPlatform: Platform = {
   clipboardCopy(data: string) {
     window.__IdeBridge.clipboardCopy?.(data);
   },
+
+  getTemporaryState<T>(_key: string): T | null {
+    // TODO: support local storage, which may require enabling some webview permissions.
+    return null;
+  },
+  setTemporaryState<T>(_key: string, _value: T): void {
+    // TODO: support local storage, which may require enabling some webview permissions.
+  },
 };
 
 window.islPlatform = androidStudioPlatform;

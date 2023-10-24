@@ -56,7 +56,7 @@ TestServer::TestServer() : tmpDir_(makeTempDir()) {
   (void)prepareResult;
 }
 
-TestServer::~TestServer() {}
+TestServer::~TestServer() = default;
 
 AbsolutePath TestServer::getTmpDir() const {
   return canonicalPath(tmpDir_.path().string());

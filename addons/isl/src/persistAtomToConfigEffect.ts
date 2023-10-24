@@ -5,11 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ConfigName} from './types';
+import type {ConfigName, LocalStorageName} from './types';
 import type {AtomEffect} from 'recoil';
 import type {Json} from 'shared/typeUtils';
 
 import serverAPI from './ClientToServerAPI';
+import platform from './platform';
 
 /**
  * Loads this atom from server config via `sl config`,
@@ -43,5 +44,25 @@ export function persistAtomToConfigEffect<T extends Json>(
         name,
       });
     });
+  };
+}
+
+/**
+ * Loads this atom from a local persistent cache (usually browser local storage),
+ * and persists any changes back to it.
+ * Useful for some customizations that don't warrant a user-visible sl config,
+ * for example UI expansion state.
+ */
+export function persistAtomToLocalStorageEffect<T extends Json>(
+  name: LocalStorageName,
+): AtomEffect<T> {
+  return ({onSet, setSelf}) => {
+    onSet(newValue => {
+      platform.setTemporaryState(name, newValue);
+    });
+    const found = platform.getTemporaryState<T>(name);
+    if (found != null) {
+      setSelf(found);
+    }
   };
 }

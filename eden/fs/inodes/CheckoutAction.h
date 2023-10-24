@@ -14,6 +14,7 @@
 #include "eden/fs/fuse/Invalidation.h"
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/model/Tree.h"
+#include "eden/fs/utils/ImmediateFuture.h"
 
 namespace folly {
 class exception_wrapper;
@@ -41,7 +42,7 @@ class ObjectStore;
  * CheckoutAction objects are ever created for these cases, since these actions
  * can be taken immediately.
  */
-class CheckoutAction {
+class CheckoutAction : public std::enable_shared_from_this<CheckoutAction> {
  public:
   /**
    * Create a CheckoutAction with an already loaded Inode object.
@@ -95,13 +96,11 @@ class CheckoutAction {
    * whether the caller is responsible for invalidating the directory's inode
    * cache in the kernel.
    */
-  FOLLY_NODISCARD folly::Future<InvalidationRequired> run(
+  FOLLY_NODISCARD ImmediateFuture<InvalidationRequired> run(
       CheckoutContext* ctx,
       ObjectStore* store);
 
  private:
-  class LoadingRefcount;
-
   enum InternalConstructor {
     INTERNAL,
   };
@@ -121,13 +120,13 @@ class CheckoutAction {
 
   void allLoadsComplete() noexcept;
   bool ensureDataReady() noexcept;
-  folly::Future<bool> hasConflict();
+  ImmediateFuture<bool> hasConflict();
 
   /**
    * Return whether the directory's contents have changed and the
    * inode's readdir cache must be flushed.
    */
-  FOLLY_NODISCARD folly::Future<InvalidationRequired> doAction();
+  FOLLY_NODISCARD ImmediateFuture<InvalidationRequired> doAction();
 
   /**
    * The context for the in-progress checkout operation.
@@ -186,11 +185,7 @@ class CheckoutAction {
    * The errors vector keeps track of any errors that occurred while trying to
    * load the data needed to perform the checkout action.
    */
+  // TODO: Add locking?
   std::vector<folly::exception_wrapper> errors_;
-
-  /**
-   * The promise that we will fulfil when the CheckoutAction is complete.
-   */
-  folly::Promise<InvalidationRequired> promise_;
 };
 } // namespace facebook::eden

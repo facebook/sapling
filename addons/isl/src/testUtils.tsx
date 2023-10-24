@@ -108,7 +108,27 @@ export function resetTestMessages() {
   testMessageBus.resetTestMessages();
 }
 
+function commitInfoIsOpen() {
+  return (
+    screen.queryByTestId('commit-info-view') != null ||
+    screen.queryByTestId('commit-info-view-loading') != null
+  );
+}
+
 export function closeCommitInfoSidebar() {
+  if (!commitInfoIsOpen()) {
+    return;
+  }
+  screen.queryAllByTestId('drawer-label').forEach(el => {
+    const commitInfoTab = within(el).queryByText('Commit Info');
+    commitInfoTab?.click();
+  });
+}
+
+export function openCommitInfoSidebar() {
+  if (commitInfoIsOpen()) {
+    return;
+  }
   screen.queryAllByTestId('drawer-label').forEach(el => {
     const commitInfoTab = within(el).queryByText('Commit Info');
     commitInfoTab?.click();
