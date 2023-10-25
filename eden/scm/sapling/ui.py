@@ -731,20 +731,10 @@ class ui:
             self._write(*msgs)
 
     def _write(self, *msgs: str) -> None:
-        starttime = util.timer()
         try:
             self.fout.write(encodeutf8("".join(msgs)))
         except IOError as err:
             raise error.StdioError(err)
-        finally:
-            # Assuming the only way to be blocked on stdout is the pager.
-            seconds = util.timer() - starttime
-            # Using util.traced is in theory correct, but will generate too
-            # many (noisy) tracing events. Only log blocking events that
-            # takes some time (ex. 0.1s).
-            if seconds >= 0.1:
-                util.info("stdio", cat="blocked-after", millis=int(seconds * 1000))
-            self._measuredtimes["stdio_blocked"] += (seconds) * 1000
 
     def writebytes(self, *args, **opts):
         """Like `write` but taking bytes instead of str as arguments.
@@ -766,17 +756,10 @@ class ui:
             self._writebytes(*msgs, **opts)
 
     def _writebytes(self, *msgs, **opts):
-        starttime = util.timer()
         try:
             self.fout.write(b"".join(msgs))
         except IOError as err:
             raise error.StdioError(err)
-        finally:
-            # Assuming the only way to be blocked on stdout is the pager.
-            millis = int((util.timer() - starttime) * 1000)
-            if millis >= 20:
-                util.info("stdio", cat="blocked-after", millis=millis)
-            self._measuredtimes["stdio_blocked"] += millis
 
     def write_err(self, *args, **opts):
         if self._outputui is not None or (
@@ -788,7 +771,6 @@ class ui:
             self._write_err(*msgs, **opts)
 
     def _write_err(self, *msgs, **opts):
-        starttime = util.timer()
         try:
             if not getattr(self.fout, "closed", False):
                 self.fout.flush()
@@ -802,12 +784,6 @@ class ui:
         except IOError as inst:
             if inst.errno not in (errno.EPIPE, errno.EIO, errno.EBADF):
                 raise error.StdioError(inst)
-        finally:
-            # Assuming the only way to be blocked on stdout is the pager.
-            millis = int((util.timer() - starttime) * 1000)
-            if millis >= 20:
-                util.info("stdio", cat="blocked-after", millis=millis)
-            self._measuredtimes["stdio_blocked"] += millis
 
     def flush(self):
         try:
