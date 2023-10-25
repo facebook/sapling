@@ -9,13 +9,12 @@ use std::collections::HashSet;
 use std::time::Duration;
 use std::time::Instant;
 
+use anyhow::Result;
 use bytes::Bytes;
 use caching_ext::CacheHandlerFactory;
 use caching_ext::MemcacheHandler;
 use fbthrift::compact_protocol;
 use filenodes::thrift;
-use filenodes::thrift::MC_CODEVER;
-use filenodes::thrift::MC_SITEVER;
 use filenodes::FilenodeInfo;
 use filenodes::FilenodeRange;
 use futures::future::try_join_all;
@@ -48,8 +47,6 @@ define_stats! {
     get_history: histogram("get_history.memcache.duration_us"; 100, 0, 10000, Average, Count; P 50; P 95; P 100),
 }
 
-const SITEVER_OVERRIDE_VAR: &str = "MONONOKE_OVERRIDE_FILENODES_MC_SITEVER";
-
 const TTL_SEC: u64 = 8 * 60 * 60;
 
 // Adding a random to TTL helps preventing eviction of all related keys at once
@@ -65,34 +62,31 @@ impl RemoteCache {
         cache_handler_factory: &CacheHandlerFactory,
         backing_store_name: &str,
         backing_store_params: &str,
-    ) -> Self {
-        Self {
+    ) -> Result<Self> {
+        Ok(Self {
             memcache: cache_handler_factory.memcache(),
-            keygen: Self::create_key_gen(backing_store_name, backing_store_params),
-        }
+            keygen: Self::create_key_gen(backing_store_name, backing_store_params)?,
+        })
     }
 
-    pub fn new_noop() -> Self {
+    pub fn new_noop() -> Result<Self> {
         Self::new(&CacheHandlerFactory::Noop, "newfilenodes", "")
     }
 
     #[cfg(test)]
     pub fn new_mock() -> Self {
-        Self::new(&CacheHandlerFactory::Mocked, "newfilenodes", "test")
+        Self::new(&CacheHandlerFactory::Mocked, "newfilenodes", "test").unwrap()
     }
 
-    fn create_key_gen(backing_store_name: &str, backing_store_params: &str) -> KeyGen {
+    fn create_key_gen(backing_store_name: &str, backing_store_params: &str) -> Result<KeyGen> {
         let key_prefix = format!(
             "scm.mononoke.filenodes.{}.{}",
             backing_store_name, backing_store_params,
         );
 
-        let mc_sitever = match std::env::var(SITEVER_OVERRIDE_VAR) {
-            Ok(v) => v.parse().unwrap_or(MC_SITEVER as u32),
-            Err(_) => MC_SITEVER as u32,
-        };
+        let sitever = justknobs::get_as::<u32>("scm/mononoke_memcache_sitevers:filenodes", None)?;
 
-        KeyGen::new(key_prefix, MC_CODEVER as u32, mc_sitever)
+        Ok(KeyGen::new(key_prefix, thrift::MC_CODEVER as u32, sitever))
     }
 
     // TODO: Can we optimize to reuse the existing PathWithHash we got?

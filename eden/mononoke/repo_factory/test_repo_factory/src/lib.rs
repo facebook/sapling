@@ -558,7 +558,7 @@ impl TestRepoFactory {
     /// db in memory).
     pub fn filenodes(&self, repo_identity: &ArcRepoIdentity) -> Result<ArcFilenodes> {
         let mut filenodes: ArcFilenodes =
-            Arc::new(NewFilenodesBuilder::with_sqlite_in_memory()?.build(repo_identity.id()));
+            Arc::new(NewFilenodesBuilder::with_sqlite_in_memory()?.build(repo_identity.id())?);
         if let Some(filenodes_override) = &self.filenodes_override {
             filenodes = filenodes_override(filenodes);
         }

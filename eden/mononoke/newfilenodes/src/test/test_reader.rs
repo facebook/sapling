@@ -225,7 +225,7 @@ async fn test_fallback_on_missing_copy_info(fb: FacebookInit) -> Result<(), Erro
     // Now, delete the copy info from the replica.
     DeleteCopyInfo::query(&replica).await?;
 
-    let reader = Arc::new(FilenodesReader::new(vec1![replica], vec1![master]));
+    let reader = Arc::new(FilenodesReader::new(vec1![replica], vec1![master])?);
     let prepared = copied_filenode();
     assert_filenode(
         &ctx,
@@ -279,7 +279,7 @@ async fn test_fallback_on_missing_paths(fb: FacebookInit) -> Result<(), Error> {
     // Now, delete the copy info from the replica.
     DeletePaths::query(&replica).await?;
 
-    let reader = Arc::new(FilenodesReader::new(vec1![replica], vec1![master]));
+    let reader = Arc::new(FilenodesReader::new(vec1![replica], vec1![master])?);
     let prepared = copied_filenode();
     assert_filenode(
         &ctx,

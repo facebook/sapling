@@ -12,6 +12,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Error;
+use anyhow::Result;
 use context::CoreContext;
 use context::PerfCounterType;
 use faster_hex::hex_encode;
@@ -32,7 +33,7 @@ use path_hash::PathWithHash;
 use sql::Connection;
 use sql_ext::mononoke_queries;
 use stats::prelude::*;
-use thiserror::Error as DeriveError;
+use thiserror::Error;
 use tokio::time::timeout;
 use tunables::tunables;
 use vec1::Vec1;
@@ -65,7 +66,7 @@ define_stats! {
 const REMOTE_CACHE_TIMEOUT_MILLIS: u64 = 100;
 const SQL_TIMEOUT_MILLIS: u64 = 5_000;
 
-#[derive(Debug, DeriveError)]
+#[derive(Debug, Error)]
 pub enum ErrorKind {
     #[error("Internal error: path is not found: {0:?}")]
     PathNotFound(PathHashBytes),
@@ -167,14 +168,14 @@ impl FilenodesReader {
     pub fn new(
         read_connections: Vec1<Connection>,
         read_master_connections: Vec1<Connection>,
-    ) -> Self {
-        Self {
+    ) -> Result<Self> {
+        Ok(Self {
             shards: Arc::new(Shards::new(1000, 1000)),
             read_connections: Connections::new(read_connections),
             read_master_connections: Connections::new(read_master_connections),
             local_cache: LocalCache::new_noop(),
-            remote_cache: RemoteCache::new_noop(),
-        }
+            remote_cache: RemoteCache::new_noop()?,
+        })
     }
 
     pub async fn get_filenode(
@@ -183,7 +184,7 @@ impl FilenodesReader {
         repo_id: RepositoryId,
         path: &RepoPath,
         filenode: HgFileNodeId,
-    ) -> Result<FilenodeResult<Option<FilenodeInfo>>, Error> {
+    ) -> Result<FilenodeResult<Option<FilenodeInfo>>> {
         STATS::gets.add_value(1);
 
         let pwh = PathWithHash::from_repo_path_cow(Cow::Owned(path.clone()));
@@ -290,7 +291,7 @@ impl FilenodesReader {
         repo_id: RepositoryId,
         path: &RepoPath,
         limit: Option<u64>,
-    ) -> Result<FilenodeResult<FilenodeRange>, Error> {
+    ) -> Result<FilenodeResult<FilenodeRange>> {
         STATS::range_gets.add_value(1);
 
         let pwh = PathWithHash::from_repo_path_cow(Cow::Owned(path.clone()));
@@ -466,7 +467,7 @@ async fn select_history_from_sql(
     pwh: &PathWithHash<'_>,
     recorder: &PerfCounterRecorder<'_>,
     limit: Option<u64>,
-) -> Result<FilenodeResult<FilenodeRange>, Error> {
+) -> Result<FilenodeResult<FilenodeRange>> {
     if tunables().filenodes_disabled().unwrap_or_default() {
         STATS::range_gets_disabled.add_value(1);
         return Ok(FilenodeResult::Disabled);
@@ -673,7 +674,7 @@ where
 
 async fn enforce_sql_timeout<T, Fut>(fut: Fut) -> Result<T, ErrorKind>
 where
-    Fut: Future<Output = Result<T, Error>>,
+    Fut: Future<Output = Result<T>>,
 {
     if !sql_timeout_knobs::should_enforce_sql_timeouts() {
         return fut.await.map_err(ErrorKind::SqlError);

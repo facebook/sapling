@@ -1009,9 +1009,9 @@ impl RepoFactory {
                 history_cache_handler_factory,
                 "newfilenodes",
                 &filenodes_tier.tier_name,
-            );
+            )?;
         }
-        Ok(Arc::new(filenodes_builder.build(repo_identity.id())))
+        Ok(Arc::new(filenodes_builder.build(repo_identity.id())?))
     }
 
     pub async fn hg_mutation_store(
