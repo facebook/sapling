@@ -121,6 +121,7 @@ pub enum ClientEntryPoint {
     InteractiveSmartlog,
     ScsClient,
     Walker,
+    MegarepoTool,
 }
 
 impl ClientRequestInfo {
@@ -184,6 +185,7 @@ impl Display for ClientEntryPoint {
             ClientEntryPoint::InteractiveSmartlog => "isl",
             ClientEntryPoint::ScsClient => "scsc",
             ClientEntryPoint::Walker => "walker",
+            ClientEntryPoint::MegarepoTool => "megarepo_tool",
         };
         write!(f, "{}", out)
     }
@@ -205,6 +207,7 @@ impl TryFrom<&str> for ClientEntryPoint {
             "isl" => Ok(ClientEntryPoint::InteractiveSmartlog),
             "scsc" => Ok(ClientEntryPoint::ScsClient),
             "walker" => Ok(ClientEntryPoint::Walker),
+            "megarepo_tool" => Ok(ClientEntryPoint::MegarepoTool),
             _ => Err(anyhow!("Invalid client entry point")),
         }
     }

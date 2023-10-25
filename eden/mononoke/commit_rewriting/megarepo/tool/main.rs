@@ -17,6 +17,8 @@ use blobrepo::BlobRepo;
 use bookmarks::BookmarkKey;
 use borrowed::borrowed;
 use clap::ArgMatches;
+use clientinfo::ClientEntryPoint;
+use clientinfo::ClientInfo;
 use cmdlib::args;
 use cmdlib::args::MononokeMatches;
 use cmdlib::helpers;
@@ -1318,7 +1320,11 @@ fn main(fb: FacebookInit) -> Result<()> {
     let (matches, _runtime) = app.get_matches(fb)?;
     let logger = matches.logger();
     let config_store = matches.config_store();
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    let ctx = CoreContext::new_with_logger_and_client_info(
+        fb,
+        logger.clone(),
+        ClientInfo::default_with_entry_point(ClientEntryPoint::MegarepoTool),
+    );
     let ctx = &ctx;
 
     let subcommand_future = async {
