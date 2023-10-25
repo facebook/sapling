@@ -120,6 +120,7 @@ pub enum ClientEntryPoint {
     DerivationWorker,
     InteractiveSmartlog,
     ScsClient,
+    Walker,
 }
 
 impl ClientRequestInfo {
@@ -182,6 +183,7 @@ impl Display for ClientEntryPoint {
             ClientEntryPoint::DerivationWorker => "derivation_worker",
             ClientEntryPoint::InteractiveSmartlog => "isl",
             ClientEntryPoint::ScsClient => "scsc",
+            ClientEntryPoint::Walker => "walker",
         };
         write!(f, "{}", out)
     }
@@ -202,6 +204,7 @@ impl TryFrom<&str> for ClientEntryPoint {
             "derived_data_service" => Ok(ClientEntryPoint::DerivedDataService),
             "isl" => Ok(ClientEntryPoint::InteractiveSmartlog),
             "scsc" => Ok(ClientEntryPoint::ScsClient),
+            "walker" => Ok(ClientEntryPoint::Walker),
             _ => Err(anyhow!("Invalid client entry point")),
         }
     }

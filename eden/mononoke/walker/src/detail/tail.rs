@@ -21,6 +21,8 @@ use bulkops::ChangesetBulkFetcher;
 use bulkops::Direction;
 use bulkops::MAX_FETCH_STEP;
 use changesets::ChangesetsArc;
+use clientinfo::ClientEntryPoint;
+use clientinfo::ClientInfo;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
@@ -235,7 +237,11 @@ where
         cloned!(job_params, tail_params, type_params, make_run);
         let tail_secs = tail_params.tail_secs;
         // Each loop get new ctx and thus session id so we can distinguish runs
-        let ctx = CoreContext::new_with_logger(fb, repo_params.logger.clone());
+        let ctx = CoreContext::new_with_logger_and_client_info(
+            fb,
+            repo_params.logger.clone(),
+            ClientInfo::default_with_entry_point(ClientEntryPoint::Walker),
+        );
         let session_text = ctx.session().metadata().session_id().to_string();
         if !job_params.quiet {
             info!(
