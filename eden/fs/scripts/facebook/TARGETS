@@ -5,11 +5,11 @@ oncall("scm_client_infra")
 python_binary(
     name = "find_changed_dependencies",
     srcs = ["find_changed_dependencies.py"],
-    main_module = "eden.fs.scripts.facebook.find_changed_dependencies",
+    main_function = "eden.fs.scripts.facebook.find_changed_dependencies.main",
 )
 
 python_binary(
     name = "bisect",
     srcs = ["bisect.py"],
-    main_module = "eden.fs.scripts.facebook.bisect",
+    main_function = "eden.fs.scripts.facebook.bisect.main",
 )
