@@ -102,6 +102,8 @@ rust_binary(
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/mononoke/server/context:context",
+        "//eden/mononoke/server/metadata:metadata",
         "//eden/mononoke/wireproto_handler:wireproto_handler",
+        "//eden/scm/lib/clientinfo:clientinfo",
     ],
 )

@@ -30,6 +30,8 @@ use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::Freshness;
 use clap::Arg;
 use clap::SubCommand;
+use clientinfo::ClientEntryPoint;
+use clientinfo::ClientInfo;
 use cloned::cloned;
 use cmdlib::args;
 use cmdlib::args::MononokeMatches;
@@ -55,6 +57,7 @@ use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
+use metadata::Metadata;
 use mononoke_types::ChangesetId;
 use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -487,7 +490,13 @@ async fn run(
     let source_repo = args::resolve_repo_by_name(config_store, &matches, &source_repo_name)?;
     let target_repo = args::resolve_repo_by_name(config_store, &matches, &target_repo_name)?;
     let repo_tag = format!("{}=>{}", &source_repo_name, &target_repo_name);
-    let session_container = SessionContainer::new_with_defaults(fb);
+    let mut metadata = Metadata::default();
+    metadata.add_client_info(ClientInfo::default_with_entry_point(
+        ClientEntryPoint::MegarepoBacksyncer,
+    ));
+    let session_container = SessionContainer::builder(fb)
+        .metadata(Arc::new(metadata))
+        .build();
     let scribe = args::get_scribe(fb, &matches)?;
     let ctx = session_container
         .new_context_with_scribe(

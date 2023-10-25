@@ -122,6 +122,7 @@ pub enum ClientEntryPoint {
     ScsClient,
     Walker,
     MegarepoTool,
+    MegarepoBacksyncer,
 }
 
 impl ClientRequestInfo {
@@ -186,6 +187,7 @@ impl Display for ClientEntryPoint {
             ClientEntryPoint::ScsClient => "scsc",
             ClientEntryPoint::Walker => "walker",
             ClientEntryPoint::MegarepoTool => "megarepo_tool",
+            ClientEntryPoint::MegarepoBacksyncer => "megarepo_backsyncer",
         };
         write!(f, "{}", out)
     }
@@ -208,6 +210,7 @@ impl TryFrom<&str> for ClientEntryPoint {
             "scsc" => Ok(ClientEntryPoint::ScsClient),
             "walker" => Ok(ClientEntryPoint::Walker),
             "megarepo_tool" => Ok(ClientEntryPoint::MegarepoTool),
+            "megarepo_backsyncer" => Ok(ClientEntryPoint::MegarepoBacksyncer),
             _ => Err(anyhow!("Invalid client entry point")),
         }
     }
