@@ -216,3 +216,11 @@ mononoke_fbpkg(
         "backfill_bonsai_blob_mapping": "//eden/mononoke/tools/facebook/backfill_bonsai_blob_mapping:backfill_bonsai_blob_mapping",
     },
 )
+
+mononoke_fbpkg(
+    name = "mononoke.gitexport",
+    compress_type = None,
+    path_actions = {
+        "gitexport": "//eden/mononoke/git/gitexport:gitexport",
+    },
+)
