@@ -433,7 +433,7 @@ export type ConfigName =
   | 'isl.experimental-features';
 
 /** local storage keys written by ISL */
-export type LocalStorageName = 'isl.drawer-state';
+export type LocalStorageName = 'isl.drawer-state' | 'isl.has-shown-getting-started';
 
 export type ClientToServerMessage =
   | {type: 'heartbeat'; id: string}
