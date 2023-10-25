@@ -12,6 +12,7 @@ use std::str::FromStr;
 
 use anyhow::anyhow;
 use anyhow::Error;
+use anyhow::Ok;
 use anyhow::Result;
 use bookmarks_types::BookmarkKey;
 use commit_id::parse_commit_id;
@@ -38,7 +39,7 @@ use print_graph::PrintGraphOptions;
 use repo_authorization::AuthorizationContext;
 use slog::info;
 use slog::trace;
-use types::ExportPathInfoArg;
+use types::ExportPathsInfoArg;
 use types::HeadChangesetArg;
 
 use crate::types::GitExportArgs;
@@ -103,15 +104,15 @@ pub mod types {
         /// upper bounds.
         ///
         /// The JSON file should contain a list of JSON serialized
-        /// `ExportPathInfoArg`, e.g.
+        /// `ExportPathsInfoArg`, e.g.
         /// ```
-        /// [ { "path": "foo", "head": { "ID": "abcde123" }  } ]
+        /// [ { "paths": ["foo"], "head": { "ID": "abcde123" }  } ]
         /// ```
         /// or
         /// ```
         /// [
-        ///     { "path": "bar", "head": { "Bookmark": "master" }  },
-        ///     { "path": "foo", "head": { "ID": "abcde123" }  },
+        ///     { "paths": ["bar"], "head": { "Bookmark": "master" }  },
+        ///     { "paths": ["foo"], "head": { "ID": "abcde123" }  },
         ///
         /// ]
         /// ```
@@ -146,8 +147,8 @@ pub mod types {
     /// through JSON files. After deserilization, these will be converted to
     /// `ExportPathInfo`.
     #[derive(Debug, Serialize, Deserialize)]
-    pub struct ExportPathInfoArg {
-        pub path: PathBuf,
+    pub struct ExportPathsInfoArg {
+        pub paths: Vec<PathBuf>,
         pub head: HeadChangesetArg,
     }
 }
@@ -331,20 +332,26 @@ async fn get_bounded_export_paths(
 
     stream::iter(export_path_info_args)
         .then(|ep_arg| async move {
-            let export_path: NonRootMPath = TryFrom::try_from(ep_arg.path.as_os_str())?;
+            let export_paths: Vec<NonRootMPath> = ep_arg
+                .paths
+                .into_iter()
+                .map(|p| TryFrom::try_from(p.as_os_str()))
+                .collect::<Result<Vec<NonRootMPath>>>()?;
+
             let head_cs: ChangesetContext =
                 get_changeset_context_from_head_arg(repo_ctx, ep_arg.head).await?;
 
-            Ok((export_path, head_cs))
+            Ok(stream::iter(export_paths).map(move |p| Ok::<ExportPathInfo>((p, head_cs.clone()))))
         })
-        .try_collect()
+        .try_flatten()
+        .try_collect::<Vec<_>>()
         .await
 }
 
 /// Deserialize a JSON file containing export paths and associated head commits
 fn read_bounded_export_paths_file(
     bounded_export_paths_file: String,
-) -> Result<Vec<ExportPathInfoArg>> {
+) -> Result<Vec<ExportPathsInfoArg>> {
     let mut file = File::open(bounded_export_paths_file)?;
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;

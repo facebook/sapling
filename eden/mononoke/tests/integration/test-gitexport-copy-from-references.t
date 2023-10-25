@@ -168,12 +168,16 @@ Run the tool without passing the old name as an export path
   +  2 files changed, 2 insertions(+)
   [1]
 
+
+
+
+
   $ rm -rf $GIT_BUNDLE_OUTPUT $GIT_REPO $GIT_REPO_LOG
 
 Run the tool and pass the old name manually as an export path using the bounded export paths file arg
 
   $ BOUNDED_EXPORT_PATHS_FILE=$TESTTMP/bounded_export_paths.json
-  $ echo '[ { "path": '"\"$OLD_EXPORT_DIR\""', "head": { "ID": '"\"$E\""' }  } ]' > $BOUNDED_EXPORT_PATHS_FILE
+  $ echo '[ { "paths": '["\"$OLD_EXPORT_DIR\""]', "head": { "ID": '"\"$E\""' }  } ]' > $BOUNDED_EXPORT_PATHS_FILE
 
   $ gitexport --log-level ERROR --repo-name "repo" -B "master" -p $EXPORT_DIR -f "$BOUNDED_EXPORT_PATHS_FILE" -o "$GIT_BUNDLE_OUTPUT"
 
