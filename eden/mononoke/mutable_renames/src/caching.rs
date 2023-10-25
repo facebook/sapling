@@ -10,7 +10,6 @@ use std::collections::HashSet;
 use std::time::Duration;
 
 use abomonation_derive::Abomonation;
-use anyhow::Context;
 use anyhow::Error;
 use async_trait::async_trait;
 use bytes::Bytes;
@@ -38,8 +37,11 @@ use path_hash::PathHashBytes;
 use crate::MutableRenameEntry;
 use crate::MutableRenames;
 
-/// Bump this when code changes the layout of memcache
-pub const CODEVER: u32 = 0;
+/// Code version used in memcache keys.  This should be changed whenever
+/// the layout of memcache entries is changed in an incompatible way.
+/// The corresponding sitever, which can be used to flush memcache, is
+/// in the JustKnob scm/mononoke_memcache_sitevers:mutable_renames.
+pub const MC_CODEVER: u32 = 0;
 
 #[derive(Clone)]
 pub struct CacheHandlers {
@@ -54,16 +56,14 @@ pub struct CacheHandlers {
 
 impl CacheHandlers {
     pub fn new(cache_handler_factory: CacheHandlerFactory) -> Result<Self, Error> {
-        let sitever = tunables::tunables()
-            .mutable_renames_sitever()
-            .unwrap_or_default()
-            .try_into()
-            .context("While converting from i64 to u32 sitever")?;
-        let presence_keygen = KeyGen::new("scm.mononoke.mutable_renames.present", CODEVER, sitever);
-        let rename_keygen = KeyGen::new("scm.mononoke.mutable_renames.rename", CODEVER, sitever);
+        let sitever =
+            justknobs::get_as::<u32>("scm/mononoke_memcache_sitevers:mutable_renames", None)?;
+        let presence_keygen =
+            KeyGen::new("scm.mononoke.mutable_renames.present", MC_CODEVER, sitever);
+        let rename_keygen = KeyGen::new("scm.mononoke.mutable_renames.rename", MC_CODEVER, sitever);
         let get_cs_ids_keygen = KeyGen::new(
             "scm.mononoke.mutable_renames.cs_ids_for_path",
-            CODEVER,
+            MC_CODEVER,
             sitever,
         );
         Ok(Self {

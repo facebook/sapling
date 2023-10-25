@@ -19,6 +19,7 @@ context = { version = "0.1.0", path = "../server/context" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
+justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 manifest = { version = "0.1.0", path = "../manifest" }
 maplit = "1.0"
 memcache = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
@@ -28,7 +29,6 @@ path_hash = { version = "0.1.0", path = "../common/path_hash" }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
-tunables = { version = "0.1.0", path = "../tunables" }
 
 [dev-dependencies]
 changesets_impl = { version = "0.1.0", path = "../changesets/changesets_impl" }

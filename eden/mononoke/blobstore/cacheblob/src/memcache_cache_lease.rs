@@ -26,7 +26,6 @@ use memcache::MemcacheClient;
 use memcache_lock_thrift::LockState;
 use slog::warn;
 use stats::prelude::*;
-use tunables::tunables;
 
 use crate::dummy::DummyLease;
 use crate::CacheBlobstore;
@@ -86,8 +85,12 @@ impl std::fmt::Display for MemcacheOps {
 }
 
 const MEMCACHE_MAX_SIZE: usize = 1024000;
+
+/// Code version used in memcache keys.  This should be changed whenever
+/// the layout of memcache entries is changed in an incompatible way.
+/// The corresponding sitever, which can be used to flush memcache, is
+/// in the JustKnob scm/mononoke_memcache_sitevers:blobstore.
 const MC_CODEVER: u32 = 0;
-const MC_SITEVER: u32 = 1;
 
 async fn mc_raw_put(
     memcache: MemcacheClient,
@@ -138,11 +141,7 @@ impl MemcacheOps {
             backing_store_params.to_string()
         );
 
-        let sitever = if tunables().blobstore_memcache_sitever().unwrap_or_default() > 0 {
-            tunables().blobstore_memcache_sitever().unwrap_or_default() as u32
-        } else {
-            MC_SITEVER
-        };
+        let sitever = justknobs::get_as::<u32>("scm/mononoke_memcache_sitevers:blobstore", None)?;
 
         Ok(Self {
             lease_type,

@@ -174,7 +174,6 @@ use streaming_clone::StreamingCloneBuilder;
 use synced_commit_mapping::ArcSyncedCommitMapping;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 use thiserror::Error;
-use tunables::tunables;
 use virtually_sharded_blobstore::VirtuallyShardedBlobstore;
 use warm_bookmarks_cache::ArcBookmarksCache;
 use warm_bookmarks_cache::NoopBookmarksCache;
@@ -844,7 +843,7 @@ impl RepoFactory {
             Ok(Arc::new(CachingBonsaiHgMapping::new(
                 Arc::new(bonsai_hg_mapping),
                 cache_handler_factory,
-            )))
+            )?))
         } else {
             Ok(Arc::new(bonsai_hg_mapping))
         }
@@ -1030,7 +1029,7 @@ impl RepoFactory {
             Ok(Arc::new(CachedHgMutationStore::new(
                 Arc::new(hg_mutation_store),
                 cache_handler_factory,
-            )))
+            )?))
         } else {
             Ok(Arc::new(hg_mutation_store))
         }
@@ -1561,11 +1560,7 @@ impl RepoFactory {
         let caching = if let Some(cache_handler_factory) = self.cache_handler_factory("sql")? {
             const KEY_PREFIX: &str = "scm.mononoke.sql";
             const MC_CODEVER: u32 = 0;
-            let sitever: u32 = tunables()
-                .sql_memcache_sitever()
-                .unwrap_or_default()
-                .try_into()
-                .unwrap_or(0);
+            let sitever = justknobs::get_as::<u32>("scm/mononoke_memcache_sitevers:sql", None)?;
             Some(sql_query_config::CachingConfig {
                 keygen: KeyGen::new(KEY_PREFIX, MC_CODEVER, sitever),
                 cache_handler_factory,
