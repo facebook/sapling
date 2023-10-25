@@ -238,7 +238,7 @@ impl HttpClient {
             responses.push(AsyncResponse::new(streams, request_info).boxed());
         }
 
-        let task = tokio::task::spawn_blocking(move || {
+        let task = async_runtime::spawn_blocking(move || {
             client.stream_with_progress(stream_requests, progress_cb)
         });
 

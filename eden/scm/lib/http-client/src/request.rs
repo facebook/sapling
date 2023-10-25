@@ -613,7 +613,7 @@ impl Request {
 
         // Spawn the request as another task, which will block
         // the worker it is scheduled on until completion.
-        let io_task = tokio::task::spawn_blocking(move || request.send());
+        let io_task = async_runtime::spawn_blocking(move || request.send());
 
         match AsyncResponse::new(streams, request_info).await {
             Ok(res) => Ok(res),
