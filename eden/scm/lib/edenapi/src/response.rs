@@ -30,13 +30,20 @@ impl<T> BlockingResponse<T> {
         // Fetch ClientRequestInfo from a thread local and pass to async code
         let maybe_client_request_info = get_client_request_info_thread_local();
         let Response { entries, stats } = block_unless_interrupted(with_client_request_info_scope(
-            maybe_client_request_info,
+            maybe_client_request_info.clone(),
             fetch,
         ))
         .context("transfer interrupted by user")??;
-        let entries = block_unless_interrupted(entries.try_collect())
-            .context("transfer interrupted by user")??;
-        let stats = block_unless_interrupted(stats).context("transfer interrupted by user")??;
+        let entries = block_unless_interrupted(with_client_request_info_scope(
+            maybe_client_request_info.clone(),
+            entries.try_collect(),
+        ))
+        .context("transfer interrupted by user")??;
+        let stats = block_unless_interrupted(with_client_request_info_scope(
+            maybe_client_request_info,
+            stats,
+        ))
+        .context("transfer interrupted by user")??;
         Ok(Self { entries, stats })
     }
 }
