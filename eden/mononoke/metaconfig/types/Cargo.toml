@@ -15,7 +15,7 @@ clap = { version = "4.3.5", features = ["derive", "env", "string", "unicode", "w
 derive_more = "0.99.17"
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-mysql_common = "0.26.0"
+mysql_common = { version = "0.29.0", features = ["chrono", "default"] }
 regex = "1.9.2"
 rusoto_core = "0.46.0"
 scuba = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
