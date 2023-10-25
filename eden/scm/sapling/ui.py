@@ -549,8 +549,6 @@ class ui:
             user = self.config("ui", "username")
             if user is not None:
                 user = os.path.expandvars(user)
-        if user is None:
-            user = encoding.environ.get("EMAIL")
         if user is None and acceptempty:
             return user
         if user is None and not self.plain("username"):

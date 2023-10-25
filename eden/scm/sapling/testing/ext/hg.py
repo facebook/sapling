@@ -92,7 +92,6 @@ def testsetup(t: TestTmp):
         "CHGDISABLE": "0",
         "COLUMNS": "80",
         "DAEMON_PIDS": str(t.path / "daemon.pids"),
-        "EMAIL": "Foo Bar <foo.bar@example.com>",
         "HGCOLORS": "16",
         "HGEDITOR": "internal:none",
         "HGEMITWARNINGS": "1",

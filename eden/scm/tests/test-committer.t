@@ -1,15 +1,12 @@
 #debugruntest-compatible
 
   $ eagerepo
-  $ unset HGUSER
-  $ EMAIL="My Name <myname@example.com>"
-  $ export EMAIL
 
   $ hg init test
   $ cd test
   $ touch asdf
   $ hg add asdf
-  $ hg commit -m commit-1
+  $ HGUSER="My Name <myname@example.com>" hg commit -m commit-1
   $ hg tip
   commit:      53f268a58230
   user:        My Name <myname@example.com>
@@ -17,7 +14,6 @@
   summary:     commit-1
   
 
-  $ unset EMAIL
   $ echo 1234 > asdf
   $ hg commit -u "foo@bar.com" -m commit-1
   $ hg tip
@@ -26,6 +22,7 @@
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     commit-1
   
+  $ unset HGUSER
   $ echo "[ui]" >> .hg/hgrc
   $ echo "username = foobar <foo@bar.com>" >> .hg/hgrc
   $ echo 12 > asdf
@@ -67,7 +64,8 @@
 # test no .hg/hgrc (uses generated non-interactive username)
 
   $ echo space > asdf
-  $ rm .hg/hgrc
+  $ echo '%unset username' >> .hg/hgrc
+  $ echo '%unset user' >> .hg/hgrc
   $ HGPLAIN=1 hg commit -m commit-1
   no username found, using '[^']*' instead (re)
 

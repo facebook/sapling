@@ -2250,7 +2250,7 @@ User interface controls.
 
 ``askusername``
     Whether to prompt for a username when committing. If True, and
-    neither ``$HGUSER`` nor ``$EMAIL`` has been specified, then the user will
+    neither ``$HGUSER`` has been specified, then the user will
     be prompted to enter a username. If no username is entered, the
     default ``USER@HOST`` is used instead.
     (default: False)
@@ -2531,7 +2531,7 @@ User interface controls.
     <fred@example.com>``. Environment variables in the
     username are expanded.
 
-    (default: ``$EMAIL`` or ``username@hostname``. If the username in
+    (default: ``username@hostname``. If the username in
     the config is empty, e.g. if the system admin set ``username =`` in the
     system config, it has to be specified manually or in a different
     config file)
@@ -2789,14 +2789,10 @@ HGUSER
 
     - HGUSER (deprecated)
     - configuration files from the HGRCPATH
-    - EMAIL
     - interactive prompt
     - LOGNAME (with ``@hostname`` appended)
 
     (deprecated, see :prog:`help config.ui.username`)
-
-EMAIL
-    May be used as the author of a commit; see HGUSER.
 
 LOGNAME
     May be used as the author of a commit; see HGUSER.

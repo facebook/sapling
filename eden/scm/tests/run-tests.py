@@ -1552,7 +1552,6 @@ class Test(unittest.TestCase):
         # the tests produce repeatable output.
         env["LANG"] = env["LC_ALL"] = env["LANGUAGE"] = self._options.locale
         env["TZ"] = "GMT"
-        env["EMAIL"] = "Foo Bar <foo.bar@example.com>"
         env["COLUMNS"] = "80"
 
         # Claim that 256 colors is not supported.
