@@ -34,12 +34,9 @@ use memcache::KeyGen;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
 use mononoke_types::RepositoryId;
-use tunables::tunables;
 
 use crate::HgMutationEntry;
 use crate::HgMutationStore;
-
-const DEFAULT_TTL_SECS: u64 = 3600;
 
 /// Struct representing the cache entry for
 /// (repo_id, cs_id) -> Vec<HgMutationEntry> mapping
@@ -227,18 +224,7 @@ impl EntityStore<HgMutationCacheEntry> for CacheRequest<'_> {
     }
 
     fn cache_determinator(&self, _: &HgMutationCacheEntry) -> CacheDisposition {
-        let ttl = if tunables()
-            .hg_mutation_store_caching_ttl_secs()
-            .unwrap_or_default()
-            > 0
-        {
-            tunables()
-                .hg_mutation_store_caching_ttl_secs()
-                .unwrap_or_default() as u64
-        } else {
-            DEFAULT_TTL_SECS
-        };
-        CacheDisposition::Cache(CacheTtl::Ttl(Duration::from_secs(ttl)))
+        CacheDisposition::Cache(CacheTtl::Ttl(Duration::from_secs(3600)))
     }
 
     caching_ext::impl_singleton_stats!("hg_mutation_store");
