@@ -728,4 +728,83 @@ TEST_F(HgFilteredBackingStoreTest, testMercurialFFI) {
   EXPECT_NE(barTxtFindRes, rootDirRes.tree->cend());
   EXPECT_NE(helloFindRes, srcRes->cend());
 }
+
+TEST_F(HgFilteredBackingStoreTest, testMercurialFFINullFilter) {
+  // Set up one commit with a root tree
+  auto rootFuture1 = filteredStoreFFI_->getRootTree(
+      RootId{
+          FilteredBackingStore::createFilteredRootId(commit1.value(), "null")},
+      ObjectFetchContext::getNullContext());
+
+  auto rootDirRes = std::move(rootFuture1).get(kTestTimeout);
+
+  // Get the object IDs of all the trees/files from the root dir.
+  auto [dir2Name, dir2Entry] = *rootDirRes.tree->find("dir2"_pc);
+  auto [srcName, srcEntry] = *rootDirRes.tree->find("src"_pc);
+  auto fooTxtFindRes = rootDirRes.tree->find("foo.txt"_pc);
+  auto barTxtFindRes = rootDirRes.tree->find("bar.txt"_pc);
+  auto fooFindRes = rootDirRes.tree->find("foo"_pc);
+  auto filteredOutFindRes = rootDirRes.tree->find("filtered_out"_pc);
+
+  // Get all the files from the trees from commit 1.
+  auto dir2Future = filteredStoreFFI_->getTree(
+      dir2Entry.getHash(), ObjectFetchContext::getNullContext());
+  auto dir2Res = std::move(dir2Future).get(kTestTimeout).tree;
+  auto readmeFindRes = dir2Res->find("README"_pc);
+  auto srcFuture = filteredStoreFFI_->getTree(
+      srcEntry.getHash(), ObjectFetchContext::getNullContext());
+  auto srcRes = std::move(srcFuture).get(kTestTimeout).tree;
+  auto helloFindRes = srcRes->find("hello.txt"_pc);
+
+  // We expect all files to be present
+  EXPECT_NE(fooFindRes, rootDirRes.tree->cend());
+  EXPECT_NE(readmeFindRes, dir2Res->cend());
+  EXPECT_NE(filteredOutFindRes, rootDirRes.tree->cend());
+  EXPECT_NE(fooTxtFindRes, rootDirRes.tree->cend());
+  EXPECT_NE(barTxtFindRes, rootDirRes.tree->cend());
+  EXPECT_NE(helloFindRes, srcRes->cend());
+}
+
+TEST_F(HgFilteredBackingStoreTest, testMercurialFFIInvalidFOID) {
+  // Set up one commit with a root tree
+  auto filterRelPath = RelativePath{"filter"};
+  auto rootFuture1 = filteredStoreFFI_->getRootTree(
+      RootId{FilteredBackingStore::createFilteredRootId(
+          commit1.value(),
+          fmt::format("{}:{}", filterRelPath.piece(), commit1.value()))},
+      ObjectFetchContext::getNullContext());
+
+  auto rootDirRes = std::move(rootFuture1).get(kTestTimeout);
+
+  // Get the object IDs of all the trees/files from the root dir.
+  auto [dir2Name, dir2Entry] = *rootDirRes.tree->find("dir2"_pc);
+  auto [srcName, srcEntry] = *rootDirRes.tree->find("src"_pc);
+  auto fooTxtFindRes = rootDirRes.tree->find("foo.txt"_pc);
+  auto barTxtFindRes = rootDirRes.tree->find("bar.txt"_pc);
+  auto fooFindRes = rootDirRes.tree->find("foo"_pc);
+  auto filteredOutFindRes = rootDirRes.tree->find("filtered_out"_pc);
+
+  // Get all the files from the trees from commit 1. We intentionally use the
+  // wrapped ObjectId instead of the FilteredObjectId to test whether we handle
+  // invalid FOIDs correctly.
+  auto dir2OID = FilteredObjectId::fromObjectId(dir2Entry.getHash()).object();
+  EXPECT_THROW_RE(
+      filteredStoreFFI_->getTree(dir2OID, ObjectFetchContext::getNullContext()),
+      std::invalid_argument,
+      ".*Invalid FilteredObjectId type byte 1.*");
+
+  auto src2OID = FilteredObjectId::fromObjectId(srcEntry.getHash()).object();
+  EXPECT_THROW_RE(
+      filteredStoreFFI_->getTree(src2OID, ObjectFetchContext::getNullContext()),
+      std::invalid_argument,
+      ".*Invalid FilteredObjectId type byte 1.*");
+
+  // We still expect foo and filtered_out to be filtered.
+  EXPECT_EQ(fooFindRes, rootDirRes.tree->cend());
+  EXPECT_EQ(filteredOutFindRes, rootDirRes.tree->cend());
+
+  // We expect these files to be present
+  EXPECT_NE(fooTxtFindRes, rootDirRes.tree->cend());
+  EXPECT_NE(barTxtFindRes, rootDirRes.tree->cend());
+}
 } // namespace

@@ -44,6 +44,11 @@ FilterCoverage determineFilterCoverage(
 ImmediateFuture<FilterCoverage> HgSparseFilter::getFilterCoverageForPath(
     RelativePathPiece path,
     folly::StringPiece id) const {
+  // If filterId is "null", Mercurial is reporting that no filters are active
+  if (id == kNullFilterId) {
+    return FilterCoverage::RECURSIVELY_UNFILTERED;
+  }
+
   // We check if the filter is cached. If so, we can avoid fetching the Filter
   // Profile from Mercurial.
   {
