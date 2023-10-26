@@ -50,5 +50,7 @@ rust_binary(
         "//eden/mononoke/repo_attributes/repo_derived_data:repo_derived_data",
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/mononoke/server/context:context",
+        "//eden/mononoke/server/metadata:metadata",
+        "//eden/scm/lib/clientinfo:clientinfo",
     ],
 )

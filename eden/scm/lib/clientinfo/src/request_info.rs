@@ -123,6 +123,7 @@ pub enum ClientEntryPoint {
     Walker,
     MegarepoTool,
     MegarepoBacksyncer,
+    MegarepoForwardsyncer,
 }
 
 impl ClientRequestInfo {
@@ -188,6 +189,7 @@ impl Display for ClientEntryPoint {
             ClientEntryPoint::Walker => "walker",
             ClientEntryPoint::MegarepoTool => "megarepo_tool",
             ClientEntryPoint::MegarepoBacksyncer => "megarepo_backsyncer",
+            ClientEntryPoint::MegarepoForwardsyncer => "megarepo_forwardsyncer",
         };
         write!(f, "{}", out)
     }
@@ -211,6 +213,7 @@ impl TryFrom<&str> for ClientEntryPoint {
             "walker" => Ok(ClientEntryPoint::Walker),
             "megarepo_tool" => Ok(ClientEntryPoint::MegarepoTool),
             "megarepo_backsyncer" => Ok(ClientEntryPoint::MegarepoBacksyncer),
+            "megarepo_forwardsyncer" => Ok(ClientEntryPoint::MegarepoForwardsyncer),
             _ => Err(anyhow!("Invalid client entry point")),
         }
     }

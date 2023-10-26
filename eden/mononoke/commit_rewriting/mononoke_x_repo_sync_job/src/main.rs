@@ -58,6 +58,8 @@ use bookmarks::Freshness;
 use cached_config::ConfigStore;
 use changesets::ChangesetsArc;
 use clap_old::ArgMatches;
+use clientinfo::ClientEntryPoint;
+use clientinfo::ClientInfo;
 use cmdlib::args;
 use cmdlib::args::MononokeMatches;
 use cmdlib::helpers;
@@ -82,6 +84,7 @@ use futures::StreamExt;
 use futures_stats::TimedFutureExt;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use live_commit_sync_config::LiveCommitSyncConfig;
+use metadata::Metadata;
 use mononoke_api_types::InnerRepo;
 use mononoke_hg_sync_job_helper_lib::wait_for_latest_log_id_to_be_synced;
 use mononoke_types::ChangesetId;
@@ -590,7 +593,13 @@ fn main(fb: FacebookInit) -> Result<()> {
     let app = create_app();
     let (matches, _runtime) = app.get_matches(fb)?;
     let logger = matches.logger();
-    let session = SessionContainer::new_with_defaults(fb);
+    let mut metadata = Metadata::default();
+    metadata.add_client_info(ClientInfo::default_with_entry_point(
+        ClientEntryPoint::MegarepoForwardsyncer,
+    ));
+    let session = SessionContainer::builder(fb)
+        .metadata(Arc::new(metadata))
+        .build();
     let ctx = session.new_context_with_scribe(
         logger.clone(),
         MononokeScubaSampleBuilder::with_discard(),
