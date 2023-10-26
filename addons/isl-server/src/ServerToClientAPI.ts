@@ -561,6 +561,25 @@ export default class ServerToClientAPI {
           });
         break;
       }
+      case 'fetchLatestCommit': {
+        repo
+          .lookupCommits([data.revset])
+          .then(commits => {
+            this.postMessage({
+              type: 'fetchedLatestCommit',
+              revset: data.revset,
+              info: {value: commits.values().next().value},
+            });
+          })
+          .catch(err => {
+            this.postMessage({
+              type: 'fetchedLatestCommit',
+              revset: data.revset,
+              info: {error: err as Error},
+            });
+          });
+        break;
+      }
       case 'fetchCommitCloudState': {
         repo.getCommitCloudState(cwd).then(state => {
           this.postMessage({

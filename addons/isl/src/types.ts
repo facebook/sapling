@@ -449,6 +449,7 @@ export type ClientToServerMessage =
   | {type: 'abortRunningOperation'; operationId: string}
   | {type: 'fetchCommitMessageTemplate'}
   | {type: 'fetchShelvedChanges'}
+  | {type: 'fetchLatestCommit'; revset: string}
   | {type: 'typeahead'; kind: TypeaheadKind; query: string; id: string}
   | {type: 'requestRepoInfo'}
   | {type: 'requestApplicationInfo'}
@@ -509,6 +510,7 @@ export type ServerToClientMessage =
   | {type: 'gotConfig'; name: ConfigName; value: string | undefined}
   | {type: 'fetchedCommitMessageTemplate'; template: string}
   | {type: 'fetchedShelvedChanges'; shelvedChanges: Result<Array<ShelvedChange>>}
+  | {type: 'fetchedLatestCommit'; info: Result<CommitInfo>; revset: string}
   | {type: 'typeaheadResult'; id: string; result: Array<TypeaheadResult>}
   | {type: 'applicationInfo'; info: ApplicationInfo}
   | {type: 'repoInfo'; info: RepoInfo; cwd?: string}

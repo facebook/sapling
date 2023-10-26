@@ -110,6 +110,21 @@ export const serverCwd = selector<string>({
   },
 });
 
+export async function forceFetchCommit(revset: string): Promise<CommitInfo> {
+  serverAPI.postMessage({
+    type: 'fetchLatestCommit',
+    revset,
+  });
+  const response = await serverAPI.nextMessageMatching(
+    'fetchedLatestCommit',
+    message => message.revset === revset,
+  );
+  if (response.info.error) {
+    throw response.info.error;
+  }
+  return response.info.value;
+}
+
 export const latestUncommittedChangesData = atom<{
   fetchStartTimestamp: number;
   fetchCompletedTimestamp: number;
