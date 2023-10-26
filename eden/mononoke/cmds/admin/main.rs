@@ -10,6 +10,8 @@
 use std::process::ExitCode;
 
 use blobstore::PutBehaviour;
+use clientinfo::ClientEntryPoint;
+use clientinfo::ClientInfo;
 use cmdlib::args;
 use cmdlib::args::ArgType;
 use cmdlib::args::MononokeClapApp;
@@ -100,7 +102,12 @@ fn main(fb: FacebookInit) -> ExitCode {
                 subcommand_content_fetch(fb, logger, &matches, sub_m).await
             }
             (bookmarks_manager::BOOKMARKS, Some(sub_m)) => {
-                let ctx = CoreContext::new_with_logger(fb, logger.clone());
+                let ctx = CoreContext::new_with_logger_and_client_info(
+                    fb,
+                    logger.clone(),
+                    ClientInfo::default_with_entry_point(ClientEntryPoint::MononokeAdmin),
+                );
+
                 let repo =
                     args::not_shardmanager_compatible::open_repo(fb, &logger, &matches).await?;
                 bookmarks_manager::handle_command(ctx, repo, sub_m, logger.clone()).await

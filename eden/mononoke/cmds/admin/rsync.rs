@@ -15,6 +15,8 @@ use clap_old::App;
 use clap_old::Arg;
 use clap_old::ArgMatches;
 use clap_old::SubCommand;
+use clientinfo::ClientEntryPoint;
+use clientinfo::ClientInfo;
 use cmdlib::args;
 use cmdlib::args::MononokeMatches;
 use cmdlib::helpers;
@@ -247,7 +249,12 @@ pub async fn subcommand_rsync<'a>(
     matches: &'a MononokeMatches<'_>,
     sub_matches: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    let ctx = CoreContext::new_with_logger_and_client_info(
+        fb,
+        logger.clone(),
+        ClientInfo::default_with_entry_point(ClientEntryPoint::MononokeAdmin),
+    );
+
     let (source_repo, target_repo, _) =
         get_source_target_repos_and_mapping(fb, logger, matches).await?;
 

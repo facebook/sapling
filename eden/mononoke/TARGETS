@@ -258,6 +258,7 @@ rust_binary(
         "//eden/mononoke/revset:revset",
         "//eden/mononoke/segmented_changelog:segmented_changelog",
         "//eden/mononoke/server/context:context",
+        "//eden/scm/lib/clientinfo:clientinfo",
         "//eden/scm/lib/xdiff:xdiff",
     ],
 )

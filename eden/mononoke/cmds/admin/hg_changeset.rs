@@ -18,6 +18,8 @@ use bonsai_hg_mapping::BonsaiHgMappingRef;
 use clap_old::App;
 use clap_old::ArgMatches;
 use clap_old::SubCommand;
+use clientinfo::ClientEntryPoint;
+use clientinfo::ClientInfo;
 use cmdlib::args;
 use cmdlib::args::MononokeMatches;
 use commit_graph::CommitGraphRef;
@@ -68,7 +70,11 @@ pub async fn subcommand_hg_changeset<'a>(
     matches: &'a MononokeMatches<'_>,
     sub_m: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    let ctx = CoreContext::new_with_logger_and_client_info(
+        fb,
+        logger.clone(),
+        ClientInfo::default_with_entry_point(ClientEntryPoint::MononokeAdmin),
+    );
 
     match sub_m.subcommand() {
         (HG_CHANGESET_DIFF, Some(sub_m)) => {

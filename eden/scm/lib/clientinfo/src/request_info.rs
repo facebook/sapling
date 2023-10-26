@@ -124,6 +124,7 @@ pub enum ClientEntryPoint {
     MegarepoTool,
     MegarepoBacksyncer,
     MegarepoForwardsyncer,
+    MononokeAdmin,
 }
 
 impl ClientRequestInfo {
@@ -190,6 +191,7 @@ impl Display for ClientEntryPoint {
             ClientEntryPoint::MegarepoTool => "megarepo_tool",
             ClientEntryPoint::MegarepoBacksyncer => "megarepo_backsyncer",
             ClientEntryPoint::MegarepoForwardsyncer => "megarepo_forwardsyncer",
+            ClientEntryPoint::MononokeAdmin => "mononoke_admin",
         };
         write!(f, "{}", out)
     }
@@ -214,6 +216,7 @@ impl TryFrom<&str> for ClientEntryPoint {
             "megarepo_tool" => Ok(ClientEntryPoint::MegarepoTool),
             "megarepo_backsyncer" => Ok(ClientEntryPoint::MegarepoBacksyncer),
             "megarepo_forwardsyncer" => Ok(ClientEntryPoint::MegarepoForwardsyncer),
+            "mononoke_admin" => Ok(ClientEntryPoint::MononokeAdmin),
             _ => Err(anyhow!("Invalid client entry point")),
         }
     }

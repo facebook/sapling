@@ -24,6 +24,8 @@ use clap_old::App;
 use clap_old::Arg;
 use clap_old::ArgMatches;
 use clap_old::SubCommand;
+use clientinfo::ClientEntryPoint;
+use clientinfo::ClientInfo;
 use cmdlib::args;
 use cmdlib::args::MononokeMatches;
 use context::CoreContext;
@@ -192,7 +194,12 @@ pub async fn subcommand_blobstore_fetch<'a>(
             .map_err(Error::from)?;
     }
 
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    let ctx = CoreContext::new_with_logger_and_client_info(
+        fb,
+        logger.clone(),
+        ClientInfo::default_with_entry_point(ClientEntryPoint::MononokeAdmin),
+    );
+
     let key = sub_m.value_of("KEY").unwrap().to_string();
     let decode_as = sub_m.value_of("decode-as").map(|val| val.to_string());
     let use_memcache = sub_m.value_of("use-memcache").map(|val| val.to_string());

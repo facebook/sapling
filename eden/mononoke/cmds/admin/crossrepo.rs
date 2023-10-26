@@ -25,6 +25,8 @@ use clap_old::App;
 use clap_old::Arg;
 use clap_old::ArgMatches;
 use clap_old::SubCommand;
+use clientinfo::ClientEntryPoint;
+use clientinfo::ClientInfo;
 use cmdlib::args;
 use cmdlib::args::MononokeMatches;
 use cmdlib::helpers;
@@ -139,7 +141,11 @@ pub async fn subcommand_crossrepo<'a>(
     let config_store = matches.config_store();
     let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(&logger, config_store)?;
 
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    let ctx = CoreContext::new_with_logger_and_client_info(
+        fb,
+        logger.clone(),
+        ClientInfo::default_with_entry_point(ClientEntryPoint::MononokeAdmin),
+    );
     match sub_m.subcommand() {
         (MAP_SUBCOMMAND, Some(sub_sub_m)) => {
             let (source_repo, target_repo, mapping) =

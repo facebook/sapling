@@ -15,6 +15,8 @@ use clap_old::App;
 use clap_old::Arg;
 use clap_old::ArgMatches;
 use clap_old::SubCommand;
+use clientinfo::ClientEntryPoint;
+use clientinfo::ClientInfo;
 use cloned::cloned;
 use cmdlib::args;
 use cmdlib::args::MononokeMatches;
@@ -218,7 +220,11 @@ pub async fn subcommand_filenodes<'a>(
     matches: &'a MononokeMatches<'_>,
     sub_m: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    let ctx = CoreContext::new_with_logger_and_client_info(
+        fb,
+        logger.clone(),
+        ClientInfo::default_with_entry_point(ClientEntryPoint::MononokeAdmin),
+    );
     let repo = args::not_shardmanager_compatible::open_repo(fb, ctx.logger(), matches).await?;
     let log_envelope = sub_m.is_present(ARG_ENVELOPE);
 
@@ -266,7 +272,11 @@ pub async fn subcommand_filenodes<'a>(
         }
         (COMMAND_VALIDATE, Some(matches)) => {
             let rev = matches.value_of(ARG_REVISION).unwrap().to_string();
-            let ctx = CoreContext::new_with_logger(fb, logger.clone());
+            let ctx = CoreContext::new_with_logger_and_client_info(
+                fb,
+                logger.clone(),
+                ClientInfo::default_with_entry_point(ClientEntryPoint::MononokeAdmin),
+            );
 
             let mf_id = helpers::get_root_manifest_id(&ctx, repo.clone(), rev).await?;
             mf_id
