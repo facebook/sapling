@@ -750,15 +750,28 @@ impl Request {
             None => {}
         }
 
-        // Windows enables ssl revocation checking by default, which doesn't work inside the
-        // datacenter.
         #[cfg(windows)]
-        {
-            use curl::easy::SslOpt;
-            let mut ssl_opts = SslOpt::new();
-            ssl_opts.no_revoke(true);
-            easy.ssl_options(&ssl_opts)?;
-        }
+        unsafe {
+            // Call directly since curl crate doesn't expose CURLSSLOPT_NATIVE_CA option.
+            let rc = curl_sys::curl_easy_setopt(
+                easy.raw(),
+                curl_sys::CURLOPT_SSL_OPTIONS,
+                // Windows enables ssl revocation checking by default, which doesn't work inside the
+                // datacenter.
+                curl_sys::CURLSSLOPT_NO_REVOKE |
+                // When using openssl, this imports CAs from Windows cert store.
+                curl_sys::CURLSSLOPT_NATIVE_CA,
+            );
+            if rc == curl_sys::CURLE_OK {
+                Ok(())
+            } else {
+                let mut err = curl::Error::new(rc);
+                if let Some(msg) = easy.take_error_buf() {
+                    err.set_extra(msg);
+                }
+                Err(err)
+            }
+        }?;
 
         if let Some(cainfo) = self.cainfo {
             easy.cainfo(cainfo)?;
