@@ -24,7 +24,7 @@ serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_ignored = "0.1.8"
 serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
 thiserror = "1.0.43"
-toml = "0.7.3"
+toml = "0.8.4"
 
 [dev-dependencies]
 maplit = "1.0"

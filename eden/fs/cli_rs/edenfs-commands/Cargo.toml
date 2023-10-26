@@ -30,7 +30,7 @@ tabular = "0.2.0"
 termwiz = { version = "0.18", features = ["widgets"] }
 thrift-types = { version = "0.1.0", path = "../../../scm/lib/thrift-types" }
 tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
-toml = "0.7.3"
+toml = "0.8.4"
 tracing = "0.1.35"
 
 [target.'cfg(target_os = "linux")'.dependencies]
