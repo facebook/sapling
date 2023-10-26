@@ -1540,19 +1540,55 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
         cs: BonsaiChangeset,
         expected_version: Option<CommitSyncConfigVersion>,
     ) -> Result<CommitSyncInMemoryResult, Error> {
+        // If a commit is changing mapping let's always rewrite it to
+        // small repo regardless if outcome is empty. This is to ensure
+        // that efter changing mapping there's a commit in small repo
+        // with new mapping on top.
+        let maybe_mapping_change_version = get_mapping_change_version(
+            &ChangesetInfo::derive(self.ctx, self.source_repo.0, cs.get_changeset_id()).await?,
+        )?;
+        let commit_rewritten_to_empty = if maybe_mapping_change_version.is_some() {
+            CommitRewrittenToEmpty::Keep
+        } else {
+            CommitRewrittenToEmpty::Discard
+        };
+
+        // During backsyncing we provide an option to skip emmpty commits but we
+        // can only do that when they're not changing the mapping.
+        let empty_commit_from_large_repo = if !self.small_to_large
+            && maybe_mapping_change_version.is_none()
+            && tunables::tunables()
+                .by_repo_cross_repo_skip_backsyncing_ordinary_empty_commits(
+                    self.source_repo_name().0,
+                )
+                .unwrap_or(false)
+        {
+            EmptyCommitFromLargeRepo::Discard
+        } else {
+            EmptyCommitFromLargeRepo::Keep
+        };
+
+        let rewrite_opts = RewriteOpts {
+            commit_rewritten_to_empty,
+            empty_commit_from_large_repo,
+        };
         let parent_count = cs.parents().count();
         if parent_count == 0 {
             match expected_version {
-                Some(version) => self.sync_commit_no_parents_in_memory(cs, version).await,
+                Some(version) => {
+                    self.sync_commit_no_parents_in_memory(cs, version, rewrite_opts)
+                        .await
+                }
                 None => bail!(
                     "no version specified for remapping commit {} with no parents",
                     cs.get_changeset_id(),
                 ),
             }
         } else if parent_count == 1 {
-            self.sync_commit_single_parent_in_memory(cs, expected_version)
+            self.sync_commit_single_parent_in_memory(cs, expected_version, rewrite_opts)
                 .await
         } else {
+            // Syncing merge doesn't take rewrite_opts because merges are always rewritten.
             self.sync_merge_in_memory(cs, expected_version).await
         }
     }
@@ -1561,6 +1597,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
         self,
         cs: BonsaiChangeset,
         expected_version: CommitSyncConfigVersion,
+        rewrite_opts: RewriteOpts,
     ) -> Result<CommitSyncInMemoryResult, Error> {
         let source_cs_id = cs.get_changeset_id();
         let maybe_version = get_version(self.ctx, self.source_repo.0, source_cs_id, &[]).await?;
@@ -1589,7 +1626,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
             &HashMap::new(),
             mover,
             self.source_repo.0,
-            Default::default(),
+            rewrite_opts,
         )
         .await?
         {
@@ -1610,6 +1647,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
         self,
         cs: BonsaiChangeset,
         expected_version: Option<CommitSyncConfigVersion>,
+        rewrite_opts: RewriteOpts,
     ) -> Result<CommitSyncInMemoryResult, Error> {
         let source_cs_id = cs.get_changeset_id();
         let cs = cs.into_mut();
@@ -1661,43 +1699,13 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                 let mut remapped_parents = HashMap::new();
                 remapped_parents.insert(p, remapped_p);
 
-                // If a commit is changing mapping let's always rewrite it to
-                // small repo regardless if outcome is empty. This is to ensure
-                // that efter changing mapping there's a commit in small repo
-                // with new mapping on top.
-                let maybe_mapping_change_version = get_mapping_change_version(
-                    &ChangesetInfo::derive(self.ctx, self.source_repo.0, source_cs_id).await?,
-                )?;
-                let commit_rewritten_to_empty = if maybe_mapping_change_version.is_some() {
-                    CommitRewrittenToEmpty::Keep
-                } else {
-                    CommitRewrittenToEmpty::Discard
-                };
-                // During backsyncing we provide an option to skip emmpty commits but we
-                // can only do that when they're not changing the mapping.
-                let empty_commit_from_large_repo = if !self.small_to_large
-                    && maybe_mapping_change_version.is_none()
-                    && tunables::tunables()
-                        .by_repo_cross_repo_skip_backsyncing_ordinary_empty_commits(
-                            self.source_repo_name().0,
-                        )
-                        .unwrap_or(false)
-                {
-                    EmptyCommitFromLargeRepo::Discard
-                } else {
-                    EmptyCommitFromLargeRepo::Keep
-                };
-
                 let maybe_rewritten = rewrite_commit(
                     self.ctx,
                     cs,
                     &remapped_parents,
                     rewrite_paths,
                     self.source_repo.0,
-                    RewriteOpts {
-                        commit_rewritten_to_empty,
-                        empty_commit_from_large_repo,
-                    },
+                    rewrite_opts,
                 )
                 .await?;
                 match maybe_rewritten {

@@ -88,19 +88,15 @@ although the second one became non-merge commit
   $ cd "$TESTTMP/small-hg-client"
   $ REPONAME=small-mon hgmn pull -q
   $ log -r :
-  o    merge commit in large repo #2 - should be non-merge in small repo [public;rev=7;edb525400b73] default/master_bookmark
+  o  merge commit in large repo #2 - should be non-merge in small repo [public;rev=5;5be69a1c5de7] default/master_bookmark
+  │
+  o    merge commit in large repo #1 [public;rev=4;8e94c6a96669]
   ├─╮
-  │ o    merge commit in large repo #1 [public;rev=6;8e94c6a96669]
-  │ ├─╮
-  │ │ o  M1 [public;rev=5;1b442d07b913]
-  │ │ │
-  │ │ o  E1 [public;rev=4;7614fd547c87]
+  │ o  M1 [public;rev=3;1b442d07b913]
   │ │
-  o │  M2 [public;rev=3;f32e9525603e]
-  │ │
-  o │  E2 [public;rev=2;012af04588fd]
-    │
-    @  first post-move commit [public;rev=1;11f848659bfc]
-    │
-    o  pre-move commit [public;rev=0;fc7ae591de0e]
+  │ o  E1 [public;rev=2;7614fd547c87]
+  │
+  @  first post-move commit [public;rev=1;11f848659bfc]
+  │
+  o  pre-move commit [public;rev=0;fc7ae591de0e]
   $
