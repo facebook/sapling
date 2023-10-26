@@ -39,7 +39,7 @@ rust_library(
         "for-tests",
     ],
     named_deps = {
-        "blake3-constant": "//blake3:blake3-constants-rust",
+        "blake3-constant": "//blake3:blake3-constants-rust-nothrift",
     },
     test_deps = [
         "fbsource//third-party/rust:maplit",
@@ -125,7 +125,7 @@ rust_library(
         "ods",
     ],
     named_deps = {
-        "blake3-constant": "//blake3:blake3-constants-rust",
+        "blake3-constant": "//blake3:blake3-constants-rust-nothrift",
     },
     test_deps = [
         "fbsource//third-party/rust:maplit",

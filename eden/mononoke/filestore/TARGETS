@@ -6,7 +6,7 @@ rust_library(
     name = "filestore",
     srcs = glob(["src/**/*.rs"]),
     named_deps = {
-        "blake3-constant": "//blake3:blake3-constants-rust",
+        "blake3-constant": "//blake3:blake3-constants-rust-nothrift",
     },
     test_deps = [
         "fbsource//third-party/rust:assert_matches",
