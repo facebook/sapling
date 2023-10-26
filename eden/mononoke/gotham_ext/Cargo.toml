@@ -28,7 +28,7 @@ hyper = { version = "0.14.26", features = ["client", "http1", "http2", "stream"]
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 metadata = { version = "0.1.0", path = "../server/metadata" }
 mime = "0.3.14"
-openssl = "0.10.55"
+openssl = "0.10.57"
 percent-encoding = "2.1"
 permission_checker = { version = "0.1.0", path = "../permission_checker" }
 pin-project = "0.4.30"
