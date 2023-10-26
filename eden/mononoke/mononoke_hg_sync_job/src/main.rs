@@ -144,6 +144,7 @@ const HGSQL_GLOBALREVS_DB_ADDR: &str = "hgsql-globalrevs-db-addr";
 // repo.
 const DEFAULT_RETRY_NUM: usize = 1;
 const DEFAULT_BATCH_SIZE: usize = 10;
+const DEFAULT_CONFIGERATOR_BATCH_SIZE: usize = 5;
 const DEFAULT_SINGLE_BUNDLE_TIMEOUT_MS: u64 = 5 * 60 * 1000;
 
 #[derive(Copy, Clone)]
@@ -254,6 +255,13 @@ impl HgSyncProcess {
                 .takes_value(true)
                 .required(false)
                 .help("maximum number of bundles allowed over a single hg peer")
+        )
+        .arg(
+            Arg::with_name("configerator-batch-size")
+                .long("configerator-batch-size")
+                .takes_value(true)
+                .required(false)
+                .help("maximum number of bundles allowed over a single hg peer for the configerator repo")
         )
         .arg(
             Arg::with_name("single-bundle-timeout-ms")
@@ -1238,10 +1246,20 @@ async fn run<'a>(
             try_join3(preparer, overlay, globalrev_syncer),
         )
     };
-    let batch_size = match job_config.as_ref().map(|c| c.batch_size) {
-        Some(size) => size as usize,
-        None => args::get_usize(matches, "batch-size", DEFAULT_BATCH_SIZE),
+
+    let batch_size = if repo_name == "configerator" {
+        args::get_usize(
+            matches,
+            "configerator-batch-size",
+            DEFAULT_CONFIGERATOR_BATCH_SIZE,
+        )
+    } else {
+        match job_config.as_ref().map(|c| c.batch_size) {
+            Some(size) => size as usize,
+            None => args::get_usize(matches, "batch-size", DEFAULT_BATCH_SIZE),
+        }
     };
+
     let single_bundle_timeout_ms = args::get_u64(
         matches,
         "single-bundle-timeout-ms",
