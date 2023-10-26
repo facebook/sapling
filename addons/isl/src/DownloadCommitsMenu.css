@@ -15,3 +15,9 @@
 .download-commits-input-row vscode-text-field {
   flex-grow: 1;
 }
+
+.download-commits-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pad);
+}

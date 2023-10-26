@@ -430,6 +430,8 @@ export type ConfigName =
   | 'isl.show-stack-submit-confirmation'
   | 'isl.show-diff-number'
   | 'isl.render-compact'
+  | 'isl.download-commit-should-goto'
+  | 'isl.download-commit-rebase-type'
   | 'isl.experimental-features';
 
 /** local storage keys written by ISL */
