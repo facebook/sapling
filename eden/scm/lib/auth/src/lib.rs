@@ -227,6 +227,7 @@ impl<'a> AuthSection<'a> {
         }
 
         if let Some(best) = best {
+            tracing::debug!(%url, ?best, "best_auth_group");
             Ok(Some(best.clone()))
         } else if !missing.is_empty() {
             let msg = self.config.get("help", "tlsauthhelp").unwrap_or_default();

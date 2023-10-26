@@ -20,6 +20,7 @@ Single credential
   > EOF
 
   $ hg debugreadauthforuri https://example.com
+  DEBUG auth: best_auth_group url=https://example.com/ best=AuthGroup { name: "first", prefix: "example.com", cert: None, key: None, cacerts: None, username: None, schemes: ["https"], priority: 0, extras: {} }
   auth.first.prefix=example.com
   auth.first.schemes=https
 
@@ -53,6 +54,7 @@ Valid credentials are used
   > EOF
 
   $ hg debugreadauthforuri https://example.com
+  DEBUG auth: best_auth_group url=https://example.com/ best=AuthGroup { name: "first", prefix: "example.com", cert: Some("foocert"), key: None, cacerts: None, username: None, schemes: ["https"], priority: 0, extras: {} }
   auth.first.cert=foocert
   auth.first.prefix=example.com
   auth.first.schemes=https
@@ -73,6 +75,7 @@ Valid credentials are preferred
 
   $ hg debugreadauthforuri https://example.com
   DEBUG auth: Ignoring [auth] group "second" because of missing private key: "fookey"
+  DEBUG auth: best_auth_group url=https://example.com/ best=AuthGroup { name: "first", prefix: "example.com", cert: Some("foocert"), key: None, cacerts: None, username: None, schemes: ["https"], priority: 0, extras: {} }
   auth.first.cert=foocert
   auth.first.prefix=example.com
   auth.first.schemes=https
@@ -89,6 +92,7 @@ Longest prefixes are used
   > EOF
 
   $ hg debugreadauthforuri https://example.com/foo
+  DEBUG auth: best_auth_group url=https://example.com/foo best=AuthGroup { name: "first", prefix: "example.com/foo", cert: None, key: None, cacerts: None, username: None, schemes: ["https"], priority: 0, extras: {} }
   auth.first.prefix=example.com/foo
   auth.first.schemes=https
 
@@ -105,6 +109,7 @@ Prefixes take precedence over priorities
   > EOF
 
   $ hg debugreadauthforuri https://example.com/foo
+  DEBUG auth: best_auth_group url=https://example.com/foo best=AuthGroup { name: "first", prefix: "example.com/foo", cert: None, key: None, cacerts: None, username: None, schemes: ["https"], priority: 0, extras: {} }
   auth.first.prefix=example.com/foo
   auth.first.schemes=https
 
@@ -122,6 +127,7 @@ Priorities take precedence over user names
   > EOF
 
   $ hg debugreadauthforuri https://example.com
+  DEBUG auth: best_auth_group url=https://example.com/ best=AuthGroup { name: "second", prefix: "example.com", cert: None, key: None, cacerts: None, username: None, schemes: ["https"], priority: 1, extras: {} }
   auth.second.prefix=example.com
   auth.second.priority=1
   auth.second.schemes=https
@@ -141,6 +147,7 @@ User names are used if everything else matches
   > EOF
 
   $ hg debugreadauthforuri https://example.com
+  DEBUG auth: best_auth_group url=https://example.com/ best=AuthGroup { name: "first", prefix: "example.com", cert: None, key: None, cacerts: None, username: Some("user"), schemes: ["https"], priority: 1, extras: {} }
   auth.first.prefix=example.com
   auth.first.priority=1
   auth.first.schemes=https
