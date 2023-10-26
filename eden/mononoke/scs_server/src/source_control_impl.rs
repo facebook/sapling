@@ -953,5 +953,10 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             repo: thrift::RepoSpecifier,
             params: thrift::CreateGitTagParams,
         ) -> Result<thrift::CreateGitTagResponse, service::CreateGitTagExn>;
+
+        async fn repo_stack_git_bundle_store(
+            repo: thrift::RepoSpecifier,
+            params: thrift::RepoStackGitBundleStoreParams,
+        ) -> Result<thrift::RepoStackGitBundleStoreResponse, service::RepoStackGitBundleStoreExn>;
     }
 }

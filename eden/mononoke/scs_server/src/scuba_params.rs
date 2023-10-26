@@ -566,3 +566,10 @@ impl AddScubaParams for thrift::CreateGitTagParams {
         scuba.add("tagged_changeset_id", hex(&self.target_changeset));
     }
 }
+
+impl AddScubaParams for thrift::RepoStackGitBundleStoreParams {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add("head", hex(&self.head));
+        scuba.add("base", hex(&self.base));
+    }
+}

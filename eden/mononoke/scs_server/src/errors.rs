@@ -225,6 +225,7 @@ impl_into_thrift_error!(service::RepoDeleteBookmarkExn);
 impl_into_thrift_error!(service::RepoLandStackExn);
 impl_into_thrift_error!(service::RepoBookmarkInfoExn);
 impl_into_thrift_error!(service::RepoStackInfoExn);
+impl_into_thrift_error!(service::RepoStackGitBundleStoreExn);
 impl_into_thrift_error!(service::RepoPrepareCommitsExn);
 impl_into_thrift_error!(service::RepoUploadFileContentExn);
 impl_into_thrift_error!(service::CommitCommonBaseWithExn);

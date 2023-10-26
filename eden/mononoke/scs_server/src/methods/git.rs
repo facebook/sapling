@@ -149,4 +149,19 @@ impl SourceControlServiceImpl {
             ..Default::default()
         })
     }
+
+    /// Generate Git bundle for the given stack of commits with the ref BUNDLE_HEAD
+    /// pointing to the top of the stack. Store the bundle in everstore and return
+    /// the everstore handle associated with it.
+    pub(crate) async fn repo_stack_git_bundle_store(
+        &self,
+        _ctx: CoreContext,
+        _repo: thrift::RepoSpecifier,
+        _params: thrift::RepoStackGitBundleStoreParams,
+    ) -> Result<thrift::RepoStackGitBundleStoreResponse, errors::ServiceError> {
+        Err(crate::errors::not_implemented(
+            "repo_stack_git_bundle_store is not yet implemented".to_string(),
+        )
+        .into())
+    }
 }

@@ -807,6 +807,16 @@ struct RepoStackInfoParams {
   3: i64 limit;
 }
 
+/// The parameter for the repo_stack_git_bundle_store method
+struct RepoStackGitBundleStoreParams {
+  /// The changeset ID of the commit which is the head of the stack of draft commits
+  1: binary head;
+  /// The changeset ID of the base commit (public or draft) that serves as the base
+  /// of the stack of commits and is present in the user repo, i.e. the repo that will
+  /// unbundle this bundle, already has this commit
+  2: binary base;
+}
+
 enum RepoCreateCommitParamsFileType {
   /// Normal file
   FILE = 1,
@@ -1715,6 +1725,11 @@ struct RepoStackInfoResponse {
   3: list<map<CommitIdentityScheme, CommitId>> leftover_heads;
 }
 
+/// The response of the repo_stack_git_bundle_store method
+struct RepoStackGitBundleStoreResponse {
+  1: string everstore_handle;
+}
+
 struct RepoCreateCommitResponse {
   /// The IDs of the created commit.
   1: map<CommitIdentityScheme, CommitId> ids;
@@ -2133,6 +2148,14 @@ service SourceControlService extends fb303_core.BaseService {
   RepoStackInfoResponse repo_stack_info(
     1: RepoSpecifier repo,
     2: RepoStackInfoParams params,
+  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+
+  /// Generate Git bundle for the given stack of commits with the ref BUNDLE_HEAD
+  /// pointing to the top of the stack. Store the bundle in everstore and return
+  /// the everstore handle associated with it.
+  RepoStackGitBundleStoreResponse repo_stack_git_bundle_store(
+    1: RepoSpecifier repo,
+    2: RepoStackGitBundleStoreParams params,
   ) throws (1: RequestError request_error, 2: InternalError internal_error);
 
   /// Repository write methods
