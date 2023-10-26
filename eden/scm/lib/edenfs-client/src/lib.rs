@@ -8,6 +8,7 @@
 //! # Communicating to EdenFS via Thrift
 
 mod client;
+mod filter;
 pub mod status;
 mod types;
 

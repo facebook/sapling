@@ -12,6 +12,7 @@ use std::time::SystemTime;
 use anyhow::anyhow;
 use anyhow::Result;
 use configmodel::Config;
+use edenfs_client::EdenFsClient;
 use io::IO;
 use parking_lot::Mutex;
 use pathmatcher::DynMatcher;
@@ -19,22 +20,18 @@ use thrift_types::edenfs::ScmFileStatus;
 use treestate::treestate::TreeState;
 use types::hgid::NULL_ID;
 use types::RepoPathBuf;
-use vfs::VFS;
 
 use crate::filesystem::PendingChange;
 use crate::filesystem::PendingChanges;
 
 pub struct EdenFileSystem {
-    root: PathBuf,
     treestate: Arc<Mutex<TreeState>>,
+    client: EdenFsClient,
 }
 
 impl EdenFileSystem {
-    pub fn new(vfs: VFS, treestate: Arc<Mutex<TreeState>>) -> Result<Self> {
-        Ok(EdenFileSystem {
-            treestate,
-            root: vfs.root().to_path_buf(),
-        })
+    pub fn new(treestate: Arc<Mutex<TreeState>>, client: EdenFsClient) -> Result<Self> {
+        Ok(EdenFileSystem { treestate, client })
     }
 }
 
@@ -56,7 +53,7 @@ impl PendingChanges for EdenFileSystem {
             .next()
             .unwrap_or_else(|| Ok(NULL_ID))?;
 
-        let result = edenfs_client::status::get_status(&self.root, p1, include_ignored)?;
+        let result = edenfs_client::status::get_status(p1, include_ignored, &self.client)?;
         Ok(Box::new(result.status.entries.into_iter().map(
             |(path, status)| {
                 {

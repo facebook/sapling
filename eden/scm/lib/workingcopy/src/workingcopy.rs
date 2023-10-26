@@ -15,6 +15,8 @@ use anyhow::Context;
 use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
+#[cfg(feature = "eden")]
+use edenfs_client::EdenFsClient;
 use identity::Identity;
 use io::IO;
 use manifest::FileType;
@@ -235,7 +237,11 @@ impl WorkingCopy {
                 #[cfg(not(feature = "eden"))]
                 panic!("cannot use EdenFS in a non-EdenFS build");
                 #[cfg(feature = "eden")]
-                Box::new(EdenFileSystem::new(vfs.clone(), treestate)?)
+                {
+                    let wdir = vfs.root();
+                    let client = EdenFsClient::from_wdir(wdir)?;
+                    Box::new(EdenFileSystem::new(treestate, client)?)
+                }
             }
         };
         Ok(FileSystem {

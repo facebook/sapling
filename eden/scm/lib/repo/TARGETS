@@ -16,7 +16,9 @@ rust_library(
             "features": {
                 "default": [],
                 "fb": ["configloader/fb"],
-                "wdir": ["workingcopy"],
+                "wdir": [
+                    "workingcopy",
+                ],
             },
         },
     },

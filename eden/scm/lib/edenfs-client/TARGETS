@@ -10,9 +10,14 @@ rust_library(
         "cargo_toml_config": {
             "dependencies_override": {
             },
-            "features": {},
+            "features": {
+                "fb": [
+                    "identity/fb",
+                ],
+            },
         },
     },
+    features = ["fb"],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:fs-err",
@@ -23,6 +28,7 @@ rust_library(
         "//common/rust/shed/tokio-uds-compat:tokio-uds-compat",
         "//eden/scm/lib/async-runtime:async-runtime",
         "//eden/scm/lib/clientinfo:clientinfo",
+        "//eden/scm/lib/identity:identity",
         "//eden/scm/lib/thrift-types:thrift-types",
         "//eden/scm/lib/types:types",
     ],
