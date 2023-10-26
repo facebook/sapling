@@ -20,6 +20,7 @@ import {numPendingImageUploads} from '../ImageUpload';
 import {OperationDisabledButton} from '../OperationDisabledButton';
 import {SubmitUpdateMessageInput} from '../SubmitUpdateMessageInput';
 import {Subtle} from '../Subtle';
+import {latestSuccessorUnlessExplicitlyObsolete} from '../SuccessionTracker';
 import {Tooltip} from '../Tooltip';
 import {ChangedFiles, UncommittedChanges} from '../UncommittedChanges';
 import {tracker} from '../analytics';
@@ -675,7 +676,7 @@ function ActionsBar({
                   }
                 }
                 const operation = new AmendMessageOperation(
-                  succeedableRevset(commit.hash),
+                  latestSuccessorUnlessExplicitlyObsolete(commit),
                   stringifiedMessage,
                 );
                 clearEditedCommitMessage(/* skip confirmation */ true);

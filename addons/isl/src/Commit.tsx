@@ -253,12 +253,11 @@ export const Commit = memo(
             onClick={event => {
               runOperation(
                 new GotoOperation(
-                  // TODO: if you click goto on an obsolete commit, use exactRevset. Otherwise use succeedable to support queueing.
-                  succeedableRevset(
-                    // If the commit has a remote bookmark, use that instead of the hash. This is easier to read in the command history
-                    // and works better with optimistic state
-                    commit.remoteBookmarks.length > 0 ? commit.remoteBookmarks[0] : commit.hash,
-                  ),
+                  // If the commit has a remote bookmark, use that instead of the hash. This is easier to read in the command history
+                  // and works better with optimistic state
+                  commit.remoteBookmarks.length > 0
+                    ? succeedableRevset(commit.remoteBookmarks[0])
+                    : latestSuccessorUnlessExplicitlyObsolete(commit),
                 ),
               );
               event.stopPropagation(); // don't toggle selection by letting click propagate onto selection target.

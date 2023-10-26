@@ -8,6 +8,7 @@
 import type {CommitInfo} from './types';
 import type {Snapshot} from 'recoil';
 
+import {latestSuccessorUnlessExplicitlyObsolete} from './SuccessionTracker';
 import {walkTreePostorder} from './getCommitTree';
 import {AmendToOperation} from './operations/AmendToOperation';
 import {uncommittedSelectionReadonly} from './partialSelection';
@@ -68,5 +69,5 @@ export function getAmendToOperation(commit: CommitInfo, snapshot: Snapshot): Ame
   const paths = uncommittedChanges
     .filter(change => selection.isFullySelected(change.path))
     .map(change => change.path);
-  return new AmendToOperation(succeedableRevset(commit.hash), paths);
+  return new AmendToOperation(latestSuccessorUnlessExplicitlyObsolete(commit), paths);
 }
