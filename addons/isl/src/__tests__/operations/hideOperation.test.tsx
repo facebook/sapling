@@ -12,6 +12,7 @@ import {
   simulateCommits,
   closeCommitInfoSidebar,
   TEST_COMMIT_HISTORY,
+  COMMIT,
 } from '../../testUtils';
 import {CommandRunner} from '../../types';
 import {fireEvent, render, screen, within} from '@testing-library/react';
@@ -66,7 +67,37 @@ describe('hide operation', () => {
     expectMessageSentToServer({
       type: 'runOperation',
       operation: {
-        args: ['hide', '--rev', {type: 'exact-revset', revset: 'b'}],
+        args: ['hide', '--rev', {type: 'succeedable-revset', revset: 'b'}],
+        id: expect.anything(),
+        runner: CommandRunner.Sapling,
+        trackEventName: 'HideOperation',
+      },
+    });
+  });
+
+  it('uses exact revset if commit is obsolete', () => {
+    act(() => {
+      simulateCommits({
+        value: [
+          COMMIT('a', 'Commit A', '1', {successorInfo: {hash: 'a2', type: 'rebase'}}),
+          COMMIT('a2', 'Commit A2', '2'),
+          COMMIT('b', 'Commit B', '1'),
+          COMMIT('1', 'some public base', '0', {phase: 'public'}),
+          COMMIT('2', 'some public base 2', '1', {phase: 'public'}),
+        ],
+      });
+    });
+
+    rightClickAndChooseFromContextMenu(screen.getByText('Commit A'), 'Hide Commit and Descendants');
+
+    const runHideButton = screen.getByText('Hide');
+    expect(runHideButton).toBeInTheDocument();
+    fireEvent.click(runHideButton);
+
+    expectMessageSentToServer({
+      type: 'runOperation',
+      operation: {
+        args: ['hide', '--rev', {type: 'exact-revset', revset: 'a'}],
         id: expect.anything(),
         runner: CommandRunner.Sapling,
         trackEventName: 'HideOperation',

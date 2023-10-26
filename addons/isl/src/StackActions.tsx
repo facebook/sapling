@@ -12,6 +12,7 @@ import {FlexRow} from './ComponentUtils';
 import {useShowConfirmSubmitStack} from './ConfirmSubmitStack';
 import {HighlightCommitsWhileHovering} from './HighlightedCommits';
 import {OperationDisabledButton} from './OperationDisabledButton';
+import {latestSuccessorUnlessExplicitlyObsolete} from './SuccessionTracker';
 import {showSuggestedRebaseForStack, SuggestedRebaseButton} from './SuggestedRebase';
 import {Tooltip, DOCUMENTATION_DELAY} from './Tooltip';
 import {codeReviewProvider, allDiffSummaries} from './codeReview/CodeReviewInfo';
@@ -227,7 +228,7 @@ function CleanupButton({commit, hasChildren}: {commit: CommitInfo; hasChildren: 
       <VSCodeButton
         appearance="icon"
         onClick={() => {
-          runOperation(new HideOperation(exactRevset(commit.hash)));
+          runOperation(new HideOperation(latestSuccessorUnlessExplicitlyObsolete(commit)));
         }}>
         <Icon icon="eye-closed" slot="start" />
         {hasChildren ? <T>Clean up stack</T> : <T>Clean up</T>}

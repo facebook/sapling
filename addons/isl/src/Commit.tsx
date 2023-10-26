@@ -204,7 +204,10 @@ export const Commit = memo(
         });
         items.push({
           label: <T>Hide Commit and Descendants</T>,
-          onClick: () => setOperationBeingPreviewed(new HideOperation(exactRevset(commit.hash))),
+          onClick: () =>
+            setOperationBeingPreviewed(
+              new HideOperation(latestSuccessorUnlessExplicitlyObsolete(commit)),
+            ),
         });
       }
       return items;

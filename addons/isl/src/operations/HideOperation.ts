@@ -6,13 +6,13 @@
  */
 
 import type {ApplyPreviewsFuncType, PreviewContext} from '../previews';
-import type {ExactRevset, Hash} from '../types';
+import type {ExactRevset, SucceedableRevset} from '../types';
 
 import {CommitPreview} from '../previews';
 import {Operation} from './Operation';
 
 export class HideOperation extends Operation {
-  constructor(private source: ExactRevset) {
+  constructor(private source: ExactRevset | SucceedableRevset) {
     super('HideOperation');
   }
 
