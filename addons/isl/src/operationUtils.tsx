@@ -12,6 +12,7 @@ import {walkTreePostorder} from './getCommitTree';
 import {AmendToOperation} from './operations/AmendToOperation';
 import {uncommittedSelectionReadonly} from './partialSelection';
 import {treeWithPreviews, uncommittedChangesWithPreviews} from './previews';
+import {succeedableRevset} from './types';
 
 /**
  * Amend --to allows amending to a parent commit other than head.
@@ -67,5 +68,5 @@ export function getAmendToOperation(commit: CommitInfo, snapshot: Snapshot): Ame
   const paths = uncommittedChanges
     .filter(change => selection.isFullySelected(change.path))
     .map(change => change.path);
-  return new AmendToOperation(commit.hash, paths);
+  return new AmendToOperation(succeedableRevset(commit.hash), paths);
 }

@@ -61,7 +61,7 @@ describe('Download Commits', () => {
       expect.objectContaining({
         type: 'runOperation',
         operation: expect.objectContaining({
-          args: expect.arrayContaining(['aaa']),
+          args: expect.arrayContaining([{type: 'exact-revset', revset: 'aaa'}]),
         }),
       }),
     );

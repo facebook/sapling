@@ -63,6 +63,7 @@ import {
   uncommittedChangesFetchError,
   useRunOperation,
 } from './serverAPIState';
+import {succeedableRevset} from './types';
 import {usePromise} from './usePromise';
 import {VSCodeButton, VSCodeCheckbox, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
 import React, {useEffect, useRef, useState} from 'react';
@@ -944,7 +945,7 @@ function FileActions({
                     [file.path],
                     comparison.type === ComparisonType.UncommittedChanges
                       ? undefined
-                      : revsetForComparison(comparison),
+                      : succeedableRevset(revsetForComparison(comparison)),
                   ),
                 );
               });

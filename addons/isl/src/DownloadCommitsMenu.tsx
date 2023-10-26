@@ -100,9 +100,9 @@ function DownloadCommitsTooltip({dismiss}: {dismiss: () => unknown}) {
 
     // TODO: don't use different internal download operation once phrevset is supported in SL_AUTOMATION_EXCEPT.
     if (Internal.diffDownloadOperation != null) {
-      await runOperation(Internal.diffDownloadOperation(enteredDiffNum));
+      await runOperation(Internal.diffDownloadOperation(exactRevset(enteredDiffNum)));
     } else {
-      await runOperation(new PullRevOperation(enteredDiffNum));
+      await runOperation(new PullRevOperation(exactRevset(enteredDiffNum)));
     }
 
     // Lookup the result of the pull

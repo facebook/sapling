@@ -46,7 +46,7 @@ import {
 import {useConfirmUnsavedEditsBeforeSplit} from './stackEdit/ui/ConfirmUnsavedEditsBeforeSplit';
 import {SplitButton} from './stackEdit/ui/SplitButton';
 import {editingStackIntentionHashes} from './stackEdit/ui/stackEditState';
-import {succeedableRevset} from './types';
+import {exactRevset, succeedableRevset} from './types';
 import {short} from './utils';
 import {VSCodeButton, VSCodeTag} from '@vscode/webview-ui-toolkit/react';
 import React, {memo, useEffect, useState} from 'react';
@@ -203,7 +203,7 @@ export const Commit = memo(
         });
         items.push({
           label: <T>Hide Commit and Descendants</T>,
-          onClick: () => setOperationBeingPreviewed(new HideOperation(commit.hash)),
+          onClick: () => setOperationBeingPreviewed(new HideOperation(exactRevset(commit.hash))),
         });
       }
       return items;

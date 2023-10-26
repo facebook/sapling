@@ -66,7 +66,7 @@ describe('hide operation', () => {
     expectMessageSentToServer({
       type: 'runOperation',
       operation: {
-        args: ['hide', '--rev', 'b'],
+        args: ['hide', '--rev', {type: 'exact-revset', revset: 'b'}],
         id: expect.anything(),
         runner: CommandRunner.Sapling,
         trackEventName: 'HideOperation',

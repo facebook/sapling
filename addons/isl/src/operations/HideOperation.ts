@@ -6,13 +6,13 @@
  */
 
 import type {ApplyPreviewsFuncType, PreviewContext} from '../previews';
-import type {Hash} from '../types';
+import type {ExactRevset, Hash} from '../types';
 
 import {CommitPreview} from '../previews';
 import {Operation} from './Operation';
 
 export class HideOperation extends Operation {
-  constructor(private source: Hash) {
+  constructor(private source: ExactRevset) {
     super('HideOperation');
   }
 
@@ -24,7 +24,7 @@ export class HideOperation extends Operation {
 
   makePreviewApplier(_context: PreviewContext): ApplyPreviewsFuncType | undefined {
     const func: ApplyPreviewsFuncType = (tree, previewType) => {
-      if (tree.info.hash === this.source) {
+      if (tree.info.hash === this.source.revset) {
         return {
           info: tree.info,
           children: tree.children,
@@ -44,13 +44,13 @@ export class HideOperation extends Operation {
 
   makeOptimisticApplier(context: PreviewContext): ApplyPreviewsFuncType | undefined {
     const {treeMap} = context;
-    const originalSourceNode = treeMap.get(this.source);
+    const originalSourceNode = treeMap.get(this.source.revset);
     if (originalSourceNode == null) {
       return undefined;
     }
 
     const func: ApplyPreviewsFuncType = (tree, previewType, childPreviewType) => {
-      if (tree.info.hash === this.source) {
+      if (tree.info.hash === this.source.revset) {
         return {
           info: null,
         };

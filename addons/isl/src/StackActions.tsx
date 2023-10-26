@@ -22,6 +22,7 @@ import {useRunOperation, latestUncommittedChangesData} from './serverAPIState';
 import {useConfirmUnsavedEditsBeforeSplit} from './stackEdit/ui/ConfirmUnsavedEditsBeforeSplit';
 import {StackEditIcon} from './stackEdit/ui/StackEditIcon';
 import {editingStackIntentionHashes, loadingStackState} from './stackEdit/ui/stackEditState';
+import {exactRevset} from './types';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useRecoilValue, useRecoilState} from 'recoil';
 import {type ContextMenuItem, useContextMenu} from 'shared/ContextMenu';
@@ -226,7 +227,7 @@ function CleanupButton({commit, hasChildren}: {commit: CommitInfo; hasChildren: 
       <VSCodeButton
         appearance="icon"
         onClick={() => {
-          runOperation(new HideOperation(commit.hash));
+          runOperation(new HideOperation(exactRevset(commit.hash)));
         }}>
         <Icon icon="eye-closed" slot="start" />
         {hasChildren ? <T>Clean up stack</T> : <T>Clean up</T>}

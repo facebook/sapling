@@ -42,6 +42,7 @@ import platform from '../platform';
 import {CommitPreview, uncommittedChangesWithPreviews} from '../previews';
 import {selectedCommits} from '../selection';
 import {latestHeadCommit, repositoryInfo, useRunOperation} from '../serverAPIState';
+import {succeedableRevset} from '../types';
 import {useModal} from '../useModal';
 import {assert, firstLine, firstOfIterable} from '../utils';
 import {CommitInfoField} from './CommitInfoField';
@@ -432,7 +433,7 @@ function ShowingRemoteMessageBanner({
         onClick: () => {
           runOperation(
             new AmendMessageOperation(
-              commit.hash,
+              succeedableRevset(commit.hash),
               commitMessageFieldsToString(schema, latestFields),
             ),
           );
@@ -673,7 +674,10 @@ function ActionsBar({
                     return;
                   }
                 }
-                const operation = new AmendMessageOperation(commit.hash, stringifiedMessage);
+                const operation = new AmendMessageOperation(
+                  succeedableRevset(commit.hash),
+                  stringifiedMessage,
+                );
                 clearEditedCommitMessage(/* skip confirmation */ true);
                 return operation;
               }}>
