@@ -22,6 +22,7 @@ import {RebaseOperation} from './operations/RebaseOperation';
 import {persistAtomToConfigEffect} from './persistAtomToConfigEffect';
 import {treeWithPreviews} from './previews';
 import {forceFetchCommit, useRunOperation} from './serverAPIState';
+import {succeedableRevset, exactRevset} from './types';
 import {VSCodeButton, VSCodeDivider, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
 import {useEffect, useRef, useState} from 'react';
 import {atom, useRecoilState} from 'recoil';
@@ -122,7 +123,9 @@ function DownloadCommitsTooltip({dismiss}: {dismiss: () => unknown}) {
           : RebaseKeepOperation
         : RebaseOperation;
       const dest = rebaseType === 'rebase_ontop' ? '.' : unwrap(findCurrentPublicBase()?.hash);
-      runOperation(new Op(enteredDiffNum, dest));
+      // Use exact revsets for sources, so that you can type a specific hash to download and not be surprised by succession.
+      // Only use succession for destination, which may be in flux at the moment you start the download.
+      runOperation(new Op(exactRevset(enteredDiffNum), succeedableRevset(dest)));
     }
 
     if (
@@ -131,7 +134,7 @@ function DownloadCommitsTooltip({dismiss}: {dismiss: () => unknown}) {
       // Goto on max(latest_successors(revset)) would just yield the existing public commit.
       !isPublic
     ) {
-      runOperation(new GotoOperation(enteredDiffNum));
+      runOperation(new GotoOperation(exactRevset(enteredDiffNum)));
     }
   };
 

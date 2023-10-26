@@ -6,34 +6,30 @@
  */
 
 import type {ApplyPreviewsFuncType, PreviewContext} from '../previews';
-import type {Hash, Revset} from '../types';
+import type {ExactRevset, Hash, SucceedableRevset} from '../types';
 
 import {latestSuccessor} from '../SuccessionTracker';
 import {t} from '../i18n';
 import {CommitPreview} from '../previews';
-import {succeedableRevset} from '../types';
 import {Operation} from './Operation';
 
 export class RebaseOperation extends Operation {
-  constructor(private source: Hash, private destination: Revset) {
+  constructor(
+    private source: ExactRevset | SucceedableRevset,
+    private destination: ExactRevset | SucceedableRevset,
+  ) {
     super('RebaseOperation');
   }
 
   static opName = 'Rebase';
 
   getArgs() {
-    return [
-      'rebase',
-      '-s',
-      succeedableRevset(this.source),
-      '-d',
-      succeedableRevset(this.destination),
-    ];
+    return ['rebase', '-s', this.source, '-d', this.destination];
   }
 
   getInitialInlineProgress(): Array<[string, string]> {
     // TODO: successions
-    return [[this.source, t('rebasing...')]];
+    return [[this.source.revset, t('rebasing...')]];
   }
 
   makePreviewApplier(context: PreviewContext): ApplyPreviewsFuncType | undefined {
@@ -69,7 +65,7 @@ export class RebaseOperation extends Operation {
         }
       } else if (
         tree.info.hash === latestSuccessor(context, this.destination) ||
-        tree.info.remoteBookmarks.includes(this.destination)
+        tree.info.remoteBookmarks.includes(this.destination.revset)
       ) {
         parentHash = tree.info.hash;
         newSourceNode.info.parents = [parentHash];
@@ -121,7 +117,7 @@ export class RebaseOperation extends Operation {
         }
       } else if (
         tree.info.hash === latestSuccessor(context, this.destination) ||
-        tree.info.remoteBookmarks.includes(this.destination)
+        tree.info.remoteBookmarks.includes(this.destination.revset)
       ) {
         parentHash = tree.info.hash;
         newSourceNode.info.parents = [parentHash];

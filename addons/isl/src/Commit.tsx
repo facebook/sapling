@@ -46,6 +46,7 @@ import {
 import {useConfirmUnsavedEditsBeforeSplit} from './stackEdit/ui/ConfirmUnsavedEditsBeforeSplit';
 import {SplitButton} from './stackEdit/ui/SplitButton';
 import {editingStackIntentionHashes} from './stackEdit/ui/stackEditState';
+import {succeedableRevset} from './types';
 import {short} from './utils';
 import {VSCodeButton, VSCodeTag} from '@vscode/webview-ui-toolkit/react';
 import React, {memo, useEffect, useState} from 'react';
@@ -251,9 +252,12 @@ export const Commit = memo(
             onClick={event => {
               runOperation(
                 new GotoOperation(
-                  // If the commit has a remote bookmark, use that instead of the hash. This is easier to read in the command history
-                  // and works better with optimistic state
-                  commit.remoteBookmarks.length > 0 ? commit.remoteBookmarks[0] : commit.hash,
+                  // TODO: if you click goto on an obsolete commit, use exactRevset. Otherwise use succeedable to support queueing.
+                  succeedableRevset(
+                    // If the commit has a remote bookmark, use that instead of the hash. This is easier to read in the command history
+                    // and works better with optimistic state
+                    commit.remoteBookmarks.length > 0 ? commit.remoteBookmarks[0] : commit.hash,
+                  ),
                 ),
               );
               event.stopPropagation(); // don't toggle selection by letting click propagate onto selection target.
@@ -506,7 +510,11 @@ function DraggableCommit({
                 commit.remoteBookmarks.length > 0 ? commit.remoteBookmarks[0] : commit.hash;
               set(
                 operationBeingPreviewed,
-                new RebaseOperation(commitBeingDragged.hash, destination),
+                new RebaseOperation(
+                  // TODO: use exactRevset if dragging on an obsolete commit
+                  succeedableRevset(commitBeingDragged.hash),
+                  succeedableRevset(destination),
+                ),
               );
             }
           }

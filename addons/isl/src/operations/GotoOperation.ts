@@ -6,22 +6,21 @@
  */
 
 import type {ApplyPreviewsFuncType, PreviewContext} from '../previews';
-import type {Hash} from '../types';
+import type {ExactRevset, SucceedableRevset} from '../types';
 
 import {latestSuccessor} from '../SuccessionTracker';
 import {CommitPreview} from '../previews';
-import {succeedableRevset} from '../types';
 import {Operation} from './Operation';
 
 export class GotoOperation extends Operation {
-  constructor(private destination: Hash) {
+  constructor(private destination: SucceedableRevset | ExactRevset) {
     super('GotoOperation');
   }
 
   static opName = 'Goto';
 
   getArgs() {
-    const args = ['goto', '--rev', succeedableRevset(this.destination)];
+    const args = ['goto', '--rev', this.destination];
     return args;
   }
 
@@ -29,7 +28,7 @@ export class GotoOperation extends Operation {
     const headCommitHash = context.headCommit?.hash;
     if (
       headCommitHash === latestSuccessor(context, this.destination) ||
-      context.headCommit?.remoteBookmarks?.includes(this.destination)
+      context.headCommit?.remoteBookmarks?.includes(this.destination.revset)
     ) {
       // head is destination => the goto completed
       return undefined;
@@ -38,7 +37,7 @@ export class GotoOperation extends Operation {
     const func: ApplyPreviewsFuncType = (tree, _previewType) => {
       if (
         tree.info.hash === latestSuccessor(context, this.destination) ||
-        tree.info.remoteBookmarks?.includes(this.destination)
+        tree.info.remoteBookmarks?.includes(this.destination.revset)
       ) {
         const modifiedInfo = {...tree.info, isHead: true};
         // this is the commit we're moving to

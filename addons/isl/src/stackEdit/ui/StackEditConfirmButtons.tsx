@@ -13,6 +13,7 @@ import {T, t} from '../../i18n';
 import {ImportStackOperation} from '../../operations/ImportStackOperation';
 import {RebaseOperation} from '../../operations/RebaseOperation';
 import {latestCommitTreeMap, latestHeadCommit, useRunOperation} from '../../serverAPIState';
+import {exactRevset, succeedableRevset} from '../../types';
 import {UndoDescription} from './StackEditSubTree';
 import {
   bumpStackEditMetric,
@@ -86,8 +87,8 @@ export function StackEditConfirmButtons(): React.ReactElement {
       const children = latestTreeMap.get(stackTop)?.children?.map(c => c.info.hash);
       if (children != null && children.length > 0) {
         const rebaseOp = new RebaseOperation(
-          children.join('|'),
-          stackTop /* stack top of the new successor */,
+          exactRevset(children.join('|')),
+          succeedableRevset(stackTop) /* stack top of the new successor */,
         );
         runOperation(rebaseOp);
       }

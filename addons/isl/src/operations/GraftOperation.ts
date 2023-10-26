@@ -5,15 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Hash} from '../types';
+import type {ExactRevset, SucceedableRevset} from '../types';
 
 import {t} from '../i18n';
 import {Operation} from './Operation';
 
 /** Graft (copy) a commit onto the current commit. Like Rebasing, without affecting the original commit.
- * Useful for public commits. Note: Does not use latest successor by default, rather the exact revset. */
+ * Useful for public commits.  */
 export class GraftOperation extends Operation {
-  constructor(private source: Hash) {
+  constructor(private source: SucceedableRevset | ExactRevset) {
     super('GraftOperation');
   }
 
@@ -25,7 +25,7 @@ export class GraftOperation extends Operation {
 
   getInitialInlineProgress(): Array<[string, string]> {
     // TODO: successions
-    return [[this.source, t('grafting...')]];
+    return [[this.source.revset, t('grafting...')]];
   }
 
   // TODO: Optimistic State

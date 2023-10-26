@@ -14,6 +14,7 @@ import {RebaseOperation} from './operations/RebaseOperation';
 import {treeWithPreviews} from './previews';
 import {RelativeDate} from './relativeDate';
 import {latestCommits, useRunOperation} from './serverAPIState';
+import {succeedableRevset} from './types';
 import {short} from './utils';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {selector, selectorFamily, useRecoilCallback} from 'recoil';
@@ -95,7 +96,9 @@ export function SuggestedRebaseButton({stackBaseHash}: {stackBaseHash: Hash}) {
           onClick: () => {
             const destination = dest.remoteBookmarks?.[0] ?? dest.hash;
             tracker.track('ClickSuggestedRebase', {extras: {destination}});
-            runOperation(new RebaseOperation(stackBaseHash, destination));
+            runOperation(
+              new RebaseOperation(succeedableRevset(stackBaseHash), succeedableRevset(destination)),
+            );
           },
         };
       }) ?? []

@@ -5,30 +5,25 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Revset} from '../types';
+import type {ExactRevset, SucceedableRevset} from '../types';
 
-import {succeedableRevset} from '../types';
 import {Operation} from './Operation';
 
 /** Like rebase, but leave the source in place, and don't rebase children.
  * Behaves more like "Graft" than rebase, but without going to the result. Useful for copying public commits.
  * Note: does not use the latest successor by default, rather the exact source revset. */
 export class RebaseKeepOperation extends Operation {
-  constructor(protected source: Revset, protected destination: Revset) {
+  constructor(
+    protected source: SucceedableRevset | ExactRevset,
+    protected destination: SucceedableRevset | ExactRevset,
+  ) {
     super('RebaseKeepOperation');
   }
 
   static opName = 'Rebase (keep)';
 
   getArgs() {
-    return [
-      'rebase',
-      '--keep',
-      '--rev',
-      this.source,
-      '--dest',
-      succeedableRevset(this.destination),
-    ];
+    return ['rebase', '--keep', '--rev', this.source, '--dest', this.destination];
   }
 
   // TODO: Support optimistic state. Presently not an issue because its use case in "Download Commits"

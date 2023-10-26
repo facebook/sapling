@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {SmartlogCommits} from './types';
+import type {ExactRevset, SmartlogCommits, SucceedableRevset} from './types';
 
 import {atom, DefaultValue} from 'recoil';
 import {unwrap} from 'shared/utils';
@@ -117,9 +117,17 @@ export const latestSuccessorsMap = atom<Map<string, string>>({
  *
  * Useful for previews to ensure they're working with the latest version of a commit,
  * given that they may have been queued up while another operation ran and eventually caused succession.
+ *
+ * Note: if an ExactRevset is passed, don't look up the successor.
  */
-export function latestSuccessor(ctx: {successorMap: Map<string, string>}, oldHash: string): string {
-  let hash = oldHash;
+export function latestSuccessor(
+  ctx: {successorMap: Map<string, string>},
+  oldRevset: SucceedableRevset | ExactRevset,
+): string {
+  let hash = oldRevset.revset;
+  if (oldRevset.type === 'exact-revset') {
+    return hash;
+  }
   while (ctx.successorMap.has(hash)) {
     hash = unwrap(ctx.successorMap.get(hash));
   }
