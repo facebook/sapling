@@ -1209,7 +1209,10 @@ mod tests {
 
         // Make sure convert_cert defaults to cfg!(windows) and gets
         // passed along to request.
-        assert_eq!(cfg!(windows), client.get(url.clone()).convert_cert);
+        assert_eq!(
+            curl::Version::get().ssl_version() == Some("Schannel"),
+            client.get(url.clone()).convert_cert
+        );
 
         let client = HttpClient::from_config(Config {
             convert_cert: true,

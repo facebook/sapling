@@ -70,11 +70,20 @@ pub struct Config {
 
 impl Default for Config {
     fn default() -> Self {
+        let version = curl::Version::get();
+
+        // Example values: "SecureTransport", "OpenSSL/1.1.1t", "Schannel"
+        let ssl_version = version.ssl_version();
+
+        tracing::debug!(curl_ssl=?ssl_version);
+
         Self {
             cert_path: None,
             key_path: None,
             ca_path: None,
-            convert_cert: cfg!(windows),
+
+            // Convert to PKCS#12 if we are using schannel, which doesn't like PEM.
+            convert_cert: ssl_version.is_some_and(|v| v.starts_with("Schannel")),
 
             client_info: None,
             disable_tls_verification: false,
