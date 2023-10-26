@@ -16,6 +16,7 @@ import {currentComparisonMode} from './ComparisonView/atoms';
 import {highlightedCommits} from './HighlightedCommits';
 import {InlineBadge} from './InlineBadge';
 import {Subtle} from './Subtle';
+import {latestSuccessorUnlessExplicitlyObsolete} from './SuccessionTracker';
 import {Tooltip} from './Tooltip';
 import {UncommitButton} from './UncommitButton';
 import {UncommittedChanges} from './UncommittedChanges';
@@ -507,13 +508,14 @@ function DraggableCommit({
               // if the dest commit has a remote bookmark, use that instead of the hash.
               // this is easier to understand in the command history and works better with optimistic state
               const destination =
-                commit.remoteBookmarks.length > 0 ? commit.remoteBookmarks[0] : commit.hash;
+                commit.remoteBookmarks.length > 0
+                  ? succeedableRevset(commit.remoteBookmarks[0])
+                  : latestSuccessorUnlessExplicitlyObsolete(commit);
               set(
                 operationBeingPreviewed,
                 new RebaseOperation(
-                  // TODO: use exactRevset if dragging on an obsolete commit
-                  succeedableRevset(commitBeingDragged.hash),
-                  succeedableRevset(destination),
+                  latestSuccessorUnlessExplicitlyObsolete(commitBeingDragged),
+                  destination,
                 ),
               );
             }

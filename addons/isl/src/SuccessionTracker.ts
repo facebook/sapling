@@ -5,8 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ExactRevset, SmartlogCommits, SucceedableRevset} from './types';
+import type {CommitInfo, ExactRevset, SmartlogCommits, SucceedableRevset} from './types';
 
+import {exactRevset, succeedableRevset} from './types';
 import {atom, DefaultValue} from 'recoil';
 import {unwrap} from 'shared/utils';
 
@@ -132,4 +133,18 @@ export function latestSuccessor(
     hash = unwrap(ctx.successorMap.get(hash));
   }
   return hash;
+}
+
+/**
+ * Typically we want to use succeedable revsets everywhere, to maximize support for queued commands.
+ * But if you see and act on a visibly obsolete commit in the UI, we should use its exact hash,
+ * so that you don't suddenly act on a seemingly unrelated commit.
+ */
+export function latestSuccessorUnlessExplicitlyObsolete(
+  commit: CommitInfo,
+): SucceedableRevset | ExactRevset {
+  if (commit.successorInfo?.type != null) {
+    return exactRevset(commit.hash);
+  }
+  return succeedableRevset(commit.hash);
 }
