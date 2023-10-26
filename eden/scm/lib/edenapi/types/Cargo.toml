@@ -13,7 +13,7 @@ path = "test/basic_test.rs"
 anyhow = "=1.0.72"
 bytes = { version = "1.1", features = ["serde"] }
 dag-types = { version = "0.1.0", path = "../../dag/dag-types", features = ["for-tests"] }
-paste = "1.0.13"
+paste = "1.0.14"
 quickcheck = "1.0"
 quickcheck_arbitrary_derive = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 revisionstore_types = { version = "0.1.0", path = "../../revisionstore/types" }
