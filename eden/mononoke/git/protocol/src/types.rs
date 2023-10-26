@@ -15,6 +15,17 @@ use mononoke_types::ChangesetId;
 use packfile::pack::DeltaForm;
 use packfile::types::PackfileItem;
 
+/// The set of symrefs that are to be included in or excluded from the pack
+#[derive(Debug, Clone, Copy)]
+pub enum RequestedSymrefs {
+    /// Only include the HEAD symref in the pack/bundle
+    IncludeHead,
+    /// Incldue all known symrefs in the pack/bundle
+    IncludeAll,
+    /// Exclude all known symrefs from the pack/bundle
+    ExcludeAll,
+}
+
 /// The set of refs that are to be included in or excluded from the pack
 #[derive(Debug, Clone)]
 pub enum RequestedRefs {
@@ -69,6 +80,8 @@ pub enum DeltaInclusion {
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub struct PackItemStreamRequest {
+    /// The symrefs that are requested to be included/excluded from the pack
+    pub requested_symrefs: RequestedSymrefs,
     /// The refs that are requested to be included/excluded from the pack
     pub requested_refs: RequestedRefs,
     /// The heads of the references that are present with the client
@@ -81,12 +94,14 @@ pub struct PackItemStreamRequest {
 
 impl PackItemStreamRequest {
     pub fn new(
+        requested_symrefs: RequestedSymrefs,
         requested_refs: RequestedRefs,
         have_heads: Vec<ChangesetId>,
         delta_inclusion: DeltaInclusion,
         tag_inclusion: TagInclusion,
     ) -> Self {
         Self {
+            requested_symrefs,
             requested_refs,
             have_heads,
             delta_inclusion,
@@ -96,6 +111,7 @@ impl PackItemStreamRequest {
 
     pub fn full_repo(delta_inclusion: DeltaInclusion, tag_inclusion: TagInclusion) -> Self {
         Self {
+            requested_symrefs: RequestedSymrefs::IncludeHead,
             requested_refs: RequestedRefs::Excluded(HashSet::new()),
             have_heads: vec![],
             delta_inclusion,

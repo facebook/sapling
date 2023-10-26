@@ -50,6 +50,7 @@ use crate::types::DeltaInclusion;
 use crate::types::PackItemStreamRequest;
 use crate::types::PackItemStreamResponse;
 use crate::types::RequestedRefs;
+use crate::types::RequestedSymrefs;
 use crate::types::TagInclusion;
 
 const HEAD_REF: &str = "HEAD";
@@ -250,40 +251,74 @@ async fn refs_to_include(
 
 /// The HEAD ref in Git doesn't have a direct counterpart in Mononoke bookmarks and is instead
 /// stored in the git_symbolic_refs. Fetch the mapping and add them to the list of refs to include
-async fn include_head_ref(
+async fn include_symrefs(
     repo: &impl Repo,
+    requested_symrefs: RequestedSymrefs,
     refs_to_include: &mut FxHashMap<String, ObjectId>,
 ) -> Result<()> {
-    // Get the branch that the HEAD symref points to
-    let head_ref = repo
-        .git_symbolic_refs()
-        .get_ref_by_symref(HEAD_REF.to_string())
-        .await
-        .with_context(|| {
-            format!(
-                "Error in getting HEAD reference for repo {:?}",
-                repo.repo_identity().name()
-            )
-        })?
-        .ok_or_else(|| {
-            anyhow::anyhow!(
-                "HEAD reference not found for repo {:?}",
-                repo.repo_identity().name()
-            )
-        })?;
-    // Get the commit id pointed by the HEAD reference
-    let head_commit_id = refs_to_include
-        .get(&head_ref.ref_name_with_type())
-        .ok_or_else(|| {
-            anyhow::anyhow!(
-                "HEAD reference points to branch/tag {} which does not exist. Known refs: {:?}",
-                &head_ref.ref_name_with_type(),
-                refs_to_include.keys()
-            )
-        })?;
+    let symref_commit_mapping = match requested_symrefs {
+        RequestedSymrefs::IncludeHead => {
+            // Get the branch that the HEAD symref points to
+            let head_ref = repo
+                .git_symbolic_refs()
+                .get_ref_by_symref(HEAD_REF.to_string())
+                .await
+                .with_context(|| {
+                    format!(
+                        "Error in getting HEAD reference for repo {:?}",
+                        repo.repo_identity().name()
+                    )
+                })?
+                .ok_or_else(|| {
+                    anyhow::anyhow!(
+                        "HEAD reference not found for repo {:?}",
+                        repo.repo_identity().name()
+                    )
+                })?;
+            // Get the commit id pointed by the HEAD reference
+            let head_commit_id = refs_to_include
+                .get(&head_ref.ref_name_with_type())
+                .ok_or_else(|| {
+                    anyhow::anyhow!(
+                        "HEAD reference points to branch/tag {} which does not exist. Known refs: {:?}",
+                        &head_ref.ref_name_with_type(),
+                        refs_to_include.keys()
+                    )
+                })?;
+            FxHashMap::from_iter([(head_ref.symref_name, head_commit_id.clone())])
+        }
+        RequestedSymrefs::IncludeAll => {
+            // Get all the symrefs with the branches/tags that they point to
+            let symref_entries = repo
+                .git_symbolic_refs()
+                .list_all_symrefs()
+                .await
+                .with_context(|| {
+                    format!(
+                        "Error in getting all symrefs for repo {:?}",
+                        repo.repo_identity().name()
+                    )
+                })?;
+            // Get the commit ids pointed by each symref
+            symref_entries.into_iter().map(|entry| {
+                let ref_commit_id = refs_to_include
+                    .get(&entry.ref_name_with_type())
+                    .ok_or_else(|| {
+                        anyhow::anyhow!(
+                            "{} reference points to branch/tag {} which does not exist. Known refs: {:?}",
+                            &entry.symref_name,
+                            &entry.ref_name_with_type(),
+                            refs_to_include.keys()
+                        )
+                    })?;
+                Ok((entry.symref_name, ref_commit_id.clone()))
+            }).collect::<Result<FxHashMap<_, _>>>()?
+        }
+        RequestedSymrefs::ExcludeAll => FxHashMap::default(),
+    };
 
-    // Add the HEAD reference -> commit id mapping
-    refs_to_include.insert(head_ref.symref_name.clone(), head_commit_id.clone());
+    // Add the symref -> commit mapping to the refs_to_include map
+    refs_to_include.extend(symref_commit_mapping.into_iter());
     Ok(())
 }
 
@@ -581,8 +616,8 @@ pub async fn generate_pack_item_stream<'a>(
         .await
         .context("Error while determining refs to include in the pack")?;
 
-    // STEP 2.5: Adding the HEAD reference -> commit id mapping to refs_to_include map
-    include_head_ref(repo, &mut refs_to_include)
+    // STEP 2.5: Add symrefs to the refs_to_include map based on the request parameters
+    include_symrefs(repo, request.requested_symrefs, &mut refs_to_include)
         .await
         .context("Error while adding HEAD ref to included set of refs")?;
 

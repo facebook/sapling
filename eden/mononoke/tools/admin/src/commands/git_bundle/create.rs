@@ -31,6 +31,7 @@ use protocol::generator::generate_pack_item_stream;
 use protocol::types::DeltaInclusion;
 use protocol::types::PackItemStreamRequest;
 use protocol::types::RequestedRefs;
+use protocol::types::RequestedSymrefs;
 use protocol::types::TagInclusion;
 use walkdir::WalkDir;
 
@@ -146,6 +147,7 @@ pub async fn create_from_mononoke_repo(
         RequestedRefs::all()
     };
     let request = PackItemStreamRequest::new(
+        RequestedSymrefs::IncludeHead,
         requested_refs,
         create_args.have_heads,
         delta_inclusion,
