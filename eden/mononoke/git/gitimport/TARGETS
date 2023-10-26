@@ -33,5 +33,6 @@ rust_binary(
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/mononoke/repo_authorization:repo_authorization",
         "//eden/mononoke/server/context:context",
+        "//eden/scm/lib/clientinfo:clientinfo",
     ],
 )

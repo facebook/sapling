@@ -25,6 +25,8 @@ use cacheblob::MemWritesBlobstore;
 use changesets::ArcChangesets;
 use clap::Parser;
 use clap::Subcommand;
+use clientinfo::ClientEntryPoint;
+use clientinfo::ClientInfo;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::future;
@@ -167,7 +169,11 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
 async fn async_main(app: MononokeApp) -> Result<(), Error> {
     let logger = app.logger();
-    let ctx = CoreContext::new_with_logger(app.fb, logger.clone());
+    let ctx = CoreContext::new_with_logger_and_client_info(
+        app.fb,
+        logger.clone(),
+        ClientInfo::default_with_entry_point(ClientEntryPoint::GitImport),
+    );
     let args: GitimportArgs = app.args()?;
     let mut prefs = GitimportPreferences {
         concurrency: args.concurrency,
