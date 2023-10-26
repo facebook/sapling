@@ -61,6 +61,7 @@ function OperationDescription(props: {
               switch (arg.type) {
                 case 'repo-relative-file':
                   return arg.path;
+                case 'exact-revset':
                 case 'succeedable-revset':
                   return props.long
                     ? arg.revset

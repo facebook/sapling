@@ -489,6 +489,8 @@ export class Repository {
         switch (arg.type) {
           case 'repo-relative-file':
             return path.normalize(path.relative(cwd, path.join(repoRoot, arg.path)));
+          case 'exact-revset':
+            return arg.revset;
           case 'succeedable-revset':
             return `max(successors(${arg.revset}))`;
         }

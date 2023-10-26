@@ -188,6 +188,9 @@ export type ChangedFile = {
   copy?: RepoRelativePath;
 };
 
+export type SucceedableRevset = {type: 'succeedable-revset'; revset: Revset};
+export type ExactRevset = {type: 'exact-revset'; revset: Revset};
+
 /**
  * Most arguments to eden commands are literal `string`s, except:
  * - When specifying file paths, the server needs to know which args are files to convert them to be cwd-relative.
@@ -195,12 +198,14 @@ export type ChangedFile = {
  *   The server can re-write hashes using a revset that transforms into the latest successor instead.
  *   This allows you to act on the optimistic versions of commits in queued commands,
  *   without a race with the server telling you new versions of those hashes.
- *   TODO: what if you WANT to act on an obsolete commit?
+ * - If you want an exact commit that's already obsolete or should never be replaced with a succeeded version,
+ *   you can use an exact revset.
  */
 export type CommandArg =
   | string
   | {type: 'repo-relative-file'; path: RepoRelativePath}
-  | {type: 'succeedable-revset'; revset: Revset};
+  | ExactRevset
+  | SucceedableRevset;
 
 /**
  * What process to execute a given operation in, such as `sl`
@@ -222,8 +227,18 @@ export enum CommandRunner {
  * This enables queued commands to act on optimistic state without knowing
  * the optimistic commit's hashes directly.
  */
-export function succeedableRevset(revset: Revset): CommandArg {
+export function succeedableRevset(revset: Revset): SucceedableRevset {
   return {type: 'succeedable-revset', revset};
+}
+
+/**
+ * {@link CommandArg} representing a hash or revset which should *not* be re-written
+ * to the latest successor of that revset when being run.
+ * This uses the revset directly in the command run. Useful if you want to specifically
+ * use an obsolete commit in an operation.
+ */
+export function exactRevset(revset: Revset): ExactRevset {
+  return {type: 'exact-revset', revset};
 }
 
 /* Subscriptions */
