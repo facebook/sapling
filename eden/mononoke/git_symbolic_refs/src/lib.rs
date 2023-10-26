@@ -94,4 +94,7 @@ pub trait GitSymbolicRefs: Send + Sync {
 
     /// Delete symrefs if they exists
     async fn delete_symrefs(&self, symrefs: Vec<String>) -> Result<()>;
+
+    /// List all symrefs for a given repo
+    async fn list_all_symrefs(&self) -> Result<Vec<GitSymbolicRefsEntry>>;
 }

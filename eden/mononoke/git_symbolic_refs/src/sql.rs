@@ -38,6 +38,14 @@ mononoke_queries! {
         repo_id = {repo_id} AND symref_name IN {symrefs}"
     }
 
+    read SelectAllGitSymbolicRefs(
+        repo_id: RepositoryId
+    ) -> (String, String, String) {
+        "SELECT symref_name, ref_name, ref_type
+         FROM git_symbolic_refs
+         WHERE repo_id = {repo_id}"
+    }
+
     read SelectRefBySymref(
         repo_id: RepositoryId,
         symref_name: String
@@ -198,5 +206,24 @@ impl GitSymbolicRefs for SqlGitSymbolicRefs {
             )
         })?;
         Ok(())
+    }
+
+    /// List all symrefs for a given repo
+    async fn list_all_symrefs(&self) -> Result<Vec<GitSymbolicRefsEntry>> {
+        let results =
+            SelectAllGitSymbolicRefs::query(&self.connections.read_connection, &self.repo_id)
+                .await
+                .with_context(|| {
+                    format!(
+                        "Failure in fetching git symbolic refs in repo {}",
+                        self.repo_id
+                    )
+                })?;
+        results
+            .into_iter()
+            .map(|(symref_name, ref_name, ref_type)| {
+                GitSymbolicRefsEntry::new(symref_name, ref_name, ref_type)
+            })
+            .collect()
     }
 }
