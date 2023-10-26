@@ -11,7 +11,7 @@ import type {
 } from '../previews';
 import type {CommandArg, Hash, RepoRelativePath, UncommittedChanges} from '../types';
 
-import {SucceedableRevset} from '../types';
+import {succeedableRevset} from '../types';
 import {Operation} from './Operation';
 
 export class AmendToOperation extends Operation {
@@ -26,7 +26,7 @@ export class AmendToOperation extends Operation {
   static opName = 'AmendTo';
 
   getArgs() {
-    const args: Array<CommandArg> = ['amend', '--to', SucceedableRevset(this.commit)];
+    const args: Array<CommandArg> = ['amend', '--to', succeedableRevset(this.commit)];
     if (this.filePathsToAmend) {
       args.push(
         ...this.filePathsToAmend.map(file =>

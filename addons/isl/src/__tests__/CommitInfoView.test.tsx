@@ -21,7 +21,7 @@ import {
   simulateMessageFromServer,
   openCommitInfoSidebar,
 } from '../testUtils';
-import {CommandRunner, SucceedableRevset} from '../types';
+import {CommandRunner, succeedableRevset} from '../types';
 import {fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {act} from 'react-dom/test-utils';
@@ -551,7 +551,7 @@ describe('CommitInfoView', () => {
                   args: [
                     'metaedit',
                     '--rev',
-                    SucceedableRevset('a'),
+                    succeedableRevset('a'),
                     '--message',
                     expect.stringMatching(
                       /^My Commit hello new title\n+Summary: First commit in the stack\nhello new text/,

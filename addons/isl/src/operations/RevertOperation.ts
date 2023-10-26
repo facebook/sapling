@@ -11,7 +11,7 @@ import type {
 } from '../previews';
 import type {CommandArg, RepoRelativePath, Revset, UncommittedChanges} from '../types';
 
-import {SucceedableRevset} from '../types';
+import {succeedableRevset} from '../types';
 import {Operation} from './Operation';
 
 export class RevertOperation extends Operation {
@@ -24,7 +24,7 @@ export class RevertOperation extends Operation {
   getArgs() {
     const args: Array<CommandArg> = ['revert'];
     if (this.revset != null) {
-      args.push('--rev', SucceedableRevset(this.revset));
+      args.push('--rev', succeedableRevset(this.revset));
     }
     args.push(
       ...this.files.map(file =>

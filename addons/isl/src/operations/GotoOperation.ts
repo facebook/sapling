@@ -10,7 +10,7 @@ import type {Hash} from '../types';
 
 import {latestSuccessor} from '../SuccessionTracker';
 import {CommitPreview} from '../previews';
-import {SucceedableRevset} from '../types';
+import {succeedableRevset} from '../types';
 import {Operation} from './Operation';
 
 export class GotoOperation extends Operation {
@@ -21,7 +21,7 @@ export class GotoOperation extends Operation {
   static opName = 'Goto';
 
   getArgs() {
-    const args = ['goto', '--rev', SucceedableRevset(this.destination)];
+    const args = ['goto', '--rev', succeedableRevset(this.destination)];
     return args;
   }
 

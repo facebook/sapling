@@ -11,7 +11,7 @@ import type {Hash, Revset} from '../types';
 import {latestSuccessor} from '../SuccessionTracker';
 import {t} from '../i18n';
 import {CommitPreview} from '../previews';
-import {SucceedableRevset} from '../types';
+import {succeedableRevset} from '../types';
 import {Operation} from './Operation';
 
 export class RebaseOperation extends Operation {
@@ -25,9 +25,9 @@ export class RebaseOperation extends Operation {
     return [
       'rebase',
       '-s',
-      SucceedableRevset(this.source),
+      succeedableRevset(this.source),
       '-d',
-      SucceedableRevset(this.destination),
+      succeedableRevset(this.destination),
     ];
   }
 

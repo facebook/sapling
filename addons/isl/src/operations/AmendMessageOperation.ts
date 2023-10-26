@@ -8,7 +8,7 @@
 import type {ApplyPreviewsFuncType, PreviewContext} from '../previews';
 import type {CommandArg, Hash} from '../types';
 
-import {SucceedableRevset} from '../types';
+import {succeedableRevset} from '../types';
 import {Operation} from './Operation';
 
 export class AmendMessageOperation extends Operation {
@@ -22,7 +22,7 @@ export class AmendMessageOperation extends Operation {
     const args: Array<CommandArg> = [
       'metaedit',
       '--rev',
-      SucceedableRevset(this.hash),
+      succeedableRevset(this.hash),
       '--message',
       this.message,
     ];

@@ -7,7 +7,7 @@
 
 import type {Revset} from '../types';
 
-import {SucceedableRevset} from '../types';
+import {succeedableRevset} from '../types';
 import {Operation} from './Operation';
 
 /** Like rebase, but leave the source in place, and don't rebase children.
@@ -27,7 +27,7 @@ export class RebaseKeepOperation extends Operation {
       '--rev',
       this.source,
       '--dest',
-      SucceedableRevset(this.destination),
+      succeedableRevset(this.destination),
     ];
   }
 

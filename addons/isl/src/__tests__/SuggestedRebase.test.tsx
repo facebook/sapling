@@ -14,7 +14,7 @@ import {
   closeCommitInfoSidebar,
   simulateRepoConnected,
 } from '../testUtils';
-import {SucceedableRevset} from '../types';
+import {succeedableRevset} from '../types';
 import {fireEvent, render, screen, within} from '@testing-library/react';
 import {act} from 'react-dom/test-utils';
 
@@ -162,7 +162,7 @@ describe('Suggested Rebase button', () => {
     expectMessageSentToServer({
       type: 'runOperation',
       operation: expect.objectContaining({
-        args: ['rebase', '-s', SucceedableRevset('a'), '-d', SucceedableRevset('remote/main')],
+        args: ['rebase', '-s', succeedableRevset('a'), '-d', succeedableRevset('remote/main')],
       }),
     });
   });
@@ -193,7 +193,7 @@ describe('Suggested Rebase button', () => {
     expectMessageSentToServer({
       type: 'runOperation',
       operation: expect.objectContaining({
-        args: ['rebase', '-s', SucceedableRevset('a'), '-d', SucceedableRevset('3')],
+        args: ['rebase', '-s', succeedableRevset('a'), '-d', succeedableRevset('3')],
       }),
     });
   });

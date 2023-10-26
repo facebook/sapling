@@ -15,7 +15,7 @@ import {
   COMMIT,
   closeCommitInfoSidebar,
 } from '../../testUtils';
-import {CommandRunner, SucceedableRevset} from '../../types';
+import {CommandRunner, succeedableRevset} from '../../types';
 import {fireEvent, render, screen, within} from '@testing-library/react';
 import {act} from 'react-dom/test-utils';
 
@@ -57,7 +57,7 @@ describe('GotoOperation', () => {
     expectMessageSentToServer({
       type: 'runOperation',
       operation: {
-        args: ['goto', '--rev', SucceedableRevset('a')],
+        args: ['goto', '--rev', succeedableRevset('a')],
         id: expect.anything(),
         runner: CommandRunner.Sapling,
         trackEventName: 'GotoOperation',
@@ -102,7 +102,7 @@ describe('GotoOperation', () => {
       expectMessageSentToServer({
         type: 'runOperation',
         operation: {
-          args: ['goto', '--rev', SucceedableRevset('remote/master')],
+          args: ['goto', '--rev', succeedableRevset('remote/master')],
           id: expect.anything(),
           runner: CommandRunner.Sapling,
           trackEventName: 'GotoOperation',

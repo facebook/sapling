@@ -222,7 +222,7 @@ export enum CommandRunner {
  * This enables queued commands to act on optimistic state without knowing
  * the optimistic commit's hashes directly.
  */
-export function SucceedableRevset(revset: Revset): CommandArg {
+export function succeedableRevset(revset: Revset): CommandArg {
   return {type: 'succeedable-revset', revset};
 }
 

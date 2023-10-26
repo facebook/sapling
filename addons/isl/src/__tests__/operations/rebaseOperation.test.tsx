@@ -19,7 +19,7 @@ import {
   dragAndDropCommits,
   simulateUncommittedChangedFiles,
 } from '../../testUtils';
-import {CommandRunner, SucceedableRevset} from '../../types';
+import {CommandRunner, succeedableRevset} from '../../types';
 import {fireEvent, render, screen, within} from '@testing-library/react';
 import {act} from 'react-dom/test-utils';
 
@@ -105,7 +105,7 @@ describe('rebase operation', () => {
     expectMessageSentToServer({
       type: 'runOperation',
       operation: {
-        args: ['rebase', '-s', SucceedableRevset('d'), '-d', SucceedableRevset('remote/master')],
+        args: ['rebase', '-s', succeedableRevset('d'), '-d', succeedableRevset('remote/master')],
         id: expect.anything(),
         runner: CommandRunner.Sapling,
         trackEventName: 'RebaseOperation',
