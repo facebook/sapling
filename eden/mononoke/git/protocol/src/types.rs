@@ -75,6 +75,15 @@ pub enum DeltaInclusion {
     Exclude,
 }
 
+impl DeltaInclusion {
+    pub fn include_only_offset_deltas(&self) -> bool {
+        match self {
+            DeltaInclusion::Include { form, .. } => form == &DeltaForm::OnlyOffset,
+            DeltaInclusion::Exclude => false,
+        }
+    }
+}
+
 /// The request parameters used to specify the constraints that need to be
 /// honored while generating the input PackfileItem stream
 #[derive(Debug, Clone)]

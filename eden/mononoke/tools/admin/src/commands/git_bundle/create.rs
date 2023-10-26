@@ -81,8 +81,12 @@ pub struct FromRepoArgs {
     #[clap(long, short = 'o', value_name = "FILE")]
     output_location: PathBuf,
     /// Flag controlling whether the generated bundle can contains deltas or just full object
-    #[clap(long)]
+    #[clap(long, conflicts_with = "exclude_ref_deltas")]
     exclude_deltas: bool,
+    /// Flag controlling whether the generated bundle can contains ref deltas or just offset deltas
+    /// (for the delta objects)
+    #[clap(long, conflicts_with = "exclude_deltas")]
+    exclude_ref_deltas: bool,
 }
 
 /// Args for creating a Git bundle from an on-disk Git repo
@@ -131,8 +135,13 @@ pub async fn create_from_mononoke_repo(
     let delta_inclusion = if create_args.exclude_deltas {
         DeltaInclusion::Exclude
     } else {
+        let form = if create_args.exclude_ref_deltas {
+            DeltaForm::OnlyOffset
+        } else {
+            DeltaForm::RefAndOffset
+        };
         DeltaInclusion::Include {
-            form: DeltaForm::RefAndOffset,
+            form,
             inclusion_threshold: 0.6,
         }
     };

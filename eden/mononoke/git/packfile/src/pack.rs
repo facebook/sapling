@@ -28,7 +28,7 @@ use crate::types::PackfileItem;
 pub struct PackfileError(#[from] anyhow::Error);
 
 /// The final representation of deltas in the packfile
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DeltaForm {
     /// The deltas in the packfile can be either RefDelta or OffsetDelta
     RefAndOffset,

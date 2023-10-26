@@ -470,6 +470,18 @@ async fn blob_and_tree_packfile_stream<'a>(
         .await
         .context("Error in getting ancestors difference")?;
 
+    // If the output stream can contain only offset deltas, then the commits must be ordered from root to
+    // head since the base of each delta should appear before the delta object. The ancestors difference
+    // stream will return the commits in head to root order so we need to reverse it. Note that this impacts
+    // performance and forces us to hold the entire commit range in memory.
+    let target_commits = if request.delta_inclusion.include_only_offset_deltas() {
+        let mut collected_commits = target_commits.try_collect::<Vec<_>>().await?;
+        collected_commits.reverse();
+        stream::iter(collected_commits.into_iter().map(anyhow::Ok)).boxed()
+    } else {
+        target_commits
+    };
+
     let delta_inclusion = request.delta_inclusion;
     let duplicated_objects = Arc::new(duplicated_objects);
     // Get the packfile items corresponding to blob and tree objects in the repo. Where applicable, use delta to represent them
