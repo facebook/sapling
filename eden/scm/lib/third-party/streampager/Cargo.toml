@@ -26,7 +26,7 @@ tempfile = "3.8"
 terminfo = "0.7"
 termwiz = { version = "0.18", features = ["widgets"] }
 thiserror = "1.0.43"
-toml = "0.7.3"
+toml = "0.8.4"
 unicode-segmentation = "1.6.0"
 unicode-width = "0.1"
 vec_map = "0.8"

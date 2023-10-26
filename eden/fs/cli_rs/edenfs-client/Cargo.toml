@@ -30,7 +30,7 @@ thrift-types = { version = "0.1.0", path = "../../../scm/lib/thrift-types" }
 thrift_streaming = { version = "0.1.0", path = "../../service/thrift_streaming" }
 tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
 tokio-uds-compat = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-toml = "0.7.3"
+toml = "0.8.4"
 tracing = "0.1.35"
 util = { version = "0.1.0", path = "../../../scm/lib/util" }
 uuid = { version = "1.2", features = ["serde", "v4", "v5", "v6", "v7", "v8"] }

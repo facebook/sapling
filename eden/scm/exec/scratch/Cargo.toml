@@ -14,7 +14,7 @@ hex = "0.4.3"
 identity = { version = "0.1.0", path = "../../lib/identity" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 sha2 = "0.10.6"
-toml = "0.7.3"
+toml = "0.8.4"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 libc = "0.2.139"
