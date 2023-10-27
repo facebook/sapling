@@ -18,6 +18,7 @@ import {
   type ChangedFilesDisplayType,
   changedFilesDisplayType,
 } from './ChangedFileDisplayTypePicker';
+import {Collapsable} from './Collapsable';
 import {
   commitFieldsBeingEdited,
   commitMessageTemplate,
@@ -66,7 +67,12 @@ import {
 } from './serverAPIState';
 import {succeedableRevset, GeneratedStatus} from './types';
 import {usePromise} from './usePromise';
-import {VSCodeButton, VSCodeCheckbox, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
+import {
+  VSCodeBadge,
+  VSCodeButton,
+  VSCodeCheckbox,
+  VSCodeTextField,
+} from '@vscode/webview-ui-toolkit/react';
 import React, {useEffect, useRef, useState} from 'react';
 import {atom, useRecoilCallback, useRecoilValue} from 'recoil';
 import {labelForComparison, revsetForComparison, ComparisonType} from 'shared/Comparison';
@@ -75,7 +81,7 @@ import {Icon} from 'shared/Icon';
 import {isMac} from 'shared/OperatingSystem';
 import {useDeepMemo} from 'shared/hooks';
 import {minimalDisambiguousPaths} from 'shared/minimalDisambiguousPaths';
-import {basename, notEmpty, partition} from 'shared/utils';
+import {basename, group, notEmpty, partition} from 'shared/utils';
 
 import './UncommittedChanges.css';
 
@@ -297,16 +303,37 @@ function LinearFileList(props: {
 }) {
   const {files, generatedStatuses, ...rest} = props;
 
-  const sorted = [...files].sort((a, b) => {
-    const aStatus = generatedStatuses[a.path] ?? GeneratedStatus.Manual;
-    const bStatus = generatedStatuses[b.path] ?? GeneratedStatus.Manual;
-    return aStatus - bStatus;
-  });
+  const groupedByGenerated = group(files, file => generatedStatuses[file.path]);
+
+  function GeneratedFilesCollapsableSection(status: GeneratedStatus) {
+    const group = groupedByGenerated[status] ?? [];
+    if (group.length === 0) {
+      return null;
+    }
+    return (
+      <Collapsable
+        title={
+          <T
+            replace={{
+              $count: <VSCodeBadge>{group.length}</VSCodeBadge>,
+            }}>
+            {status === GeneratedStatus.PartiallyGenerated
+              ? 'Partially Generated Files $count'
+              : 'Generated Files $count'}
+          </T>
+        }
+        startExpanded={status === GeneratedStatus.PartiallyGenerated}>
+        {group.map(file => (
+          <File key={file.path} {...rest} file={file} generatedStatus={status} />
+        ))}
+      </Collapsable>
+    );
+  }
 
   return (
     <div className="changed-files-list-container">
       <div className="changed-files-list">
-        {sorted.map(file => (
+        {groupedByGenerated[GeneratedStatus.Manual]?.map(file => (
           <File
             key={file.path}
             {...rest}
@@ -314,6 +341,8 @@ function LinearFileList(props: {
             generatedStatus={generatedStatuses[file.path] ?? GeneratedStatus.Manual}
           />
         ))}
+        {GeneratedFilesCollapsableSection(GeneratedStatus.PartiallyGenerated)}
+        {GeneratedFilesCollapsableSection(GeneratedStatus.Generated)}
       </div>
     </div>
   );

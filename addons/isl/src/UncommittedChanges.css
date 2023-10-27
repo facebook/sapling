@@ -131,6 +131,20 @@
   max-height: var(--changed-files-list-height);
 }
 
+.changed-files-list .collapsable {
+  margin: var(--pad) 0;
+}
+.changed-files-list .collapsable-title {
+  user-select: none;
+
+  font-weight: 500;
+  opacity: 0.9;
+  font-variant: all-small-caps;
+}
+.changed-files-list .collapsable-contents {
+  margin-left: calc(2 * var(--pad));
+}
+
 .changed-files-list:after {
   --overflow-gradient-height: 20px;
   display: block;
