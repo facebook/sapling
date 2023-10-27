@@ -14,8 +14,8 @@ use async_stream::try_stream;
 use blobstore::Loadable;
 use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_tag_mapping::BonsaiTagMappingRef;
-use bookmarks::Bookmark;
 use bookmarks::BookmarkCategory;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
 use bookmarks::BookmarkPagination;
 use bookmarks::BookmarkPrefix;
@@ -67,13 +67,16 @@ pub trait Repo = RepoIdentityRef
     + Sync;
 
 /// Get the bookmarks (branches, tags) and their corresponding commits
-/// for the given repo based on the request parameters
+/// for the given repo based on the request parameters. If the request
+/// specifies a predefined mapping of an existing or new bookmark to a
+/// commit, include that in the output as well
 async fn bookmarks(
     ctx: &CoreContext,
     repo: &impl Repo,
     request: &PackItemStreamRequest,
-) -> Result<FxHashMap<Bookmark, ChangesetId>> {
-    repo.bookmarks()
+) -> Result<FxHashMap<BookmarkKey, ChangesetId>> {
+    let mut bookmarks = repo
+        .bookmarks()
         .list(
             ctx.clone(),
             Freshness::MostRecent,
@@ -89,21 +92,32 @@ async fn bookmarks(
             async move {
                 let result = match refs {
                     RequestedRefs::Included(refs) if refs.contains(&name) => {
-                        Some((bookmark, cs_id))
+                        Some((bookmark.into_key(), cs_id))
                     }
                     RequestedRefs::Excluded(refs) if !refs.contains(&name) => {
-                        Some((bookmark, cs_id))
+                        Some((bookmark.into_key(), cs_id))
                     }
-                    RequestedRefs::IncludedWithValue(refs) => {
-                        refs.get(&name).map(|cs_id| (bookmark, cs_id.clone()))
-                    }
+                    RequestedRefs::IncludedWithValue(refs) => refs
+                        .get(&name)
+                        .map(|cs_id| (bookmark.into_key(), cs_id.clone())),
                     _ => None,
                 };
                 anyhow::Ok(result)
             }
         })
         .try_collect::<FxHashMap<_, _>>()
-        .await
+        .await?;
+    // In case the requested refs include specified refs with value and those refs are not
+    // bookmarks known at the server, we need to manually include them in the output
+    if let RequestedRefs::IncludedWithValue(ref ref_value_map) = request.requested_refs {
+        for (ref_name, ref_value) in ref_value_map {
+            bookmarks.insert(
+                BookmarkKey::with_name(ref_name.as_str().try_into()?),
+                ref_value.clone(),
+            );
+        }
+    }
+    Ok(bookmarks)
 }
 
 /// Get the count of tree, blob and commit objects that will be included in the packfile/bundle
@@ -113,7 +127,7 @@ async fn bookmarks(
 async fn object_count(
     ctx: &CoreContext,
     repo: &impl Repo,
-    bookmarks: &FxHashMap<Bookmark, ChangesetId>,
+    bookmarks: &FxHashMap<BookmarkKey, ChangesetId>,
     request: &PackItemStreamRequest,
 ) -> Result<(usize, FxHashSet<ObjectId>)> {
     // Get all the commits that are reachable from the bookmarks
@@ -198,13 +212,13 @@ async fn object_count(
 async fn refs_to_include(
     ctx: &CoreContext,
     repo: &impl Repo,
-    bookmarks: &FxHashMap<Bookmark, ChangesetId>,
+    bookmarks: &FxHashMap<BookmarkKey, ChangesetId>,
     tag_inclusion: TagInclusion,
 ) -> Result<FxHashMap<String, ObjectId>> {
     stream::iter(bookmarks.iter())
         .map(|(bookmark, cs_id)| async move {
-            if bookmark.key().is_tag() && tag_inclusion == TagInclusion::AsIs {
-                let tag_name = bookmark.key().name().to_string();
+            if bookmark.is_tag() && tag_inclusion == TagInclusion::AsIs {
+                let tag_name = bookmark.name().to_string();
                 let entry = repo
                     .bonsai_tag_mapping()
                     .get_entry_by_tag_name(tag_name.clone())
@@ -217,7 +231,7 @@ async fn refs_to_include(
                     })?;
                 if let Some(entry) = entry {
                     let git_objectid = entry.tag_hash.to_object_id()?;
-                    let ref_name = format!("refs/{}", bookmark.key);
+                    let ref_name = format!("refs/{}", bookmark);
                     return anyhow::Ok((ref_name, git_objectid));
                 }
             };
@@ -240,7 +254,7 @@ async fn refs_to_include(
                         git_sha1.to_hex()
                     )
                 })?;
-            let ref_name = format!("refs/{}", bookmark.key);
+            let ref_name = format!("refs/{}", bookmark);
             anyhow::Ok((ref_name, git_objectid))
         })
         .boxed()
@@ -456,7 +470,7 @@ async fn blob_and_tree_packfile_items<'a>(
 async fn blob_and_tree_packfile_stream<'a>(
     ctx: &'a CoreContext,
     repo: &'a impl Repo,
-    bookmarks: &FxHashMap<Bookmark, ChangesetId>,
+    bookmarks: &FxHashMap<BookmarkKey, ChangesetId>,
     request: &PackItemStreamRequest,
     duplicated_objects: FxHashSet<ObjectId>,
 ) -> Result<BoxStream<'a, Result<PackfileItem>>> {
@@ -505,7 +519,7 @@ async fn blob_and_tree_packfile_stream<'a>(
 async fn commit_packfile_stream<'a>(
     ctx: &'a CoreContext,
     repo: &'a impl Repo,
-    bookmarks: &FxHashMap<Bookmark, ChangesetId>,
+    bookmarks: &FxHashMap<BookmarkKey, ChangesetId>,
     request: &PackItemStreamRequest,
 ) -> Result<BoxStream<'a, Result<PackfileItem>>> {
     let target_commits = repo
@@ -554,7 +568,7 @@ async fn commit_packfile_stream<'a>(
 async fn tag_packfile_stream<'a>(
     ctx: &'a CoreContext,
     repo: &'a impl Repo,
-    bookmarks: &FxHashMap<Bookmark, ChangesetId>,
+    bookmarks: &FxHashMap<BookmarkKey, ChangesetId>,
 ) -> Result<(BoxStream<'a, Result<PackfileItem>>, usize)> {
     // Since we need the count of items, we would have to consume the stream either for counting or collecting the items.
     // This is fine, since unlike commits, blobs and trees there will only be thousands of tags in the worst case.
@@ -563,8 +577,8 @@ async fn tag_packfile_stream<'a>(
             // If the bookmark is actually a tag but there is no mapping in bonsai_tag_mapping table for it, then it
             // means that its a simple tag and won't be included in the packfile as an object. If a mapping exists, then
             // it will be included in the packfile as a raw Git object
-            if bookmark.key().is_tag() {
-                let tag_name = bookmark.key().name().to_string();
+            if bookmark.is_tag() {
+                let tag_name = bookmark.name().to_string();
                 repo.bonsai_tag_mapping()
                     .get_entry_by_tag_name(tag_name.clone())
                     .await

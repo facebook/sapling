@@ -104,13 +104,14 @@
   19881757b04cb22f8c86ac8b30d0e7f8eb26348ee271ff6c1f0f9b4fabb266ac
 
 # Generate a git bundle for the changes made in the draft commit
-  $ mononoke_newadmin git-bundle create from-repo -R repo --output-location "$BUNDLE_PATH" --have-heads da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c --included-refs-with-value heads/master=19881757b04cb22f8c86ac8b30d0e7f8eb26348ee271ff6c1f0f9b4fabb266ac
+  $ mononoke_newadmin git-bundle create from-repo -R repo --output-location "$BUNDLE_PATH" --have-heads da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c --included-refs-with-value heads/master=19881757b04cb22f8c86ac8b30d0e7f8eb26348ee271ff6c1f0f9b4fabb266ac,heads/non_existent_ref=19881757b04cb22f8c86ac8b30d0e7f8eb26348ee271ff6c1f0f9b4fabb266ac
 
 # Ensure that Git considers this a valid bundle
   $ cd $GIT_REPO
   $ git bundle verify $BUNDLE_PATH
   $TESTTMP/repo_bundle.bundle is okay
-  The bundle contains these 2 refs:
+  The bundle contains these 3 refs:
+  * (glob)
   * (glob)
   * (glob)
   The bundle records a complete history.
