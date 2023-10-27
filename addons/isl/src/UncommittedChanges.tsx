@@ -31,6 +31,7 @@ import {
 } from './CommitInfoView/CommitMessageFields';
 import {OpenComparisonViewButton} from './ComparisonView/OpenComparisonViewButton';
 import {ErrorNotice} from './ErrorNotice';
+import {useGeneratedFileStatuses} from './GeneratedFile';
 import {PartialFileSelectionWithMode} from './PartialFileSelection';
 import {SuspenseBoundary} from './SuspenseBoundary';
 import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
@@ -63,7 +64,7 @@ import {
   uncommittedChangesFetchError,
   useRunOperation,
 } from './serverAPIState';
-import {succeedableRevset} from './types';
+import {succeedableRevset, GeneratedStatus} from './types';
 import {usePromise} from './usePromise';
 import {VSCodeButton, VSCodeCheckbox, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
 import React, {useEffect, useRef, useState} from 'react';
@@ -215,6 +216,7 @@ export function ChangedFiles(props: {
   const rangeEnd = Math.min(filesSubset.length, (pageNum + 1) * MAX_FILES_TO_SHOW);
   const filesToShow = filesSubset.slice(rangeStart, rangeEnd);
   const hasAdditionalPages = filesSubset.length > MAX_FILES_TO_SHOW;
+  const generatedStatuses = useGeneratedFileStatuses(filesToShow.map(f => f.path));
   const processedFiles = useDeepMemo(() => processCopiesAndRenames(filesToShow), [filesToShow]);
 
   useEffect(() => {
@@ -274,7 +276,12 @@ export function ChangedFiles(props: {
       {displayType === 'tree' ? (
         <FileTree {...rest} files={processedFiles} displayType={displayType} />
       ) : (
-        <LinearFileList {...rest} files={processedFiles} displayType={displayType} />
+        <LinearFileList
+          {...rest}
+          files={processedFiles}
+          displayType={displayType}
+          generatedStatuses={generatedStatuses}
+        />
       )}
     </div>
   );
@@ -283,17 +290,29 @@ export function ChangedFiles(props: {
 function LinearFileList(props: {
   files: Array<UIChangedFile>;
   displayType: ChangedFilesDisplayType;
+  generatedStatuses: Record<RepoRelativePath, GeneratedStatus>;
   comparison: Comparison;
   selection?: UseUncommittedSelection;
   place?: Place;
 }) {
-  const {files, ...rest} = props;
+  const {files, generatedStatuses, ...rest} = props;
+
+  const sorted = [...files].sort((a, b) => {
+    const aStatus = generatedStatuses[a.path] ?? GeneratedStatus.Manual;
+    const bStatus = generatedStatuses[b.path] ?? GeneratedStatus.Manual;
+    return aStatus - bStatus;
+  });
 
   return (
     <div className="changed-files-list-container">
       <div className="changed-files-list">
-        {files.map(file => (
-          <File key={file.path} {...rest} file={file} />
+        {sorted.map(file => (
+          <File
+            key={file.path}
+            {...rest}
+            file={file}
+            generatedStatus={generatedStatuses[file.path] ?? GeneratedStatus.Manual}
+          />
         ))}
       </div>
     </div>
@@ -355,22 +374,36 @@ function FileTree(props: {
   return renderTree(tree);
 }
 
+function generatedStatusToLabel(status: GeneratedStatus | undefined): string {
+  if (status === GeneratedStatus.Generated) {
+    return 'generated';
+  } else if (status === GeneratedStatus.PartiallyGenerated) {
+    return 'partial';
+  } else {
+    return 'manual';
+  }
+}
+
 function File({
   file,
   displayType,
   comparison,
   selection,
   place,
+  generatedStatus,
 }: {
   file: UIChangedFile;
   displayType: ChangedFilesDisplayType;
   comparison: Comparison;
   selection?: UseUncommittedSelection;
   place?: Place;
+  generatedStatus?: GeneratedStatus;
 }) {
   // Renamed files are files which have a copy field, where that path was also removed.
   // Visually show renamed files as if they were modified, even though sl treats them as added.
   const [statusName, icon] = nameAndIconForFileStatus[file.visualStatus];
+
+  const generated = generatedStatusToLabel(generatedStatus);
 
   const contextMenu = useContextMenu(() => {
     const options = [
@@ -403,7 +436,7 @@ function File({
   return (
     <>
       <div
-        className={`changed-file file-${statusName}`}
+        className={`changed-file file-${statusName} file-${generated}`}
         data-testid={`changed-file-${file.path}`}
         onContextMenu={contextMenu}
         key={file.path}

@@ -201,6 +201,13 @@
   opacity: 0.9;
 }
 
+.file-generated {
+  opacity: 0.5;
+}
+.file-partial {
+  opacity: 0.8;
+}
+
 .show-on-hover,
 .file-show-on-hover {
   opacity: 0;
