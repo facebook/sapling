@@ -7,7 +7,7 @@
  * This file is generated with cbindgen. Please run `./tools/cbindgen.sh` to
  * update this file.
  *
- * @generated SignedSource<<4947b4766dba30aa1181fea2bc183dca>>
+ * @generated SignedSource<<1ae5e8aa5170c38a67fa3c73f34f54c4>>
  *
  */
 
@@ -108,6 +108,8 @@ CFallibleBase sapling_backingstore_new(Slice<uint8_t> repository,
                                        const BackingStoreOptions *options);
 
 void sapling_backingstore_free(BackingStore *store);
+
+CFallibleBase sapling_backingstore_get_manifest(BackingStore *store, Slice<uint8_t> node);
 
 CFallibleBase sapling_backingstore_get_tree(BackingStore *store, Slice<uint8_t> node, bool local);
 

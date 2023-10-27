@@ -511,18 +511,24 @@ folly::Future<TreePtr> HgBackingStore::importTreeManifest(
     const ObjectId& commitId,
     const ObjectFetchContextPtr& context) {
   return folly::via(
-             importThreadPool_.get(),
-             [commitId] {
-               return getThreadLocalImporter().resolveManifestNode(
-                   commitId.asHexString());
+             serverThreadPool_,
+             [this, commitId] {
+               return datapackStore_.getManifestNode(commitId);
              })
-      .via(serverThreadPool_)
-      .thenValue(
-          [this, commitId, fetchContext = context.copy()](auto manifestNode) {
-            XLOG(DBG2) << "revision " << commitId << " has manifest node "
-                       << manifestNode;
-            return importTreeManifestImpl(manifestNode, fetchContext);
-          });
+      .thenValue([this, commitId, fetchContext = context.copy()](
+                     auto manifestNode) {
+        if (!manifestNode.has_value()) {
+          auto ew = folly::exception_wrapper{std::runtime_error{
+              "Manifest node could not be found for commitId"}};
+          return folly::makeFuture<TreePtr>(std::move(ew));
+        }
+        XLOGF(
+            DBG2,
+            "commit {} has manifest node {}",
+            commitId,
+            manifestNode.value());
+        return importTreeManifestImpl(*std::move(manifestNode), fetchContext);
+      });
 }
 
 folly::Future<TreePtr> HgBackingStore::importTreeManifestImpl(

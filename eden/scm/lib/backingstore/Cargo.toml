@@ -11,6 +11,7 @@ crate-type = ["lib", "staticlib"]
 
 [dependencies]
 anyhow = "=1.0.72"
+async-runtime = { version = "0.1.0", path = "../async-runtime" }
 configloader = { version = "0.1.0", path = "../config/loader" }
 constructors = { version = "0.1.0", path = "../constructors", default-features = false }
 eagerepo = { version = "0.1.0", path = "../eagerepo" }
@@ -22,6 +23,7 @@ libc = "0.2.139"
 log = { version = "0.4.17", features = ["kv_unstable", "kv_unstable_std"] }
 manifest = { version = "0.1.0", path = "../manifest" }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
+repo = { version = "0.1.0", path = "../repo" }
 revisionstore = { version = "0.1.0", path = "../revisionstore", features = ["ods"] }
 tracing = "0.1.35"
 tracing-collector = { version = "0.1.0", path = "../tracing-collector" }

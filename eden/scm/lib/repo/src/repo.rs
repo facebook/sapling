@@ -231,6 +231,14 @@ impl Repo {
         Ok(())
     }
 
+    /// Invalidate all repo state.
+    pub fn invalidate_all(&mut self) -> Result<()> {
+        self.invalidate_dag_commits()?;
+        self.invalidate_stores()?;
+        self.invalidate_metalog();
+        Ok(())
+    }
+
     /// Return the store path.
     pub fn store_path(&self) -> &Path {
         &self.store_path

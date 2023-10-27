@@ -109,6 +109,16 @@ TreePtr fromRawTree(
 
 } // namespace
 
+std::optional<Hash20> HgDatapackStore::getManifestNode(
+    const ObjectId& commitId) {
+  auto manifestNode = store_.getManifestNode(commitId.getBytes());
+  if (!manifestNode.has_value()) {
+    XLOGF(DBG2, "Error while getting manifest node from datapackstore");
+    return std::nullopt;
+  }
+  return Hash20(*std::move(manifestNode));
+}
+
 void HgDatapackStore::getTreeBatch(const ImportRequestsList& importRequests) {
   auto preparedRequests =
       prepareRequests<HgImportRequest::TreeImport>(importRequests, "Tree");

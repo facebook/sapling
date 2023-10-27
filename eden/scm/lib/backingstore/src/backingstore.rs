@@ -12,8 +12,10 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Result;
+use async_runtime::block_on;
 use log::warn;
 use manifest::List;
+use repo::repo::Repo;
 use revisionstore::scmstore::file::FileAuxData;
 use revisionstore::scmstore::FetchMode;
 use revisionstore::scmstore::FileAttributes;
@@ -34,6 +36,7 @@ use types::RepoPathBuf;
 pub struct BackingStore {
     filestore: Arc<FileStore>,
     treestore: Arc<TreeStore>,
+    repo: Repo,
 }
 
 impl BackingStore {
@@ -67,10 +70,12 @@ impl BackingStore {
 
         let filestore = Arc::new(filestore.build()?);
         let treestore = treestore.filestore(filestore.clone());
+        let repo = Repo::load_with_config(root, config.clone())?;
 
         Ok(Self {
             treestore: Arc::new(treestore.build()?),
             filestore,
+            repo,
         })
     }
 
@@ -190,6 +195,23 @@ impl BackingStore {
             },
             FileAttributes::CONTENT,
         )
+    }
+
+    #[instrument(level = "debug", skip(self))]
+    pub fn get_manifest(&mut self, node: &[u8]) -> Result<Vec<u8>> {
+        let hgid = HgId::from_slice(node)?;
+        let root_tree_id = match block_on(self.repo.get_root_tree_id(hgid)) {
+            Ok(root_tree_id) => root_tree_id,
+            Err(_e) => {
+                // This call may fail with a `NotFoundError` if the revision in question
+                // was added to the repository after we originally opened it. Invalidate
+                // the repository and try again, in case our cached repo data is just stale.
+                self.repo.invalidate_all()?;
+                block_on(self.repo.get_root_tree_id(hgid))?
+            }
+        };
+        let bytes = root_tree_id.into_byte_array();
+        Ok(bytes.to_vec())
     }
 
     #[instrument(level = "debug", skip(self))]

@@ -11,6 +11,7 @@
 #include <folly/Range.h>
 #include <folly/Try.h>
 #include <memory>
+#include <optional>
 #include <string_view>
 
 #include "eden/scm/lib/backingstore/c_api/BackingStoreBindings.h"
@@ -40,6 +41,11 @@ using NodeId = folly::ByteRange;
 using NodeIdRange = folly::Range<const NodeId*>;
 
 /**
+ * Storage for a 20-byte hg manifest id.
+ */
+using ManifestId = std::array<uint8_t, 20>;
+
+/**
  * Provides a type-safe layer and a more convenient API around the raw
  * BackingStoreBindings.h C functions.
  *
@@ -57,6 +63,8 @@ class SaplingNativeBackingStore {
   SaplingNativeBackingStore(
       std::string_view repository,
       const BackingStoreOptions& options);
+
+  std::optional<ManifestId> getManifestNode(NodeId node);
 
   std::shared_ptr<Tree> getTree(NodeId node, bool local);
 

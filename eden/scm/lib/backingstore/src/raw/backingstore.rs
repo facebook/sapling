@@ -63,6 +63,14 @@ pub extern "C" fn sapling_backingstore_free(store: *mut BackingStore) {
 }
 
 #[no_mangle]
+pub extern "C" fn sapling_backingstore_get_manifest(
+    store: &mut BackingStore,
+    node: Slice<u8>,
+) -> CFallibleBase {
+    CFallible::make_with(|| store.get_manifest(node.slice()).map(CBytes::from_vec)).into()
+}
+
+#[no_mangle]
 pub extern "C" fn sapling_backingstore_get_tree(
     store: &mut BackingStore,
     node: Slice<u8>,

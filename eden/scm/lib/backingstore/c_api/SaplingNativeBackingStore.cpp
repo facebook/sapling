@@ -13,6 +13,7 @@
 #include <folly/logging/xlog.h>
 #include <cstddef>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 
 namespace sapling {
@@ -45,6 +46,32 @@ SaplingNativeBackingStore::SaplingNativeBackingStore(
   }
 
   store_ = store.unwrap();
+}
+
+std::optional<ManifestId> SaplingNativeBackingStore::getManifestNode(
+    NodeId node) {
+  XLOG(DBG7) << "Importing manifest node=" << folly::hexlify(node)
+             << " from backingstore";
+  CFallible<CBytes, sapling_cbytes_free> result{
+      sapling_backingstore_get_manifest(store_.get(), node)};
+
+  if (result.isError()) {
+    XLOG(DBG2) << "Error while getting manifest node=" << folly::hexlify(node)
+               << " from backingstore: " << result.getError();
+    return std::nullopt;
+  }
+
+  auto bytes = result.unwrap();
+  ManifestId manifestId;
+
+  if (bytes->len != manifestId.size()) {
+    XLOG(DBG2) << "Invalid manifest node length=" << bytes->len
+               << ", expected=" << manifestId.size();
+    return std::nullopt;
+  }
+
+  std::memcpy(manifestId.data(), bytes->ptr, bytes->len);
+  return manifestId;
 }
 
 std::shared_ptr<Tree> SaplingNativeBackingStore::getTree(

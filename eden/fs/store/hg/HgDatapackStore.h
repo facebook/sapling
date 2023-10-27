@@ -9,6 +9,7 @@
 
 #include <folly/Range.h>
 #include <folly/futures/Promise.h>
+#include <optional>
 
 #include "eden/fs/model/BlobFwd.h"
 #include "eden/fs/model/BlobMetadataFwd.h"
@@ -45,6 +46,8 @@ class HgDatapackStore {
         config_{std::move(config)},
         logger_{std::move(logger)},
         repoName_{std::move(repoName)} {}
+
+  std::optional<Hash20> getManifestNode(const ObjectId& commitId);
 
   void getTreeBatch(const ImportRequestsList& requests);
 
