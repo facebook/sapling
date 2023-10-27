@@ -75,6 +75,10 @@ export class GithubUICodeReviewProvider implements UICodeReviewProvider {
     return new PrSubmitOperation(options);
   }
 
+  submitCommandName() {
+    return `sl ${this.preferredSubmitCommand}`;
+  }
+
   getSupportedStackActions() {
     return {};
   }

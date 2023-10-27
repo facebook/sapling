@@ -35,6 +35,8 @@ export interface UICodeReviewProvider {
     },
   ): Operation;
 
+  submitCommandName(): string;
+
   RepoInfo(): JSX.Element | null;
 
   isDiffClosed(summary: DiffSummary): boolean;

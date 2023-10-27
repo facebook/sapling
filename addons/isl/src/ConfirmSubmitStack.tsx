@@ -40,7 +40,7 @@ type SubmitType = 'submit' | 'submit-all' | 'resubmit';
 /**
  * Show a modal to confirm if you want to bulk submit a given stack of commits.
  * Allows you to set if you want to submit as a draft or not,
- * and provide an update message (TODO).
+ * and provide an update message.
  *
  * If your code review provider does not support submitting as draft,
  * this function returns true immediately.
@@ -63,13 +63,13 @@ export function useShowConfirmSubmitStack() {
       return {submitAsDraft: draft ?? false};
     }
 
-    const replace = {$numCommits: String(stack.length)};
+    const replace = {$numCommits: String(stack.length), $cmd: provider.submitCommandName()};
     const title =
       mode === 'submit'
-        ? t('Submit $numCommits commits for review?', {replace})
+        ? t('Submitting $numCommits commits for review with $cmd', {replace})
         : mode === 'resubmit'
-        ? t('Resubmit $numCommits commits that already have diffs for review?', {replace})
-        : t('Submit all $numCommits commits in this stack for review?', {replace});
+        ? t('Submitting new versions of $numCommits commits for review with $cmd', {replace})
+        : t('Submitting all $numCommits commits in this stack for review with $cmd', {replace});
     const response = await showModal<SubmitConfirmationReponse>({
       type: 'custom',
       title,
