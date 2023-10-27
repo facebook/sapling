@@ -45,6 +45,7 @@ from sapling import (
     pycompat,
     registrar,
     revset,
+    scmutil,
     smartset,
     templatekw,
     templater,
@@ -609,6 +610,36 @@ def debugmarklanded(ui, repo, **opts):
     _cleanuplanded(repo, dryrun=dryrun)
     if dryrun:
         ui.status(_("(this is a dry-run, nothing was actually done)\n"))
+
+
+@command(
+    "url",
+    [
+        ("r", "rev", "", _("revision"), _("REV")),
+    ]
+    + cmdutil.walkopts,
+)
+def url(ui, repo, *pats, **opts):
+    """show url for the given files"""
+    from urllib.parse import quote
+
+    url_reponame = ui.config("fbscmquery", "reponame")
+    url_template = ui.config("fbcodereview", "code-browser-url")
+    if not url_reponame or not url_template:
+        raise error.Abort(_("repo is not configured for showing URL"))
+    ctx = scmutil.revsingle(repo, opts.get("rev"))
+    m = scmutil.match(ctx, pats, opts)
+    if not m.anypats():
+        paths = m.files()
+    else:
+        paths = ctx.walk(m)
+    for path in paths:
+        url = url_template % {
+            "repo_name": url_reponame,
+            "path": quote(path),
+            "node_hex": ctx.hex(),
+        }
+        ui.write(("%s\n" % url))
 
 
 def uisetup(ui) -> None:
