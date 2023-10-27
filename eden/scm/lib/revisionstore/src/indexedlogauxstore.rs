@@ -17,11 +17,7 @@ use byteorder::WriteBytesExt;
 use configmodel::convert::ByteCount;
 use configmodel::Config;
 use configmodel::ConfigExt;
-use edenapi_types::Blake3;
-use edenapi_types::ContentId;
 use edenapi_types::FileAuxData;
-use edenapi_types::Sha1;
-use edenapi_types::Sha256;
 use indexedlog::log::IndexOutput;
 use minibytes::Bytes;
 use parking_lot::RwLock;
@@ -35,130 +31,77 @@ use crate::indexedlogutil::StoreOpenOptions;
 use crate::indexedlogutil::StoreType;
 
 /// See edenapi_types::FileAuxData and mononoke_types::ContentMetadataV2
-#[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
-pub struct Entry {
-    pub(crate) total_size: u64,
-    pub(crate) content_id: ContentId,
-    pub(crate) content_sha1: Sha1,
-    pub(crate) content_sha256: Sha256,
-    pub(crate) content_seeded_blake3: Option<Blake3>,
-}
+pub(crate) type Entry = FileAuxData;
 
-impl From<FileAuxData> for Entry {
-    fn from(v: FileAuxData) -> Self {
-        Entry {
-            total_size: v.total_size,
-            content_id: v.content_id,
-            content_sha1: v.sha1,
-            content_sha256: v.sha256,
-            content_seeded_blake3: v.seeded_blake3,
+/// Serialize the Entry to Bytes.
+///
+/// The serialization format is as follows:
+/// - HgId <20 bytes>
+/// - Version <1 byte> (for compatibility)
+/// - content_id <32 bytes>
+/// - content sha1 <20 bytes>
+/// - content sha256 <32 bytes>
+/// - total_size <u64 VLQ, 1-9 bytes>
+/// - presence byte for seeded blake3 <1 byte>
+/// - content seeded blake3 <32 OR 0 bytes>
+pub(crate) fn serialize(this: &FileAuxData, hgid: HgId) -> Result<Bytes> {
+    let mut buf = Vec::new();
+    buf.write_all(hgid.as_ref())?;
+    buf.write_u8(0)?; // write version
+    buf.write_all(this.content_id.as_ref())?;
+    buf.write_all(this.sha1.as_ref())?;
+    buf.write_all(this.sha256.as_ref())?;
+    buf.write_vlq(this.total_size)?;
+    match this.seeded_blake3 {
+        Some(seeded_blake3) => {
+            buf.write_u8(1)?; // A value of 1 indicates the blake3 hash is present
+            buf.write_all(seeded_blake3.as_ref())?;
         }
-    }
+        None => buf.write_u8(0)?, // A value of 0 indicates the blake3 hash is absent
+    };
+    Ok(buf.into())
 }
 
-impl From<Entry> for FileAuxData {
-    fn from(v: Entry) -> FileAuxData {
+fn deserialize(bytes: Bytes) -> Result<(HgId, FileAuxData)> {
+    let data: &[u8] = bytes.as_ref();
+    let mut cur = Cursor::new(data);
+
+    let hgid = cur.read_hgid()?;
+
+    let version = cur.read_u8()?;
+    if version != 0 {
+        bail!("unsupported auxstore entry version {}", version);
+    }
+
+    let mut content_id = [0u8; 32];
+    cur.read_exact(&mut content_id)?;
+
+    let mut sha1 = [0u8; 20];
+    cur.read_exact(&mut sha1)?;
+
+    let mut sha256 = [0u8; 32];
+    cur.read_exact(&mut sha256)?;
+
+    let total_size: u64 = cur.read_vlq()?;
+    let remaining = cur.position() < bytes.len() as u64;
+    let seeded_blake3 = if remaining && cur.read_u8()? == 1 {
+        let mut seeded_blake3 = [0u8; 32];
+        cur.read_exact(&mut seeded_blake3)?;
+        Some(seeded_blake3.into())
+    } else {
+        None
+    };
+
+    Ok((
+        hgid,
         FileAuxData {
-            total_size: v.total_size,
-            content_id: v.content_id,
-            sha1: v.content_sha1,
-            sha256: v.content_sha256,
-            seeded_blake3: v.content_seeded_blake3,
-        }
-    }
-}
-
-impl Entry {
-    pub fn total_size(&self) -> u64 {
-        self.total_size
-    }
-
-    pub fn content_id(&self) -> ContentId {
-        self.content_id
-    }
-
-    pub fn content_sha1(&self) -> Sha1 {
-        self.content_sha1
-    }
-
-    pub fn content_sha256(&self) -> Sha256 {
-        self.content_sha256
-    }
-
-    pub fn content_seeded_blake3(&self) -> Option<Blake3> {
-        self.content_seeded_blake3.clone()
-    }
-
-    /// Serialize the Entry to Bytes.
-    ///
-    /// The serialization format is as follows:
-    /// - HgId <20 bytes>
-    /// - Version <1 byte> (for compatibility)
-    /// - content_id <32 bytes>
-    /// - content sha1 <20 bytes>
-    /// - content sha256 <32 bytes>
-    /// - total_size <u64 VLQ, 1-9 bytes>
-    /// - presence byte for seeded blake3 <1 byte>
-    /// - content seeded blake3 <32 OR 0 bytes>
-    fn serialize(&self, hgid: HgId) -> Result<Bytes> {
-        let mut buf = Vec::new();
-        buf.write_all(hgid.as_ref())?;
-        buf.write_u8(0)?; // write version
-        buf.write_all(self.content_id.as_ref())?;
-        buf.write_all(self.content_sha1.as_ref())?;
-        buf.write_all(self.content_sha256.as_ref())?;
-        buf.write_vlq(self.total_size)?;
-        match self.content_seeded_blake3() {
-            Some(content_seeded_blake3) => {
-                buf.write_u8(1)?; // A value of 1 indicates the blake3 hash is present
-                buf.write_all(content_seeded_blake3.as_ref())?;
-            }
-            None => buf.write_u8(0)?, // A value of 0 indicates the blake3 hash is absent
-        };
-        Ok(buf.into())
-    }
-
-    fn deserialize(bytes: Bytes) -> Result<(HgId, Self)> {
-        let data: &[u8] = bytes.as_ref();
-        let mut cur = Cursor::new(data);
-
-        let hgid = cur.read_hgid()?;
-
-        let version = cur.read_u8()?;
-        if version != 0 {
-            bail!("unsupported auxstore entry version {}", version);
-        }
-
-        let mut content_id = [0u8; 32];
-        cur.read_exact(&mut content_id)?;
-
-        let mut content_sha1 = [0u8; 20];
-        cur.read_exact(&mut content_sha1)?;
-
-        let mut content_sha256 = [0u8; 32];
-        cur.read_exact(&mut content_sha256)?;
-
-        let total_size: u64 = cur.read_vlq()?;
-        let remaining = cur.position() < bytes.len() as u64;
-        let content_seeded_blake3 = if remaining && cur.read_u8()? == 1 {
-            let mut content_seeded_blake3 = [0u8; 32];
-            cur.read_exact(&mut content_seeded_blake3)?;
-            Some(content_seeded_blake3.into())
-        } else {
-            None
-        };
-
-        Ok((
-            hgid,
-            Entry {
-                content_id: content_id.into(),
-                content_sha1: content_sha1.into(),
-                content_sha256: content_sha256.into(),
-                total_size,
-                content_seeded_blake3,
-            },
-        ))
-    }
+            content_id: content_id.into(),
+            sha1: sha1.into(),
+            sha256: sha256.into(),
+            total_size,
+            seeded_blake3,
+        },
+    ))
 }
 
 pub struct AuxStore(RwLock<Store>);
@@ -206,7 +149,7 @@ impl AuxStore {
         Ok(open_options)
     }
 
-    pub fn get(&self, hgid: HgId) -> Result<Option<Entry>> {
+    pub fn get(&self, hgid: HgId) -> Result<Option<FileAuxData>> {
         let log = self.0.read();
         let mut entries = log.lookup(0, hgid)?;
 
@@ -217,11 +160,11 @@ impl AuxStore {
         let bytes = log.slice_to_bytes(slice);
         drop(log);
 
-        Entry::deserialize(bytes).map(|(_hgid, entry)| Some(entry))
+        deserialize(bytes).map(|(_hgid, entry)| Some(entry))
     }
 
     pub fn put(&self, hgid: HgId, entry: &Entry) -> Result<()> {
-        let serialized = entry.serialize(hgid)?;
+        let serialized = serialize(entry, hgid)?;
         self.0.write().append(&serialized)
     }
 
@@ -235,7 +178,7 @@ impl AuxStore {
         log.iter()
             .map(|slice| {
                 let bytes = log.slice_to_bytes(slice?);
-                Entry::deserialize(bytes).map(|(hgid, _entry)| hgid)
+                deserialize(bytes).map(|(hgid, _entry)| hgid)
             })
             .collect()
     }
@@ -246,6 +189,10 @@ mod tests {
     use std::str::FromStr;
     use std::sync::Arc;
 
+    use edenapi_types::Blake3;
+    use edenapi_types::ContentId;
+    use edenapi_types::Sha1;
+    use edenapi_types::Sha256;
     use fs_err::remove_file;
     use tempfile::TempDir;
     use types::testutil::*;
@@ -281,7 +228,7 @@ mod tests {
 
         let mut entry = Entry::default();
         entry.total_size = 1;
-        entry.content_sha1 = single_byte_sha1(1);
+        entry.sha1 = single_byte_sha1(1);
 
         let k = key("a", "1");
 
@@ -300,7 +247,7 @@ mod tests {
 
         let mut entry = Entry::default();
         entry.total_size = 1;
-        entry.content_sha1 = single_byte_sha1(1);
+        entry.sha1 = single_byte_sha1(1);
 
         let k = key("a", "1");
 
@@ -322,7 +269,7 @@ mod tests {
         let k = key("a", "2");
         let mut entry = Entry::default();
         entry.total_size = 2;
-        entry.content_sha1 = single_byte_sha1(2);
+        entry.sha1 = single_byte_sha1(2);
 
         store.put(k.hgid, &entry)?;
         store.flush()?;
@@ -339,7 +286,7 @@ mod tests {
         let k = key("a", "3");
         let mut entry = Entry::default();
         entry.total_size = 3;
-        entry.content_sha1 = single_byte_sha1(3);
+        entry.sha1 = single_byte_sha1(3);
 
         store.put(k.hgid, &entry)?;
         store.flush()?;
@@ -356,7 +303,7 @@ mod tests {
 
         let mut entry = Entry::default();
         entry.total_size = 1;
-        entry.content_sha1 = single_byte_sha1(1);
+        entry.sha1 = single_byte_sha1(1);
 
         let k = key("a", "1");
 
@@ -416,10 +363,10 @@ mod tests {
         expected.content_id = ContentId::from_str(
             "aa6ab85da77ca480b7624172fe44aa9906b6c3f00f06ff23c3e5f60bfd0c414e",
         )?;
-        expected.content_sha1 = Sha1::from_str("7110eda4d09e062aa5e4a390b0a572ac0d2c0220")?;
-        expected.content_sha256 =
+        expected.sha1 = Sha1::from_str("7110eda4d09e062aa5e4a390b0a572ac0d2c0220")?;
+        expected.sha256 =
             Sha256::from_str("03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4")?;
-        expected.content_seeded_blake3 = Some(Blake3::from_str(
+        expected.seeded_blake3 = Some(Blake3::from_str(
             "2078b4229b5353de0268efc7f64b68f3c99fb8829e9c052117b4e1e090b2603a",
         )?);
         // Attempt fetch.
@@ -451,11 +398,11 @@ mod tests {
             content_id: ContentId::from_str(
                 "aa6ab85da77ca480b7624172fe44aa9906b6c3f00f06ff23c3e5f60bfd0c414e",
             )?,
-            content_sha1: Sha1::from_str("7110eda4d09e062aa5e4a390b0a572ac0d2c0220")?,
-            content_sha256: Sha256::from_str(
+            sha1: Sha1::from_str("7110eda4d09e062aa5e4a390b0a572ac0d2c0220")?,
+            sha256: Sha256::from_str(
                 "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
             )?,
-            content_seeded_blake3: Some(Blake3::from_str(
+            seeded_blake3: Some(Blake3::from_str(
                 "2078b4229b5353de0268efc7f64b68f3c99fb8829e9c052117b4e1e090b2603a",
             )?),
         };
@@ -464,12 +411,12 @@ mod tests {
         buf.write_all(k.hgid.as_ref())?;
         buf.write_u8(0)?; // write version
         buf.write_all(entry.content_id.as_ref())?;
-        buf.write_all(entry.content_sha1.as_ref())?;
-        buf.write_all(entry.content_sha256.as_ref())?;
+        buf.write_all(entry.sha1.as_ref())?;
+        buf.write_all(entry.sha256.as_ref())?;
         buf.write_vlq(entry.total_size)?;
 
         // Validate that we can deserialize the entry even when the Blake3 hash has not been written to it.
-        Entry::deserialize(buf.into()).expect("Failed to deserialize non-Blake3 entry");
+        deserialize(buf.into()).expect("Failed to deserialize non-Blake3 entry");
         Ok(())
     }
 }
