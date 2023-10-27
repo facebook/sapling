@@ -31,6 +31,7 @@ export async function activate(context: vscode.ExtensionContext) {
       Internal.getEnabledSCMApiFeatures?.() ?? new Set<EnabledSCMApiFeature>(['blame', 'sidebar']),
     ]);
     logger.info('enabled features: ', [...enabledSCMApiFeatures].join(', '));
+    Internal.maybeOverwriteIslEnabledSetting?.(logger);
     context.subscriptions.push(registerISLCommands(context, logger));
     context.subscriptions.push(outputChannel);
     const reposList = new VSCodeReposList(logger, extensionTracker, enabledSCMApiFeatures);
