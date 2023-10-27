@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.1.29
+
+### Oct 26 2023
+
+- Add initial support for special handling for generated files
+  - Currently checks for "&#0064;generated" in the head of any files
+  - Eventually this will also be configurable by path to look for commons files
+  - Generated files are sorted below regular files in the list of uncommitted changes,
+    and the section is collapsed by default
+  - Generated files' content is hidden by default in the comparison view
+  - Also supports _partially generated_ files by looking for "&#0064;partially-generated". These files are marked as generated, but not collapsed.
+- Improve how obsolete commits behave with operations. If a commit is already obsolete (has a newer version from some operation, such as amending), operations will act on it specifically, instead of using the latest successor. This makes drag-and-drop rebase more predicatable when dragging onto commits which are obsolete and fixes some weird behaviors.
+- Add options to goto, rebase to same public base, and rebase on top when downloading (pulling) commits
+- Remember UI layout (commit info sidebar expansion/width) when reopening the page
+- Smarter auto-collapsing of the commit info sidebar, such as when resizing the window
+- Use a teal color for missing files to differentiate them from untracked files
+- Auto-close the cwd selector when changing the cwd
+- Fix weird padding on filenames in the comparison view
+- Fix filenames like #backup# rendering incorrectly
+- Merge commit messages when using Edit Stack
+- Use your commit template when making commits with quick commit or split
+- Fix minor rendering issues
+
 ## 0.1.28
 
 ### Oct 12 2023
