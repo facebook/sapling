@@ -26,6 +26,7 @@ import type {
 } from 'isl/src/types';
 import type {ExportStack, ImportedStack} from 'shared/types/stack';
 
+import {generatedFilesDetector} from './GeneratedFiles';
 import {Internal} from './Internal';
 import {Repository} from './Repository';
 import {repositoryCache} from './RepositoryCache';
@@ -587,6 +588,14 @@ export default class ServerToClientAPI {
             state: {value: state},
           });
         });
+        break;
+      }
+      case 'fetchGeneratedStatuses': {
+        generatedFilesDetector
+          .queryFilesGenerated(repo.logger, repo.info.repoRoot, data.paths)
+          .then(results => {
+            this.postMessage({type: 'fetchedGeneratedStatuses', results});
+          });
         break;
       }
       case 'typeahead': {

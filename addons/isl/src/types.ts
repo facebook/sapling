@@ -309,6 +309,16 @@ export type CommitCloudSyncState = {
   workspaceError?: Error;
 };
 
+/**
+ * A file can be auto-generated, partially auto-generated, or not generated (manual).
+ * Numbered according to expected visual sort order.
+ */
+export enum GeneratedStatus {
+  Manual = 0,
+  PartiallyGenerated = 1,
+  Generated = 2,
+}
+
 type ConflictInfo = {
   command: string;
   toContinue: string;
@@ -464,6 +474,7 @@ export type ClientToServerMessage =
   | {type: 'fileBugReport'; data: FileABugFields; uiState?: Json}
   | {type: 'runOperation'; operation: RunnableOperation}
   | {type: 'abortRunningOperation'; operationId: string}
+  | {type: 'fetchGeneratedStatuses'; paths: Array<RepoRelativePath>}
   | {type: 'fetchCommitMessageTemplate'}
   | {type: 'fetchShelvedChanges'}
   | {type: 'fetchLatestCommit'; revset: string}
@@ -525,6 +536,10 @@ export type ServerToClientMessage =
   | FileABugProgressMessage
   | {type: 'heartbeat'; id: string}
   | {type: 'gotConfig'; name: ConfigName; value: string | undefined}
+  | {
+      type: 'fetchedGeneratedStatuses';
+      results: Record<RepoRelativePath, GeneratedStatus>;
+    }
   | {type: 'fetchedCommitMessageTemplate'; template: string}
   | {type: 'fetchedShelvedChanges'; shelvedChanges: Result<Array<ShelvedChange>>}
   | {type: 'fetchedLatestCommit'; info: Result<CommitInfo>; revset: string}
