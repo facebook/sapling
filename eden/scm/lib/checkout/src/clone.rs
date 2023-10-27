@@ -22,7 +22,7 @@ use manifest_tree::TreeManifest;
 use pathmatcher::Matcher;
 use progress_model::ProgressBar;
 use repolock::RepoLocker;
-use storemodel::ReadFileContents;
+use storemodel::FileStore;
 use tracing::instrument;
 use treestate::dirstate::Dirstate;
 use treestate::dirstate::TreeStateFields;
@@ -87,7 +87,7 @@ pub fn checkout(
     dot_path: &Path,
     source_mf: &TreeManifest,
     target_mf: &TreeManifest,
-    file_store: Arc<dyn ReadFileContents>,
+    file_store: Arc<dyn FileStore>,
     ts: &mut TreeState,
     target: HgId,
     locker: &RepoLocker,
@@ -115,7 +115,7 @@ impl CheckoutState {
         dot_path: &Path,
         source_mf: &TreeManifest,
         target_mf: &TreeManifest,
-        file_store: Arc<dyn ReadFileContents>,
+        file_store: Arc<dyn FileStore>,
         ts: &mut TreeState,
         target: HgId,
         locker: &RepoLocker,

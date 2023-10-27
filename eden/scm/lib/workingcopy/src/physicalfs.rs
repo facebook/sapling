@@ -19,7 +19,7 @@ use parking_lot::Mutex;
 use pathmatcher::DynMatcher;
 use pathmatcher::Matcher;
 use repolock::RepoLocker;
-use storemodel::ReadFileContents;
+use storemodel::FileStore;
 use treestate::filestate::StateFlags;
 use treestate::tree::VisitorResult;
 use treestate::treestate::TreeState;
@@ -40,14 +40,14 @@ use crate::walker::WalkEntry;
 use crate::walker::Walker;
 use crate::workingcopy::WorkingCopy;
 
-type ArcReadFileContents = Arc<dyn ReadFileContents>;
+type ArcFileStore = Arc<dyn FileStore>;
 type ArcReadTreeManifest = Arc<dyn ReadTreeManifest + Send + Sync>;
 
 pub struct PhysicalFileSystem {
     // TODO: Make this an Arc<Mutex<VFS>> so we can persist the vfs pathauditor cache
     vfs: VFS,
     tree_resolver: ArcReadTreeManifest,
-    store: ArcReadFileContents,
+    store: ArcFileStore,
     treestate: Arc<Mutex<TreeState>>,
     locker: Arc<RepoLocker>,
 }
@@ -56,7 +56,7 @@ impl PhysicalFileSystem {
     pub fn new(
         vfs: VFS,
         tree_resolver: ArcReadTreeManifest,
-        store: ArcReadFileContents,
+        store: ArcFileStore,
         treestate: Arc<Mutex<TreeState>>,
         locker: Arc<RepoLocker>,
     ) -> Result<Self> {

@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use cpython::*;
 use cpython_ext::convert::register_into;
-use storemodel::ReadFileContents;
+use storemodel::FileStore;
 use storemodel::TreeStore;
 
 use crate::EagerRepoStore;
@@ -24,7 +24,7 @@ impl EagerRepoStore {
         Arc::new(store.clone())
     }
 
-    fn to_read_file_contents(&self, py: Python) -> Arc<dyn ReadFileContents> {
+    fn to_read_file_contents(&self, py: Python) -> Arc<dyn FileStore> {
         let store = self.inner(py).clone();
         Arc::new(store)
     }

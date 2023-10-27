@@ -22,7 +22,7 @@ use revisionstore::RemoteDataStore;
 use revisionstore::StoreKey;
 use revisionstore::StoreResult;
 use storemodel::minibytes::Bytes;
-use storemodel::ReadFileContents;
+use storemodel::FileStore;
 use storemodel::TreeStore;
 use types::Key;
 use types::Node;
@@ -50,7 +50,7 @@ impl contentstore {
         Arc::new(ManifestStore::new(store))
     }
 
-    fn to_read_file_contents(&self, py: Python) -> Arc<dyn ReadFileContents> {
+    fn to_read_file_contents(&self, py: Python) -> Arc<dyn FileStore> {
         let store = self.extract_inner(py) as Arc<dyn LegacyStore>;
         let store = ArcRemoteDataStore(store as Arc<_>);
         Arc::new(store)
@@ -58,7 +58,7 @@ impl contentstore {
 }
 
 impl filescmstore {
-    fn to_read_file_contents(&self, py: Python) -> Arc<dyn ReadFileContents> {
+    fn to_read_file_contents(&self, py: Python) -> Arc<dyn FileStore> {
         let store = self.extract_inner(py);
         let store = ArcFileStore(store);
         Arc::new(store)
@@ -66,7 +66,7 @@ impl filescmstore {
 }
 
 impl pyfilescmstore {
-    fn to_read_file_contents(&self, py: Python) -> Arc<dyn ReadFileContents> {
+    fn to_read_file_contents(&self, py: Python) -> Arc<dyn FileStore> {
         self.extract_inner(py)
     }
 }

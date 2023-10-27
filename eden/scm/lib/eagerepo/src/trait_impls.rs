@@ -13,7 +13,7 @@ use futures::stream::StreamExt;
 use hgstore::separate_metadata;
 use hgstore::strip_metadata;
 use storemodel::types;
-use storemodel::ReadFileContents;
+use storemodel::FileStore;
 use storemodel::TreeFormat;
 use storemodel::TreeStore;
 use types::HgId;
@@ -25,7 +25,7 @@ use crate::EagerRepoStore;
 // storemodel traits
 
 #[async_trait]
-impl ReadFileContents for EagerRepoStore {
+impl FileStore for EagerRepoStore {
     async fn read_file_contents(
         &self,
         keys: Vec<Key>,

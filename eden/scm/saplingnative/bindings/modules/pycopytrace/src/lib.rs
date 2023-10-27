@@ -29,7 +29,7 @@ use cpython_ext::ResultPyErrExt;
 use dag::DagAlgorithm;
 use dag::Vertex;
 use parking_lot::Mutex;
-use storemodel::ReadFileContents;
+use storemodel::FileStore;
 use storemodel::ReadRootTreeIds;
 use storemodel::TreeFormat;
 use storemodel::TreeStore;
@@ -67,7 +67,7 @@ py_class!(pub class dagcopytrace |py| {
         _cls,
         root_tree_reader: ImplInto<Arc<dyn ReadRootTreeIds + Send + Sync>>,
         tree_store: ImplInto<Arc<dyn TreeStore>>,
-        file_reader: ImplInto<Arc<dyn ReadFileContents>>,
+        file_reader: ImplInto<Arc<dyn FileStore>>,
         dag: ImplInto<Arc<dyn DagAlgorithm + Send + Sync>>,
         config: ImplInto<Arc<dyn Config + Send + Sync>>,
     ) -> PyResult<Self> {

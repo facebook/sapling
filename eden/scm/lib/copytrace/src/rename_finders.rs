@@ -24,7 +24,7 @@ use manifest_tree::TreeManifest;
 use parking_lot::Mutex;
 use pathmatcher::AlwaysMatcher;
 use storemodel::futures::StreamExt;
-use storemodel::ReadFileContents;
+use storemodel::FileStore;
 use types::Key;
 use types::RepoPath;
 use types::RepoPathBuf;
@@ -86,7 +86,7 @@ pub struct ContentSimilarityRenameFinder {
 /// It is introduced for code reuse between those two file based rename finders.
 struct RenameFinderInner {
     // Read content and rename metadata of a file
-    file_reader: Arc<dyn ReadFileContents>,
+    file_reader: Arc<dyn FileStore>,
     // Read configs
     config: Arc<dyn Config + Send + Sync>,
     // Dir move caused rename candidates
@@ -97,7 +97,7 @@ type CacheKey = (Vertex, RepoPathBuf);
 
 impl MetadataRenameFinder {
     pub fn new(
-        file_reader: Arc<dyn ReadFileContents>,
+        file_reader: Arc<dyn FileStore>,
         config: Arc<dyn Config + Send + Sync>,
     ) -> Result<Self> {
         let cache_size = get_rename_cache_size(&config)?;
@@ -179,7 +179,7 @@ impl RenameFinder for MetadataRenameFinder {
 
 impl ContentSimilarityRenameFinder {
     pub fn new(
-        file_reader: Arc<dyn ReadFileContents>,
+        file_reader: Arc<dyn FileStore>,
         config: Arc<dyn Config + Send + Sync>,
     ) -> Result<Self> {
         let cache_size = get_rename_cache_size(&config)?;

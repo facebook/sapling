@@ -10,7 +10,7 @@
 use async_trait::async_trait;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
-use storemodel::ReadFileContents;
+use storemodel::FileStore;
 use storemodel::TreeFormat;
 use storemodel::TreeStore;
 use types::HgId;
@@ -20,7 +20,7 @@ use types::RepoPath;
 use crate::GitStore;
 
 #[async_trait]
-impl ReadFileContents for GitStore {
+impl FileStore for GitStore {
     async fn read_file_contents(
         &self,
         keys: Vec<Key>,

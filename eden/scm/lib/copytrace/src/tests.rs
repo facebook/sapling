@@ -25,7 +25,7 @@ use manifest_tree::TreeManifest;
 use manifest_tree::TreeStore;
 use storemodel::futures::stream;
 use storemodel::futures::StreamExt;
-use storemodel::ReadFileContents;
+use storemodel::FileStore;
 use storemodel::ReadRootTreeIds;
 use storemodel::TreeFormat;
 use tracing_test::traced_test;
@@ -184,7 +184,7 @@ impl ReadRootTreeIds for CopyTraceTestCase {
 }
 
 #[async_trait]
-impl ReadFileContents for CopyTraceTestCase {
+impl FileStore for CopyTraceTestCase {
     #[allow(dead_code)]
     async fn read_file_contents(
         &self,

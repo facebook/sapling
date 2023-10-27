@@ -19,7 +19,6 @@ use futures::Stream;
 use futures::StreamExt;
 use hgstore::strip_metadata;
 use minibytes::Bytes;
-use storemodel::ReadFileContents;
 use tokio::runtime::Handle;
 use types::Key;
 
@@ -37,7 +36,7 @@ pub struct ArcFileStore(pub Arc<FileStore>);
 pub struct ArcRemoteDataStore<T: ?Sized>(pub Arc<T>);
 
 #[async_trait]
-impl<T> ReadFileContents for ArcRemoteDataStore<T>
+impl<T> storemodel::FileStore for ArcRemoteDataStore<T>
 where
     T: RemoteDataStore + 'static + ?Sized,
 {
@@ -64,7 +63,7 @@ where
 }
 
 #[async_trait]
-impl ReadFileContents for ArcFileStore {
+impl storemodel::FileStore for ArcFileStore {
     async fn read_file_contents(&self, keys: Vec<Key>) -> BoxStream<Result<(Bytes, Key)>> {
         stream_data_from_scmstore(self.0.clone(), keys)
             .map(|result| match result {

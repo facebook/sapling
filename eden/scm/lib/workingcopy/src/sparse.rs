@@ -27,7 +27,7 @@ use pathmatcher::ExactMatcher;
 use pathmatcher::UnionMatcher;
 pub use sparse::Root;
 use storemodel::futures::StreamExt;
-use storemodel::ReadFileContents;
+use storemodel::FileStore;
 use types::Key;
 use types::RepoPath;
 use types::RepoPathBuf;
@@ -40,7 +40,7 @@ pub fn repo_matcher(
     vfs: &VFS,
     dot_path: &Path,
     manifest: impl Manifest + Send + Sync + 'static,
-    store: Arc<dyn ReadFileContents>,
+    store: Arc<dyn FileStore>,
 ) -> anyhow::Result<Option<(DynMatcher, u64)>> {
     repo_matcher_with_overrides(vfs, dot_path, manifest, store, &disk_overrides(dot_path)?)
 }
@@ -49,7 +49,7 @@ pub fn repo_matcher_with_overrides(
     vfs: &VFS,
     dot_path: &Path,
     manifest: impl Manifest + Send + Sync + 'static,
-    store: Arc<dyn ReadFileContents>,
+    store: Arc<dyn FileStore>,
     overrides: &HashMap<String, String>,
 ) -> anyhow::Result<Option<(DynMatcher, u64)>> {
     let prof = match fs_err::read(dot_path.join("sparse")) {
@@ -88,7 +88,7 @@ pub fn repo_matcher_with_overrides(
 pub fn build_matcher(
     prof: &sparse::Root,
     manifest: impl Manifest + Send + Sync + 'static,
-    store: Arc<dyn ReadFileContents>,
+    store: Arc<dyn FileStore>,
     overrides: &HashMap<String, String>,
 ) -> anyhow::Result<(sparse::Matcher, DefaultHasher)> {
     let manifest = Arc::new(manifest);
@@ -515,7 +515,7 @@ inc
     }
 
     #[async_trait::async_trait]
-    impl ReadFileContents for StubCommit {
+    impl FileStore for StubCommit {
         async fn read_file_contents(
             &self,
             keys: Vec<Key>,

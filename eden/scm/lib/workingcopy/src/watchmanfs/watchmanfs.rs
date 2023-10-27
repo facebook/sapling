@@ -38,7 +38,7 @@ use watchman_client::prelude::*;
 use super::treestate::clear_needs_check;
 use super::treestate::mark_needs_check;
 use super::treestate::set_clock;
-use crate::filechangedetector::ArcReadFileContents;
+use crate::filechangedetector::ArcFileStore;
 use crate::filechangedetector::FileChangeDetector;
 use crate::filechangedetector::FileChangeDetectorTrait;
 use crate::filechangedetector::ResolvedFileChangeResult;
@@ -59,7 +59,7 @@ pub struct WatchmanFileSystem {
     vfs: VFS,
     treestate: Arc<Mutex<TreeState>>,
     tree_resolver: ArcReadTreeManifest,
-    store: ArcReadFileContents,
+    store: ArcFileStore,
     locker: Arc<RepoLocker>,
 }
 
@@ -101,7 +101,7 @@ impl WatchmanFileSystem {
         vfs: VFS,
         treestate: Arc<Mutex<TreeState>>,
         tree_resolver: ArcReadTreeManifest,
-        store: ArcReadFileContents,
+        store: ArcFileStore,
         locker: Arc<RepoLocker>,
     ) -> Result<Self> {
         Ok(WatchmanFileSystem {

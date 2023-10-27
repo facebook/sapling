@@ -36,7 +36,7 @@ use repolock::RepoLocker;
 use status::FileStatus;
 use status::Status;
 use status::StatusBuilder;
-use storemodel::ReadFileContents;
+use storemodel::FileStore;
 use treestate::filestate::StateFlags;
 use treestate::tree::VisitorResult;
 use treestate::treestate::TreeState;
@@ -58,12 +58,12 @@ use crate::status::compute_status;
 use crate::util::walk_treestate;
 use crate::watchmanfs::WatchmanFileSystem;
 
-type ArcReadFileContents = Arc<dyn ReadFileContents>;
+type ArcFileStore = Arc<dyn FileStore>;
 type ArcReadTreeManifest = Arc<dyn ReadTreeManifest + Send + Sync>;
 
 struct FileSystem {
     vfs: VFS,
-    file_store: ArcReadFileContents,
+    file_store: ArcFileStore,
     file_system_type: FileSystemType,
     inner: Box<dyn PendingChanges + Send>,
 }
@@ -80,7 +80,7 @@ pub struct WorkingCopy {
     format: StorageFormat,
     treestate: Arc<Mutex<TreeState>>,
     tree_resolver: ArcReadTreeManifest,
-    filestore: ArcReadFileContents,
+    filestore: ArcFileStore,
     filesystem: Mutex<FileSystem>,
     ignore_matcher: Arc<GitignoreMatcher>,
     locker: Arc<RepoLocker>,
@@ -95,7 +95,7 @@ impl WorkingCopy {
         file_system_type: FileSystemType,
         treestate: Arc<Mutex<TreeState>>,
         tree_resolver: ArcReadTreeManifest,
-        filestore: ArcReadFileContents,
+        filestore: ArcFileStore,
         config: &dyn Config,
         locker: Arc<RepoLocker>,
     ) -> Result<Self> {
@@ -171,7 +171,7 @@ impl WorkingCopy {
         self.treestate.lock().set_parents(parents)
     }
 
-    pub fn filestore(&self) -> ArcReadFileContents {
+    pub fn filestore(&self) -> ArcFileStore {
         self.filestore.clone()
     }
 
@@ -215,7 +215,7 @@ impl WorkingCopy {
         file_system_type: FileSystemType,
         treestate: Arc<Mutex<TreeState>>,
         tree_resolver: ArcReadTreeManifest,
-        store: ArcReadFileContents,
+        store: ArcFileStore,
         locker: Arc<RepoLocker>,
     ) -> Result<FileSystem> {
         let inner: Box<dyn PendingChanges + Send> = match file_system_type {

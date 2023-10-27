@@ -16,7 +16,7 @@ use cpython_ext::PyPathBuf;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use minibytes::Bytes;
-use storemodel::ReadFileContents;
+use storemodel::FileStore;
 use types::Key;
 
 pub struct PythonFileScmStore {
@@ -36,7 +36,7 @@ impl PythonFileScmStore {
 }
 
 #[async_trait]
-impl ReadFileContents for PythonFileScmStore {
+impl FileStore for PythonFileScmStore {
     async fn read_file_contents(&self, keys: Vec<Key>) -> BoxStream<anyhow::Result<(Bytes, Key)>> {
         let gil = Python::acquire_gil();
         let py = gil.python();

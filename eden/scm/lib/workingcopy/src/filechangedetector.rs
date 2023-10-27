@@ -17,7 +17,7 @@ use pathmatcher::ExactMatcher;
 use progress_model::ActiveProgressBar;
 use progress_model::ProgressBar;
 use storemodel::minibytes::Bytes;
-use storemodel::ReadFileContents;
+use storemodel::FileStore;
 use treestate::filestate::StateFlags;
 use types::Key;
 use types::RepoPathBuf;
@@ -28,7 +28,7 @@ use crate::metadata;
 use crate::metadata::HgModifiedTime;
 use crate::metadata::Metadata;
 
-pub type ArcReadFileContents = Arc<dyn ReadFileContents>;
+pub type ArcFileStore = Arc<dyn FileStore>;
 
 pub(crate) enum FileChangeResult {
     Yes(PendingChange),
@@ -71,7 +71,7 @@ pub(crate) struct FileChangeDetector {
     results: Vec<Result<ResolvedFileChangeResult>>,
     lookups: RepoPathMap<Metadata>,
     manifest: Arc<RwLock<TreeManifest>>,
-    store: ArcReadFileContents,
+    store: ArcFileStore,
     worker_count: usize,
     progress: ActiveProgressBar,
 }
@@ -81,7 +81,7 @@ impl FileChangeDetector {
         vfs: VFS,
         last_write: HgModifiedTime,
         manifest: Arc<RwLock<TreeManifest>>,
-        store: ArcReadFileContents,
+        store: ArcFileStore,
         worker_count: Option<usize>,
     ) -> Self {
         let case_sensitive = vfs.case_sensitive();

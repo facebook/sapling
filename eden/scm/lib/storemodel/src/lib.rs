@@ -36,7 +36,7 @@ use types::RepoPath;
 
 #[async_trait]
 #[auto_impl::auto_impl(Arc)]
-pub trait ReadFileContents: Send + Sync + 'static {
+pub trait FileStore: Send + Sync + 'static {
     /// Read the content of specified files.
     ///
     /// The returned content should be just the file contents. This means:
@@ -137,7 +137,7 @@ pub trait StoreInfo: 'static {
 /// Provide ways to obtain file and tree stores.
 pub trait StoreOutput: 'static {
     /// Obtain the file store.
-    fn file_store(&self) -> Arc<dyn ReadFileContents>;
+    fn file_store(&self) -> Arc<dyn FileStore>;
 
     /// Obtain the tree store.
     ///
@@ -146,9 +146,9 @@ pub trait StoreOutput: 'static {
     fn tree_store(&self) -> Arc<dyn TreeStore>;
 }
 
-impl<T: ReadFileContents + TreeStore> StoreOutput for Arc<T> {
-    fn file_store(&self) -> Arc<dyn ReadFileContents> {
-        self.clone() as Arc<dyn ReadFileContents>
+impl<T: FileStore + TreeStore> StoreOutput for Arc<T> {
+    fn file_store(&self) -> Arc<dyn FileStore> {
+        self.clone() as Arc<dyn FileStore>
     }
 
     fn tree_store(&self) -> Arc<dyn TreeStore> {
