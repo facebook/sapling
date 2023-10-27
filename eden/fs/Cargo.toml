@@ -1,7 +1,7 @@
 [patch.crates-io]
 abomonation = { git = "https://github.com/markbt/abomonation", rev = "0f43346d2afa2aedc64d61f3f4273e8d1e454642" }
 annotate-snippets = { git = "https://github.com/rust-lang/annotate-snippets-rs.git", rev = "160ef451acded1f92e7ddc462f9e1d8a3f99dcce" }
-base64urlsafedata = { git = "https://github.com/kanidm/webauthn-rs.git", rev = "d4b418487ff7726464549b43bf850509694c3e74" }
+base64urlsafedata = { git = "https://github.com/kanidm/webauthn-rs.git", rev = "eecc9fe640152f37eec671a3fa60241ed9032d83" }
 curve25519-dalek = { git = "https://github.com/hariria/curve25519-dalek", rev = "1f39e7b369dc70f432370c9703229a45bfa9664e" }
 dachshund = { git = "https://github.com/facebookresearch/dachshund", rev = "ec4cc35bc5afb0db5f791ee9e3168e7586986c88" }
 graphql-parser = { git = "https://github.com/graphql-rust//graphql-parser", rev = "8d76425d83c40670570cc325f57c730262f07456" }
