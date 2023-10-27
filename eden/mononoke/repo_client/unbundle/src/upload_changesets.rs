@@ -126,18 +126,18 @@ impl NewBlobs {
             }
         };
 
-        let buffer_size = tunables::tunables()
-            .repo_client_concurrent_blob_uploads()
-            .unwrap_or_default();
-        let s = if buffer_size <= 0 {
+        let mb_buffer_size =
+            justknobs::get_as::<usize>("scm/mononoke:repo_client_concurrent_blob_uploads", None);
+
+        let s = if let Ok(buffer_size) = mb_buffer_size {
+            stream::iter(entries)
+                .buffer_unordered(buffer_size)
+                .right_stream()
+        } else {
             entries
                 .into_iter()
                 .collect::<FuturesUnordered<_>>()
                 .left_stream()
-        } else {
-            stream::iter(entries)
-                .buffer_unordered(buffer_size as usize)
-                .right_stream()
         };
 
         Ok(Self {

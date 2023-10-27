@@ -21,6 +21,7 @@ futures-old = { package = "futures", version = "0.1.31" }
 futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 itertools = "0.11.0"
+justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 lazy_static = "1.4"
 limited_async_read = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 maplit = "1.0"
@@ -36,7 +37,6 @@ thiserror = "1.0.43"
 tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
 tokio-codec = "0.1"
 tokio-io = "0.1"
-tunables = { version = "0.1.0", path = "../../tunables" }
 types = { version = "0.1.0", path = "../../../scm/lib/types" }
 vlqencoding = { version = "0.1.0", path = "../../../scm/lib/vlqencoding" }
 

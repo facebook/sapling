@@ -9,7 +9,6 @@ use std::collections::HashMap;
 use std::fmt;
 use std::io::Write;
 
-use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use byteorder::BigEndian;
@@ -315,15 +314,10 @@ where
 
     builder.add_mparam("category", "manifests")?;
 
-    let mut buffer_size = tunables::tunables()
-        .repo_client_gettreepack_buffer_size()
-        .unwrap_or_default();
-    if buffer_size <= 0 {
-        buffer_size = 1000
-    }
-    let buffer_size: usize = buffer_size
-        .try_into()
-        .with_context(|| format!("invalid buffer size {}", buffer_size))?;
+    let buffer_size =
+        justknobs::get_as::<usize>("scm/mononoke:repo_client_gettreepack_buffer_size", None)
+            .unwrap_or(1000);
+
     let wirepack_parts = entries
         .buffered(buffer_size)
         .map(|input| {

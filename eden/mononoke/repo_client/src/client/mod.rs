@@ -967,11 +967,12 @@ impl RepoClient {
             {
                 cloned!(ctx);
                 async move {
-                    let max_nodes = tunables()
-                        .repo_client_max_nodes_in_known_method()
-                        .unwrap_or_default()
-                        .try_into()
-                        .unwrap();
+                    let max_nodes = justknobs::get_as::<usize>(
+                        "scm/mononoke:repo_client_max_nodes_in_known_method",
+                        None,
+                    )
+                    .unwrap_or(100000);
+
                     if max_nodes > 0 {
                         if nodes_len > max_nodes {
                             return Err(format_err!(
