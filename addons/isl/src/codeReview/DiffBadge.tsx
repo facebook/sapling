@@ -13,6 +13,7 @@ import {CircleEllipsisIcon} from '../CircleEllipsisIcon';
 import {ExternalLink} from '../ExternalLink';
 import {Tooltip} from '../Tooltip';
 import {t} from '../i18n';
+import {CircleExclamationIcon} from '../icons/CircleExclamationIcon';
 import {persistAtomToConfigEffect} from '../persistAtomToConfigEffect';
 import platform from '../platform';
 import {diffSummary, codeReviewProvider} from './CodeReviewInfo';
@@ -159,7 +160,7 @@ function DiffSignalSummary({diff}: {diff: DiffSummary}) {
       tooltip = t('No signal from test run on this Diff.');
       break;
     case 'warning':
-      icon = 'question';
+      icon = <CircleExclamationIcon />;
       tooltip = t(
         'Test Signals were not fully successful for this Diff. See Diff for more details.',
       );
