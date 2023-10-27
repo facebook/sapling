@@ -37,6 +37,7 @@ Check basic command start/end.
     "progress": []
   } (no-eol)
 
+  $ wait
   $ waitforrunlog
   {
     "id": ".*", (re)
@@ -124,6 +125,7 @@ Make sure runlog works with progress disabled.
       }
     ]
   } (no-eol)
+  $ wait
   $ waitforrunlog
   {
     "id": ".*", (re)
@@ -214,6 +216,7 @@ Make sure runlog works with rust renderer.
       }
     ]
   } (no-eol)
+  $ wait
   $ waitforrunlog
   {
     "id": ".*", (re)
