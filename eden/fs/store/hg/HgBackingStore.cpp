@@ -300,41 +300,60 @@ folly::Future<TreePtr> HgBackingStore::fetchTreeFromImporter(
     ObjectId edenTreeID,
     RelativePath path,
     std::shared_ptr<LocalStore::WriteBatch> writeBatch) {
-  auto fut =
-      folly::via(
-          importThreadPool_.get(),
-          [this,
-           path,
-           manifestNode,
-           &liveImportTreeWatches = liveImportTreeWatches_] {
-            Importer& importer = getThreadLocalImporter();
-            folly::stop_watch<std::chrono::milliseconds> watch;
-            RequestMetricsScope queueTracker{&liveImportTreeWatches};
-            auto serializedTree = importer.fetchTree(path, manifestNode);
-            stats_->addDuration(
-                &HgBackingStoreStats::importTreeDuration, watch.elapsed());
-            return serializedTree;
-          })
-          .via(serverThreadPool_);
+  return folly::via(
+             importThreadPool_.get(),
+             [this,
+              path,
+              manifestNode,
+              edenTreeID,
+              writeBatch,
+              &liveImportTreeWatches = liveImportTreeWatches_] {
+               Importer& importer = getThreadLocalImporter();
+               folly::stop_watch<std::chrono::milliseconds> watch;
+               RequestMetricsScope queueTracker{&liveImportTreeWatches};
 
-  return std::move(fut).thenTry([this,
-                                 ownedPath = std::move(path),
-                                 node = std::move(manifestNode),
-                                 treeID = std::move(edenTreeID),
-                                 batch = std::move(writeBatch)](
-                                    folly::Try<std::unique_ptr<IOBuf>> val) {
-    // Note: the `value` call will throw if fetchTree threw an exception
-    if (val.hasException()) {
-      stats_->increment(&HgBackingStoreStats::importTreeError);
-    }
-    auto iobuf = std::move(val).value();
-    if (iobuf) {
-      stats_->increment(&HgBackingStoreStats::importTreeSuccess);
-    } else {
-      stats_->increment(&HgBackingStoreStats::importTreeFailure);
-    }
-    return processTree(std::move(iobuf), node, treeID, ownedPath, batch.get());
-  });
+               // NOTE: In the future we plan to update
+               // SaplingNativeBackingStore (and HgDatapackStore) to provide and
+               // asynchronous interface enabling us to perform our retries
+               // there. In the meantime we use importThreadPool_ for these
+               // longer-running retry requests to avoid starving
+               // serverThreadPool_.
+
+               // NOTE: Retrying first, via SaplingNativeBackingStore, will
+               // affect the HgBackingStoreStats::importTreeDuration timer. A
+               // successful retry will also affect the
+               // HgBackingStoreStats::importTreeSuccess and
+               // HgBackingStoreStats::importTreeFailure counters as we will no
+               // longer increment either.
+
+               // Retry using datapackStore (backingstore).
+               auto tree = datapackStore_.getTree(
+                   path, manifestNode, edenTreeID, /*context*/ nullptr);
+
+               if (!tree) {
+                 auto serializedTree = importer.fetchTree(path, manifestNode);
+                 stats_->addDuration(
+                     &HgBackingStoreStats::importTreeDuration, watch.elapsed());
+                 if (serializedTree) {
+                   stats_->increment(&HgBackingStoreStats::importTreeSuccess);
+                 } else {
+                   stats_->increment(&HgBackingStoreStats::importTreeFailure);
+                 }
+                 tree = processTree(
+                     std::move(serializedTree),
+                     manifestNode,
+                     edenTreeID,
+                     path,
+                     writeBatch.get());
+               } else {
+                 stats_->increment(&HgBackingStoreStats::fetchTreeRetrySuccess);
+               }
+               return tree;
+             })
+      .thenError([this](folly::exception_wrapper&& ew) {
+        stats_->increment(&HgBackingStoreStats::importTreeError);
+        return folly::makeFuture<TreePtr>(std::move(ew));
+      });
 }
 
 namespace {

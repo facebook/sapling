@@ -353,6 +353,7 @@ struct LocalStoreStats : StatsGroup<LocalStoreStats> {
 struct HgBackingStoreStats : StatsGroup<HgBackingStoreStats> {
   Duration getTree{"store.hg.get_tree_us"};
   Duration fetchTree{"store.hg.fetch_tree_us"};
+  Counter fetchTreeRetrySuccess{"store.hg.fetch_tree_retry_success"};
   Duration importTreeDuration{"store.hg.import_tree_us"};
   Counter importTreeSuccess{"store.hg.import_tree_success"};
   Counter importTreeFailure{"store.hg.import_tree_failure"};
