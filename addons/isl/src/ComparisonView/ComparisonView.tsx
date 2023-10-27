@@ -13,18 +13,21 @@ import type {ParsedDiff} from 'shared/patch/parse';
 import serverAPI from '../ClientToServerAPI';
 import {EmptyState} from '../EmptyState';
 import {ErrorBoundary, ErrorNotice} from '../ErrorNotice';
+import {useGeneratedFileStatuses} from '../GeneratedFile';
 import {Tooltip} from '../Tooltip';
 import {T, t} from '../i18n';
 import platform from '../platform';
 import {latestHeadCommit} from '../serverAPIState';
+import {GeneratedStatus} from '../types';
 import {SplitDiffView} from './SplitDiffView';
 import {currentComparisonMode} from './atoms';
 import {VSCodeButton, VSCodeDropdown, VSCodeOption} from '@vscode/webview-ui-toolkit/react';
-import {useCallback, useEffect, useState} from 'react';
+import {useCallback, useEffect, useMemo, useState} from 'react';
 import {atomFamily, selectorFamily, useRecoilState, useSetRecoilState} from 'recoil';
 import {comparisonIsAgainstHead, labelForComparison, ComparisonType} from 'shared/Comparison';
 import {Icon} from 'shared/Icon';
 import {parsePatch} from 'shared/patch/parse';
+import {group, notEmpty} from 'shared/utils';
 
 import './ComparisonView.css';
 
@@ -117,7 +120,68 @@ export default function ComparisonView({comparison}: {comparison: Comparison}) {
   // any time the comparison changes, fetch the diff
   useEffect(reloadComparison, [comparison, reloadComparison]);
 
+  const paths = useMemo(
+    () => compared.data?.value?.map(file => file.newFileName).filter(notEmpty) ?? [],
+    [compared.data?.value],
+  );
+  const generatedStatuses = useGeneratedFileStatuses(paths);
   const [collapsedFiles, setCollapsedFile] = useCollapsedFilesState(compared);
+
+  let content;
+  if (compared.data == null) {
+    content = <Icon icon="loading" />;
+  } else if (compared.data.error != null) {
+    content = <ErrorNotice error={compared.data.error} title={t('Unable to load comparison')} />;
+  } else if (compared.data.value.length === 0) {
+    content = (
+      <EmptyState>
+        <T>No Changes</T>
+      </EmptyState>
+    );
+  } else {
+    const files = compared.data.value;
+    const fileGroups = group(files, file => generatedStatuses[file.newFileName ?? '']);
+    content = (
+      <>
+        {fileGroups[GeneratedStatus.Manual]?.map((parsed, i) => (
+          <ComparisonViewFile
+            diff={parsed}
+            comparison={comparison}
+            key={i}
+            collapsed={collapsedFiles.get(parsed.newFileName ?? '') ?? false}
+            setCollapsed={(collapsed: boolean) =>
+              setCollapsedFile(parsed.newFileName ?? '', collapsed)
+            }
+            generatedStatus={GeneratedStatus.Manual}
+          />
+        ))}
+        {fileGroups[GeneratedStatus.PartiallyGenerated]?.map((parsed, i) => (
+          <ComparisonViewFile
+            diff={parsed}
+            comparison={comparison}
+            key={i}
+            collapsed={collapsedFiles.get(parsed.newFileName ?? '') ?? false}
+            setCollapsed={(collapsed: boolean) =>
+              setCollapsedFile(parsed.newFileName ?? '', collapsed)
+            }
+            generatedStatus={GeneratedStatus.PartiallyGenerated}
+          />
+        ))}
+        {fileGroups[GeneratedStatus.Generated]?.map((parsed, i) => (
+          <ComparisonViewFile
+            diff={parsed}
+            comparison={comparison}
+            key={i}
+            collapsed={collapsedFiles.get(parsed.newFileName ?? '') ?? false}
+            setCollapsed={(collapsed: boolean) =>
+              setCollapsedFile(parsed.newFileName ?? '', collapsed)
+            }
+            generatedStatus={GeneratedStatus.Generated}
+          />
+        ))}
+      </>
+    );
+  }
 
   return (
     <div data-testid="comparison-view" className="comparison-view">
@@ -126,29 +190,7 @@ export default function ComparisonView({comparison}: {comparison: Comparison}) {
         collapsedFiles={collapsedFiles}
         setCollapsedFile={setCollapsedFile}
       />
-      <div className="comparison-view-details">
-        {compared.data == null ? (
-          <Icon icon="loading" />
-        ) : compared.data.error != null ? (
-          <ErrorNotice error={compared.data.error} title={t('Unable to load comparison')} />
-        ) : compared.data.value.length === 0 ? (
-          <EmptyState>
-            <T>No Changes</T>
-          </EmptyState>
-        ) : (
-          compared.data.value.map((parsed, i) => (
-            <ComparisonViewFile
-              diff={parsed}
-              comparison={comparison}
-              key={i}
-              collapsed={collapsedFiles.get(parsed.newFileName ?? '') ?? false}
-              setCollapsed={(collapsed: boolean) =>
-                setCollapsedFile(parsed.newFileName ?? '', collapsed)
-              }
-            />
-          ))
-        )}
-      </div>
+      <div className="comparison-view-details">{content}</div>
     </div>
   );
 }
@@ -318,11 +360,13 @@ function ComparisonViewFile({
   comparison,
   collapsed,
   setCollapsed,
+  generatedStatus,
 }: {
   diff: ParsedDiff;
   comparison: Comparison;
   collapsed: boolean;
   setCollapsed: (isCollapsed: boolean) => void;
+  generatedStatus: GeneratedStatus;
 }) {
   const path = diff.newFileName ?? diff.oldFileName ?? '';
   const context: Context = {
@@ -341,7 +385,7 @@ function ComparisonViewFile({
   return (
     <div className="comparison-view-file" key={path}>
       <ErrorBoundary>
-        <SplitDiffView ctx={context} patch={diff} path={path} />
+        <SplitDiffView ctx={context} patch={diff} path={path} generatedStatus={generatedStatus} />
       </ErrorBoundary>
     </div>
   );

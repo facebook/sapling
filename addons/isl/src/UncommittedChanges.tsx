@@ -32,7 +32,11 @@ import {
 } from './CommitInfoView/CommitMessageFields';
 import {OpenComparisonViewButton} from './ComparisonView/OpenComparisonViewButton';
 import {ErrorNotice} from './ErrorNotice';
-import {useGeneratedFileStatuses} from './GeneratedFile';
+import {
+  generatedStatusToLabel,
+  generatedStatusDescription,
+  useGeneratedFileStatuses,
+} from './GeneratedFile';
 import {PartialFileSelectionWithMode} from './PartialFileSelection';
 import {SuspenseBoundary} from './SuspenseBoundary';
 import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
@@ -403,26 +407,6 @@ function FileTree(props: {
   return renderTree(tree);
 }
 
-function generatedStatusToLabel(status: GeneratedStatus | undefined): string {
-  if (status === GeneratedStatus.Generated) {
-    return 'generated';
-  } else if (status === GeneratedStatus.PartiallyGenerated) {
-    return 'partial';
-  } else {
-    return 'manual';
-  }
-}
-
-function generatedStatusTooltip(status: GeneratedStatus | undefined): string | undefined {
-  if (status === GeneratedStatus.Generated) {
-    return t('This file is generated');
-  } else if (status === GeneratedStatus.PartiallyGenerated) {
-    return t('This file is partially generated');
-  } else {
-    return undefined;
-  }
-}
-
 function File({
   file,
   displayType,
@@ -472,7 +456,7 @@ function File({
   // needing to go through the menu to change the rendering type.
   const isHoldingAlt = useRecoilValue(holdingAltAtom);
 
-  const tooltip = file.tooltip + '\n\n' + generatedStatusTooltip(generatedStatus);
+  const tooltip = file.tooltip + '\n\n' + generatedStatusDescription(generatedStatus);
 
   return (
     <>

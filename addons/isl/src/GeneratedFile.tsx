@@ -8,7 +8,9 @@
 import type {RepoRelativePath} from './types';
 
 import serverAPI from './ClientToServerAPI';
+import {t} from './i18n';
 import {GeneratedStatus} from './types';
+import {useMemo} from 'react';
 import {DefaultValue, atom, useRecoilValue} from 'recoil';
 import {LRU} from 'shared/LRU';
 
@@ -53,13 +55,16 @@ export function useGeneratedFileStatus(path: RepoRelativePath): GeneratedStatus 
 export function useGeneratedFileStatuses(
   paths: Array<RepoRelativePath>,
 ): Record<RepoRelativePath, GeneratedStatus> {
-  useRecoilValue(generatedFileGeneration); // update if we get new statuses
+  const generation = useRecoilValue(generatedFileGeneration); // update if we get new statuses
 
   fetchMissingGeneratedFileStatuses(paths);
 
-  return Object.fromEntries(
-    paths.map(path => [path, genereatedFileCache.get(path) ?? GeneratedStatus.Manual]),
-  );
+  return useMemo(() => {
+    return Object.fromEntries(
+      paths.map(path => [path, genereatedFileCache.get(path) ?? GeneratedStatus.Manual]),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [generation, paths]);
 }
 
 /**
@@ -79,5 +84,27 @@ export function fetchMissingGeneratedFileStatuses(files: Array<RepoRelativePath>
       type: 'fetchGeneratedStatuses',
       paths: notCached,
     });
+  }
+}
+
+export function generatedStatusToLabel(status: GeneratedStatus | undefined): string {
+  if (status === GeneratedStatus.Generated) {
+    return 'generated';
+  } else if (status === GeneratedStatus.PartiallyGenerated) {
+    return 'partial';
+  } else {
+    return 'manual';
+  }
+}
+
+export function generatedStatusDescription(
+  status: GeneratedStatus | undefined,
+): string | undefined {
+  if (status === GeneratedStatus.Generated) {
+    return t('This file is generated');
+  } else if (status === GeneratedStatus.PartiallyGenerated) {
+    return t('This file is partially generated');
+  } else {
+    return undefined;
   }
 }

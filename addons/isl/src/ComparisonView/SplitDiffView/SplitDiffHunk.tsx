@@ -29,11 +29,10 @@ export type SplitDiffTableProps = {
   ctx: Context;
   path: string;
   patch: ParsedDiff;
-  preamble?: Array<React.ReactElement>;
 };
 
 export const SplitDiffTable = React.memo(
-  ({ctx, path, patch, preamble}: SplitDiffTableProps): React.ReactElement => {
+  ({ctx, path, patch}: SplitDiffTableProps): React.ReactElement => {
     const [deletedFileExpanded, setDeletedFileExpanded] = useState<boolean>(false);
     const [expandedSeparators, setExpandedSeparators] = useState<Readonly<Set<string>>>(
       () => new Set(),
@@ -57,7 +56,7 @@ export const SplitDiffTable = React.memo(
 
     const {hunks} = patch;
     const lastHunkIndex = hunks.length - 1;
-    const rows: React.ReactElement[] = [...(preamble ?? [])];
+    const rows: React.ReactElement[] = [];
     if (!isDeleted || deletedFileExpanded) {
       hunks.forEach((hunk, index) => {
         // Show a separator before the first hunk if the file starts with a

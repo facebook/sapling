@@ -17,7 +17,9 @@ import {
   simulateMessageFromServer,
   simulateUncommittedChangedFiles,
 } from '../testUtils';
+import {GeneratedStatus} from '../types';
 import {act, screen, render, waitFor, fireEvent, cleanup, within} from '@testing-library/react';
+import {wait} from '@testing-library/user-event/dist/utils';
 import fs from 'fs';
 import path from 'path';
 import {ComparisonType} from 'shared/Comparison';
@@ -121,7 +123,10 @@ describe('ComparisonView', () => {
       fireEvent.click(button);
     });
   }
-  async function openUncommittedChangesComparison(diffContent = UNCOMMITTED_CHANGES_DIFF) {
+  async function openUncommittedChangesComparison(
+    diffContent?: string,
+    genereatedStatuses?: Record<string, GeneratedStatus>,
+  ) {
     clickComparisonViewButton();
     await waitFor(
       () =>
@@ -135,9 +140,15 @@ describe('ComparisonView', () => {
     );
     act(() => {
       simulateMessageFromServer({
+        type: 'fetchedGeneratedStatuses',
+        results: genereatedStatuses ?? {},
+      });
+    });
+    act(() => {
+      simulateMessageFromServer({
         type: 'comparison',
         comparison: {type: ComparisonType.UncommittedChanges},
-        data: {diff: {value: diffContent}},
+        data: {diff: {value: diffContent ?? UNCOMMITTED_CHANGES_DIFF}},
       });
     });
   }
@@ -416,16 +427,16 @@ describe('ComparisonView', () => {
     });
   });
 
-  describe('collapsing files', () => {
-    const makeFileDiff = (name: string, content: string) => {
-      return `diff --git file${name}.txt file${name}.txt
+  const makeFileDiff = (name: string, content: string) => {
+    return `diff --git file${name}.txt file${name}.txt
 --- file${name}.txt
 +++ file${name}.txt
 @@ -1,2 +1,2 @@
 ${content}
 `;
-    };
+  };
 
+  describe('collapsing files', () => {
     it('can click to collapse files', async () => {
       const SINGLE_CHANGE = makeFileDiff('1', '+const x = 1;');
       await openUncommittedChangesComparison(SINGLE_CHANGE);
@@ -480,6 +491,66 @@ ${content}
       expect(inComparisonView().getAllByText('big_file_contents').length).toBeGreaterThan(0);
       // the small file starts collapsed
       expect(inComparisonView().queryByText('small_file_contents')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('genereated files', () => {
+    it('genereated status is fetched for files being compared', async () => {
+      const NORMAL_FILE = makeFileDiff('normal1', '+normal_contents');
+      const PARTIAL_FILE = makeFileDiff('partial1', '+partial_contents');
+      const GENERATED_FILE = makeFileDiff('generated1', '+generated_contents');
+      const ALL = [GENERATED_FILE, PARTIAL_FILE, NORMAL_FILE].join('\n');
+
+      await openUncommittedChangesComparison(ALL);
+      await waitFor(() => {
+        expectMessageSentToServer({
+          type: 'fetchGeneratedStatuses',
+          paths: ['filegenerated1.txt', 'filepartial1.txt', 'filenormal1.txt'],
+        });
+      });
+    });
+
+    it('banner says that files are generated', async () => {
+      const NORMAL_FILE = makeFileDiff('normal2', '+normal_contents');
+      const PARTIAL_FILE = makeFileDiff('partial2', '+partial_contents');
+      const GENERATED_FILE = makeFileDiff('generated2', '+generated_contents');
+      const ALL = [GENERATED_FILE, PARTIAL_FILE, NORMAL_FILE].join('\n');
+
+      await openUncommittedChangesComparison(ALL, {
+        'filenormal2.txt': GeneratedStatus.Manual,
+        'filegenerated2.txt': GeneratedStatus.Generated,
+        'filepartial2.txt': GeneratedStatus.PartiallyGenerated,
+      });
+      expect(inComparisonView().getByText('This file is generated')).toBeInTheDocument();
+      expect(inComparisonView().getByText('This file is partially generated')).toBeInTheDocument();
+    });
+
+    it('generated files are collapsed by default', async () => {
+      const NORMAL_FILE = makeFileDiff('normal3', '+normal_contents');
+      const PARTIAL_FILE = makeFileDiff('partial3', '+partial_contents');
+      const GENERATED_FILE = makeFileDiff('generated3', '+generated_contents');
+      const ALL = [GENERATED_FILE, PARTIAL_FILE, NORMAL_FILE].join('\n');
+
+      await openUncommittedChangesComparison(ALL, {
+        'filenormal3.txt': GeneratedStatus.Manual,
+        'filegenerated3.txt': GeneratedStatus.Generated,
+        'filepartial3.txt': GeneratedStatus.PartiallyGenerated,
+      });
+
+      // normal, partial start expanded
+      expect(inComparisonView().getByText('normal_contents')).toBeInTheDocument();
+      expect(inComparisonView().getByText('partial_contents')).toBeInTheDocument();
+      await waitFor(() => {
+        // genereated starts collapsed
+        expect(inComparisonView().queryByText('generated_contents')).not.toBeInTheDocument();
+      });
+
+      expect(inComparisonView().getByText('Show anyway')).toBeInTheDocument();
+      fireEvent.click(inComparisonView().getByText('Show anyway'));
+      await waitFor(() => {
+        // genereated now expands
+        expect(inComparisonView().getByText('generated_contents')).toBeInTheDocument();
+      });
     });
   });
 });
