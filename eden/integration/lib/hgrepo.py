@@ -143,13 +143,13 @@ class HgRepository(repobase.Repository):
         cwd: Optional[str] = None,
         check: bool = True,
         traceback: bool = True,
+        env: Optional[Dict[str, str]] = None,
     ) -> subprocess.CompletedProcess:
-        env = self.hg_environment
+        env = self.hg_environment | (env or {})
         argslist = list(args)
         cmd = [self.hg_bin] + (["--traceback"] if traceback else []) + argslist
         print(f"Trying to run {cmd}")
         if hgeditor is not None:
-            env = dict(env)
             env["HGEDITOR"] = hgeditor
 
         input_bytes = None
@@ -337,7 +337,9 @@ class HgRepository(repobase.Repository):
 
             # Do not capture stdout or stderr when running "hg commit"
             # This allows its output to show up in the test logs.
-            self.run_hg(*args, stdout=None, stderr=None)
+            self.run_hg(
+                *args, stdout=None, stderr=None, env={"SL_LOG": "workingcopy=trace"}
+            )
 
         # Get the commit ID and return it
         return self.hg("log", "-T{node}", "-r.")
