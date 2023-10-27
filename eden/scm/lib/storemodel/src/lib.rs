@@ -43,8 +43,6 @@ pub trait FileStore: Send + Sync + 'static {
     /// - The returned content does not contain the "copy from" header.
     /// - The returned content does not contain raw LFS content. LFS pointer
     ///   is resolved transparently.
-    /// - If the file content is redacted, it's an error instead of a placeholder
-    ///   of dummy data.
     async fn get_content_stream(
         &self,
         keys: Vec<Key>,
