@@ -30,6 +30,7 @@ use pathmatcher::NeverMatcher;
 use pathmatcher::PatternKind;
 use pathmatcher::TreeMatcher;
 use pathmatcher::UnionMatcher;
+use pathmatcher::XorMatcher;
 use tracing::debug;
 use types::RepoPath;
 use types::RepoPathBuf;
@@ -318,7 +319,11 @@ pub fn extract_matcher(py: Python, matcher: PyObject) -> PyResult<Arc<dyn Matche
         let exclude = extract_matcher(py, matcher.getattr(py, "_m2")?)?;
         return Ok(Arc::new(DifferenceMatcher::new(include, exclude)));
     }
-
+    if type_name.as_ref() == "xormatcher" {
+        let m1 = extract_matcher(py, matcher.getattr(py, "m1")?)?;
+        let m2 = extract_matcher(py, matcher.getattr(py, "m2")?)?;
+        return Ok(Arc::new(XorMatcher::new(m1, m2)));
+    }
     if type_name.as_ref() == "alwaysmatcher" {
         return Ok(Arc::new(AlwaysMatcher::new()));
     }
