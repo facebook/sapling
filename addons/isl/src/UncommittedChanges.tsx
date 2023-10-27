@@ -384,6 +384,16 @@ function generatedStatusToLabel(status: GeneratedStatus | undefined): string {
   }
 }
 
+function generatedStatusTooltip(status: GeneratedStatus | undefined): string | undefined {
+  if (status === GeneratedStatus.Generated) {
+    return t('This file is generated');
+  } else if (status === GeneratedStatus.PartiallyGenerated) {
+    return t('This file is partially generated');
+  } else {
+    return undefined;
+  }
+}
+
 function File({
   file,
   displayType,
@@ -433,6 +443,8 @@ function File({
   // needing to go through the menu to change the rendering type.
   const isHoldingAlt = useRecoilValue(holdingAltAtom);
 
+  const tooltip = file.tooltip + '\n\n' + generatedStatusTooltip(generatedStatus);
+
   return (
     <>
       <div
@@ -453,7 +465,7 @@ function File({
             platform.openFile(file.path);
           }}>
           <Icon icon={icon} />
-          <Tooltip title={file.tooltip} delayMs={2_000} placement="right">
+          <Tooltip title={tooltip} delayMs={2_000} placement="right">
             <span
               className="changed-file-path-text"
               onCopy={e => {
