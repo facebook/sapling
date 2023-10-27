@@ -3658,7 +3658,7 @@ ImmediateFuture<InvalidationRequired> TreeInode::checkoutUpdateEntry(
       contents->entries.erase(it);
 
       if (newScmEntry) {
-        auto [it, inserted] = contents->entries.emplace(
+        auto [_it, inserted] = contents->entries.emplace(
             newScmEntry->first,
             modeFromTreeEntryType(filteredEntryType(
                 newScmEntry->second.getType(), windowsSymlinksEnabled)),

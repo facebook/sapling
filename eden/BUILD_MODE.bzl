@@ -17,6 +17,7 @@ _extra_clang_flags = [
     "-Wgnu-conditional-omitted-operand",
     "-Wheader-hygiene",
     "-Wimplicit-fallthrough",
+    "-Wshadow",
     "-Wshift-sign-overflow",
     "-Wunused-const-variable",
     "-Wunused-exception-parameter",
@@ -30,7 +31,7 @@ _extra_clang_flags = [
 
 _extra_gcc_flags = [
     "-Wunused-but-set-variable",
-    "-Wno-shadow",
+    "-Wshadow",
 ]
 
 _os_preprocessor_flags = [

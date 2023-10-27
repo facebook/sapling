@@ -73,8 +73,8 @@ class GlobNodeImpl {
   struct TreeRoot {
     std::shared_ptr<const Tree> tree;
 
-    explicit TreeRoot(std::shared_ptr<const Tree> tree)
-        : tree(std::move(tree)) {}
+    explicit TreeRoot(std::shared_ptr<const Tree> entries)
+        : tree(std::move(entries)) {}
 
     /** We don't need to lock the contents, so we just return a reference
      * to the entries */
@@ -87,8 +87,8 @@ class GlobNodeImpl {
      * the object you obtained via lockContents().
      * The returned iterator yields ENTRY elements that can be
      * used with the entryXXX methods below. */
-    const Tree& iterate(const Tree& tree) {
-      return tree;
+    const Tree& iterate(const Tree& entries) {
+      return entries;
     }
 
     /** We can never load a TreeInodePtr from a raw Tree, so this always
@@ -105,9 +105,9 @@ class GlobNodeImpl {
     }
 
     typename Tree::container::const_pointer FOLLY_NULLABLE
-    lookupEntry(const Tree& tree, PathComponentPiece name) {
-      auto it = tree.find(name);
-      if (it != tree.cend()) {
+    lookupEntry(const Tree& entries, PathComponentPiece name) {
+      auto it = entries.find(name);
+      if (it != entries.cend()) {
         return &*it;
       }
       return nullptr;

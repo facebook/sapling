@@ -1807,7 +1807,7 @@ EdenServiceHandler::streamChangesSince(
   auto [serverStream, publisher] =
       apache::thrift::ServerStream<ChangedFileResult>::createPublisher(
           [cancellationSource] { cancellationSource->requestCancellation(); });
-  auto sharedPublisher = std::make_shared<
+  auto sharedPublisherLock = std::make_shared<
       folly::Synchronized<ThriftStreamPublisherOwner<ChangedFileResult>>>(
       ThriftStreamPublisherOwner{std::move(publisher)});
 
@@ -1821,10 +1821,11 @@ EdenServiceHandler::streamChangesSince(
       rootIdCodec.renderRootId(summed->snapshotTransitions.back());
   result.toPosition_ref() = toPosition;
 
-  sumUncommitedChanges(*summed, *sharedPublisher, std::nullopt);
+  sumUncommitedChanges(*summed, *sharedPublisherLock, std::nullopt);
 
   if (summed->snapshotTransitions.size() > 1) {
-    auto callback = std::make_shared<StreamingDiffCallback>(sharedPublisher);
+    auto callback =
+        std::make_shared<StreamingDiffCallback>(sharedPublisherLock);
 
     std::vector<ImmediateFuture<folly::Unit>> futures;
     for (auto rootIt = summed->snapshotTransitions.begin();
@@ -1862,15 +1863,16 @@ EdenServiceHandler::streamChangesSince(
             // copying them.
             .thenTry(
                 [mountHandle,
-                 sharedPublisher,
+                 sharedPublisherLock,
                  callback = std::move(callback),
                  helper = std::move(helper),
                  cancellationSource](
                     folly::Try<std::vector<folly::Unit>>&& result) mutable {
                   if (result.hasException()) {
-                    auto publisher = std::move(*sharedPublisher->wlock());
-                    std::move(publisher).next(
-                        newEdenError(std::move(result).exception()));
+                    auto sharedPublisher =
+                        std::move(*sharedPublisherLock->wlock());
+                    std::move(sharedPublisher)
+                        .next(newEdenError(std::move(result).exception()));
                   }
                 })
             .semi());
@@ -1917,7 +1919,7 @@ EdenServiceHandler::streamSelectedChangesSince(
   auto [serverStream, publisher] =
       apache::thrift::ServerStream<ChangedFileResult>::createPublisher(
           [cancellationSource] { cancellationSource->requestCancellation(); });
-  auto sharedPublisher = std::make_shared<
+  auto sharedPublisherLock = std::make_shared<
       folly::Synchronized<ThriftStreamPublisherOwner<ChangedFileResult>>>(
       ThriftStreamPublisherOwner{std::move(publisher)});
 
@@ -1937,7 +1939,7 @@ EdenServiceHandler::streamSelectedChangesSince(
       std::make_unique<WatchmanGlobFilter>(
           params->get_filter().get_globs(), caseSensitivity);
 
-  sumUncommitedChanges(*summed, *sharedPublisher, *filter);
+  sumUncommitedChanges(*summed, *sharedPublisherLock, *filter);
 
   if (summed->snapshotTransitions.size() > 1) {
     // create filtered backing store
@@ -1957,7 +1959,8 @@ EdenServiceHandler::streamSelectedChangesSince(
             .getCheckoutConfig()
             ->getEnableWindowsSymlinks(),
         caseSensitivity);
-    auto callback = std::make_shared<StreamingDiffCallback>(sharedPublisher);
+    auto callback =
+        std::make_shared<StreamingDiffCallback>(sharedPublisherLock);
 
     std::vector<ImmediateFuture<folly::Unit>> futures;
     // now iterate all commits
@@ -1994,15 +1997,16 @@ EdenServiceHandler::streamSelectedChangesSince(
         collectAllSafe(std::move(futures))
             .thenTry(
                 [mountHandle,
-                 sharedPublisher,
+                 sharedPublisherLock,
                  callback = std::move(callback),
                  helper = std::move(helper),
                  cancellationSource](
                     folly::Try<std::vector<folly::Unit>>&& result) mutable {
                   if (result.hasException()) {
-                    auto publisher = std::move(*sharedPublisher->wlock());
-                    std::move(publisher).next(
-                        newEdenError(std::move(result).exception()));
+                    auto sharedPublisher =
+                        std::move(*sharedPublisherLock->wlock());
+                    std::move(sharedPublisher)
+                        .next(newEdenError(std::move(result).exception()));
                   }
                 })
             .semi());

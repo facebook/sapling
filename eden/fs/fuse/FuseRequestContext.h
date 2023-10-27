@@ -85,13 +85,14 @@ class FuseRequestContext : public RequestContext {
     return std::move(fut).thenTryInline([this, notifier](
                                             folly::Try<folly::Unit>&& try_) {
       if (try_.hasException()) {
-        if (auto* err = try_.tryGetExceptionObject<folly::FutureTimeout>()) {
-          timeoutErrorHandler(*err, notifier);
+        if (auto* futureTimeoutErr =
+                try_.tryGetExceptionObject<folly::FutureTimeout>()) {
+          timeoutErrorHandler(*futureTimeoutErr, notifier);
         } else if (
-            auto* err = try_.tryGetExceptionObject<std::system_error>()) {
-          systemErrorHandler(*err, notifier);
-        } else if (auto* err = try_.tryGetExceptionObject<std::exception>()) {
-          genericErrorHandler(*err, notifier);
+            auto* systemErr = try_.tryGetExceptionObject<std::system_error>()) {
+          systemErrorHandler(*systemErr, notifier);
+        } else if (auto* ex = try_.tryGetExceptionObject<std::exception>()) {
+          genericErrorHandler(*ex, notifier);
         } else {
           genericErrorHandler(
               std::runtime_error{"unknown exception type"}, notifier);

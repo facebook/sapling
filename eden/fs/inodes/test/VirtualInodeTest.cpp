@@ -122,8 +122,8 @@ struct TestFileInfo {
     return contents;
   }
 
-  void setContents(folly::StringPiece contents) {
-    this->contents = contents;
+  void setContents(folly::StringPiece value) {
+    contents = value;
   }
 
   Hash20 getSHA1() const {

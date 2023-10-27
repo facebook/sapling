@@ -1930,14 +1930,15 @@ EdenServer::getHgQueuedBackingStores() {
     auto lockedStores = this->backingStores_.rlock();
     for (const auto& entry : *lockedStores) {
       // TODO: remove these dynamic casts in favor of a QueryInterface method
-      if (auto store =
+      if (auto hgQueuedBackingStore =
               std::dynamic_pointer_cast<HgQueuedBackingStore>(entry.second)) {
-        hgBackingStores.emplace(std::move(store));
+        hgBackingStores.emplace(std::move(hgQueuedBackingStore));
       } else if (
-          auto store = std::dynamic_pointer_cast<LocalStoreCachedBackingStore>(
-              entry.second)) {
+          auto localStoreCachedBackingStore =
+              std::dynamic_pointer_cast<LocalStoreCachedBackingStore>(
+                  entry.second)) {
         auto inner_store = std::dynamic_pointer_cast<HgQueuedBackingStore>(
-            store->getBackingStore());
+            localStoreCachedBackingStore->getBackingStore());
         if (inner_store) {
           // dynamic_pointer_cast returns a copy of the shared pointer, so it is
           // safe to be moved
@@ -2423,14 +2424,14 @@ void EdenServer::detectNfsCrawl() {
                     fmt::format("[{}({}): {}]", pi.simpleName, p, pi.name);
                 while (!hierarchy.empty()) {
                   fmt::format_to(std::back_inserter(output), " -> ");
-                  auto [p, pi] = std::move(hierarchy.back());
+                  auto [child_p, child_pi] = std::move(hierarchy.back());
                   hierarchy.pop_back();
                   fmt::format_to(
                       std::back_inserter(output),
                       "[{}({}): {}]",
-                      pi.simpleName,
-                      p,
-                      pi.name);
+                      child_pi.simpleName,
+                      child_p,
+                      child_pi.name);
                 }
                 XLOGF(
                     DBG2,

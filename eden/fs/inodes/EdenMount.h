@@ -251,11 +251,11 @@ struct SetPathObjectIdObjectAndPath {
         "path={}, objectId={}, type={}",
         path.value(),
         id.asString(),
-        convertTypeToString(type));
+        convertTypeToString());
   }
 
  private:
-  std::string_view convertTypeToString(ObjectType type) const {
+  std::string_view convertTypeToString() const {
     switch (type) {
       case ObjectType::TREE:
         return "tree";

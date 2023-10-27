@@ -138,13 +138,13 @@ TEST_F(BlobAccessTest, remembers_blobs) {
 }
 
 TEST_F(BlobAccessTest, drops_blobs_when_size_is_exceeded) {
-  auto blob1 = getBlobBlocking(hash6);
-  auto blob2 = getBlobBlocking(hash5);
-  auto blob3 = getBlobBlocking(hash6);
+  auto blob0 = getBlobBlocking(hash6);
+  auto blob1 = getBlobBlocking(hash5);
+  auto blob2 = getBlobBlocking(hash6);
 
-  EXPECT_EQ(6, blob1->getSize());
-  EXPECT_EQ(5, blob2->getSize());
-  EXPECT_EQ(6, blob3->getSize());
+  EXPECT_EQ(6, blob0->getSize());
+  EXPECT_EQ(5, blob1->getSize());
+  EXPECT_EQ(6, blob2->getSize());
 
   EXPECT_EQ(1, backingStore->getAccessCount(hash5));
   EXPECT_EQ(2, backingStore->getAccessCount(hash6));
