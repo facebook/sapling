@@ -40,7 +40,7 @@ impl<T> storemodel::FileStore for ArcRemoteDataStore<T>
 where
     T: RemoteDataStore + 'static + ?Sized,
 {
-    async fn read_file_contents(&self, keys: Vec<Key>) -> BoxStream<Result<(Bytes, Key)>> {
+    async fn get_content_stream(&self, keys: Vec<Key>) -> BoxStream<Result<(Bytes, Key)>> {
         stream_data_from_remote_data_store(self.0.clone(), keys)
             .map(|result| match result {
                 Ok((data, key, _copy_from)) => Ok((data, key)),
@@ -49,7 +49,7 @@ where
             .boxed()
     }
 
-    async fn read_rename_metadata(
+    async fn get_rename_stream(
         &self,
         keys: Vec<Key>,
     ) -> BoxStream<anyhow::Result<(Key, Option<Key>)>> {
@@ -64,7 +64,7 @@ where
 
 #[async_trait]
 impl storemodel::FileStore for ArcFileStore {
-    async fn read_file_contents(&self, keys: Vec<Key>) -> BoxStream<Result<(Bytes, Key)>> {
+    async fn get_content_stream(&self, keys: Vec<Key>) -> BoxStream<Result<(Bytes, Key)>> {
         stream_data_from_scmstore(self.0.clone(), keys)
             .map(|result| match result {
                 Ok((data, key, _copy_from)) => Ok((data, key)),
@@ -73,7 +73,7 @@ impl storemodel::FileStore for ArcFileStore {
             .boxed()
     }
 
-    async fn read_rename_metadata(
+    async fn get_rename_stream(
         &self,
         keys: Vec<Key>,
     ) -> BoxStream<anyhow::Result<(Key, Option<Key>)>> {

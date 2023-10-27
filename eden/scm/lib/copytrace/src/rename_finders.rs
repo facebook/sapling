@@ -327,7 +327,7 @@ impl RenameFinderInner {
         old_path: &RepoPath,
     ) -> Result<Option<RepoPathBuf>> {
         tracing::trace!(keys_len = keys.len(), " read_renamed_metadata_forward");
-        let mut renames = self.file_reader.read_rename_metadata(keys).await;
+        let mut renames = self.file_reader.get_rename_stream(keys).await;
         while let Some(rename) = renames.next().await {
             let (key, rename_from_key) = rename?;
             if let Some(rename_from_key) = rename_from_key {
@@ -340,7 +340,7 @@ impl RenameFinderInner {
     }
 
     async fn read_renamed_metadata_backward(&self, key: Key) -> Result<Option<RepoPathBuf>> {
-        let mut renames = self.file_reader.read_rename_metadata(vec![key]).await;
+        let mut renames = self.file_reader.get_rename_stream(vec![key]).await;
         if let Some(rename) = renames.next().await {
             let (_, rename_from_key) = rename?;
             return Ok(rename_from_key.map(|k| k.path));
@@ -379,7 +379,7 @@ impl RenameFinderInner {
     ) -> Result<Option<RepoPathBuf>> {
         let mut source = self
             .file_reader
-            .read_file_contents(vec![source_key.clone()])
+            .get_content_stream(vec![source_key.clone()])
             .await;
         let source_content = match source.next().await {
             None => return Err(CopyTraceError::FileNotFound(source_key.path).into()),
@@ -401,7 +401,7 @@ impl RenameFinderInner {
             " content similarity configs"
         );
 
-        let mut candidates = self.file_reader.read_file_contents(keys).await;
+        let mut candidates = self.file_reader.get_content_stream(keys).await;
         while let Some(candidate) = candidates.next().await {
             let (candidate_content, k) = candidate?;
             if edit_cost(&source_content, &candidate_content, max_edit_cost + 1) <= max_edit_cost {

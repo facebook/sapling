@@ -251,7 +251,7 @@ impl CheckoutPlan {
                 .collect();
             let keys: Vec<_> = actions.keys().cloned().collect();
 
-            let data_stream = store.read_file_contents(keys).await;
+            let data_stream = store.get_content_stream(keys).await;
 
             let update_content = data_stream.map(|result| -> Result<_> {
                 let (data, key) = result?;
@@ -310,7 +310,7 @@ impl CheckoutPlan {
             .filtered_update_content
             .iter()
             .map(|(p, u)| Key::new(p.clone(), u.content_hgid.clone()));
-        let mut stream = store.read_file_contents(keys.collect()).await;
+        let mut stream = store.get_content_stream(keys.collect()).await;
         let (mut count, mut size) = (0, 0);
         while let Some(result) = stream.next().await {
             let (bytes, _) = result?;
@@ -403,7 +403,7 @@ impl CheckoutPlan {
 
         block_on(async move {
             let check_content = store
-                .read_file_contents(check_content)
+                .get_content_stream(check_content)
                 .await
                 .chunks(VFS_BATCH_SIZE)
                 .map(|v| {
@@ -1301,13 +1301,13 @@ mod test {
 
     #[async_trait::async_trait]
     impl FileStore for DummyFileContentStore {
-        async fn read_file_contents(&self, keys: Vec<Key>) -> BoxStream<Result<(Bytes, Key)>> {
+        async fn get_content_stream(&self, keys: Vec<Key>) -> BoxStream<Result<(Bytes, Key)>> {
             stream::iter(keys)
                 .map(|key| Ok((hgid_file(&key.hgid).into(), key)))
                 .boxed()
         }
 
-        async fn read_rename_metadata(
+        async fn get_rename_stream(
             &self,
             _keys: Vec<Key>,
         ) -> BoxStream<anyhow::Result<(Key, Option<Key>)>> {

@@ -21,7 +21,7 @@ use crate::GitStore;
 
 #[async_trait]
 impl FileStore for GitStore {
-    async fn read_file_contents(
+    async fn get_content_stream(
         &self,
         keys: Vec<Key>,
     ) -> BoxStream<anyhow::Result<(minibytes::Bytes, Key)>> {
@@ -33,7 +33,7 @@ impl FileStore for GitStore {
         futures::stream::iter(iter).boxed()
     }
 
-    async fn read_rename_metadata(
+    async fn get_rename_stream(
         &self,
         _keys: Vec<Key>,
     ) -> BoxStream<anyhow::Result<(Key, Option<Key>)>> {

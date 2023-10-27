@@ -423,9 +423,9 @@ impl IntoIterator for FileChangeDetector {
         // switch this to use that (rather than pulling down the entire contents of each
         // file).
         async_runtime::block_on(async {
-            let _span = tracing::info_span!("read_file_contents").entered();
+            let _span = tracing::info_span!("get_content_stream").entered();
 
-            let mut results = self.store.read_file_contents(keys).await;
+            let mut results = self.store.get_content_stream(keys).await;
             while let Some(result) = results.next().await {
                 match result {
                     Ok((bytes, key)) => disk_send.send((key.path, bytes)).unwrap(),

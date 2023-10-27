@@ -229,7 +229,7 @@ async fn _profile_contents_from_repo(
 
     // TODO(cuev): Is there a better way to do this?
     let mut stream = repo_store
-        .read_file_contents(vec![Key::new(id.repo_path.clone(), file_id)])
+        .get_content_stream(vec![Key::new(id.repo_path.clone(), file_id)])
         .await;
     match stream.next().await {
         Some(Ok((bytes, _key))) => {

@@ -37,7 +37,7 @@ impl PythonFileScmStore {
 
 #[async_trait]
 impl FileStore for PythonFileScmStore {
-    async fn read_file_contents(&self, keys: Vec<Key>) -> BoxStream<anyhow::Result<(Bytes, Key)>> {
+    async fn get_content_stream(&self, keys: Vec<Key>) -> BoxStream<anyhow::Result<(Bytes, Key)>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
         let contents = keys
@@ -58,7 +58,7 @@ impl FileStore for PythonFileScmStore {
         futures::stream::iter(contents.into_iter()).boxed()
     }
 
-    async fn read_rename_metadata(
+    async fn get_rename_stream(
         &self,
         _keys: Vec<Key>,
     ) -> BoxStream<anyhow::Result<(Key, Option<Key>)>> {

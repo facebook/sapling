@@ -128,7 +128,7 @@ pub fn build_matcher(
 
         let repo_path = RepoPathBuf::from_string(path.clone())?;
         let mut stream = store
-            .read_file_contents(vec![Key::new(repo_path.clone(), file_id.clone())])
+            .get_content_stream(vec![Key::new(repo_path.clone(), file_id.clone())])
             .await;
         match stream.next().await {
             Some(Ok((bytes, _key))) => {
@@ -516,7 +516,7 @@ inc
 
     #[async_trait::async_trait]
     impl FileStore for StubCommit {
-        async fn read_file_contents(
+        async fn get_content_stream(
             &self,
             keys: Vec<Key>,
         ) -> BoxStream<anyhow::Result<(storemodel::minibytes::Bytes, Key)>> {
@@ -530,7 +530,7 @@ inc
             .boxed()
         }
 
-        async fn read_rename_metadata(
+        async fn get_rename_stream(
             &self,
             _keys: Vec<Key>,
         ) -> BoxStream<anyhow::Result<(Key, Option<Key>)>> {

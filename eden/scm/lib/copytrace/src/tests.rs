@@ -186,7 +186,7 @@ impl ReadRootTreeIds for CopyTraceTestCase {
 #[async_trait]
 impl FileStore for CopyTraceTestCase {
     #[allow(dead_code)]
-    async fn read_file_contents(
+    async fn get_content_stream(
         &self,
         _keys: Vec<Key>,
     ) -> stream::BoxStream<anyhow::Result<(storemodel::minibytes::Bytes, Key)>> {
@@ -194,7 +194,7 @@ impl FileStore for CopyTraceTestCase {
         todo!()
     }
 
-    async fn read_rename_metadata(
+    async fn get_rename_stream(
         &self,
         keys: Vec<Key>,
     ) -> stream::BoxStream<anyhow::Result<(Key, Option<Key>)>> {

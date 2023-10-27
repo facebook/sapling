@@ -45,7 +45,7 @@ pub trait FileStore: Send + Sync + 'static {
     ///   is resolved transparently.
     /// - If the file content is redacted, it's an error instead of a placeholder
     ///   of dummy data.
-    async fn read_file_contents(
+    async fn get_content_stream(
         &self,
         keys: Vec<Key>,
     ) -> BoxStream<anyhow::Result<(minibytes::Bytes, Key)>>;
@@ -53,7 +53,7 @@ pub trait FileStore: Send + Sync + 'static {
     /// Read rename metadata of sepcified files.
     ///
     /// The result is a vector of (key, Option<rename_from_key>) pairs for success case.
-    async fn read_rename_metadata(
+    async fn get_rename_stream(
         &self,
         keys: Vec<Key>,
     ) -> BoxStream<anyhow::Result<(Key, Option<Key>)>>;

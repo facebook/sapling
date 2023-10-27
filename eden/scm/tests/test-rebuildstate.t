@@ -70,7 +70,7 @@ status
   C foo
 
 Make sure the second status call doesn't need to compare file contents anymore.
-  $ LOG=workingcopy::filechangedetector=trace hg status 2>&1 | grep read_file_contents | grep enter
+  $ LOG=workingcopy::filechangedetector=trace hg status 2>&1 | grep get_content | grep enter
   *compare contents{keys=0}* (glob)
 
 Test debugdirstate --minimal where a file is not in parent manifest
