@@ -6,11 +6,16 @@
  */
 
 #![cfg(test)]
+use std::pin::pin;
+
 use blobstore::Loadable;
 use fbinit::FacebookInit;
 use fixtures::ManyFilesDirs;
 use fixtures::TestRepoFixture;
 use futures::compat::Future01CompatExt;
+use justknobs::test_helpers::with_just_knobs_async;
+use justknobs::test_helpers::JustKnobsInMemory;
+use justknobs::test_helpers::KnobVal;
 use manifest::Entry;
 use manifest::ManifestOps;
 use maplit::hashset;
@@ -247,34 +252,45 @@ async fn get_changed_manifests_stream_test_base_path_impl(fb: FacebookInit) -> R
 
 #[fbinit::test]
 async fn test_lfs_rollout(fb: FacebookInit) -> Result<(), Error> {
-    let ctx = CoreContext::test_mock(fb);
+    with_just_knobs_async(
+        JustKnobsInMemory::new(hashmap! {
+            "scm/mononoke_timeouts:repo_client_getpack_timeout_secs".to_string() => KnobVal::Int(18000),
+        }),
+        pin!{
 
-    assert!(!run_and_check_if_lfs(&ctx, LfsParams::default()).await?);
+            async move {
 
-    // Rollout percentage is 100 and threshold is set - enable lfs
-    let lfs_params = LfsParams {
-        threshold: Some(5),
-        rollout_percentage: 100,
-        ..Default::default()
-    };
-    assert!(run_and_check_if_lfs(&ctx, lfs_params).await?);
+                let ctx = CoreContext::test_mock(fb);
 
-    // Rollout percentage is 0 - no lfs is enabled
-    let lfs_params = LfsParams {
-        threshold: Some(5),
-        rollout_percentage: 0,
-        ..Default::default()
-    };
-    assert!(!run_and_check_if_lfs(&ctx, lfs_params).await?);
+                assert!(!run_and_check_if_lfs(&ctx, LfsParams::default()).await?);
 
-    // Rollout percentage is 100, but threshold is too high
-    let lfs_params = LfsParams {
-        threshold: Some(500),
-        rollout_percentage: 100,
-        ..Default::default()
-    };
-    assert!(!run_and_check_if_lfs(&ctx, lfs_params).await?);
-    Ok(())
+                // Rollout percentage is 100 and threshold is set - enable lfs
+                let lfs_params = LfsParams {
+                    threshold: Some(5),
+                    rollout_percentage: 100,
+                    ..Default::default()
+                };
+                assert!(run_and_check_if_lfs(&ctx, lfs_params).await?);
+
+                // Rollout percentage is 0 - no lfs is enabled
+                let lfs_params = LfsParams {
+                    threshold: Some(5),
+                    rollout_percentage: 0,
+                    ..Default::default()
+                };
+                assert!(!run_and_check_if_lfs(&ctx, lfs_params).await?);
+
+                // Rollout percentage is 100, but threshold is too high
+                let lfs_params = LfsParams {
+                    threshold: Some(500),
+                    rollout_percentage: 100,
+                    ..Default::default()
+                };
+                assert!(!run_and_check_if_lfs(&ctx, lfs_params).await?);
+                Ok(())
+        }
+    },
+    ).await
 }
 
 #[fbinit::test]

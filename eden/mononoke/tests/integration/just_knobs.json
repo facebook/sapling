@@ -10,5 +10,11 @@
     "scm/mononoke:sql_disable_auto_retries": false,
     "scm/mononoke:static-backend": false
   },
-  "ints": {}
+  "ints": {
+    "scm/mononoke_timeouts:repo_client_clone_timeout_secs": 14400,
+    "scm/mononoke_timeouts:repo_client_default_timeout_secs": 900,
+    "scm/mononoke_timeouts:repo_client_getbundle_timeout_secs": 1800,
+    "scm/mononoke_timeouts:repo_client_getpack_timeout_secs": 18000,
+    "scm/mononoke_timeouts:repo_client_bookmarks_timeout_secs": 180
+  }
 }

@@ -11,6 +11,7 @@ use std::sync::Mutex;
 use std::time::Duration;
 
 use anyhow::Error;
+use anyhow::Result;
 use blobrepo::BlobRepo;
 use blobrepo_hg::to_hg_bookmark_stream;
 use blobrepo_hg::BlobRepoHg;
@@ -71,14 +72,15 @@ impl BookmarkCacheRepo for Arc<Repo> {
 }
 
 fn bookmarks_timeout() -> Duration {
-    let timeout = tunables()
-        .repo_client_bookmarks_timeout_secs()
-        .unwrap_or_default();
-    if timeout > 0 {
-        Duration::from_secs(timeout as u64)
-    } else {
-        Duration::from_secs(3 * 60)
-    }
+    const FALLBACK_TIMEOUT_SECS: u64 = 3 * 60;
+
+    let timeout: u64 = justknobs::get_as::<u64>(
+        "scm/mononoke_timeouts:repo_client_bookmarks_timeout_secs",
+        None,
+    )
+    .unwrap_or(FALLBACK_TIMEOUT_SECS);
+
+    Duration::from_secs(timeout)
 }
 
 impl<R> SessionBookmarkCache<R>

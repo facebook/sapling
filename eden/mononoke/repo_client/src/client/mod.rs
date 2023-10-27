@@ -265,46 +265,48 @@ lazy_static! {
 }
 
 fn clone_timeout() -> Duration {
-    let timeout = tunables()
-        .repo_client_clone_timeout_secs()
-        .unwrap_or_default();
-    if timeout > 0 {
-        Duration::from_secs(timeout as u64)
-    } else {
-        Duration::from_secs(4 * 60 * 60)
-    }
+    const FALLBACK_TIMEOUT_SECS: u64 = 4 * 60 * 60;
+
+    let timeout: u64 =
+        justknobs::get_as::<u64>("scm/mononoke_timeouts:repo_client_clone_timeout_secs", None)
+            .unwrap_or(FALLBACK_TIMEOUT_SECS);
+
+    Duration::from_secs(timeout)
 }
 
 fn default_timeout() -> Duration {
-    let timeout = tunables()
-        .repo_client_default_timeout_secs()
-        .unwrap_or_default();
-    if timeout > 0 {
-        Duration::from_secs(timeout as u64)
-    } else {
-        Duration::from_secs(15 * 60)
-    }
+    const FALLBACK_TIMEOUT_SECS: u64 = 15 * 60;
+
+    let timeout: u64 = justknobs::get_as::<u64>(
+        "scm/mononoke_timeouts:repo_client_default_timeout_secs",
+        None,
+    )
+    .unwrap_or(FALLBACK_TIMEOUT_SECS);
+
+    Duration::from_secs(timeout)
 }
 fn getbundle_timeout() -> Duration {
-    let timeout = tunables()
-        .repo_client_getbundle_timeout_secs()
-        .unwrap_or_default();
-    if timeout > 0 {
-        Duration::from_secs(timeout as u64)
-    } else {
-        Duration::from_secs(30 * 60)
-    }
+    const FALLBACK_TIMEOUT_SECS: u64 = 30 * 60;
+
+    let timeout: u64 = justknobs::get_as::<u64>(
+        "scm/mononoke_timeouts:repo_client_getbundle_timeout_secs",
+        None,
+    )
+    .unwrap_or(FALLBACK_TIMEOUT_SECS);
+
+    Duration::from_secs(timeout)
 }
 
 fn getpack_timeout() -> Duration {
-    let timeout = tunables()
-        .repo_client_getpack_timeout_secs()
-        .unwrap_or_default();
-    if timeout > 0 {
-        Duration::from_secs(timeout as u64)
-    } else {
-        Duration::from_secs(5 * 60 * 60)
-    }
+    const FALLBACK_TIMEOUT_SECS: u64 = 5 * 60 * 60;
+
+    let timeout: u64 = justknobs::get_as::<u64>(
+        "scm/mononoke_timeouts:repo_client_getpack_timeout_secs",
+        None,
+    )
+    .unwrap_or(FALLBACK_TIMEOUT_SECS);
+
+    Duration::from_secs(timeout)
 }
 
 fn wireprotocaps() -> Vec<String> {
