@@ -101,9 +101,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             .await
         } else {
             app.open_repo_with_factory_customization(&args.repo, |repo_factory| {
-                repo_factory
-                    .with_lease_override(|_| Arc::new(DummyLease {}))
-                    .with_bonsai_hg_mapping_override()
+                repo_factory.with_lease_override(|_| Arc::new(DummyLease {}))
             })
             .await
         }

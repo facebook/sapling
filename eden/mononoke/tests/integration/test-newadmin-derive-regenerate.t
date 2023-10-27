@@ -67,11 +67,16 @@
   $ mononoke_newadmin convert -R repo --from bonsai --to hg 1213979c6023f23e70dbe8845d773078ac1e0506bc2ab98382a329da0cb379a7 --derive
   52aee0f873361473bbb29cbce0c1ba5d0c1a2c5e
 
-# Now rederive HG_SET_COMMITTER_EXTRA=true. This changes hg hash, so let's run it with --rederive and make sure
+# Now rederive HG_SET_COMMITTER_EXTRA=true. This changes hg hash, so we need to run with --rederive and make sure
 # hg hash was overwritten.
   $ HG_SET_COMMITTER_EXTRA=true ENABLED_DERIVED_DATA='["git_trees", "filenodes", "hgchangesets"]' setup_common_config
-  $ mononoke_newadmin derived-data -R repo derive -T hgchangesets -i 1213979c6023f23e70dbe8845d773078ac1e0506bc2ab98382a329da0cb379a7 --rederive
 
-# Check hg hash after overwriting
+# If we call derive without the rederive flag, we have the same hg hash as before
+  $ mononoke_newadmin derived-data -R repo derive -T hgchangesets -i 1213979c6023f23e70dbe8845d773078ac1e0506bc2ab98382a329da0cb379a7
+  $ mononoke_newadmin convert -R repo --from bonsai --to hg 1213979c6023f23e70dbe8845d773078ac1e0506bc2ab98382a329da0cb379a7
+  52aee0f873361473bbb29cbce0c1ba5d0c1a2c5e
+
+# With rederive, we can see that the hash is now different as expected
+  $ mononoke_newadmin derived-data -R repo derive -T hgchangesets -i 1213979c6023f23e70dbe8845d773078ac1e0506bc2ab98382a329da0cb379a7 --rederive
   $ mononoke_newadmin convert -R repo --from bonsai --to hg 1213979c6023f23e70dbe8845d773078ac1e0506bc2ab98382a329da0cb379a7
   c4c28fe2943cad9b4fed5a6982d3ffc0a83b4e7e
