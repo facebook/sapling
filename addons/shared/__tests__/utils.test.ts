@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {basename, generatorContains, mapObject, partition, truncate} from '../utils';
+import {basename, generatorContains, group, mapObject, partition, truncate} from '../utils';
 
 describe('basename', () => {
   it('/path/to/foo.txt -> foo.txt', () => {
@@ -90,5 +90,15 @@ describe('partition', () => {
     expect(partition([1, 2, 3], n => n % 2 === 0)).toEqual([[2], [1, 3]]);
     expect(partition([1, 2, 3], () => true)).toEqual([[1, 2, 3], []]);
     expect(partition([1, 2, 3], () => false)).toEqual([[], [1, 2, 3]]);
+  });
+});
+
+describe('group', () => {
+  it('groups an array into multiple subarrays based on a key', () => {
+    expect(group(['a', 'ab', 'abc', 'ef', 'g'], e => e.length)).toEqual({
+      1: ['a', 'g'],
+      2: ['ab', 'ef'],
+      3: ['abc'],
+    });
   });
 });

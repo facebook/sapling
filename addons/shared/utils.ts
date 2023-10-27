@@ -163,3 +163,21 @@ export function partition<T>(a: Array<T>, predicate: (item: T) => boolean): [Arr
   }
   return [passed, failed];
 }
+
+/**
+ * Like Array.filter, but separates elements that pass from those that don't pass and return both arrays.
+ * For example, partition([1, 2, 3], n => n % 2 === 0) returns [[2], [1, 3]]
+ */
+export function group<ArrayType, BucketType extends string | number>(
+  a: Array<ArrayType>,
+  bucket: (item: ArrayType) => BucketType,
+): Record<BucketType, Array<ArrayType> | undefined> {
+  const result = {} as Record<BucketType, Array<ArrayType>>;
+  for (const item of a) {
+    const b = bucket(item);
+    const existing = result[b] ?? [];
+    existing.push(item);
+    result[b] = existing;
+  }
+  return result;
+}
