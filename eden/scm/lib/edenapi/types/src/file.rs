@@ -65,7 +65,7 @@ impl FileError {
 
 /// File "aux data", requires an additional mononoke blobstore lookup. See mononoke_types::ContentMetadataV2.
 #[auto_wire]
-#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct FileAuxData {
     #[id(0)]

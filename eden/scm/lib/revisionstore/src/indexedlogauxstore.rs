@@ -56,6 +56,18 @@ impl From<FileAuxData> for Entry {
     }
 }
 
+impl From<Entry> for FileAuxData {
+    fn from(v: Entry) -> FileAuxData {
+        FileAuxData {
+            total_size: v.total_size,
+            content_id: v.content_id,
+            sha1: v.content_sha1,
+            sha256: v.content_sha256,
+            seeded_blake3: v.content_seeded_blake3,
+        }
+    }
+}
+
 impl Entry {
     pub fn total_size(&self) -> u64 {
         self.total_size

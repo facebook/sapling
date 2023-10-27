@@ -25,15 +25,14 @@ impl From<ScmStoreFileAuxData> for FileAuxData {
         FileAuxData {
             total_size: v.total_size,
             content_id: v.content_id.as_ref().to_vec().into(),
-            content_sha1: v.content_sha1.as_ref().to_vec().into(),
-            content_sha256: v.content_sha256.as_ref().to_vec().into(),
-            content_blake3: v.content_seeded_blake3.map_or(
-                std::ptr::null_mut(),
-                |content_blake3| {
+            content_sha1: v.sha1.as_ref().to_vec().into(),
+            content_sha256: v.sha256.as_ref().to_vec().into(),
+            content_blake3: v
+                .seeded_blake3
+                .map_or(std::ptr::null_mut(), |content_blake3| {
                     let boxed_blake3 = Box::new(content_blake3.as_ref().to_vec().into());
                     Box::into_raw(boxed_blake3)
-                },
-            ),
+                }),
         }
     }
 }

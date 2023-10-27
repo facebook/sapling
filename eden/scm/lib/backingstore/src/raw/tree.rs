@@ -78,8 +78,8 @@ impl TreeEntry {
                         entry_type,
                         metadata.hgid.as_ref().to_vec(),
                         Some(aux_data.total_size),
-                        Some(aux_data.content_sha1),
-                        aux_data.content_seeded_blake3,
+                        Some(aux_data.sha1),
+                        aux_data.seeded_blake3,
                     )
                 } else {
                     (

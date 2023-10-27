@@ -57,9 +57,9 @@ impl LazyFile {
             LazyFile::Lfs(content, ref ptr) => FileAuxData {
                 total_size: content.len() as u64,
                 content_id: ContentHash::content_id(content),
-                content_sha1: ContentHash::sha1(content),
-                content_sha256: ptr.sha256(),
-                content_seeded_blake3: Some(ContentHash::seeded_blake3(content)),
+                sha1: ContentHash::sha1(content),
+                sha256: ptr.sha256().into_inner().into(),
+                seeded_blake3: Some(ContentHash::seeded_blake3(content)),
             },
             LazyFile::EdenApi(entry) if entry.aux_data.is_some() => entry
                 .aux_data()
@@ -73,9 +73,12 @@ impl LazyFile {
                 FileAuxData {
                     total_size: content.len() as u64,
                     content_id: ContentHash::content_id(&content),
-                    content_sha1: ContentHash::sha1(&content),
-                    content_sha256: ContentHash::sha256(&content).unwrap_sha256(),
-                    content_seeded_blake3: Some(ContentHash::seeded_blake3(&content)),
+                    sha1: ContentHash::sha1(&content),
+                    sha256: ContentHash::sha256(&content)
+                        .unwrap_sha256()
+                        .into_inner()
+                        .into(),
+                    seeded_blake3: Some(ContentHash::seeded_blake3(&content)),
                 }
             }
         };
