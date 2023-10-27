@@ -12,6 +12,7 @@ path = "lib.rs"
 
 [dependencies]
 anyhow = "=1.0.72"
+arg_extensions = { version = "0.1.0", path = "../../cmdlib/extensions" }
 async-trait = "0.1.71"
 clap = { version = "4.3.5", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 context = { version = "0.1.0", path = "../../server/context" }

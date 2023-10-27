@@ -9,6 +9,7 @@ use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Error;
@@ -16,6 +17,7 @@ use anyhow::Ok;
 use anyhow::Result;
 use bookmarks_types::BookmarkKey;
 use commit_id::parse_commit_id;
+use derived_data_remote::RemoteDerivationArgs;
 use fbinit::FacebookInit;
 use futures::stream::TryStreamExt;
 use futures::stream::{self};
@@ -28,6 +30,7 @@ use gitexport_tools::MASTER_BOOKMARK;
 use mononoke_api::BookmarkFreshness;
 use mononoke_api::ChangesetContext;
 use mononoke_api::ChangesetId;
+use mononoke_api::Repo;
 use mononoke_api::RepoContext;
 use mononoke_app::fb303::AliveService;
 use mononoke_app::fb303::Fb303AppExtension;
@@ -37,8 +40,10 @@ use mononoke_types::NonRootMPath;
 use print_graph::print_graph;
 use print_graph::PrintGraphOptions;
 use repo_authorization::AuthorizationContext;
+use repo_factory::ReadOnlyStorage;
 use slog::info;
 use slog::trace;
+use slog::warn;
 use types::ExportPathsInfoArg;
 use types::HeadChangesetArg;
 
@@ -155,7 +160,17 @@ pub mod types {
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
+    let read_only_storage = ReadOnlyStorage(true);
+
+    let remove_derivation_args = RemoteDerivationArgs {
+        derive_remotely: true,
+        derive_remotely_tier: None,
+        derive_remotely_hostport: None,
+    };
+
     let app: MononokeApp = MononokeAppBuilder::new(fb)
+        .with_arg_defaults(read_only_storage)
+        .with_arg_defaults(remove_derivation_args)
         .with_app_extension(Fb303AppExtension {})
         .build::<GitExportArgs>()?;
 
@@ -169,7 +184,15 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     let logger = app.logger();
     let ctx = app.new_basic_context();
 
-    let repo = app.open_repo(&args.hg_repo_args).await?;
+    let repo: Arc<Repo> = app.open_repo(&args.hg_repo_args).await?;
+
+    if !app.environment().readonly_storage.0 {
+        warn!(logger, "readonly_storage is DISABLED!");
+    };
+
+    if !app.environment().remote_derivation_options.derive_remotely {
+        warn!(logger, "Remote derivation is DISABLED!");
+    };
 
     let auth_ctx = AuthorizationContext::new_bypass_access_control();
     let repo_ctx: RepoContext = RepoContext::new(ctx, auth_ctx.into(), repo, None, None).await?;
