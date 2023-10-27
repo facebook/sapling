@@ -1313,6 +1313,10 @@ mod test {
         ) -> BoxStream<anyhow::Result<(Key, Option<Key>)>> {
             stream::empty().boxed()
         }
+
+        fn get_local_content(&self, _key: &Key) -> anyhow::Result<Option<minibytes::Bytes>> {
+            Ok(None)
+        }
     }
 
     fn hgid_file(hgid: &HgId) -> Vec<u8> {

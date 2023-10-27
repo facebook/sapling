@@ -56,6 +56,14 @@ impl FileStore for EagerRepoStore {
         futures::stream::iter(iter).boxed()
     }
 
+    fn get_local_content(&self, key: &Key) -> anyhow::Result<Option<minibytes::Bytes>> {
+        let id = key.hgid;
+        match self.get_content(id)? {
+            Some(data) => Ok(Some(separate_metadata(&data)?.0)),
+            None => Ok(None),
+        }
+    }
+
     fn refresh(&self) -> anyhow::Result<()> {
         let mut inner = self.inner.write();
         inner.flush()?;

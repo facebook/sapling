@@ -536,5 +536,12 @@ inc
         ) -> BoxStream<anyhow::Result<(Key, Option<Key>)>> {
             stream::empty().boxed()
         }
+
+        fn get_local_content(
+            &self,
+            _key: &Key,
+        ) -> anyhow::Result<Option<storemodel::minibytes::Bytes>> {
+            Ok(None)
+        }
     }
 }

@@ -205,6 +205,13 @@ impl FileStore for CopyTraceTestCase {
         };
         stream::iter(renames).boxed()
     }
+
+    fn get_local_content(
+        &self,
+        _key: &Key,
+    ) -> anyhow::Result<Option<storemodel::minibytes::Bytes>> {
+        Ok(None)
+    }
 }
 
 impl Change {

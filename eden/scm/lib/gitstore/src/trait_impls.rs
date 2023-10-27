@@ -40,6 +40,15 @@ impl FileStore for GitStore {
         futures::stream::empty().boxed()
     }
 
+    fn get_local_content(&self, key: &Key) -> anyhow::Result<Option<minibytes::Bytes>> {
+        let id = key.hgid;
+        match self.read_obj(id, git2::ObjectType::Blob) {
+            Ok(data) => Ok(Some(data.into())),
+            Err(e) if e.code() == git2::ErrorCode::NotFound => Ok(None),
+            Err(e) => Err(e.into()),
+        }
+    }
+
     fn refresh(&self) -> anyhow::Result<()> {
         // We don't hold state in memory, so no need to refresh.
         Ok(())

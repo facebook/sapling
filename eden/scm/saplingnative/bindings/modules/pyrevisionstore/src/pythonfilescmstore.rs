@@ -64,4 +64,8 @@ impl FileStore for PythonFileScmStore {
     ) -> BoxStream<anyhow::Result<(Key, Option<Key>)>> {
         futures::stream::empty().boxed()
     }
+
+    fn get_local_content(&self, _key: &Key) -> anyhow::Result<Option<minibytes::Bytes>> {
+        Ok(None)
+    }
 }

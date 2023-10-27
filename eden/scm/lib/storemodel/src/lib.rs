@@ -58,6 +58,10 @@ pub trait FileStore: Send + Sync + 'static {
         keys: Vec<Key>,
     ) -> BoxStream<anyhow::Result<(Key, Option<Key>)>>;
 
+    /// Read the content of the specified file without connecting to a remote server.
+    /// Return `None` if the file is available locally.
+    fn get_local_content(&self, key: &Key) -> anyhow::Result<Option<minibytes::Bytes>>;
+
     /// Refresh the store so it might pick up new contents written by other processes.
     fn refresh(&self) -> anyhow::Result<()> {
         Ok(())

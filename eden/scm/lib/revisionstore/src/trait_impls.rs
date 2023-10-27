@@ -60,6 +60,10 @@ where
             })
             .boxed()
     }
+
+    fn get_local_content(&self, _key: &Key) -> anyhow::Result<Option<minibytes::Bytes>> {
+        Ok(None)
+    }
 }
 
 #[async_trait]
@@ -83,6 +87,10 @@ impl storemodel::FileStore for ArcFileStore {
                 Err(err) => Err(err),
             })
             .boxed()
+    }
+
+    fn get_local_content(&self, key: &Key) -> anyhow::Result<Option<minibytes::Bytes>> {
+        self.0.get_file_content_impl(key, FetchMode::LocalOnly)
     }
 
     fn refresh(&self) -> Result<()> {
