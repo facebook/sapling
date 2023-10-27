@@ -8,8 +8,9 @@
 import type {UICodeReviewProvider} from './codeReview/UICodeReviewProvider';
 import type {DiffSummary, CommitInfo, Hash} from './types';
 
+import {globalRecoil} from './AccessGlobalRecoil';
 import {FlexRow} from './ComponentUtils';
-import {useShowConfirmSubmitStack} from './ConfirmSubmitStack';
+import {shouldShowSubmitStackConfirmation, useShowConfirmSubmitStack} from './ConfirmSubmitStack';
 import {HighlightCommitsWhileHovering} from './HighlightedCommits';
 import {OperationDisabledButton} from './OperationDisabledButton';
 import {latestSuccessorUnlessExplicitlyObsolete} from './SuccessionTracker';
@@ -67,31 +68,43 @@ export function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.Reac
     const submittableStack = reviewActions?.submittableStack;
     const MIN_STACK_SIZE_TO_SUGGEST_SUBMIT = 2; // don't show "submit stack" on single commits... they're not really "stacks".
 
+    const willShowConfirmationModal = shouldShowSubmitStackConfirmation(
+      globalRecoil().getSnapshot(),
+    );
+
     // any existing diffs -> show resubmit stack,
     if (
       resubmittableStack != null &&
       resubmittableStack.length >= MIN_STACK_SIZE_TO_SUGGEST_SUBMIT
     ) {
+      const tooltip = t(
+        willShowConfirmationModal
+          ? 'Submit new version of commits in this stack for review with $cmd.\n\nDraft mode and update message can be configured before submitting.'
+          : 'Submit new version of commits in this stack for review with $cmd.',
+        {replace: {$cmd: reviewProvider?.submitCommandName()}},
+      );
       actions.push(
-        <HighlightCommitsWhileHovering key="resubmit-stack" toHighlight={resubmittableStack}>
-          <OperationDisabledButton
-            // Use the diffId in the key so that only this "resubmit stack" button shows the spinner.
-            contextKey={`resubmit-stack-on-${tree.info.diffId}`}
-            appearance="icon"
-            icon={<Icon icon="cloud-upload" slot="start" />}
-            runOperation={async () => {
-              const confirmation = await confirmShouldSubmit('resubmit', resubmittableStack);
-              if (!confirmation) {
-                return [];
-              }
-              return reviewProvider.submitOperation(resubmittableStack, {
-                draft: confirmation.submitAsDraft,
-                updateMessage: confirmation.updateMessage,
-              });
-            }}>
-            <T>Resubmit stack</T>
-          </OperationDisabledButton>
-        </HighlightCommitsWhileHovering>,
+        <Tooltip key="resubmit-stack" title={tooltip}>
+          <HighlightCommitsWhileHovering toHighlight={resubmittableStack}>
+            <OperationDisabledButton
+              // Use the diffId in the key so that only this "resubmit stack" button shows the spinner.
+              contextKey={`resubmit-stack-on-${tree.info.diffId}`}
+              appearance="icon"
+              icon={<Icon icon="cloud-upload" slot="start" />}
+              runOperation={async () => {
+                const confirmation = await confirmShouldSubmit('resubmit', resubmittableStack);
+                if (!confirmation) {
+                  return [];
+                }
+                return reviewProvider.submitOperation(resubmittableStack, {
+                  draft: confirmation.submitAsDraft,
+                  updateMessage: confirmation.updateMessage,
+                });
+              }}>
+              <T>Resubmit stack</T>
+            </OperationDisabledButton>
+          </HighlightCommitsWhileHovering>
+        </Tooltip>,
       );
       // any non-submitted diffs -> "submit all commits this stack" in hidden group
       if (
@@ -136,27 +149,36 @@ export function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.Reac
         / /g,
         '_',
       )}`;
+
+      const tooltip = t(
+        willShowConfirmationModal
+          ? 'Submit commits in this stack for review with $cmd.\n\nDraft mode and update message can be configured before submitting.'
+          : 'Submit commits in this stack for review with $cmd.',
+        {replace: {$cmd: reviewProvider?.submitCommandName()}},
+      );
       // NO existing diffs -> show submit stack ()
       actions.push(
-        <HighlightCommitsWhileHovering key="submit-stack" toHighlight={submittableStack}>
-          <OperationDisabledButton
-            contextKey={contextKey}
-            appearance="icon"
-            icon={<Icon icon="cloud-upload" slot="start" />}
-            runOperation={async () => {
-              const allCommits = submittableStack;
-              const confirmation = await confirmShouldSubmit('submit', allCommits);
-              if (!confirmation) {
-                return [];
-              }
-              return reviewProvider.submitOperation(submittableStack, {
-                draft: confirmation.submitAsDraft,
-                updateMessage: confirmation.updateMessage,
-              });
-            }}>
-            <T>Submit stack</T>
-          </OperationDisabledButton>
-        </HighlightCommitsWhileHovering>,
+        <Tooltip key="submit-stack" title={tooltip}>
+          <HighlightCommitsWhileHovering toHighlight={submittableStack}>
+            <OperationDisabledButton
+              contextKey={contextKey}
+              appearance="icon"
+              icon={<Icon icon="cloud-upload" slot="start" />}
+              runOperation={async () => {
+                const allCommits = submittableStack;
+                const confirmation = await confirmShouldSubmit('submit', allCommits);
+                if (!confirmation) {
+                  return [];
+                }
+                return reviewProvider.submitOperation(submittableStack, {
+                  draft: confirmation.submitAsDraft,
+                  updateMessage: confirmation.updateMessage,
+                });
+              }}>
+              <T>Submit stack</T>
+            </OperationDisabledButton>
+          </HighlightCommitsWhileHovering>
+        </Tooltip>,
       );
     }
   }
