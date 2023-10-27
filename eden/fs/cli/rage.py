@@ -222,7 +222,7 @@ def print_diagnostic_info(
     if sys.platform == "win32":
         print_counters(instance, "Prjfs", r"prjfs\..*", out)
 
-    print_eden_config(instance, out)
+    print_eden_config(instance, processor, out)
 
     print_prefetch_profiles_list(instance, out)
 
@@ -333,7 +333,7 @@ def print_log_file(
 
 def paste_output(
     output_generator: Callable[[IO[bytes]], None], processor: str, out: IO[bytes]
-) -> None:
+) -> int:
     try:
         proc = subprocess.Popen(
             shlex.split(processor), stdin=subprocess.PIPE, stdout=subprocess.PIPE
@@ -361,8 +361,10 @@ def paste_output(
         else:
             paste, _ = stdout.split("\n")[1].split(": ")
             out.write(paste.encode())
+        return 0
     except Exception as e:
         out.write(b"Error generating paste: %s\n" % str(e).encode())
+        return 1
 
 
 def print_tail_of_log_file(path: Path, out: IO[bytes]) -> None:
@@ -524,9 +526,24 @@ def print_system_load(out: IO[bytes]) -> None:
         out.write(f"Error printing system load: {e}\n".encode())
 
 
-def print_eden_config(instance: EdenInstance, out: IO[bytes]) -> None:
+def run_edenfsctl_cmd(cmd: List[str], sink: IO[bytes]) -> None:
+    subprocess.run(cmd, check=True, stderr=subprocess.STDOUT, stdout=sink)
+
+
+def print_eden_config(instance: EdenInstance, processor: str, out: IO[bytes]) -> None:
+    section_title("EdenFS config:", out)
+    fsconfig_cmd = ["edenfsctl", "fsconfig", "--all"]
+
+    result = paste_output(
+        lambda sink: run_edenfsctl_cmd(fsconfig_cmd, sink),
+        processor,
+        out,
+    )
+    if result == 0:
+        return
+
+    out.write("Falling back to manually parsing config\n".encode())
     try:
-        section_title("EdenFS config:", out)
         instance.print_full_config(out)
     except Exception as e:
         out.write(f"Error printing EdenFS config: {e}\n".encode())
@@ -634,16 +651,12 @@ def print_recent_events(processor: str, out: IO[bytes]) -> None:
         try:
             out.write(f"{opt}: ".encode())
             paste_output(
-                lambda sink: run_trace_cmd(trace_cmd, sink),
+                lambda sink: run_edenfsctl_cmd(trace_cmd, sink),
                 processor,
                 out,
             )
         except Exception as e:
             out.write(b"Error getting EdenFS trace events: %s.\n" % str(e).encode())
-
-
-def run_trace_cmd(cmd: List[str], sink: IO[bytes]) -> None:
-    subprocess.run(cmd, check=True, stderr=subprocess.STDOUT, stdout=sink)
 
 
 def find_cdb() -> Optional[Path]:
