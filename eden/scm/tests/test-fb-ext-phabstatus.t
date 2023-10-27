@@ -4,7 +4,7 @@
   $ eagerepo
 Setup
 
-  $ enable phabstatus smartlog
+  $ enable fbcodereview smartlog
   $ setconfig extensions.arcconfig="$TESTDIR/../sapling/ext/extlib/phabricator/arcconfig.py"
   $ hg init repo
   $ cd repo

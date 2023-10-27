@@ -151,7 +151,6 @@ myparent=
 obsshelve=
 patchrmdir=!
 progressfile=
-pullcreatemarkers=
 pushrebase=!
 rage=!
 rebase=

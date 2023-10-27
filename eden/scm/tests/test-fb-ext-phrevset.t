@@ -7,7 +7,7 @@
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ cat >> $HGRCPATH << 'EOF'
   > [extensions]
-  > phrevset=
+  > fbcodereview=
   > EOF
   $ hg init repo
   $ cd repo

@@ -2,7 +2,7 @@
 
 Setup
   $ configure modern
-  $ enable pullcreatemarkers
+  $ enable fbcodereview
   $ setconfig pullcreatemarkers.check-local-versions=True
 
 Configure arc...

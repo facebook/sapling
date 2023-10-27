@@ -23,7 +23,7 @@ setupcommon() {
 [extensions]
 commitcloud=
 infinitepush=
-pullcreatemarkers=
+fbcodereview=
 [ui]
 ssh=$(dummysshcmd)
 [infinitepush]

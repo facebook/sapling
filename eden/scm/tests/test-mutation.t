@@ -2,7 +2,7 @@
 
   $ eagerepo
   $ configure dummyssh
-  $ enable amend rebase histedit fbhistedit phabdiff absorb
+  $ enable amend rebase histedit fbhistedit fbcodereview absorb
   $ setconfig ui.interactive=true
   $ setconfig experimental.evolution=obsolete
   $ setconfig visibility.enabled=true

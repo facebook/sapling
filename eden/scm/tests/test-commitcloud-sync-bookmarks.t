@@ -2,7 +2,7 @@
 #inprocess-hg-incompatible
   $ setconfig experimental.allowfilepeer=True
 
-  $ enable amend commitcloud infinitepush rebase remotenames pullcreatemarkers phabstatus
+  $ enable amend commitcloud infinitepush rebase remotenames fbcodereview
   $ configure dummyssh
   $ setconfig commitcloud.hostname=testhost
   $ setconfig remotefilelog.reponame=server

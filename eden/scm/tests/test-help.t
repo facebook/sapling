@@ -313,8 +313,8 @@ Test extension help:
        extorder
        extutil       (no help text available)
        fastlog
+       fbcodereview  integration with Meta internal code review systems
        fbhistedit    extends the existing histedit functionality
-       fbscmquery    (no help text available)
        generic_bisect
                      (no help text available)
        gitrevset     map a git hash to a Mercurial hash:
@@ -336,12 +336,8 @@ Test extension help:
        morestatus    make status give a bit more context
        myparent
        ownercheck    prevent operations on repos not owned by the current user
-       phabdiff      (no help text available)
-       phabstatus    (no help text available)
-       phrevset      provides support for Phabricator revsets
        preventpremegarepoupdateshook
                      (no help text available)
-       pullcreatemarkers
        pushrebase    rebases commits during push
        rage          upload useful diagnostics and give instructions for asking
                      for help
@@ -369,7 +365,7 @@ Test extension help:
 
 Verify that extension keywords appear in help templates
 
-  $ hg help --config extensions.phabdiff= templating|grep phabdiff > /dev/null
+  $ hg help --config extensions.fbcodereview= templating|grep phabdiff > /dev/null
 
 Normal help for add
 

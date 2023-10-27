@@ -10,7 +10,7 @@
   $ cat >> $HGRCPATH << 'EOF'
   > [extensions]
   > arcconfig=$TESTDIR/../sapling/ext/extlib/phabricator/arcconfig.py
-  > phabstatus=
+  > fbcodereview=
   > smartlog=
   > EOF
   $ hg init repo

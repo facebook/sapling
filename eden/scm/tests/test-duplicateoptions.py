@@ -13,7 +13,7 @@ require(["py2"])
 ignore = {
     b"",
     b"factotum",
-    b"fbscmquery",
+    b"fbcodereview",
     b"globalrevs",
     b"hgsql",
     b"highlight",

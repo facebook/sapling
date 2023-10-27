@@ -2,8 +2,8 @@
 
 Setup
 
-  $ configure mutation-norecord dummyssh phabstatus
-  $ enable amend pullcreatemarkers pushrebase rebase remotenames
+  $ configure mutation-norecord dummyssh
+  $ enable amend fbcodereview pushrebase rebase remotenames
   $ setconfig ui.username="nobody <no.reply@fb.com>" experimental.rebaseskipobsolete=true
   $ setconfig remotenames.allownonfastforward=true
   $ setconfig extensions.arcconfig="$TESTDIR/../sapling/ext/extlib/phabricator/arcconfig.py"

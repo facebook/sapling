@@ -115,7 +115,7 @@ Somehow problematic: With many extensions
   > extorder=
   > fastlog=
   > fastpartialmatch=!
-  > fbscmquery=
+  > fbcodereview=
   > fbhistedit=
   > githelp=
   > gitlookup=!
@@ -131,11 +131,8 @@ Somehow problematic: With many extensions
   > mergedriver=
   > morestatus=
   > myparent=
-  > phabdiff=
-  > phabstatus=
   > phrevset=
   > progressfile=
-  > pullcreatemarkers=
   > pushrebase =
   > pushrebase=
   > rage=
