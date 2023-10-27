@@ -9,10 +9,10 @@ import type {DiffId, DiffSummary} from '../types';
 import type {UICodeReviewProvider} from './UICodeReviewProvider';
 import type {ReactNode} from 'react';
 
-import {CircleEllipsisIcon} from '../CircleEllipsisIcon';
 import {ExternalLink} from '../ExternalLink';
 import {Tooltip} from '../Tooltip';
 import {t} from '../i18n';
+import {CircleEllipsisIcon} from '../icons/CircleEllipsisIcon';
 import {CircleExclamationIcon} from '../icons/CircleExclamationIcon';
 import {persistAtomToConfigEffect} from '../persistAtomToConfigEffect';
 import platform from '../platform';
