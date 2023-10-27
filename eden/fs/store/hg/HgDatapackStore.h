@@ -73,10 +73,21 @@ class HgDatapackStore {
   void getBlobBatch(const ImportRequestsList& requests);
 
   /**
+   * Imports the blob identified by the given hash from the backing store.
+   * If localOnly is set to true, only fetch the blob from local (memory or
+   * disk) store.
+   *
+   * Returns nullptr if not found.
+   */
+  BlobPtr getBlob(const HgProxyHash& hgInfo, bool localOnly);
+
+  /**
    * Imports the blob identified by the given hash from the local store.
    * Returns nullptr if not found.
    */
-  BlobPtr getBlobLocal(const HgProxyHash& hgInfo);
+  BlobPtr getBlobLocal(const HgProxyHash& hgInfo) {
+    return getBlob(hgInfo, /*localOnly=*/true);
+  }
 
   /**
    * Reads blob metadata from hg cache.

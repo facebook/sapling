@@ -48,6 +48,7 @@
 using folly::Future;
 using folly::IOBuf;
 using folly::makeFuture;
+using folly::makeSemiFuture;
 using folly::SemiFuture;
 using folly::StringPiece;
 using std::make_unique;
@@ -566,24 +567,61 @@ folly::Future<TreePtr> HgBackingStore::importTreeManifestImpl(
 SemiFuture<BlobPtr> HgBackingStore::fetchBlobFromHgImporter(
     HgProxyHash hgInfo) {
   return folly::via(
-      importThreadPool_.get(),
-      [this,
-       hgInfo = std::move(hgInfo),
-       &liveImportBlobWatches = liveImportBlobWatches_] {
-        Importer& importer = getThreadLocalImporter();
-        folly::stop_watch<std::chrono::milliseconds> watch;
-        RequestMetricsScope queueTracker{&liveImportBlobWatches};
-        auto blob =
-            importer.importFileContents(hgInfo.path(), hgInfo.revHash());
-        stats_->addDuration(
-            &HgBackingStoreStats::importBlobDuration, watch.elapsed());
+             importThreadPool_.get(),
+             [this,
+              hgInfo = std::move(hgInfo),
+              &liveImportBlobWatches = liveImportBlobWatches_] {
+               folly::stop_watch<std::chrono::milliseconds> watch;
+               RequestMetricsScope queueTracker{&liveImportBlobWatches};
 
-        if (blob) {
-          stats_->increment(&HgBackingStoreStats::importBlobSuccess);
-        } else {
-          stats_->increment(&HgBackingStoreStats::importBlobFailure);
-        }
-        return blob;
+               // NOTE: In the future we plan to update
+               // SaplingNativeBackingStore (and HgDatapackStore) to provide and
+               // asynchronous interface enabling us to perform our retries
+               // there. In the meantime we use importThreadPool_ for these
+               // longer-running retry requests to avoid starving
+               // serverThreadPool_.
+
+               // NOTE: Retyring first, via SaplingNativeBackingStore, will
+               // affect the HgBackingStoreStats::importBlobDuration timer. A
+               // successful retry will also affect the
+               // HgBackingStoreStats::importBlobSuccess and
+               // HgBackingStoreStats::importBlobFailure counters as we will no
+               // longer increment either.
+
+               // Retry using datapackStore (backingstore).
+               auto blob = datapackStore_.getBlob(hgInfo, /*localOnly=*/false);
+
+               // NOTE: We will remove HgImporter soon. By continuing to use it
+               // as a secondary fallback for retries we can track the number of
+               // times we fail to fetch a blob after a retrying via
+               // SaplingNativeBackingStore. This data will aid in determining
+               // when we can safely remove HgImporter - when there are few if
+               // any successful imports via HgImporter and all failures are not
+               // retriable.
+
+               if (!blob) {
+                 // Retry using HgImporter.
+                 Importer& importer = getThreadLocalImporter();
+                 blob = importer.importFileContents(
+                     hgInfo.path(), hgInfo.revHash());
+
+                 if (blob) {
+                   stats_->increment(&HgBackingStoreStats::importBlobSuccess);
+                 } else {
+                   stats_->increment(&HgBackingStoreStats::importBlobFailure);
+                 }
+               } else {
+                 stats_->increment(&HgBackingStoreStats::fetchBlobRetrySuccess);
+               }
+
+               stats_->addDuration(
+                   &HgBackingStoreStats::importBlobDuration, watch.elapsed());
+
+               return blob;
+             })
+      .thenError([this](folly::exception_wrapper&& ew) {
+        stats_->increment(&HgBackingStoreStats::importBlobError);
+        return folly::makeSemiFuture<BlobPtr>(std::move(ew));
       });
 }
 

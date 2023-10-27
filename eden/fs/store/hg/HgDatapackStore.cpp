@@ -267,8 +267,8 @@ void HgDatapackStore::getBlobBatch(const ImportRequestsList& importRequests) {
       });
 }
 
-BlobPtr HgDatapackStore::getBlobLocal(const HgProxyHash& hgInfo) {
-  auto content = store_.getBlob(hgInfo.byteHash(), true);
+BlobPtr HgDatapackStore::getBlob(const HgProxyHash& hgInfo, bool localOnly) {
+  auto content = store_.getBlob(hgInfo.byteHash(), localOnly);
   if (content) {
     return std::make_shared<BlobPtr::element_type>(std::move(*content));
   }
