@@ -1,12 +1,20 @@
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
-load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
 
 oncall("scm_client_infra")
 
 cpp_library(
     name = "prjfs",
-    srcs = glob(["*.cpp"]),
-    headers = glob(["*.h"]),
+    srcs = [
+        "Enumerator.cpp",
+        "PrjfsChannel.cpp",
+        "PrjfsDispatcher.cpp",
+    ],
+    headers = [
+        "Enumerator.h",
+        "PrjfsChannel.h",
+        "PrjfsDispatcher.h",
+        "PrjfsRequestContext.h",
+    ],
     os_deps = [(
         "windows",
         ["fbsource//third-party/toolchains/win:ProjectedFSLib.lib"],
@@ -40,5 +48,32 @@ cpp_library(
         "//folly/futures:future_splitter",
         "//folly/portability:windows",
         "//thrift/lib/cpp/util:enum_utils",
+    ],
+)
+
+cpp_library(
+    name = "disk_state",
+    srcs = [
+        "PrjfsDiskState.cpp",
+    ],
+    headers = [
+        "PrjfsDiskState.h",
+    ],
+    deps = [
+        "//eden/common/utils:file_utils",
+        "//eden/common/utils:win_error",
+        "//eden/fs/config:config",
+        "//eden/fs/inodes:inode_number",
+        "//eden/fs/utils:case_sensitivity",
+        "//eden/fs/utils:file_utils",
+        "//eden/fs/utils:projfs_util",
+        "//folly/executors:serial_executor",
+    ],
+    exported_deps = [
+        "//eden/fs/inodes/overlay:serialization-cpp2-types",
+        "//eden/fs/model:model",
+        "//eden/fs/utils:path",
+        "//eden/fs/utils:utils",
+        "//folly/portability:windows",
     ],
 )
