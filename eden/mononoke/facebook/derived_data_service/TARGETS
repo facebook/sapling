@@ -61,9 +61,9 @@ rust_binary(
 )
 
 rust_binary(
-    name = "derived_data_service_stats",
+    name = "derived_data_service_stats_collector",
     srcs = glob([
-        "stats/**/*.rs",
+        "stats_collector/**/*.rs",
     ]),
     deps = [
         "fbsource//third-party/rust:anyhow",
@@ -214,6 +214,21 @@ tw.container(
                 path_actions = {
                     "derivation_worker": ":derivation_worker",
                     "derived_data_service": ":derived_data_service",
+                },
+            ),
+        ),
+    ],
+    oncall = "scm_server_infra",
+)
+
+tw.container(
+    name = "tw.mononoke.derived_data_service.stats_collector",
+    features = [
+        tw.build_fbpkg(
+            fbpkg.builder(
+                name = "mononoke.derived_data_service.stats_collector",
+                path_actions = {
+                    "derived_data_service_stats_collector": ":derived_data_service_stats_collector",
                 },
             ),
         ),
