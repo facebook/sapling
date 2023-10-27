@@ -55,6 +55,7 @@ def get_test_env_and_deps(suffix = ""):
             "EDENFS_FSATTR_BIN": "//eden/integration/helpers:fsattr",
             "EDENFS_TAKEOVER_TOOL": "//eden/integration/helpers:takeover_tool",
             "EDEN_HG_BINARY": "//scm/telemetry/hg:hg",
+            "HG_REAL_BIN": "//eden/scm:hg_universal_binary",
         })
     elif read_bool("fbcode", "mode_win_enabled", False):
         suffix = get_oss_suffix()
@@ -62,6 +63,7 @@ def get_test_env_and_deps(suffix = ""):
             "EDENFS_CHECK_WINDOWS_RENAME": "//eden/integration/helpers:check_windows_rename",
             "EDENFS_READ_REPARSE_BUFFER": "//eden/integration/helpers:read_reparse_buffer",
             "EDEN_HG_BINARY": "//eden/scm:hg",
+            "HG_REAL_BIN": "//eden/scm:hg",
         })
     else:
         env_to_target.update({
@@ -69,6 +71,7 @@ def get_test_env_and_deps(suffix = ""):
             "EDENFS_FSATTR_BIN": "//eden/integration/helpers:fsattr",
             "EDENFS_TAKEOVER_TOOL": "//eden/integration/helpers:takeover_tool",
             "EDEN_HG_BINARY": "//scm/telemetry/hg:hg",
+            "HG_REAL_BIN": "//eden/scm:hg",
         })
 
     daemon_target = "//eden/fs/service:edenfs%s" % suffix
@@ -80,7 +83,6 @@ def get_test_env_and_deps(suffix = ""):
         "EDENFS_SNAPSHOTS": "//eden/test-data:snapshots",
         "EDENFS_ZERO_BLOB": "//eden/integration/helpers:zero_blob",
         "HG_ETC_MERCURIAL": "//eden/scm:etc_mercurial",
-        "HG_REAL_BIN": "//eden/scm:hg",
         "MKSCRATCH_BIN": "//eden/scm/exec/scratch:scratch",
     })
 
