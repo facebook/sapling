@@ -433,6 +433,24 @@ impl FileStore {
     }
 }
 
+impl FileStore {
+    pub(crate) fn get_file_content_impl(
+        &self,
+        key: &Key,
+        fetch_mode: FetchMode,
+    ) -> Result<Option<Bytes>> {
+        self.metrics.write().api.hg_getfilecontent.call(0);
+        self.fetch(
+            std::iter::once(key.clone()),
+            FileAttributes::CONTENT,
+            fetch_mode,
+        )
+        .single()?
+        .map(|entry| entry.content.unwrap().file_content())
+        .transpose()
+    }
+}
+
 impl LegacyStore for FileStore {
     /// Returns only the local cache / shared stores, in place of the local-only stores, such that writes will go directly to the local cache.
     /// For compatibility with ContentStore::get_shared_mutable
@@ -486,15 +504,7 @@ impl LegacyStore for FileStore {
     }
 
     fn get_file_content(&self, key: &Key) -> Result<Option<Bytes>> {
-        self.metrics.write().api.hg_getfilecontent.call(0);
-        self.fetch(
-            std::iter::once(key.clone()),
-            FileAttributes::CONTENT,
-            FetchMode::AllowRemote,
-        )
-        .single()?
-        .map(|entry| entry.content.unwrap().file_content())
-        .transpose()
+        self.get_file_content_impl(key, FetchMode::AllowRemote)
     }
 
     // If ContentStore is available, these call into ContentStore. Otherwise, implement these
