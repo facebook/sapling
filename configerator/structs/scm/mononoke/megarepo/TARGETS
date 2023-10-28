@@ -15,6 +15,9 @@ thrift_library(
     py3_namespace = "scm.service.thrift",
     py_base_module = "scm.service.thrift",
     py_remote_service_router = True,
+    thrift_cpp2_options = [
+        "reflection",
+    ],
     thrift_py_options = "utf8strings",
     thrift_rust_options = "serde",
     thrift_srcs = {

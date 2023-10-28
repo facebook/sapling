@@ -21,6 +21,9 @@ thrift_library(
         "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:smallvec",
     ],
+    thrift_cpp2_options = [
+        "reflection",
+    ],
     thrift_py_options = "utf8strings",
     thrift_rust_options = [
         "deprecated_default_enum_min_i32",
