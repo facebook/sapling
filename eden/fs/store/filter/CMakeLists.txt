@@ -24,5 +24,5 @@ target_link_libraries(eden_store_filter PUBLIC
     eden_config
     eden_model
     eden_utils
-    # hg_eden_ffi
+    edenfs_ffi
     ${RE2_LIBRARY})
