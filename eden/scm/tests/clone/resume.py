@@ -44,6 +44,6 @@ class TestResumeClone(BaseTest):
             clone_wc.hg.checkout(
                 **{"continue": True, "env": {"EDENSCM_LOG": "checkout=debug"}}
             ).stderr,
-            "Skipping checking out 1 files since they're already written",
+            "skipped files based on progress skipped_count=1",
         )
         self.assertTrue(clone_wc.status().empty())

@@ -77,7 +77,8 @@ Can continue interrupted checkout:
   abort: checkout requires exactly one destination commit but got: ["a19fc4bcafede967b22a29cd9af839765fff19b7", "a19fc4bcafede967b22a29cd9af839765fff19b7", "a19fc4bcafede967b22a29cd9af839765fff19b7"]
   [255]
 
-  $ hg go --continue -q
+  $ LOG=checkout=debug hg go -q --continue 2>&1 | grep skipped_count
+  DEBUG apply_store: checkout: skipped files based on progress skipped_count=3
   $ hg st
   $ tglog
   @  a19fc4bcafed 'A'

@@ -12,7 +12,6 @@ use std::io::BufRead;
 use std::io::BufReader;
 use std::io::Write;
 use std::path::Path;
-#[cfg(windows)]
 use std::path::PathBuf;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
@@ -39,6 +38,7 @@ use manifest_tree::TreeManifest;
 use minibytes::Bytes;
 use parking_lot::Mutex;
 use pathmatcher::AlwaysMatcher;
+use pathmatcher::DynMatcher;
 use pathmatcher::Matcher;
 use pathmatcher::UnionMatcher;
 use progress_model::ProgressBar;
@@ -83,8 +83,6 @@ use status::Status;
 use tokio::runtime::Handle;
 
 const VFS_BATCH_SIZE: usize = 100;
-
-type ArcMatcher = Arc<dyn Matcher + Sync + Send>;
 
 /// Contains lists of files to be removed / updated during checkout.
 pub struct CheckoutPlan {
@@ -192,10 +190,11 @@ impl CheckoutPlan {
     pub fn add_progress(&mut self, path: &Path) -> Result<()> {
         let vfs = &self.checkout.vfs;
         let progress = if path.exists() {
+            debug!(?path, "loading progress");
             match CheckoutProgress::load(path, vfs.clone()) {
                 Ok(p) => p,
-                Err(e) => {
-                    debug!("Failed to load CheckoutProgress with {:?}", e);
+                Err(err) => {
+                    warn!(?err, "failed loading progress");
                     CheckoutProgress::new(path, vfs.clone())?
                 }
             }
@@ -224,10 +223,10 @@ impl CheckoutPlan {
     #[instrument(skip_all, err)]
     pub fn apply_store(&self, store: &dyn FileStore) -> Result<CheckoutStats> {
         let vfs = &self.checkout.vfs;
-        debug!(
-            "Skipping checking out {} files since they're already written",
-            self.update_content.len() - self.filtered_update_content.len()
-        );
+
+        let skipped_count = self.update_content.len() - self.filtered_update_content.len();
+        debug!(skipped_count, "skipped files based on progress");
+
         let total = self.filtered_update_content.len() + self.remove.len() + self.update_meta.len();
         let bar = &ProgressBar::new("Updating", total as u64, "files");
         Registry::main().register_progress_bar(bar);
@@ -803,6 +802,12 @@ pub fn checkout(
     let (sparse_matcher, sparse_change) =
         create_sparse_matchers(repo, wc.vfs(), &current_mf.read(), &target_mf.read())?;
 
+    let progress_path: Option<PathBuf> = if repo.config().get_or_default("checkout", "resumable")? {
+        Some(wc.dot_hg_path().join("updateprogress"))
+    } else {
+        None
+    };
+
     // 1. Create the plan
     let plan = create_plan(
         wc.vfs(),
@@ -811,6 +816,7 @@ pub fn checkout(
         &target_mf.read(),
         &sparse_matcher,
         sparse_change,
+        progress_path,
     )?;
 
     // 2. Check if status is dirty
@@ -879,7 +885,7 @@ fn create_sparse_matchers(
     vfs: &VFS,
     current_mf: &TreeManifest,
     target_mf: &TreeManifest,
-) -> Result<(ArcMatcher, Option<(ArcMatcher, ArcMatcher)>)> {
+) -> Result<(DynMatcher, Option<(DynMatcher, DynMatcher)>)> {
     let dot_path = repo.dot_hg_path().to_owned();
     if util::file::exists(dot_path.join("sparse"))?.is_none() {
         return Ok((Arc::new(AlwaysMatcher::new()), None));
@@ -911,7 +917,7 @@ fn create_sparse_matchers(
         (matcher, 0)
     });
 
-    let sparse_matcher: ArcMatcher = Arc::new(UnionMatcher::new(vec![
+    let sparse_matcher: DynMatcher = Arc::new(UnionMatcher::new(vec![
         current_sparse.clone(),
         target_sparse.clone(),
     ]));
@@ -930,7 +936,8 @@ fn create_plan(
     current_mf: &TreeManifest,
     target_mf: &TreeManifest,
     matcher: &dyn Matcher,
-    sparse_change: Option<(ArcMatcher, ArcMatcher)>,
+    sparse_change: Option<(DynMatcher, DynMatcher)>,
+    progress_path: Option<PathBuf>,
 ) -> Result<CheckoutPlan> {
     let diff = Diff::new(current_mf, target_mf, &matcher)?;
     let mut actions = ActionMap::from_diff(diff)?;
@@ -940,10 +947,11 @@ fn create_plan(
             actions.with_sparse_profile_change(old_sparse, new_sparse, current_mf, target_mf)?;
     }
     let checkout = Checkout::from_config(vfs.clone(), &config)?;
-    let plan = checkout.plan_action_map(actions);
-    // if let Some(progress_path) = progress_path {
-    //     plan.add_progress(progress_path.as_path()).map_pyerr(py)?;
-    // }
+    let mut plan = checkout.plan_action_map(actions);
+
+    if let Some(progress_path) = progress_path {
+        plan.add_progress(&progress_path)?;
+    }
 
     Ok(plan)
 }
