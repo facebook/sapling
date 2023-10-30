@@ -9,11 +9,8 @@
 Adds a s/stop verb to histedit to stop after a changeset was picked.
 """
 
-from pipes import quote
-
 from sapling import (
     cmdutil,
-    encoding,
     error,
     extensions,
     hg,
@@ -31,11 +28,6 @@ from sapling.i18n import _
 
 cmdtable = {}
 command = registrar.command(cmdtable)
-
-configtable = {}
-configitem = registrar.configitem(configtable)
-
-configitem("fbhistedit", "exec_in_user_shell", default=None)
 
 testedwith = "ships-with-fb-ext"
 
@@ -110,10 +102,7 @@ def defineactions():
 
             try:
                 ctx = repo[ctxnode]
-                shell = encoding.environ.get("SHELL", None)
                 cmd = self.command
-                if shell and self.repo.ui.config("fbhistedit", "exec_in_user_shell"):
-                    cmd = "%s -c -i %s" % (shell, quote(cmd))
                 rc = repo.ui.system(
                     cmd,
                     environ={"HGNODE": ctx.hex()},
