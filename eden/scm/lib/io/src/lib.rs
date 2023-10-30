@@ -348,6 +348,12 @@ impl IO {
         }
     }
 
+    /// Creates an "null" IO that writes to nowhere and reads empty.
+    pub fn null() -> Self {
+        let empty = io::empty();
+        Self::new(empty, EmptyWrite, None::<EmptyWrite>)
+    }
+
     /// Wait for the pager to exit, and restore outputs to stdio.
     /// Might block if the pager is waiting for the user to exit.
     pub fn wait_pager(&self) -> io::Result<()> {
@@ -807,5 +813,21 @@ impl Drop for IOState {
         self.error = None;
         self.pager_progress = None;
         self.wait_pager();
+    }
+}
+
+// Workaround `io::Empty` not implementing `io::Write` before Rust 1.73
+struct EmptyWrite;
+impl io::Write for EmptyWrite {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        Ok(buf.len())
+    }
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+impl IsTty for EmptyWrite {
+    fn is_tty(&self) -> bool {
+        false
     }
 }
