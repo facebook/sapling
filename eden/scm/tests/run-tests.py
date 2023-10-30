@@ -575,12 +575,6 @@ def getparser():
         help="use IPv4 for network related tests",
     )
     hgconf.add_argument(
-        "-3",
-        "--py3k-warnings",
-        action="store_true",
-        help="enable Py3k warnings on Python 2.7+",
-    )
-    hgconf.add_argument(
         "--record",
         action="store_true",
         help="track $TESTTMP changes in git (implies --keep-tmpdir)",
@@ -592,13 +586,6 @@ def getparser():
     )
     hgconf.add_argument(
         "--with-watchman", metavar="WATCHMAN", help="test using specified watchman"
-    )
-    # This option should be deleted once test-check-py3-compat.t and other
-    # Python 3 tests run with Python 3.
-    hgconf.add_argument(
-        "--with-python3",
-        metavar="PYTHON3",
-        help="Python 3 interpreter (if running under Python 2) (TEMPORARY)",
     )
 
     reporting = parser.add_argument_group("Results Reporting")
@@ -766,31 +753,6 @@ def parseargs(args, parser):
             "ui.interactive=1",
             "ui.paginate=0",
         ]
-    if options.py3k_warnings:
-        if PYTHON3:
-            parser.error("--py3k-warnings can only be used on Python 2.7")
-    if options.with_python3:
-        if PYTHON3:
-            parser.error("--with-python3 cannot be used when executing with Python 3")
-
-        options.with_python3 = canonpath(options.with_python3)
-        # Verify Python3 executable is acceptable.
-        proc = subprocess.Popen(
-            [options.with_python3, "--version"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-        )
-        out, _err = proc.communicate()
-        ret = proc.wait()
-        if ret != 0:
-            parser.error("could not determine version of python 3")
-        if not out.startswith("Python "):
-            parser.error("unexpected output from python3 --version: %s" % out)
-        vers = version.LooseVersion(out[len("Python ") :])
-        if vers < version.LooseVersion("3.5.0"):
-            parser.error(
-                "--with-python3 version must be 3.5.0 or greater; got %s" % out
-            )
 
     if options.blacklist:
         options.blacklist = parselistfiles(options.blacklist, "blacklist")
@@ -1059,7 +1021,6 @@ class Test(unittest.TestCase):
         startport=None,
         extraconfigopts=None,
         extrarcpaths=None,
-        py3kwarnings=False,
         shell=None,
         hgcommand=None,
         slowtimeout=None,
@@ -1098,8 +1059,6 @@ class Test(unittest.TestCase):
         extrarcpaths is an iterable for extra hgrc paths (files or
         directories).
 
-        py3kwarnings enables Py3k warnings.
-
         shell is the shell to execute tests in.
         """
         if timeout is None:
@@ -1125,7 +1084,6 @@ class Test(unittest.TestCase):
         self._startport = startport
         self._extraconfigopts = extraconfigopts or []
         self._extrarcpaths = extrarcpaths or []
-        self._py3kwarnings = py3kwarnings
         self._shell = shell
         self._hgcommand = hgcommand or "hg"
         self._usechg = usechg
@@ -3512,9 +3470,6 @@ class TestRunner:
         os.environ["TMPBINDIR"] = self._tmpbindir
         os.environ["PYTHON"] = PYTHON
 
-        if self.options.with_python3:
-            os.environ["PYTHON3"] = self.options.with_python3
-
         runtestdir = os.path.abspath(os.path.dirname(__file__))
         os.environ["RUNTESTDIR"] = runtestdir
         path = [self._bindir, runtestdir] + os.environ["PATH"].split(os.pathsep)
@@ -3801,7 +3756,6 @@ class TestRunner:
             startport=self._getport(count),
             extraconfigopts=self.options.extra_config_opt,
             extrarcpaths=self.options.extra_rcpath,
-            py3kwarnings=self.options.py3k_warnings,
             shell=self.options.shell,
             hgcommand=self._hgcommand,
             usechg=self.options.chg,
@@ -3953,15 +3907,6 @@ class TestRunner:
         os.chdir(self._testdir)
 
         self._usecorrectpython()
-
-        if self.options.py3k_warnings and not self.options.anycoverage:
-            vlog("# Updating hg command to enable Py3k Warnings switch")
-            with open(os.path.join(self._bindir, "hg"), "rb") as f:
-                lines = [line.rstrip() for line in f]
-                lines[0] += " -3"
-            with open(os.path.join(self._bindir, "hg"), "wb") as f:
-                for line in lines:
-                    f.write(line + "\n")
 
         hgbat = os.path.join(self._bindir, "hg.bat")
         if os.path.isfile(hgbat):
