@@ -7,17 +7,21 @@ import csv
 import re
 import time
 from dataclasses import dataclass
-from typing import List, Optional
 
 from sapling import error, mdiff, registrar, scmutil
 from sapling.i18n import _
-from sapling.simplemerge import Merge3Text, render_minimized, wordmergemode
+from sapling.simplemerge import (
+    automerge_adjacent_changes,
+    automerge_common_changes,
+    Merge3Text,
+    render_minimized,
+    wordmergemode,
+)
 
 cmdtable = {}
 command = registrar.command(cmdtable)
 
 
-A, B, BASE = range(3)
 WHITE_SPACE_PATTERN = re.compile(b"\\s+")
 
 
@@ -30,108 +34,10 @@ class SmartMerge3Text(Merge3Text):
         Merge3Text.__init__(self, basetext, atext, btext, wordmerge=wordmerge)
         self.automerge_fns.extend(
             [
-                merge_adjacent_changes,
-                merge_common_changes,
+                automerge_adjacent_changes,
+                automerge_common_changes,
             ]
         )
-
-
-def merge_adjacent_changes(base_lines, a_lines, b_lines) -> Optional[List[bytes]]:
-    # require something to be changed
-    if not base_lines:
-        return None
-
-    ablocks = unmatching_blocks(base_lines, a_lines)
-    bblocks = unmatching_blocks(base_lines, b_lines)
-
-    k = 0
-    indexes = [0, 0]
-    merged_lines = []
-    while indexes[A] < len(ablocks) and indexes[B] < len(bblocks):
-        ablock, bblock = ablocks[indexes[A]], bblocks[indexes[B]]
-        if is_overlap(ablock[0], ablock[1], bblock[0], bblock[1]):
-            return None
-        elif is_non_unique_separator_for_insertion(
-            base_lines, a_lines, b_lines, ablock, bblock
-        ):
-            return None
-
-        i, block, lines = (
-            (A, ablock, a_lines) if ablock[0] < bblock[0] else (B, bblock, b_lines)
-        )
-        # add base lines before the block
-        while k < block[0]:
-            merged_lines.append(base_lines[k])
-            k += 1
-        # skip base lines being deleted
-        k += block[1] - block[0]
-        # add new lines from the block
-        merged_lines.extend(lines[block[2] : block[3]])
-
-        indexes[i] += 1
-
-    if indexes[A] < len(ablocks):
-        blocks, index, lines = ablocks, indexes[A], a_lines
-    else:
-        blocks, index, lines = bblocks, indexes[B], b_lines
-
-    while index < len(blocks):
-        block = blocks[index]
-        index += 1
-
-        while k < block[0]:
-            merged_lines.append(base_lines[k])
-            k += 1
-        k += block[1] - block[0]
-        merged_lines.extend(lines[block[2] : block[3]])
-
-    # add base lines at the end of block
-    merged_lines.extend(base_lines[k:])
-
-    return merged_lines
-
-
-def merge_common_changes(base_lines, a_lines, b_lines) -> Optional[List[bytes]]:
-    if base_lines:
-        return None
-    if len(a_lines) > len(b_lines):
-        return merge_common_changes(base_lines, b_lines, a_lines)
-    if is_sub_list(a_lines, b_lines):
-        return b_lines
-
-
-def is_non_unique_separator_for_insertion(
-    base_lines, a_lines, b_lines, ablock, bblock
-) -> bool:
-    # no insertion on both sides
-    if not (ablock[0] == bblock[0] or ablock[1] == bblock[1]):
-        return False
-
-    if ablock[1] <= bblock[0]:
-        base_start, base_end = ablock[1], bblock[0]
-    else:
-        base_start, base_end = bblock[1], ablock[0]
-
-    if base_start <= base_end:
-        # empty is a subset of any list
-        return True
-
-    base_list = base_lines[base_start:base_end]
-    a_list = a_lines[ablock[3] : ablock[4]]
-    b_list = b_lines[bblock[3] : bblock[4]]
-    return is_sub_list(base_list, a_list) or is_sub_list(base_list, b_list)
-
-
-def is_sub_list(list1, list2):
-    "check if list1 is a sublist of list2"
-    # PERF: might be able to use rolling hash to optimize the time complexity
-    len1, len2 = len(list1), len(list2)
-    if len1 > len2:
-        return False
-    for i in range(len2 - len1 + 1):
-        if list1 == list2[i : i + len1]:
-            return True
-    return False
 
 
 @dataclass
@@ -455,17 +361,6 @@ def render_mergediff2(m3, name_a, name_b):
 def readfile(path):
     with open(path, "rb") as f:
         return f.read()
-
-
-def unmatching_blocks(lines1, lines2):
-    text1 = b"".join(lines1)
-    text2 = b"".join(lines2)
-    blocks = mdiff.allblocks(text1, text2, lines1=lines1, lines2=lines2)
-    return [b[0] for b in blocks if b[1] == "!"]
-
-
-def is_overlap(s1, e1, s2, e2):
-    return not (s1 >= e2 or s2 >= e1)
 
 
 def remove_white_space(text):
