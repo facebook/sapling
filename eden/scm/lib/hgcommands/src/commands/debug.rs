@@ -34,6 +34,7 @@ commands! {
     mod segmentpull;
     mod store;
     mod top;
+    mod wait;
 }
 
 define_flags! {
