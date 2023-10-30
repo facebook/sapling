@@ -119,6 +119,17 @@ impl EdenFsClient {
         Ok(result)
     }
 
+    /// Get the raw journal position. Useful to check whether there are file changes.
+    pub fn get_journal_position(&self) -> anyhow::Result<(i64, i64)> {
+        let thrift_client = block_on(self.get_thrift_client())?;
+        let position = extract_error(block_on(
+            thrift_client.getCurrentJournalPosition(&self.root_vec()),
+        ))?;
+        let position = (position.mountGeneration, position.sequenceNumber);
+        tracing::debug!("journal position {:?}", position);
+        Ok(position)
+    }
+
     /// Set the working copy (dirstate) parents.
     pub fn set_parents(&self, p1: HgId, p2: Option<HgId>, p1_tree: HgId) -> anyhow::Result<()> {
         let thrift_client = block_on(self.get_thrift_client())?;
