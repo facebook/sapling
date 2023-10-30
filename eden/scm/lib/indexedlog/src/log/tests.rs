@@ -10,6 +10,8 @@ use std::cell::RefCell;
 use std::io::Read;
 #[cfg(not(windows))]
 use std::ops::Range;
+use std::sync::mpsc::channel;
+use std::time::Duration;
 
 use quickcheck::quickcheck;
 use tempfile::tempdir;
@@ -1558,6 +1560,36 @@ fn test_multithread_sync() {
     let log = open_opts.open(dir.path()).unwrap();
     let count = log.iter().count() as u64;
     assert_eq!(count, THREAD_COUNT as u64 * WRITE_COUNT_PER_THREAD as u64);
+}
+
+#[test]
+fn test_wait_for_changes() {
+    let dir = tempdir().unwrap();
+    let (tx, rx) = channel::<i32>();
+    let mut log = Log::open(&dir, Vec::new()).unwrap();
+
+    let mut wait = crate::log::Wait::from_log(&log).unwrap();
+    std::thread::spawn({
+        move || {
+            wait.wait_for_change().unwrap();
+            tx.send(101).unwrap();
+            wait.wait_for_change().unwrap();
+            tx.send(102).unwrap();
+        }
+    });
+
+    std::thread::sleep(Duration::from_millis(110));
+    assert!(rx.try_recv().is_err());
+
+    log.append(b"1").unwrap();
+    log.sync().unwrap();
+
+    assert_eq!(rx.recv().unwrap(), 101);
+
+    log.append(b"2").unwrap();
+    log.sync().unwrap();
+
+    assert_eq!(rx.recv().unwrap(), 102);
 }
 
 fn index_ref(data: &[u8]) -> Vec<IndexOutput> {

@@ -81,6 +81,7 @@ mod path;
 mod repair;
 #[cfg(test)]
 pub(crate) mod tests;
+mod wait;
 
 pub use open_options::ChecksumType;
 pub use open_options::FlushFilterContext;
@@ -95,6 +96,7 @@ pub use self::fold::Fold;
 pub use self::fold::FoldDef;
 use self::fold::FoldState;
 pub use self::meta::LogMetadata;
+pub use self::wait::Wait;
 
 // Constants about file names
 pub(crate) const PRIMARY_FILE: &str = "log";
