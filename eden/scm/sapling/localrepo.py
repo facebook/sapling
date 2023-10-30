@@ -1005,13 +1005,22 @@ class localrepository:
 
     @util.timefunction("pull", 0, "ui")
     def pull(
-        self, source="default", bookmarknames=(), headnodes=(), headnames=(), quiet=True
+        self,
+        source="default",
+        bookmarknames=(),
+        headnodes=(),
+        headnames=(),
+        quiet=True,
+        visible=True,
     ):
         """Pull specified revisions and remote bookmarks.
 
         headnodes is a list of binary nodes to pull.
         headnames is a list of text names (ex. hex prefix of a commit hash).
         bookmarknames is a list of bookmark names to pull.
+
+        visible=False can disable updating visible heads. This means the pulled
+        commit hashes will not be visible, although bookmarks are still updated.
 
         If a remote bookmark no longer exists on the server-side, it will be
         removed.
@@ -1252,7 +1261,7 @@ class localrepository:
                 )
 
             # Update visibleheads:
-            if heads:
+            if visible and heads:
                 # Exclude obvious public heads (not all public heads for
                 # performance). Note: legacy non-narrow-heads won't be
                 # able to provide only public heads and cannot use this
