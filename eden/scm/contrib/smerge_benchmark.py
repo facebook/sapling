@@ -10,13 +10,7 @@ from dataclasses import dataclass
 
 from sapling import error, mdiff, registrar, scmutil
 from sapling.i18n import _
-from sapling.simplemerge import (
-    automerge_adjacent_changes,
-    automerge_common_changes,
-    Merge3Text,
-    render_minimized,
-    wordmergemode,
-)
+from sapling.simplemerge import Merge3Text, render_minimized
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -30,13 +24,10 @@ class SmartMerge3Text(Merge3Text):
     SmergeMerge3Text uses vairable automerge algorithms to resolve conflicts.
     """
 
-    def __init__(self, basetext, atext, btext, wordmerge=wordmergemode.disabled):
-        Merge3Text.__init__(self, basetext, atext, btext, wordmerge=wordmerge)
-        self.automerge_fns.extend(
-            [
-                automerge_adjacent_changes,
-                automerge_common_changes,
-            ]
+    def __init__(self, basetext, atext, btext):
+        automerge_algos = ["adjacent-changes", "common-changes"]
+        Merge3Text.__init__(
+            self, basetext, atext, btext, automerge_algos=automerge_algos
         )
 
 

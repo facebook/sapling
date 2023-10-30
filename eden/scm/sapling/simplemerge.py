@@ -63,27 +63,14 @@ def compare_range(a, astart, aend, b, bstart, bend):
     return True
 
 
-### word merge
+### automerge algorithms
 
 
 class CantShowWordConflicts(Exception):
     pass
 
 
-class wordmergemode:
-    enforced = "enforced"  # Enforced word merge. Cannot draw conflict regions.
-    ondemand = "ondemand"  # Try line merge first. Only use word merge if it can solve conflicts.
-    disabled = "disabled"  # Do not ever attempt to do word merge.
-
-    @classmethod
-    def fromui(cls, ui):
-        if ui.configbool("merge", "word-merge"):
-            return cls.ondemand
-        else:
-            return cls.disabled
-
-
-def trywordmerge(base_lines, a_lines, b_lines):
+def automerge_wordmerge(base_lines, a_lines, b_lines) -> Optional[List[bytes]]:
     """Try resolve conflicts using wordmerge.
     Return resolved lines, or None if merge failed.
     """
@@ -91,35 +78,11 @@ def trywordmerge(base_lines, a_lines, b_lines):
     atext = b"".join(a_lines)
     btext = b"".join(b_lines)
     try:
-        m3 = Merge3Text(basetext, atext, btext, wordmerge=wordmergemode.enforced)
+        m3 = Merge3Text(basetext, atext, btext, in_wordmerge=True)
         text = b"".join(render_minimized(m3)[0])
         return text.splitlines(True)
     except CantShowWordConflicts:
         return None
-
-
-def splitwordswithoutemptylines(text):
-    """Run mdiff.splitwords. Then fold "\n" into the previous word.
-
-    This makes "surrounding lines/words" more meaningful and avoids some
-    aggressive merges where conflicts are more desirable.
-    """
-    words = mdiff.splitwords(text)
-    buf = []
-    result = []
-    append = result.append
-    bufappend = buf.append
-    for word in words:
-        if word != b"\n" and buf:
-            append(b"".join(buf))
-            buf.clear()
-        bufappend(word)
-    if buf:
-        append(b"".join(buf))
-    return result
-
-
-### automerge algorithms
 
 
 def automerge_adjacent_changes(base_lines, a_lines, b_lines) -> Optional[List[bytes]]:
@@ -232,27 +195,75 @@ def is_overlap(s1, e1, s2, e2):
     return not (s1 >= e2 or s2 >= e1)
 
 
+def splitwordswithoutemptylines(text):
+    """Run mdiff.splitwords. Then fold "\n" into the previous word.
+
+    This makes "surrounding lines/words" more meaningful and avoids some
+    aggressive merges where conflicts are more desirable.
+    """
+    words = mdiff.splitwords(text)
+    buf = []
+    result = []
+    append = result.append
+    bufappend = buf.append
+    for word in words:
+        if word != b"\n" and buf:
+            append(b"".join(buf))
+            buf.clear()
+        bufappend(word)
+    if buf:
+        append(b"".join(buf))
+    return result
+
+
+AUTOMERGE_ALGORITHMS = {
+    "word-merge": automerge_wordmerge,
+    "adjacent-changes": automerge_adjacent_changes,
+    "common-changes": automerge_common_changes,
+}
+
+
+def get_automerge_algos(ui):
+    return ui.configlist("merge", "automerge-algos")
+
+
 class Merge3Text:
     """3-way merge of texts.
 
     Given strings BASE, OTHER, THIS, tries to produce a combined text
     incorporating the changes from both BASE->OTHER and BASE->THIS."""
 
-    def __init__(self, basetext, atext, btext, wordmerge=wordmergemode.disabled):
+    def __init__(self, basetext, atext, btext, automerge_algos=(), in_wordmerge=False):
+        if in_wordmerge and automerge_algos:
+            raise error.Abort(
+                _("word-level merge does not support automerge algorithms")
+            )
+
+        self.in_wordmerge = in_wordmerge
+        self.automerge_fns = self.init_automerge_fns(automerge_algos)
+
         self.basetext = basetext
         self.atext = atext
         self.btext = btext
-        if wordmerge is wordmergemode.enforced:
-            split = splitwordswithoutemptylines
-        else:
-            split = mdiff.splitnewlines
+
+        split = (
+            splitwordswithoutemptylines if self.in_wordmerge else mdiff.splitnewlines
+        )
         self.base = split(basetext)
         self.a = split(atext)
         self.b = split(btext)
-        self.wordmerge = wordmerge
-        self.automerge_fns = (
-            [trywordmerge] if wordmerge == wordmergemode.ondemand else []
-        )
+
+    def init_automerge_fns(self, automerge_algos):
+        automerge_fns = []
+        for name in automerge_algos:
+            try:
+                automerge_fns.append(AUTOMERGE_ALGORITHMS[name])
+            except KeyError:
+                raise error.Abort(
+                    _("unknown automerge algorithm '%s', availabe algorithms are %s")
+                    % (name, list(AUTOMERGE_ALGORITHMS.keys()))
+                )
+        return automerge_fns
 
     def merge_groups(self, automerge=False):
         """Yield sequence of line groups.
@@ -286,7 +297,7 @@ class Merge3Text:
             elif what == "b":
                 yield what, self.b[t[1] : t[2]]
             elif what == "conflict":
-                if self.wordmerge is wordmergemode.enforced:
+                if self.in_wordmerge:
                     raise CantShowWordConflicts()
 
                 base_lines = self.base[t[1] : t[2]]
@@ -397,7 +408,7 @@ class Merge3Text:
         """
 
         ia = ib = 0
-        if self.wordmerge is wordmergemode.enforced:
+        if self.in_wordmerge:
 
             def escape(word):
                 # escape "word" so it looks like a line ending with "\n"
@@ -690,7 +701,8 @@ def simplemerge(ui, localctx, basectx, otherctx, **opts):
     except error.Abort:
         return 1
 
-    m3 = Merge3Text(basetext, localtext, othertext, wordmerge=wordmergemode.fromui(ui))
+    automerge_algos = get_automerge_algos(ui)
+    m3 = Merge3Text(basetext, localtext, othertext, automerge_algos=automerge_algos)
 
     conflictscount = 0
     if mode == "union":

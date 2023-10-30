@@ -24,7 +24,7 @@ import unittest
 
 from sapling import error, util
 from sapling.pycompat import decodeutf8
-from sapling.simplemerge import Merge3Text, render_minimized, wordmergemode
+from sapling.simplemerge import Merge3Text, render_minimized
 
 
 TestCase = unittest.TestCase
@@ -36,13 +36,15 @@ class Merge3(Merge3Text):
     incorporating the changes from both BASE->OTHER and BASE->THIS.
     All three will typically be sequences of lines."""
 
-    def __init__(self, base, a, b, wordmerge=wordmergemode.disabled):
+    def __init__(self, base, a, b, automerge_algos=()):
         basetext = b"\n".join([i.strip(b"\n") for i in base] + [b""])
         atext = b"\n".join([i.strip(b"\n") for i in a] + [b""])
         btext = b"\n".join([i.strip(b"\n") for i in b] + [b""])
         if util.binary(basetext) or util.binary(atext) or util.binary(btext):
             raise error.Abort("don't know how to merge binary files")
-        Merge3Text.__init__(self, basetext, atext, btext, wordmerge=wordmerge)
+        Merge3Text.__init__(
+            self, basetext, atext, btext, automerge_algos=automerge_algos
+        )
         self.base = base
         self.a = a
         self.b = b
@@ -388,7 +390,7 @@ import {cached, LRU} from 'shared/LRU';
             base_text.splitlines(True),
             other_text.splitlines(True),
             this_text.splitlines(True),
-            wordmerge=wordmergemode.ondemand,
+            automerge_algos=("word-merge",),
         )
         m_lines, conflictscount = render_minimized(m3, b"OTHER", b"THIS")
         self.assertEqual(expected.splitlines(True), m_lines)
