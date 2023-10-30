@@ -88,6 +88,7 @@ export const vscodeWebviewPlatform: Platform = {
       });
     });
   },
+  onCommitFormSubmit: Internal.onCommitFormSubmit,
 };
 
 function getTheme(): ThemeColor {

@@ -581,6 +581,8 @@ function ActionsBar({
   const showCommitOrAmend =
     commit.isHead && (isCommitMode || anythingToCommit || !isAnythingBeingEdited);
 
+  const onCommitFormSubmit = platform.onCommitFormSubmit;
+
   return (
     <div className="commit-info-actions-bar" data-testid="commit-info-actions-bar">
       {isCommitMode || commit.diffId == null ? null : (
@@ -709,6 +711,10 @@ function ActionsBar({
               contextKey={`submit-${commit.isHead ? 'head' : commit.hash}`}
               disabled={!canSubmitWithCodeReviewProvider || areImageUploadsOngoing}
               runOperation={async () => {
+                if (onCommitFormSubmit !== undefined) {
+                  onCommitFormSubmit();
+                }
+
                 let amendOrCommitOp;
                 if (anythingToCommit) {
                   // TODO: we should also amend if there are pending commit message changes, and change the button

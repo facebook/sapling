@@ -58,6 +58,7 @@ export const vscodeCommands = {
 type ExternalVSCodeCommands = {
   'vscode.diff': (left: vscode.Uri, right: vscode.Uri, title: string) => Thenable<unknown>;
   'workbench.action.closeSidebar': () => Thenable<void>;
+  'fb.survey.initStateUIByNamespace': (surveyID: string) => Thenable<void>;
   'sapling.open-isl': () => Thenable<void>;
   'sapling.close-isl': () => Thenable<void>;
   'sapling.isl.focus': () => Thenable<void>;
