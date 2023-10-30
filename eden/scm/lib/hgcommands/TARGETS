@@ -63,6 +63,7 @@ rust_python_library(
         "fbsource//third-party/rust:ctrlc",
         "fbsource//third-party/rust:fail",
         "fbsource//third-party/rust:flate2",
+        "fbsource//third-party/rust:fs-err",
         "fbsource//third-party/rust:hostname",
         "fbsource//third-party/rust:libc",
         "fbsource//third-party/rust:parking_lot",

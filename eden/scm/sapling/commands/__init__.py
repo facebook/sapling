@@ -6335,19 +6335,23 @@ def update(
 
     ui.log("checkout_info", checkout_mode="python")
 
+    def abort_on_unresolved_conflicts():
+        if repo.localvfs.exists("updatemergestate"):
+            ms = mergemod.mergestate.read(repo)
+            if list(ms.unresolved()):
+                raise error.Abort(
+                    _("outstanding merge conflicts"),
+                    hint=_(
+                        "use '@prog@ resolve --list' to list, '@prog@ resolve --mark FILE' to mark resolved"
+                    ),
+                )
+            repo.localvfs.tryunlink("updatemergestate")
+            ms.reset()
+
     if opts.get("continue"):
         with repo.wlock():
             if repo.localvfs.exists("updatemergestate"):
-                ms = mergemod.mergestate.read(repo)
-                if list(ms.unresolved()):
-                    raise error.Abort(
-                        _("outstanding merge conflicts"),
-                        hint=_(
-                            "use '@prog@ resolve --list' to list, '@prog@ resolve --mark FILE' to mark resolved"
-                        ),
-                    )
-                repo.localvfs.unlink("updatemergestate")
-                ms.reset()
+                abort_on_unresolved_conflicts()
                 return 0
             elif repo.localvfs.exists("updatestate") and (
                 repo.ui.configbool("experimental", "nativecheckout")
@@ -6361,7 +6365,7 @@ def update(
                 rev = repo.localvfs.readutf8("updatestate")
                 repo.ui.warn(_("continuing checkout to '%s'\n") % rev)
             else:
-                raise error.Abort(_("not in an interrupted update --merge state"))
+                raise error.Abort(_("not in an interrupted update state"))
 
     if rev is not None and rev != "" and node is not None:
         raise error.Abort(_("please specify just one revision"))
@@ -6412,6 +6416,10 @@ def update(
         updatecheck = "none"
 
     with repo.wlock():
+        if not clean:
+            # Don't delete the "updatemergestate" marker if we have conflicts.
+            abort_on_unresolved_conflicts()
+
         cmdutil.clearunfinished(repo)
 
         if date:

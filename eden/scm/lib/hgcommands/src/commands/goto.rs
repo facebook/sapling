@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::io;
+
 use anyhow::bail;
 use anyhow::Result;
 use clidispatch::abort;
@@ -12,6 +14,7 @@ use clidispatch::fallback;
 use clidispatch::ReqCtx;
 use cliparser::define_flags;
 use configmodel::ConfigExt;
+use fs_err as fs;
 use repo::repo::Repo;
 use workingcopy::workingcopy::WorkingCopy;
 
@@ -75,33 +78,44 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
         fallback!("checkout.use-rust is False");
     }
 
+    // Protect the various ".hg" state file checks.
+    let _wlock = wc.lock();
+
     if wc.dot_hg_path().join("updatemergestate").exists() {
         tracing::debug!(target: "checkout_info", checkout_detail="updatemergestate");
         fallback!("updatemergestate exists");
     }
 
-    let mut dest: Vec<&String> = ctx.opts.args.iter().collect();
+    let mut dest: Vec<String> = ctx.opts.args.clone();
     if !ctx.opts.rev.is_empty() {
-        dest.push(&ctx.opts.rev);
+        dest.push(ctx.opts.rev.clone());
+    }
+
+    if ctx.opts.r#continue {
+        let interrupted_dest = match fs::read_to_string(wc.dot_hg_path().join("updatestate")) {
+            Ok(data) => data,
+            Err(err) if err.kind() == io::ErrorKind::NotFound => {
+                bail!("not in an interrupted update state")
+            }
+            Err(err) => return Err(err.into()),
+        };
+        dest.push(interrupted_dest);
+    }
+
+    if dest.len() > 1 {
+        abort!(
+            "checkout requires exactly one destination commit but got: {:?}",
+            dest
+        );
     }
 
     if dest.is_empty() {
         abort!(r#"You must specify a destination to update to, for example "@prog@ goto main"."#);
     }
-    if dest.len() > 1 {
-        bail!(
-            "checkout requires exactly one destination commit: {:?}",
-            dest
-        );
-    }
-    let dest: String = dest[0].clone();
 
-    if ctx.opts.clean
-        || ctx.opts.check
-        || ctx.opts.merge
-        || !ctx.opts.date.is_empty()
-        || ctx.opts.r#continue
-    {
+    let dest = dest.remove(0);
+
+    if ctx.opts.clean || ctx.opts.check || ctx.opts.merge || !ctx.opts.date.is_empty() {
         tracing::debug!(target: "checkout_info", checkout_detail="unsupported_args");
         fallback!("one or more unsupported options in Rust checkout");
     }
@@ -116,7 +130,6 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
 
     tracing::debug!(target: "checkout_info", checkout_mode="rust");
 
-    let _wlock = wc.lock();
     let _lock = repo.lock();
     let (updated, removed) = checkout::checkout(ctx.io(), repo, wc, target)?;
 

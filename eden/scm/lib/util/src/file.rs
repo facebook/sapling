@@ -74,6 +74,14 @@ pub fn exists(path: impl AsRef<Path>) -> io::Result<Option<std::fs::Metadata>> {
     }
 }
 
+pub fn unlink_if_exists(path: impl AsRef<Path>) -> io::Result<()> {
+    match std::fs::remove_file(path.as_ref()) {
+        Ok(()) => Ok(()),
+        Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(()),
+        Err(err) => Err(err).path_context("error deleting file", path.as_ref()),
+    }
+}
+
 #[cfg(test)]
 mod test {
     use anyhow::Result;

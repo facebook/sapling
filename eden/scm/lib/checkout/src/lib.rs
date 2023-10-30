@@ -494,9 +494,10 @@ impl CheckoutPlan {
 
         if let Some(progress) = progress {
             progress.lock().record_writes(paths);
-            fail::fail_point!("checkout-post-progress", |_| { bail!("oh no!") });
         }
         bar.increase_position(count as u64);
+
+        fail::fail_point!("checkout-post-progress", |_| { bail!("oh no!") });
 
         Ok(())
     }
@@ -848,6 +849,12 @@ pub fn checkout(
         );
     }
 
+    let updatestate_path = wc.dot_hg_path().join("updatestate");
+
+    util::file::atomic_write(&updatestate_path, |f| {
+        write!(f, "{}", target_commit.to_hex())
+    })?;
+
     // 3. Execute the plan
     plan.apply_store(&repo.file_store()?)?;
 
@@ -861,6 +868,8 @@ pub fn checkout(
         None,
         None,
     )?;
+
+    util::file::unlink_if_exists(&updatestate_path)?;
 
     Ok(plan.stats())
 }
