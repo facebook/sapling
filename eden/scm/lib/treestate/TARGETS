@@ -32,6 +32,7 @@ rust_library(
         "fbsource//third-party/rust:tracing",
         "fbsource//third-party/rust:twox-hash",
         "fbsource//third-party/rust:uuid",
+        "//eden/scm/lib/atomicfile:atomicfile",
         "//eden/scm/lib/identity:identity",
         "//eden/scm/lib/repolock:repolock",
         "//eden/scm/lib/types:types",
