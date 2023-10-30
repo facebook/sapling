@@ -5,12 +5,15 @@
  * GNU General Public License version 2.
  */
 
+use std::cell::Cell;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Duration;
 use std::time::SystemTime;
 
 use anyhow::Result;
 use configmodel::Config;
+use configmodel::ConfigExt;
 use edenfs_client::EdenFsClient;
 use edenfs_client::FileStatus;
 use io::IO;
@@ -25,11 +28,19 @@ use crate::filesystem::PendingChanges;
 pub struct EdenFileSystem {
     treestate: Arc<Mutex<TreeState>>,
     client: EdenFsClient,
+
+    // For wait_for_potential_change
+    journal_position: Cell<(i64, i64)>,
 }
 
 impl EdenFileSystem {
     pub fn new(treestate: Arc<Mutex<TreeState>>, client: EdenFsClient) -> Result<Self> {
-        Ok(EdenFileSystem { treestate, client })
+        let journal_position = Cell::new(client.get_journal_position()?);
+        Ok(EdenFileSystem {
+            treestate,
+            client,
+            journal_position,
+        })
     }
 }
 
@@ -61,5 +72,26 @@ impl PendingChanges for EdenFileSystem {
                 _ => Ok(PendingChange::Changed(path)),
             }
         })))
+    }
+
+    fn wait_for_potential_change(&self, config: &dyn Config) -> Result<()> {
+        let interval_ms = config
+            .get_or("workingcopy", "poll-interval-ms-edenfs", || 200)?
+            .max(50);
+        loop {
+            let new_journal_position = self.client.get_journal_position()?;
+            let old_journal_position = self.journal_position.get();
+            if old_journal_position != new_journal_position {
+                tracing::trace!(
+                    "edenfs journal position changed: {:?} -> {:?}",
+                    old_journal_position,
+                    new_journal_position
+                );
+                self.journal_position.set(new_journal_position);
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(interval_ms));
+        }
+        Ok(())
     }
 }
