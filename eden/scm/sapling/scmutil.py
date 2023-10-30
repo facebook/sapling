@@ -316,7 +316,17 @@ def callcatch(ui, req, func):
                 # SSLError of Python 2.7.9 contains a unicode
                 reason = encoding.unitolocal(reason)
             ui.warn(_("error: %s\n") % reason, error=_("abort"))
-        elif hasattr(inst, "args") and inst.args and inst.args[0] == errno.EPIPE:
+        elif (
+            not ui.debugflag
+            and hasattr(inst, "args")
+            and inst.args
+            and inst.args[0] == errno.EPIPE
+            # "sl files . | head" yields "Broken pipe"
+            # "sl files ." then "q" in streampager yields "pipe reader has been dropped"
+            # But, Windows gives you a BrokenPipe error in different cases such as unlinking a file that is in use.
+            # Let's only eat the error if it explicitly mentions "pipe".
+            and "pipe" in inst.args[1]
+        ):
             pass
         elif getattr(inst, "strerror", None):
             filename = getattr(inst, "filename", None)
