@@ -281,6 +281,11 @@ Test that auto pull invalidates public() properly:
     D9
     >>> assert 'resolve ids (' not in _
 
+Test that autopull does not make draft commits visible.
+
+  $ hg log -r $D9 -T '{phase}\n'
+  secret
+
 Test that filtering revset does not use sequential fetches.
 
   $ cd

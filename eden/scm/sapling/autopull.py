@@ -76,12 +76,21 @@ class pullattempt:
         bookmarknames = list(self.bookmarknames)
         if self.headnodes or self.headnames:
             bookmarknames += bookmarks.selectivepullbookmarknames(repo, source)
+
+        # (best-effort) avoid changing visible heads for readonly command.
+        visible = repo.ui.cmdtype != registrar.command.readonly
+
+        # Temporary config in case the above change caused issues.
+        if repo.ui.configbool("experimental", "autopull-always-visible"):
+            visible = True
+
         try:
             repo.pull(
                 source,
                 bookmarknames=bookmarknames,
                 headnodes=self.headnodes,
                 headnames=self.headnames,
+                visible=visible,
             )
         except Exception as ex:
             repo.ui.status_err(_("pull failed: %s\n") % ex)
