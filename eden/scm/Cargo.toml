@@ -51,7 +51,7 @@ members = [
   "lib/edenapi/types",
   "lib/edenapi/types/proc_macros",
   "lib/edenfs-client",
-  "lib/edenfs-ffi",
+  "lib/edenfs_ffi",
   "lib/encoding",
   "lib/exchange",
   "lib/formatter",

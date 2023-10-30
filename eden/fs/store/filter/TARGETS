@@ -54,9 +54,9 @@ cpp_library(
     exported_deps = [
         "fbsource//third-party/rust:cxx-core",
         ":filters",
-        "//eden/scm/lib/edenfs-ffi:edenfs-ffi",  # @manual
-        "//eden/scm/lib/edenfs-ffi:edenfs-ffi-wrapper",
-        "//eden/scm/lib/edenfs-ffi:edenfs-ffi@header",  # @manual
+        "//eden/scm/lib/edenfs_ffi:edenfs_ffi",  # @manual
+        "//eden/scm/lib/edenfs_ffi:edenfs_ffi-wrapper",
+        "//eden/scm/lib/edenfs_ffi:edenfs_ffi@header",  # @manual
         "//folly/container:f14_hash",
         "//folly/logging:logging",
     ],
