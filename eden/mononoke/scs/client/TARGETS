@@ -13,6 +13,7 @@ rust_binary(
             [
                 "//common/rust/thrift/srclient:srclient",
                 "//eden/mononoke/scs/if:source_control-rust-srclients",
+                "//eden/mononoke/scs/if:source_control-rust-thriftclients",
                 "//common/rust/build_info:build_info",
             ],
         ),
@@ -20,6 +21,7 @@ rust_binary(
             "macos",
             [
                 "//common/rust/build_info:build_info",
+                "//eden/mononoke/scs/if:source_control-rust-thriftclients",
             ],
         ),
     ],
@@ -52,7 +54,6 @@ rust_binary(
         "//eden/mononoke/cmdlib/sharding_ext:sharding_ext",
         "//eden/mononoke/common/bounded_traversal:bounded_traversal",
         "//eden/mononoke/scs/if:source_control-rust",
-        "//eden/mononoke/scs/if:source_control-rust-thriftclients",
         "//eden/mononoke/scs/if:source_control-rust-x2pclients",
         "//eden/scm/lib/clientinfo:clientinfo",
     ],
