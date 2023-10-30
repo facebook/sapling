@@ -309,6 +309,221 @@ impl DeltaMetadata {
     }
 }
 
+async fn derive_git_delta_manifest(
+    ctx: &CoreContext,
+    derivation_ctx: &DerivationContext,
+    bonsai: BonsaiChangeset,
+) -> Result<RootGitDeltaManifestId> {
+    if bonsai.is_snapshot() {
+        anyhow::bail!("Can't derive GitDeltaManifest for snapshot")
+    }
+    // Ensure that the dependent Git commit is derived at this point
+    derivation_ctx
+        .derive_dependency::<MappedGitCommitId>(ctx, bonsai.get_changeset_id())
+        .await?;
+    // Derive the Git tree manifest for the current commit
+    let tree_handle = derivation_ctx
+        .derive_dependency::<TreeHandle>(ctx, bonsai.get_changeset_id())
+        .await
+        .context("Error while deriving current commit's Git tree")?;
+    // For each parent of the bonsai changeset, derive the Git tree manifest
+    // Ok to try join since there will only be a handful of parents for Git repos
+    let parent_trees_with_commit = try_join_all(bonsai.parents().map(|parent| async move {
+        let parent_tree_handle = derivation_ctx
+            .derive_dependency::<TreeHandle>(ctx, parent.clone())
+            .await
+            .with_context(|| {
+                format!("Error while deriving Git tree for parent commit {}", parent)
+            })?;
+        anyhow::Ok((parent, parent_tree_handle))
+    }))
+    .await?;
+
+    // Perform a manifest diff between the parent and the current changeset to identify the paths (could be file or directory)
+    // that have been modified in the current commit as compared to the parent commit. Collect the result in a Multimap that
+    // maps from MPath (added or modified) to Vec<DeltaEntryMetadata>. In case of added MPath, there would be only one DeltaEntryMetadata
+    // value but for modified paths (by different parents), there will be multiple DeltaEntryMetadata values.
+    let mut diff_items = stream::iter(parent_trees_with_commit)
+        .flat_map(|(parent_changeset_id, parent_tree_handle)| {
+            // Diff the Git tree of the parent with the current commits Git tree. This will give information about
+            // what paths were added, modified or deleted
+            parent_tree_handle.filtered_diff(
+                ctx.clone(),
+                derivation_ctx.blobstore().clone(),
+                tree_handle.clone(),
+                derivation_ctx.blobstore().clone(),
+                move |diff_entry| {
+                    match diff_entry {
+                        // We only care about files/directories that were added or modified since removed entries won't be
+                        // included in GitDeltaManifest
+                        manifest::Diff::Added(path, entry) => Some((
+                            path,
+                            // Transform to TreeMember so we can easily access type, size and oid information
+                            DeltaEntryMetadata::new(TreeMember::from(entry)),
+                        )),
+                        manifest::Diff::Changed(path, old_entry, new_entry) => {
+                            let actual = TreeMember::from(new_entry);
+                            let base = TreeMember::from(old_entry);
+                            if actual.oid().size() > DELTA_THRESHOLD
+                                || base.oid().size() > DELTA_THRESHOLD
+                            {
+                                // If either the base object or the actual object is too large, then we don't want to delta them
+                                // and instead use them directly
+                                Some((path, DeltaEntryMetadata::new(actual)))
+                            } else {
+                                Some((
+                                    path,
+                                    // The parent changeset id is _not really_ the changeset that introduced the base object (i.e. old entry)
+                                    // but we still use it here since it tells us which commit's unode we need to look at, to find the actual
+                                    // base commit that introduced this object (tree or file)
+                                    DeltaEntryMetadata::with_delta(
+                                        actual,
+                                        base,
+                                        parent_changeset_id,
+                                    ),
+                                ))
+                            }
+                        }
+                        // Ignore entries with no path or deleted entries
+                        _ => None,
+                    }
+                },
+                |_| true, // recurse_pruner is a function that allows us to skip iterating over some subtrees
+            )
+        })
+        // Collect as a MultiMap since the same modification can potentially be made as part of different parents
+        .try_collect::<MultiMap<_, _>>()
+        .await?;
+    // If the current commit has no parent, (i.e. its a root commit), then performing a manifest diff would yield no results. In this case, we can just
+    // directly add all entries from the tree of the current commit
+    if bonsai.parents().count() == 0 {
+        diff_items = tree_handle
+            .list_all_entries(ctx.clone(), derivation_ctx.blobstore().clone())
+            .map_ok(|(path, entry)| (path, DeltaEntryMetadata::new(entry.into())))
+            .try_collect::<MultiMap<_, _>>()
+            .await?;
+    }
+    // The MultiMap contains a map of MPath -> Vec<DeltaEntryMetadata> since a modified path can have potentially multiple bases to
+    // create delta and each such base object will have its own associated commit (e.g. merge-commit containing file/directory modified in multiple parents).
+    // Since DeltaEntryMetadata can represent multiple base objects with their commits, lets merge Vec<DeltaEntryMetadata> into a single DeltaEntryMetadata
+    // that represents the entire delta
+    let diff_items = diff_items
+        .into_iter()
+        .map(|(path, entries)| Ok((path, DeltaEntryMetadata::merged_entry(entries)?)))
+        .collect::<Result<HashMap<_, _>>>()?;
+
+    // To determine the actual source commit of the delta base object, we need to look into the parent commit unodes for the files/directories
+    // that were modified in the current commit
+    let parent_unodes_with_commit = try_join_all(bonsai.parents().map(|parent| async move {
+        let parent_root_unode = derivation_ctx
+            .derive_dependency::<RootUnodeManifestId>(ctx, parent.clone())
+            .await
+            .with_context(|| {
+                format!(
+                    "Error while deriving root unode for parent commit {}",
+                    parent
+                )
+            })?;
+        anyhow::Ok((parent, parent_root_unode))
+    }))
+    .await?
+    .into_iter()
+    .collect::<HashMap<_, _>>();
+
+    // For each modified path, find the correct origin commit that introduced the previous modification to the path and generate the delta entries
+    let manifest_entries = stream::iter(diff_items.into_iter()).map(|(path, mut entry)| {
+        let parent_unodes_with_commit = &parent_unodes_with_commit;
+        let commit = bonsai.get_changeset_id();
+        let blobstore = derivation_ctx.blobstore().clone();
+        async move {
+            // Need to look at unodes only if this is a delta entry (i.e. entry for a modified file or directory)
+            if entry.is_delta_entry() {
+                // HashSet for storing the DeltaEntries with correct origin commit
+                let mut deltas_with_correct_origin = HashSet::new();
+                for delta_entry in entry.deltas.into_iter() {
+                    // Currently the origin for the DeltaMetadata is the parent commit that was diffed against the current
+                    // commit to get this modified path. This parent might or might not be the right commit when the file was last
+                    // modified before the current commit. The parent commit's unode would give the right origin commit for this path
+                    let root_unode = parent_unodes_with_commit
+                        .get(&delta_entry.origin)
+                        .ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "Root unode not found for origin commit {:?}",
+                                delta_entry.origin
+                            )
+                        })?;
+                    let mut unodes = root_unode
+                        .manifest_unode_id()
+                        .find_entries(
+                            ctx.clone(),
+                            derivation_ctx.blobstore().clone(),
+                            vec![path.clone()],
+                        )
+                        .try_collect::<Vec<_>>()
+                        .await.with_context(|| format!("Error in finding entries for path {:?} in root unode for origin commit {:?}", path, delta_entry.origin))?;
+                    let (returned_path, unode_entry) = unodes.pop().ok_or_else(|| {
+                        anyhow::anyhow!(
+                            "No unode found for path {:?} in origin commit {:?}",
+                            path,
+                            delta_entry.origin
+                        )
+                    })?;
+                    if returned_path != path {
+                        anyhow::bail!("Unexpected path {:?} found in unode for path {:?} in origin commit {:?}", returned_path, path, delta_entry.origin);
+                    }
+                    let updated_entry = match unode_entry {
+                        manifest::Entry::Tree(tree_id) => {
+                            let manifest_unode = tree_id.load(ctx, derivation_ctx.blobstore())
+                                    .await.with_context(|| format!("Error in loading manifest unode {:?} for path {:?} and origin commit {:?}", tree_id, path, delta_entry.origin))?;
+                            // Set the correct origin commit returned by the manifest unode
+                            DeltaMetadata::new(delta_entry.object, manifest_unode.linknode().clone())
+                        },
+                        manifest::Entry::Leaf(file_id) => {
+                            let file_unode = file_id.load(ctx, derivation_ctx.blobstore())
+                                    .await.with_context(|| format!("Error in loading file unode {:?} for path {:?} and origin commit {:?}", file_id, path, delta_entry.origin))?;
+                            // Set the correct origin commit returned by the file unode
+                            DeltaMetadata::new(delta_entry.object, file_unode.linknode().clone())
+                        },
+                    };
+                    deltas_with_correct_origin.insert(updated_entry);
+                }
+                entry.deltas = deltas_with_correct_origin;
+            }
+            // Use the metadata of the delta entry to construct GitDeltaManifestEntry
+            let manifest_entry = metadata_to_manifest_entry(&commit, path.clone(), entry, blobstore, ctx)
+                    .await.with_context(|| format!("Error in generating git delta manifest entry for path {}", path))?;
+            anyhow::Ok((path, manifest_entry))
+        }
+    })
+    .buffered(100)
+    .try_collect::<BTreeMap<_, _>>()
+    .await?;
+    // Store the generated delta entries as part of the sharded GitDeltaManifest
+    let mut manifest = GitDeltaManifest::new(bonsai.get_changeset_id());
+    // The sharded map representation might change its structure multiple times if keys are added one-by-one. Using the add_entries
+    // method all manifest entries are added in one go and persisted in the blobstore
+    manifest
+        .add_entries(ctx, derivation_ctx.blobstore(), manifest_entries)
+        .await
+        .with_context(|| {
+            format!(
+                "Error in storing derived data GitDeltaManifest for Bonsai changeset {}",
+                bonsai.get_changeset_id()
+            )
+        })?;
+    // Now that the entries of the manifest are stored, store the initial manifest type itself
+    let manifest_id = manifest
+        .store(ctx, derivation_ctx.blobstore())
+        .await
+        .with_context(|| {
+            format!(
+                "Error in storing GitDeltaManifest for Bonsai changeset {}",
+                bonsai.get_changeset_id()
+            )
+        })?;
+    Ok(RootGitDeltaManifestId(manifest_id))
+}
+
 #[async_trait]
 impl BonsaiDerivable for RootGitDeltaManifestId {
     const VARIANT: DerivableType = DerivableType::GitDeltaManifest;
@@ -321,214 +536,23 @@ impl BonsaiDerivable for RootGitDeltaManifestId {
         bonsai: BonsaiChangeset,
         _parents: Vec<Self>,
     ) -> Result<Self, Error> {
-        if bonsai.is_snapshot() {
-            anyhow::bail!("Can't derive GitDeltaManifest for snapshot")
-        }
-        // Ensure that the dependent Git commit is derived at this point
-        derivation_ctx
-            .derive_dependency::<MappedGitCommitId>(ctx, bonsai.get_changeset_id())
-            .await?;
-        // Derive the Git tree manifest for the current commit
-        let tree_handle = derivation_ctx
-            .derive_dependency::<TreeHandle>(ctx, bonsai.get_changeset_id())
-            .await
-            .context("Error while deriving current commit's Git tree")?;
-        // For each parent of the bonsai changeset, derive the Git tree manifest
-        // Ok to try join since there will only be a handful of parents for Git repos
-        let parent_trees_with_commit = try_join_all(bonsai.parents().map(|parent| async move {
-            let parent_tree_handle = derivation_ctx
-                .derive_dependency::<TreeHandle>(ctx, parent.clone())
-                .await
-                .with_context(|| {
-                    format!("Error while deriving Git tree for parent commit {}", parent)
-                })?;
-            anyhow::Ok((parent, parent_tree_handle))
-        }))
-        .await?;
+        derive_git_delta_manifest(ctx, derivation_ctx, bonsai).await
+    }
 
-        // Perform a manifest diff between the parent and the current changeset to identify the paths (could be file or directory)
-        // that have been modified in the current commit as compared to the parent commit. Collect the result in a Multimap that
-        // maps from MPath (added or modified) to Vec<DeltaEntryMetadata>. In case of added MPath, there would be only one DeltaEntryMetadata
-        // value but for modified paths (by different parents), there will be multiple DeltaEntryMetadata values.
-        let mut diff_items = stream::iter(parent_trees_with_commit)
-            .flat_map(|(parent_changeset_id, parent_tree_handle)| {
-                // Diff the Git tree of the parent with the current commits Git tree. This will give information about
-                // what paths were added, modified or deleted
-                parent_tree_handle.filtered_diff(
-                    ctx.clone(),
-                    derivation_ctx.blobstore().clone(),
-                    tree_handle.clone(),
-                    derivation_ctx.blobstore().clone(),
-                    move |diff_entry| {
-                        match diff_entry {
-                            // We only care about files/directories that were added or modified since removed entries won't be
-                            // included in GitDeltaManifest
-                            manifest::Diff::Added(path, entry) => Some((
-                                path,
-                                // Transform to TreeMember so we can easily access type, size and oid information
-                                DeltaEntryMetadata::new(TreeMember::from(entry)),
-                            )),
-                            manifest::Diff::Changed(path, old_entry, new_entry) => {
-                                let actual = TreeMember::from(new_entry);
-                                let base = TreeMember::from(old_entry);
-                                if actual.oid().size() > DELTA_THRESHOLD
-                                    || base.oid().size() > DELTA_THRESHOLD
-                                {
-                                    // If either the base object or the actual object is too large, then we don't want to delta them
-                                    // and instead use them directly
-                                    Some((path, DeltaEntryMetadata::new(actual)))
-                                } else {
-                                    Some((
-                                        path,
-                                        // The parent changeset id is _not really_ the changeset that introduced the base object (i.e. old entry)
-                                        // but we still use it here since it tells us which commit's unode we need to look at, to find the actual
-                                        // base commit that introduced this object (tree or file)
-                                        DeltaEntryMetadata::with_delta(
-                                            actual,
-                                            base,
-                                            parent_changeset_id,
-                                        ),
-                                    ))
-                                }
-                            }
-                            // Ignore entries with no path or deleted entries
-                            _ => None,
-                        }
-                    },
-                    |_| true, // recurse_pruner is a function that allows us to skip iterating over some subtrees
-                )
+    async fn derive_batch(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        bonsais: Vec<BonsaiChangeset>,
+        _gap_size: Option<usize>,
+    ) -> Result<HashMap<ChangesetId, Self>> {
+        stream::iter(bonsais.into_iter().map(anyhow::Ok))
+            .and_then(|bonsai| async move {
+                let changeset_id = bonsai.get_changeset_id();
+                let manifest_id = derive_git_delta_manifest(ctx, derivation_ctx, bonsai).await?;
+                anyhow::Ok((changeset_id, manifest_id))
             })
-            // Collect as a MultiMap since the same modification can potentially be made as part of different parents
-            .try_collect::<MultiMap<_, _>>()
-            .await?;
-        // If the current commit has no parent, (i.e. its a root commit), then performing a manifest diff would yield no results. In this case, we can just
-        // directly add all entries from the tree of the current commit
-        if bonsai.parents().count() == 0 {
-            diff_items = tree_handle
-                .list_all_entries(ctx.clone(), derivation_ctx.blobstore().clone())
-                .map_ok(|(path, entry)| (path, DeltaEntryMetadata::new(entry.into())))
-                .try_collect::<MultiMap<_, _>>()
-                .await?;
-        }
-        // The MultiMap contains a map of MPath -> Vec<DeltaEntryMetadata> since a modified path can have potentially multiple bases to
-        // create delta and each such base object will have its own associated commit (e.g. merge-commit containing file/directory modified in multiple parents).
-        // Since DeltaEntryMetadata can represent multiple base objects with their commits, lets merge Vec<DeltaEntryMetadata> into a single DeltaEntryMetadata
-        // that represents the entire delta
-        let diff_items = diff_items
-            .into_iter()
-            .map(|(path, entries)| Ok((path, DeltaEntryMetadata::merged_entry(entries)?)))
-            .collect::<Result<HashMap<_, _>>>()?;
-
-        // To determine the actual source commit of the delta base object, we need to look into the parent commit unodes for the files/directories
-        // that were modified in the current commit
-        let parent_unodes_with_commit = try_join_all(bonsai.parents().map(|parent| async move {
-            let parent_root_unode = derivation_ctx
-                .derive_dependency::<RootUnodeManifestId>(ctx, parent.clone())
-                .await
-                .with_context(|| {
-                    format!(
-                        "Error while deriving root unode for parent commit {}",
-                        parent
-                    )
-                })?;
-            anyhow::Ok((parent, parent_root_unode))
-        }))
-        .await?
-        .into_iter()
-        .collect::<HashMap<_, _>>();
-
-        // For each modified path, find the correct origin commit that introduced the previous modification to the path and generate the delta entries
-        let manifest_entries = stream::iter(diff_items.into_iter()).map(|(path, mut entry)| {
-            let parent_unodes_with_commit = &parent_unodes_with_commit;
-            let commit = bonsai.get_changeset_id();
-            let blobstore = derivation_ctx.blobstore().clone();
-            async move {
-                // Need to look at unodes only if this is a delta entry (i.e. entry for a modified file or directory)
-                if entry.is_delta_entry() {
-                    // HashSet for storing the DeltaEntries with correct origin commit
-                    let mut deltas_with_correct_origin = HashSet::new();
-                    for delta_entry in entry.deltas.into_iter() {
-                        // Currently the origin for the DeltaMetadata is the parent commit that was diffed against the current
-                        // commit to get this modified path. This parent might or might not be the right commit when the file was last
-                        // modified before the current commit. The parent commit's unode would give the right origin commit for this path
-                        let root_unode = parent_unodes_with_commit
-                            .get(&delta_entry.origin)
-                            .ok_or_else(|| {
-                                anyhow::anyhow!(
-                                    "Root unode not found for origin commit {:?}",
-                                    delta_entry.origin
-                                )
-                            })?;
-                        let mut unodes = root_unode
-                            .manifest_unode_id()
-                            .find_entries(
-                                ctx.clone(),
-                                derivation_ctx.blobstore().clone(),
-                                vec![path.clone()],
-                            )
-                            .try_collect::<Vec<_>>()
-                            .await.with_context(|| format!("Error in finding entries for path {:?} in root unode for origin commit {:?}", path, delta_entry.origin))?;
-                        let (returned_path, unode_entry) = unodes.pop().ok_or_else(|| {
-                            anyhow::anyhow!(
-                                "No unode found for path {:?} in origin commit {:?}",
-                                path,
-                                delta_entry.origin
-                            )
-                        })?;
-                        if returned_path != path {
-                            anyhow::bail!("Unexpected path {:?} found in unode for path {:?} in origin commit {:?}", returned_path, path, delta_entry.origin);
-                        }
-                        let updated_entry = match unode_entry {
-                            manifest::Entry::Tree(tree_id) => {
-                                let manifest_unode = tree_id.load(ctx, derivation_ctx.blobstore())
-                                        .await.with_context(|| format!("Error in loading manifest unode {:?} for path {:?} and origin commit {:?}", tree_id, path, delta_entry.origin))?;
-                                // Set the correct origin commit returned by the manifest unode
-                                DeltaMetadata::new(delta_entry.object, manifest_unode.linknode().clone())
-                            },
-                            manifest::Entry::Leaf(file_id) => {
-                                let file_unode = file_id.load(ctx, derivation_ctx.blobstore())
-                                        .await.with_context(|| format!("Error in loading file unode {:?} for path {:?} and origin commit {:?}", file_id, path, delta_entry.origin))?;
-                                // Set the correct origin commit returned by the file unode
-                                DeltaMetadata::new(delta_entry.object, file_unode.linknode().clone())
-                            },
-                        };
-                        deltas_with_correct_origin.insert(updated_entry);
-                    }
-                    entry.deltas = deltas_with_correct_origin;
-                }
-                // Use the metadata of the delta entry to construct GitDeltaManifestEntry
-                let manifest_entry = metadata_to_manifest_entry(&commit, path.clone(), entry, blobstore, ctx)
-                        .await.with_context(|| format!("Error in generating git delta manifest entry for path {}", path))?;
-                anyhow::Ok((path, manifest_entry))
-            }
-        })
-        .buffered(100)
-        .try_collect::<BTreeMap<_, _>>()
-        .await?;
-        // Store the generated delta entries as part of the sharded GitDeltaManifest
-        let mut manifest = GitDeltaManifest::new(bonsai.get_changeset_id());
-        // The sharded map representation might change its structure multiple times if keys are added one-by-one. Using the add_entries
-        // method all manifest entries are added in one go and persisted in the blobstore
-        manifest
-            .add_entries(ctx, derivation_ctx.blobstore(), manifest_entries)
+            .try_collect::<HashMap<_, _>>()
             .await
-            .with_context(|| {
-                format!(
-                    "Error in storing derived data GitDeltaManifest for Bonsai changeset {}",
-                    bonsai.get_changeset_id()
-                )
-            })?;
-        // Now that the entries of the manifest are stored, store the initial manifest type itself
-        let manifest_id = manifest
-            .store(ctx, derivation_ctx.blobstore())
-            .await
-            .with_context(|| {
-                format!(
-                    "Error in storing GitDeltaManifest for Bonsai changeset {}",
-                    bonsai.get_changeset_id()
-                )
-            })?;
-        Ok(Self(manifest_id))
     }
 
     async fn store_mapping(
