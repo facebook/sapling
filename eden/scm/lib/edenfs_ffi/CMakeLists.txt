@@ -5,7 +5,7 @@
 
 # Due to some tools changing '-' to '_' when building,
 # this library/crate is named using an '_' so that it can link successfully.
-rust_static_library(rust_edenfs_ffi CRATE edenfs_ffi)
+rust_static_library(rust_edenfs_ffi CRATE edenfs_ffi USE_CXX_INCLUDE)
 install_rust_static_library(
   rust_edenfs_ffi
   INSTALL_DIR lib
@@ -24,7 +24,6 @@ target_include_directories(
   PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
-  ${CMAKE_CURRENT_BINARY_DIR}/cxxbridge/
 )
 target_link_libraries(
   edenfs_ffi
