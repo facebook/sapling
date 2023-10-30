@@ -22,6 +22,9 @@ define_flags! {
         /// detect visible commits and bookmarks change
         commits: bool,
 
+        /// detect working parents (current commit, '.') change
+        wdir_parents: bool,
+
         /// maximum changes before exiting (0 or negative: unlimited)
         #[short('n')]
         limit: i64 = 0,
@@ -69,6 +72,17 @@ pub fn run(ctx: ReqCtx<Opts>, repo: &mut Repo) -> Result<u8> {
             }),
         )?;
     }
+    if ctx.opts.wdir_parents {
+        let dot_dir = repo.dot_hg_path();
+        let mut wait = treestate::Wait::from_dot_dir(dot_dir);
+        spawn_wait_thread(
+            "wdir-parents",
+            Box::new(move || -> anyhow::Result<()> {
+                wait.wait_for_parent_change()?;
+                Ok(())
+            }),
+        )?;
+    }
 
     let mut ret = 0;
     drop(tx);
@@ -106,6 +120,9 @@ Wait for changes and print what changed.
 
 With --commits, wait for bookmarks and visible heads change,
 then print ``commits`` to stdout.
+
+With --wdir-parents, wait for "working directory parents" changes,
+then print a line ``wdir-parents`` to stdout.
 
 With a positive --limit, exit after detecting the given number of changes.
 If --limit is 0, detect changes in an endless loop (use Ctrl+C to stop).
