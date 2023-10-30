@@ -4,7 +4,7 @@
 # GNU General Public License version 2.
 
 find_program(CARGO_COMMAND cargo REQUIRED)
-set(crate_name edenfs-ffi)
+set(crate_name edenfs_ffi)
 if(DEFINED ARG_FEATURES)
   set(cargo_flags build
     $<IF:$<CONFIG:Debug>,,--release>
@@ -25,12 +25,12 @@ if(USE_CARGO_VENDOR)
   set(cargo_flags ${cargo_flags})
 endif()
 
-set(CARGO_MANIFEST ${CMAKE_SOURCE_DIR}/eden/scm/lib/edenfs-ffi/Cargo.toml)
-set(CARGO_TARGET_DIR ${CMAKE_SOURCE_DIR}/eden/scm/lib/edenfs-ffi/target)
+set(CARGO_MANIFEST ${CMAKE_SOURCE_DIR}/eden/scm/lib/edenfs_ffi/Cargo.toml)
+set(CARGO_TARGET_DIR ${CMAKE_SOURCE_DIR}/eden/scm/lib/edenfs_ffi/target)
 
-set(FFI_SOURCE_FILE ${CMAKE_SOURCE_DIR}/eden/scm/lib/edenfs-ffi/src/lib.rs)
-set(FFI_BRIDGE_CPP ${CARGO_TARGET_DIR}/cxxbridge/edenfs-ffi/src/lib.rs.cc)
-set(FFI_LIB ${CARGO_TARGET_DIR}/${TARGET_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}edenfs-ffi${CMAKE_STATIC_LIBRARY_SUFFIX})
+set(FFI_SOURCE_FILE ${CMAKE_SOURCE_DIR}/eden/scm/lib/edenfs_ffi/src/lib.rs)
+set(FFI_BRIDGE_CPP ${CARGO_TARGET_DIR}/cxxbridge/edenfs_ffi/src/lib.rs.cc)
+set(FFI_LIB ${CARGO_TARGET_DIR}/${TARGET_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}edenfs_ffi${CMAKE_STATIC_LIBRARY_SUFFIX})
 
 # Add a custom command that builds the rust crate and generates C++ bridge code
 add_custom_command(
@@ -55,7 +55,7 @@ target_include_directories(
         hg_eden_ffi
         PRIVATE
         include/
-        ${CARGO_TARGET_DIR}/eden/scm/lib/edenfs-ffi/src/
+        ${CARGO_TARGET_DIR}/eden/scm/lib/edenfs_ffi/src/
 )
 
 target_link_libraries(hg_eden_ffi PUBLIC

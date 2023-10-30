@@ -3,8 +3,10 @@ load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
 
 oncall("source_control")
 
+# Due to some tools changing '-' to '_' when building,
+# this library/crate is named using an '_' so that it can link successfully.
 rust_library(
-    name = "edenfs-ffi",
+    name = "edenfs_ffi",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {
         "cargo_target_config": {
@@ -21,7 +23,7 @@ rust_library(
             },
         },
     },
-    cpp_deps = [":edenfs-ffi-wrapper"],
+    cpp_deps = [":edenfs_ffi-wrapper"],
     crate_root = "src/lib.rs",
     cxx_bridge = "src/lib.rs",
     deps = [
@@ -42,14 +44,14 @@ rust_library(
 )
 
 cpp_library(
-    name = "edenfs-ffi-wrapper",
+    name = "edenfs_ffi-wrapper",
     srcs = ["src/ffi.cpp"],
     headers = ["src/ffi.h"],
     preferred_linkage = "static",
     undefined_symbols = True,
     exported_deps = [
         "fbsource//third-party/rust:cxx-core",
-        ":edenfs-ffi@header",  # @manual
+        ":edenfs_ffi@header",  # @manual
         "//folly/futures:core",
     ],
 )
