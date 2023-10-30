@@ -27,3 +27,10 @@
   $ cat wait3.log
   wdir-parents
 
+  $ hg debugwait --commits --wdir-parents --wdir-content -n 1 > ../wait4.log &
+  $ touch a
+  $ hg add a
+  $ hg mv -q a b
+  $ wait
+  $ cat ../wait4.log
+  wdir-content
