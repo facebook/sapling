@@ -912,6 +912,7 @@ def _dispatch(req):
 
         cmd, func, args, options, cmdoptions, foundaliases = _parse(lui, args)
         lui.cmdname = ui.cmdname = cmd
+        lui.cmdtype = ui.cmdtype = getattr(func, "cmdtype", None)
 
         # Do not profile the 'debugshell' command.
         if cmd == "debugshell":

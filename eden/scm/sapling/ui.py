@@ -179,8 +179,6 @@ class ui:
         self._styles = {}
         # Whether the output stream is known to be a terminal.
         self._terminaloutput = None
-        # The current command name being executed.
-        self.cmdname = None
 
         # CLI config overrides to allow easier reloading of config.
         self.cliconfigs = []
@@ -211,6 +209,7 @@ class ui:
 
             self.metrics = src.metrics
             self.cmdname = src.cmdname
+            self.cmdtype = src.cmdtype
 
             self.cliconfigs = src.cliconfigs.copy()
             self.cliconfigfiles = src.cliconfigfiles.copy()
@@ -235,6 +234,9 @@ class ui:
             self._measuredtimes = collections.defaultdict(int)
 
             self.metrics = metrics.metrics(self)
+            # The current command name being executed.
+            self.cmdname = None
+            self.cmdtype = None
 
             self.identity = identity.default()
 
