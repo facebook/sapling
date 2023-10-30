@@ -14,6 +14,7 @@ use thrift_types::edenfs as eden;
 use thrift_types::edenfs::RootIdOptions;
 use types::HgId;
 
+use crate::client::extract_error;
 use crate::client::EdenFsClient;
 
 pub fn get_status(
@@ -41,15 +42,16 @@ async fn get_status_internal(
         filterId: filter_id,
         ..Default::default()
     };
-    thrift_client
-        .getScmStatusV2(&GetScmStatusParams {
-            mountPoint: client.root().as_bytes().to_vec(),
-            commit: commit.into_byte_array().into(),
-            listIgnored: ignored,
-            cri: Some(cri),
-            rootIdOptions: Some(root_id_options),
-            ..Default::default()
-        })
-        .await
-        .map_err(|err| err.into())
+    extract_error(
+        thrift_client
+            .getScmStatusV2(&GetScmStatusParams {
+                mountPoint: client.root().as_bytes().to_vec(),
+                commit: commit.into_byte_array().into(),
+                listIgnored: ignored,
+                cri: Some(cri),
+                rootIdOptions: Some(root_id_options),
+                ..Default::default()
+            })
+            .await,
+    )
 }

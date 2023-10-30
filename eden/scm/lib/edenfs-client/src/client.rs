@@ -185,7 +185,7 @@ impl EdenFsClient {
 
 /// Extract EdenError from Thrift generated enums.
 /// For example, turn GetScmStatusV2Error::ex(EdenError) into this crate's EdenError.
-fn extract_error<V, E: std::error::Error + Send + Sync + 'static>(
+pub(crate) fn extract_error<V, E: std::error::Error + Send + Sync + 'static>(
     result: std::result::Result<V, E>,
 ) -> anyhow::Result<V> {
     match result {
