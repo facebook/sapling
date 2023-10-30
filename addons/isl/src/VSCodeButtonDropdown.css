@@ -50,12 +50,22 @@
   vertical-align: bottom;
   appearance: none;
   line-height: 0;
-  /* Embed image for chevron, since we can't add children to <select> */
-  background-repeat: no-repeat;
-  background-position: center;
-  background-image: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZmlsbC1ydWxlPSJldmVub2RkIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik03Ljk3NjEyIDEwLjA3MTlMMTIuMzMzNCA1LjcxNDZMMTIuOTUyMSA2LjMzMzMyTDguMjg1NDggMTFMNy42NjY3NiAxMUwzLjAwMDEgNi4zMzMzMkwzLjYxODgyIDUuNzE0Nkw3Ljk3NjEyIDEwLjA3MTlaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4K);
 
+  border: 1px solid var(--button-border);
   border-left: 1px solid var(--button-secondary-foreground);
+}
+
+/* Improve handling of the "Modern" themes, which use button-border unlike most other themes. */
+body[data-vscode-theme-id='Default Light Modern'] .vscode-button-dropdown select,
+body[data-vscode-theme-id='Default Dark Modern'] .vscode-button-dropdown select {
+  border-left: unset;
+}
+
+.vscode-button-dropdown .codicon.codicon-chevron-down {
+  color: var(--button-secondary-foreground);
+  position: absolute;
+  right: calc(var(--halfpad) - 1px);
+  pointer-events: none;
 }
 
 .vscode-button-dropdown vscode-button {
