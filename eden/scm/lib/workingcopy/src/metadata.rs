@@ -132,6 +132,12 @@ impl Metadata {
     }
 }
 
+impl PartialEq for Metadata {
+    fn eq(&self, other: &Self) -> bool {
+        self.mode() == other.mode() && self.len() == other.len() && self.mtime() == other.mtime()
+    }
+}
+
 impl From<FileStateV2> for Metadata {
     fn from(s: FileStateV2) -> Self {
         let mut flags = MetadataFlags::empty();
