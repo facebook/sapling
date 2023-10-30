@@ -8,8 +8,8 @@
 #pragma once
 
 #include <folly/futures/Future.h>
+#include <rust/cxx.h>
 #include <memory>
-#include "rust/cxx.h"
 
 namespace facebook::eden {
 
