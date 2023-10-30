@@ -91,6 +91,7 @@ rust_python_library(
         "//eden/scm/lib/doctor/network:network-doctor",
         "//eden/scm/lib/eagerepo:eagerepo",
         "//eden/scm/lib/edenapi:edenapi",
+        "//eden/scm/lib/edenfs-client:edenfs-client",
         "//eden/scm/lib/exchange:exchange",
         "//eden/scm/lib/formatter:formatter",
         "//eden/scm/lib/fsyncglob:fsyncglob",

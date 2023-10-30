@@ -10,6 +10,8 @@ use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 use std::sync::mpsc;
 use std::sync::Arc;
+use std::time::Duration;
+use std::time::Instant;
 
 use clidispatch::ReqCtx;
 
@@ -46,15 +48,23 @@ pub fn run(ctx: ReqCtx<Opts>, repo: &mut Repo) -> Result<u8> {
             wait_thread_count.fetch_add(1, Ordering::Release);
             let mut err = io.error();
             let tx = tx.clone();
+            let mut error_start = None;
             std::thread::Builder::new()
                 .name(format!("wait:{}", name))
                 .spawn(move || {
                     loop {
                         if let Err(e) = wait() {
-                            let _ = write!(err, "error({}): {}\n{:?}\n", name, &e, &e);
-                            let _ = tx.send("error");
-                            break;
+                            if should_retry(&e, &mut error_start) {
+                                tracing::warn!("retry error in wait:{}: {}\n{:?}", name, &e, &e);
+                                std::thread::sleep(Duration::from_secs(1));
+                                continue;
+                            } else {
+                                let _ = write!(err, "error({}): {}\n{:?}\n", name, &e, &e);
+                                let _ = tx.send("error");
+                                break;
+                            }
                         }
+                        error_start = None;
                         if tx.send(name).is_err() {
                             break;
                         }
@@ -159,4 +169,34 @@ will exit with code 254.
 
 pub fn synopsis() -> Option<&'static str> {
     None
+}
+
+/// Decide whether to retry when a wait thread encountered an error.
+///
+/// Errors like edenfs commit out-of-date is considered transient and will be
+/// retired with limited patience.
+fn should_retry(error: &anyhow::Error, error_start: &mut Option<Instant>) -> bool {
+    if error_start.is_none() {
+        // Track the error start time.
+        *error_start = Some(Instant::now());
+    }
+
+    let mut patience = None;
+    if let Some(error) = error.downcast_ref::<edenfs_client::EdenError>() {
+        // Assuming that a checkout is in process. Expect those to recover later.
+        tracing::trace!("eden error code: {}", error.error_type);
+        if error.error_type == "OUT_OF_DATE_PARENT" || error.error_type == "CHECKOUT_IN_PROGRESS" {
+            patience = Some(Duration::from_secs(60));
+        }
+    } else {
+        tracing::trace!("non-eden error: {:?}", error);
+    }
+
+    if let (Some(start), Some(patience)) = (error_start.as_ref(), patience) {
+        if start.elapsed() < patience {
+            return true;
+        }
+    }
+
+    false
 }

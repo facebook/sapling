@@ -28,6 +28,7 @@ dag = { version = "0.1.0", path = "../dag" }
 debugtop = { version = "0.1.0", path = "../debugtop" }
 eagerepo = { version = "0.1.0", path = "../eagerepo" }
 edenapi = { version = "0.1.0", path = "../edenapi" }
+edenfs-client = { version = "0.1.0", path = "../edenfs-client" }
 exchange = { version = "0.1.0", path = "../exchange" }
 fail = { version = "0.4", features = ["failpoints"] }
 flate2 = { version = "1.0.26", features = ["rust_backend"], default-features = false }
