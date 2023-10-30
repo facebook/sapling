@@ -9,7 +9,6 @@
 
 mod client;
 mod filter;
-pub mod status;
 mod types;
 
 pub use crate::client::EdenFsClient;
