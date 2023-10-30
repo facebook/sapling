@@ -9,7 +9,6 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::Duration;
 use std::time::SystemTime;
 
 use configmodel::Config;
@@ -104,7 +103,10 @@ impl Wait {
             let new_wait = Self::new(wc, &self.dot_dir, config)?;
             if new_wait.metadata_map == self.metadata_map {
                 // Not changed.
-                std::thread::sleep(Duration::from_secs(1));
+                wc.filesystem
+                    .lock()
+                    .inner
+                    .wait_for_potential_change(config)?;
             } else {
                 *self = new_wait;
                 break;

@@ -6,10 +6,12 @@
  */
 
 use std::path::PathBuf;
+use std::time::Duration;
 use std::time::SystemTime;
 
 use anyhow::Result;
 use configmodel::Config;
+use configmodel::ConfigExt;
 use io::IO;
 use pathmatcher::DynMatcher;
 use serde::Serialize;
@@ -51,4 +53,18 @@ pub trait PendingChanges {
         config: &dyn Config,
         io: &IO,
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChange>>>>;
+
+    /// Block until potential "status" or "diff" change.
+    ///
+    /// This function is "correct" if it just returns directly. But that will
+    /// trigger potentially slow "status" calculation.
+    ///
+    /// For supported backends (ex. watchman or edenfs), this function can
+    /// watchman subscription or edenfs journal number to delay a prolonged
+    /// period of time to optimize unnecessary "status" out.
+    fn wait_for_potential_change(&self, config: &dyn Config) -> Result<()> {
+        let interval_ms = config.get_or("workingcopy", "poll-interval-ms", || 1000)?;
+        std::thread::sleep(Duration::from_millis(interval_ms));
+        Ok(())
+    }
 }

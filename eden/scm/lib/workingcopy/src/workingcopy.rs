@@ -61,11 +61,11 @@ use crate::watchmanfs::WatchmanFileSystem;
 type ArcFileStore = Arc<dyn FileStore>;
 type ArcReadTreeManifest = Arc<dyn ReadTreeManifest + Send + Sync>;
 
-struct FileSystem {
+pub(crate) struct FileSystem {
     vfs: VFS,
     file_store: ArcFileStore,
     file_system_type: FileSystemType,
-    inner: Box<dyn PendingChanges + Send>,
+    pub(crate) inner: Box<dyn PendingChanges + Send>,
 }
 
 impl AsRef<Box<dyn PendingChanges + Send>> for FileSystem {
@@ -81,7 +81,7 @@ pub struct WorkingCopy {
     treestate: Arc<Mutex<TreeState>>,
     tree_resolver: ArcReadTreeManifest,
     filestore: ArcFileStore,
-    filesystem: Mutex<FileSystem>,
+    pub(crate) filesystem: Mutex<FileSystem>,
     ignore_matcher: Arc<GitignoreMatcher>,
     locker: Arc<RepoLocker>,
     dot_hg_path: PathBuf,
