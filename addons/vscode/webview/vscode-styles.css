@@ -22,3 +22,10 @@ code {
    Just unset this to reset to more browser-like style. */
   color: unset;
 }
+
+/* Improve handling of the "Modern" themes, which have a particularly "loud" badge color. */
+body[data-vscode-theme-id='Default Light Modern'] .commit-rows vscode-tag::part(control),
+body[data-vscode-theme-id='Default Dark Modern'] .commit-rows vscode-tag::part(control) {
+  background-color: var(--vscode-tab-unfocusedHoverBackground);
+  color: var(--vscode-tab-activeForeground);
+}
