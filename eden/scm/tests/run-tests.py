@@ -46,7 +46,6 @@ from __future__ import absolute_import, print_function
 import argparse
 import collections
 import difflib
-import distutils.version as version
 import errno
 import hashlib
 import json
@@ -711,9 +710,7 @@ def parseargs(args, parser):
         try:
             import coverage
 
-            covver = version.StrictVersion(coverage.__version__).version
-            if covver < (3, 3):
-                parser.error("coverage options require coverage 3.3 or later")
+            coverage.__version__
         except ImportError:
             parser.error("coverage options now require the coverage package")
 
