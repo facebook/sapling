@@ -459,6 +459,7 @@ def smartdate(context, mapping, args):
     ]
     + logopts,
     _("[OPTION]... [[-r] REV]"),
+    cmdtype=registrar.command.readonly,
 )
 def smartlog(ui, repo, *pats, **opts):
     """show a graph of the commits that are relevant to you
