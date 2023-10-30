@@ -9,17 +9,15 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::SystemTime;
 
-use anyhow::anyhow;
 use anyhow::Result;
 use configmodel::Config;
 use edenfs_client::EdenFsClient;
+use edenfs_client::FileStatus;
 use io::IO;
 use parking_lot::Mutex;
 use pathmatcher::DynMatcher;
-use thrift_types::edenfs::ScmFileStatus;
 use treestate::treestate::TreeState;
 use types::hgid::NULL_ID;
-use types::RepoPathBuf;
 
 use crate::filesystem::PendingChange;
 use crate::filesystem::PendingChanges;
@@ -53,25 +51,15 @@ impl PendingChanges for EdenFileSystem {
             .next()
             .unwrap_or_else(|| Ok(NULL_ID))?;
 
-        let result = edenfs_client::status::get_status(p1, include_ignored, &self.client)?;
-        Ok(Box::new(result.status.entries.into_iter().map(
-            |(path, status)| {
-                {
-                    // TODO: Handle non-UTF8 encoded paths from Eden
-                    let repo_path = match RepoPathBuf::from_utf8(path) {
-                        Ok(repo_path) => repo_path,
-                        Err(err) => return Err(anyhow!(err)),
-                    };
+        let status_map = self.client.get_status(p1, include_ignored)?;
+        Ok(Box::new(status_map.into_iter().map(|(path, status)| {
+            tracing::trace!(%path, ?status, "eden status");
 
-                    tracing::trace!(%repo_path, ?status, "eden status");
-
-                    match status {
-                        ScmFileStatus::REMOVED => Ok(PendingChange::Deleted(repo_path)),
-                        ScmFileStatus::IGNORED => Ok(PendingChange::Ignored(repo_path)),
-                        _ => Ok(PendingChange::Changed(repo_path)),
-                    }
-                }
-            },
-        )))
+            match status {
+                FileStatus::Removed => Ok(PendingChange::Deleted(path)),
+                FileStatus::Ignored => Ok(PendingChange::Ignored(path)),
+                _ => Ok(PendingChange::Changed(path)),
+            }
+        })))
     }
 }

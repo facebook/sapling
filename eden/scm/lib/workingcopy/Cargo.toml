@@ -30,7 +30,6 @@ sparse = { version = "0.1.0", path = "../sparse" }
 status = { version = "0.1.0", path = "../status" }
 storemodel = { version = "0.1.0", path = "../storemodel" }
 thiserror = "1.0.43"
-thrift-types = { version = "0.1.0", path = "../thrift-types", optional = true }
 tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
 tracing = "0.1.35"
 treestate = { version = "0.1.0", path = "../treestate" }
@@ -44,4 +43,4 @@ async-trait = "0.1.71"
 tempfile = "3.8"
 
 [features]
-eden = ["edenfs-client", "thrift-types"]
+eden = ["edenfs-client"]

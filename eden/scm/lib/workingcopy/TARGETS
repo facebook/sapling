@@ -10,13 +10,11 @@ rust_library(
             "dependencies_override": {
                 "dependencies": {
                     "edenfs-client": {"optional": True},
-                    "thrift-types": {"optional": True},
                 },
             },
             "features": {
                 "eden": [
                     "edenfs-client",
-                    "thrift-types",
                 ],
             },
         },
@@ -57,7 +55,6 @@ rust_library(
         "//eden/scm/lib/sparse:sparse",
         "//eden/scm/lib/status:status",
         "//eden/scm/lib/storemodel:storemodel",
-        "//eden/scm/lib/thrift-types:thrift-types",
         "//eden/scm/lib/treestate:treestate",
         "//eden/scm/lib/types:types",
         "//eden/scm/lib/util:util",
