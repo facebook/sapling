@@ -53,6 +53,9 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures_stats::TimedFutureExt;
 use futures_watchdog::WatchdogExt;
+use git_types::MappedGitCommitId;
+use git_types::RootGitDeltaManifestId;
+use git_types::TreeHandle;
 use itertools::Itertools;
 use lock_ext::RwLockExt;
 use mercurial_derivation::MappedHgChangesetId;
@@ -253,7 +256,26 @@ impl WarmBookmarksCacheBuilder {
                 RootBasenameSuffixSkeletonManifest,
             >(&self.ctx, repo_derived_data.clone()));
         }
-
+        if types.contains(TreeHandle::NAME) {
+            self.warmers.push(create_derived_data_warmer::<TreeHandle>(
+                &self.ctx,
+                repo_derived_data.clone(),
+            ));
+        }
+        if types.contains(MappedGitCommitId::NAME) {
+            self.warmers
+                .push(create_derived_data_warmer::<MappedGitCommitId>(
+                    &self.ctx,
+                    repo_derived_data.clone(),
+                ));
+        }
+        if types.contains(RootGitDeltaManifestId::NAME) {
+            self.warmers
+                .push(create_derived_data_warmer::<RootGitDeltaManifestId>(
+                    &self.ctx,
+                    repo_derived_data.clone(),
+                ));
+        }
         Ok(())
     }
 
