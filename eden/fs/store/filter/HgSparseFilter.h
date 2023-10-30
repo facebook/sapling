@@ -14,8 +14,8 @@
 #include <string>
 
 #include "eden/fs/store/filter/Filter.h"
-#include "eden/scm/lib/edenfs-ffi/src/ffi.h"
-#include "eden/scm/lib/edenfs-ffi/src/lib.rs.h" // @manual
+#include "eden/scm/lib/edenfs_ffi/src/ffi.h"
+#include "eden/scm/lib/edenfs_ffi/src/lib.rs.h" // @manual
 
 namespace facebook::eden {
 
