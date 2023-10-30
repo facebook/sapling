@@ -607,7 +607,8 @@ impl Repo {
     }
 
     #[cfg(feature = "wdir")]
-    pub fn working_copy(&mut self, path: &Path) -> Result<WorkingCopy, errors::InvalidWorkingCopy> {
+    pub fn working_copy(&mut self) -> Result<WorkingCopy, errors::InvalidWorkingCopy> {
+        let path = &self.path;
         let is_eden = self.requirements.contains("eden");
         let fsmonitor_ext = self.config.get("extensions", "fsmonitor");
         let fsmonitor_mode = self.config.get_nonempty("fsmonitor", "mode");

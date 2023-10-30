@@ -442,8 +442,7 @@ impl Dispatcher {
                 }
                 CommandFunc::WorkingCopy(f) => {
                     let repo = self.repo_mut()?;
-                    let path = repo.path().to_owned();
-                    let mut wc = repo.working_copy(&path)?;
+                    let mut wc = repo.working_copy()?;
                     f(parsed, io, repo, &mut wc)
                 }
             }

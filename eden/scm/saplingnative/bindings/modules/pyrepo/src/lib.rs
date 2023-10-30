@@ -65,8 +65,7 @@ py_class!(pub class repo |py| {
         let mut wc_option = self.inner_wc(py).borrow_mut();
         if wc_option.is_none() {
             let mut repo = self.inner(py).write();
-            let path = repo.path().to_path_buf();
-            wc_option.replace(Arc::new(RwLock::new(repo.working_copy(&path).map_pyerr(py)?)));
+            wc_option.replace(Arc::new(RwLock::new(repo.working_copy().map_pyerr(py)?)));
         }
         PyWorkingCopy::create_instance(py, wc_option.as_ref().unwrap().clone())
     }
@@ -75,9 +74,8 @@ py_class!(pub class repo |py| {
         let wc_option = self.inner_wc(py).borrow_mut();
         if wc_option.is_some() {
             let mut repo = self.inner(py).write();
-            let path = repo.path().to_path_buf();
             let mut wc = wc_option.as_ref().unwrap().write();
-            *wc = repo.working_copy(&path).map_pyerr(py)?;
+            *wc = repo.working_copy().map_pyerr(py)?;
         }
         Ok(PyNone)
     }
