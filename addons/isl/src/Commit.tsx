@@ -10,6 +10,7 @@ import type {Snapshot} from 'recoil';
 import type {ContextMenuItem} from 'shared/ContextMenu';
 
 import {globalRecoil} from './AccessGlobalRecoil';
+import {Avatar} from './Avatar';
 import {BranchIndicator} from './BranchIndicator';
 import {hasUnsavedEditedCommitMessage} from './CommitInfoView/CommitInfoState';
 import {currentComparisonMode} from './ComparisonView/atoms';
@@ -307,7 +308,7 @@ export const Commit = memo(
             draggable={!isPublic && isDraggablePreview(previewType)}
             onClick={onClickToSelect}
             onDoubleClick={onDoubleClickToShowDrawer}>
-            <div className="commit-avatar" />
+            <Avatar username={commit.author} />
             {isPublic ? null : (
               <span className="commit-title">
                 <span>{title}</span>

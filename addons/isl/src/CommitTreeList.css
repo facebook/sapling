@@ -85,21 +85,27 @@
 
 .commit-avatar {
   position: absolute;
-  border: 2px solid var(--foreground);
+  border: 1px solid var(--foreground);
   margin-bottom: 0px;
   z-index: 3;
   background-color: var(--foreground, hsla(0, 0%, 0%, 0.1));
   display: inline-block;
   vertical-align: top;
   overflow: hidden;
-  left: -21px;
+  left: -22px;
   top: auto;
   bottom: auto;
   border-radius: 50%;
-  height: 14px;
-  width: 14px;
+  height: 16px;
+  width: 16px;
   box-sizing: border-box;
   transition: transform 0.2s, box-shadow 0.3s;
+}
+
+.commit-avatar img {
+  position: absolute;
+  width: 14px;
+  height: 14px;
 }
 
 /* Avatar may render below the top of the border,

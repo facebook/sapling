@@ -481,6 +481,7 @@ export type ClientToServerMessage =
   | {type: 'typeahead'; kind: TypeaheadKind; query: string; id: string}
   | {type: 'requestRepoInfo'}
   | {type: 'requestApplicationInfo'}
+  | {type: 'fetchAvatars'; authors: Array<string>}
   | {type: 'fetchDiffSummaries'; diffIds?: Array<DiffId>}
   | {type: 'fetchCommitCloudState'}
   | {type: 'getSuggestedReviewers'; context: {paths: Array<string>}; key: string}
@@ -547,6 +548,7 @@ export type ServerToClientMessage =
   | {type: 'applicationInfo'; info: ApplicationInfo}
   | {type: 'repoInfo'; info: RepoInfo; cwd?: string}
   | {type: 'repoError'; error: RepositoryError | undefined}
+  | {type: 'fetchedAvatars'; avatars: Map<string, string>}
   | {type: 'fetchedDiffSummaries'; summaries: Result<Map<DiffId, DiffSummary>>}
   | {type: 'fetchedCommitCloudState'; state: Result<CommitCloudSyncState>}
   | {type: 'gotSuggestedReviewers'; reviewers: Array<string>; key: string}

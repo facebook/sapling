@@ -614,6 +614,15 @@ export default class ServerToClientAPI {
         repo.codeReviewProvider?.triggerDiffSummariesFetch(data.diffIds ?? repo.getAllDiffIds());
         break;
       }
+      case 'fetchAvatars': {
+        repo.codeReviewProvider?.fetchAvatars?.(data.authors)?.then(avatars => {
+          this.postMessage({
+            type: 'fetchedAvatars',
+            avatars,
+          });
+        });
+        break;
+      }
       case 'getSuggestedReviewers': {
         repo.codeReviewProvider?.getSuggestedReviewers?.(data.context).then(reviewers => {
           this.postMessage({

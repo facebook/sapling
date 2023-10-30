@@ -44,4 +44,7 @@ export interface CodeReviewProvider {
   updateDiffMessage?(diffId: DiffId, newTitle: string, newDescription: string): Promise<void>;
 
   getSuggestedReviewers?(context: {paths: Array<string>}): Promise<Array<string>>;
+
+  /** Convert usernames/emails to avatar URIs */
+  fetchAvatars?(authors: Array<string>): Promise<Map<string, string>>;
 }
