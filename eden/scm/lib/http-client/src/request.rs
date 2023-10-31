@@ -17,6 +17,7 @@ use std::sync::atomic::Ordering::AcqRel;
 use std::time::Duration;
 use std::time::SystemTime;
 
+use clientinfo::CLIENT_INFO_HEADER;
 use curl::easy::Easy2;
 use curl::easy::HttpVersion;
 use curl::easy::List;
@@ -539,7 +540,7 @@ impl Request {
 
     pub fn set_client_info(&mut self, client_info: &Option<String>) -> &mut Self {
         if let Some(info) = client_info {
-            self.set_header("X-Client-Info", info);
+            self.set_header(CLIENT_INFO_HEADER, info);
         }
         self
     }

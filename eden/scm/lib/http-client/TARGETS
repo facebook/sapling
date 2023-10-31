@@ -36,6 +36,7 @@ rust_library(
         "fbsource//third-party/rust:tracing",
         "fbsource//third-party/rust:url",
         "//eden/scm/lib/async-runtime:async-runtime",
+        "//eden/scm/lib/clientinfo:clientinfo",
     ],
 )
 
