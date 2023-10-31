@@ -281,3 +281,40 @@ pub fn remove_symlink(path: &Path) -> Result<()> {
 pub fn remove_symlink(path: &Path) -> Result<()> {
     panic!("failed to remove symlink, unsupported platform");
 }
+
+#[cfg(windows)]
+const PYTHON_CANDIDATES: &[&str] = &[
+    r"c:\tools\fb-python\fb-python310",
+    r"c:\tools\fb-python\fb-python39",
+    r"c:\tools\fb-python\fb-python38",
+    r"c:\Python310",
+    r"c:\Python39",
+    r"c:\Python38",
+];
+
+#[cfg(windows)]
+pub fn find_python() -> Option<PathBuf> {
+    for candidate in PYTHON_CANDIDATES.iter() {
+        let candidate = Path::new(candidate);
+        let python = candidate.join("python.exe");
+
+        if candidate.exists() && python.exists() {
+            tracing::debug!("Found Python runtime at {}", python.display());
+            return Some(python);
+        }
+    }
+    None
+}
+
+#[cfg(windows)]
+pub fn execute_par(par: PathBuf) -> anyhow::Result<Command> {
+    let python = find_python().ok_or_else(|| {
+        anyhow!(
+            "Unable to find Python runtime. Paths tried:\n\n - {}",
+            PYTHON_CANDIDATES.join("\n - ")
+        )
+    })?;
+    let mut python = Command::new(python);
+    python.arg(par);
+    Ok(python)
+}

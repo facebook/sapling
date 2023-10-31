@@ -6,8 +6,6 @@
  */
 
 use std::path::Path;
-#[cfg(windows)]
-use std::path::PathBuf;
 use std::process::Command;
 
 use anyhow::anyhow;
@@ -22,46 +20,11 @@ use edenfs_telemetry::send;
 #[cfg(fbcode_build)]
 use edenfs_telemetry::EDENFSCTL_CLI_USAGE;
 #[cfg(windows)]
+use edenfs_utils::execute_par;
+#[cfg(windows)]
 use edenfs_utils::strip_unc_prefix;
 use fbinit::FacebookInit;
 use tracing_subscriber::filter::EnvFilter;
-
-#[cfg(windows)]
-const PYTHON_CANDIDATES: &[&str] = &[
-    r"c:\tools\fb-python\fb-python310",
-    r"c:\tools\fb-python\fb-python39",
-    r"c:\tools\fb-python\fb-python38",
-    r"c:\Python310",
-    r"c:\Python39",
-    r"c:\Python38",
-];
-
-#[cfg(windows)]
-fn find_python() -> Option<PathBuf> {
-    for candidate in PYTHON_CANDIDATES.iter() {
-        let candidate = Path::new(candidate);
-        let python = candidate.join("python.exe");
-
-        if candidate.exists() && python.exists() {
-            tracing::debug!("Found Python runtime at {}", python.display());
-            return Some(python);
-        }
-    }
-    None
-}
-
-#[cfg(windows)]
-fn execute_par(par: PathBuf) -> Result<Command> {
-    let python = find_python().ok_or_else(|| {
-        anyhow!(
-            "Unable to find Python runtime. Paths tried:\n\n - {}",
-            PYTHON_CANDIDATES.join("\n - ")
-        )
-    })?;
-    let mut python = Command::new(python);
-    python.arg(par);
-    Ok(python)
-}
 
 fn python_fallback() -> Result<Command> {
     if let Ok(args) = std::env::var("EDENFSCTL_REAL") {
