@@ -399,6 +399,9 @@ impl<H: ScubaHandler> Middleware for ScubaMiddleware<H> {
                 if uri.path() == "/health_check" {
                     return;
                 }
+                if uri.path() == "/proxygen/health_check" {
+                    return;
+                }
             }
 
             log_stats::<H>(scuba, state, &response.status());
