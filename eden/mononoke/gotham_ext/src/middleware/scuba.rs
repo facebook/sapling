@@ -35,9 +35,6 @@ use crate::middleware::PostResponseInfo;
 use crate::response::HeadersMeta;
 use crate::state_ext::StateExt;
 
-/// HTTP header used to correlate the request with the client-side logging
-const CLIENT_CORRELATOR: &str = "x-client-correlator";
-
 /// Common HTTP-related Scuba columns that the middlware will set automatically.
 /// Applications using the middleware are encouraged to follow a similar pattern
 /// when adding application-specific columns to the `ScubaMiddlewareState`.
@@ -216,15 +213,6 @@ fn populate_scuba(scuba: &mut MononokeScubaSampleBuilder, state: &mut State) {
             headers,
             HttpScubaKey::HttpUserAgent,
             header::USER_AGENT,
-            |header| header.to_string(),
-        );
-
-        // TODO(rajshar): Remove this once the ClientRequestInfo pieces are deployed in Prod
-        add_header(
-            scuba,
-            headers,
-            HttpScubaKey::ClientCorrelator,
-            CLIENT_CORRELATOR,
             |header| header.to_string(),
         );
     }
