@@ -265,7 +265,7 @@ class Merge3Text:
                 )
         return automerge_fns
 
-    def merge_groups(self, automerge=False):
+    def merge_groups(self, disable_automerge=False):
         """Yield sequence of line groups.
 
         Each one is a tuple:
@@ -304,7 +304,7 @@ class Merge3Text:
                 a_lines = self.a[t[3] : t[4]]
                 b_lines = self.b[t[5] : t[6]]
                 merged_lines = None
-                if automerge:
+                if not disable_automerge:
                     for fn in self.automerge_fns:
                         merged_lines = fn(base_lines, a_lines, b_lines)
                         if merged_lines is not None:
@@ -525,7 +525,7 @@ def render_minimized(
     if name_b:
         end_marker = end_marker + b" " + name_b
 
-    merge_groups = m3.merge_groups(automerge=True)
+    merge_groups = m3.merge_groups()
     lines = []
     for what, group_lines in merge_groups:
         if what == "conflict":
@@ -550,7 +550,7 @@ def render_merge3(m3, name_a, name_b, name_base) -> Tuple[List[bytes], int]:
     """Return merge in cvs-like form."""
     conflictscount = 0
     newline = _detect_newline(m3)
-    merge_groups = m3.merge_groups(automerge=True)
+    merge_groups = m3.merge_groups()
     lines = []
 
     for what, group_lines in merge_groups:
@@ -605,7 +605,7 @@ def render_mergediff(m3, name_a, name_b, name_base):
     newline = _detect_newline(m3)
     lines = []
     conflictscount = 0
-    for what, group_lines in m3.merge_groups(automerge=True):
+    for what, group_lines in m3.merge_groups():
         if what == "conflict":
             base_lines, a_lines, b_lines = group_lines
             basetext = b"".join(base_lines)
@@ -662,7 +662,7 @@ def render_mergediff(m3, name_a, name_b, name_base):
 
 def _resolve(m3, sides):
     lines = []
-    for what, group_lines in m3.merge_groups():
+    for what, group_lines in m3.merge_groups(disable_automerge=True):
         if what == "conflict":
             for side in sides:
                 lines.extend(group_lines[side])
