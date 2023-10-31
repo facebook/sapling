@@ -126,6 +126,7 @@ pub enum ClientEntryPoint {
     MegarepoForwardsyncer,
     MononokeAdmin,
     GitImport,
+    EdenApiReplay,
 }
 
 impl ClientRequestInfo {
@@ -194,6 +195,7 @@ impl Display for ClientEntryPoint {
             ClientEntryPoint::MegarepoForwardsyncer => "megarepo_forwardsyncer",
             ClientEntryPoint::MononokeAdmin => "mononoke_admin",
             ClientEntryPoint::GitImport => "git_import",
+            ClientEntryPoint::EdenApiReplay => "eden_api_replay",
         };
         write!(f, "{}", out)
     }
@@ -220,6 +222,7 @@ impl TryFrom<&str> for ClientEntryPoint {
             "megarepo_forwardsyncer" => Ok(ClientEntryPoint::MegarepoForwardsyncer),
             "mononoke_admin" => Ok(ClientEntryPoint::MononokeAdmin),
             "git_import" => Ok(ClientEntryPoint::GitImport),
+            "eden_api_replay" => Ok(ClientEntryPoint::EdenApiReplay),
             _ => Err(anyhow!("Invalid client entry point")),
         }
     }
