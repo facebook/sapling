@@ -247,9 +247,9 @@ struct ContentMetadataV2 {
   // whichever is the shortest. If is_utf8 is false, the
   // first_line is None
   11: optional string first_line;
-  // Is the file auto-generated? i.e. does it have the '@generated' tag
+  // Is the file auto-generated? i.e. does it have the '@'+'generated' tag
   12: optional bool is_generated;
-  // Is the file partially-generated? i.e. does it have the '@partially-generated' tag
+  // Is the file partially-generated? i.e. does it have the '@'+'partially-generated' tag
   13: optional bool is_partially_generated;
   // Blake3 hash of the file seeded with the global thrift constant in fbcode/blake3.thrift
   14: optional Blake3 seeded_blake3;
