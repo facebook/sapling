@@ -31,6 +31,7 @@ pub mod redaction_key_list;
 pub mod repo;
 pub mod sha1_hash;
 pub mod sharded_map;
+pub mod sharded_map_v2;
 pub mod skeleton_manifest;
 pub mod sql_types;
 pub mod svnrev;
