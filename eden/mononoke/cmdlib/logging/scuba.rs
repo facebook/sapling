@@ -11,6 +11,7 @@ use std::hash::Hasher;
 
 use anyhow::Error;
 use anyhow::Result;
+use arg_extensions::ArgDefaults;
 use clap::Args;
 use fbinit::FacebookInit;
 use observability::ObservabilityContext;
@@ -83,5 +84,27 @@ impl ScubaLoggingArgs {
         };
 
         MononokeScubaSampleBuilder::with_opt_table(fb, maybe_scuba)
+    }
+}
+
+impl ArgDefaults for ScubaLoggingArgs {
+    fn arg_defaults(&self) -> Vec<(&'static str, String)> {
+        let mut args = vec![];
+
+        if let Some(scuba_dataset) = &self.scuba_dataset {
+            args.push(("scuba_dataset", scuba_dataset.clone().to_string()));
+        };
+        if self.no_default_scuba_dataset {
+            args.push(("no_default_scuba_dataset", String::from("")));
+        };
+
+        if let Some(warm_bookmark_cache_scuba_dataset) = &self.warm_bookmark_cache_scuba_dataset {
+            args.push((
+                "warm_bookmark_cache_scuba_dataset",
+                warm_bookmark_cache_scuba_dataset.clone().to_string(),
+            ));
+        };
+
+        args
     }
 }

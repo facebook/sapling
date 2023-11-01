@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::env;
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
@@ -16,6 +17,7 @@ use anyhow::Error;
 use anyhow::Ok;
 use anyhow::Result;
 use bookmarks_types::BookmarkKey;
+use cmdlib_logging::ScubaLoggingArgs;
 use commit_id::parse_commit_id;
 use derived_data_remote::RemoteDerivationArgs;
 use fbinit::FacebookInit;
@@ -25,11 +27,13 @@ use futures::StreamExt;
 use gitexport_tools::build_partial_commit_graph_for_export;
 use gitexport_tools::create_git_repo_on_disk;
 use gitexport_tools::rewrite_partial_changesets;
+use gitexport_tools::run_and_log_stats_to_scuba;
 use gitexport_tools::ExportPathInfo;
 use gitexport_tools::MASTER_BOOKMARK;
 use mononoke_api::BookmarkFreshness;
 use mononoke_api::ChangesetContext;
 use mononoke_api::ChangesetId;
+use mononoke_api::CoreContext;
 use mononoke_api::Repo;
 use mononoke_api::RepoContext;
 use mononoke_app::fb303::AliveService;
@@ -168,9 +172,16 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         derive_remotely_hostport: None,
     };
 
+    let default_scuba_logging_args = ScubaLoggingArgs {
+        scuba_dataset: Some("mononoke_gitexport".to_string()),
+        no_default_scuba_dataset: false,
+        warm_bookmark_cache_scuba_dataset: None,
+    };
+
     let app: MononokeApp = MononokeAppBuilder::new(fb)
         .with_arg_defaults(read_only_storage)
         .with_arg_defaults(remove_derivation_args)
+        .with_arg_defaults(default_scuba_logging_args)
         .with_app_extension(Fb303AppExtension {})
         .build::<GitExportArgs>()?;
 
@@ -181,9 +192,42 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     let start_time = std::time::Instant::now();
 
     let args: GitExportArgs = app.args()?;
-    let logger = app.logger();
     let ctx = app.new_basic_context();
+    let metadata = ctx.session().metadata();
+    let session_id = metadata.session_id();
+    let logger = ctx.logger().clone();
 
+    let ctx = ctx.with_mutated_scuba(|mut scuba| {
+        scuba.add_metadata(metadata);
+        if let Result::Ok(unixname) = env::var("USER") {
+            scuba.add("unixname", unixname);
+        }
+        scuba
+    });
+    info!(logger, "Starting session with id {}", session_id);
+
+    run_and_log_stats_to_scuba(
+        &ctx.clone(),
+        "Gitexport execution",
+        async_main_impl(app, args, ctx),
+    )
+    .await?;
+
+    info!(
+        &logger,
+        "Finished export in {} seconds",
+        start_time.elapsed().as_secs()
+    );
+
+    Ok(())
+}
+
+async fn async_main_impl(
+    app: MononokeApp,
+    args: GitExportArgs,
+    ctx: CoreContext,
+) -> Result<(), Error> {
+    let logger = ctx.logger().clone();
     let repo: Arc<Repo> = app.open_repo(&args.hg_repo_args).await?;
 
     if !app.environment().readonly_storage.0 {
@@ -246,7 +290,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     );
 
     let graph_info = build_partial_commit_graph_for_export(
-        logger,
+        &logger,
         export_path_infos.clone(),
         args.oldest_commit_ts,
     )
@@ -288,12 +332,6 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         args.git_repo_path,
     )
     .await?;
-
-    info!(
-        logger,
-        "Finished export in {} seconds",
-        start_time.elapsed().as_secs()
-    );
 
     Ok(())
 }
