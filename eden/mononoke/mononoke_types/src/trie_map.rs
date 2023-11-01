@@ -85,6 +85,44 @@ impl<V> TrieMap<V> {
             stack: vec![self.edges.iter()],
         }
     }
+
+    /// Returns a tuple of the longest common prefix of all entries in the TrieMap,
+    /// and the TrieMap with the longest common prefix removed.
+    // Example input:
+    //     *
+    //     |
+    //     a
+    //     |
+    //     b
+    //   /   \
+    //  c=1   d
+    //        |
+    //        e=4
+    //
+    // Example output:
+    // longest common prefix = [a, b]
+    //     *
+    //   /   \
+    //  c=1   d
+    //        |
+    //        e=4
+    pub fn split_longest_common_prefix(mut self) -> (SmallVec<[u8; 24]>, Self) {
+        let mut lcp: SmallVec<[u8; 24]> = Default::default();
+
+        loop {
+            if self.value.is_some() || self.edges.len() > 1 {
+                return (lcp, self);
+            }
+
+            match self.edges.pop_first() {
+                None => return (lcp, self),
+                Some((next_byte, child)) => {
+                    lcp.push(next_byte);
+                    self = child;
+                }
+            }
+        }
+    }
 }
 
 impl<V> TrieMap<V>
@@ -289,6 +327,7 @@ impl<K: AsRef<[u8]>, V> FromIterator<(K, V)> for TrieMap<V> {
 #[cfg(test)]
 mod test {
     use anyhow::Result;
+    use itertools::Itertools;
 
     use super::*;
 
@@ -301,6 +340,18 @@ mod test {
         assert_eq!(trie_map.insert("bcdf", 3), None);
         assert_eq!(trie_map.insert("abcde", 4), Some(1));
 
+        // trie_map:
+        //      *
+        //     / \
+        //    a   b
+        //    |   |
+        //    b   c
+        //    |   |
+        //    c   d
+        //    |   |
+        //    d   f=3
+        //   / \
+        // e=4 f=2
         assert_eq!(
             trie_map.clone().into_iter().collect::<Vec<_>>(),
             vec![
@@ -336,6 +387,16 @@ mod test {
             vec![4, 2, 3]
         );
 
+        assert_eq!(
+            trie_map.clone().split_longest_common_prefix(),
+            (
+                SmallVec::<[u8; 24]>::new(),
+                vec![("abcde", 4), ("abcdf", 2), ("bcdf", 3),]
+                    .into_iter()
+                    .collect()
+            )
+        );
+
         assert_eq!(trie_map.get("abcde"), Some(&4));
         assert_eq!(trie_map.get("abcdd"), None);
         assert_eq!(trie_map.get("bcdf"), Some(&3));
@@ -351,6 +412,18 @@ mod test {
         *value = 6;
         assert_eq!(trie_map.get("zzzz"), Some(&6));
 
+        // trie_map after modifications:
+        //       *
+        //     / | \
+        //    a  b  z
+        //    |  |  |
+        //    b  c  z
+        //    |  |  |
+        //    c  d  z=6
+        //    |  |
+        //    d  f=3
+        //   / \
+        // e=5 f=2
         let (root_value, children) = trie_map.expand();
 
         assert_eq!(root_value, None);
@@ -359,8 +432,24 @@ mod test {
         assert_eq!(children[1].0, b'b');
         assert_eq!(children[2].0, b'z');
 
+        let (a_child, b_child, mut z_child) = children
+            .into_iter()
+            .map(|(_byte, child)| child)
+            .collect_tuple()
+            .unwrap();
+
+        // a_child:
+        //    *
+        //    |
+        //    b
+        //    |
+        //    c
+        //    |
+        //    d
+        //   / \
+        //  e=5 f=2
         assert_eq!(
-            children[0].1.clone().into_iter().collect::<Vec<_>>(),
+            a_child.clone().into_iter().collect::<Vec<_>>(),
             vec![
                 (SmallVec::from_slice("bcde".as_bytes()), 5),
                 (SmallVec::from_slice("bcdf".as_bytes()), 2),
@@ -368,13 +457,71 @@ mod test {
         );
 
         assert_eq!(
-            children[1].1.clone().into_iter().collect::<Vec<_>>(),
+            a_child.clone().split_longest_common_prefix(),
+            (
+                SmallVec::<[u8; 24]>::from_slice("bcd".as_bytes()),
+                vec![("e", 5), ("f", 2)].into_iter().collect()
+            )
+        );
+
+        // b_child:
+        //    *
+        //    |
+        //    c
+        //    |
+        //    d
+        //    |
+        //    f=3
+        assert_eq!(
+            b_child.clone().into_iter().collect::<Vec<_>>(),
             vec![(SmallVec::from_slice("cdf".as_bytes()), 3)]
         );
 
         assert_eq!(
-            children[2].1.clone().into_iter().collect::<Vec<_>>(),
+            b_child.clone().split_longest_common_prefix(),
+            (
+                SmallVec::<[u8; 24]>::from_slice("cdf".as_bytes()),
+                vec![("", 3)].into_iter().collect()
+            )
+        );
+
+        // z_child:
+        //    *
+        //    |
+        //    z
+        //    |
+        //    z
+        //    |
+        //    z=6
+        assert_eq!(
+            z_child.clone().into_iter().collect::<Vec<_>>(),
             vec![(SmallVec::from_slice("zzz".as_bytes()), 6)]
+        );
+
+        assert_eq!(
+            z_child.clone().split_longest_common_prefix(),
+            (
+                SmallVec::<[u8; 24]>::from_slice("zzz".as_bytes()),
+                vec![("", 6)].into_iter().collect()
+            )
+        );
+
+        z_child.insert("zzx", 10);
+        // z_child after modification:
+        //    *
+        //    |
+        //    z
+        //    |
+        //    z
+        //   / \
+        // x=10 z=6
+
+        assert_eq!(
+            z_child.clone().split_longest_common_prefix(),
+            (
+                SmallVec::<[u8; 24]>::from_slice("zz".as_bytes()),
+                vec![("x", 10), ("z", 6)].into_iter().collect()
+            )
         );
 
         Ok(())
