@@ -8,7 +8,9 @@
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::convert;
 use std::io::Write;
+use std::str::from_utf8;
 use std::sync::Arc;
 
 use anyhow::anyhow;
@@ -209,36 +211,47 @@ async fn metadata_to_manifest_entry(
                 let origin = delta_metadata.origin;
                 let actual_object = get_object_bytes(&ctx, blobstore.clone(), &full_object_entry, metadata.actual.oid(), HeaderState::Excluded).await?;
                 let base_object = get_object_bytes(&ctx, blobstore.clone(), &base, delta_metadata.object.oid(), HeaderState::Excluded).await?;
-                let instructions = DeltaInstructions::generate(
-                    base_object,
-        actual_object,
-    Algorithm::Myers,
-                )
-                .with_context(|| {
-                    format!(
-                        "Error while computing delta between base object {:?} and actual object {:?}",
-                        base.oid, full_object_entry.oid
+                // Objects are only valid for deltas when they are trees OR UTF-8 encoded blobs
+                let actual_object_valid = full_object_entry.kind == DeltaObjectKind::Tree || from_utf8(&actual_object).is_ok();
+                let base_object_valid = base.kind == DeltaObjectKind::Tree || from_utf8(&base_object).is_ok();
+                // Only generate delta when both the base and the target object are valid
+                if actual_object_valid && base_object_valid {
+                    let instructions = DeltaInstructions::generate(
+                        base_object,actual_object,Algorithm::Myers,
                     )
-                })?;
-                // The base path and actual path are the same for now but can vary in the future when we support
-                // files copied from one location to the other
-                let chunk_prefix =
-                    DeltaInstructionChunkIdPrefix::new(commit, path.clone(), origin, path.clone());
-                let chunk_size = Some(CHUNK_SIZE);
-                let stored_instructions_metadata = store_delta_instructions(&ctx, &blobstore, instructions, chunk_prefix, chunk_size)
-                    .await
                     .with_context(|| {
                         format!(
-                            "Error while storing delta instructions for path {} in commit {}",
-                            path, commit
+                            "Error while computing delta between base object {:?} and actual object {:?}",
+                            base.oid, full_object_entry.oid
                         )
                     })?;
-                anyhow::Ok(ObjectDelta::new(origin, base, stored_instructions_metadata))
+                    // The base path and actual path are the same for now but can vary in the future when we support
+                    // files copied from one location to the other
+                    let chunk_prefix =
+                        DeltaInstructionChunkIdPrefix::new(commit, path.clone(), origin, path.clone());
+                    let chunk_size = Some(CHUNK_SIZE);
+                    let stored_instructions_metadata = store_delta_instructions(&ctx, &blobstore, instructions, chunk_prefix, chunk_size)
+                        .await
+                        .with_context(|| {
+                            format!(
+                                "Error while storing delta instructions for path {} in commit {}",
+                                path, commit
+                            )
+                        })?;
+                    anyhow::Ok(Some(ObjectDelta::new(origin, base, stored_instructions_metadata)))
+                } else {
+                    anyhow::Ok(None)
+                }
             })
         })
         .buffer_unordered(20) // There will mostly be 1-2 deltas per path per object so concurrency of 20 is more than enough
         .try_collect::<Vec<_>>()
-        .await?.into_iter().collect::<Result<Vec<_>>>()?;
+        .await?
+        .into_iter()
+        .collect::<Result<Vec<_>>>()?
+        .into_iter()
+        .filter_map(convert::identity) // Filter out the deltas which are None
+        .collect();
     Ok(GitDeltaManifestEntry::new(full_object_entry, deltas))
 }
 
@@ -338,7 +351,7 @@ async fn derive_git_delta_manifest(
         anyhow::Ok((parent, parent_tree_handle))
     }))
     .await?;
-
+    let is_merge = parent_trees_with_commit.len() > 1;
     // Perform a manifest diff between the parent and the current changeset to identify the paths (could be file or directory)
     // that have been modified in the current commit as compared to the parent commit. Collect the result in a Multimap that
     // maps from MPath (added or modified) to Vec<DeltaEntryMetadata>. In case of added MPath, there would be only one DeltaEntryMetadata
@@ -366,6 +379,7 @@ async fn derive_git_delta_manifest(
                             let base = TreeMember::from(old_entry);
                             if actual.oid().size() > DELTA_THRESHOLD
                                 || base.oid().size() > DELTA_THRESHOLD
+                                || is_merge
                             {
                                 // If either the base object or the actual object is too large, then we don't want to delta them
                                 // and instead use them directly
@@ -429,7 +443,6 @@ async fn derive_git_delta_manifest(
     .await?
     .into_iter()
     .collect::<HashMap<_, _>>();
-
     // For each modified path, find the correct origin commit that introduced the previous modification to the path and generate the delta entries
     let manifest_entries = stream::iter(diff_items.into_iter()).map(|(path, mut entry)| {
         let parent_unodes_with_commit = &parent_unodes_with_commit;
@@ -830,35 +843,12 @@ mod test {
             .await?;
         // Ensure that the delta manifest contains entries for the paths that were added/modified as part of this commit
         assert_eq!(matched_entries.len(), expected_paths.len());
-        // Since the file base was modified, we should have a delta variant for it. Additionally, the root directory is always modified so it should
-        // have a delta variant as well
-        assert!(matched_entries.values().all(|entry| entry.is_delta()));
         // The commit has a change for path "branch" as well. However, both parents of the merge commit have the same version
         // of the file, so there should not be any entry for it in the manifest
         let branch_entry = delta_manifest
             .lookup(&ctx, &blobstore, &MPath::new("branch")?)
             .await?;
         assert!(branch_entry.is_none());
-        // Since the file "base" was modified, ensure that the delta variant for its entry points to the right changeset
-        let entry = matched_entries
-            .get(&MPath::new("base")?)
-            .expect("Expected entry for path 'base'");
-        // There should only be one delta base for the file "base"
-        assert_eq!(entry.deltas.len(), 1);
-        let delta = entry
-            .deltas
-            .first()
-            .expect("Expected delta variant for entry for path 'base'");
-        let base_hg_id = repo
-            .bonsai_hg_mapping_arc()
-            .get_hg_from_bonsai(&ctx, delta.origin)
-            .await?
-            .expect("Expected HG ID to exist for bonsai changeset");
-        // Validate that the base commit for the delta is as expected
-        assert_eq!(
-            base_hg_id,
-            HgChangesetId::from_str("15c40d0abc36d47fb51c8eaec51ac7aad31f669c").unwrap()
-        );
         Ok(())
     }
 
@@ -906,35 +896,12 @@ mod test {
             .await?;
         // Ensure that the delta manifest contains entries for the paths that were added/modified as part of this commit
         assert_eq!(matched_entries.len(), expected_paths.len());
-        // Since the file base was modified, we should have a delta variant for it. Additionally, the root directory is always modified so it should
-        // have a delta variant as well
-        assert!(matched_entries.values().all(|entry| entry.is_delta()));
         // The commit has a change for path "branch" as well. However, both parents of the merge commit have the same version
         // of the file, so there should not be any entry for it in the manifest
         let branch_entry = delta_manifest
             .lookup(&ctx, &blobstore, &MPath::new("branch")?)
             .await?;
         assert!(branch_entry.is_none());
-        // Since the file "base" was modified, ensure that the delta variant for its entry points to the right changeset
-        let entry = matched_entries
-            .get(&MPath::new("base")?)
-            .expect("Expected entry for path 'base'");
-        // There should only be one delta base for the file "base"
-        assert_eq!(entry.deltas.len(), 1);
-        let delta = entry
-            .deltas
-            .first()
-            .expect("Expected delta variant for entry for path 'base'");
-        let base_hg_id = repo
-            .bonsai_hg_mapping_arc()
-            .get_hg_from_bonsai(&ctx, delta.origin)
-            .await?
-            .expect("Expected HG ID to exist for bonsai changeset");
-        // Validate that the base commit for the delta is as expected
-        assert_eq!(
-            base_hg_id,
-            HgChangesetId::from_str("15c40d0abc36d47fb51c8eaec51ac7aad31f669c").unwrap()
-        );
         Ok(())
     }
 
@@ -965,7 +932,7 @@ mod test {
             .await?;
         // Ensure that the delta manifest contains entries for the paths that were added/modified as part of this commit
         assert_eq!(matched_entries.len(), expected_paths.len());
-        // The commit has a chan|ge for path "branch" as well. However, both parents of the merge commit have the same version
+        // The commit has a change for path "branch" as well. However, both parents of the merge commit have the same version
         // of the file, so there should not be any entry for it in the manifest
         let branch_entry = delta_manifest
             .lookup(&ctx, &blobstore, &MPath::new("branch")?)
@@ -986,18 +953,6 @@ mod test {
                 .iter()
                 .filter(|(path, _)| added_paths.contains(path))
                 .all(|(_, entry)| !entry.is_delta())
-        );
-        // Files root and base are present in both parents but with different content/version. The GitDeltaManifest should have entries
-        // for these files and these entries should have two delta variants
-        let modified_in_both_paths = vec![MPath::ROOT, MPath::new("3")?]
-            .into_iter()
-            .collect::<HashSet<_>>();
-
-        assert!(
-            matched_entries
-                .iter()
-                .filter(|(path, _)| modified_in_both_paths.contains(path))
-                .all(|(_, entry)| entry.is_delta() && entry.deltas.len() == 2)
         );
         // Validate that the correct commits are used as origin for modified files
         validate_origin_hg_hash(
