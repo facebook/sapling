@@ -37,7 +37,6 @@ Setup configuration
 # No warning should be printed because `foo` was created in `A`, not in `C`
 # which contains the `copy_from` reference.
   $ test_gitexport --log-level WARN -p "foo"
-  *] Changeset 5737239030ee7036172ee7bf8e2986159258fa401b4edb4c06d2c62cdb1e33c1 might have created the exported path foo by moving/copying files from a commit that might not be exported (id 00b258af738c278985fa2f7b224bb2054527eaaedfcc49d5e5cb0af35080d2f3). (glob)
 
 
   $ git clone $GIT_BUNDLE_OUTPUT $GIT_REPO

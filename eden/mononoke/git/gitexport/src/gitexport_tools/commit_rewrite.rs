@@ -319,7 +319,13 @@ async fn create_bonsai_for_new_repo<'a>(
             // Since we're building a history using all changesets that
             // affect the exported directories, any file being copied
             // should always exist in the new parent.
-            //
+
+            // Get all the export paths under which the modified file is.
+            let matched_export_paths = export_paths
+                .iter()
+                .filter(|p| p.is_prefix_of(new_path))
+                .collect::<HashSet<_>>();
+
             // If this isn't done, it might not be possible to rewrite the
             // commit to the new repo, because the changeset referenced in
             // its `copy_from` field will not have been remapped.
@@ -339,6 +345,7 @@ async fn create_bonsai_for_new_repo<'a>(
                 // This is copying from a path that's being exported, so we can
                 // reference the new parent in the `copy_from` field.
                 let is_old_path_exported = export_paths.iter().any(|p| p.is_prefix_of(old_path));
+
                 let new_parent_cs_id = orig_parent_ids.first();
 
                 if new_parent_cs_id.is_some() && is_old_path_exported {
@@ -357,15 +364,9 @@ async fn create_bonsai_for_new_repo<'a>(
 
                     // Check if the file being copied is creating any export
                     // path.
-                    let created_export_paths = export_paths_not_created
-                        .iter()
-                        .filter(|p| p.is_prefix_of(new_path))
-                        .cloned()
-                        .collect::<Vec<_>>();
-                    // Remove the paths from the `export_paths_not_created` set.
-                    let created_export_paths = created_export_paths
-                        .iter()
-                        .map(|p| export_paths_not_created.take(p).unwrap())
+                    let exp_paths_not_created_refs = export_paths_not_created.iter().collect();
+                    let created_export_paths = matched_export_paths
+                        .intersection(&exp_paths_not_created_refs)
                         .collect::<Vec<_>>();
 
                     for exp_p in created_export_paths {
@@ -390,6 +391,13 @@ async fn create_bonsai_for_new_repo<'a>(
                     *tracked_fc = tracked_fc.with_new_copy_from(None);
                 };
             };
+            // If any of the matched export paths from the set of the
+            // ones that haven't shown up yet (weren't created), to avoid
+            // printing false positive warnings to the user about
+            // `copy_from` references.
+            matched_export_paths.into_iter().for_each(|p| {
+                export_paths_not_created.take(p);
+            });
         };
     });
 
