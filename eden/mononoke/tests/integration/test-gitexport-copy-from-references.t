@@ -6,14 +6,8 @@
 
 Setting up a simple scenario for the gitexport tool
   $ . "${TEST_FIXTURES}/library.sh"
-
-
-Setup configuration
-  $ REPOTYPE="blob_files"
-  $ setup_common_config "$REPOTYPE"
-  $ ENABLE_API_WRITES=1 REPOID=1 setup_mononoke_repo_config "temp_repo"
+  $ . "${TEST_FIXTURES}/gitexport_library.sh"
   $ cd $TESTTMP
-
 
 Set some env vars that will be used frequently
 
@@ -91,26 +85,19 @@ Set some env vars that will be used frequently
   $ hgmn_clone mononoke://$(mononoke_address)/repo repo
   $ cd repo
   $ hg -q co master
-  $ SOURCE_REPO_LOG=$TESTTMP/source_repo_log
-  $ hg log --git --template "{firstline(desc)}\n{stat()}\n" | sed -E 's/\s+\|\s+([0-9]+).+/ \| \1/' > $SOURCE_REPO_LOG
-
 
 # -------------------- Use the gitexport tool --------------------
 
-  $ GIT_BUNDLE_OUTPUT=git_bundle
-  $ GIT_REPO=git_repo
-  $ GIT_REPO_LOG=$TESTTMP/git_repo_log
 
 Run the tool without passing the old name as an export path
 
-  $ gitexport --log-level WARN --repo-name "repo" -B "master" -p "$EXPORT_DIR" -o "$GIT_BUNDLE_OUTPUT"
+  $ test_gitexport --log-level WARN -p "$EXPORT_DIR"
   *] Changeset 6fc3f51f797aecf2a419fb70362d7da614bf5a7c1fc7ca067af0bdccff817493 might have created the exported path export_dir by moving/copying files from a commit that might not be exported (id 659ed19d0148b13710d4d466e39a5d86d52e6dabfe3becd8dbfb7e02fe327abc). (glob)
 
   $ git clone $GIT_BUNDLE_OUTPUT $GIT_REPO
-  Cloning into 'git_repo'...
-  $ cd $GIT_REPO
-  $ git log --stat --pretty=format:"%s" | sed -E 's/\s+\|\s+([0-9]+).+/ \| \1/' > $GIT_REPO_LOG
-  $ diff --old-line-format="- %L" --new-line-format="+ %L" "$SOURCE_REPO_LOG" "$GIT_REPO_LOG"
+  Cloning into '$TESTTMP/git_repo'...
+ 
+  $ diff_hg_and_git_repos
   - Add file to repo root
   -  root_file.txt | 1
   -  1 files changed, 1 insertions(+), 0 deletions(-)
@@ -166,27 +153,18 @@ Run the tool without passing the old name as an export path
   -  1 files changed, 1 insertions(+), 0 deletions(-)
   - 
   +  2 files changed, 2 insertions(+)
-  [1]
 
-
-
-
-
-  $ rm -rf $GIT_BUNDLE_OUTPUT $GIT_REPO $GIT_REPO_LOG
 
 Run the tool and pass the old name manually as an export path using the bounded export paths file arg
 
   $ BOUNDED_EXPORT_PATHS_FILE=$TESTTMP/bounded_export_paths.json
   $ echo '[ { "paths": '["\"$OLD_EXPORT_DIR\""]', "head": { "ID": '"\"$E\""' }  } ]' > $BOUNDED_EXPORT_PATHS_FILE
 
-  $ gitexport --log-level ERROR --repo-name "repo" -B "master" -p $EXPORT_DIR -f "$BOUNDED_EXPORT_PATHS_FILE" -o "$GIT_BUNDLE_OUTPUT"
+  $ test_gitexport --log-level ERROR -p $EXPORT_DIR -f "$BOUNDED_EXPORT_PATHS_FILE"
 
   $ git clone $GIT_BUNDLE_OUTPUT $GIT_REPO
-  Cloning into 'git_repo'...
-  $ cd $GIT_REPO
-  $ git log --stat --pretty=format:"%s" | sed -E 's/\s+\|\s+([0-9]+).+/ \| \1/' > $GIT_REPO_LOG
-
-  $ diff --old-line-format="- %L" --new-line-format="+ %L" "$SOURCE_REPO_LOG" "$GIT_REPO_LOG"
+  Cloning into '$TESTTMP/git_repo'...
+  $ diff_hg_and_git_repos  
   - Add file to repo root
   -  root_file.txt | 1
   -  1 files changed, 1 insertions(+), 0 deletions(-)
@@ -247,11 +225,3 @@ Run the tool and pass the old name manually as an export path using the bounded 
   -  1 files changed, 1 insertions(+), 0 deletions(-)
   - 
   +  1 file changed, 1 insertion(+)
-  [1]
-
-
-
-
-
-
-

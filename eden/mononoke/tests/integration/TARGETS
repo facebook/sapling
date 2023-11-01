@@ -27,6 +27,7 @@ buck_filegroup(
         "commitsync/current.toml",
         "commitsync/flipped_config.json",
         "commitsync/flipped_config.toml",
+        "gitexport_library.sh",
         "just_knobs.json",
         "library.sh",
         "library-commit.sh",

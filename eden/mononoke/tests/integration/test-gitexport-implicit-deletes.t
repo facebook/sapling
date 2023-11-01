@@ -4,18 +4,11 @@
 # GNU General Public License found in the LICENSE file in the root
 # directory of this source tree.
 
-Setting up a simple scenario for the gitexport tool
-  $ . "${TEST_FIXTURES}/library.sh"
-
-
 Setup configuration
-  $ REPOTYPE="blob_files"
-  $ setup_common_config "$REPOTYPE"
-  $ ENABLE_API_WRITES=1 REPOID=1 setup_mononoke_repo_config "temp_repo"
+  $ . "${TEST_FIXTURES}/library.sh"
+  $ . "${TEST_FIXTURES}/gitexport_library.sh"
   $ cd $TESTTMP
 
-
-Set some env vars that will be used frequently
 
 
 # Test if implicit deletes are being handled properly the following scenarios:
@@ -47,30 +40,20 @@ Set some env vars that will be used frequently
   $ hgmn_clone mononoke://$(mononoke_address)/repo repo
   $ cd repo
   $ hg -q co master
-  $ SOURCE_REPO_LOG=$TESTTMP/source_repo_log
-  $ hg log --git --template "{firstline(desc)}\n{stat()}\n" | sed -E 's/\s+\|\s+([0-9]+).+/ \| \1/' > $SOURCE_REPO_LOG
-
 
 
 # -------------------- Use the gitexport tool --------------------
 
 
-  $ GIT_REPO_OUTPUT="$TESTTMP/git_bundle"
-  $ GIT_REPO_LOG=$TESTTMP/git_repo_log
-
-
 Run the tool without passing the old name as an export path
 
-  $ gitexport --log-level ERROR --repo-name "repo" -B "master" -p "foo/a" -p "bar" -o "$GIT_REPO_OUTPUT"
+  $ test_gitexport --log-level="ERROR" -p "foo/a" -p "bar"
 
 
-  $ git clone "$GIT_REPO_OUTPUT" git_repo
-  Cloning into 'git_repo'...
-  $ cd git_repo
+  $ git clone "$GIT_BUNDLE_OUTPUT" "$GIT_REPO"
+  Cloning into '$TESTTMP/git_repo'...
 
-  $ git log --stat --pretty=format:"%s" | sed -E 's/\s+\|\s+([0-9]+).+/ \| \1/' > $GIT_REPO_LOG
-
-  $ diff --old-line-format="- %L" --new-line-format="+ %L" "$SOURCE_REPO_LOG" "$GIT_REPO_LOG"
+  $ diff_hg_and_git_repos  
   C
    bar | 1
    bar/f/g | 1
@@ -95,4 +78,3 @@ Run the tool without passing the old name as an export path
   -  5 files changed, 5 insertions(+), 0 deletions(-)
   - 
   +  4 files changed, 4 insertions(+)
-  [1]

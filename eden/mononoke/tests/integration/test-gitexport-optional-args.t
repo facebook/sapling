@@ -4,14 +4,9 @@
 # GNU General Public License found in the LICENSE file in the root
 # directory of this source tree.
 
-Setting up a simple scenario for the gitexport tool
-  $ . "${TEST_FIXTURES}/library.sh"
-
-
 Setup configuration
-  $ REPOTYPE="blob_files"
-  $ setup_common_config "$REPOTYPE"
-  $ ENABLE_API_WRITES=1 REPOID=1 setup_mononoke_repo_config "temp_repo"
+  $ . "${TEST_FIXTURES}/library.sh"
+  $ . "${TEST_FIXTURES}/gitexport_library.sh"
   $ cd $TESTTMP
 
 
@@ -52,25 +47,16 @@ Set some env vars that will be used frequently
   $ hgmn_clone mononoke://$(mononoke_address)/repo repo
   $ cd repo
   $ hg -q co master
-  $ SOURCE_REPO_LOG=$TESTTMP/source_repo_log
-  $ hg log --git --template "{firstline(desc)}\n{stat()}\n" | sed -E 's/\s+\|\s+([0-9]+).+/ \| \1/' > $SOURCE_REPO_LOG
-
   $ B_AUTHOR_TS=1451613600
-
-  $ GIT_BUNDLE_OUTPUT=git_bundle
-  $ GIT_REPO=git_repo
-  $ GIT_REPO_LOG=$TESTTMP/git_repo_log
 
 
 Specify a bookmark
-  $ gitexport --log-level ERROR --repo-name "repo" -B "master" -p $EXPORT_DIR -o "$GIT_BUNDLE_OUTPUT"
+  $ test_gitexport --log-level ERROR -p $EXPORT_DIR
+ 
   $ git clone $GIT_BUNDLE_OUTPUT $GIT_REPO
-  Cloning into 'git_repo'...
-  $ cd $GIT_REPO
-
-  $ git log --stat --pretty=format:"%s" | sed -E 's/\s+\|\s+([0-9]+).+/ \| \1/' > $GIT_REPO_LOG
-
-  $ diff --old-line-format="- %L" --new-line-format="+ %L" "$SOURCE_REPO_LOG" "$GIT_REPO_LOG"
+  Cloning into '$TESTTMP/git_repo'...
+ 
+  $ diff_hg_and_git_repos
   Add files to all directories
    export_dir/C.txt | 1
    export_dir/subdir_to_export/second_subdir_export.txt | 1
@@ -92,23 +78,15 @@ Specify a bookmark
   -  1 files changed, 1 insertions(+), 0 deletions(-)
   - 
   +  1 file changed, 1 insertion(+)
-  [1]
-
-
-
-
-  $ rm -rf $GIT_BUNDLE_OUTPUT $GIT_REPO $GIT_REPO_LOG
-
 
 Specify a changeset id
-  $ gitexport --log-level ERROR --repo-name "repo" -p $EXPORT_DIR -i "$C" -o "$GIT_BUNDLE_OUTPUT"
+# This run can't use the `test_gitexport` abbreviation because it uses the `-i`
+# flag and it conflicts with the default `-B "master"` arg used in the abbreviation.
+  $ gitexport -R "repo" --scuba-dataset="$SCUBA_LOGS_FILE" -o "$GIT_BUNDLE_OUTPUT" --log-level ERROR -p $EXPORT_DIR -i "$C"
   $ git clone $GIT_BUNDLE_OUTPUT $GIT_REPO
-  Cloning into 'git_repo'...
-  $ cd $GIT_REPO
+  Cloning into '$TESTTMP/git_repo'...
 
-  $ git log --stat --pretty=format:"%s" | sed -E 's/\s+\|\s+([0-9]+).+/ \| \1/' > $GIT_REPO_LOG
-
-  $ diff --old-line-format="- %L" --new-line-format="+ %L" "$SOURCE_REPO_LOG" "$GIT_REPO_LOG"
+  $ diff_hg_and_git_repos
   - Add files to all directories
   -  export_dir/C.txt | 1
   -  export_dir/subdir_to_export/second_subdir_export.txt | 1
@@ -129,21 +107,14 @@ Specify a changeset id
   -  1 files changed, 1 insertions(+), 0 deletions(-)
   - 
   +  1 file changed, 1 insertion(+)
-  [1]
-
-
-  $ rm -rf $GIT_BUNDLE_OUTPUT $GIT_REPO $GIT_REPO_LOG
-
 
 Test oldest commit timestamp arg
-  $ gitexport --log-level ERROR --repo-name "repo" -B "master" -p $EXPORT_DIR --oldest-commit-ts $B_AUTHOR_TS -o "$GIT_BUNDLE_OUTPUT"
+  $ test_gitexport --log-level ERROR -p $EXPORT_DIR --oldest-commit-ts $B_AUTHOR_TS
+
   $ git clone $GIT_BUNDLE_OUTPUT $GIT_REPO
-  Cloning into 'git_repo'...
-  $ cd $GIT_REPO
-
-  $ git log --stat --pretty=format:"%s" | sed -E 's/\s+\|\s+([0-9]+).+/ \| \1/' > $GIT_REPO_LOG
-
-  $ diff --old-line-format="- %L" --new-line-format="+ %L" "$SOURCE_REPO_LOG" "$GIT_REPO_LOG"
+  Cloning into '$TESTTMP/git_repo'...
+ 
+  $ diff_hg_and_git_repos
   Add files to all directories
    export_dir/C.txt | 1
    export_dir/subdir_to_export/second_subdir_export.txt | 1
@@ -164,22 +135,14 @@ Test oldest commit timestamp arg
   -  1 files changed, 1 insertions(+), 0 deletions(-)
   - 
   +  1 file changed, 1 insertion(+)
-  [1]
-
-
-  $ rm -rf $GIT_BUNDLE_OUTPUT $GIT_REPO $GIT_REPO_LOG
-
-
 
 Test both latest changeset and commit timestamp arg
-  $ gitexport --log-level ERROR --repo-name "repo" -p $EXPORT_DIR -i "$C" --oldest-commit-ts $B_AUTHOR_TS -o "$GIT_BUNDLE_OUTPUT"
+# This run can't use the `test_gitexport` abbreviation because it uses the `-i`
+# flag and it conflicts with the default `-B "master"` arg used in the abbreviation.
+  $ gitexport --log-level ERROR -R "repo" -p $EXPORT_DIR -i "$C" --oldest-commit-ts $B_AUTHOR_TS -o "$GIT_BUNDLE_OUTPUT"
   $ git clone $GIT_BUNDLE_OUTPUT $GIT_REPO
-  Cloning into 'git_repo'...
-  $ cd $GIT_REPO
-
-  $ git log --stat --pretty=format:"%s" | sed -E 's/\s+\|\s+([0-9]+).+/ \| \1/' > $GIT_REPO_LOG
-
-  $ diff --old-line-format="- %L" --new-line-format="+ %L" "$SOURCE_REPO_LOG" "$GIT_REPO_LOG"
+  Cloning into '$TESTTMP/git_repo'...
+  $ diff_hg_and_git_repos
   - Add files to all directories
   -  export_dir/C.txt | 1
   -  export_dir/subdir_to_export/second_subdir_export.txt | 1
@@ -199,4 +162,3 @@ Test both latest changeset and commit timestamp arg
   -  1 files changed, 1 insertions(+), 0 deletions(-)
   - 
   +  1 file changed, 1 insertion(+)
-  [1]
