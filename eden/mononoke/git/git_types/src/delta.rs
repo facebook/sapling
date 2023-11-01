@@ -48,8 +48,11 @@ const DATA_BITMASK: u8 = (1 << 7) - 1;
 /// Specific range size within a copy instruction which is encoded uniquely by Git, ignoring
 /// the standard format
 const COPY_SPECIAL_SIZE: u32 = 1 << 16;
-
+/// The hashing key used for generating the final hash for a delta instruction chunk
 const DELTA_INSTRUCTION_HASHING_KEY: &str = "git_delta_instruction_chunk";
+/// The maximum number of chunks for a file that will be considered for computing deltas
+/// This ensures that even big files can be deltaed quickly
+const DELTA_CHUNK_COUNT: usize = 100_000;
 
 /// Identifier for accessing a specific delta instruction chunk from the blobstore
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
@@ -303,7 +306,9 @@ impl std::fmt::Debug for DeltaInstruction {
 #[derive(Clone, Hash, Eq, PartialEq)]
 pub struct DeltaInstructions {
     base_object: Bytes,
+    base_object_chunk_size: usize,
     new_object: Bytes,
+    new_object_chunk_size: usize,
     processed_till: u32, // To keep track of the byte position till which the delta has been processed
     instructions: Vec<DeltaInstruction>,
 }
@@ -317,14 +322,18 @@ impl DeltaInstructions {
         new_object: Bytes,
         diff_algorithm: Algorithm,
     ) -> Result<Self> {
+        let base_object_vec = base_object.to_vec();
+        let new_object_vec = new_object.to_vec();
+        let tokened_base_object = ObjectData::new(&base_object_vec);
+        let tokened_new_object = ObjectData::new(&new_object_vec);
         let delta_instructions = Self {
-            base_object: base_object.clone(),
-            new_object: new_object.clone(),
+            base_object,
+            new_object,
+            base_object_chunk_size: tokened_base_object.chunk_size(),
+            new_object_chunk_size: tokened_new_object.chunk_size(),
             instructions: Vec::new(),
             processed_till: 0,
         };
-        let tokened_base_object = ObjectData::new(base_object);
-        let tokened_new_object = ObjectData::new(new_object);
         let interned_input = InternedInput::new(tokened_base_object, tokened_new_object);
         let fallible_delta_instructions = FallibleDeltaInstructions::Valid(delta_instructions);
         diff(diff_algorithm, &interned_input, fallible_delta_instructions)
@@ -441,6 +450,18 @@ impl Sink for FallibleDeltaInstructions {
     fn process_change(&mut self, before: Range<u32>, after: Range<u32>) {
         match self {
             Self::Valid(delta_instructions) => {
+                // The before and after ranges are essentially chunk indices where each
+                // chunk can be `chunk_size` bytes long. To get the actual byte level index,
+                // we need to multiply the `chunk_size` with the chunk index
+                let base_object_offset = delta_instructions.base_object_chunk_size as u32;
+                let base_object_len = delta_instructions.base_object.len() as u32;
+                let before = (before.start * base_object_offset)
+                    ..(std::cmp::min(before.end * base_object_offset, base_object_len));
+
+                let new_object_offset = delta_instructions.new_object_chunk_size as u32;
+                let new_object_len = delta_instructions.new_object.len() as u32;
+                let after = (after.start * new_object_offset)
+                    ..(std::cmp::min(after.end * new_object_offset, new_object_len));
                 let processed_till = delta_instructions.processed_till.clone();
                 // Every change detected by the algorithm would be represented as a Data instruction since
                 // the changed part of the content cannot be copied from the base object. The data instruction
@@ -554,29 +575,35 @@ impl Sink for FallibleDeltaInstructions {
 
 /// Wrapper type over the bytes representing the data of the Git Object, used
 /// for bypassing the orphan rule for implementing the TokenSource trait
-struct ObjectData {
-    data: Bytes,
+struct ObjectData<'a> {
+    data: &'a Vec<u8>,
+    chunk_size: usize,
 }
 
-impl ObjectData {
-    pub fn new(data: Bytes) -> Self {
-        Self { data }
+impl<'a> ObjectData<'a> {
+    pub fn new(data: &'a Vec<u8>) -> Self {
+        let chunk_size = std::cmp::max(data.len() / DELTA_CHUNK_COUNT, 1);
+        Self { data, chunk_size }
+    }
+
+    pub fn chunk_size(&self) -> usize {
+        self.chunk_size
     }
 }
 
-impl TokenSource for ObjectData {
-    // Since we want byte level diff, the atomic unit of difference would
-    // be individual bytes of the Git Object data
-    type Token = u8;
+impl<'a> TokenSource for ObjectData<'a> {
+    // Depending upon the input, the granularity could be individual bytes (for file less than 100KB)
+    // or chunks of bytes (for large files)
+    type Token = &'a [u8];
 
-    type Tokenizer = bytes::buf::IntoIter<Bytes>;
+    type Tokenizer = std::slice::Chunks<'a, u8>;
 
     fn tokenize(&self) -> Self::Tokenizer {
-        self.data.clone().into_iter()
+        self.data.chunks(self.chunk_size)
     }
 
     fn estimate_tokens(&self) -> u32 {
-        self.data.len() as u32
+        (self.data.len() / self.chunk_size) as u32
     }
 }
 
@@ -708,6 +735,39 @@ mod test {
         assert_eq!(i, data.len());
     }
 
+    async fn random_bytes_blob_delta_application(
+        base_object_size: usize,
+        new_object_size: usize,
+    ) -> Result<()> {
+        // Create an arbitrary set of bytes and use that as the base object
+        let base_object: Vec<u8> = rand::thread_rng()
+            .sample_iter::<u8, _>(rand::distributions::Standard)
+            .take(base_object_size)
+            .collect();
+        let base_object = Bytes::from(base_object);
+        // Create an arbitrary set of bytes and use that as the new object
+        let new_object: Vec<u8> = rand::thread_rng()
+            .sample_iter::<u8, _>(rand::distributions::Standard)
+            .take(new_object_size)
+            .collect();
+        let new_object = Bytes::from(new_object);
+        let delta_instructions =
+            DeltaInstructions::generate(base_object.clone(), new_object.clone(), Algorithm::Myers)?;
+        let mut encoded_instructions = Vec::new();
+        delta_instructions
+            .write_instructions(&mut encoded_instructions)
+            .await?;
+        let mut recreated_new_object = Vec::new();
+        apply(
+            base_object.as_ref(),
+            &mut recreated_new_object,
+            encoded_instructions.as_ref(),
+        );
+        // Validate that the recreated_new_object matches the original new_object
+        assert_eq!(new_object, Bytes::from(recreated_new_object));
+        Ok(())
+    }
+
     #[test]
     fn test_data_instruction_creation() -> Result<()> {
         // Creating a data instruction with more than 127 bytes of data should fail
@@ -786,34 +846,51 @@ mod test {
     }
 
     #[fbinit::test]
-    async fn test_random_bytes_blob_delta_application() -> Result<()> {
-        // Create an arbitrary set of bytes and use that as the base object
-        let base_object: Vec<u8> = rand::thread_rng()
-            .sample_iter::<u8, _>(rand::distributions::Standard)
-            .take(10000)
+    async fn test_very_large_string_delta_application() -> Result<()> {
+        // Create a 50 MB string with random characters
+        let base_object: String = rand::thread_rng()
+            .sample_iter::<char, _>(rand::distributions::Standard)
+            .take(52_428_800)
             .collect();
-        let base_object = Bytes::from(base_object);
-        // Create an arbitrary set of bytes and use that as the new object
-        let new_object: Vec<u8> = rand::thread_rng()
-            .sample_iter::<u8, _>(rand::distributions::Standard)
-            .take(10000)
+        let base_bytes = Bytes::from(base_object.into_bytes());
+
+        // Create another 40 MB string with random characters
+        let new_object: String = rand::thread_rng()
+            .sample_iter::<char, _>(rand::distributions::Standard)
+            .take(41_943_040)
             .collect();
-        let new_object = Bytes::from(new_object);
+        let new_bytes = Bytes::from(new_object.into_bytes());
+
         let delta_instructions =
-            DeltaInstructions::generate(base_object.clone(), new_object.clone(), Algorithm::Myers)?;
+            DeltaInstructions::generate(base_bytes.clone(), new_bytes.clone(), Algorithm::Myers)?;
         let mut encoded_instructions = Vec::new();
         delta_instructions
             .write_instructions(&mut encoded_instructions)
             .await?;
         let mut recreated_new_object = Vec::new();
         apply(
-            base_object.as_ref(),
+            base_bytes.as_ref(),
             &mut recreated_new_object,
             encoded_instructions.as_ref(),
         );
         // Validate that the recreated_new_object matches the original new_object
-        assert_eq!(new_object, Bytes::from(recreated_new_object));
+        assert_eq!(new_bytes, Bytes::from(recreated_new_object));
         Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_very_large_random_bytes_blob_delta_application() -> Result<()> {
+        random_bytes_blob_delta_application(41_943_040, 52_428_800).await
+    }
+
+    #[fbinit::test]
+    async fn test_mismatched_random_bytes_blob_delta_application() -> Result<()> {
+        // Very small base object and large new object
+        random_bytes_blob_delta_application(199, 2_097_152).await?;
+        // Large base object and very small new object
+        random_bytes_blob_delta_application(3_145_728, 271).await?;
+        // Both small objects
+        random_bytes_blob_delta_application(4_194_304, 4_194_305).await
     }
 
     #[fbinit::test]
