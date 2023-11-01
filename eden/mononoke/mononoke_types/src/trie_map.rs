@@ -62,6 +62,14 @@ impl<V> TrieMap<V> {
         self.value = None;
         self.edges.clear();
     }
+
+    pub fn iter(&self) -> TrieMapIter<'_, V> {
+        TrieMapIter {
+            bytes: Default::default(),
+            value: self.value.as_ref().map(|value| value.as_ref()),
+            stack: vec![self.edges.iter()],
+        }
+    }
 }
 
 impl<V> TrieMap<V>
@@ -79,6 +87,14 @@ where
     }
 }
 
+/// A consuming ordered iterator over all key-value pairs of a TrieMap.
+// The iterator works by keeping the state of a depth first search performed
+// on the trie:
+// - `bytes` contains a concatenation of all u8s from the root to the current
+// node in the search.
+// - `value` is the value of the current node in the search, if any.
+// - `stack` contains an iterator for each level descended in the depth first
+// search, to allow continuing the search after backtracking from a level.
 pub struct TrieMapIntoIter<V> {
     bytes: SmallVec<[u8; 24]>,
     value: Option<Box<V>>,
@@ -125,6 +141,44 @@ impl<V> Iterator for TrieMapIntoIter<V> {
     }
 }
 
+/// A non-consuming ordered iterator over all key-value pairs of a TrieMap.
+/// Note: the iterator has to allocate memory for the keys as they are
+/// defined implicitly.
+// Same as TrieMapIntoIter except that it stores a reference to the
+// current node's value in `value` instead of owning it.
+pub struct TrieMapIter<'a, V> {
+    bytes: SmallVec<[u8; 24]>,
+    value: Option<&'a V>,
+    stack: Vec<std::collections::btree_map::Iter<'a, u8, TrieMap<V>>>,
+}
+
+impl<'a, V> Iterator for TrieMapIter<'a, V> {
+    type Item = (SmallVec<[u8; 24]>, &'a V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if let Some(value) = self.value.take() {
+                return Some((self.bytes.clone(), value));
+            }
+
+            match self.stack.last_mut() {
+                None => return None,
+                Some(iter) => match iter.next() {
+                    None => {
+                        self.bytes.pop();
+                        self.stack.pop();
+                    }
+                    Some((next_byte, child)) => {
+                        self.bytes.push(*next_byte);
+                        self.value = child.value.as_ref().map(|value| value.as_ref());
+                        self.stack.push(child.edges.iter());
+                    }
+                },
+            };
+        }
+    }
+}
+
 impl<K: AsRef<[u8]>, V> Extend<(K, V)> for TrieMap<V> {
     fn extend<T: IntoIterator<Item = (K, V)>>(&mut self, iter: T) {
         for (key, value) in iter {
@@ -161,6 +215,18 @@ mod test {
 
         assert_eq!(
             trie_map.clone().into_iter().collect::<Vec<_>>(),
+            vec![
+                (SmallVec::from_slice("abcde".as_bytes()), 4),
+                (SmallVec::from_slice("abcdf".as_bytes()), 2),
+                (SmallVec::from_slice("bcdf".as_bytes()), 3),
+            ]
+        );
+
+        assert_eq!(
+            trie_map
+                .iter()
+                .map(|(key, value)| (key, *value))
+                .collect::<Vec<_>>(),
             vec![
                 (SmallVec::from_slice("abcde".as_bytes()), 4),
                 (SmallVec::from_slice("abcdf".as_bytes()), 2),
