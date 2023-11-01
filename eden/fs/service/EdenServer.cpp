@@ -760,7 +760,7 @@ void EdenServer::updatePeriodicTaskIntervals(const EdenConfig& config) {
       config.enableNfsCrawlDetection.getValue()) {
     auto interval = config.nfsCrawlInterval.getValue();
     XLOGF(
-        DBG2,
+        DBG4,
         "NFS crawl detection enabled. Using interval = {}ns",
         interval.count());
     detectNfsCrawlTask_.updateInterval(
