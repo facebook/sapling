@@ -79,7 +79,7 @@ where
     }
 }
 
-pub struct TrieMapIter<V> {
+pub struct TrieMapIntoIter<V> {
     bytes: SmallVec<[u8; 24]>,
     value: Option<Box<V>>,
     stack: Vec<std::collections::btree_map::IntoIter<u8, TrieMap<V>>>,
@@ -87,10 +87,10 @@ pub struct TrieMapIter<V> {
 
 impl<V> IntoIterator for TrieMap<V> {
     type Item = (SmallVec<[u8; 24]>, V);
-    type IntoIter = TrieMapIter<V>;
+    type IntoIter = TrieMapIntoIter<V>;
 
     fn into_iter(self) -> Self::IntoIter {
-        TrieMapIter {
+        TrieMapIntoIter {
             bytes: Default::default(),
             value: self.value,
             stack: vec![self.edges.into_iter()],
@@ -98,7 +98,7 @@ impl<V> IntoIterator for TrieMap<V> {
     }
 }
 
-impl<V> Iterator for TrieMapIter<V> {
+impl<V> Iterator for TrieMapIntoIter<V> {
     type Item = (SmallVec<[u8; 24]>, V);
 
     fn next(&mut self) -> Option<Self::Item> {
