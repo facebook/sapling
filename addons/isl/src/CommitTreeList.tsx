@@ -20,7 +20,7 @@ import {T, t} from './i18n';
 import {CreateEmptyInitialCommitOperation} from './operations/CreateEmptyInitialCommitOperation';
 import {treeWithPreviews, useMarkOperationsCompleted} from './previews';
 import {isNarrowCommitTree} from './responsive';
-import {useArrowKeysToChangeSelection} from './selection';
+import {useArrowKeysToChangeSelection, useBackspaceToHideSelected} from './selection';
 import {
   commitFetchError,
   commitsShownRange,
@@ -48,6 +48,7 @@ export function CommitTreeList() {
   useMarkOperationsCompleted();
 
   useArrowKeysToChangeSelection();
+  useBackspaceToHideSelected();
 
   const isNarrow = useRecoilValue(isNarrowCommitTree);
 

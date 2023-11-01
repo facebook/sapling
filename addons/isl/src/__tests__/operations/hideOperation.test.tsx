@@ -6,6 +6,7 @@
  */
 
 import App from '../../App';
+import {CommitInfoTestUtils} from '../../testQueries';
 import {
   resetTestMessages,
   expectMessageSentToServer,
@@ -16,6 +17,7 @@ import {
 } from '../../testUtils';
 import {CommandRunner} from '../../types';
 import {fireEvent, render, screen, within} from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import {act} from 'react-dom/test-utils';
 
 /*eslint-disable @typescript-eslint/no-non-null-assertion */
@@ -137,5 +139,28 @@ describe('hide operation', () => {
 
     // the whole subtree is hidden, but this commit has the remote/master bookmark so it's shown anyway.
     expect(screen.queryByTestId('commit-2')).toBeInTheDocument();
+  });
+
+  it('previews a hide by pressing delete with a selection', () => {
+    CommitInfoTestUtils.clickToSelectCommit('b');
+
+    act(() => {
+      userEvent.type(document.body, '{Backspace}');
+    });
+
+    const runHideButton = screen.getByText('Hide');
+    expect(runHideButton).toBeInTheDocument();
+    expect(runHideButton).toHaveFocus();
+    fireEvent.click(runHideButton);
+
+    expectMessageSentToServer({
+      type: 'runOperation',
+      operation: {
+        args: ['hide', '--rev', {type: 'succeedable-revset', revset: 'b'}],
+        id: expect.anything(),
+        runner: CommandRunner.Sapling,
+        trackEventName: 'HideOperation',
+      },
+    });
   });
 });

@@ -56,6 +56,7 @@ import {useRecoilCallback, useRecoilValue, useSetRecoilState} from 'recoil';
 import {ComparisonType} from 'shared/Comparison';
 import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
+import {useAutofocusRef} from 'shared/hooks';
 import {notEmpty} from 'shared/utils';
 
 function isDraggablePreview(previewType?: CommitPreview): boolean {
@@ -241,11 +242,7 @@ export const Commit = memo(
             onClick={() => handlePreviewedOperation(/* cancel */ true)}>
             <T>Cancel</T>
           </VSCodeButton>
-          <VSCodeButton
-            appearance="primary"
-            onClick={() => handlePreviewedOperation(/* cancel */ false)}>
-            <T>Hide</T>
-          </VSCodeButton>
+          <ConfirmHideButton onClick={() => handlePreviewedOperation(/* cancel */ false)} />
         </React.Fragment>,
       );
     }
@@ -353,6 +350,15 @@ export const Commit = memo(
     );
   },
 );
+
+function ConfirmHideButton({onClick}: {onClick: () => unknown}) {
+  const ref = useAutofocusRef() as React.MutableRefObject<null>;
+  return (
+    <VSCodeButton ref={ref} appearance="primary" onClick={onClick}>
+      <T>Hide</T>
+    </VSCodeButton>
+  );
+}
 
 function CommitDate({date}: {date: Date}) {
   return (

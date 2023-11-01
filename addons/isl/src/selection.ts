@@ -6,13 +6,15 @@
  */
 
 import type {ISLCommandName} from './ISLShortcuts';
-import type {CommitInfo} from './types';
+import type {CommitInfo, Hash} from './types';
 import type React from 'react';
 
 import {useCommand} from './ISLShortcuts';
-import {successionTracker} from './SuccessionTracker';
+import {latestSuccessorUnlessExplicitlyObsolete, successionTracker} from './SuccessionTracker';
+import {HideOperation} from './operations/HideOperation';
 import {treeWithPreviews} from './previews';
-import {latestCommitTreeMap} from './serverAPIState';
+import {latestCommitTreeMap, operationBeingPreviewed} from './serverAPIState';
+import {firstOfIterable} from './utils';
 import {atom, selector, useRecoilCallback, useRecoilValue} from 'recoil';
 import {notEmpty} from 'shared/utils';
 
@@ -21,7 +23,7 @@ import {notEmpty} from 'shared/utils';
  * Note: it is possible to be selecting a commit that stops being rendered, and thus has no associated commit info.
  * Prefer to use `selectedCommitInfos` to get the subset of the selection that is visible.
  */
-export const selectedCommits = atom<Set<string>>({
+export const selectedCommits = atom<Set<Hash>>({
   key: 'selectedCommits',
   default: new Set(),
   effects: [
@@ -231,4 +233,37 @@ export function useArrowKeysToChangeSelection() {
   useCommand('SelectDownwards', () => cb('SelectDownwards'));
   useCommand('ContinueSelectionUpwards', () => cb('ContinueSelectionUpwards'));
   useCommand('ContinueSelectionDownwards', () => cb('ContinueSelectionDownwards'));
+}
+
+export function useBackspaceToHideSelected(): void {
+  const cb = useRecoilCallback(({snapshot, set}) => () => {
+    // Though you can select multiple commits, our preview system doens't handle that very well.
+    // Just preview hiding the most recently selected commit.
+    // Another sensible behavior would be to inspect the tree of commits selected
+    // and find if there's a single common ancestor to hide. That won't work in all cases though.
+    const mostRecent = snapshot.getLoadable(previouslySelectedCommit).valueMaybe();
+    let hashToHide = mostRecent;
+    if (hashToHide == null) {
+      const selection = snapshot.getLoadable(selectedCommits).valueMaybe();
+      if (selection != null) {
+        hashToHide = firstOfIterable(selection.values());
+      }
+    }
+    if (hashToHide == null) {
+      return;
+    }
+
+    const loadable = snapshot.getLoadable(latestCommitTreeMap);
+    const commitToHide = loadable.getValue().get(hashToHide)?.info;
+    if (commitToHide == null) {
+      return;
+    }
+
+    set(
+      operationBeingPreviewed,
+      new HideOperation(latestSuccessorUnlessExplicitlyObsolete(commitToHide)),
+    );
+  });
+
+  useCommand('HideSelectedCommits', () => cb());
 }
