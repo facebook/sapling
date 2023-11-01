@@ -12,7 +12,7 @@ use context::CoreContext;
 use context::SessionClass;
 use derived_data_utils::derived_data_utils;
 use derived_data_utils::POSSIBLE_DERIVED_TYPES;
-use futures_stats::TimedFutureExt;
+use futures_stats::TimedTryFutureExt;
 use mononoke_app::args::ChangesetArgs;
 use slog::trace;
 
@@ -49,8 +49,8 @@ pub(super) async fn derive(ctx: &mut CoreContext, repo: &Repo, args: DeriveArgs)
         trace!(ctx.logger(), "deriving {}", csid);
         let (stats, res) = derived_utils
             .derive(ctx.clone(), repo.repo_derived_data.clone(), csid)
-            .timed()
-            .await;
+            .try_timed()
+            .await?;
         trace!(
             ctx.logger(),
             "derived {} in {}ms, {:?}",
