@@ -289,22 +289,31 @@ async fn async_main_impl(
         "Export paths and their HEAD commits: {0:#?}", export_path_infos
     );
 
-    let graph_info = build_partial_commit_graph_for_export(
-        &logger,
-        export_path_infos.clone(),
-        args.oldest_commit_ts,
+    let graph_info = run_and_log_stats_to_scuba(
+        repo_ctx.ctx(),
+        "Build partial commit graph",
+        build_partial_commit_graph_for_export(
+            &logger,
+            export_path_infos.clone(),
+            args.oldest_commit_ts,
+        ),
     )
     .await?;
 
     trace!(logger, "changesets: {:#?}", &graph_info.changesets);
     trace!(logger, "changeset parents: {:#?}", &graph_info.parents_map);
 
-    let temp_repo_ctx = rewrite_partial_changesets(
-        app.fb,
-        repo_ctx,
-        graph_info,
-        export_path_infos,
-        args.implicit_delete_prefetch_buffer_size,
+    let ctx = repo_ctx.ctx().clone();
+    let temp_repo_ctx = run_and_log_stats_to_scuba(
+        &ctx,
+        "Rewrite all relevant commits",
+        rewrite_partial_changesets(
+            app.fb,
+            repo_ctx,
+            graph_info,
+            export_path_infos,
+            args.implicit_delete_prefetch_buffer_size,
+        ),
     )
     .await?;
 
@@ -326,10 +335,14 @@ async fn async_main_impl(
         .await?;
     };
 
-    create_git_repo_on_disk(
-        temp_repo_ctx.ctx(),
-        temp_repo_ctx.repo(),
-        args.git_repo_path,
+    run_and_log_stats_to_scuba(
+        &ctx,
+        "Create git bundle",
+        create_git_repo_on_disk(
+            temp_repo_ctx.ctx(),
+            temp_repo_ctx.repo(),
+            args.git_repo_path,
+        ),
     )
     .await?;
 
