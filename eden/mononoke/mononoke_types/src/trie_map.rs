@@ -71,6 +71,14 @@ impl<V> TrieMap<V> {
         }
     }
 
+    pub fn keys(&self) -> TrieMapKeys<'_, V> {
+        TrieMapKeys {
+            bytes: Default::default(),
+            has_value: self.value.is_some(),
+            stack: vec![self.edges.iter()],
+        }
+    }
+
     pub fn values(&self) -> TrieMapValues<'_, V> {
         TrieMapValues {
             value: self.value.as_ref().map(|value| value.as_ref()),
@@ -186,6 +194,46 @@ impl<'a, V> Iterator for TrieMapIter<'a, V> {
     }
 }
 
+/// A non-consuming ordered iterator over all keys of a TrieMap.
+/// Note: the iterator has to allocate memory for the keys as they
+/// are defined implicitly.
+// Same as TrieMapIter except that it only needs to know whether
+// the current node has a value or not without requiring a reference
+// to it.
+pub struct TrieMapKeys<'a, V> {
+    bytes: SmallVec<[u8; 24]>,
+    has_value: bool,
+    stack: Vec<std::collections::btree_map::Iter<'a, u8, TrieMap<V>>>,
+}
+
+impl<'a, V> Iterator for TrieMapKeys<'a, V> {
+    type Item = SmallVec<[u8; 24]>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if self.has_value {
+                self.has_value = false;
+                return Some(self.bytes.clone());
+            }
+
+            match self.stack.last_mut() {
+                None => return None,
+                Some(iter) => match iter.next() {
+                    None => {
+                        self.bytes.pop();
+                        self.stack.pop();
+                    }
+                    Some((next_byte, child)) => {
+                        self.bytes.push(*next_byte);
+                        self.has_value = child.value.is_some();
+                        self.stack.push(child.edges.iter());
+                    }
+                },
+            };
+        }
+    }
+}
+
 /// A non-consuming ordered iterator over all values of a TrieMap.
 // Same as TrieMapIter except that it doesn't need to store
 // the concatenated bytes of the path from the root.
@@ -271,6 +319,15 @@ mod test {
                 (SmallVec::from_slice("abcde".as_bytes()), 4),
                 (SmallVec::from_slice("abcdf".as_bytes()), 2),
                 (SmallVec::from_slice("bcdf".as_bytes()), 3),
+            ]
+        );
+
+        assert_eq!(
+            trie_map.keys().collect::<Vec<_>>(),
+            vec![
+                SmallVec::<[u8; 24]>::from_slice("abcde".as_bytes()),
+                SmallVec::<[u8; 24]>::from_slice("abcdf".as_bytes()),
+                SmallVec::<[u8; 24]>::from_slice("bcdf".as_bytes()),
             ]
         );
 
