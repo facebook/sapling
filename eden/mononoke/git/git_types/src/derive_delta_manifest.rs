@@ -57,6 +57,7 @@ use crate::delta_manifest::GitDeltaManifestId;
 use crate::delta_manifest::ObjectDelta;
 use crate::delta_manifest::ObjectEntry;
 use crate::fetch_git_object;
+use crate::mode;
 use crate::store::store_delta_instructions;
 use crate::DeltaObjectKind;
 use crate::GitError;
@@ -369,15 +370,23 @@ async fn derive_git_delta_manifest(
                     match diff_entry {
                         // We only care about files/directories that were added or modified since removed entries won't be
                         // included in GitDeltaManifest
-                        manifest::Diff::Added(path, entry) => Some((
-                            path,
+                        manifest::Diff::Added(path, entry) => {
                             // Transform to TreeMember so we can easily access type, size and oid information
-                            DeltaEntryMetadata::new(TreeMember::from(entry)),
-                        )),
+                            let tree_entry = TreeMember::from(entry);
+                            // If the entry corresponds to a submodules (and shows up as a commit), then we ignore it
+                            if tree_entry.filemode() == mode::GIT_FILEMODE_COMMIT {
+                                None
+                            } else {
+                                Some((path, DeltaEntryMetadata::new(tree_entry)))
+                            }
+                        }
                         manifest::Diff::Changed(path, old_entry, new_entry) => {
                             let actual = TreeMember::from(new_entry);
                             let base = TreeMember::from(old_entry);
-                            if actual.oid().size() > DELTA_THRESHOLD
+                            // If the entry corresponds to a submodules (and shows up as a commit), then we ignore it
+                            if actual.filemode() == mode::GIT_FILEMODE_COMMIT {
+                                None
+                            } else if actual.oid().size() > DELTA_THRESHOLD
                                 || base.oid().size() > DELTA_THRESHOLD
                                 || is_merge
                             {
