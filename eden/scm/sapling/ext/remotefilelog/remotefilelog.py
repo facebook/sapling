@@ -45,7 +45,7 @@ class remotefilelog:
         self.opener = opener
         self.filename = path
         self.repo = repo
-        self.nodemap = remotefilelognodemap(self.filename, repo.fileslog.contentstore)
+        self.nodemap = remotefilelognodemap(self.filename, repo.fileslog.filestore)
 
         self.version = 1
 
@@ -157,7 +157,7 @@ class remotefilelog:
     def size(self, node):
         """return the size of a given revision"""
         try:
-            meta = self.repo.fileslog.contentstore.metadata(self.filename, node)
+            meta = self.repo.fileslog.filestore.metadata(self.filename, node)
             return meta["size"]
         except KeyError:
             pass
@@ -232,7 +232,7 @@ class remotefilelog:
             )
         if node == nullid:
             return revlog.REVIDX_DEFAULT_FLAGS
-        store = self.repo.fileslog.contentstore
+        store = self.repo.fileslog.filestore
         return store.getmeta(self.filename, node).get(constants.METAKEYFLAG, 0)
 
     def parents(self, node):
@@ -291,7 +291,7 @@ class remotefilelog:
         if len(node) != 20:
             raise error.LookupError(node, self.filename, _("invalid revision input"))
 
-        store = self.repo.fileslog.contentstore
+        store = self.repo.fileslog.filestore
         rawtext = store.get(self.filename, node)
         if raw:
             return rawtext
@@ -309,7 +309,7 @@ class remotefilelog:
         Return (chain, False), chain is a list of nodes. This is to be
         compatible with revlog API.
         """
-        store = self.repo.fileslog.contentstore
+        store = self.repo.fileslog.filestore
         chain = store.getdeltachain(self.filename, node)
         return ([x[1] for x in chain], False)
 
@@ -546,8 +546,7 @@ class remotefileslog(filelog.fileslog):
 
         mask = os.umask(0o002)
         try:
-            self.filescmstore = repo._rsrepo.filescmstore(remotestore)
-            self.contentstore = self.filescmstore
+            self.filestore = repo._rsrepo.filescmstore(remotestore)
             self.metadatastore = revisionstore.metadatastore(
                 repo.svfs.vfs.base,
                 repo.ui._rcfg,
@@ -558,29 +557,21 @@ class remotefileslog(filelog.fileslog):
             os.umask(mask)
 
     def getmutablelocalpacks(self):
-        return self.contentstore, self.metadatastore
+        return self.filestore, self.metadatastore
 
     def commitsharedpacks(self):
         """Persist the dirty data written to the shared packs."""
-        self.filescmstore = None
-        self.contentstore = None
+        self.filestore = None
         self.metadatastore = None
         self.makeruststore(self.repo)
 
     def commitpending(self):
         """Used in alternative filelog implementations to commit pending
         additions."""
-        if self.contentstore:
-            self.contentstore.flush()
-            self.logfetches()
 
-        if self.filescmstore:
-            if (
-                not self.contentstore
-                or type(self.contentstore) is not revisionstore.filescmstore
-            ):
-                self.filescmstore.flush()
-                self.logfetches()
+        if self.filestore:
+            self.filestore.flush()
+            self.logfetches()
 
         if self.metadatastore:
             self.metadatastore.flush()
@@ -590,30 +581,28 @@ class remotefileslog(filelog.fileslog):
         """Used in alternative filelog implementations to throw out pending
         additions."""
         self.logfetches()
-        self.filescmstore = None
-        self.contentstore = None
+        self.filestore = None
         self.metadatastore = None
 
     def logfetches(self):
         # TODO(meyer): Rename this function
+
+        if not self.filestore:
+            return
+
         ui = self.repo.ui
-        if self.contentstore:
-            fetched = self.contentstore.getloggedfetches()
-            if fetched:
-                for path in fetched:
-                    ui.log(
-                        "undesired_file_fetches",
-                        "",
-                        filename=path,
-                        reponame=self.repo.name,
-                    )
-                ui.metrics.gauge("undesiredfilefetches", len(fetched))
-        scmstore = None
-        if self.contentstore and type(self.contentstore) is revisionstore.filescmstore:
-            scmstore = self.contentstore
-        elif self.filescmstore:
-            scmstore = self.filescmstore
-        if scmstore:
-            metrics = self.filescmstore.getmetrics()
+        fetched = self.filestore.getloggedfetches()
+        if fetched:
+            for path in fetched:
+                ui.log(
+                    "undesired_file_fetches",
+                    "",
+                    filename=path,
+                    reponame=self.repo.name,
+                )
+            ui.metrics.gauge("undesiredfilefetches", len(fetched))
+
+        if type(self.filestore) is revisionstore.filescmstore:
+            metrics = self.filestore.getmetrics()
             for (metric, value) in metrics:
                 ui.metrics.gauge(metric, value)

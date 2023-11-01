@@ -780,7 +780,7 @@ class HgServer:
             # type of error to avoid restarting the importer when this happens.
             self.repo.ui.develwarn("Retrying due to possible race condition")
 
-            if not hasattr(self.repo.fileslog, "contentstore"):
+            if not hasattr(self.repo.fileslog, "filestore"):
                 # we are not using remotefilelog in tests, and normal filelog
                 # does not have a contentstore. So fail immediately
                 raise ResetRepoError(e)

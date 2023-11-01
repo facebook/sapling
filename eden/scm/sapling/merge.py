@@ -1628,7 +1628,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
             )
 
             writer = rustworker.writerworker(
-                repo.fileslog.contentstore, repo.wvfs.base, numworkers
+                repo.fileslog.filestore, repo.wvfs.base, numworkers
             )
             fctx = mctx.filectx
             slinkfix = pycompat.iswindows and repo.wvfs._cansymlink
@@ -2120,7 +2120,7 @@ def goto(
             fallbackcheckout = (
                 "Working copy is dirty and --clean specified - not supported yet"
             )
-        elif not hasattr(repo.fileslog, "contentstore"):
+        elif not hasattr(repo.fileslog, "filestore"):
             fallbackcheckout = "Repo does not have remotefilelog"
         else:
             fallbackcheckout = None
@@ -2558,15 +2558,10 @@ def donativecheckout(repo, p1, p2, force, wc, prerecrawls):
         repo.ui.debug("Native checkout plan:\n%s\n" % plan)
 
     if not force:
-        if git.isgitstore(repo):
-            store = repo.fileslog.contentstore
-        else:
-            store = repo.fileslog.filescmstore
-
         status = nativestatus.status(repo.status(unknown=True))
         unknown = plan.check_unknown_files(
             p2.manifest(),
-            store,
+            repo.fileslog.filestore,
             repo.dirstate._map._tree,
             status,
         )
@@ -2601,14 +2596,9 @@ def donativecheckout(repo, p1, p2, force, wc, prerecrawls):
     cwd = pycompat.getcwdsafe()
 
     repo.ui.debug("Applying to %s \n" % repo.wvfs.base)
-    if repo.ui.configbool("nativecheckout", "usescmstore"):
-        plan.apply(
-            repo.fileslog.filescmstore,
-        )
-    else:
-        plan.apply(
-            repo.fileslog.contentstore,
-        )
+    plan.apply(
+        repo.fileslog.filestore,
+    )
     repo.ui.debug("Apply done\n")
     stats = plan.stats()
 

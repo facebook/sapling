@@ -411,7 +411,7 @@ def setuptreestores(repo, mfl):
     elif eagerepo.iseagerepo(repo) or repo.storage_format() == "revlog":
         mfl._isgit = False
         mfl._iseager = True
-        store = repo.fileslog.contentstore
+        store = repo.fileslog.filestore
         mfl.datastore = EagerDataStore(store)
         mfl.historystore = mfl.datastore.historystore
         if not isinstance(store, bindings.eagerepo.EagerRepoStore):

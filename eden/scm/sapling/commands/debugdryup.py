@@ -22,14 +22,9 @@ def debugdryup(ui, repo, fromspec, tospec, **opts):
     repo.ui.write(_("plan has %s actions\n") % len(plan))
 
     with PrintTimer(ui, "Fetching"):
-        if repo.ui.configbool("nativecheckout", "usescmstore"):
-            count, size = plan.apply_dry_run(
-                repo.fileslog.filescmstore,
-            )
-        else:
-            count, size = plan.apply_dry_run(
-                repo.fileslog.contentstore,
-            )
+        count, size = plan.apply_dry_run(
+            repo.fileslog.filestore,
+        )
 
     repo.ui.write(_("fetched %s files with %s\n") % (count, util.bytecount(size)))
 

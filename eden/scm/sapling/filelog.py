@@ -159,15 +159,11 @@ class fileslog:
         self.ui = repo.ui
         self.repo = repo
         if git.isgitstore(repo):
-            gitstore = git.openstore(repo)
-            self.contentstore = gitstore
-            self.filescmstore = gitstore
+            self.filestore = git.openstore(repo)
         elif eagerepo.iseagerepo(repo) or repo.storage_format() == "revlog":
-            store = repo._rsrepo.eagerstore()
-            self.contentstore = store
-            self.filescmstore = store
+            self.filestore = repo._rsrepo.eagerstore()
         elif util.istest():
-            self.filescmstore = bindings.revisionstore.pyfilescmstore(
+            self.filestore = bindings.revisionstore.pyfilescmstore(
                 lambda name, node: self.repo.file(name).read(node)
             )
 
@@ -175,7 +171,7 @@ class fileslog:
         """Used in alternative filelog implementations to commit pending
         additions."""
         if eagerepo.iseagerepo(self.repo):
-            self.contentstore.flush()
+            self.filestore.flush()
 
     def abortpending(self):
         """Used in alternative filelog implementations to throw out pending

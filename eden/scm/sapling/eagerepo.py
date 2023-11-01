@@ -27,7 +27,7 @@ class eagerfilelog:
     """filelog-like interface for EagerRepoStore"""
 
     def __init__(self, repo, name):
-        self.store = repo.fileslog.contentstore
+        self.store = repo.fileslog.filestore
         self.name = name
 
     def lookup(self, node):

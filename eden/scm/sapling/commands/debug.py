@@ -3848,7 +3848,7 @@ def debugscmstore(
     if mode == "tree":
         repo.manifestlog.treescmstore.test_fetch(path, local)
     if mode == "file":
-        repo.fileslog.filescmstore.test_fetch(path, local)
+        repo.fileslog.filestore.test_fetch(path, local)
 
 
 @command("debugrevlogclone", [], _("source"))

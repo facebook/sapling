@@ -283,7 +283,7 @@ def uploadblobs(repo, nodes):
 
             fctx = ctx[f]
             toupload.append((fctx.path(), fctx.filenode()))
-    repo.fileslog.contentstore.upload(toupload)
+    repo.fileslog.filestore.upload(toupload)
 
 
 def prepush(pushop):

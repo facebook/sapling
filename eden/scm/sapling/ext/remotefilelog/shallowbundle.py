@@ -318,7 +318,7 @@ class shallowcg1packer(changegroup.cg1packer):
         def getmeta():
             try:
                 fileslog = flog.repo.fileslog
-                meta = fileslog.contentstore.metadata(flog.filename, node)
+                meta = fileslog.filestore.metadata(flog.filename, node)
                 return meta
             except KeyError:
                 pass

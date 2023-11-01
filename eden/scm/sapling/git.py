@@ -973,7 +973,7 @@ class gitfilelog:
     """filelog-like interface for git"""
 
     def __init__(self, repo):
-        self.store = repo.fileslog.contentstore
+        self.store = repo.fileslog.filestore
 
     def lookup(self, node):
         assert len(node) == 20

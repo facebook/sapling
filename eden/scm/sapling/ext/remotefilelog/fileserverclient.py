@@ -234,7 +234,7 @@ class fileserverclient:
 
         idstocheck = list(idstocheck)
         if not force:
-            contentstore = repo.fileslog.contentstore
+            contentstore = repo.fileslog.filestore
             metadatastore = repo.fileslog.metadatastore
         else:
             # TODO(meyer): Convert this to support scmstore.

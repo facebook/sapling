@@ -1339,7 +1339,7 @@ class localrepository:
         return bindings.copytrace.dagcopytrace(
             self.changelog.inner,
             self.manifestlog.datastore,
-            self.fileslog.filescmstore,
+            self.fileslog.filestore,
             self.changelog.dag,
             self.ui._rcfg,
         )
@@ -2613,7 +2613,7 @@ class localrepository:
         fnode = git.submodule_node_from_fctx(fctx)
         if fnode is not None:
             return fnode
-        return self.fileslog.contentstore.writeobj("blob", fctx.data())
+        return self.fileslog.filestore.writeobj("blob", fctx.data())
 
     def checkcommitpatterns(self, wctx, match, status, fail):
         """check for commit arguments that aren't committable"""

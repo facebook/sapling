@@ -65,7 +65,7 @@ def runrepacklegacy(ui, packpath, incremental, shared) -> None:
 
 def _getstores(repo, category):
     if category == constants.FILEPACK_CATEGORY:
-        return (repo.fileslog.contentstore, repo.fileslog.metadatastore)
+        return (repo.fileslog.filestore, repo.fileslog.metadatastore)
     elif category == constants.TREEPACK_CATEGORY:
         return (repo.manifestlog.datastore, repo.manifestlog.historystore)
     raise error.ProgrammingError("invalid pack category")

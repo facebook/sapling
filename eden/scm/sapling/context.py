@@ -885,7 +885,7 @@ class basefilectx:
         if extensions.isenabled(
             self._repo.ui, "remotefilelog"
         ) and self._repo.ui.configbool("scmstore", "status"):
-            return self._repo.fileslog.filescmstore.fetch_contentsha256(
+            return self._repo.fileslog.filestore.fetch_contentsha256(
                 [(self.path(), self.filenode())]
             )[0][1]
         return hashlib.sha256(self.data()).digest()
