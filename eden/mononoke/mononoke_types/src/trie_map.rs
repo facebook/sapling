@@ -70,6 +70,13 @@ impl<V> TrieMap<V> {
             stack: vec![self.edges.iter()],
         }
     }
+
+    pub fn values(&self) -> TrieMapValues<'_, V> {
+        TrieMapValues {
+            value: self.value.as_ref().map(|value| value.as_ref()),
+            stack: vec![self.edges.iter()],
+        }
+    }
 }
 
 impl<V> TrieMap<V>
@@ -179,6 +186,39 @@ impl<'a, V> Iterator for TrieMapIter<'a, V> {
     }
 }
 
+/// A non-consuming ordered iterator over all values of a TrieMap.
+// Same as TrieMapIter except that it doesn't need to store
+// the concatenated bytes of the path from the root.
+pub struct TrieMapValues<'a, V> {
+    value: Option<&'a V>,
+    stack: Vec<std::collections::btree_map::Iter<'a, u8, TrieMap<V>>>,
+}
+
+impl<'a, V> Iterator for TrieMapValues<'a, V> {
+    type Item = &'a V;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if let Some(value) = self.value.take() {
+                return Some(value);
+            }
+
+            match self.stack.last_mut() {
+                None => return None,
+                Some(iter) => match iter.next() {
+                    None => {
+                        self.stack.pop();
+                    }
+                    Some((_next_byte, child)) => {
+                        self.value = child.value.as_ref().map(|value| value.as_ref());
+                        self.stack.push(child.edges.iter());
+                    }
+                },
+            };
+        }
+    }
+}
+
 impl<K: AsRef<[u8]>, V> Extend<(K, V)> for TrieMap<V> {
     fn extend<T: IntoIterator<Item = (K, V)>>(&mut self, iter: T) {
         for (key, value) in iter {
@@ -232,6 +272,11 @@ mod test {
                 (SmallVec::from_slice("abcdf".as_bytes()), 2),
                 (SmallVec::from_slice("bcdf".as_bytes()), 3),
             ]
+        );
+
+        assert_eq!(
+            trie_map.values().copied().collect::<Vec<_>>(),
+            vec![4, 2, 3]
         );
 
         assert_eq!(trie_map.get("abcde"), Some(&4));
