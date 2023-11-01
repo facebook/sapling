@@ -83,6 +83,8 @@ rust_library(
         "//eden/mononoke/features/repo_update_logger:repo_update_logger",
         "//eden/mononoke/filestore:filestore",
         "//eden/mononoke/git/git_types:git_types",
+        "//eden/mononoke/git/packfile:packfile",
+        "//eden/mononoke/git/protocol:protocol",
         "//eden/mononoke/git_symbolic_refs:git_symbolic_refs",
         "//eden/mononoke/hooks:hooks",
         "//eden/mononoke/manifest:manifest",

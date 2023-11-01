@@ -815,6 +815,8 @@ struct RepoStackGitBundleStoreParams {
   /// of the stack of commits and is present in the user repo, i.e. the repo that will
   /// unbundle this bundle, already has this commit
   2: binary base;
+  /// The identity of the service making the repo_stack_git_bundle_store request.
+  3: optional string service_identity;
 }
 
 enum RepoCreateCommitParamsFileType {

@@ -76,6 +76,17 @@ pub enum DeltaInclusion {
 }
 
 impl DeltaInclusion {
+    /// The standard delta inclusion setting used in most places
+    /// in Mononoke
+    pub fn standard() -> Self {
+        DeltaInclusion::Include {
+            form: DeltaForm::RefAndOffset,
+            inclusion_threshold: 0.6,
+        }
+    }
+}
+
+impl DeltaInclusion {
     pub fn include_only_offset_deltas(&self) -> bool {
         match self {
             DeltaInclusion::Include { form, .. } => form == &DeltaForm::OnlyOffset,

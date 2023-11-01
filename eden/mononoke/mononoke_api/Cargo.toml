@@ -70,8 +70,10 @@ mononoke_repos = { version = "0.1.0", path = "../mononoke_repos" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
 mutable_renames = { version = "0.1.0", path = "../mutable_renames" }
+packfile = { version = "0.1.0", path = "../git/packfile" }
 pathmatcher = { version = "0.1.0", path = "../../scm/lib/pathmatcher" }
 phases = { version = "0.1.0", path = "../phases" }
+protocol = { version = "0.1.0", path = "../git/protocol" }
 pushrebase = { version = "0.1.0", path = "../pushrebase" }
 pushrebase_client = { version = "0.1.0", path = "../pushrebase/client" }
 pushrebase_mutation_mapping = { version = "0.1.0", path = "../pushrebase_mutation_mapping" }

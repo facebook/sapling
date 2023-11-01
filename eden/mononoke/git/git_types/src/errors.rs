@@ -52,6 +52,11 @@ pub enum GitError {
         "Validation failure while persisting git object (ID: {0}) as a bonsai changeset. Cause: {1}"
     )]
     InvalidBonsai(String, GitInternalError),
+
+    /// Error during the packfile stream generation or while writing it to bundle or while storing
+    /// to everstore
+    #[error("{0}")]
+    PackfileError(String),
 }
 
 cloneable_error!(GitInternalError);

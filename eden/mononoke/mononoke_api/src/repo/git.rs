@@ -13,19 +13,35 @@ use bonsai_git_mapping::BonsaiGitMappingEntry;
 use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_tag_mapping::BonsaiTagMappingEntry;
 use bonsai_tag_mapping::BonsaiTagMappingRef;
+use bookmarks::BookmarksRef;
+use bytes::Bytes;
 use chrono::DateTime;
 use chrono::FixedOffset;
+use commit_graph::CommitGraphRef;
 use context::CoreContext;
+use git_symbolic_refs::GitSymbolicRefsRef;
 use git_types::GitError;
 use gix_hash::ObjectId;
 use mononoke_types::bonsai_changeset::BonsaiAnnotatedTag;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::BonsaiChangesetMut;
+use mononoke_types::ChangesetId;
 use mononoke_types::DateTime as MononokeDateTime;
+use packfile::bundle::BundleWriter;
+use packfile::pack::DeltaForm;
+use protocol::generator::generate_pack_item_stream;
+use protocol::types::DeltaInclusion;
+use protocol::types::PackItemStreamRequest;
+use protocol::types::RequestedRefs;
+use protocol::types::RequestedSymrefs;
+use protocol::types::TagInclusion;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedDataRef;
+use repo_identity::RepoIdentityRef;
 
 use crate::changeset::ChangesetContext;
 use crate::errors::MononokeError;
+use crate::repo::RepoBlobstoreArc;
 use crate::repo::RepoContext;
 
 const HGGIT_MARKER_EXTRA: &str = "hg-git-rename-source";
@@ -33,6 +49,7 @@ const HGGIT_MARKER_VALUE: &[u8] = b"git";
 const HGGIT_COMMIT_ID_EXTRA: &str = "convert_revision";
 const GIT_OBJECT_PREFIX: &str = "git_object";
 const SEPARATOR: &str = ".";
+const BUNDLE_HEAD: &str = "BUNDLE_HEAD";
 
 impl RepoContext {
     /// Set the bonsai to git mapping based on the changeset
@@ -121,6 +138,16 @@ impl RepoContext {
         .await?;
 
         Ok(ChangesetContext::new(self.clone(), new_changeset_id))
+    }
+
+    /// Create a git bundle for the given stack of commits, returning the raw content
+    /// of the bundle bytes
+    pub async fn repo_stack_git_bundle(
+        &self,
+        head: ChangesetId,
+        base: ChangesetId,
+    ) -> Result<Bytes, GitError> {
+        repo_stack_git_bundle(self.ctx(), self.inner_repo(), head, base).await
     }
 }
 
@@ -235,4 +262,115 @@ pub async fn create_annotated_tag(
         .await
         .map_err(|e| GitError::StorageFailure(tag_id, e.into()))?;
     Ok(changeset_id)
+}
+
+pub trait Repo = RepoIdentityRef
+    + RepoBlobstoreArc
+    + BookmarksRef
+    + BonsaiGitMappingRef
+    + BonsaiTagMappingRef
+    + RepoDerivedDataRef
+    + GitSymbolicRefsRef
+    + CommitGraphRef
+    + Send
+    + Sync;
+
+async fn get_git_commit(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    cs_id: ChangesetId,
+) -> Result<ObjectId, GitError> {
+    let maybe_git_sha1 = repo
+        .bonsai_git_mapping()
+        .get_git_sha1_from_bonsai(ctx, cs_id)
+        .await
+        .map_err(|e| {
+            GitError::PackfileError(format!(
+                "Error in fetching Git Sha1 for changeset {:?} through BonsaiGitMapping. Cause: {}",
+                cs_id, e
+            ))
+        })?;
+    let git_sha1 = maybe_git_sha1.ok_or_else(|| {
+        GitError::PackfileError(format!("Git Sha1 not found for changeset {:?}", cs_id))
+    })?;
+    ObjectId::from_hex(git_sha1.to_hex().as_bytes()).map_err(|e| {
+        GitError::PackfileError(format!(
+            "Error in converting GitSha1 {} to GitObjectId. Cause: {}",
+            git_sha1.to_hex(),
+            e
+        ))
+    })
+}
+
+/// Free function for creating a Git bundle for the stack of commits
+/// ending at `head` with base `base` and returning the bundle contents
+pub async fn repo_stack_git_bundle(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    head: ChangesetId,
+    base: ChangesetId,
+) -> Result<Bytes, GitError> {
+    let requested_refs =
+        RequestedRefs::IncludedWithValue([(BUNDLE_HEAD.to_owned(), head)].into_iter().collect());
+    // Ensure we don't include the base and any of its ancestors in the bundle
+    let already_present = vec![base];
+    let request = PackItemStreamRequest::new(
+        RequestedSymrefs::ExcludeAll, // Need no symrefs for this bundle
+        requested_refs,
+        already_present,
+        DeltaInclusion::standard(),
+        TagInclusion::AsIs,
+    );
+    let response = generate_pack_item_stream(ctx, repo, request)
+        .await
+        .map_err(|e| {
+            GitError::PackfileError(format!(
+                "Error in generating pack item stream for head {} and base {}. Cause: {}",
+                head, base, e
+            ))
+        })?;
+    let base_git_commit = get_git_commit(ctx, repo, base).await?;
+    // Ensure that the base commit is included as a prerequisite
+    let prereqs: Option<Vec<ObjectId>> = Some(vec![base_git_commit]);
+    // Convert the included ref into symref since JF expects only symrefs
+    let refs_to_include = response
+        .included_refs
+        .into_iter()
+        .map(|(ref_name, commit)| match ref_name.strip_prefix("refs/") {
+            Some(stripped_ref) => (stripped_ref.to_owned(), commit),
+            None => (ref_name, commit),
+        })
+        .collect();
+
+    // Create the bundle writer with the header pre-written
+    let mut writer = BundleWriter::new_with_header(
+        Vec::new(),
+        refs_to_include,
+        prereqs,
+        response.num_items as u32,
+        DeltaForm::RefAndOffset,
+    )
+    .await
+    .map_err(|e| {
+        GitError::PackfileError(format!(
+            "Error in creating BundleWriter for head {} and base {}. Cause: {}",
+            head, base, e
+        ))
+    })?;
+    // Write the packfile item stream to the bundle
+    writer.write(response.items).await.map_err(|e| {
+        GitError::PackfileError(format!(
+            "Error in writing packfile items to bundle for head {} and base {}. Cause: {}",
+            head, base, e
+        ))
+    })?;
+    // Finish writing the bundle
+    writer.finish().await.map_err(|e| {
+        GitError::PackfileError(format!(
+            "Error in finishing writing to the bundle for head {} and base {}. Cause: {}",
+            head, base, e
+        ))
+    })?;
+
+    Ok(writer.into_write().into())
 }
