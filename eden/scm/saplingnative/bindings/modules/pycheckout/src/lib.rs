@@ -141,13 +141,14 @@ py_class!(class checkoutplan |py| {
         Ok(conflicts)
     }
 
-    def apply(&self, store: ImplInto<ArcFileStore>) -> PyResult<PyNone> {
+    def apply(&self, store: ImplInto<ArcFileStore>) -> PyResult<Vec<(PyPathBuf, PyObject)>> {
         let plan = self.plan(py);
         let store = store.into();
-        py.allow_threads(||
-            plan.apply_store(store.as_ref())
-        ).map_pyerr(py)?;
-        Ok(PyNone)
+        Ok(py.allow_threads(|| plan.apply_store(store.as_ref())).map_pyerr(py)?
+           .remove_failed
+           .into_iter()
+           .map(|e| (e.0.into(), Err::<(), _>(e.1).map_pyerr(py).unwrap_err().instance(py)))
+           .collect())
     }
 
     def apply_dry_run(&self, store: ImplInto<ArcFileStore>) -> PyResult<(usize, u64)> {

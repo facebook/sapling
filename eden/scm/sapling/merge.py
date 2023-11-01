@@ -2596,9 +2596,11 @@ def donativecheckout(repo, p1, p2, force, wc, prerecrawls):
     cwd = pycompat.getcwdsafe()
 
     repo.ui.debug("Applying to %s \n" % repo.wvfs.base)
-    plan.apply(
+    failed_removes = plan.apply(
         repo.fileslog.filestore,
     )
+    for (path, err) in failed_removes:
+        repo.ui.warn(_("update failed to remove %s: %s!\n") % (path, err))
     repo.ui.debug("Apply done\n")
     stats = plan.stats()
 

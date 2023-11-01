@@ -86,3 +86,24 @@ Can continue interrupted checkout:
   $ hg go --continue
   abort: not in an interrupted update state
   [255]
+
+
+Don't fail with open files that can't be deleted:
+  $ newclientrepo unlink_fail
+  $ drawdag <<'EOS'
+  > B   # B/foo = (removed)
+  > |   # B/bar = different
+  > |
+  > A   # A/foo = foo
+  >     # A/bar = bar
+  > EOS
+
+
+  $ hg go -q $A
+
+    with open("unlink_fail/foo"), open("unlink_fail/bar"):
+
+      $ hg go $B
+      update failed to remove foo: Can't remove file "*foo": The process cannot access the file because it is being used by another process. (os error 32)! (glob) (windows !)
+      2 files updated, 0 files merged, 1 files removed, 0 files unresolved
+

@@ -8,6 +8,7 @@
 use std::thread;
 use std::thread::JoinHandle;
 
+use anyhow::Error;
 use anyhow::Result;
 use crossbeam::channel;
 use crossbeam::channel::Receiver;
@@ -25,7 +26,7 @@ pub struct AsyncVfsWriter {
 }
 
 struct WorkItem {
-    res: oneshot::Sender<Result<usize>>,
+    res: oneshot::Sender<Result<ActionResult>>,
     action: Action,
 }
 #[derive(Debug)]
@@ -61,6 +62,7 @@ impl AsyncVfsWriter {
     ) -> Result<usize> {
         self.submit_action(Action::Write(path, data.into(), flag))
             .await
+            .map(|r| r.bytes_written)
     }
 
     pub async fn write_batch<B: Into<Bytes>>(
@@ -71,16 +73,16 @@ impl AsyncVfsWriter {
             .into_iter()
             .map(|(path, data, flag)| Action::Write(path, data.into(), flag))
             .collect();
-        self.submit_action(Action::Batch(batch)).await
+        self.submit_action(Action::Batch(batch))
+            .await
+            .map(|r| r.bytes_written)
     }
 
-    pub async fn remove(&self, path: RepoPathBuf) -> Result<()> {
-        self.submit_action(Action::Remove(path)).await.map(|_| ())
-    }
-
-    pub async fn remove_batch(&self, batch: Vec<RepoPathBuf>) -> Result<()> {
+    pub async fn remove_batch(&self, batch: Vec<RepoPathBuf>) -> Result<Vec<(RepoPathBuf, Error)>> {
         let batch = batch.into_iter().map(Action::Remove).collect();
-        self.submit_action(Action::Batch(batch)).await.map(|_| ())
+        self.submit_action(Action::Batch(batch))
+            .await
+            .map(|r| r.remove_errors)
     }
 
     pub async fn set_executable(&self, path: RepoPathBuf, flag: bool) -> Result<()> {
@@ -89,12 +91,17 @@ impl AsyncVfsWriter {
             .map(|_| ())
     }
 
-    async fn submit_action(&self, action: Action) -> Result<usize> {
+    async fn submit_action(&self, action: Action) -> Result<ActionResult> {
         let (tx, rx) = oneshot::channel();
         let wi = WorkItem { action, res: tx };
-        self.sender.as_ref().unwrap().send(wi).ok();
+        let _ = self.sender.as_ref().unwrap().send(wi);
         rx.await?
     }
+}
+
+struct ActionResult {
+    bytes_written: usize,
+    remove_errors: Vec<(RepoPathBuf, Error)>,
 }
 
 fn async_vfs_worker(vfs: VFS, receiver: Receiver<WorkItem>) {
@@ -106,23 +113,35 @@ fn async_vfs_worker(vfs: VFS, receiver: Receiver<WorkItem>) {
             continue;
         }
         let result = execute_action(&vfs, item.action);
-        item.res.send(result).ok();
+        let _ = item.res.send(result);
     }
 }
 
-fn execute_action(vfs: &VFS, action: Action) -> Result<usize> {
+fn execute_action(vfs: &VFS, action: Action) -> Result<ActionResult> {
+    let mut bytes_written = 0;
+    let mut remove_errors = Vec::new();
+
     match action {
-        Action::Write(path, data, flag) => vfs.write(&path, &data, flag),
-        Action::Remove(path) => vfs.remove(&path).map(|_| 0),
-        Action::SetExecutable(path, flag) => vfs.set_executable(&path, flag).map(|_| 0),
-        Action::Batch(batch) => {
-            let mut total = 0;
-            for action in batch {
-                total += execute_action(vfs, action)?;
+        Action::Write(path, data, flag) => bytes_written += vfs.write(&path, &data, flag)?,
+        Action::Remove(path) => {
+            if let Err(err) = vfs.remove(&path) {
+                remove_errors.push((path, err));
             }
-            Ok(total)
+        }
+        Action::SetExecutable(path, flag) => vfs.set_executable(&path, flag)?,
+        Action::Batch(batch) => {
+            for action in batch {
+                let res = execute_action(vfs, action)?;
+                bytes_written += res.bytes_written;
+                remove_errors.extend(res.remove_errors.into_iter());
+            }
         }
     }
+
+    Ok(ActionResult {
+        bytes_written,
+        remove_errors,
+    })
 }
 
 impl Drop for AsyncVfsWriter {

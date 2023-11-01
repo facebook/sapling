@@ -22,6 +22,7 @@ use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Context;
+use anyhow::Error;
 use anyhow::Result;
 use async_runtime::try_block_unless_interrupted as block_on;
 use futures::stream;
@@ -128,6 +129,7 @@ pub struct CheckoutStats {
     updated: AtomicUsize,
     meta_updated: AtomicUsize,
     written_bytes: AtomicUsize,
+    pub remove_failed: Vec<(RepoPathBuf, Error)>,
 }
 
 const DEFAULT_CONCURRENCY: usize = 16;
@@ -233,15 +235,14 @@ impl CheckoutPlan {
         let async_vfs = &AsyncVfsWriter::spawn_new(vfs.clone(), 16);
 
         block_on(async move {
-            let stats = CheckoutStats::default();
-            let stats_ref = &stats;
+            let mut stats = CheckoutStats::default();
 
             let remove_files = stream::iter(self.remove.clone().into_iter())
                 .chunks(VFS_BATCH_SIZE)
                 .map(|paths| Self::remove_files(async_vfs, &stats, paths, bar));
             let remove_files = remove_files.buffer_unordered(self.checkout.concurrency);
 
-            Self::process_work_stream(remove_files).await?;
+            stats.remove_failed = Self::process_vec_work_stream(remove_files).await?;
 
             let actions: HashMap<_, _> = self
                 .filtered_update_content
@@ -263,6 +264,7 @@ impl CheckoutPlan {
             });
 
             let progress_ref = self.progress.as_ref();
+            let stats_ref = &stats;
             let update_content = update_content
                 .chunks(VFS_BATCH_SIZE)
                 .map(|actions| async move {
@@ -506,12 +508,12 @@ impl CheckoutPlan {
         stats: &CheckoutStats,
         paths: Vec<RepoPathBuf>,
         bar: &Arc<ProgressBar>,
-    ) -> Result<()> {
+    ) -> Result<Vec<(RepoPathBuf, Error)>> {
         let count = paths.len();
-        async_vfs.remove_batch(paths).await?;
+        let failed = async_vfs.remove_batch(paths).await?;
         stats.removed.fetch_add(count, Ordering::Relaxed);
         bar.increase_position(count as u64);
-        Ok(())
+        Ok(failed)
     }
 
     async fn set_exec_on_file(
@@ -862,7 +864,11 @@ pub fn checkout(
     })?;
 
     // 3. Execute the plan
-    plan.apply_store(&repo.file_store()?)?;
+    let apply_result = plan.apply_store(&repo.file_store()?)?;
+
+    for (path, err) in apply_result.remove_failed {
+        let _ = write!(io.error(), "update failed to remove {}: {:#}!\n", path, err);
+    }
 
     // 4. Update the treestate parents, dirstate
     wc.set_parents(&mut [target_commit].iter())?;
