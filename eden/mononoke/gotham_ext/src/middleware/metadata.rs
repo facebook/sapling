@@ -21,6 +21,7 @@ use hyper::header::HeaderMap;
 use hyper::Body;
 use hyper::Response;
 use hyper::StatusCode;
+use hyper::Uri;
 use metaconfig_types::Identity;
 use metadata::Metadata;
 use percent_encoding::percent_decode;
@@ -150,6 +151,19 @@ impl Middleware for MetadataMiddleware {
                 .get(CLIENT_INFO_HEADER)
                 .and_then(|h| h.to_str().ok())
                 .and_then(|ci| serde_json::from_str(ci).ok());
+
+            if client_info.is_none()
+                && matches!(Uri::try_borrow_from(state), Some(uri) if !uri.path().ends_with("/health_check"))
+            {
+                let msg = "Error: expected Client Info header but not provided...".to_string();
+                error!(self.logger, "{}", &msg,);
+                let response = Response::builder()
+                    .status(StatusCode::UNAUTHORIZED)
+                    .body(format!("{{\"message:\"{}\"}}", msg,).into())
+                    .expect("Couldn't build http response");
+                return Some(response);
+            }
+
             let client_info = client_info
                 .unwrap_or_else(|| ClientInfo::default_with_entry_point(self.entry_point.clone()));
             metadata.add_client_info(client_info);

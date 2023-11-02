@@ -129,6 +129,7 @@ pub enum ClientEntryPoint {
     RemoteGitImport,
     EdenApiReplay,
     MononokeHgSync,
+    CurlTest,
 }
 
 impl ClientRequestInfo {
@@ -200,6 +201,7 @@ impl Display for ClientEntryPoint {
             ClientEntryPoint::RemoteGitImport => "remote_git_import",
             ClientEntryPoint::EdenApiReplay => "eden_api_replay",
             ClientEntryPoint::MononokeHgSync => "hg_sync",
+            ClientEntryPoint::CurlTest => "curl_test",
         };
         write!(f, "{}", out)
     }
@@ -229,6 +231,7 @@ impl TryFrom<&str> for ClientEntryPoint {
             "remote_git_import" => Ok(ClientEntryPoint::RemoteGitImport),
             "eden_api_replay" => Ok(ClientEntryPoint::EdenApiReplay),
             "hg_sync" => Ok(ClientEntryPoint::MononokeHgSync),
+            "curl_test" => Ok(ClientEntryPoint::CurlTest),
             _ => Err(anyhow!("Invalid client entry point")),
         }
     }
