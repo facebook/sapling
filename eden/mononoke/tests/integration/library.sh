@@ -171,6 +171,10 @@ function sslcurl {
   sslcurlas proxy "$@"
 }
 
+function sslcurl_noclientinfo_test {
+  curl --noproxy localhost --cert "$TEST_CERTDIR/proxy.crt" --cacert "$TEST_CERTDIR/root-ca.crt" --key "$TEST_CERTDIR/proxy.key" "$@"
+}
+
 function curltest {
   curl -H 'x-client-info: {"request_info": {"entry_point": "CurlTest", "correlator": "test"}}' "$@"
 }
