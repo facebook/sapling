@@ -60,6 +60,7 @@ impl<T: AsyncWrite + Unpin> BundleWriter<T> {
         refs: Vec<(String, ObjectId)>,
         prereqs: Option<Vec<ObjectId>>,
         num_objects: u32,
+        concurrency: usize,
         delta_form: DeltaForm,
     ) -> Result<Self> {
         // Append the bundle header
@@ -82,7 +83,7 @@ impl<T: AsyncWrite + Unpin> BundleWriter<T> {
         }
         // Newline before starting packfile
         writer.write_all(b"\n").await?;
-        let pack_writer = PackfileWriter::new(writer, num_objects, delta_form);
+        let pack_writer = PackfileWriter::new(writer, num_objects, concurrency, delta_form);
         Ok(Self {
             version: BundleVersion::V2,
             refs,

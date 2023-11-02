@@ -65,11 +65,13 @@ pub async fn create_git_repo_on_disk(
     let prereqs: Option<Vec<ObjectId>> = None;
 
     // Create the bundle writer with the header pre-written
+    let concurrency = 1000;
     let mut writer = BundleWriter::new_with_header(
         output_file,
         response.included_refs.into_iter().collect(),
         prereqs,
         response.num_items as u32,
+        concurrency,
         DeltaForm::RefAndOffset, // Ref deltas are supported by Git when cloning from a bundle
     )
     .await?;

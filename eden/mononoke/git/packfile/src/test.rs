@@ -145,7 +145,9 @@ fn validate_packfile_item_encoding() -> anyhow::Result<()> {
 #[fbinit::test]
 async fn validate_basic_packfile_generation() -> anyhow::Result<()> {
     let objects_stream = get_objects_stream(false).await?;
-    let mut packfile_writer = PackfileWriter::new(Vec::new(), 3, DeltaForm::RefAndOffset);
+    let concurrency = 100;
+    let mut packfile_writer =
+        PackfileWriter::new(Vec::new(), 3, concurrency, DeltaForm::RefAndOffset);
     // Validate we are able to write the objects to the packfile without errors
     packfile_writer
         .write(objects_stream)
@@ -161,7 +163,9 @@ async fn validate_basic_packfile_generation() -> anyhow::Result<()> {
 async fn validate_packfile_generation_format() -> anyhow::Result<()> {
     // Create a few Git objects
     let objects_stream = get_objects_stream(false).await?;
-    let mut packfile_writer = PackfileWriter::new(Vec::new(), 3, DeltaForm::RefAndOffset);
+    let concurrency = 100;
+    let mut packfile_writer =
+        PackfileWriter::new(Vec::new(), 3, concurrency, DeltaForm::RefAndOffset);
     // Validate we are able to write the objects to the packfile without errors
     packfile_writer
         .write(objects_stream)
@@ -199,7 +203,9 @@ async fn validate_packfile_generation_format() -> anyhow::Result<()> {
 
 #[fbinit::test]
 async fn validate_staggered_packfile_generation() -> anyhow::Result<()> {
-    let mut packfile_writer = PackfileWriter::new(Vec::new(), 3, DeltaForm::RefAndOffset);
+    let concurrency = 100;
+    let mut packfile_writer =
+        PackfileWriter::new(Vec::new(), 3, concurrency, DeltaForm::RefAndOffset);
     // Create Git objects and write them to a packfile one at a time
     let tag_bytes = Bytes::from(to_vec_bytes(&gix_object::Object::Tag(Tag {
         target: ObjectId::empty_tree(gix_hash::Kind::Sha1),
@@ -269,7 +275,9 @@ async fn validate_staggered_packfile_generation() -> anyhow::Result<()> {
 async fn validate_roundtrip_packfile_generation() -> anyhow::Result<()> {
     // Create a few Git objects
     let objects_stream = get_objects_stream(false).await?;
-    let mut packfile_writer = PackfileWriter::new(Vec::new(), 3, DeltaForm::RefAndOffset);
+    let concurrency = 100;
+    let mut packfile_writer =
+        PackfileWriter::new(Vec::new(), 3, concurrency, DeltaForm::RefAndOffset);
     // Validate we are able to write the objects to the packfile without errors
     packfile_writer
         .write(objects_stream)
@@ -307,7 +315,9 @@ async fn validate_roundtrip_packfile_generation() -> anyhow::Result<()> {
 async fn validate_delta_packfile_generation() -> anyhow::Result<()> {
     // Create a few Git objects along with delta variants
     let objects_stream = get_objects_stream(true).await?;
-    let mut packfile_writer = PackfileWriter::new(Vec::new(), 4, DeltaForm::OnlyOffset);
+    let concurrency = 100;
+    let mut packfile_writer =
+        PackfileWriter::new(Vec::new(), 4, concurrency, DeltaForm::OnlyOffset);
     // Validate we are able to write the objects to the packfile without errors
     packfile_writer
         .write(objects_stream)
@@ -348,10 +358,17 @@ async fn validate_basic_bundle_generation() -> anyhow::Result<()> {
         ObjectId::empty_tree(gix_hash::Kind::Sha1),
     )];
     // Validate we are able to successfully create BundleWriter
-    let mut bundle_writer =
-        BundleWriter::new_with_header(Vec::new(), refs, None, 3, DeltaForm::RefAndOffset)
-            .await
-            .expect("Expected successful creation of BundleWriter");
+    let concurrency = 100;
+    let mut bundle_writer = BundleWriter::new_with_header(
+        Vec::new(),
+        refs,
+        None,
+        3,
+        concurrency,
+        DeltaForm::RefAndOffset,
+    )
+    .await
+    .expect("Expected successful creation of BundleWriter");
     // Validate we are able to successfully write objects to the bundle
     bundle_writer
         .write(objects_stream)
@@ -372,10 +389,17 @@ async fn validate_staggered_bundle_generation() -> anyhow::Result<()> {
         ObjectId::empty_tree(gix_hash::Kind::Sha1),
     )];
     // Validate we are able to successfully create BundleWriter
-    let mut bundle_writer =
-        BundleWriter::new_with_header(Vec::new(), refs, None, 3, DeltaForm::RefAndOffset)
-            .await
-            .expect("Expected successful creation of BundleWriter");
+    let concurrency = 100;
+    let mut bundle_writer = BundleWriter::new_with_header(
+        Vec::new(),
+        refs,
+        None,
+        3,
+        concurrency,
+        DeltaForm::RefAndOffset,
+    )
+    .await
+    .expect("Expected successful creation of BundleWriter");
     // Create a few Git objects
     let tag_bytes = Bytes::from(to_vec_bytes(&gix_object::Object::Tag(Tag {
         target: ObjectId::empty_tree(gix_hash::Kind::Sha1),

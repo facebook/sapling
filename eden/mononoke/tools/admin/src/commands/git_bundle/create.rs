@@ -87,6 +87,9 @@ pub struct FromRepoArgs {
     /// (for the delta objects)
     #[clap(long, conflicts_with = "exclude_deltas")]
     exclude_ref_deltas: bool,
+    /// The concurrency with which the stream objects will be prefetched while writing to the bundle
+    #[clap(long, default_value_t = 1000)]
+    concurrency: usize,
 }
 
 /// Args for creating a Git bundle from an on-disk Git repo
@@ -173,6 +176,7 @@ pub async fn create_from_mononoke_repo(
         response.included_refs.into_iter().collect(),
         prereqs,
         response.num_items as u32,
+        create_args.concurrency,
         DeltaForm::RefAndOffset, // Ref deltas are supported by Git when cloning from a bundle
     )
     .await?;
@@ -252,6 +256,7 @@ async fn create_from_on_disk_repo(path: PathBuf, output_file: tokio::fs::File) -
         refs_to_include.into_iter().collect(),
         None,
         object_count as u32,
+        1000,
         DeltaForm::RefAndOffset,
     )
     .await?;
