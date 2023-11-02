@@ -145,7 +145,7 @@ pub async fn create_from_mononoke_repo(
         };
         DeltaInclusion::Include {
             form,
-            inclusion_threshold: 0.6,
+            inclusion_threshold: 0.90,
         }
     };
     // If references are specified without values, just take the ref names

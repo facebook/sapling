@@ -356,7 +356,7 @@ async fn packfile_entry(
             // Can't use the delta if no delta variant is present in the entry. Additionally, if this object has been
             // duplicated across multiple commits in the pack, then we can't use it as a delta due to the potential of
             // a delta cycle
-            let mut use_delta = !entry.is_delta() && !is_duplicated;
+            let mut use_delta = entry.is_delta() && !is_duplicated;
             // Get the delta with the shortest size. In case of shallow clones, we would also want to validate if the
             // base of the delta is present in the pack or at the client.
             // TODO(rajshar): Implement delta support in shallow clones
@@ -367,7 +367,7 @@ async fn packfile_entry(
             let shortest_delta = entry.deltas.first();
             // Only use the delta if the size of the delta is less than inclusion_threshold% the size of the actual object
             use_delta &= shortest_delta.map_or(false, |delta| {
-                (delta.instructions_uncompressed_size as f64)
+                (delta.instructions_compressed_size as f64)
                     < (entry.full.size as f64) * inclusion_threshold as f64
             });
             use_delta
