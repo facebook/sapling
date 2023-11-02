@@ -44,6 +44,8 @@ use changesets::Changesets;
 use clap_old::Arg;
 use clap_old::ArgGroup;
 use clap_old::SubCommand;
+use clientinfo::ClientEntryPoint;
+use clientinfo::ClientInfo;
 use cloned::cloned;
 use cmdlib::args;
 use cmdlib::args::MononokeMatches;
@@ -457,8 +459,12 @@ pub struct HgSyncProcessExecutor {
 
 impl HgSyncProcessExecutor {
     fn new(fb: FacebookInit, matches: Arc<MononokeMatches<'static>>, repo_name: String) -> Self {
-        let ctx = CoreContext::new_with_logger(fb, matches.logger().clone())
-            .clone_with_repo_name(&repo_name);
+        let ctx = CoreContext::new_with_logger_and_client_info(
+            fb,
+            matches.logger().clone(),
+            ClientInfo::default_with_entry_point(ClientEntryPoint::MononokeHgSync),
+        )
+        .clone_with_repo_name(&repo_name);
         Self {
             matches,
             ctx,
@@ -1562,8 +1568,12 @@ fn main(fb: FacebookInit) -> Result<()> {
             let config_store = matches.config_store();
             let (repo_name, _) =
                 args::not_shardmanager_compatible::get_config(config_store, &matches)?;
-            let ctx = CoreContext::new_with_logger(fb, matches.logger().clone())
-                .clone_with_repo_name(&repo_name);
+            let ctx = CoreContext::new_with_logger_and_client_info(
+                fb,
+                matches.logger().clone(),
+                ClientInfo::default_with_entry_point(ClientEntryPoint::MononokeHgSync),
+            )
+            .clone_with_repo_name(&repo_name);
             let fut = run(&ctx, &matches, repo_name, Arc::new(AtomicBool::new(false)));
             block_execute(
                 fut,

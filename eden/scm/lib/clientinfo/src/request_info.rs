@@ -127,6 +127,7 @@ pub enum ClientEntryPoint {
     MononokeAdmin,
     GitImport,
     EdenApiReplay,
+    MononokeHgSync,
 }
 
 impl ClientRequestInfo {
@@ -196,6 +197,7 @@ impl Display for ClientEntryPoint {
             ClientEntryPoint::MononokeAdmin => "mononoke_admin",
             ClientEntryPoint::GitImport => "git_import",
             ClientEntryPoint::EdenApiReplay => "eden_api_replay",
+            ClientEntryPoint::MononokeHgSync => "hg_sync",
         };
         write!(f, "{}", out)
     }
@@ -223,6 +225,7 @@ impl TryFrom<&str> for ClientEntryPoint {
             "mononoke_admin" => Ok(ClientEntryPoint::MononokeAdmin),
             "git_import" => Ok(ClientEntryPoint::GitImport),
             "eden_api_replay" => Ok(ClientEntryPoint::EdenApiReplay),
+            "hg_sync" => Ok(ClientEntryPoint::MononokeHgSync),
             _ => Err(anyhow!("Invalid client entry point")),
         }
     }

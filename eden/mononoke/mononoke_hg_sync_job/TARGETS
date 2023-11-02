@@ -88,6 +88,7 @@ rust_binary(
         "//eden/mononoke/repo_attributes/repo_lock:repo_lock",
         "//eden/mononoke/repo_client:getbundle_response",
         "//eden/mononoke/server/context:context",
+        "//eden/scm/lib/clientinfo:clientinfo",
     ],
 )
 
