@@ -39,6 +39,10 @@
   IN  > POST /lfs1/objects/batch -
   OUT < POST /lfs1/objects/batch 200 OK
 
+# Try to download without providing the mandatory client info header
+  $ sslcurl_noclientinfo_test "${lfs_uri}/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d" -s
+  {"message:"Error: expected Client Info header but not provided..."} (no-eol)
+
 # Download over a variety of encodings
 
   $ curltest "${lfs_uri}/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d" -s -o identity
