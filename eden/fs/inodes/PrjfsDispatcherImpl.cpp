@@ -186,6 +186,55 @@ ImmediateFuture<std::vector<PrjfsDirEntry>> PrjfsDispatcherImpl::opendir(
       });
 }
 
+namespace {
+bool isNonEdenFsPathDirectory(AbsolutePath path) {
+  // TODO(sggutier): This might actually be another EdenFS repo instead of a
+  // regular file. We should try to consider the case where the other EdenFS
+  // repo in turn points out to somewhere inside of the EdenFS repo that
+  // initiated this call, as trying to recursively resolve symlinks on this
+  // manner might cause issues.
+  boost::system::error_code ec;
+  auto boostPath = boost::filesystem::path(path.asString());
+  auto fileType = boost::filesystem::status(boostPath, ec).type();
+  return fileType == boost::filesystem::directory_file;
+}
+} // namespace
+
+std::variant<AbsolutePath, RelativePath>
+PrjfsDispatcherImpl::determineTargetType(
+    RelativePath symlink,
+    string_view targetStringView) {
+  // Creating absolute path symlinks with a variety of tools (e.g.,
+  // mklink on Windows or os.symlink on Python) makes the created
+  // symlinks start with an UNC prefix. However, there could be tools
+  // that create symlinks that don't add this prefix.
+  // TODO: Make this line also consider tools that do not add an UNC
+  // prefix to absolute path symlinks.
+  auto targetString = targetStringView.starts_with(detail::kUNCPrefix)
+      ? std::string(targetStringView)
+      : fmt::format(
+            "{}{}{}",
+            mount_->getPath() + symlink.dirname(),
+            kDirSeparatorStr,
+            targetStringView);
+  AbsolutePath absTarget;
+  try {
+    absTarget = canonicalPath(targetString);
+  } catch (const std::exception& exc) {
+    XLOG(DBG6) << "unable to normalize target " << symlink.asString() << ": "
+               << exc.what();
+    throw exc;
+  }
+  RelativePath target;
+  try {
+    // Symlink points inside of EdenFS
+    return RelativePath(mount_->getPath().relativize(absTarget));
+  } catch (const std::exception&) {
+    // Symlink points outside of EdenFS
+    return absTarget;
+  }
+}
+
 ImmediateFuture<bool> PrjfsDispatcherImpl::isFinalSymlinkPathDirectory(
     RelativePath symlink,
     string_view targetStringView,
@@ -214,37 +263,20 @@ ImmediateFuture<bool> PrjfsDispatcherImpl::isFinalSymlinkPathDirectory(
   }
 
   return makeImmediateFutureWith([&]() -> ImmediateFuture<bool> {
-           // Creating absolute path symlinks with a variety of tools (e.g.,
-           // mklink on Windows or os.symlink on Python) makes the created
-           // symlinks start with an UNC prefix. However, there could be tools
-           // that create symlinks that don't add this prefix.
-           // TODO: Make this line also consider tools that do not add an UNC
-           // prefix to absolute path symlinks.
-           auto targetString = targetStringView.starts_with(detail::kUNCPrefix)
-               ? std::string(targetStringView)
-               : fmt::format(
-                     "{}{}{}",
-                     mount_->getPath() + symlink.dirname(),
-                     kDirSeparatorStr,
-                     targetStringView);
-           AbsolutePath absTarget;
+           RelativePath target;
+           std::variant<AbsolutePath, RelativePath> resolvedTarget;
            try {
-             absTarget = canonicalPath(targetString);
-           } catch (const std::exception& exc) {
-             XLOG(DBG6) << "unable to resolve target for symlink "
-                        << symlink.asString() << ": " << exc.what();
+             resolvedTarget = determineTargetType(symlink, targetStringView);
+           } catch (const std::exception&) {
              return false;
            }
-           RelativePath target;
-           try {
-             target = RelativePath(mount_->getPath().relativize(absTarget));
-           } catch (const std::exception&) {
+           if (std::holds_alternative<RelativePath>(resolvedTarget)) {
+             target = std::get<RelativePath>(resolvedTarget);
+           } else {
              // Symlink points outside of EdenFS; make the system solve it for
              // us
-             boost::system::error_code ec;
-             auto boostPath = boost::filesystem::path(absTarget.asString());
-             auto fileType = boost::filesystem::status(boostPath, ec).type();
-             return fileType == boost::filesystem::directory_file;
+             return isNonEdenFsPathDirectory(
+                 std::get<AbsolutePath>(resolvedTarget));
            }
            // This recursively goes through symlinks until it gets the first
            // entry that is not a symlink. Symlink cycles are prevented by the
@@ -281,7 +313,7 @@ ImmediateFuture<bool> PrjfsDispatcherImpl::isFinalSymlinkPathDirectory(
                          });
                    })
                .thenError(
-                   [](const folly::exception_wrapper& _ew) { return false; });
+                   [](const folly::exception_wrapper&) { return false; });
          })
       .ensure([this, symlink] {
         auto sptr = symlinkCheck_.wlock();

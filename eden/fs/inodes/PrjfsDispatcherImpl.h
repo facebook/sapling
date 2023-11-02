@@ -97,6 +97,10 @@ class PrjfsDispatcherImpl : public PrjfsDispatcher {
       const ObjectFetchContextPtr& context,
       const int remainingRecursionDepth = kMaxSymlinkChainDepth);
 
+  std::variant<AbsolutePath, RelativePath> determineTargetType(
+      RelativePath symlink,
+      string_view targetStringView);
+
  private:
   // The EdenMount associated with this dispatcher.
   EdenMount* const mount_;
