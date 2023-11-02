@@ -22,6 +22,8 @@ use clap::builder::NonEmptyStringValueParser;
 use clap::Args;
 use clap::Parser;
 use clap::Subcommand;
+use clientinfo::ClientEntryPoint;
+use clientinfo::ClientInfo;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::future;
@@ -166,7 +168,11 @@ fn build_context(
         logger.new(o!("repo" => repo.repo_identity().name().to_string()))
     };
 
-    CoreContext::new_with_logger(fb, logger)
+    CoreContext::new_with_logger_and_client_info(
+        fb,
+        logger,
+        ClientInfo::default_with_entry_point(ClientEntryPoint::StreamingClone),
+    )
 }
 
 // Returns how many chunks were inserted

@@ -131,6 +131,7 @@ pub enum ClientEntryPoint {
     MononokeHgSync,
     CurlTest,
     MirrorHgCommits,
+    StreamingClone,
 }
 
 impl ClientRequestInfo {
@@ -204,6 +205,7 @@ impl Display for ClientEntryPoint {
             ClientEntryPoint::MononokeHgSync => "hg_sync",
             ClientEntryPoint::CurlTest => "curl_test",
             ClientEntryPoint::MirrorHgCommits => "mirror_hg_commits",
+            ClientEntryPoint::StreamingClone => "streaming_clone",
         };
         write!(f, "{}", out)
     }
@@ -236,6 +238,7 @@ impl TryFrom<&str> for ClientEntryPoint {
             "hg_sync" => Ok(ClientEntryPoint::MononokeHgSync),
             "curl_test" => Ok(ClientEntryPoint::CurlTest),
             "mirror_hg_commits" => Ok(ClientEntryPoint::MirrorHgCommits),
+            "streaming_clone" => Ok(ClientEntryPoint::StreamingClone),
             _ => Err(anyhow!("Invalid client entry point")),
         }
     }
@@ -374,6 +377,11 @@ mod tests {
         assert_eq!(
             Some(ClientEntryPoint::MirrorHgCommits),
             ClientEntryPoint::try_from(ClientEntryPoint::MirrorHgCommits.to_string().as_ref()).ok()
+        );
+
+        assert_eq!(
+            Some(ClientEntryPoint::StreamingClone),
+            ClientEntryPoint::try_from(ClientEntryPoint::StreamingClone.to_string().as_ref()).ok()
         );
     }
 }
