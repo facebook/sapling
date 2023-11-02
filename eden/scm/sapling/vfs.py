@@ -25,9 +25,9 @@ from typing import (
     Any,
     BinaryIO,
     Callable,
-    ContextManager,
     IO,
     Iterable,
+    Iterator,
     List,
     Optional,
     Tuple,
@@ -347,7 +347,7 @@ class abstractvfs(pycompat.ABC):
     @contextlib.contextmanager
     def backgroundclosing(
         self, ui: "Any", expectedcount: int = -1
-    ) -> "ContextManager[backgroundfilecloser]":
+    ) -> Iterator[Optional["backgroundfilecloser"]]:
         """Allow files to be closed asynchronously.
 
         When this context manager is active, ``backgroundclose`` can be passed
@@ -363,11 +363,7 @@ class abstractvfs(pycompat.ABC):
             threading.current_thread(),
             threading._MainThread,  # pyre-fixme
         ):
-            # pyre-fixme[7]: Expected `ContextManager[backgroundfilecloser]` but got
-            #  `Generator[None, None, None]`.
             yield
-            # pyre-fixme[7]: Expected `ContextManager[backgroundfilecloser]` but got
-            #  `Generator[typing.Any, typing.Any, None]`.
             return
         vfs = getattr(self, "vfs", self)
         if vfs._backgroundfilecloser is not None:
@@ -376,8 +372,6 @@ class abstractvfs(pycompat.ABC):
         with backgroundfilecloser(ui, expectedcount=expectedcount) as bfc:
             try:
                 vfs._backgroundfilecloser = bfc
-                # pyre-fixme[7]: Expected `ContextManager[backgroundfilecloser]` but
-                #  got `Generator[typing.Any, None, None]`.
                 yield bfc
             finally:
                 vfs._backgroundfilecloser = None
