@@ -352,7 +352,6 @@ async fn derive_git_delta_manifest(
         anyhow::Ok((parent, parent_tree_handle))
     }))
     .await?;
-    let is_merge = parent_trees_with_commit.len() > 1;
     // Perform a manifest diff between the parent and the current changeset to identify the paths (could be file or directory)
     // that have been modified in the current commit as compared to the parent commit. Collect the result in a Multimap that
     // maps from MPath (added or modified) to Vec<DeltaEntryMetadata>. In case of added MPath, there would be only one DeltaEntryMetadata
@@ -388,7 +387,6 @@ async fn derive_git_delta_manifest(
                                 None
                             } else if actual.oid().size() > DELTA_THRESHOLD
                                 || base.oid().size() > DELTA_THRESHOLD
-                                || is_merge
                             {
                                 // If either the base object or the actual object is too large, then we don't want to delta them
                                 // and instead use them directly
