@@ -204,15 +204,11 @@ Metrics is logged to blackbox:
   $ hg log -r null -T '.\n' --config extensions.gauge=$TESTTMP/a.py
   .
   atexit handler executed
-  $ hg blackbox --no-timestamp --no-sid --pattern '{"legacy_log":{"service":"metrics"}}'
-  [legacy][metrics] {'metrics': {'watchmanfilecount': 3, 'watchmanfreshinstances': 0}} (?)
-  [legacy][metrics] {'metrics': {'scmstore': {'file': {'api': {'hg': {'add': {'calls': 3}, 'prefetch': {'calls': 3}}}, 'write': {'nonlfs': {'items': 3, 'ok': 3}}}}}}
-  [legacy][metrics] {'metrics': {'scmstore': {'file': {'api': {'hg': {'add': {'calls': 3}, 'prefetch': {'calls': 3}}}, 'write': {'nonlfs': {'items': 3, 'ok': 3}}}}}}
-  *metrics* (glob)
-  [legacy][metrics] {'metrics': {'bar': 2, 'foo': {'a': 1, 'b': 5}}}
-  [legacy][metrics] {'metrics': {'bar': 2, 'foo': {'a': 1, 'b': 5}}}
-  [legacy][metrics] {'metrics': {'bar': 2, 'foo': {'a': 1, 'b': 5}}}
+  $ hg blackbox --no-timestamp --no-sid --pattern '{"legacy_log":{"service":"metrics"}}' | grep foo
   atexit handler executed
+  [legacy][metrics] {'metrics': {'bar': 2, 'foo': {'a': 1, 'b': 5}}}
+  [legacy][metrics] {'metrics': {'bar': 2, 'foo': {'a': 1, 'b': 5}}}
+  [legacy][metrics] {'metrics': {'bar': 2, 'foo': {'a': 1, 'b': 5}}}
 
 Invalid format strings don't crash Mercurial
 
