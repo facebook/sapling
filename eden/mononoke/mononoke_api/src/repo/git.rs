@@ -343,11 +343,14 @@ pub async fn repo_stack_git_bundle(
         .collect();
 
     // Create the bundle writer with the header pre-written
+    // A concurrency of 100 is sufficient since the bundle is for a stack of draft commits
+    let concurrency = 100;
     let mut writer = BundleWriter::new_with_header(
         Vec::new(),
         refs_to_include,
         prereqs,
         response.num_items as u32,
+        concurrency,
         DeltaForm::RefAndOffset,
     )
     .await
