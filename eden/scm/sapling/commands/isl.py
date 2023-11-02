@@ -185,7 +185,7 @@ def untar(tar_path, dest_dir) -> Dict[str, str]:
                 os.rename(dest_dir, to_delete_dir)
                 shutil.rmtree(to_delete_dir, ignore_errors=True)
                 os.makedirs(dest_dir, exist_ok=True)
-            if sys.version_info > (3, 11):
+            if hasattr(tarfile, "data_filter"):
                 tar.extractall(dest_dir, filter="data")
             else:
                 tar.extractall(dest_dir)
