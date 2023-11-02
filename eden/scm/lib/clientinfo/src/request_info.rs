@@ -130,6 +130,7 @@ pub enum ClientEntryPoint {
     EdenApiReplay,
     MononokeHgSync,
     CurlTest,
+    MirrorHgCommits,
 }
 
 impl ClientRequestInfo {
@@ -202,6 +203,7 @@ impl Display for ClientEntryPoint {
             ClientEntryPoint::EdenApiReplay => "eden_api_replay",
             ClientEntryPoint::MononokeHgSync => "hg_sync",
             ClientEntryPoint::CurlTest => "curl_test",
+            ClientEntryPoint::MirrorHgCommits => "mirror_hg_commits",
         };
         write!(f, "{}", out)
     }
@@ -232,6 +234,7 @@ impl TryFrom<&str> for ClientEntryPoint {
             "eden_api_replay" => Ok(ClientEntryPoint::EdenApiReplay),
             "hg_sync" => Ok(ClientEntryPoint::MononokeHgSync),
             "curl_test" => Ok(ClientEntryPoint::CurlTest),
+            "mirror_hg_commits" => Ok(ClientEntryPoint::MirrorHgCommits),
             _ => Err(anyhow!("Invalid client entry point")),
         }
     }
