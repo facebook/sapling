@@ -158,11 +158,17 @@ impl ISLAppBundle {
         Ok(())
     }
 
-    /// Launch the app bundle in a new process via 'open'.
+    /// Launch the app bundle in a new process.
     pub(crate) fn run_app_bundle(&self) -> anyhow::Result<()> {
-        // Use 'open' to run the app.
-        let mut command = Command::new("/usr/bin/open");
-        command.arg(&self.app_dir).spawn()?;
+        let mut command = Command::new(self.app_dir.join("Contents/MacOS/Interactive Smartlog"));
+
+        // No need to keep the stdout, since the parent process will exit immediately.
+        // Use --foreground to get the stdout.
+        command
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null());
+
+        command.spawn()?;
 
         Ok(())
     }
