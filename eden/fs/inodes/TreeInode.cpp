@@ -694,15 +694,8 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInodeNoThrow(
   // It simplifies their logic to guarantee that we never throw an exception,
   // and always return a Future object.  Therefore we simply wrap
   // startLoadingInode() and convert any thrown exceptions into Future.
-  try {
-    return startLoadingInode(entry, name, fetchContext);
-  } catch (...) {
-    // It's possible that makeFuture() itself could throw, but this only
-    // happens on out of memory, in which case the whole process is pretty much
-    // hosed anyway.
-    return makeFuture<unique_ptr<InodeBase>>(
-        folly::exception_wrapper{std::current_exception()});
-  }
+  return folly::makeFutureWith(
+      [&] { return startLoadingInode(entry, name, fetchContext); });
 }
 
 template <typename T>
