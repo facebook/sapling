@@ -299,9 +299,11 @@ impl PreloadedCommitGraphStorage {
             ctx.clone(),
             move || {
                 std::time::Duration::from_secs(
-                    tunables::tunables()
-                        .preloaded_commit_graph_reloading_interval_secs()
-                        .map_or(DEFAULT_RELOADING_INTERVAL_SECS, |secs| secs as u64),
+                    justknobs::get_as::<u64>(
+                        "scm/mononoke:preloaded_commit_graph_reloading_interval_secs",
+                        None,
+                    )
+                    .unwrap_or(DEFAULT_RELOADING_INTERVAL_SECS),
                 )
             },
             loader,
