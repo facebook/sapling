@@ -187,9 +187,6 @@ pub struct MononokeTunables {
     // How often to check if derived data is disabled or not
     derived_data_disabled_watcher_delay_secs: TunableU64,
 
-    // Stops deriving on derivation workers. Will not drain Derivation Queue
-    derived_data_disable_derivation_workers: TunableBool,
-
     // How long to wait before worker retries in case of an error
     // or empty Derivation queue (ms).
     derivation_worker_sleep_duration: TunableU64,
