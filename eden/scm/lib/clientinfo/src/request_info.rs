@@ -132,6 +132,7 @@ pub enum ClientEntryPoint {
     CurlTest,
     MirrorHgCommits,
     StreamingClone,
+    ScmDaemon,
 }
 
 impl ClientRequestInfo {
@@ -206,6 +207,7 @@ impl Display for ClientEntryPoint {
             ClientEntryPoint::CurlTest => "curl_test",
             ClientEntryPoint::MirrorHgCommits => "mirror_hg_commits",
             ClientEntryPoint::StreamingClone => "streaming_clone",
+            ClientEntryPoint::ScmDaemon => "scm_daemon",
         };
         write!(f, "{}", out)
     }
@@ -239,6 +241,7 @@ impl TryFrom<&str> for ClientEntryPoint {
             "curl_test" => Ok(ClientEntryPoint::CurlTest),
             "mirror_hg_commits" => Ok(ClientEntryPoint::MirrorHgCommits),
             "streaming_clone" => Ok(ClientEntryPoint::StreamingClone),
+            "scm_daemon" => Ok(ClientEntryPoint::ScmDaemon),
             _ => Err(anyhow!("Invalid client entry point")),
         }
     }
@@ -382,6 +385,11 @@ mod tests {
         assert_eq!(
             Some(ClientEntryPoint::StreamingClone),
             ClientEntryPoint::try_from(ClientEntryPoint::StreamingClone.to_string().as_ref()).ok()
+        );
+
+        assert_eq!(
+            Some(ClientEntryPoint::ScmDaemon),
+            ClientEntryPoint::try_from(ClientEntryPoint::ScmDaemon.to_string().as_ref()).ok()
         );
     }
 }
