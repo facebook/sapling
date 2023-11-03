@@ -24,6 +24,7 @@ rust_library(
         "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:maplit",
         "fbsource//third-party/rust:vec1",
+        "//common/rust/shed/justknobs_stub:justknobs",
         "//common/rust/shed/memcache_stub:memcache",
         "//common/rust/shed/stats:stats",
         "//eden/mononoke/common/rust/caching_ext:caching_ext",

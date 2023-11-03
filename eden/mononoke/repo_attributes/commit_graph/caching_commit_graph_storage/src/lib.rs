@@ -257,7 +257,9 @@ impl CachingCommitGraphStorage {
     }
 
     fn request<'a>(&'a self, ctx: &'a CoreContext, prefetch: Prefetch) -> CacheRequest<'a> {
-        let prefetch = if tunables().disable_commit_graph_prefetch().unwrap_or(false) {
+        let prefetch = if justknobs::eval("scm/mononoke:disable_commit_graph_prefetch", None, None)
+            .unwrap_or_default()
+        {
             Prefetch::None
         } else {
             prefetch.include_hint()
@@ -275,7 +277,9 @@ impl CachingCommitGraphStorage {
         ctx: &'a CoreContext,
         prefetch: Prefetch,
     ) -> CacheRequest<'a> {
-        let prefetch = if tunables().disable_commit_graph_prefetch().unwrap_or(false) {
+        let prefetch = if justknobs::eval("scm/mononoke:disable_commit_graph_prefetch", None, None)
+            .unwrap_or_default()
+        {
             Prefetch::None
         } else {
             prefetch.include_hint()
