@@ -32,7 +32,6 @@ rust_library(
         "//eden/mononoke/repo_attributes/commit_graph/commit_graph_types:commit_graph_types",
         "//eden/mononoke/repo_attributes/commit_graph/commit_graph_types/if:commit_graph_thrift-rust",
         "//eden/mononoke/server/context:context",
-        "//eden/mononoke/tunables:tunables",
         "//thrift/lib/rust:fbthrift",
     ],
 )

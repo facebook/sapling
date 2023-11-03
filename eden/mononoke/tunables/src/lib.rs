@@ -333,8 +333,6 @@ pub struct MononokeTunables {
     // Enable derivation on service per repo
     enable_remote_derivation: TunableBoolByRepo,
 
-    // Disable memcache for commit graph prefetching
-    disable_commit_graph_memcache_for_prefetch: TunableBool,
     // Max number of steps to make when prefetching
     commit_graph_prefetch_step_limit: TunableI64,
 
