@@ -72,7 +72,6 @@ use mononoke_types::DateTime;
 use mononoke_types::FileChange;
 use mononoke_types::Globalrev;
 use serde::Deserialize;
-use tunables::tunables;
 use types::HgId;
 use types::Parents;
 
@@ -629,9 +628,12 @@ impl EdenApiHandler for GraphHandlerV2 {
             .map(|hg_id| HgChangesetId::new(HgNodeHash::from(hg_id)))
             .collect();
 
-        if tunables()
-            .enable_streaming_commit_graph_edenapi_endpoint()
-            .unwrap_or_default()
+        if justknobs::eval(
+            "scm/mononoke:enable_streaming_commit_graph_edenapi_endpoint",
+            None,
+            None,
+        )
+        .unwrap_or_default()
         {
             // If all the requested heads are public, return stream.
             if heads.len() < PHASES_CHECK_LIMIT && repo.is_all_public(&heads).await? {

@@ -333,9 +333,6 @@ pub struct MononokeTunables {
     // Enable derivation on service per repo
     enable_remote_derivation: TunableBoolByRepo,
 
-    // Enable streaming commit graph EdenAPI endpoint.
-    enable_streaming_commit_graph_edenapi_endpoint: TunableBool,
-
     // Disable all prefetching in the commit graph
     disable_commit_graph_prefetch: TunableBool,
     // Disable memcache for commit graph prefetching
