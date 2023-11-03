@@ -11,7 +11,7 @@ import socket
 import ssl
 import time
 
-from bindings import clientinfo
+from bindings import clientinfo as clientinfomod
 
 from sapling import error, httpclient, httpconnection, json, perftrace, pycompat, util
 from sapling.i18n import _
@@ -83,7 +83,7 @@ class _HttpsCommitCloudService(baseservice.BaseService):
             "Accept-Encoding": "none, gzip",
             "Content-Encoding": "gzip",
             "User-Agent": self.user_agent,
-            "X-Client-Info": clientinfo.clientinfo().to_json().decode(),
+            "X-Client-Info": clientinfomod.clientinfo().to_json().decode(),
         }
 
         u = util.url(self.url, parsequery=False, parsefragment=False)
@@ -318,6 +318,8 @@ class _HttpsCommitCloudService(baseservice.BaseService):
         newheads = [h for h in newheads if h not in commonset]
         oldheads = [h for h in oldheads if h not in commonset]
 
+        client_correlator = clientinfomod.get_client_correlator().decode()
+        client_entry_point = clientinfomod.get_client_entry_point().decode()
         self.ui.log(
             "commitcloud_updates",
             version=version,
@@ -329,6 +331,8 @@ class _HttpsCommitCloudService(baseservice.BaseService):
             newbookmarkcount=len(newbookmarks),
             oldremotebookmarkcount=len(oldremotebookmarks),
             newremotebookmarkcount=len(newremotebookmarks),
+            client_correlator=client_correlator,
+            client_entry_point=client_entry_point,
             **logopts,
         )
 

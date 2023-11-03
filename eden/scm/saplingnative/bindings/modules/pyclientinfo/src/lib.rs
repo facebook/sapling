@@ -25,6 +25,16 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
         "get_client_request_info",
         py_fn!(py, get_client_request_info()),
     )?;
+    m.add(
+        py,
+        "get_client_correlator",
+        py_fn!(py, get_client_correlator()),
+    )?;
+    m.add(
+        py,
+        "get_client_entry_point",
+        py_fn!(py, get_client_entry_point()),
+    )?;
     Ok(m)
 }
 
@@ -64,4 +74,23 @@ py_class!(pub class ClientRequestInfo |py| {
 
 pub fn get_client_request_info(_py: Python) -> PyResult<Serde<client_info::ClientRequestInfo>> {
     Ok(Serde(client_info::get_client_request_info()))
+}
+
+pub fn get_client_correlator(py: Python) -> PyResult<PyBytes> {
+    Ok(PyBytes::new(
+        py,
+        &client_info::get_client_request_info()
+            .correlator
+            .into_bytes(),
+    ))
+}
+
+pub fn get_client_entry_point(py: Python) -> PyResult<PyBytes> {
+    Ok(PyBytes::new(
+        py,
+        &client_info::get_client_request_info()
+            .entry_point
+            .to_string()
+            .into_bytes(),
+    ))
 }
