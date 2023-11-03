@@ -72,6 +72,8 @@ const FORWARDED_IDENTITIES_HEADER: &str = "scm_forwarded_identities";
 const FORWARDED_CLIENT_IP_HEADER: &str = "scm_forwarded_client_ip";
 const FORWARDED_CLIENT_DEBUG_HEADER: &str = "scm_forwarded_client_debug";
 const FORWARDED_OTHER_CATS_HEADER: &str = "scm_forwarded_other_cats";
+const PER_REQUEST_READ_QPS: usize = 4000;
+const PER_REQUEST_WRITE_QPS: usize = 4000;
 
 define_stats! {
     prefix = "mononoke.scs_server";
@@ -320,11 +322,9 @@ impl SourceControlServiceImpl {
         let metadata = self.create_metadata(req_ctxt).await?;
         let session = SessionContainer::builder(self.fb)
             .metadata(Arc::new(metadata))
-            .blobstore_maybe_read_qps_limiter(tunables().scs_request_read_qps().unwrap_or_default())
+            .blobstore_maybe_read_qps_limiter(PER_REQUEST_READ_QPS)
             .await
-            .blobstore_maybe_write_qps_limiter(
-                tunables().scs_request_write_qps().unwrap_or_default(),
-            )
+            .blobstore_maybe_write_qps_limiter(PER_REQUEST_WRITE_QPS)
             .await
             .build();
         Ok(session)
