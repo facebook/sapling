@@ -51,7 +51,7 @@ mod tests;
 /// Maximum number of recursive steps to take when prefetching commits.
 ///
 /// The configured maximum number of recursive steps in MySQL is 1000.
-const DEFAULT_PREFETCH_STEP_LIMIT: i64 = 1000;
+const DEFAULT_PREFETCH_STEP_LIMIT: u64 = 1000;
 
 pub struct SqlCommitGraphStorageBuilder {
     connections: SqlConnections,
@@ -989,9 +989,8 @@ impl SqlCommitGraphStorage {
         if let Some(target) = prefetch.target() {
             let steps = std::cmp::min(
                 target.steps,
-                tunables()
-                    .commit_graph_prefetch_step_limit()
-                    .unwrap_or(DEFAULT_PREFETCH_STEP_LIMIT) as u64,
+                justknobs::get_as::<u64>("scm/mononoke:commit_graph_prefetch_step_limit", None)
+                    .unwrap_or(DEFAULT_PREFETCH_STEP_LIMIT),
             );
             let fetched_edges = match target.edge {
                 PrefetchEdge::FirstParent => {

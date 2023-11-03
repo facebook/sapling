@@ -333,9 +333,6 @@ pub struct MononokeTunables {
     // Enable derivation on service per repo
     enable_remote_derivation: TunableBoolByRepo,
 
-    // Max number of steps to make when prefetching
-    commit_graph_prefetch_step_limit: TunableI64,
-
     // Interval between preloaded commit graph reloads in secs.
     preloaded_commit_graph_reloading_interval_secs: TunableI64,
 
