@@ -46,7 +46,6 @@ use sql_ext::facebook::MysqlOptions;
 use sql_ext::replication::NoReplicaLagMonitor;
 use sql_ext::replication::ReplicaLagMonitor;
 use stats::prelude::*;
-use tunables::tunables;
 
 use crate::dag::ops::DagAddHeads;
 use crate::dag::DagAlgorithm;
@@ -375,14 +374,14 @@ impl SegmentedChangelogTailer {
                     .fetch_public_bounded(ctx, Direction::NewestFirst, Some(repo_bounds))
                     .map(|res| {
                         counter += 1;
-                        let sampling_rate = tunables()
-                            .segmented_changelog_tailer_log_sampling_rate()
-                            .unwrap_or_default();
-                        let sampling_rate = if sampling_rate <= 0 {
-                            DEFAULT_LOG_SAMPLING_RATE
-                        } else {
-                            sampling_rate as usize
-                        };
+                        let mut sampling_rate = justknobs::get_as::<usize>(
+                            "scm/mononoke:segmented_changelog_tailer_log_sampling_rate",
+                            None,
+                        )
+                        .unwrap_or_default();
+                        if sampling_rate == 0 {
+                            sampling_rate = DEFAULT_LOG_SAMPLING_RATE;
+                        }
                         if counter % sampling_rate == 0 {
                             info!(
                                 ctx.logger(),
