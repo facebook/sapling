@@ -218,7 +218,6 @@ pub struct MononokeTunables {
     // Changing the value of this tunable forces all mononoke instances
     // to reload segmented changelog. One can also specify jitter (or use default)
     segmented_changelog_force_reload: TunableI64ByRepo,
-    segmented_changelog_force_reload_jitter_secs: TunableI64,
 
     // Override default progress logging sampling rate for segmented changelog parts
     segmented_changelog_idmap_log_sampling_rate: TunableI64,

@@ -38,6 +38,9 @@ use futures::future::try_join_all;
 use futures::future::FutureExt;
 use futures::stream;
 use futures::StreamExt;
+use justknobs::test_helpers::override_just_knobs;
+use justknobs::test_helpers::JustKnobsInMemory;
+use justknobs::test_helpers::KnobVal;
 use maplit::hashmap;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
@@ -1068,11 +1071,12 @@ async fn test_periodic_reload(fb: FacebookInit) -> Result<()> {
             "segmented_changelog_force_reload".to_string() => 2,
         },
     });
-    tunables_override.update_ints(&hashmap! {
-        "segmented_changelog_force_reload_jitter_secs".to_string() => 5,
-    });
     override_tunables(Some(tunables_override.clone()));
+    override_just_knobs(Some(JustKnobsInMemory::new(hashmap! {
+        "scm/mononoke:segmented_changelog_force_reload_jitter_secs".to_string() => KnobVal::Int(5),
+    })));
     tokio::time::timeout(Duration::from_secs(45), sc.wait_for_update()).await?;
+    override_just_knobs(None);
     override_tunables(None);
     Ok(())
 }

@@ -71,12 +71,15 @@ impl PeriodicReloadSegmentedChangelog {
         let fut = async move {
             let mut force_reload_val = tunables().by_repo_segmented_changelog_force_reload(&name);
             loop {
-                let mut jitter = tunables()
-                    .segmented_changelog_force_reload_jitter_secs()
-                    .unwrap_or_default();
+                let mut jitter = justknobs::get_as::<u64>(
+                    "scm/mononoke:segmented_changelog_force_reload_jitter_secs",
+                    None,
+                )
+                .unwrap_or_default();
                 if jitter <= 0 {
                     jitter = 30;
                 }
+
                 let jitter = rand::thread_rng().gen_range(
                     Duration::from_secs(0)..Duration::from_secs(jitter.try_into().unwrap()),
                 );
