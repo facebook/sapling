@@ -33,13 +33,13 @@ rust_library(
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:itertools",
         ":derived_data_manager",
+        "//common/rust/shed/justknobs_stub:justknobs",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/repo_attributes/repo_derived_data:repo_derived_data",
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/mononoke/server/context:context",
-        "//eden/mononoke/tunables:tunables",
     ],
 )
 

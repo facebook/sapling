@@ -36,9 +36,12 @@ impl DerivedDataManager {
     /// Returns the passed-in `CoreContext` with the session class modified to
     /// the one that should be used for derivation.
     pub(super) fn set_derivation_session_class(&self, mut ctx: CoreContext) -> CoreContext {
-        if tunables::tunables()
-            .by_repo_derived_data_use_background_session_class(self.repo_name())
-            .unwrap_or(false)
+        if justknobs::eval(
+            "scm/mononoke:derived_data_use_background_session_class",
+            None,
+            Some(self.repo_name()),
+        )
+        .unwrap_or_default()
         {
             ctx.session_mut()
                 .override_session_class(SessionClass::BackgroundUnlessTooSlow);
