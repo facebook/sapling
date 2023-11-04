@@ -141,7 +141,6 @@ pub struct MononokeTunables {
     xrepo_sync_disable_all_syncs: TunableBool,
     xrepo_disable_commit_sync_lease: TunableBool,
 
-    commit_cloud_use_background_session_class: TunableBool,
     multiplex_blobstore_background_session_timeout_ms: TunableI64,
 
     allow_change_xrepo_mapping_extra: TunableBool,
