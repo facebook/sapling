@@ -24,7 +24,6 @@ import {useRunOperation, latestUncommittedChangesData} from './serverAPIState';
 import {useConfirmUnsavedEditsBeforeSplit} from './stackEdit/ui/ConfirmUnsavedEditsBeforeSplit';
 import {StackEditIcon} from './stackEdit/ui/StackEditIcon';
 import {editingStackIntentionHashes, loadingStackState} from './stackEdit/ui/stackEditState';
-import {exactRevset} from './types';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useRecoilValue, useRecoilState} from 'recoil';
 import {type ContextMenuItem, useContextMenu} from 'shared/ContextMenu';

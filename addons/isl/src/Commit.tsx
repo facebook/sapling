@@ -48,7 +48,7 @@ import {
 import {useConfirmUnsavedEditsBeforeSplit} from './stackEdit/ui/ConfirmUnsavedEditsBeforeSplit';
 import {SplitButton} from './stackEdit/ui/SplitButton';
 import {editingStackIntentionHashes} from './stackEdit/ui/stackEditState';
-import {exactRevset, succeedableRevset} from './types';
+import {succeedableRevset} from './types';
 import {short} from './utils';
 import {VSCodeButton, VSCodeTag} from '@vscode/webview-ui-toolkit/react';
 import React, {memo, useEffect, useState} from 'react';

@@ -12,7 +12,7 @@ import type {TrackEventName} from 'isl-server/src/analytics/eventNames';
 import type {TrackDataWithEventName} from 'isl-server/src/analytics/types';
 import type {GitHubDiffSummary} from 'isl-server/src/github/githubCodeReviewProvider';
 import type {Comparison} from 'shared/Comparison';
-import type {AllUndefined, ExclusiveOr, Json} from 'shared/typeUtils';
+import type {AllUndefined, Json} from 'shared/typeUtils';
 import type {Hash} from 'shared/types/common';
 import type {ExportStack, ImportedStack, ImportStack} from 'shared/types/stack';
 
