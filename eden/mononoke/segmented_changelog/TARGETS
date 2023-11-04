@@ -105,7 +105,6 @@ rust_library(
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/mononoke/revset:revset",
         "//eden/mononoke/server/context:context",
-        "//eden/mononoke/tunables:tunables",
         "//eden/scm/lib/mincode:mincode",
     ],
 )

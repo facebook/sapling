@@ -99,10 +99,13 @@ I..P are pulled via non-lazy fallback pull path. They can be resolved locally:
   ~
 
 Allow server to build up temporary segments on demand:
-
-  $ merge_tunables <<'EOS'
-  > {"ints": {"segmented_changelog_client_max_commits_to_traverse": 100}}
-  > EOS
+  $ merge_just_knobs <<EOF
+  > {
+  >    "ints": {
+  >      "scm/mononoke:segmented_changelog_client_max_commits_to_traverse": 100
+  >    }
+  > }
+  > EOF
 
 Pulling branch1 as main branch now uses fastpath:
 

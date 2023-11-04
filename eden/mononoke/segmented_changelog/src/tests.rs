@@ -39,6 +39,7 @@ use futures::future::FutureExt;
 use futures::stream;
 use futures::StreamExt;
 use justknobs::test_helpers::override_just_knobs;
+use justknobs::test_helpers::with_just_knobs_async;
 use justknobs::test_helpers::JustKnobsInMemory;
 use justknobs::test_helpers::KnobVal;
 use maplit::hashmap;
@@ -54,7 +55,6 @@ use sql_construct::SqlConstruct;
 use sql_ext::replication::NoReplicaLagMonitor;
 use tests_utils::resolve_cs_id;
 use tests_utils::CreateCommitContext;
-use tunables::with_tunables_async;
 
 use crate::builder::SegmentedChangelogSqlConnections;
 use crate::iddag::IdDagSaveStore;
@@ -1128,29 +1128,32 @@ async fn test_mismatched_heads(fb: FacebookInit) -> Result<()> {
     // should fail with the small limit for traversing from client heads
     let h2 = resolve_cs_id(&ctx, &blobrepo, "16839021e338500b3cf7c9b871c8a07351697d68").await?;
 
-    let tunables = tunables::MononokeTunables::default();
-    tunables.update_ints(&hashmap! {
-        "segmented_changelog_client_max_commits_to_traverse".to_string() => 2,
-    });
     let f = dag.changeset_id_to_location(&ctx, vec![h1, h2], h1_parent);
 
-    let err = with_tunables_async(tunables, f.boxed())
-        .await
-        .err()
-        .unwrap();
+    let err = with_just_knobs_async(
+        JustKnobsInMemory::new(hashmap! {
+            "scm/mononoke:segmented_changelog_client_max_commits_to_traverse".to_string() => KnobVal::Int(2),
+        }),
+        f.boxed(),
+    )
+    .await
+    .err()
+    .unwrap();
     assert!(err.is::<crate::MismatchedHeadsError>());
 
     // should succeed as the client head not far from the commits in SC IdMap
     let h2 = resolve_cs_id(&ctx, &blobrepo, "16839021e338500b3cf7c9b871c8a07351697d68").await?;
 
-    let tunables = tunables::MononokeTunables::default();
-    tunables.update_ints(&hashmap! {
-        "segmented_changelog_client_max_commits_to_traverse".to_string() => 100,
-    });
     let f = dag.changeset_id_to_location(&ctx, vec![h1, h2], h1_parent);
 
     assert_eq!(
-        with_tunables_async(tunables, f.boxed()).await?,
+        with_just_knobs_async(
+            JustKnobsInMemory::new(hashmap! {
+                "scm/mononoke:segmented_changelog_client_max_commits_to_traverse".to_string() => KnobVal::Int(100),
+            }),
+            f.boxed(),
+        )
+        .await?,
         Some(Location::new(h1, 1))
     );
 
