@@ -805,7 +805,7 @@ class FuseChannel final : public FsChannel {
    * around this event:
    * - If the stop can occur as the last FUSE worker thread shuts down.
    *   No other FUSE worker threads can access fuseDevice_ after this point,
-   *   and the FuseChannel destructor will join the threads before destryoing
+   *   and the FuseChannel destructor will join the threads before destroying
    *   fuseDevice_.
    * - If the stop can occur as when the last outstanding FUSE request
    *   completes, after all FUSE worker threads have stopped.  In this case no
