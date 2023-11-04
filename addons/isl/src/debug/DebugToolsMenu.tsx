@@ -17,7 +17,12 @@ import {Tooltip} from '../Tooltip';
 import {useHeartbeat} from '../heartbeat';
 import {t, T} from '../i18n';
 import {RelativeDate} from '../relativeDate';
-import {latestCommitsData, latestUncommittedChangesData, mergeConflicts} from '../serverAPIState';
+import {
+  latestCommitsData,
+  latestUncommittedChangesData,
+  mergeConflicts,
+  repositoryInfo,
+} from '../serverAPIState';
 import {getAllRecoilStateJson} from './getAllRecoilStateJson';
 import {VSCodeBadge, VSCodeButton, VSCodeCheckbox} from '@vscode/webview-ui-toolkit/react';
 import {useState} from 'react';
@@ -32,6 +37,12 @@ export default function DebugToolsMenu() {
       icon="pulse"
       data-testid="internal-debug-tools-dropdown"
       className="internal-debug-tools-dropdown">
+      <Subtle>
+        <T>
+          This data is only intended for debugging Interactive Smartlog and may not capture all
+          issues.
+        </T>
+      </Subtle>
       <DropdownField title={<T>Performance</T>}>
         <DebugPerfInfo />
       </DropdownField>
@@ -100,6 +111,11 @@ function DebugPerfInfo() {
   const latestLog = useRecoilValue(latestCommitsData);
   const latestConflicts = useRecoilValue(mergeConflicts);
   const heartbeat = useHeartbeat();
+  const repoInfo = useRecoilValue(repositoryInfo);
+  let commandName = 'sl';
+  if (repoInfo?.type === 'success') {
+    commandName = repoInfo.command;
+  }
   return (
     <div>
       {heartbeat.type === 'timeout' ? (
@@ -108,17 +124,17 @@ function DebugPerfInfo() {
         </InlineErrorBadge>
       ) : (
         <FetchDurationInfo
-          name={<T>Ping</T>}
+          name={<T>ISL Server Ping</T>}
           duration={(heartbeat as Heartbeat & {type: 'success'})?.rtt}
         />
       )}
       <FetchDurationInfo
-        name={<T>Status</T>}
+        name={<T replace={{$cmd: commandName}}>$cmd status</T>}
         start={latestStatus.fetchStartTimestamp}
         end={latestStatus.fetchCompletedTimestamp}
       />
       <FetchDurationInfo
-        name={<T>Log</T>}
+        name={<T replace={{$cmd: commandName}}>$cmd log</T>}
         start={latestLog.fetchStartTimestamp}
         end={latestLog.fetchCompletedTimestamp}
       />
