@@ -216,7 +216,6 @@ pub struct MononokeTunables {
     megarepo_api_dont_set_directory_mutable_renames: TunableBool,
 
     // Override default progress logging sampling rate for segmented changelog parts
-    segmented_changelog_idmap_log_sampling_rate: TunableI64,
     segmented_changelog_tailer_log_sampling_rate: TunableI64,
 
     // How many commits to walk back from the client heads before failing to rebuild SC
