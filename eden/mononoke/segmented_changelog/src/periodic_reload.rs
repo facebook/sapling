@@ -20,7 +20,6 @@ use reloader::Loader;
 use reloader::Reloader;
 use slog::info;
 use tokio::sync::Notify;
-use tunables::tunables;
 
 use crate::manager::SegmentedChangelogManager;
 use crate::segmented_changelog_delegate;
@@ -69,7 +68,11 @@ impl PeriodicReloadSegmentedChangelog {
 
         // This is a future to trigger force reload of segmented changelog
         let fut = async move {
-            let mut force_reload_val = tunables().by_repo_segmented_changelog_force_reload(&name);
+            let mut force_reload_val = justknobs::get_as::<u64>(
+                "scm/mononoke:segmented_changelog_force_reload",
+                Some(&name),
+            )
+            .unwrap_or_default();
             loop {
                 let mut jitter = justknobs::get_as::<u64>(
                     "scm/mononoke:segmented_changelog_force_reload_jitter_secs",
@@ -85,8 +88,11 @@ impl PeriodicReloadSegmentedChangelog {
                 );
                 tokio::time::sleep(jitter).await;
 
-                let new_force_reload_val =
-                    tunables().by_repo_segmented_changelog_force_reload(&name);
+                let new_force_reload_val = justknobs::get_as::<u64>(
+                    "scm/mononoke:segmented_changelog_force_reload",
+                    Some(&name),
+                )
+                .unwrap_or_default();
                 if force_reload_val != new_force_reload_val {
                     info!(ctx_clone.logger(), "force reloading segmented changelog");
                     force_reload_notify_clone.notify_waiters();

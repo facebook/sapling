@@ -54,7 +54,6 @@ use sql_construct::SqlConstruct;
 use sql_ext::replication::NoReplicaLagMonitor;
 use tests_utils::resolve_cs_id;
 use tests_utils::CreateCommitContext;
-use tunables::override_tunables;
 use tunables::with_tunables_async;
 
 use crate::builder::SegmentedChangelogSqlConnections;
@@ -1065,19 +1064,12 @@ async fn test_periodic_reload(fb: FacebookInit) -> Result<()> {
     );
 
     // Force the reload should trigger even if there are not updates at all.
-    let tunables_override = Arc::new(tunables::MononokeTunables::default());
-    tunables_override.update_by_repo_ints(&hashmap! {
-        blobrepo.repo_identity().name().to_string() => hashmap! {
-            "segmented_changelog_force_reload".to_string() => 2,
-        },
-    });
-    override_tunables(Some(tunables_override.clone()));
     override_just_knobs(Some(JustKnobsInMemory::new(hashmap! {
+        "scm/mononoke:segmented_changelog_force_reload".to_string() => KnobVal::Int(2),
         "scm/mononoke:segmented_changelog_force_reload_jitter_secs".to_string() => KnobVal::Int(5),
     })));
     tokio::time::timeout(Duration::from_secs(45), sc.wait_for_update()).await?;
     override_just_knobs(None);
-    override_tunables(None);
     Ok(())
 }
 

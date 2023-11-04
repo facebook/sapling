@@ -215,10 +215,6 @@ pub struct MononokeTunables {
     megarepo_api_dont_set_file_mutable_renames: TunableBool,
     megarepo_api_dont_set_directory_mutable_renames: TunableBool,
 
-    // Changing the value of this tunable forces all mononoke instances
-    // to reload segmented changelog. One can also specify jitter (or use default)
-    segmented_changelog_force_reload: TunableI64ByRepo,
-
     // Override default progress logging sampling rate for segmented changelog parts
     segmented_changelog_idmap_log_sampling_rate: TunableI64,
     segmented_changelog_tailer_log_sampling_rate: TunableI64,
