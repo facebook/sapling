@@ -20,7 +20,6 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
-use std::time::Instant;
 
 use anyhow::format_err;
 use anyhow::Context;
@@ -47,8 +46,6 @@ use context::PerfCounterType;
 use context::PerfCounters;
 use context::SessionContainer;
 use filenodes::FilenodeResult;
-use futures::channel::oneshot;
-use futures::channel::oneshot::Sender;
 use futures::compat::Future01CompatExt;
 use futures::compat::Stream01CompatExt;
 use futures::future;
@@ -155,7 +152,6 @@ use wireproto_handler::BackupSourceRepo;
 use crate::errors::ErrorKind;
 
 mod logging;
-mod monitor;
 mod session_bookmarks_cache;
 mod tests;
 
@@ -164,7 +160,6 @@ use logging::debug_format_path;
 use logging::log_getpack_params_verbose;
 use logging::log_gettreepack_params_verbose;
 use logging::CommandLogger;
-use monitor::Monitor;
 use session_bookmarks_cache::SessionBookmarkCache;
 
 define_stats! {
@@ -424,7 +419,7 @@ impl RepoClient {
         H: FnOnce(CoreContext, CommandLogger) -> F,
     {
         let (ctx, command_logger) = self.start_command(command, sampling_rate);
-        with_command_monitor(ctx.clone(), handler(ctx, command_logger)).boxify()
+        Box::new(handler(ctx, command_logger))
     }
 
     fn command_stream<S, I, E, H>(
@@ -438,7 +433,7 @@ impl RepoClient {
         H: FnOnce(CoreContext, CommandLogger) -> S,
     {
         let (ctx, command_logger) = self.start_command(command, sampling_rate);
-        with_command_monitor(ctx.clone(), handler(ctx, command_logger)).boxify()
+        Box::new(handler(ctx, command_logger))
     }
 
     fn start_command(
@@ -2402,58 +2397,6 @@ fn serialize_getcommitdata(
     buffer.extend_from_slice(&revlog_commit);
     buffer.put("\n");
     Ok(buffer.freeze())
-}
-
-fn with_command_monitor<T>(ctx: CoreContext, t: T) -> Monitor<T, Sender<()>> {
-    let (sender, receiver) = oneshot::channel();
-
-    let reporting_loop = async move {
-        let start = Instant::now();
-
-        loop {
-            let interval = match tunables()
-                .command_monitor_interval()
-                .unwrap_or_default()
-                .try_into()
-            {
-                Ok(interval) if interval > 0 => interval,
-                _ => {
-                    break;
-                }
-            };
-
-            tokio::time::sleep(Duration::from_secs(interval)).await;
-
-            if tunables()
-                .command_monitor_remote_logging()
-                .unwrap_or_default()
-                != 0
-            {
-                info!(
-                    ctx.logger(),
-                    "Command in progress. Elapsed: {}s, BlobPuts: {}, BlobGets: {}, SqlWrites: {}, SqlReadsMaster: {}, SqlReadsReplica: {}.",
-                    start.elapsed().as_secs(),
-                    ctx.perf_counters().get_counter(PerfCounterType::BlobPuts),
-                    ctx.perf_counters().get_counter(PerfCounterType::BlobGets),
-                    ctx.perf_counters().get_counter(PerfCounterType::SqlWrites),
-                    ctx.perf_counters().get_counter(PerfCounterType::SqlReadsMaster),
-                    ctx.perf_counters().get_counter(PerfCounterType::SqlReadsReplica),
-                    ; o!("remote" => "true")
-                );
-            }
-
-            let mut scuba = ctx.scuba().clone();
-            ctx.perf_counters().insert_perf_counters(&mut scuba);
-            scuba.log_with_msg("Long running command", None);
-        }
-    };
-
-    tokio::task::spawn(async move {
-        futures::pin_mut!(reporting_loop);
-        let _ = future::select(reporting_loop, receiver).await;
-    });
-
-    Monitor::new(t, sender)
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
