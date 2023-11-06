@@ -94,6 +94,20 @@ rust_unittest(
 )
 
 rust_library(
+    name = "bookmarks_cache",
+    srcs = glob(["bookmarks_cache/*.rs"]),
+    autocargo = {"cargo_toml_dir": "bookmarks_cache"},
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        ":bookmarks_types",
+        "//common/rust/shed/facet:facet",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/server/context:context",
+    ],
+)
+
+rust_library(
     name = "warm_bookmarks_cache",
     srcs = glob(["warm_bookmarks_cache/*.rs"]),
     autocargo = {"cargo_toml_dir": "warm_bookmarks_cache"},
@@ -120,6 +134,7 @@ rust_library(
         "fbsource//third-party/rust:slog",
         "fbsource//third-party/rust:tokio",
         ":bookmarks",
+        ":bookmarks_cache",
         ":bookmarks_types",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/facet:facet",

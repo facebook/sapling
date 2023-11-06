@@ -29,6 +29,7 @@ use bookmarks::Bookmarks;
 use bookmarks::BookmarksRef;
 use bookmarks::BookmarksSubscription;
 use bookmarks::Freshness;
+use bookmarks_cache::BookmarksCache;
 use bookmarks_types::Bookmark;
 use bookmarks_types::BookmarkKind;
 use bookmarks_types::BookmarkPagination;
@@ -303,27 +304,6 @@ impl WarmBookmarksCacheBuilder {
         )
         .await
     }
-}
-
-#[async_trait]
-#[facet::facet]
-pub trait BookmarksCache: Send + Sync {
-    async fn get(
-        &self,
-        ctx: &CoreContext,
-        bookmark: &BookmarkKey,
-    ) -> Result<Option<ChangesetId>, Error>;
-
-    async fn list(
-        &self,
-        ctx: &CoreContext,
-        prefix: &BookmarkPrefix,
-        pagination: &BookmarkPagination,
-        limit: Option<u64>,
-    ) -> Result<Vec<(BookmarkKey, (ChangesetId, BookmarkKind))>, Error>;
-
-    /// Awaits the completion of any ongoing update.
-    async fn sync(&self, ctx: &CoreContext);
 }
 
 /// A drop-in replacement for warm bookmark cache that doesn't

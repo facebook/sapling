@@ -16,6 +16,7 @@ async-trait = "0.1.71"
 basename_suffix_skeleton_manifest = { version = "0.1.0", path = "../../derived_data/basename_suffix_skeleton_manifest" }
 blame = { version = "0.1.0", path = "../../derived_data/blame" }
 bookmarks = { version = "0.1.0", path = ".." }
+bookmarks_cache = { version = "0.1.0", path = "../bookmarks_cache" }
 bookmarks_types = { version = "0.1.0", path = "../bookmarks_types" }
 changeset_info = { version = "0.1.0", path = "../../derived_data/changeset_info" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

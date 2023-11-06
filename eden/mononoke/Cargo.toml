@@ -182,6 +182,7 @@ members = [
   "bonsai_svnrev_mapping/if/types",
   "bonsai_tag_mapping",
   "bookmarks",
+  "bookmarks/bookmarks_cache",
   "bookmarks/bookmarks_movement",
   "bookmarks/bookmarks_types",
   "bookmarks/dbbookmarks",

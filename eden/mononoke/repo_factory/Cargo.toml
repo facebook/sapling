@@ -20,6 +20,7 @@ bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }
 bonsai_svnrev_mapping = { version = "0.1.0", path = "../bonsai_svnrev_mapping" }
 bonsai_tag_mapping = { version = "0.1.0", path = "../bonsai_tag_mapping" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
+bookmarks_cache = { version = "0.1.0", path = "../bookmarks/bookmarks_cache" }
 cacheblob = { version = "0.1.0", path = "../blobstore/cacheblob" }
 cachelib = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 caching_commit_graph_storage = { version = "0.1.0", path = "../repo_attributes/commit_graph/caching_commit_graph_storage" }

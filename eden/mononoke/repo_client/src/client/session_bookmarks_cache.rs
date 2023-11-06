@@ -23,6 +23,7 @@ use bookmarks::BookmarkPagination;
 use bookmarks::BookmarkPrefix;
 use bookmarks::BookmarksRef;
 use bookmarks::Freshness;
+use bookmarks_cache::BookmarksCache;
 use context::CoreContext;
 use futures::compat::Future01CompatExt;
 use futures::compat::Stream01CompatExt;
@@ -40,7 +41,6 @@ use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mononoke_api::Repo;
 use tunables::tunables;
-use warm_bookmarks_cache::BookmarksCache;
 
 // We'd like to give user a consistent view of thier bookmarks for the duration of the
 // whole Mononoke session. SessionBookmarkCache is used for that.

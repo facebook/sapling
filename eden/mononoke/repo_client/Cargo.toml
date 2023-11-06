@@ -15,6 +15,7 @@ blobstore = { version = "0.1.0", path = "../blobstore" }
 bonsai_git_mapping = { version = "0.1.0", path = "../bonsai_git_mapping" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
+bookmarks_cache = { version = "0.1.0", path = "../bookmarks/bookmarks_cache" }
 bookmarks_types = { version = "0.1.0", path = "../bookmarks/bookmarks_types" }
 bytes = { version = "1.1", features = ["serde"] }
 bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
@@ -65,7 +66,6 @@ time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
 tunables = { version = "0.1.0", path = "../tunables" }
 unbundle = { version = "0.1.0", path = "unbundle" }
-warm_bookmarks_cache = { version = "0.1.0", path = "../bookmarks/warm_bookmarks_cache" }
 wireproto_handler = { version = "0.1.0", path = "../wireproto_handler" }
 
 [dev-dependencies]
@@ -77,3 +77,4 @@ mononoke_types-mocks = { version = "0.1.0", path = "../mononoke_types/mocks" }
 repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived_data" }
 test_repo_factory = { version = "0.1.0", path = "../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../tests/utils" }
+warm_bookmarks_cache = { version = "0.1.0", path = "../bookmarks/warm_bookmarks_cache" }
