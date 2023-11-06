@@ -238,17 +238,13 @@
   position: relative;
 }
 .text-area-toolbar {
-  position: absolute;
-  right: var(--halfpad);
-  bottom: var(--halfpad);
-  z-index: 2;
   display: flex;
   flex-direction: row;
   align-items: center;
+  justify-content: flex-end;
   gap: var(--pad);
   font-size: 90%;
-  background-color: var(--background);
-  padding: var(--halfpad) var(--pad);
+  margin-bottom: calc(-1.5 * var(--pad));
   border-radius: var(--pad);
 }
 .text-area-toolbar .choose-file {
