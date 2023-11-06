@@ -168,10 +168,10 @@ def main():
         run(yarn + ["--cwd", src_join(), "install", "--prefer-offline"])
 
     rm_rf(src_join("server/dist"))
-    run(yarn + ["--cwd", src_join("isl-server"), "run", "build"])
+    run(yarn + ["--cwd", src_join("isl-server"), "run", "build"], env={"CI": "false"})
 
     rm_rf(src_join("isl/build"))
-    run(yarn + ["--cwd", src_join("isl"), "run", "build"])
+    run(yarn + ["--cwd", src_join("isl"), "run", "build"], env={"CI": "false"})
 
     print_err(f"writing {out}")
 
