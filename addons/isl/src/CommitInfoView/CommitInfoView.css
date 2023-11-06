@@ -87,6 +87,10 @@
   word-break: break-word;
 }
 
+.commit-info-rendered-textarea:focus-visible {
+  outline-offset: -1px;
+}
+
 .commit-info-section .see-more-container {
   margin: calc(-1 * var(--pad));
   margin-bottom: var(--pad);
