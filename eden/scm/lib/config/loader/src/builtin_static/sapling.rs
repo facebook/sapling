@@ -119,6 +119,7 @@ graph.renderer=lines
 nativecheckout=True
 numworkerswriter=2
 network-doctor=True
+windows-symlinks=True
 
 [extensions]
 absorb=
