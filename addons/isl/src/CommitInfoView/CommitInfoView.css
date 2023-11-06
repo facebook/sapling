@@ -175,6 +175,10 @@
 
 .min-height-text-area::part(control) {
   overflow: hidden;
+  /* Match vscode-text-field */
+  margin: 2px 0;
+  padding: 4px 9px;
+  min-height: 26px;
 }
 
 .commit-info-section {
