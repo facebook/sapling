@@ -11,9 +11,13 @@
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  margin: var(--pad);
+  padding: var(--pad);
+  background-color: var(--background);
   margin-left: var(--halfpad);
   gap: var(--pad);
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .top-bar .button-group {

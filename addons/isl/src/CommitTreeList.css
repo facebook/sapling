@@ -25,6 +25,7 @@
 }
 .commit-tree-root {
   margin-left: calc(3.5 * var(--pad));
+  margin-top: 0;
 }
 .commit-tree-stack-actions {
   display: flex;
