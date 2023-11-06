@@ -131,10 +131,6 @@ pub struct MononokeTunables {
     // this threshold will be logged to scuba
     blobstore_read_size_logging_threshold: TunableI64,
     hash_validation_percentage: TunableI64,
-    // Filter out commits that we already have in infinitepush. Shouldn't be needed if we have a
-    // client exchanging commits with us, but when processing bundled uploads (i.e. commit cloud
-    // filling), it might help a lot.
-    filter_pre_existing_commits_on_infinitepush: TunableBool,
     backfill_read_qps: TunableI64,
     backfill_write_qps: TunableI64,
     disable_commit_scribe_logging_scs: TunableBool,

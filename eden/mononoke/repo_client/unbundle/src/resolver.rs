@@ -982,11 +982,7 @@ impl<'r> Bundle2Resolver<'r> {
                     }
                 }
 
-                let changesets = if is_infinitepush
-                    && tunables()
-                        .filter_pre_existing_commits_on_infinitepush()
-                        .unwrap_or_default()
-                {
+                let changesets = if is_infinitepush {
                     let hg_cs_ids = changesets.iter().map(|(id, _)| *id).collect::<Vec<_>>();
 
                     let mapping = self
