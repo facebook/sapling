@@ -108,5 +108,5 @@ class RequestMetricsScope {
  private:
   LockedRequestWatchList* pendingRequestWatches_;
   RequestWatchList::iterator requestWatch_;
-} // namespace eden
+}; // namespace eden
 } // namespace facebook::eden

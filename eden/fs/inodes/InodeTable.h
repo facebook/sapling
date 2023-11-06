@@ -338,7 +338,7 @@ class InodeTable {
 
   folly::Synchronized<State> state_;
   EdenStatsPtr stats_;
-} // namespace eden
+}; // namespace eden
 
 static_assert(
     CheckSize<InodeMetadata, 40>(),

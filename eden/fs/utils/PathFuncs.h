@@ -1502,7 +1502,7 @@ class RelativePathBase : public ComposedPathBase<
   bool isParentDirOf(const RelativePathPiece& other) const {
     return other.findParent(*this) != other.allPaths().end();
   }
-} // namespace detail
+}; // namespace detail
 
 /// Asserts that val is well formed absolute path
 struct AbsolutePathSanityCheck {
