@@ -99,4 +99,4 @@ uint64_t SqliteStatement::columnUint64(size_t colNo) const {
 SqliteStatement::~SqliteStatement() {
   sqlite3_finalize(stmt_);
 }
-}; // namespace facebook::eden
+} // namespace facebook::eden

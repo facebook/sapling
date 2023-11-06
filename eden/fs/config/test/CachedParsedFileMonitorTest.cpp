@@ -119,7 +119,7 @@ class CachedParsedFileMonitorTest : public ::testing::Test {
   void TearDown() override {
     rootTestDir_.reset();
   }
-}; // namespace
+} // namespace
 } // namespace
 
 TEST_F(CachedParsedFileMonitorTest, baseIsChangedTest) {
