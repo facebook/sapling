@@ -2102,7 +2102,7 @@ if [ -z "$HAS_FB" ]; then
   }
 
   function format_single_scuba_sample_strip_server_info {
-      jq -S 'del(.[].server_tier, .[].tw_task_id, .[].tw_handle, .[].datacenter, .[].region)'
+      jq -S 'del(.[].server_tier, .[].tw_task_id, .[].tw_handle, .[].datacenter, .[].region, .[].region_datacenter_prefix)'
   }
 fi
 
