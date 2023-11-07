@@ -436,8 +436,13 @@ fn decode_message(
     encoding: &Option<BString>,
     logger: &Logger,
 ) -> Result<String, Error> {
-    let encoding = Encoding::for_label(&encoding.clone().unwrap_or_else(|| BString::from("utf-8")))
-        .ok_or_else(|| anyhow!("Failed to parse git commit encoding: {encoding:?}"))?;
+    let encoding_or_utf8 = encoding.clone().unwrap_or_else(|| BString::from("utf-8"));
+    let encoding = Encoding::for_label(&encoding_or_utf8).ok_or_else(|| {
+        anyhow!(
+            "Failed to parse git commit encoding: {encoding:?} {}",
+            String::from_utf8_lossy(&encoding_or_utf8)
+        )
+    })?;
     let (decoded, actual_encoding, replacement) = encoding.decode(message);
     let message = decoded.to_string();
     if actual_encoding != encoding {
