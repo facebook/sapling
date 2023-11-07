@@ -28,7 +28,6 @@ rust_binary(
         "fbsource//third-party/rust:gix-hash",
         "fbsource//third-party/rust:itertools",
         "fbsource//third-party/rust:maplit",
-        "fbsource//third-party/rust:question",
         "fbsource//third-party/rust:serde",
         "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:slog",

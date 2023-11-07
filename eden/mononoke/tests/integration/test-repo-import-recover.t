@@ -109,10 +109,9 @@
   >    "x_repo_check_disabled": false
   >  }
   > EOF
-  $ echo n | repo_import \
+  $ repo_import \
   >  recover-process \
   > "$TESTTMP/recovery_file.json"
-  Does the git repo you're about to merge has multiple heads (unmerged branches)? It's unsafe to use this tool when it does. (y/n) * Let's get this merged! (glob)
   * using repo "repo" repoid RepositoryId(0) (glob)
   * Fetching the recovery stage for importing (glob)
   * Fetched the recovery stage for importing. (glob)

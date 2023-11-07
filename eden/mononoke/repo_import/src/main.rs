@@ -78,8 +78,6 @@ use mononoke_types::RepositoryId;
 use movers::DefaultAction;
 use movers::Mover;
 use pushrebase::do_pushrebase_bonsai;
-use question::Answer;
-use question::Question;
 use repo_derived_data::RepoDerivedDataArc;
 use segmented_changelog::seedheads_from_config;
 use segmented_changelog::SeedHead;
@@ -1629,20 +1627,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let app = MononokeAppBuilder::new(fb)
         .with_app_extension(Fb303AppExtension {})
         .build::<MononokeRepoImportArgs>()?;
-    let logger = app.logger();
-
-    let answer = Question::new("Does the git repo you're about to merge has multiple heads (unmerged branches)? It's unsafe to use this tool when it does.")
-        .show_defaults()
-        .confirm();
-    match answer {
-        Answer::NO => info!(logger, "Let's get this merged!"),
-        Answer::YES => bail!(
-            "Try cloning with 'git clone -b master --single-branch $clone_path` to clone only ancestors of master. Then you should be good to go!"
-        ),
-        _ => bail!(
-            "If not sure, you must examine the git repo for such branches / heads. If it has them, it's unsafe to use this tool."
-        ),
-    };
 
     app.run_with_monitoring_and_logging(async_main, "repo_import", AliveService)
 }

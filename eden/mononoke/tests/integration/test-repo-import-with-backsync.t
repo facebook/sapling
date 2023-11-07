@@ -31,7 +31,7 @@ Setup configuration
 -- Import git repo
   $ cd "$TESTTMP"
   $ REPOID="$REPOIDLARGE"
-  $ echo n | repo_import \
+  $ repo_import \
   > import \
   > "$GIT_REPO" \
   > --dest-path "imported" \
@@ -73,7 +73,7 @@ Setup configuration
 -- Try to import git repo again inside the small repo's directory (it should fail).
   $ cd "$TESTTMP"
   $ REPOID="$REPOIDLARGE"
-  $ echo n | repo_import \
+  $ repo_import \
   > import \
   > "$GIT_REPO" \
   > --dest-path "smallrepofolder/imported2" \
@@ -88,7 +88,6 @@ Setup configuration
   > --commit-date-rfc3339 "1970-01-01T00:00:00Z" \
   > --mark-not-synced-mapping "large_only" \
   > --recovery-file-path "$GIT_REPO/recovery_file.json"
-  * (glob)
   *] using repo "large-mon" repoid RepositoryId(0) (glob)
   *] Execution error: Small repo 1 default prefix smallrepofolder overlaps with import destination smallrepofolder/imported2 (glob)
   Error: Execution failed
