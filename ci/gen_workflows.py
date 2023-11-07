@@ -42,9 +42,11 @@ UBUNTU_DEPS = [
 MACOS_RELEASES = {
     "x86": {
         "runson": "macos-12",
+        "mac_release": "monterey",
     },
     "arm64": {
-        "runson": "macos-latest-xlarge",
+        "runson": "macos-13-xlarge",
+        "mac_release": "ventura",
     },
 }
 
@@ -343,10 +345,9 @@ RUN rm -rf /tmp/repo
         }
         self._write_file("sapling-cli-windows-amd64-release.yml", gh_action)
 
-    def gen_homebrew_macos_release(self, arch, runson) -> str:
+    def gen_homebrew_macos_release(self, arch, runson, mac_release) -> str:
         BUILD = "build"
         artifact_key = f"macos-homebrew-{arch}-bottle"
-        mac_release = "monterey"
         extension = f"{mac_release}.bottle.tar.gz"
         final_ext = f"{'' if arch == 'x86' else 'arm64_'}{extension}"
         artifact_glob = f"sapling*{mac_release}.bottle*.tar.gz"
