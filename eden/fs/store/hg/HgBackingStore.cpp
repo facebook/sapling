@@ -496,15 +496,13 @@ TreePtr HgBackingStore::processTree(
       std::move(entries), edenTreeID);
 }
 
-folly::Future<folly::Unit> HgBackingStore::importTreeManifestForRoot(
+ImmediateFuture<folly::Unit> HgBackingStore::importTreeManifestForRoot(
     const RootId& rootId,
     const Hash20& manifestId,
     const ObjectFetchContextPtr& context) {
   auto commitId = hashFromRootId(rootId);
   return localStore_
       ->getImmediateFuture(KeySpace::HgCommitToTreeFamily, commitId)
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance())
       .thenValue(
           [this, commitId, manifestId, context = context.copy()](
               StoreResult result) -> folly::Future<folly::Unit> {

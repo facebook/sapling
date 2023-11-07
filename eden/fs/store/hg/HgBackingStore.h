@@ -79,7 +79,7 @@ class HgBackingStore {
    * treemanifest data.  This is called when the root manifest is provided
    * to EdenFS directly by the hg client.
    */
-  folly::Future<folly::Unit> importTreeManifestForRoot(
+  ImmediateFuture<folly::Unit> importTreeManifestForRoot(
       const RootId& rootId,
       const Hash20& manifestId,
       const ObjectFetchContextPtr& context);

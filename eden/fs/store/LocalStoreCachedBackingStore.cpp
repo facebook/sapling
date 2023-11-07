@@ -247,7 +247,7 @@ LocalStoreCachedBackingStore::stopRecordingFetch() {
   return backingStore_->stopRecordingFetch();
 }
 
-folly::SemiFuture<folly::Unit>
+ImmediateFuture<folly::Unit>
 LocalStoreCachedBackingStore::importManifestForRoot(
     const RootId& rootId,
     const Hash20& manifest,

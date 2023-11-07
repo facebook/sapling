@@ -69,7 +69,7 @@ class FilteredBackingStore
 
   std::unordered_set<std::string> stopRecordingFetch() override;
 
-  folly::SemiFuture<folly::Unit> importManifestForRoot(
+  ImmediateFuture<folly::Unit> importManifestForRoot(
       const RootId& rootId,
       const Hash20& manifest,
       const ObjectFetchContextPtr& context) override;

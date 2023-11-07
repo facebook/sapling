@@ -785,7 +785,7 @@ std::unordered_set<std::string> HgQueuedBackingStore::stopRecordingFetch() {
   return paths;
 }
 
-folly::SemiFuture<folly::Unit> HgQueuedBackingStore::importManifestForRoot(
+ImmediateFuture<folly::Unit> HgQueuedBackingStore::importManifestForRoot(
     const RootId& root,
     const Hash20& manifest,
     const ObjectFetchContextPtr& context) {

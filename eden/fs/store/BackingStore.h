@@ -198,7 +198,7 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
    * Hash is widened to variable-width, eliminating the need for proxy hashes,
    * this API should be removed.
    */
-  virtual folly::SemiFuture<folly::Unit> importManifestForRoot(
+  virtual ImmediateFuture<folly::Unit> importManifestForRoot(
       const RootId& /*rootId*/,
       const Hash20& /*manifest*/,
       const ObjectFetchContextPtr& /*context*/) {

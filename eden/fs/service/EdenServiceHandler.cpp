@@ -688,7 +688,7 @@ EdenServiceHandler::semifuture_resetParentCommits(
       std::move(*parents->parent1_ref()), rootIdOptions, mountHandle);
   auto parent1 = mountHandle.getObjectStore().parseRootId(parsedParent);
 
-  auto fut = folly::SemiFuture<folly::Unit>::makeEmpty();
+  auto fut = ImmediateFuture<folly::Unit>{std::in_place};
   if (params->hgRootManifest_ref().has_value()) {
     auto& fetchContext = helper->getFetchContext();
     // The hg client has told us what the root manifest is.
@@ -700,16 +700,13 @@ EdenServiceHandler::semifuture_resetParentCommits(
     auto rootManifest = hash20FromThrift(*params->hgRootManifest_ref());
     fut = mountHandle.getObjectStore().getBackingStore()->importManifestForRoot(
         parent1, rootManifest, fetchContext);
-  } else {
-    fut = folly::makeSemiFuture();
   }
 
   return wrapImmediateFuture(
              std::move(helper),
-             ImmediateFuture{
-                 std::move(fut).deferValue([parent1, mountHandle](folly::Unit) {
-                   mountHandle.getEdenMount().resetParent(parent1);
-                 })})
+             std::move(fut).thenValue([parent1, mountHandle](folly::Unit) {
+               mountHandle.getEdenMount().resetParent(parent1);
+             }))
       .semi();
 }
 

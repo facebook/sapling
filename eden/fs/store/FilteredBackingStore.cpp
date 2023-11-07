@@ -395,7 +395,7 @@ std::unordered_set<std::string> FilteredBackingStore::stopRecordingFetch() {
   return backingStore_->stopRecordingFetch();
 }
 
-folly::SemiFuture<folly::Unit> FilteredBackingStore::importManifestForRoot(
+ImmediateFuture<folly::Unit> FilteredBackingStore::importManifestForRoot(
     const RootId& rootId,
     const Hash20& manifest,
     const ObjectFetchContextPtr& context) {
