@@ -719,7 +719,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * required as a parameter to ensure that the caller is actually holding the
    * lock.)
    */
-  folly::Future<InodePtr> loadChildLocked(
+  ImmediateFuture<InodePtr> loadChildLocked(
       DirContents& dir,
       PathComponentPiece name,
       DirEntry& entry,

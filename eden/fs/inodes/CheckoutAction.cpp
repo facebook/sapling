@@ -20,7 +20,6 @@
 #include "eden/fs/store/ObjectStore.h"
 
 using folly::exception_wrapper;
-using folly::Future;
 
 namespace facebook::eden {
 
@@ -44,7 +43,7 @@ CheckoutAction::CheckoutAction(
     CheckoutContext* ctx,
     const Tree::value_type* oldScmEntry,
     const Tree::value_type* newScmEntry,
-    folly::Future<InodePtr> inodeFuture)
+    ImmediateFuture<InodePtr> inodeFuture)
     : ctx_(ctx), inodeFuture_(std::move(inodeFuture)) {
   XDCHECK(oldScmEntry || newScmEntry);
   if (oldScmEntry) {
@@ -124,8 +123,7 @@ ImmediateFuture<InvalidationRequired> CheckoutAction::run(
               })
               .thenError([self = shared_from_this()](exception_wrapper&& ew) {
                 self->error("error getting inode", std::move(ew));
-              })
-              .semi());
+              }));
     }
   } catch (...) {
     auto ew = exception_wrapper{std::current_exception()};
