@@ -10,6 +10,7 @@
   border-radius: 2px;
   color: var(--diffEditor-foreground);
   font-family: var(--monospace-fontFamily);
+  font-size: var(--font-size-small);
 }
 
 .split-diff-view-file-header {
@@ -46,7 +47,7 @@
   display: flex;
   flex-grow: 1;
   flex-shrink: 1;
-  font-size: 12px;
+  font-size: var(--font-size-small);
   overflow-x: scroll;
 
   -ms-overflow-style: none;
@@ -137,8 +138,9 @@
 
 .split-diff-view-hunk-table td,
 .split-diff-view-file-preamble {
-  font-size: 12px;
+  font-size: var(--font-size-small);
   line-height: 16px;
+  line-height: var(--font-size);
   white-space: pre-wrap;
   word-break: break-all;
 }
@@ -161,6 +163,7 @@
 .split-diff-view-hunk-table tr.separator-row {
   background-color: var(--tooltip-background);
   height: 12px;
+  height: var(--font-size-small);
 }
 
 .split-diff-view-hunk-table td.separator {

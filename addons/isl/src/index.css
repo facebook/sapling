@@ -21,6 +21,13 @@
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu',
     'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
 
+  --font-size: calc(var(--font-size-raw, 16) * 1px);
+  /* Scaling factor to have default -small size of 13px when --font-size is 16px */
+  --font-size-small: calc(var(--font-size) * 0.8125);
+  /* Ratio of font size compared to default, to scale UI elements that depend implicitly on font-size to look right. */
+  --font-size-adjust-scale: calc(var(--font-size-raw, 16) / 16);
+  font-size: var(--font-size);
+
   --pad: 10px;
   --halfpad: 5px;
 
@@ -30,7 +37,7 @@
   --monospace-fontFamily: source-code-pro, SFMono-Regular, Consolas, 'Liberation Mono', Menlo,
     Courier, monospace;
 
-  --editor-font-size: var(--vscode-font-size, 13px);
+  --editor-font-size: var(--font-size, var(--vscode-font-size, 13px));
 
   height: 100vh;
   max-height: 100vh;
@@ -69,4 +76,21 @@ vscode-button[appearance='icon'] {
 }
 vscode-button[appearance='icon']:not(:hover) {
   background-color: var(--subtle-hover-darken);
+}
+
+button,
+vscode-tag,
+vscode-radio,
+vscode-checkbox,
+vscode-option,
+vscode-dropdown::part(control),
+vscode-text-field::part(label),
+vscode-button::part(control),
+vscode-text-field::part(control),
+vscode-text-area::part(control) {
+  font-size: var(--font-size-small);
+}
+
+body .codicon[class*='codicon-'] {
+  font-size: var(--font-size);
 }

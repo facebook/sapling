@@ -19,7 +19,7 @@ import {debugToolsEnabledState} from './debug/DebugToolsState';
 import {t, T} from './i18n';
 import {SetConfigOperation} from './operations/SetConfigOperation';
 import platform from './platform';
-import {renderCompactAtom} from './responsive';
+import {fontSizeAtom, renderCompactAtom} from './responsive';
 import {repositoryInfo, useRunOperation} from './serverAPIState';
 import {themeState} from './theme';
 import {
@@ -28,6 +28,7 @@ import {
   VSCodeDropdown,
   VSCodeLink,
   VSCodeOption,
+  VSCodeTextField,
 } from '@vscode/webview-ui-toolkit/react';
 import {useRecoilState, useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
@@ -70,8 +71,10 @@ function SettingsDropdown() {
           </VSCodeDropdown>
         </Setting>
       )}
-      <Setting title={<T>Commits</T>}>
+      <Setting title={<T>UI</T>}>
         <RenderCompactSetting />
+        <Space />
+        <FontSizeSetting />
       </Setting>
       {/* TODO: enable this setting when there is actually a chocie to be made here. */}
       {/* <Setting
@@ -178,6 +181,35 @@ function RenderCompactSetting() {
       </VSCodeCheckbox>
     </Tooltip>
   );
+}
+
+function FontSizeSetting() {
+  const [value, setValue] = useRecoilState(fontSizeAtom);
+  return (
+    <Tooltip
+      title={t(
+        'Font size of text in the UI in pixels, including commit titles and comparison view file content. Default is 16px.',
+      )}>
+      <VSCodeTextField
+        value={value == null ? '' : value.toString()}
+        onInput={e => {
+          try {
+            const value = parseInt((e.target as HTMLInputElement).value, 10);
+            if (isNaN(value) || value < 5 || value > 50) {
+              // don't allow weird/invalid font sizes
+              return;
+            }
+            setValue(value);
+          } catch {}
+        }}>
+        <T>Font Size</T>
+      </VSCodeTextField>
+    </Tooltip>
+  );
+}
+
+function Space() {
+  return <div style={{height: 'var(--pad)'}}></div>;
 }
 
 function DebugToolsField() {
