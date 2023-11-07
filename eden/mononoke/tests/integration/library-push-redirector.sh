@@ -91,6 +91,12 @@ EOF
             }
           ],
           "version_name": "test_version"
+        },
+        {
+          "large_repo_id": 0,
+          "common_pushrebase_bookmarks": [],
+          "small_repos": [],
+          "version_name": "large_only"
         }
       ],
       "common": {

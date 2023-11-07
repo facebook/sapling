@@ -14,6 +14,7 @@ use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use std::time::Duration;
 
+use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Context;
@@ -59,6 +60,7 @@ use mercurial_types::HgChangesetId;
 use mercurial_types::NonRootMPath;
 use metaconfig_parser::RepoConfigs;
 use metaconfig_types::CommitSyncConfigVersion;
+use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
 use metaconfig_types::MetadataDatabaseConfig;
 use metaconfig_types::RepoConfig;
 use metaconfig_types::SegmentedChangelogConfig;
@@ -89,6 +91,7 @@ use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMapping;
+use synced_commit_mapping::SyncedCommitMappingRef;
 use tokio::fs;
 use tokio::io::AsyncBufReadExt;
 use tokio::io::AsyncReadExt;
@@ -192,6 +195,7 @@ pub struct RecoveryFields {
     commit_author: String,
     commit_message: String,
     datetime: DateTime,
+    mark_not_synced_mapping: Option<String>,
     /// Head of the imported commits
     imported_cs_id: Option<ChangesetId>,
     /// ChangesetId of the merged commit we make to merge the imported commits into dest_bookmark
@@ -1042,8 +1046,22 @@ async fn repo_import(
         x_repo_check_disabled: recovery_fields.x_repo_check_disabled,
         hg_sync_check_disabled: recovery_fields.hg_sync_check_disabled,
     };
+
     let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &env.config_store)?;
 
+    check_megarepo_large_repo_import_requirements(
+        &ctx,
+        &repo,
+        &live_commit_sync_config,
+        &repo_import_setting.dest_bookmark,
+        &dest_path_prefix,
+        recovery_fields.mark_not_synced_mapping.as_deref(),
+    )
+    .await?;
+
+    // Check if the import target is a small repo that is pushredirected to a
+    // large repo.  In that case we will import to the large repo and then
+    // backsync to the small repo.
     let maybe_large_repo_config =
         get_large_repo_config_if_pushredirected(&repo, &live_commit_sync_config, &configs.repos)
             .await?;
@@ -1244,8 +1262,33 @@ async fn repo_import(
             }
         };
 
+        let mark_not_synced_changesets = {
+            borrowed!(ctx, repo, shifted_bcs_ids: &[ChangesetId]);
+            let mark_not_synced_mapping = &recovery_fields.mark_not_synced_mapping;
+
+            async move {
+                if let Some(version) = mark_not_synced_mapping {
+                    let version = CommitSyncConfigVersion(version.to_string());
+                    let repo_id = repo.repo_identity().id();
+                    let mapping = repo.synced_commit_mapping();
+
+                    for cs_id in shifted_bcs_ids {
+                        mapping
+                            .insert_large_repo_commit_version(ctx, repo_id, *cs_id, &version)
+                            .await?;
+                    }
+                }
+                Ok(())
+            }
+        };
+
         info!(ctx.logger(), "Start deriving data types");
-        future::try_join(derive_changesets, backsync_and_derive_changesets).await?;
+        future::try_join3(
+            derive_changesets,
+            backsync_and_derive_changesets,
+            mark_not_synced_changesets,
+        )
+        .await?;
         info!(ctx.logger(), "Finished deriving data types");
 
         recovery_fields.import_stage = ImportStage::TailSegmentedChangelog;
@@ -1490,6 +1533,94 @@ async fn check_additional_setup_steps(
     } else {
         info!(ctx.logger(), "There is no additional setup step needed!");
     }
+    Ok(())
+}
+
+/// Check if the import target is a large repo.  If so, the import destination must not be
+/// mapped to any small repos, and the caller needs to provide the name of the mapping to use
+/// for marking the commits as not-sync.
+///
+/// If the destination is mapped to a small repo, the repo should be imported to that repo
+/// instead.
+///
+/// It is not currently supported to import to a destination which maps to multiple repos,
+/// partially maps to a small repo, or otherwise crosses megarepo boundaries.
+async fn check_megarepo_large_repo_import_requirements(
+    ctx: &CoreContext,
+    repo: &Repo,
+    live_commit_sync_config: &dyn LiveCommitSyncConfig,
+    dest_bookmark: &BookmarkKey,
+    dest_path_prefix: &NonRootMPath,
+    mark_not_synced_mapping: Option<&str>,
+) -> Result<(), Error> {
+    let dest_cs_id = repo
+        .bookmarks()
+        .get(ctx.clone(), dest_bookmark)
+        .await?
+        .ok_or_else(|| anyhow!("Bookmark not found: {}", dest_bookmark))?;
+    if let Some(version) = repo
+        .synced_commit_mapping()
+        .get_large_repo_commit_version(ctx, repo.repo_identity().id(), dest_cs_id)
+        .await?
+    {
+        let commit_sync_config = live_commit_sync_config
+            .get_commit_sync_config_by_version_if_exists(repo.repo_identity().id(), &version)
+            .await?
+            .ok_or_else(|| anyhow!("Couldn't find commit sync config version {}", version))?;
+        for (small_repo_id, small_repo_config) in commit_sync_config.small_repos.iter() {
+            match &small_repo_config.default_action {
+                DefaultSmallToLargeCommitSyncPathAction::Preserve => {
+                    // This small repo is overlayed with the large repo
+                    // without a prefix.  We can't handle this case.
+                    return Err(anyhow!(
+                        "Not possible to import to a large repo with an unprefixed small repo"
+                    ));
+                }
+                DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(prefix) => {
+                    if dest_path_prefix.is_prefix_of(prefix)
+                        || prefix.is_prefix_of(dest_path_prefix)
+                    {
+                        return Err(anyhow!(
+                            "Small repo {} default prefix {} overlaps with import destination {}",
+                            small_repo_id,
+                            prefix,
+                            dest_path_prefix
+                        ));
+                    }
+                }
+            }
+
+            for (small_repo_prefix, large_repo_prefix) in small_repo_config.map.iter() {
+                if dest_path_prefix.is_prefix_of(large_repo_prefix)
+                    || large_repo_prefix.is_prefix_of(dest_path_prefix)
+                {
+                    return Err(anyhow!(
+                        "Small repo {} mapped prefix {} -> {} overlaps with import destination {}",
+                        small_repo_id,
+                        small_repo_prefix,
+                        large_repo_prefix,
+                        dest_path_prefix
+                    ));
+                }
+            }
+        }
+
+        if mark_not_synced_mapping.is_none() {
+            // If we are importing into a large repo, we need to mark all the imported as
+            // "not-synced", which means we need the name of a mapping that contains only
+            // the large repo.
+            return Err(anyhow!(concat!(
+                "You are importing into a large repo without a large-only mapping.  ",
+                "Please specify one with '--mark-not-synced-mapping'.",
+            )));
+        }
+    } else if mark_not_synced_mapping.is_some() {
+        return Err(anyhow!(concat!(
+            "You specified '--mark-not-synced-mapping' but are not importing into a ",
+            "large repo.  This is invalid.",
+        )));
+    }
+
     Ok(())
 }
 

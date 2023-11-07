@@ -204,6 +204,7 @@
     "hg_sync_check_disabled": true,
     "import_stage": "PushCommit",
     "imported_cs_id": "fea472cdf364ad6499f20e5f32c0ba01cb73fda8cab229c24f456df085b17622",
+    "mark_not_synced_mapping": null,
     "merged_cs_id": * (glob)
     "move_bookmark_commits_done": 4,
     "phab_check_disabled": true,

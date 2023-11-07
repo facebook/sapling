@@ -145,6 +145,7 @@ mod tests {
             commit_author: "commit_author".to_string(),
             commit_message: "commit_message".to_string(),
             datetime: DateTime::now(),
+            mark_not_synced_mapping: None,
             imported_cs_id: None,
             shifted_bcs_ids: None,
             gitimport_bcs_ids: None,
