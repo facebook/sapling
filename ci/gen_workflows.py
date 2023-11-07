@@ -349,7 +349,7 @@ RUN rm -rf /tmp/repo
         mac_release = "monterey"
         extension = f"{mac_release}.bottle.tar.gz"
         final_ext = f"{'' if arch == 'x86' else 'arm64_'}{extension}"
-        artifact_glob = "sapling*" + extension
+        artifact_glob = f"sapling*{mac_release}.bottle*.tar.gz"
 
         build_job = {
             "runs-on": runson,
