@@ -118,9 +118,6 @@ python_unittest(
 python_unittest(
     name = "eden_journal",
     srcs = ["eden_journal_test.py"],
-    compatible_with = [
-        "ovr_config//os:linux",
-    ],
     env = artifacts["env"],
     supports_static_listing = False,
     runtime_deps = artifacts["deps"],
