@@ -197,4 +197,37 @@ describe('Suggested Rebase button', () => {
       }),
     });
   });
+
+  it('includes current stack base as a destination', () => {
+    act(() => {
+      simulateCommits({
+        value: [
+          COMMIT('3', 'main', '2', {phase: 'public'}),
+          COMMIT('x', 'Commit X', '2', {isHead: true}),
+          COMMIT('2', 'some public base 2', '0', {
+            phase: 'public',
+            remoteBookmarks: ['remote/main'],
+          }),
+          COMMIT('1', 'some public base', '0', {phase: 'public'}),
+          COMMIT('b', 'Another Commit', 'a'),
+          COMMIT('a', 'My Commit', '1'),
+        ],
+      });
+    });
+
+    const rebaseOntoButton = screen.getByText('Rebase onto…');
+    fireEvent.click(rebaseOntoButton);
+
+    const suggestion = within(screen.getByTestId('context-menu-container')).getByText(
+      'Current Stack Base, remote/main',
+    );
+    fireEvent.click(suggestion);
+
+    expectMessageSentToServer({
+      type: 'runOperation',
+      operation: expect.objectContaining({
+        args: ['rebase', '-s', succeedableRevset('a'), '-d', succeedableRevset('remote/main')],
+      }),
+    });
+  });
 });

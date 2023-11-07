@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {CommitPreview} from './previews';
+import type {CommitPreview, TreeWithPreviews} from './previews';
 import type {CommitInfo} from './types';
 
 export type CommitTree = {
@@ -98,4 +98,15 @@ export function isTreeLinear(tree: CommitTreeWithPreviews): boolean {
     return false;
   }
   return tree.children.every(t => isTreeLinear(t));
+}
+
+export function findCurrentPublicBase(commitTree?: TreeWithPreviews): CommitInfo | undefined {
+  let commit = commitTree?.headCommit;
+  while (commit) {
+    if (commit.phase === 'public') {
+      return commit;
+    }
+    commit = commitTree?.treeMap.get(commit.parents[0])?.info;
+  }
+  return undefined;
 }

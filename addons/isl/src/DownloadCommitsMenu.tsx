@@ -5,14 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {CommitInfo} from './types';
-
 import {globalRecoil} from './AccessGlobalRecoil';
 import {CommitCloudInfo} from './CommitCloud';
 import {DropdownFields} from './DropdownFields';
 import {Internal} from './Internal';
 import {Tooltip} from './Tooltip';
 import {VSCodeCheckbox} from './VSCodeCheckbox';
+import {findCurrentPublicBase} from './getCommitTree';
 import {t, T} from './i18n';
 import {GotoOperation} from './operations/GotoOperation';
 import {GraftOperation} from './operations/GraftOperation';
@@ -43,18 +42,6 @@ export function DownloadCommitsTooltipButton() {
       </VSCodeButton>
     </Tooltip>
   );
-}
-
-function findCurrentPublicBase(): CommitInfo | undefined {
-  const tree = globalRecoil().getLoadable(treeWithPreviews).valueMaybe();
-  let commit = tree?.headCommit;
-  while (commit) {
-    if (commit.phase === 'public') {
-      return commit;
-    }
-    commit = tree?.treeMap.get(commit.parents[0])?.info;
-  }
-  return undefined;
 }
 
 const downloadCommitRebaseType = atom<'rebase_base' | 'rebase_ontop' | null>({
@@ -122,7 +109,13 @@ function DownloadCommitsTooltip({dismiss}: {dismiss: () => unknown}) {
           ? GraftOperation
           : RebaseKeepOperation
         : RebaseOperation;
-      const dest = rebaseType === 'rebase_ontop' ? '.' : unwrap(findCurrentPublicBase()?.hash);
+      const dest =
+        rebaseType === 'rebase_ontop'
+          ? '.'
+          : unwrap(
+              findCurrentPublicBase(globalRecoil().getLoadable(treeWithPreviews).valueMaybe())
+                ?.hash,
+            );
       // Use exact revsets for sources, so that you can type a specific hash to download and not be surprised by succession.
       // Only use succession for destination, which may be in flux at the moment you start the download.
       runOperation(new Op(exactRevset(enteredDiffNum), succeedableRevset(dest)));

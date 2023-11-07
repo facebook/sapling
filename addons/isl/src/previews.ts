@@ -253,11 +253,14 @@ export const optimisticMergeConflicts = selector<MergeConflicts | undefined>({
   },
 });
 
+export type TreeWithPreviews = {
+  trees: Array<CommitTree>;
+  treeMap: Map<Hash, CommitTree>;
+  headCommit?: CommitInfo;
+};
 export const treeWithPreviews = selector({
   key: 'treeWithPreviews',
-  get: ({
-    get,
-  }): {trees: Array<CommitTree>; treeMap: Map<Hash, CommitTree>; headCommit?: CommitInfo} => {
+  get: ({get}): TreeWithPreviews => {
     const trees = get(latestCommitTree);
 
     // gather operations from past, current, and queued commands which could have optimistic state appliers
