@@ -235,6 +235,140 @@ PrjfsDispatcherImpl::determineTargetType(
   }
 }
 
+ImmediateFuture<std::variant<AbsolutePath, RelativePath>>
+PrjfsDispatcherImpl::resolveSymlinkPath(
+    RelativePath path,
+    const ObjectFetchContextPtr& context,
+    const size_t remainingRecursionDepth) {
+  std::vector<RelativePath> pathParts;
+  std::transform(
+      path.paths().begin(),
+      path.paths().end(),
+      std::back_inserter(pathParts),
+      [](const auto& p) { return RelativePath(p); });
+  return resolveSymlinkPathImpl(
+      std::move(path),
+      context,
+      std::move(pathParts),
+      0,
+      remainingRecursionDepth);
+}
+
+ImmediateFuture<std::variant<AbsolutePath, RelativePath>>
+PrjfsDispatcherImpl::resolveSymlinkPathImpl(
+    RelativePath path,
+    const ObjectFetchContextPtr& context,
+    std::vector<RelativePath> pathParts,
+    const size_t solvedLen,
+    const size_t remainingRecursionDepth) {
+  if (solvedLen >= pathParts.size()) {
+    // Everything is resolved
+    return std::move(path);
+  }
+  RelativePath target = pathParts[solvedLen];
+  return mount_->getTreeOrTreeEntry(target, context)
+      .thenValue(
+          [this,
+           path = path.copy(),
+           symlink = std::move(target),
+           context = context.copy(),
+           pathParts = std::move(pathParts),
+           solvedLen,
+           remainingRecursionDepth](
+              std::variant<std::shared_ptr<const Tree>, TreeEntry>
+                  treeOrTreeEntry) mutable
+          -> ImmediateFuture<std::variant<AbsolutePath, RelativePath>> {
+            if (std::holds_alternative<std::shared_ptr<const Tree>>(
+                    treeOrTreeEntry)) {
+              // Everything up to the current component is a directory and ok,
+              // keep normalizing the rest of the path
+              return resolveSymlinkPathImpl(
+                  std::move(path),
+                  context,
+                  std::move(pathParts),
+                  solvedLen + 1,
+                  remainingRecursionDepth);
+            }
+            auto& entry = std::get<TreeEntry>(treeOrTreeEntry);
+            if (entry.getDtype() != dtype_t::Symlink) {
+              // Some part of the path is a file; it does not make sense to keep
+              // trying to resolve the rest
+              return std::move(path);
+            }
+            return mount_->getObjectStore()
+                ->getBlob(entry.getHash(), context)
+                .thenValue(
+                    [this,
+                     context = context.copy(),
+                     symlink = std::move(symlink),
+                     path = std::move(path),
+                     pathParts = std::move(pathParts),
+                     solvedLen,
+                     remainingRecursionDepth](
+                        std::shared_ptr<const Blob> blob) mutable
+                    -> ImmediateFuture<
+                        std::variant<AbsolutePath, RelativePath>> {
+                      // Resolve the symlink at this point and replace it in the
+                      // path, then keep normalizing
+                      auto content = blob->asString();
+                      std::replace(content.begin(), content.end(), '/', '\\');
+                      std::variant<AbsolutePath, RelativePath> resolvedTarget;
+                      try {
+                        resolvedTarget = determineTargetType(symlink, content);
+                      } catch (const std::exception&) {
+                        // The symlink target is invalid, just give up
+                        return std::move(path);
+                      }
+                      std::optional<RelativePath> remainingPath = std::nullopt;
+                      if (solvedLen != pathParts.size() - 1) {
+                        // Even after partially resolving a symlink in the path,
+                        // it's possible that we have a remainder in the path
+                        // that needs to be attached to it. For instance, if we
+                        // are resolving a path like a/b/c/x/y/z, c is a symlink
+                        // to ../w, and the rest are regular directories then
+                        // after replacing c by its symlink, resolvedTarget
+                        // would be a/w . However, we still need to attach x/y/z
+                        // to it. In this case, remainingPath would be x/y/z.
+                        std::vector<RelativePathPiece> suffixes(
+                            path.rsuffixes().begin(), path.rsuffixes().end());
+                        remainingPath = RelativePath(
+                            suffixes[pathParts.size() - solvedLen - 2]);
+                      }
+                      if (std::holds_alternative<AbsolutePath>(
+                              resolvedTarget)) {
+                        // The symlink target is absolute, but we are resolving
+                        // a relative path. This means that the symlink target
+                        // is outside of EdenFS. In this case, we can only
+                        // return the absolute path.
+                        auto absPath = std::get<AbsolutePath>(resolvedTarget);
+                        if (remainingPath.has_value()) {
+                          absPath = absPath + remainingPath.value();
+                        }
+                        return absPath;
+                      }
+                      auto newPath = std::get<RelativePath>(resolvedTarget);
+                      if (remainingPath.has_value()) {
+                        newPath = newPath + remainingPath.value();
+                      }
+                      // We need to rebuild the paths here, so we don't pass
+                      // pathParts. Also, we cannot make assumptions about the
+                      // position we are in as canonicalizing the path might
+                      // have set us back so we don't pass solvedLen either
+                      return resolveSymlinkPath(
+                          std::move(newPath),
+                          context,
+                          remainingRecursionDepth - 1);
+                    });
+          })
+      .thenError(
+          [path = path.copy()](const folly::exception_wrapper&)
+              -> ImmediateFuture<std::variant<AbsolutePath, RelativePath>> {
+            // Something is wrong in the path, stop caring and return the entire
+            // path
+            return std::move(path);
+          });
+}
+
 ImmediateFuture<bool> PrjfsDispatcherImpl::isFinalSymlinkPathDirectory(
     RelativePath symlink,
     string_view targetStringView,
@@ -281,36 +415,53 @@ ImmediateFuture<bool> PrjfsDispatcherImpl::isFinalSymlinkPathDirectory(
            // This recursively goes through symlinks until it gets the first
            // entry that is not a symlink. Symlink cycles are prevented by the
            // check above.
-           return mount_->getTreeOrTreeEntry(target, context)
+           return resolveSymlinkPath(target, context)
                .thenValue(
-                   [this,
-                    target,
-                    context = context.copy(),
-                    remainingRecursionDepth](
-                       std::variant<std::shared_ptr<const Tree>, TreeEntry>
-                           treeOrTreeEntry) mutable -> ImmediateFuture<bool> {
-                     if (std::holds_alternative<std::shared_ptr<const Tree>>(
-                             treeOrTreeEntry)) {
-                       return true;
+                   [this, remainingRecursionDepth, context = context.copy()](
+                       std::variant<AbsolutePath, RelativePath> resolvedTarget)
+                       -> ImmediateFuture<bool> {
+                     if (std::holds_alternative<AbsolutePath>(resolvedTarget)) {
+                       return isNonEdenFsPathDirectory(
+                           std::get<AbsolutePath>(resolvedTarget));
                      }
-                     auto entry = std::get<TreeEntry>(treeOrTreeEntry);
-                     if (entry.getDtype() != dtype_t::Symlink) {
-                       return false;
-                     }
-                     return mount_->getObjectStore()
-                         ->getBlob(entry.getHash(), context)
-                         .thenValue([this,
-                                     context = context.copy(),
-                                     path = target,
-                                     remainingRecursionDepth](
-                                        std::shared_ptr<const Blob> blob) {
-                           auto content = blob->asString();
-                           return isFinalSymlinkPathDirectory(
-                               path,
-                               content,
-                               context,
-                               remainingRecursionDepth - 1);
-                         });
+                     RelativePath target =
+                         std::get<RelativePath>(resolvedTarget);
+                     return mount_->getTreeOrTreeEntry(target, context)
+                         .thenValue(
+                             [this,
+                              target = std::move(target),
+                              context = context.copy(),
+                              remainingRecursionDepth](
+                                 std::variant<
+                                     std::shared_ptr<const Tree>,
+                                     TreeEntry> treeOrTreeEntry) mutable
+                             -> ImmediateFuture<bool> {
+                               if (std::holds_alternative<
+                                       std::shared_ptr<const Tree>>(
+                                       treeOrTreeEntry)) {
+                                 return true;
+                               }
+                               auto entry =
+                                   std::get<TreeEntry>(treeOrTreeEntry);
+                               if (entry.getDtype() != dtype_t::Symlink) {
+                                 return false;
+                               }
+                               return mount_->getObjectStore()
+                                   ->getBlob(entry.getHash(), context)
+                                   .thenValue([this,
+                                               context = context.copy(),
+                                               path = std::move(target),
+                                               remainingRecursionDepth](
+                                                  std::shared_ptr<const Blob>
+                                                      blob) mutable {
+                                     auto content = blob->asString();
+                                     return isFinalSymlinkPathDirectory(
+                                         std::move(path),
+                                         content,
+                                         context,
+                                         remainingRecursionDepth - 1);
+                                   });
+                             });
                    })
                .thenError(
                    [](const folly::exception_wrapper&) { return false; });

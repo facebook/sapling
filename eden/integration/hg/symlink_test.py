@@ -322,6 +322,45 @@ new file mode 120000
             os.readlink(self.get_path("slink3")), os.sep.join(["..", "snth"])
         )
 
+    def test_path_with_symlinks(self) -> None:
+        # Tests that symlinks with paths are properly classified
+        # Replacement at beginning of path
+        self.repo.write_file("foo/bar/baz/f", "aoeu")
+        self.repo.symlink("y", "foo", target_is_directory=True)
+        self.repo.symlink(
+            "x", os.path.join("y", "bar", "baz"), target_is_directory=True
+        )
+        # Replacement at end of path
+        self.repo.write_file("p/q/r/f", "snth")
+        self.repo.symlink("p/y", "q", target_is_directory=True)
+        self.repo.symlink("p/x", os.path.join("y", "r"), target_is_directory=True)
+        # Replacement in the middle of path
+        self.repo.write_file("uno/dos/tres/f", "wut")
+        self.repo.symlink("uno/dos/z", "tres", target_is_directory=True)
+        self.repo.symlink("uno/y", "dos", target_is_directory=True)
+        self.repo.symlink("uno/x", os.path.join("y", "z"), target_is_directory=True)
+        # Replacement in the middle of path (absolute)
+        self.repo.write_file("one/two/three/f", "ftw")
+        self.repo.symlink("one/two/z", "three", target_is_directory=True)
+        self.repo.symlink("one/y", self.get_path("one/two"), target_is_directory=True)
+        self.repo.symlink("one/x", os.path.join("y", "z"), target_is_directory=True)
+        ## Now revert everything and check that symlinks and are correct
+        slinkcommit = self.repo.commit("path stuff")
+        self.repo.update(self.simple_commit, clean=True)
+        self.repo.update(slinkcommit, clean=True)
+        for tdir, cntt in [
+            ("x", "aoeu"),
+            ("p/x", "snth"),
+            ("uno/x", "wut"),
+            ("one/x", "ftw"),
+        ]:
+            self.assertEqual(
+                ["f"],
+                [e.name for e in os.scandir(os.path.join(self.mount, tdir))],
+            )
+            self.assertTrue(os.path.isdir(self.get_path(tdir)))
+            self.assertEqual(cntt, self.read_file(tdir + "/f"))
+
 
 @hg_test
 # pyre-ignore[13]: T62487924
