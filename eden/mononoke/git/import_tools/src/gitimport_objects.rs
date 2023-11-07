@@ -436,7 +436,10 @@ fn decode_message(
     encoding: &Option<BString>,
     logger: &Logger,
 ) -> Result<String, Error> {
-    let encoding_or_utf8 = encoding.clone().unwrap_or_else(|| BString::from("utf-8"));
+    let mut encoding_or_utf8 = encoding.clone().unwrap_or_else(|| BString::from("utf-8"));
+    // remove single quotes so that "'utf8'" will be accepted
+    encoding_or_utf8.retain(|c| *c != 39);
+
     let encoding = Encoding::for_label(&encoding_or_utf8).ok_or_else(|| {
         anyhow!(
             "Failed to parse git commit encoding: {encoding:?} {}",
