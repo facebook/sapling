@@ -154,6 +154,7 @@ impl ISLSpawnOptions {
     }
 
     /// Override arguments that make the spawned server compatible with connecting to the webview.
+    #[cfg(target_os = "macos")]
     fn replace_args_for_webview_spawn(self) -> ISLSpawnOptions {
         let mut opts = self.clone();
         opts.json = true;

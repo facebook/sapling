@@ -28,7 +28,6 @@ use dag::DagAlgorithm;
 use dag::Vertex;
 use dag::VertexListWithOptions;
 use hgcommits::DagCommits;
-use hgcommits::DoubleWriteCommits;
 use hgcommits::GraphNode;
 use hgcommits::HgCommit;
 use hgcommits::HgCommits;
