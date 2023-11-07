@@ -7,7 +7,7 @@ name: Release - Homebrew macOS-arm64
     - test-release-*
 jobs:
   build:
-    runs-on: macos-12
+    runs-on: macos-latest-xlarge
     steps:
     - name: Checkout Code
       uses: actions/checkout@v3
@@ -16,18 +16,6 @@ jobs:
     - name: set-env SAPLING_VERSION
       shell: bash
       run: echo "SAPLING_VERSION=$(ci/tag-name.sh)" >> $GITHUB_ENV
-    - name: Prepare build environment
-      run: 'eden/scm/packaging/mac/prepare_environment.py \
-
-        -s c11b17c8b78efa46dac2d213cd7a7b3fff75f6f5e6d2ef2248345cd4a900b1c6 -f openssl@1.1 \
-
-        -s 270d1f7c56978757922b246dfd8bccead979c3d30a8e95d77a7b7b644050e6cd -f python@3.11 \
-
-        -t aarch64-apple-darwin \
-
-        -r ${{ env.SAPLING_VERSION }} \
-
-        -o $(brew tap-info homebrew/core | sed -n ''2p'' | awk ''{printf $1}'')/Formula/sapling.rb'
     - name: Install and build Sapling bottle
       run: brew install --build-bottle sapling
     - name: Create Sapling bottle

@@ -41,14 +41,10 @@ UBUNTU_DEPS = [
 
 MACOS_RELEASES = {
     "x86": {
-        "target": "x86_64-apple-darwin",
-        "python_bottle_hash": "e86210ffc0380bf4ccff3e3081e4dbd9c9ee3c2f72574d41498a817050f1ef86",
-        "openssl_bottle_hash": "d915175bedb146e38d7a2c95e86888a60a5058a5cd21f835813d43d1372a29d9",
+        "runson": "macos-12",
     },
     "arm64": {
-        "target": "aarch64-apple-darwin",
-        "python_bottle_hash": "270d1f7c56978757922b246dfd8bccead979c3d30a8e95d77a7b7b644050e6cd",
-        "openssl_bottle_hash": "c11b17c8b78efa46dac2d213cd7a7b3fff75f6f5e6d2ef2248345cd4a900b1c6",
+        "runson": "macos-latest-xlarge",
     },
 }
 
@@ -347,9 +343,7 @@ RUN rm -rf /tmp/repo
         }
         self._write_file("sapling-cli-windows-amd64-release.yml", gh_action)
 
-    def gen_homebrew_macos_release(
-        self, arch, target, python_bottle_hash, openssl_bottle_hash
-    ) -> str:
+    def gen_homebrew_macos_release(self, arch, runson) -> str:
         BUILD = "build"
         artifact_key = f"macos-homebrew-{arch}-bottle"
         mac_release = "monterey"
@@ -358,20 +352,11 @@ RUN rm -rf /tmp/repo
         artifact_glob = "sapling*" + extension
 
         build_job = {
-            "runs-on": "macos-12",
+            "runs-on": runson,
             "steps": [
                 {"name": "Checkout Code", "uses": "actions/checkout@v3"},
                 grant_repo_access(),
                 create_set_env_step(SAPLING_VERSION, "$(ci/tag-name.sh)"),
-                {
-                    "name": "Prepare build environment",
-                    "run": "eden/scm/packaging/mac/prepare_environment.py \\\n"
-                    + f"-s {openssl_bottle_hash} -f openssl@1.1 \\\n"
-                    + f"-s {python_bottle_hash} -f python@3.11 \\\n"
-                    + f"-t {target} \\\n"
-                    + "-r ${{ env.SAPLING_VERSION }} \\\n"
-                    + "-o $(brew tap-info homebrew/core | sed -n '2p' | awk '{printf $1}')/Formula/sapling.rb",
-                },
                 {
                     "name": "Install and build Sapling bottle",
                     "run": "brew install --build-bottle sapling",

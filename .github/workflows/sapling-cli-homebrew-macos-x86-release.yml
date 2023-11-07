@@ -16,18 +16,6 @@ jobs:
     - name: set-env SAPLING_VERSION
       shell: bash
       run: echo "SAPLING_VERSION=$(ci/tag-name.sh)" >> $GITHUB_ENV
-    - name: Prepare build environment
-      run: 'eden/scm/packaging/mac/prepare_environment.py \
-
-        -s d915175bedb146e38d7a2c95e86888a60a5058a5cd21f835813d43d1372a29d9 -f openssl@1.1 \
-
-        -s e86210ffc0380bf4ccff3e3081e4dbd9c9ee3c2f72574d41498a817050f1ef86 -f python@3.11 \
-
-        -t x86_64-apple-darwin \
-
-        -r ${{ env.SAPLING_VERSION }} \
-
-        -o $(brew tap-info homebrew/core | sed -n ''2p'' | awk ''{printf $1}'')/Formula/sapling.rb'
     - name: Install and build Sapling bottle
       run: brew install --build-bottle sapling
     - name: Create Sapling bottle
