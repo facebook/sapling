@@ -484,6 +484,7 @@ dott_test(
         "//eden/mononoke:blobimport",
         "//eden/mononoke:mononoke",
         "//eden/mononoke:segmented_changelog_tailer",
+        "//eden/mononoke/commit_rewriting/backsyncer:backsyncer_cmd",
         "//eden/mononoke/repo_import:repo_import",
         "//eden/mononoke/tools/admin:newadmin",
         "//eden/mononoke/tools/testtool:testtool",
