@@ -120,25 +120,23 @@ function large_small_config() {
 }
 
 function large_small_setup() {
-  quiet testtool_drawdag -R small-mon <<'EOF'
+  quiet testtool_drawdag -R small-mon --no-default-files <<'EOF'
 S_B
 |
 S_A
 # message: S_A "pre-move commit"
 # author: S_A test
 # modify: S_A file.txt "1\n"
-# forget: S_A S_A
 # message: S_B "first post-move commit"
 # author: S_B test
 # modify: S_B filetoremove "1\n"
 # bookmark: S_B master_bookmark
-# forget: S_B S_B
 EOF
 
   export SMALL_MASTER_BONSAI
   SMALL_MASTER_BONSAI=$S_B
 
-  quiet testtool_drawdag -R large-mon <<'EOF'
+  quiet testtool_drawdag -R large-mon --no-default-files <<'EOF'
 L_C
 |
 L_B
@@ -149,15 +147,12 @@ L_A
 # modify: L_A file.txt "1\n"
 # message: L_B "move commit"
 # author: L_B test
-# forget: L_A L_A
 # copy: L_B smallrepofolder/file.txt "1\n" L_A file.txt
 # delete: L_B file.txt
-# forget: L_B L_B
 # message: L_C "first post-move commit"
 # author: L_C test
 # modify: L_C smallrepofolder/filetoremove "1\n"
 # bookmark: L_C master_bookmark
-# forget: L_C L_C
 EOF
 
   export LARGE_MASTER_BONSAI
