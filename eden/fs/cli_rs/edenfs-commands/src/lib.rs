@@ -108,6 +108,7 @@ pub enum TopLevelSubcommand {
     PrefetchProfile(crate::prefetch_profile::PrefetchCmd),
     #[clap(subcommand, alias = "redir")]
     Redirect(crate::redirect::RedirectCmd),
+    Reloadconfig(crate::config::ReloadConfigCmd),
     #[clap(alias = "health")]
     Status(crate::status::StatusCmd),
     // Top(crate::top::TopCmd),
@@ -120,6 +121,7 @@ impl TopLevelSubcommand {
 
         match self {
             Config(cmd) => cmd,
+            Reloadconfig(cmd) => cmd,
             Fsconfig(cmd) => cmd,
             Debug(cmd) => cmd,
             Du(cmd) => cmd,
@@ -149,6 +151,7 @@ impl TopLevelSubcommand {
             TopLevelSubcommand::Pid(_) => "pid",
             TopLevelSubcommand::PrefetchProfile(_) => "prefetch-profile",
             TopLevelSubcommand::Redirect(_) => "redirect",
+            TopLevelSubcommand::Reloadconfig(_) => "reloadconfig",
             TopLevelSubcommand::Status(_) => "status",
             //TopLevelSubcommand::Top(_) => "top",
             TopLevelSubcommand::Uptime(_) => "uptime",

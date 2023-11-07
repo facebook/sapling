@@ -1080,6 +1080,57 @@ class FsConfigCmd(Subcmd):
         raise NotImplementedError("Stub -- only implemented in Rust")
 
 
+@subcmd(
+    "reloadconfig",
+    "Reload EdenFS dynamic configs. This invokes edenfs_config_manager under the hood",
+)
+class ReloadConfigCmd(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "-n",
+            "--dry-run",
+            action="store_true",
+            help="Dry run mode. Just print the config to stdout instead of writing it to disk",
+        )
+        parser.add_argument(
+            "--local-telemetry",
+            metavar="PATH",
+            help="Log telemetry samples to a local file rather than to scuba (mainly for "
+            "debugging and development)",
+        )
+        parser.add_argument(
+            "--out",
+            metavar="PATH",
+            help="Write filtered config file to custom location",
+        )
+        parser.add_argument(
+            "--raw-out",
+            metavar="PATH",
+            help="Read and write location of the raw config which will be used if Configerator sends back an `edenfs_uptodate` repsonse",
+        )
+        parser.add_argument(
+            "-t",
+            "--timeout",
+            default=5,
+            type=int,
+            action="store",
+            help="Number of seconds to wait for HTTP post response while fetching configs",
+        )
+        parser.add_argument(
+            "-c",
+            "--local-cfgr-root",
+            type=str,
+            action="store",
+            help="Load configs from the given local configerator repo instead of reading from remote. This is useful for testing changes locally without having to push them to production",
+        )
+        parser.add_argument(
+            "-v", "--verbose", action="store_true", help="Enable more verbose logging"
+        )
+
+    def run(self, args: argparse.Namespace) -> int:
+        raise NotImplementedError("Stub -- only implemented in Rust")
+
+
 @subcmd("doctor", "Debug and fix issues with EdenFS")
 class DoctorCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
