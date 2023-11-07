@@ -258,3 +258,85 @@ TEST(PathMap, swap) {
   EXPECT_EQ(1, a.size()) << "a now has 1 element";
   EXPECT_EQ("foo", a.at("foo"_pc));
 }
+
+TEST(PathMapTest, collatePathMaps_empty) {
+  auto a = PathMap<int>{{}, CaseSensitivity::Insensitive};
+  auto b = PathMap<char>{{}, CaseSensitivity::Insensitive};
+  auto expected = PathMap<std::pair<std::optional<int>, std::optional<char>>>{
+      {}, CaseSensitivity::Insensitive};
+
+  ASSERT_EQ(expected, collatePathMaps(a, b));
+  ASSERT_EQ(expected.getCaseSensitivity(), CaseSensitivity::Insensitive);
+}
+
+TEST(PathMapTest, collatePathMaps_simple) {
+  auto a = PathMap<int>{
+      {{PathComponent("foo"), 1},
+       {PathComponent("bar"), 2},
+       {PathComponent("baz"), 3}},
+      CaseSensitivity::Insensitive};
+  auto b = PathMap<char>{
+      {{PathComponent("foo"), 'a'},
+       {PathComponent("bar"), 'b'},
+       {PathComponent("baz"), 'c'}},
+      CaseSensitivity::Insensitive};
+  auto expected = PathMap<std::pair<std::optional<int>, std::optional<char>>>{
+      {{PathComponent("foo"), {1, 'a'}},
+       {PathComponent("bar"), {2, 'b'}},
+       {PathComponent("baz"), {3, 'c'}}},
+      CaseSensitivity::Insensitive};
+
+  ASSERT_EQ(expected, collatePathMaps(a, b));
+  ASSERT_EQ(expected.getCaseSensitivity(), CaseSensitivity::Insensitive);
+}
+
+TEST(PathMapTest, collatePathMaps_disjoint) {
+  auto a = PathMap<int>{
+      {{PathComponent("foo"), 1}, {PathComponent("bar"), 2}},
+      CaseSensitivity::Insensitive};
+  auto b = PathMap<char>{
+      {{PathComponent("baz"), 'c'}}, CaseSensitivity::Insensitive};
+  auto expected = PathMap<std::pair<std::optional<int>, std::optional<char>>>{
+      {{PathComponent("foo"), {1, std::nullopt}},
+       {PathComponent("bar"), {2, std::nullopt}},
+       {PathComponent("baz"), {std::nullopt, 'c'}}},
+      CaseSensitivity::Insensitive};
+
+  ASSERT_EQ(expected, collatePathMaps(a, b));
+  ASSERT_EQ(expected.getCaseSensitivity(), CaseSensitivity::Insensitive);
+}
+
+// If the PathMap is case-insensitive, we should collate entries from with
+// different casing, preserving the casing from the first parameter.
+TEST(PathMapTest, collatePathMaps_caseInsensitive) {
+  auto a = PathMap<int>{
+      {{PathComponent("foo"), 1}, {PathComponent("BAR"), 2}},
+      CaseSensitivity::Insensitive};
+  auto b = PathMap<char>{
+      {{PathComponent("Foo"), 'a'}, {PathComponent("bAr"), 'b'}},
+      CaseSensitivity::Insensitive};
+  auto expected = PathMap<std::pair<std::optional<int>, std::optional<char>>>{
+      {{PathComponent("foo"), {1, 'a'}}, {PathComponent("BAR"), {2, 'b'}}},
+      CaseSensitivity::Insensitive};
+
+  ASSERT_EQ(expected, collatePathMaps(a, b));
+  ASSERT_EQ(expected.getCaseSensitivity(), CaseSensitivity::Insensitive);
+}
+
+TEST(PathMapTest, collatePathMaps_caseSensitive) {
+  auto a = PathMap<int>{
+      {{PathComponent("foo"), 1}, {PathComponent("BAR"), 2}},
+      CaseSensitivity::Sensitive};
+  auto b = PathMap<char>{
+      {{PathComponent("Foo"), 'a'}, {PathComponent("bAr"), 'b'}},
+      CaseSensitivity::Sensitive};
+  auto expected = PathMap<std::pair<std::optional<int>, std::optional<char>>>{
+      {{PathComponent("foo"), {1, std::nullopt}},
+       {PathComponent("Foo"), {std::nullopt, 'a'}},
+       {PathComponent("bAr"), {std::nullopt, 'b'}},
+       {PathComponent("BAR"), {2, std::nullopt}}},
+      CaseSensitivity::Sensitive};
+
+  ASSERT_EQ(expected, collatePathMaps(a, b));
+  ASSERT_EQ(expected.getCaseSensitivity(), CaseSensitivity::Sensitive);
+}
