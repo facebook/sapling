@@ -181,15 +181,21 @@ fn should_retry(error: &anyhow::Error, error_start: &mut Option<Instant>) -> boo
         *error_start = Some(Instant::now());
     }
 
-    let mut patience = None;
-    if let Some(error) = error.downcast_ref::<edenfs_client::EdenError>() {
-        // Assuming that a checkout is in process. Expect those to recover later.
-        tracing::trace!("eden error code: {}", error.error_type);
-        if error.error_type == "OUT_OF_DATE_PARENT" || error.error_type == "CHECKOUT_IN_PROGRESS" {
-            patience = Some(Duration::from_secs(60));
+    #[allow(unused_mut)]
+    let mut patience: Option<Duration> = None;
+
+    tracing::trace!("wait error: {:?}", error);
+    #[cfg(feature = "eden")]
+    {
+        if let Some(error) = error.downcast_ref::<edenfs_client::EdenError>() {
+            // Assuming that a checkout is in process. Expect those to recover later.
+            tracing::trace!("eden error code: {}", error.error_type);
+            if error.error_type == "OUT_OF_DATE_PARENT"
+                || error.error_type == "CHECKOUT_IN_PROGRESS"
+            {
+                patience = Some(Duration::from_secs(60));
+            }
         }
-    } else {
-        tracing::trace!("non-eden error: {:?}", error);
     }
 
     if let (Some(start), Some(patience)) = (error_start.as_ref(), patience) {
