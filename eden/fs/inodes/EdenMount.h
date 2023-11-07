@@ -351,7 +351,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    *
    * If takeover data is specified, it is used to initialize the inode map.
    */
-  FOLLY_NODISCARD folly::Future<folly::Unit> initialize(
+  FOLLY_NODISCARD ImmediateFuture<folly::Unit> initialize(
       OverlayChecker::ProgressCallback&& progressCallback = [](auto) {},
       const std::optional<SerializedInodeMap>& takeover = std::nullopt,
       const std::optional<MountProtocol>& takeoverMountProtocol = std::nullopt);

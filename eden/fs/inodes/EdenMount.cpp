@@ -346,7 +346,7 @@ InodeCatalogOptions EdenMount::getInodeCatalogOptions(
   return options;
 }
 
-FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
+FOLLY_NODISCARD ImmediateFuture<folly::Unit> EdenMount::initialize(
     OverlayChecker::ProgressCallback&& progressCallback,
     const std::optional<SerializedInodeMap>& takeover,
     const std::optional<MountProtocol>& takeoverMountProtocol) {
@@ -365,12 +365,8 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
       "EdenMount::initialize");
   return serverState_->getFaultInjector()
       .checkAsync("mount", getPath().view())
-      .semi()
-      .via(getServerThreadPool().get())
       .thenValue([this, parent](auto&&) {
-        return objectStore_->getRootTree(parent, context)
-            .semi()
-            .via(&folly::QueuedImmediateExecutor::instance());
+        return objectStore_->getRootTree(parent, context);
       })
       .thenValue(
           [this,
@@ -431,9 +427,7 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
         // TODO: It would be nice if the .eden inode was created before
         // allocating inode numbers for the Tree's entries. This would give the
         // .eden directory inode number 2.
-        return setupDotEden(std::move(initTreeNode))
-            .semi()
-            .via(&folly::QueuedImmediateExecutor::instance());
+        return setupDotEden(std::move(initTreeNode));
       })
       .thenTry([this](auto&& result) {
         if (result.hasException()) {

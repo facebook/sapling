@@ -279,7 +279,10 @@ void TestMount::initialize(
 }
 
 void TestMount::initializeEdenMount() {
-  edenMount_->initialize().getVia(serverExecutor_.get());
+  edenMount_->initialize()
+      .semi()
+      .via(serverExecutor_.get())
+      .getVia(serverExecutor_.get());
   rootInode_ = edenMount_->getRootInodeUnchecked();
 }
 
@@ -529,6 +532,8 @@ void TestMount::remountGracefully() {
           [](auto) {},
           takeoverData,
           std::optional<MountProtocol>(MountProtocol::FUSE))
+      .semi()
+      .via(serverExecutor_.get())
       .getVia(serverExecutor_.get());
   rootInode_ = edenMount_->getRootInodeUnchecked();
 }
