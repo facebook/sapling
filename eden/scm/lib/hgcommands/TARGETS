@@ -97,6 +97,7 @@ rust_python_library(
         "//eden/scm/lib/formatter:formatter",
         "//eden/scm/lib/fsyncglob:fsyncglob",
         "//eden/scm/lib/hg-http:hg-http",
+        "//eden/scm/lib/hg-metrics:hg-metrics",
         "//eden/scm/lib/hgtime:hgtime",
         "//eden/scm/lib/identity:identity",
         "//eden/scm/lib/indexedlog:indexedlog",
