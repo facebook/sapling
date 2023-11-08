@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.1.30
+
+### Nov 8 2023
+
+- Bulk query generated files in batches of 400, so files are sorted by status before pagination in groups of 25.
+  - Also warns if there are too many files to correctly sort in one batch.
+- Improve handling of VS Code "modern" themes
+- Update icon for warning signals to be more consistent
+- Add border to icon-style buttons
+- Press backspace to preview hiding a commit
+- Make top bar sticky as you scroll
+- Add current stack base as a suggested rebase target
+- Show all changed files in the commit's files list in the sidebar
+- Allow opening a diff view of a deleted file
+- Allow reverting added files in the head commit
+
 ## 0.1.29
 
 ### Oct 26 2023
