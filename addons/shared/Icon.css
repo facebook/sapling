@@ -23,3 +23,7 @@
     transform: rotate(360deg);
   }
 }
+
+.icon-blue {
+  color: var(--button-primary-background);
+}

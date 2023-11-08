@@ -27,6 +27,7 @@ import {DiffInfo} from './codeReview/DiffBadge';
 import {islDrawerState} from './drawerState';
 import {isDescendant} from './getCommitTree';
 import {t, T} from './i18n';
+import {IconStack} from './icons/IconStack';
 import {getAmendToOperation, isAmendToAllowedForCommit} from './operationUtils';
 import {GotoOperation} from './operations/GotoOperation';
 import {HideOperation} from './operations/HideOperation';
@@ -388,7 +389,10 @@ function UnsavedEditedMessageIndicator({commit}: {commit: CommitInfo}) {
   return (
     <div className="unsaved-message-indicator" data-testid="unsaved-message-indicator">
       <Tooltip title={t('This commit has unsaved changes to its message')}>
-        <Icon icon="circle-large-filled" />
+        <IconStack>
+          <Icon icon="output" />
+          <Icon icon="circle-large-filled" />
+        </IconStack>
       </Tooltip>
     </div>
   );

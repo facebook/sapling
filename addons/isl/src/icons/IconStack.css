@@ -1,0 +1,25 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.icon-stack {
+  --icon-stack-size: 16px;
+  position: relative;
+  width: var(--icon-stack-size);
+  height: var(--icon-stack-size);
+}
+
+.icon-stack > *:last-child {
+  position: absolute;
+  font-size: calc(var(--icon-stack-size) / 2);
+  bottom: -2px;
+  right: -2px;
+}
+
+/* Cut out a circle in the corner to fit the stacked icon into */
+.icon-stack > *:first-child {
+  clip-path: path('M 0 0 L 16 0 L 19 12 A 1 1 0 1 0 9 16 L 0 16 L 0 0');
+}
