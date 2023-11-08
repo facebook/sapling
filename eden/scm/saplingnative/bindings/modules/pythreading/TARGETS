@@ -19,4 +19,7 @@ rust_python_library(
         },
     },
     crate_root = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:rand",
+    ],
 )

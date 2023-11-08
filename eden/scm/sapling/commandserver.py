@@ -389,6 +389,7 @@ def _initworkerprocess() -> None:
     # change random state otherwise forked request handlers would have a
     # same state inherited from parent.
     random.seed()
+    bindings.threading.trigger_rng_reseed()
 
 
 def _serverequest(ui, repo, conn, createcmdserver):

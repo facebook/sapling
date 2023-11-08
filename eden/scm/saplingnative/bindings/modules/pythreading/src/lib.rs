@@ -16,6 +16,7 @@ use std::thread::ThreadId;
 use std::time::Duration;
 
 use cpython::*;
+use rand::Rng;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "threading"].join(".");
@@ -23,6 +24,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add_class::<Condition>(py)?;
     m.add_class::<bug29988wrapper>(py)?;
     m.add_class::<RGenerator>(py)?;
+    m.add(py, "trigger_rng_reseed", py_fn!(py, trigger_rng_reseed()))?;
     Ok(m)
 }
 
@@ -511,6 +513,24 @@ impl RGeneratorIter {
             Err(unavailable(py))
         }
     }
+}
+
+pub fn trigger_rng_reseed(_py: Python) -> PyResult<PyNone> {
+    // The thread rng has fork detection, but it will not reseed immediately.
+    // reseeding.rs documents:
+    //
+    //  - When a process is forked on UNIX, the RNGs in both the parent and child
+    //    processes will be reseeded just before the next call to
+    //    [`BlockRngCore::generate`], i.e. "soon". For ChaCha and Hc128 this is a
+    //    maximum of fifteen `u32` values before reseeding.
+    //
+    // So, let's just burn some values to trigger the reseed.
+
+    let mut rng = rand::thread_rng();
+    for _ in 0..16 {
+        let _ = rng.gen::<u32>();
+    }
+    Ok(PyNone)
 }
 
 #[cfg(test)]
