@@ -201,12 +201,13 @@ const sortKeyForStatus: Record<VisualChangedFileType, number> = {
 /**
  * Display a list of changed files.
  *
- * If filesSubset is too long, but filesSubset.length === totalFiles, pagination buttons
+ * (Case 1) If filesSubset is too long, but filesSubset.length === totalFiles, pagination buttons
  * are shown. This happens for uncommitted changes, where we have the entire list of files.
  *
- * If filesSubset.length < totalFiles, no pagination buttons are shown.
+ * (Case 2) If filesSubset.length < totalFiles, no pagination buttons are shown.
  * It's expected that filesSubset is already truncated to fit.
- * This happens for committed lists of changes, where we don't have the entire list of files.
+ * This happens initially for committed lists of changes, where we don't have the entire list of files.
+ * Note that we later fetch the remaining files, to end up in (Case 1) again.
  *
  * In either case, a banner is shown to warn that not all files are shown.
  */

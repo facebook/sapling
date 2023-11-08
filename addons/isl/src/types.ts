@@ -467,9 +467,7 @@ export type LocalStorageName =
 
 export type ClientToServerMessage =
   | {type: 'heartbeat'; id: string}
-  | {
-      type: 'refresh';
-    }
+  | {type: 'refresh'}
   | {type: 'getConfig'; name: ConfigName}
   | {type: 'setConfig'; name: ConfigName; value: string}
   | {type: 'changeCwd'; cwd: string}
@@ -481,6 +479,7 @@ export type ClientToServerMessage =
   | {type: 'fetchCommitMessageTemplate'}
   | {type: 'fetchShelvedChanges'}
   | {type: 'fetchLatestCommit'; revset: string}
+  | {type: 'fetchAllCommitChangedFiles'; hash: Hash}
   | {type: 'typeahead'; kind: TypeaheadKind; query: string; id: string}
   | {type: 'requestRepoInfo'}
   | {type: 'requestApplicationInfo'}
@@ -490,10 +489,7 @@ export type ClientToServerMessage =
   | {type: 'getSuggestedReviewers'; context: {paths: Array<string>}; key: string}
   | {type: 'updateRemoteDiffMessage'; diffId: DiffId; title: string; description: string}
   | {type: 'pageVisibility'; state: PageVisibility}
-  | {
-      type: 'requestComparison';
-      comparison: Comparison;
-    }
+  | {type: 'requestComparison'; comparison: Comparison}
   | {
       type: 'requestComparisonContextLines';
       id: {
@@ -547,6 +543,7 @@ export type ServerToClientMessage =
   | {type: 'fetchedCommitMessageTemplate'; template: string}
   | {type: 'fetchedShelvedChanges'; shelvedChanges: Result<Array<ShelvedChange>>}
   | {type: 'fetchedLatestCommit'; info: Result<CommitInfo>; revset: string}
+  | {type: 'fetchedAllCommitChangedFiles'; hash: Hash; result: Result<Array<ChangedFile>>}
   | {type: 'typeaheadResult'; id: string; result: Array<TypeaheadResult>}
   | {type: 'applicationInfo'; info: ApplicationInfo}
   | {type: 'repoInfo'; info: RepoInfo; cwd?: string}

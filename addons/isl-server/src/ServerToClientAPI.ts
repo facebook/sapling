@@ -581,6 +581,25 @@ export default class ServerToClientAPI {
           });
         break;
       }
+      case 'fetchAllCommitChangedFiles': {
+        repo
+          .getAllChangedFiles(data.hash)
+          .then(files => {
+            this.postMessage({
+              type: 'fetchedAllCommitChangedFiles',
+              hash: data.hash,
+              result: {value: files},
+            });
+          })
+          .catch(err => {
+            this.postMessage({
+              type: 'fetchedAllCommitChangedFiles',
+              hash: data.hash,
+              result: {error: err as Error},
+            });
+          });
+        break;
+      }
       case 'fetchCommitCloudState': {
         repo.getCommitCloudState(cwd).then(state => {
           this.postMessage({

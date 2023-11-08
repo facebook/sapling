@@ -150,6 +150,19 @@ const SHELVE_FIELD_INDEX = fromEntries(Object.keys(SHELVE_FIELDS).map((key, i) =
 };
 const SHELVE_FETCH_TEMPLATE = [...Object.values(SHELVE_FIELDS), COMMIT_END_MARK].join('\n');
 
+const CHANGED_FILES_FIELDS = {
+  hash: '{node}',
+  filesAdded: '{file_adds|json}',
+  filesModified: '{file_mods|json}',
+  filesRemoved: '{file_dels|json}',
+};
+const CHANGED_FILES_INDEX = fromEntries(
+  Object.keys(CHANGED_FILES_FIELDS).map((key, i) => [key, i]),
+) as {
+  [key in Required<keyof typeof CHANGED_FILES_FIELDS>]: number;
+};
+const CHANGED_FILES_TEMPLATE = [...Object.values(CHANGED_FILES_FIELDS), COMMIT_END_MARK].join('\n');
+
 /**
  * This class is responsible for providing information about the working copy
  * for a Sapling repository.
@@ -877,6 +890,39 @@ export class Repository {
     }
 
     return result;
+  }
+
+  public async getAllChangedFiles(hash: Hash): Promise<Array<ChangedFile>> {
+    const output = (
+      await this.runCommand(
+        ['log', '--template', CHANGED_FILES_TEMPLATE, '--rev', hash],
+        'LookupAllCommitChangedFilesCommand',
+      )
+    ).stdout;
+
+    const [chunk] = output.split(COMMIT_END_MARK, 1);
+
+    const lines = chunk.trim().split('\n');
+    if (lines.length < Object.keys(CHANGED_FILES_FIELDS).length) {
+      return [];
+    }
+
+    const files: Array<ChangedFile> = [
+      ...(JSON.parse(lines[CHANGED_FILES_INDEX.filesModified]) as Array<string>).map(path => ({
+        path,
+        status: 'M' as const,
+      })),
+      ...(JSON.parse(lines[CHANGED_FILES_INDEX.filesAdded]) as Array<string>).map(path => ({
+        path,
+        status: 'A' as const,
+      })),
+      ...(JSON.parse(lines[CHANGED_FILES_INDEX.filesRemoved]) as Array<string>).map(path => ({
+        path,
+        status: 'R' as const,
+      })),
+    ];
+
+    return files;
   }
 
   public async getShelvedChanges(): Promise<Array<ShelvedChange>> {

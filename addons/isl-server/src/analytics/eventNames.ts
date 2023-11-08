@@ -66,6 +66,7 @@ export type TrackEventName =
   | 'StatusCommand'
   | 'LogCommand'
   | 'LookupCommitsCommand'
+  | 'LookupAllCommitChangedFilesCommand'
   | 'GetShelvesCommand'
   | 'GetConflictsCommand'
   | 'BlameCommand'

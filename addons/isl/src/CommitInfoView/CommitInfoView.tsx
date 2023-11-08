@@ -11,6 +11,7 @@ import type {CommitMessageFields, FieldConfig, FieldsBeingEdited} from './types'
 import type {Dispatch, SetStateAction} from 'react';
 
 import {Banner} from '../Banner';
+import {ChangedFilesWithFetching} from '../ChangedFilesWithFetching';
 import serverAPI from '../ClientToServerAPI';
 import {Commit} from '../Commit';
 import {OpenComparisonViewButton} from '../ComparisonView/OpenComparisonViewButton';
@@ -22,7 +23,7 @@ import {SubmitUpdateMessageInput} from '../SubmitUpdateMessageInput';
 import {Subtle} from '../Subtle';
 import {latestSuccessorUnlessExplicitlyObsolete} from '../SuccessionTracker';
 import {Tooltip} from '../Tooltip';
-import {ChangedFiles, UncommittedChanges} from '../UncommittedChanges';
+import {UncommittedChanges} from '../UncommittedChanges';
 import {tracker} from '../analytics';
 import {
   allDiffSummaries,
@@ -346,18 +347,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
                   <T>Open All Files</T>
                 </VSCodeButton>
               </div>
-              <ChangedFiles
-                filesSubset={commit.filesSample}
-                totalFiles={commit.totalFileCount}
-                comparison={
-                  commit.isHead
-                    ? {type: ComparisonType.HeadChanges}
-                    : {
-                        type: ComparisonType.Committed,
-                        hash: commit.hash,
-                      }
-                }
-              />
+              <ChangedFilesWithFetching commit={commit} />{' '}
             </div>
           </Section>
         )}
