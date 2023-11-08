@@ -984,11 +984,11 @@ function FileActions({
 
   if (platform.openDiff != null && !conflictStatuses.has(file.status)) {
     actions.push(
-      <Tooltip title={t('Open diff view')} key="revert" delayMs={1000}>
+      <Tooltip title={t('Open diff view')} key="open-diff-view" delayMs={1000}>
         <VSCodeButton
           className="file-show-on-hover"
           appearance="icon"
-          data-testid="file-revert-button"
+          data-testid="file-open-diff-button"
           onClick={() => {
             platform.openDiff?.(file.path, comparison);
           }}>
@@ -998,7 +998,11 @@ function FileActions({
     );
   }
 
-  if (revertableStatues.has(file.status) && comparison.type !== ComparisonType.Committed) {
+  if (
+    (revertableStatues.has(file.status) && comparison.type !== ComparisonType.Committed) ||
+    // special case: reverting does actually work for added files in the head commit
+    (comparison.type === ComparisonType.HeadChanges && file.status === 'A')
+  ) {
     actions.push(
       <Tooltip
         title={
