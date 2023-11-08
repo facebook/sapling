@@ -77,7 +77,7 @@ import {
   VSCodeCheckbox,
   VSCodeTextField,
 } from '@vscode/webview-ui-toolkit/react';
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useMemo, useEffect, useRef, useState} from 'react';
 import {atom, useRecoilCallback, useRecoilValue} from 'recoil';
 import {labelForComparison, revsetForComparison, ComparisonType} from 'shared/Comparison';
 import {useContextMenu} from 'shared/ContextMenu';
@@ -219,20 +219,42 @@ export function ChangedFiles(props: {
 }) {
   const displayType = useRecoilValue(changedFilesDisplayType);
   const {filesSubset, totalFiles, ...rest} = props;
-  const MAX_FILES_TO_SHOW = 25;
+  const PAGE_SIZE = 25;
+  const PAGE_FETCH_COUNT = 16;
   const [pageNum, setPageNum] = useState(0);
-  const isLastPage = pageNum >= Math.floor((totalFiles - 1) / MAX_FILES_TO_SHOW);
-  const rangeStart = pageNum * MAX_FILES_TO_SHOW;
-  const rangeEnd = Math.min(filesSubset.length, (pageNum + 1) * MAX_FILES_TO_SHOW);
-  const filesToShow = filesSubset.slice(rangeStart, rangeEnd);
-  const hasAdditionalPages = filesSubset.length > MAX_FILES_TO_SHOW;
-  const generatedStatuses = useGeneratedFileStatuses(filesToShow.map(f => f.path));
+  const isLastPage = pageNum >= Math.floor((totalFiles - 1) / PAGE_SIZE);
+  const rangeStart = pageNum * PAGE_SIZE;
+  const rangeEnd = Math.min(filesSubset.length, (pageNum + 1) * PAGE_SIZE);
+  const hasAdditionalPages = filesSubset.length > PAGE_SIZE;
+
+  // We paginate files, but also paginate our fetches for generated statuses
+  // at a larger granularity. This allows all manual files within that window
+  // to be sorted to the front. This wider pagination is neceessary so we can control
+  // how many files we query for generated statuses.
+  // TODO: If we have more than one generated statuses page, then we should show a warning.
+  const fetchPage = Math.floor(pageNum - (pageNum % PAGE_FETCH_COUNT));
+  const fetchRangeStart = fetchPage * PAGE_SIZE;
+  const fetchRangeEnd = (fetchPage + PAGE_FETCH_COUNT) * PAGE_SIZE;
+  const filesToQueryGeneratedStatus = useMemo(
+    () => filesSubset.slice(fetchRangeStart, fetchRangeEnd).map(f => f.path),
+    [filesSubset, fetchRangeStart, fetchRangeEnd],
+  );
+
+  const generatedStatuses = useGeneratedFileStatuses(filesToQueryGeneratedStatus);
+  const filesToSort = filesSubset.slice(fetchRangeStart, fetchRangeEnd);
+  filesToSort.sort((a, b) => {
+    const genStatA = generatedStatuses[a.path] ?? 0;
+    const genStatB = generatedStatuses[b.path] ?? 0;
+    return genStatA - genStatB;
+  });
+  const filesToShow = filesToSort.slice(rangeStart - fetchRangeStart, rangeEnd - fetchRangeStart);
+
   const processedFiles = useDeepMemo(() => processCopiesAndRenames(filesToShow), [filesToShow]);
 
   useEffect(() => {
     // If the list of files is updated to have fewer files, we need to reset
     // the pageNum state to be in the proper range again.
-    const lastPageIndex = Math.floor((totalFiles - 1) / MAX_FILES_TO_SHOW);
+    const lastPageIndex = Math.floor((totalFiles - 1) / PAGE_SIZE);
     if (pageNum > lastPageIndex) {
       setPageNum(Math.max(0, lastPageIndex));
     }
