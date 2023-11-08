@@ -81,4 +81,6 @@ export interface UICodeReviewProvider {
   enableMessageSyncing: boolean;
 
   supportsSuggestedReviewers: boolean;
+
+  supportsComparingSinceLastSubmit: boolean;
 }

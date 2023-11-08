@@ -116,6 +116,8 @@ export class GithubUICodeReviewProvider implements UICodeReviewProvider {
   enableMessageSyncing = false;
 
   supportsSuggestedReviewers = false;
+
+  supportsComparingSinceLastSubmit = false;
 }
 
 type BadgeState = PullRequestState | 'ERROR' | 'DRAFT';

@@ -22,8 +22,9 @@ import {Tooltip} from './Tooltip';
 import {UncommitButton} from './UncommitButton';
 import {UncommittedChanges} from './UncommittedChanges';
 import {tracker} from './analytics';
-import {latestCommitMessage} from './codeReview/CodeReviewInfo';
+import {codeReviewProvider, latestCommitMessage} from './codeReview/CodeReviewInfo';
 import {DiffInfo} from './codeReview/DiffBadge';
+import {SyncStatus, syncStatusAtom} from './codeReview/syncStatus';
 import {islDrawerState} from './drawerState';
 import {isDescendant} from './getCommitTree';
 import {t, T} from './i18n';
@@ -163,9 +164,11 @@ export const Commit = memo(
       tracker.track('SplitOpenFromCommitContextMenu');
     }
 
-    const makeContextMenuOptions = useRecoilCallback(({snapshot}) => () => {
+    const makeContextMenuOptions = useRecoilCallback(({snapshot, set}) => () => {
       const hasUncommittedChanges =
         (snapshot.getLoadable(uncommittedChangesWithPreviews).valueMaybe()?.length ?? 0) > 0;
+      const syncStatus = snapshot.getLoadable(syncStatusAtom).valueMaybe()?.get(commit.hash);
+
       const items: Array<ContextMenuItem> = [
         {
           label: <T replace={{$hash: short(commit?.hash)}}>Copy Commit Hash "$hash"</T>,
@@ -183,6 +186,23 @@ export const Commit = memo(
           label: <T>View Changes in Commit</T>,
           onClick: viewChangesCallback,
         });
+      }
+      if (
+        !isPublic &&
+        (syncStatus === SyncStatus.LocalIsNewer || syncStatus === SyncStatus.RemoteIsNewer)
+      ) {
+        const provider = snapshot.getLoadable(codeReviewProvider).valueMaybe();
+        if (provider?.supportsComparingSinceLastSubmit) {
+          items.push({
+            label: <T replace={{$provider: provider?.label ?? 'remote'}}>Compare with $provider</T>,
+            onClick: () => {
+              set(currentComparisonMode, {
+                comparison: {type: ComparisonType.SinceLastCodeReviewSubmit, hash: commit.hash},
+                visible: true,
+              });
+            },
+          });
+        }
       }
       if (!isPublic && !actionsPrevented) {
         items.push({type: 'divider'});

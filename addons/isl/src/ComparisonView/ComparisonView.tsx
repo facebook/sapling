@@ -14,6 +14,7 @@ import serverAPI from '../ClientToServerAPI';
 import {EmptyState} from '../EmptyState';
 import {ErrorBoundary, ErrorNotice} from '../ErrorNotice';
 import {useGeneratedFileStatuses} from '../GeneratedFile';
+import {Subtle} from '../Subtle';
 import {Tooltip} from '../Tooltip';
 import {T, t} from '../i18n';
 import platform from '../platform';
@@ -133,11 +134,20 @@ export default function ComparisonView({comparison}: {comparison: Comparison}) {
   } else if (compared.data.error != null) {
     content = <ErrorNotice error={compared.data.error} title={t('Unable to load comparison')} />;
   } else if (compared.data.value.length === 0) {
-    content = (
-      <EmptyState>
-        <T>No Changes</T>
-      </EmptyState>
-    );
+    content =
+      comparison.type === ComparisonType.SinceLastCodeReviewSubmit ? (
+        <EmptyState>
+          <T>No Content Changes</T>
+          <br />
+          <Subtle>
+            <T> This commit might have been rebased</T>
+          </Subtle>
+        </EmptyState>
+      ) : (
+        <EmptyState>
+          <T>No Changes</T>
+        </EmptyState>
+      );
   } else {
     const files = compared.data.value;
     const fileGroups = group(files, file => generatedStatuses[file.newFileName ?? '']);
