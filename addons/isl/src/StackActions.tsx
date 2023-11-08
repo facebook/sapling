@@ -17,8 +17,10 @@ import {latestSuccessorUnlessExplicitlyObsolete} from './SuccessionTracker';
 import {showSuggestedRebaseForStack, SuggestedRebaseButton} from './SuggestedRebase';
 import {Tooltip, DOCUMENTATION_DELAY} from './Tooltip';
 import {codeReviewProvider, allDiffSummaries} from './codeReview/CodeReviewInfo';
+import {SyncStatus, syncStatusAtom} from './codeReview/syncStatus';
 import {type CommitTreeWithPreviews, walkTreePostorder, isTreeLinear} from './getCommitTree';
 import {T, t} from './i18n';
+import {IconStack} from './icons/IconStack';
 import {HideOperation} from './operations/HideOperation';
 import {useRunOperation, latestUncommittedChangesData} from './serverAPIState';
 import {useConfirmUnsavedEditsBeforeSplit} from './stackEdit/ui/ConfirmUnsavedEditsBeforeSplit';
@@ -29,6 +31,8 @@ import {useRecoilValue, useRecoilState} from 'recoil';
 import {type ContextMenuItem, useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
 import {generatorContains, unwrap} from 'shared/utils';
+
+import './StackActions.css';
 
 /**
  * Actions at the bottom of a stack of commits that acts on the whole stack,
@@ -41,6 +45,7 @@ export function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.Reac
   const loadingState = useRecoilValue(loadingStackState);
   const suggestedRebase = useRecoilValue(showSuggestedRebaseForStack(tree.info.hash));
   const runOperation = useRunOperation();
+  const syncStatusMap = useRecoilValue(syncStatusAtom);
 
   // buttons at the bottom of the stack
   const actions = [];
@@ -67,6 +72,10 @@ export function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.Reac
     const submittableStack = reviewActions?.submittableStack;
     const MIN_STACK_SIZE_TO_SUGGEST_SUBMIT = 2; // don't show "submit stack" on single commits... they're not really "stacks".
 
+    const locallyChangedCommits = resubmittableStack?.filter(
+      c => syncStatusMap?.get(c.hash) === SyncStatus.LocalIsNewer,
+    );
+
     const willShowConfirmationModal = shouldShowSubmitStackConfirmation(
       globalRecoil().getSnapshot(),
     );
@@ -76,20 +85,43 @@ export function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.Reac
       resubmittableStack != null &&
       resubmittableStack.length >= MIN_STACK_SIZE_TO_SUGGEST_SUBMIT
     ) {
-      const tooltip = t(
-        willShowConfirmationModal
-          ? 'Submit new version of commits in this stack for review with $cmd.\n\nDraft mode and update message can be configured before submitting.'
-          : 'Submit new version of commits in this stack for review with $cmd.',
-        {replace: {$cmd: reviewProvider?.submitCommandName()}},
-      );
+      const TooltipContent = () => {
+        return (
+          <div className="resubmit-stack-tooltip">
+            <T replace={{$cmd: reviewProvider?.submitCommandName()}}>
+              Submit new version of commits in this stack for review with $cmd.
+            </T>
+            {willShowConfirmationModal && (
+              <div>
+                <T>Draft mode and update message can be configured before submitting.</T>
+              </div>
+            )}
+            {locallyChangedCommits != null && locallyChangedCommits.length > 0 && (
+              <div>
+                <Icon icon="circle-filled" color={'blue'} />
+                <T count={locallyChangedCommits.length}>someCommitsUpdatedLocallyAddendum</T>
+              </div>
+            )}
+          </div>
+        );
+      };
+      let icon = <Icon icon="cloud-upload" slot="start" />;
+      if (locallyChangedCommits != null && locallyChangedCommits.length > 0) {
+        icon = (
+          <IconStack slot="start">
+            <Icon icon="cloud-upload" />
+            <Icon icon="circle-large-filled" color={'blue'} />
+          </IconStack>
+        );
+      }
       actions.push(
-        <Tooltip key="resubmit-stack" title={tooltip}>
+        <Tooltip key="resubmit-stack" component={() => <TooltipContent />} placement="bottom">
           <HighlightCommitsWhileHovering toHighlight={resubmittableStack}>
             <OperationDisabledButton
               // Use the diffId in the key so that only this "resubmit stack" button shows the spinner.
               contextKey={`resubmit-stack-on-${tree.info.diffId}`}
               appearance="icon"
-              icon={<Icon icon="cloud-upload" slot="start" />}
+              icon={icon}
               runOperation={async () => {
                 const confirmation = await confirmShouldSubmit('resubmit', resubmittableStack);
                 if (!confirmation) {
