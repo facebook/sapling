@@ -79,13 +79,12 @@ impl PeriodicReloadSegmentedChangelog {
                     None,
                 )
                 .unwrap_or_default();
-                if jitter <= 0 {
+                if jitter == 0 {
                     jitter = 30;
                 }
 
-                let jitter = rand::thread_rng().gen_range(
-                    Duration::from_secs(0)..Duration::from_secs(jitter.try_into().unwrap()),
-                );
+                let jitter = rand::thread_rng()
+                    .gen_range(Duration::from_secs(0)..Duration::from_secs(jitter));
                 tokio::time::sleep(jitter).await;
 
                 let new_force_reload_val = justknobs::get_as::<u64>(

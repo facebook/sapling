@@ -116,10 +116,10 @@ impl IdMap for IdMapMemWrites {
                 None,
             )
             .unwrap_or_default();
-            let sampling_rate = if sampling_rate <= 0 {
+            let sampling_rate = if sampling_rate == 0 {
                 DEFAULT_LOG_SAMPLING_RATE
             } else {
-                sampling_rate as usize
+                sampling_rate
             };
             if new_size / sampling_rate != old_size / sampling_rate {
                 trace!(
