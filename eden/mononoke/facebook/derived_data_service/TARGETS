@@ -100,11 +100,10 @@ rust_binary(
     srcs = glob(["client/**/*.rs"]),
     deps = [
         "fbsource//third-party/rust:anyhow",
-        "fbsource//third-party/rust:clap-2",
+        "fbsource//third-party/rust:clap",
         "fbsource//third-party/rust:env_logger",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:log",
-        "fbsource//third-party/rust:structopt",
         ":derived_data_client_library",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
