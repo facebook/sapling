@@ -41,7 +41,7 @@ export const showDiffNumberConfig = atom<boolean>({
  * Component that shows inline summary information about a Diff,
  * such as its status, number of comments, CI state, etc.
  */
-export function DiffInfo({commit}: {commit: CommitInfo}) {
+export function DiffInfo({commit, hideActions}: {commit: CommitInfo; hideActions: boolean}) {
   const repo = useRecoilValue(codeReviewProvider);
   const diffId = commit.diffId;
   if (repo == null || diffId == null) {
@@ -50,7 +50,7 @@ export function DiffInfo({commit}: {commit: CommitInfo}) {
   return (
     <DiffErrorBoundary provider={repo} diffId={diffId}>
       <Suspense fallback={<DiffSpinner diffId={diffId} provider={repo} />}>
-        <DiffInfoInner commit={commit} diffId={diffId} provider={repo} />
+        <DiffInfoInner commit={commit} diffId={diffId} provider={repo} hideActions={hideActions} />
       </Suspense>
     </DiffErrorBoundary>
   );
@@ -93,10 +93,12 @@ function DiffInfoInner({
   diffId,
   commit,
   provider,
+  hideActions,
 }: {
   diffId: DiffId;
   commit: CommitInfo;
   provider: UICodeReviewProvider;
+  hideActions: boolean;
 }) {
   const diffInfoResult = useRecoilValue(diffSummary(diffId));
   const syncStatuses = useRecoilValue(syncStatusAtom);
@@ -116,7 +118,7 @@ function DiffInfoInner({
       <DiffBadge provider={provider} diff={info} url={info.url} syncStatus={syncStatus} />
       <DiffComments diff={info} />
       <DiffNumber>{provider.formatDiffNumber(diffId)}</DiffNumber>
-      {syncStatus === SyncStatus.RemoteIsNewer ? (
+      {hideActions === true ? null : syncStatus === SyncStatus.RemoteIsNewer ? (
         <DownloadNewVersionButton diffId={diffId} provider={provider} />
       ) : syncStatus === SyncStatus.LocalIsNewer ? (
         <ResubmitSyncButton commit={commit} provider={provider} />
