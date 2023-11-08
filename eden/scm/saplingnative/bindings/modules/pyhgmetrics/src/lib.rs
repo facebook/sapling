@@ -42,7 +42,7 @@ fn increment_counter(_py: Python, key: &str, value: usize) -> PyResult<PyNone> {
 }
 
 fn summarize(_py: Python) -> PyResult<HashMap<String, usize>> {
-    Ok(hg_metrics::summarize().into_iter().collect())
+    Ok(hg_metrics::summarize())
 }
 
 fn sampling_category(_py: Python, key: &str) -> PyResult<Option<String>> {
