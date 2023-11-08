@@ -8,6 +8,7 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 
+use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
@@ -341,22 +342,22 @@ pub async fn sync_commit_without_pushrebase<M: SyncedCommitMapping + Clone + 'st
 
         // Merge is from a branch completely independent from common_pushrebase_bookmark -
         // it's fine to sync it.
-        if maybe_independent_branch.is_some() {
-            commit_syncer
-                .unsafe_always_rewrite_sync_commit(
-                    ctx,
-                    cs_id,
-                    None,
-                    version,
-                    CommitSyncContext::XRepoSyncJob,
-                )
-                .timed()
-                .await
-        } else {
-            return Err(format_err!(
+        if maybe_independent_branch.is_none() {
+            bail!(
                 "cannot sync merge commit - one of it's ancestors is an ancestor of a common pushrebase bookmark"
-            ));
-        }
+            );
+        };
+
+        commit_syncer
+            .unsafe_always_rewrite_sync_commit(
+                ctx,
+                cs_id,
+                None,
+                version,
+                CommitSyncContext::XRepoSyncJob,
+            )
+            .timed()
+            .await
     } else {
         commit_syncer
             .unsafe_sync_commit_with_expected_version(
