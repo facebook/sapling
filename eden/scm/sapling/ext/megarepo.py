@@ -14,6 +14,8 @@ local repo which corresponds to commit "deadbeef" in a mirror repo.
 import re
 from typing import Optional
 
+import bindings
+
 from sapling import (
     autopull,
     commands,
@@ -50,8 +52,8 @@ def _megareponamespace(_repo) -> namespace:
 
     """
 
-    def cachedname(repo, commithash):
-        if localnode := getattr(repo, "_xrepo_lookup_cache", {}).get(commithash):
+    def cachedname(repo, commitid):
+        if localnode := getattr(repo, "_xrepo_lookup_cache", {}).get(commitid):
             return [localnode]
 
         return []
@@ -89,8 +91,8 @@ def _xrepopull(repo, name) -> deferredpullattempt:
 _commithashre = re.compile(r"\A[0-9a-f]{6,40}\Z")
 
 
-def _xrepotranslate(repo, commithash):
-    if not _commithashre.match(commithash):
+def _xrepotranslate(repo, commitid):
+    if not _commithashre.match(commitid) and "/" not in commitid:
         return None
 
     if not repo.nullableedenapi:
@@ -98,33 +100,48 @@ def _xrepotranslate(repo, commithash):
 
     # Avoid xrepo query if commithash is now known to be of this repo.
     # This would be the case if a previous autopull already found it.
-    if commithash in repo:
+    if commitid in repo:
         return None
 
     cache = getattr(repo, "_xrepo_lookup_cache", None)
     if cache is None:
         return None
 
-    if commithash in cache:
-        return cache[commithash]
+    if commitid in cache:
+        return cache[commitid]
 
-    commit_ids = {commithash}
+    commit_ids = {commitid}
 
     localnode = None
     for xrepo in repo.ui.configlist("megarepo", "transparent-lookup"):
         if xrepo == repo.ui.config("remotefilelog", "reponame"):
             continue
 
-        if len(commithash) == 40:
-            xnode = bin(commithash)
+        xnode = None
+
+        if "/" in commitid:
+            bm_name = commitid.removeprefix(xrepo + "/")
+            if bm_name != commitid:
+                repo.ui.note_err(
+                    _("looking up bookmark %s in repo %s\n") % (bm_name, xrepo)
+                )
+                xrepo_edenapi = bindings.edenapi.client(repo.ui._rcfg, reponame=xrepo)
+                if xrepo_hash := xrepo_edenapi.bookmarks([bm_name]).get(bm_name):
+                    commit_ids.add(xrepo_hash)
+                    xnode = bin(xrepo_hash)
+        elif len(commitid) == 40:
+            xnode = bin(commitid)
         else:
             try:
                 repo.ui.note_err(
-                    _("looking up prefix %s in repo %s\n") % (commithash, xrepo)
+                    _("looking up prefix %s in repo %s\n") % (commitid, xrepo)
                 )
-                xnode = next(repo._http_prefix_lookup([commithash], reponame=xrepo))
+                xnode = next(repo._http_prefix_lookup([commitid], reponame=xrepo))
             except error.RepoLookupError:
-                continue
+                pass
+
+        if xnode is None:
+            continue
 
         if xnode in cache:
             return cache[xnode]
