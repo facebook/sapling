@@ -491,7 +491,8 @@ mod tests {
         dead_code,
         unreachable_code,
         unused_variables,
-        clippy::diverging_sub_expression
+        clippy::diverging_sub_expression,
+        clippy::todo
     )]
     async fn should_compile() -> anyhow::Result<()> {
         use sql_query_config::SqlQueryConfig;
