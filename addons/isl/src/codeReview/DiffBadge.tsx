@@ -7,19 +7,24 @@
 
 import type {CommitInfo, DiffId, DiffSummary} from '../types';
 import type {UICodeReviewProvider} from './UICodeReviewProvider';
-import type {SyncStatus} from './syncStatus';
 import type {ReactNode} from 'react';
 
+import {useShowConfirmSubmitStack} from '../ConfirmSubmitStack';
 import {ExternalLink} from '../ExternalLink';
+import {Internal} from '../Internal';
 import {Tooltip} from '../Tooltip';
-import {t} from '../i18n';
+import {T, t} from '../i18n';
 import {CircleEllipsisIcon} from '../icons/CircleEllipsisIcon';
 import {CircleExclamationIcon} from '../icons/CircleExclamationIcon';
+import {PullRevOperation} from '../operations/PullRevOperation';
 import {persistAtomToConfigEffect} from '../persistAtomToConfigEffect';
 import platform from '../platform';
+import {useRunOperation} from '../serverAPIState';
+import {exactRevset} from '../types';
 import {diffSummary, codeReviewProvider} from './CodeReviewInfo';
 import {openerUrlForDiffUrl} from './github/GitHubUrlOpener';
-import {syncStatusAtom} from './syncStatus';
+import {SyncStatus, syncStatusAtom} from './syncStatus';
+import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useState, Component, Suspense} from 'react';
 import {atom, useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
@@ -111,7 +116,75 @@ function DiffInfoInner({
       <DiffBadge provider={provider} diff={info} url={info.url} syncStatus={syncStatus} />
       <DiffComments diff={info} />
       <DiffNumber>{provider.formatDiffNumber(diffId)}</DiffNumber>
+      {syncStatus === SyncStatus.RemoteIsNewer ? (
+        <DownloadNewVersionButton diffId={diffId} provider={provider} />
+      ) : syncStatus === SyncStatus.LocalIsNewer ? (
+        <ResubmitSyncButton commit={commit} provider={provider} />
+      ) : null}
     </div>
+  );
+}
+
+function DownloadNewVersionButton({
+  diffId,
+  provider,
+}: {
+  diffId: DiffId;
+  provider: UICodeReviewProvider;
+}) {
+  const runOperation = useRunOperation();
+  return (
+    <Tooltip
+      title={t('$provider has a newer version of this Diff. Click to download the newer version.', {
+        replace: {$provider: provider.label},
+      })}>
+      <VSCodeButton
+        appearance="icon"
+        onClick={() => {
+          if (Internal.diffDownloadOperation != null) {
+            runOperation(Internal.diffDownloadOperation(exactRevset(diffId)));
+          } else {
+            runOperation(new PullRevOperation(exactRevset(diffId)));
+          }
+        }}>
+        <Icon icon="cloud-download" slot="start" />
+        <T>Download New Version</T>
+      </VSCodeButton>
+    </Tooltip>
+  );
+}
+
+function ResubmitSyncButton({
+  commit,
+  provider,
+}: {
+  commit: CommitInfo;
+  provider: UICodeReviewProvider;
+}) {
+  const runOperation = useRunOperation();
+  const confirmShouldSubmit = useShowConfirmSubmitStack();
+
+  return (
+    <Tooltip
+      title={t('This commit has changed locally since it was last submitted. Click to resubmit.')}>
+      <VSCodeButton
+        appearance="icon"
+        onClick={async () => {
+          const confirmation = await confirmShouldSubmit('submit', [commit]);
+          if (!confirmation) {
+            return [];
+          }
+          runOperation(
+            provider.submitOperation([commit], {
+              draft: confirmation.submitAsDraft,
+              updateMessage: confirmation.updateMessage,
+            }),
+          );
+        }}>
+        <Icon icon="cloud-upload" slot="start" />
+        <T>Sync</T>
+      </VSCodeButton>
+    </Tooltip>
   );
 }
 
