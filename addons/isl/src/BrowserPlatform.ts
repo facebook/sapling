@@ -6,9 +6,11 @@
  */
 
 import type {Platform} from './platform';
-import type {OneIndexedLineNumber, RepoRelativePath} from './types';
 
-import serverAPI from './ClientToServerAPI';
+import {browserPlatformImpl} from './platform/browerPlatformImpl';
+
+// important: this file should not try to import other code from 'isl',
+// since it will end up getting duplicated by webpack.
 
 declare global {
   interface Window {
@@ -18,41 +20,5 @@ declare global {
 
 export const browserPlatform: Platform = {
   platformName: 'browser',
-  confirm: (message: string, details?: string) => {
-    const ok = window.confirm(message + '\n' + (details ?? ''));
-    return Promise.resolve(ok);
-  },
-
-  openFile: (path: RepoRelativePath, options?: {line?: OneIndexedLineNumber}) => {
-    serverAPI.postMessage({type: 'platform/openFile', path, options});
-  },
-
-  openContainingFolder: (path: RepoRelativePath) => {
-    serverAPI.postMessage({type: 'platform/openContainingFolder', path});
-  },
-
-  openExternalLink(url: string): void {
-    window.open(url, '_blank');
-  },
-
-  clipboardCopy(data: string): void {
-    navigator.clipboard.writeText(data);
-  },
-
-  getTemporaryState<T>(key: string): T | null {
-    try {
-      const found = localStorage.getItem(key) as string | null;
-      if (found == null) {
-        return null;
-      }
-      return JSON.parse(found) as T;
-    } catch {
-      return null;
-    }
-  },
-  setTemporaryState<T>(key: string, value: T): void {
-    try {
-      localStorage.setItem(key, JSON.stringify(value));
-    } catch {}
-  },
+  ...browserPlatformImpl,
 };

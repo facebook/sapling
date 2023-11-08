@@ -7,7 +7,7 @@
 
 import type {Platform} from '../platform';
 
-import {browserPlatform} from '../BrowserPlatform';
+import {browserPlatformImpl} from './browerPlatformImpl';
 
 /** Typed commands to communicate with the Tauri backend from the frontend */
 type TauriCommands = {
@@ -32,7 +32,7 @@ declare global {
 // since it will end up getting duplicated by webpack.
 
 const standalonePlatform: Platform = {
-  ...browserPlatform, // just act like the browser platform by default, since the app use case is similar
+  ...browserPlatformImpl, // just act like the browser platform by default, since the app use case is similar
   platformName: 'standalone',
 };
 

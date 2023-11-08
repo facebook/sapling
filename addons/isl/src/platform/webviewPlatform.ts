@@ -7,7 +7,7 @@
 
 import type {Platform} from '../platform';
 
-import {browserPlatform} from '../BrowserPlatform';
+import {browserPlatformImpl} from './browerPlatformImpl';
 
 // important: this file should not try to import other code from 'isl',
 // since it will end up getting duplicated by webpack.
@@ -20,7 +20,8 @@ import {browserPlatform} from '../BrowserPlatform';
  * which are not implemented in the webview itself.
  */
 export const webviewPlatform: Platform = {
-  ...browserPlatform, // just act like the browser platform by default, since the app use case is similar
+  ...browserPlatformImpl, // just act like the browser platform by default, since the app use case is similar
+
   platformName: 'webview',
   openExternalLink(url: string) {
     invoke({cmd: 'openExternal', url});

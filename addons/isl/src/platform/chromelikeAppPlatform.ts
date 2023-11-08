@@ -7,13 +7,14 @@
 
 import type {Platform} from '../platform';
 
-import {browserPlatform} from '../BrowserPlatform';
+import {browserPlatformImpl} from './browerPlatformImpl';
 
 // important: this file should not try to import other code from 'isl',
 // since it will end up getting duplicated by webpack.
 
 const chromelikeAppPlatform: Platform = {
-  ...browserPlatform, // just act like the browser platform, since the chromelike app use case exactly identical.
+  ...browserPlatformImpl,
+
   platformName: 'chromelike_app',
 };
 
