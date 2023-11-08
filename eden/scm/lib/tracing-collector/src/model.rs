@@ -1073,9 +1073,12 @@ impl TracingData {
         let mut out = String::new();
         for ((pid, tid), eventus) in eventus_by_pid_tid.iter() {
             if self.test_clock_step > 0 {
-                out += "Process _ Thread _:\n"
+                out += "Process _ Thread _ Start Time _:\n"
             } else {
-                out += &format!("Process {} Thread {}:\n", pid, tid)
+                out += &format!(
+                    "Process {} Thread {} Start Time {:?}:\n",
+                    pid, tid, self.start,
+                )
             };
             out += &self.ascii_single_thread(eventus, opts);
             out += "\n";
@@ -1407,7 +1410,10 @@ impl TracingData {
                 let duration = if tree_span.is_event {
                     "0".to_string()
                 } else if tree_span.is_incomplete() {
-                    "...".to_string()
+                    format!(
+                        "+{}?",
+                        (ctx.this.now_micros().0 - tree_span.start_time) / 1000,
+                    )
                 } else {
                     // Use milliseconds. This is consistent with traceprof.
                     format!("+{}", tree_span.duration / 1000)
@@ -1785,7 +1791,7 @@ mod tests {
         data.add_action(span_id1, Action::ExitSpan);
         assert_eq!(
             data.ascii(&Default::default()),
-            r#"Process _ Thread _:
+            r#"Process _ Thread _ Start Time _:
 Start Dur.ms | Name                       Source
     2     +6 | eval                       eval.py line 10
              | - expression = ['+', 1, 2] :
@@ -1808,7 +1814,7 @@ Start Dur.ms | Name                       Source
         data.add_action(span_id2, Action::ExitSpan);
         assert_eq!(
             data.ascii(&Default::default()),
-            r#"Process _ Thread _:
+            r#"Process _ Thread _ Start Time _:
 Start Dur.ms | Name                         Source
     2    +14 | refresh                      view.py line 90
     4     +2  \ refresh                     view.py line 90
@@ -1882,9 +1888,9 @@ Start Dur.ms | Name                         Source
 
         assert_eq!(
             data.ascii(&Default::default()),
-            r#"Process _ Thread _:
+            r#"Process _ Thread _ Start Time _:
 Start Dur.ms | Name               Source
-    2    ... | foo                a.py line 10
+    2   +34? | foo                a.py line 10
     4    +14  \ foo               a.py line 10
     6    +10   | foo              a.py line 10
     8     +6   | foo              a.py line 10
@@ -1901,9 +1907,9 @@ Start Dur.ms | Name               Source
         opts.min_duration_micros_to_hide = 4000;
         assert_eq!(
             data.ascii(&opts),
-            r#"Process _ Thread _:
+            r#"Process _ Thread _ Start Time _:
 Start Dur.ms | Name               Source
-    2    ... | foo                a.py line 10
+    2   +34? | foo                a.py line 10
     4    +14  \ foo               a.py line 10
     6    +10   | foo              a.py line 10
     8     +6   | foo              a.py line 10
@@ -1929,7 +1935,7 @@ Start Dur.ms | Name               Source
         let opts = AsciiOptions::default();
         assert_eq!(
             data.ascii(&opts),
-            r#"Process _ Thread _:
+            r#"Process _ Thread _ Start Time _:
 Start Dur.ms | Name               Source
     2     +8 | foo                a.py line 10
     4      0  \ bar               a.py line 20
@@ -1965,7 +1971,7 @@ Start Dur.ms | Name               Source
 
         assert_eq!(
             data.ascii(&opts),
-            r#"Process _ Thread _:
+            r#"Process _ Thread _ Start Time _:
 Start Dur.ms | Name                          Source
     2  +4010 | foo                           a.py line 10
     4  +2000  \ bar (1000 times) (truncated) a.py line 20
@@ -1993,7 +1999,7 @@ Start Dur.ms | Name                          Source
         opts.min_duration_micros_to_hide = 3000;
         assert_eq!(
             data.ascii(&opts),
-            r#"Process _ Thread _:
+            r#"Process _ Thread _ Start Time _:
 Start Dur.ms | Name                         Source
     2  +8002 | foo                          a.py line 10
     4  +4000 | bar (2000 times) (truncated) a.py line 20
@@ -2024,17 +2030,17 @@ Start Dur.ms | Name                         Source
 
         assert_eq!(
             data.ascii(&Default::default()),
-            r#"Process _ Thread _:
+            r#"Process _ Thread _ Start Time _:
 Start Dur.ms | Name               Source
-    2    ... | foo                a.py line 10
+    2   +26? | foo                a.py line 10
     4     +6  \ foo               a.py line 10
     6     +2   | bar              a.py line 20
-   12    ...  \ bar               a.py line 20
+   12   +16?  \ bar               a.py line 20
    14     +6   \ foo              a.py line 10
    16     +2    | bar             a.py line 20
-   22    ...   \ foo              a.py line 10
-   24    ...    | foo             a.py line 10
-   26    ...    | foo             a.py line 10
+   22    +6?   \ foo              a.py line 10
+   24    +4?    | foo             a.py line 10
+   26    +2?    | foo             a.py line 10
 
 "#
         );
@@ -2059,7 +2065,7 @@ Start Dur.ms | Name               Source
 
         assert_eq!(
             data.ascii(&Default::default()),
-            r#"Process _ Thread _:
+            r#"Process _ Thread _ Start Time _:
 Start Dur.ms | Name               Source
     2    +18 | bar                a.py line 20
     4     +2  \ bar               a.py line 20
@@ -2121,7 +2127,7 @@ Start Dur.ms | Name               Source
 
         assert_eq!(
             data.ascii(&Default::default()),
-            r#"Process _ Thread _:
+            r#"Process _ Thread _ Start Time _:
 Start Dur.ms | Name                                                                           Source
     2    +14 | very long text very long text very long text very long text very long text very long text very long text very long text very long text very long text  a.py line 10
     4     +6  \ bar                                                                           a.py line 20
