@@ -77,6 +77,7 @@ impl FileStore {
     /// Create a new FileStore, overwriting any existing file.
     pub fn create<P: AsRef<Path>>(path: P) -> Result<FileStore> {
         let path = path.as_ref();
+        tracing::trace!(target: "treestate::filestore::create", ?path);
         let writer = BufWriter::new(
             OpenOptions::new()
                 .read(true)
@@ -123,6 +124,7 @@ impl FileStore {
     /// in read-only mode, new blocks of data cannot be appended.
     pub fn open<P: AsRef<Path>>(path: P) -> Result<FileStore> {
         let path = path.as_ref();
+        tracing::trace!(target: "treestate::filestore::open", ?path);
         let mut read_only = false;
         let file = OpenOptions::new()
             .read(true)
@@ -149,6 +151,7 @@ impl FileStore {
         // Find the size of the file (and hence the position to write new blocks of data)
         // by seeking to the end.
         let position = file.seek(SeekFrom::End(0))?;
+        tracing::trace!(target: "treestate::filestore::open", ?position);
         let file = Arc::new(Mutex::new(Box::new(file) as Box<dyn FileReadWrite>));
         Ok(FileStore {
             file,

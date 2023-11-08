@@ -187,6 +187,7 @@ impl TreeState {
     pub fn write_new<P: AsRef<Path>>(&mut self, directory: P) -> Result<BlockId> {
         let name = format!("{:x}", uuid::Uuid::new_v4());
         let path = directory.as_ref().join(name);
+        tracing::trace!(target: "treestate::write_new", ?path);
         let mut new_store = FileStore::create(path)?;
         let _lock = new_store.lock()?;
         let tree_block_id = self.tree.write_full(&mut new_store, &self.store)?;
