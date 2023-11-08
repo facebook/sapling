@@ -12,7 +12,7 @@ import type {ChangedFile, ChangedFileType, MergeConflicts, RepoRelativePath} fro
 import type {MutableRefObject, ReactNode} from 'react';
 import type {Comparison} from 'shared/Comparison';
 
-import {Banner} from './Banner';
+import {Banner, BannerKind} from './Banner';
 import {
   ChangedFileDisplayTypePicker,
   type ChangedFilesDisplayType,
@@ -231,7 +231,6 @@ export function ChangedFiles(props: {
   // at a larger granularity. This allows all manual files within that window
   // to be sorted to the front. This wider pagination is neceessary so we can control
   // how many files we query for generated statuses.
-  // TODO: If we have more than one generated statuses page, then we should show a warning.
   const fetchPage = Math.floor(pageNum - (pageNum % PAGE_FETCH_COUNT));
   const fetchRangeStart = fetchPage * PAGE_SIZE;
   const fetchRangeEnd = (fetchPage + PAGE_FETCH_COUNT) * PAGE_SIZE;
@@ -305,6 +304,13 @@ export function ChangedFiles(props: {
           )}
         </Banner>
       ) : null}
+      {totalFiles > PAGE_SIZE * PAGE_FETCH_COUNT && (
+        <Banner key="too-many-files" icon={<Icon icon="warning" />} kind={BannerKind.warning}>
+          <T replace={{$maxFiles: PAGE_SIZE * PAGE_FETCH_COUNT}}>
+            There are more than $maxFiles files, some files may appear out of order
+          </T>
+        </Banner>
+      )}
       {displayType === 'tree' ? (
         <FileTree {...rest} files={processedFiles} displayType={displayType} />
       ) : (

@@ -6,6 +6,7 @@
  */
 
 import App from '../App';
+import {genereatedFileCache} from '../GeneratedFile';
 import {ignoreRTL} from '../testQueries';
 import {
   expectMessageSentToServer,
@@ -27,6 +28,7 @@ describe('Generated Files', () => {
   beforeEach(() => {
     resetTestMessages();
     render(<App />);
+    genereatedFileCache.clear();
     act(() => {
       simulateRepoConnected();
       closeCommitInfoSidebar();
@@ -216,5 +218,12 @@ describe('Generated Files', () => {
     expectNOTHasPartiallyGeneratedFiles();
     expectNOTHasGeneratedFiles();
     expect(getChangedFiles()).toMatchSnapshot();
+  });
+
+  it('Warns about too many files to fetch all generated statuses', async () => {
+    await simulateGeneratedFiles(401);
+    expect(
+      screen.getByText('There are more than 400 files, some files may appear out of order'),
+    ).toBeInTheDocument();
   });
 });
