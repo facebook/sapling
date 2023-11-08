@@ -54,11 +54,11 @@ def run(args=None, fin=None, fout=None, ferr=None, config=None):
     if args[1:2] == ["start-pfc-server"]:
         # chgserver code path
 
-        # Disable tracing as early as possible. Any use of Rust
-        # tracing pre-fork messes things up post-fork.
-        from . import tracing
+        from . import prefork
 
-        tracing.disabletracing = True
+        # Set a global so other modules know we are about to fork. They may want
+        # to avoid doing/initializing certain things that are not fork safe.
+        prefork.prefork = True
 
         # no demandimport, since chgserver wants to preimport everything.
         from . import dispatch

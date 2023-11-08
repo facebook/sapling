@@ -52,7 +52,7 @@ import time
 from typing import BinaryIO, Callable, Dict, List, Optional
 
 from bindings import commands, hgtime
-from sapling import tracing
+from sapling import prefork
 
 from . import commandserver, encoding, error, pycompat, ui as uimod, util
 from .i18n import _
@@ -241,8 +241,8 @@ class chgcmdserver(commandserver.server):
         # type () -> None
         # Environment variables might change, reload env.
 
-        # Re-enable tracing after forking.
-        tracing.disabletracing = False
+        # Let things know we are no longer prefork.
+        prefork.prefork = False
 
         util._reloadenv()
         args = self._readlist()

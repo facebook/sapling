@@ -15,6 +15,8 @@ from functools import partial
 
 import bindings
 
+from . import prefork
+
 # The Rust bindings (pytracing crate)
 _tracing = bindings.tracing
 
@@ -25,7 +27,10 @@ LEVEL_INFO = _tracing.LEVEL_INFO
 LEVEL_WARN = _tracing.LEVEL_WARN
 LEVEL_ERROR = _tracing.LEVEL_ERROR
 
-disabletracing = False
+
+def disabletracing():
+    return prefork.prefork
+
 
 # ---- instrument ----
 
@@ -50,7 +55,7 @@ if os.getenv("EDENSCM_NO_PYTHON_INSTRUMENT"):
 else:
 
     def instrument(func=None, **kwargs):
-        if disabletracing:
+        if disabletracing():
             return func or instrument
 
         return _tracing.instrument(func, **kwargs)
@@ -77,7 +82,7 @@ def event(
         info(f"{n} files downloaded in {t} seconds", request_id=reqid)
 
     """
-    if disabletracing:
+    if disabletracing():
         return
 
     frame = sys._getframe(1 + depth)
@@ -158,7 +163,7 @@ def span(name, target=None, level=LEVEL_INFO, depth: int = 0, **meta):
             span.record("tx", txbytes)
     """
 
-    if disabletracing:
+    if disabletracing():
         return _stubspan()
 
     frame = sys._getframe(1 + depth)
@@ -194,7 +199,7 @@ error_span = partial(span, level=LEVEL_ERROR)
 
 def isenabled(level, name=None, target=None, depth: int = 0):
     """Test if a callsite is enabled."""
-    if disabletracing:
+    if disabletracing():
         return False
 
     frame = sys._getframe(1 + depth)

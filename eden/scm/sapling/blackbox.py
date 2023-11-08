@@ -5,10 +5,23 @@
 
 from bindings import blackbox as _blackbox
 
+from . import prefork
 
 events = _blackbox.events
-init = _blackbox.init
-log = _blackbox.log
+
+
+def init(*args, **opts):
+    if prefork.prefork:
+        return
+    _blackbox.init(*args, **opts)
+
+
+def log(*args, **opts):
+    if prefork.prefork:
+        return
+    _blackbox.log(*args, **opts)
+
+
 sessions = _blackbox.sessions
 sync = _blackbox.sync
 
