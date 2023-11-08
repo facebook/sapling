@@ -5,8 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {DiffId, DiffSummary} from '../types';
+import type {CommitInfo, DiffId, DiffSummary} from '../types';
 import type {UICodeReviewProvider} from './UICodeReviewProvider';
+import type {SyncStatus} from './syncStatus';
 import type {ReactNode} from 'react';
 
 import {ExternalLink} from '../ExternalLink';
@@ -18,6 +19,7 @@ import {persistAtomToConfigEffect} from '../persistAtomToConfigEffect';
 import platform from '../platform';
 import {diffSummary, codeReviewProvider} from './CodeReviewInfo';
 import {openerUrlForDiffUrl} from './github/GitHubUrlOpener';
+import {syncStatusAtom} from './syncStatus';
 import {useState, Component, Suspense} from 'react';
 import {atom, useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
@@ -34,15 +36,16 @@ export const showDiffNumberConfig = atom<boolean>({
  * Component that shows inline summary information about a Diff,
  * such as its status, number of comments, CI state, etc.
  */
-export function DiffInfo({diffId}: {diffId: string}) {
+export function DiffInfo({commit}: {commit: CommitInfo}) {
   const repo = useRecoilValue(codeReviewProvider);
-  if (repo == null) {
+  const diffId = commit.diffId;
+  if (repo == null || diffId == null) {
     return null;
   }
   return (
     <DiffErrorBoundary provider={repo} diffId={diffId}>
       <Suspense fallback={<DiffSpinner diffId={diffId} provider={repo} />}>
-        <DiffInfoInner diffId={diffId} provider={repo} />
+        <DiffInfoInner commit={commit} diffId={diffId} provider={repo} />
       </Suspense>
     </DiffErrorBoundary>
   );
@@ -53,17 +56,19 @@ export function DiffBadge({
   children,
   url,
   provider,
+  syncStatus,
 }: {
   diff?: DiffSummary;
   children?: ReactNode;
   url?: string;
   provider: UICodeReviewProvider;
+  syncStatus?: SyncStatus;
 }) {
   const openerUrl = useRecoilValue(openerUrlForDiffUrl(url));
 
   return (
     <ExternalLink href={openerUrl} className={`diff-badge ${provider.name}-diff-badge`}>
-      <provider.DiffBadgeContent diff={diff} children={children} />
+      <provider.DiffBadgeContent diff={diff} children={children} syncStatus={syncStatus} />
     </ExternalLink>
   );
 }
@@ -79,8 +84,17 @@ function DiffSpinner({diffId, provider}: {diffId: DiffId; provider: UICodeReview
   );
 }
 
-function DiffInfoInner({diffId, provider}: {diffId: DiffId; provider: UICodeReviewProvider}) {
+function DiffInfoInner({
+  diffId,
+  commit,
+  provider,
+}: {
+  diffId: DiffId;
+  commit: CommitInfo;
+  provider: UICodeReviewProvider;
+}) {
   const diffInfoResult = useRecoilValue(diffSummary(diffId));
+  const syncStatuses = useRecoilValue(syncStatusAtom);
   if (diffInfoResult.error) {
     return <DiffLoadError number={provider.formatDiffNumber(diffId)} provider={provider} />;
   }
@@ -88,12 +102,13 @@ function DiffInfoInner({diffId, provider}: {diffId: DiffId; provider: UICodeRevi
     return <DiffSpinner diffId={diffId} provider={provider} />;
   }
   const info = diffInfoResult.value;
+  const syncStatus = syncStatuses?.get(commit.hash);
   return (
     <div
       className={`diff-info ${provider.name}-diff-info`}
       data-testid={`${provider.name}-diff-info`}>
       <DiffSignalSummary diff={info} />
-      <DiffBadge provider={provider} diff={info} url={info.url} />
+      <DiffBadge provider={provider} diff={info} url={info.url} syncStatus={syncStatus} />
       <DiffComments diff={info} />
       <DiffNumber>{provider.formatDiffNumber(diffId)}</DiffNumber>
     </div>

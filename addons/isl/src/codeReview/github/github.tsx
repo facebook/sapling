@@ -6,8 +6,15 @@
  */
 
 import type {Operation} from '../../operations/Operation';
-import type {CodeReviewSystem, DiffId, DiffSummary, PreferredSubmitCommand} from '../../types';
+import type {
+  CodeReviewSystem,
+  CommitInfo,
+  DiffId,
+  DiffSummary,
+  PreferredSubmitCommand,
+} from '../../types';
 import type {UICodeReviewProvider} from '../UICodeReviewProvider';
+import type {SyncStatus} from '../syncStatus';
 import type {ReactNode} from 'react';
 
 import {Tooltip} from '../../Tooltip';
@@ -57,6 +64,14 @@ export class GithubUICodeReviewProvider implements UICodeReviewProvider {
 
   formatDiffNumber(diffId: DiffId): string {
     return `#${diffId}`;
+  }
+
+  getSyncStatuses(
+    _commits: CommitInfo[],
+    _allDiffSummaries: Map<string, DiffSummary>,
+  ): Map<string, SyncStatus> {
+    // TODO: support finding the sync status for GitHub PRs
+    return new Map();
   }
 
   RepoInfo = () => {

@@ -334,7 +334,7 @@ export const Commit = memo(
             {isNarrow ? commitActions : null}
           </DraggableCommit>
           <DivIfChildren className="commit-second-row">
-            {commit.diffId && !isPublic ? <DiffInfo diffId={commit.diffId} /> : null}
+            {commit.diffId && !isPublic ? <DiffInfo commit={commit} /> : null}
             {commit.successorInfo != null ? (
               <SuccessorInfoToDisplay successorInfo={commit.successorInfo} />
             ) : null}

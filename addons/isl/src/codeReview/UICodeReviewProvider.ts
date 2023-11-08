@@ -7,7 +7,8 @@
 
 import type {CommitTreeWithPreviews} from '../getCommitTree';
 import type {Operation} from '../operations/Operation';
-import type {CommitInfo, DiffId, DiffSummary} from '../types';
+import type {CommitInfo, DiffId, DiffSummary, Hash} from '../types';
+import type {SyncStatus} from './syncStatus';
 import type {ReactNode} from 'react';
 
 /**
@@ -20,7 +21,11 @@ export interface UICodeReviewProvider {
   /** name used to run commands provider-specific commands */
   cliName?: string;
 
-  DiffBadgeContent(props: {diff?: DiffSummary; children?: ReactNode}): JSX.Element | null;
+  DiffBadgeContent(props: {
+    diff?: DiffSummary;
+    children?: ReactNode;
+    syncStatus?: SyncStatus;
+  }): JSX.Element | null;
   formatDiffNumber(diffId: DiffId): string;
 
   submitOperation(
@@ -42,6 +47,11 @@ export interface UICodeReviewProvider {
   isDiffClosed(summary: DiffSummary): boolean;
 
   isDiffEligibleForCleanup(summary: DiffSummary): boolean;
+
+  getSyncStatuses(
+    commits: Array<CommitInfo>,
+    allDiffSummaries: Map<string, DiffSummary>,
+  ): Map<Hash, SyncStatus>;
 
   /**
    * Defines when this review provider can submit diffs as drafts,
