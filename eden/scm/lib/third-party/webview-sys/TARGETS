@@ -45,7 +45,7 @@ rust_library(
                 "license": "MIT",
                 "links": "webview",
                 "name": "webview-sys",
-                "repository": "https://github.com/Boscop/web-view",
+                "repository": "https://github.com/evangrayk/web-view",
                 "version": "0.6.2",
             },
         },
