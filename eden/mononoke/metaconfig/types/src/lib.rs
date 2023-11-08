@@ -1270,6 +1270,12 @@ pub struct CommonCommitSyncConfig {
 pub struct SmallRepoPermanentConfig {
     /// Prefix of the bookmark
     pub bookmark_prefix: AsciiString,
+    /// Mapping from each common_pushrebase_bookmark in the large repo to
+    /// the equivalent bookmark in the small repo.
+    /// This allows using a different bookmark name for the common pushrebase bookmark
+    /// between the large repos and some of the small repos (e.g: a small repo imported
+    /// from git may want to sync its `heads/master` to `master` in a large repo)
+    pub common_pushrebase_bookmarks_map: HashMap<BookmarkKey, BookmarkKey>,
 }
 
 /// Source Control Service options

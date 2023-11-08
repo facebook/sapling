@@ -278,6 +278,7 @@ fn create_small_to_large_commit_syncer(
         small_repos: hashmap! {
             small_repo.repo_identity().id() => SmallRepoPermanentConfig {
                 bookmark_prefix: AsciiString::new(),
+                common_pushrebase_bookmarks_map: HashMap::new(),
             }
         },
         large_repo_id: large_repo.repo_identity().id(),
@@ -322,6 +323,7 @@ fn create_large_to_small_commit_syncer_and_config_source(
         small_repos: hashmap! {
             small_repo.repo_identity().id() => SmallRepoPermanentConfig {
                 bookmark_prefix: AsciiString::new(),
+                common_pushrebase_bookmarks_map: HashMap::new(),
             }
         },
         large_repo_id: large_repo.repo_identity().id(),
@@ -689,6 +691,7 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
         small_repos: hashmap! {
             small_repo.repo_identity().id() => SmallRepoPermanentConfig {
                 bookmark_prefix: AsciiString::new(),
+                common_pushrebase_bookmarks_map: HashMap::new(),
             }
         },
         large_repo_id: megarepo.repo_identity().id(),
@@ -1620,6 +1623,7 @@ async fn prepare_commit_syncer_with_mapping_change(
         small_repos: hashmap! {
             small_repo.repo_identity().id() => SmallRepoPermanentConfig {
                 bookmark_prefix: AsciiString::new(),
+                common_pushrebase_bookmarks_map: HashMap::new(),
             }
         },
         large_repo_id,
@@ -1703,6 +1707,7 @@ fn get_merge_sync_data_provider(
         small_repos: hashmap! {
             small_repo_id => SmallRepoPermanentConfig {
                 bookmark_prefix: AsciiString::new(),
+                common_pushrebase_bookmarks_map: HashMap::new(),
             }
         },
         large_repo_id,
@@ -2018,6 +2023,7 @@ async fn test_no_accidental_preserved_roots(
             small_repos: hashmap! {
                 commit_syncer.get_small_repo().repo_identity().id() => SmallRepoPermanentConfig {
                     bookmark_prefix: AsciiString::new(),
+                    common_pushrebase_bookmarks_map: HashMap::new(),
                 }
             },
             large_repo_id: commit_syncer.get_large_repo().repo_identity().id(),
@@ -2099,9 +2105,11 @@ async fn test_not_sync_candidate_if_mapping_does_not_have_small_repo(
         small_repos: hashmap! {
             first_small_repo_id => SmallRepoPermanentConfig {
                 bookmark_prefix: AsciiString::new(),
+                common_pushrebase_bookmarks_map: HashMap::new(),
             },
             second_small_repo_id => SmallRepoPermanentConfig {
                 bookmark_prefix: AsciiString::new(),
+                common_pushrebase_bookmarks_map: HashMap::new(),
             },
         },
         large_repo_id,

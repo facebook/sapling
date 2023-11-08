@@ -567,10 +567,12 @@ mod tests {
                 RepositoryId::new(1) => SmallRepoPermanentConfig {
                     bookmark_prefix: AsciiString::from_str("large_repo_bookmark/")
                         .unwrap(),
+                    common_pushrebase_bookmarks_map: HashMap::new(),
                 },
                 RepositoryId::new(2) => SmallRepoPermanentConfig {
                     bookmark_prefix: AsciiString::from_str("large_repo_bookmark_2/")
                         .unwrap(),
+                    common_pushrebase_bookmarks_map: HashMap::new(),
                 },
             },
             large_repo_id: commit_sync_config.large_repo_id,

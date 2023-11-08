@@ -113,6 +113,7 @@ pub fn get_bookmark_renamers(
 
 #[cfg(test)]
 mod test {
+    use std::collections::HashMap;
     use std::str::FromStr;
 
     use maplit::hashmap;
@@ -129,9 +130,11 @@ mod test {
             small_repos: hashmap! {
                 RepositoryId::new(1) => SmallRepoPermanentConfig {
                     bookmark_prefix: AsciiString::from_str("b1/").unwrap(),
+                    common_pushrebase_bookmarks_map: HashMap::new(),
                 },
                 RepositoryId::new(2) => SmallRepoPermanentConfig {
                     bookmark_prefix: AsciiString::from_str("b2/").unwrap(),
+                    common_pushrebase_bookmarks_map: HashMap::new(),
                 },
             },
             large_repo_id: RepositoryId::new(0),

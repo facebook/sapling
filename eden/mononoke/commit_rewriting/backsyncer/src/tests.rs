@@ -1199,6 +1199,7 @@ impl BookmarkRenamerType {
                 small_repos: hashmap! {
                     small_repo_id => SmallRepoPermanentConfig {
                         bookmark_prefix: AsciiString::from_str(bookmark_prefix).unwrap(),
+                        common_pushrebase_bookmarks_map: HashMap::new(),
                     }
                 },
                 large_repo_id,
@@ -1208,6 +1209,7 @@ impl BookmarkRenamerType {
                 small_repos: hashmap! {
                     small_repo_id => SmallRepoPermanentConfig {
                         bookmark_prefix: AsciiString::from_str("nonexistentprefix").unwrap(),
+                        common_pushrebase_bookmarks_map: HashMap::new(),
                     }
                 },
                 large_repo_id,
@@ -1217,6 +1219,7 @@ impl BookmarkRenamerType {
                 small_repos: hashmap! {
                     small_repo_id => SmallRepoPermanentConfig {
                         bookmark_prefix: AsciiString::from_str("nonexistentprefix").unwrap(),
+                        common_pushrebase_bookmarks_map: HashMap::new(),
                     }
                 },
                 large_repo_id,
@@ -1226,6 +1229,7 @@ impl BookmarkRenamerType {
                 small_repos: hashmap! {
                     small_repo_id => SmallRepoPermanentConfig {
                         bookmark_prefix: AsciiString::new(),
+                        common_pushrebase_bookmarks_map: HashMap::new(),
                     }
                 },
                 large_repo_id,

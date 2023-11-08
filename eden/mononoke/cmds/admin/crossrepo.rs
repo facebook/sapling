@@ -1618,7 +1618,8 @@ mod test {
                 common_pushrebase_bookmarks: vec![master.clone()],
                 small_repos: hashmap! {
                     small_repo.repo_identity().id() => SmallRepoPermanentConfig {
-                        bookmark_prefix: Default::default()
+                        bookmark_prefix: Default::default(),
+                        common_pushrebase_bookmarks_map: Default::default(),
                     },
                 },
                 large_repo_id: large_repo.repo_identity().id(),
@@ -1711,6 +1712,7 @@ mod test {
             small_repos: hashmap! {
                 small_repo.repo_identity().id() => SmallRepoPermanentConfig {
                     bookmark_prefix: AsciiString::new(),
+                    common_pushrebase_bookmarks_map: Default::default(),
                 }
             },
             large_repo_id: large_repo.repo_identity().id(),

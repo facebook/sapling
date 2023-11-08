@@ -217,8 +217,17 @@ impl Convert for RawCommonCommitSyncConfig {
                             small_repo_config.bookmark_prefix
                         )
                     })?;
+                let common_pushrebase_bookmarks_map = small_repo_config
+                    .common_pushrebase_bookmarks_map
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(|(k, v)| Ok((BookmarkKey::from_str(&k)?, BookmarkKey::from_str(&v)?)))
+                    .collect::<Result<_>>()?;
 
-                let config = SmallRepoPermanentConfig { bookmark_prefix };
+                let config = SmallRepoPermanentConfig {
+                    bookmark_prefix,
+                    common_pushrebase_bookmarks_map,
+                };
                 Ok((repo_id, config))
             })
             .collect::<Result<_>>()?;

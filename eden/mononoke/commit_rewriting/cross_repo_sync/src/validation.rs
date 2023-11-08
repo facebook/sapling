@@ -1686,6 +1686,7 @@ mod test {
             small_repos: hashmap! {
                 small_repo.repo_identity().id() => SmallRepoPermanentConfig {
                     bookmark_prefix: AsciiString::from_str("prefix/").unwrap(),
+                    common_pushrebase_bookmarks_map: HashMap::new(),
                 }
             },
             large_repo_id: large_repo.repo_identity().id(),

@@ -234,6 +234,7 @@ pub async fn init_small_large_repo(
         small_repos: hashmap! {
             RepositoryId::new(0) => SmallRepoPermanentConfig {
                 bookmark_prefix: AsciiString::new(),
+                common_pushrebase_bookmarks_map: HashMap::new(),
             }
         },
         large_repo_id: RepositoryId::new(1),
@@ -425,6 +426,7 @@ pub fn get_live_commit_sync_config() -> Arc<dyn LiveCommitSyncConfig> {
         small_repos: hashmap! {
             RepositoryId::new(1) => SmallRepoPermanentConfig {
                 bookmark_prefix,
+                common_pushrebase_bookmarks_map: HashMap::new(),
             }
         },
         large_repo_id: RepositoryId::new(0),
