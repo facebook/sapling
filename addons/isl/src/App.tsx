@@ -25,7 +25,7 @@ import {islDrawerState} from './drawerState';
 import {GettingStartedModal} from './gettingStarted/GettingStartedModal';
 import {I18nSupport, t, T} from './i18n';
 import platform from './platform';
-import {fontSizeAtom, useMainContentWidth} from './responsive';
+import {useMainContentWidth} from './responsive';
 import {applicationinfo, repositoryInfo} from './serverAPIState';
 import {themeState} from './theme';
 import {ModalContainer} from './useModal';
@@ -65,7 +65,6 @@ export default function App() {
 
 function ISLRoot({children}: {children: ReactNode}) {
   const theme = useRecoilValue(themeState);
-  useRecoilValue(fontSizeAtom);
   return (
     <div
       className={`isl-root ${theme}-theme`}

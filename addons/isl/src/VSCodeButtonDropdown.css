@@ -47,7 +47,6 @@
   padding: 4px;
   outline-offset: 2px;
   height: 26px;
-  height: calc(12px + 14px * var(--font-size-adjust-scale));
   vertical-align: bottom;
   appearance: none;
   line-height: 0;

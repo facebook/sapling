@@ -5,10 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {
-  persistAtomToConfigEffect,
-  persistAtomToLocalStorageEffect,
-} from './persistAtomToConfigEffect';
+import {persistAtomToConfigEffect} from './persistAtomToConfigEffect';
 import {useRef, useEffect} from 'react';
 import {atom, selector, useSetRecoilState} from 'recoil';
 
@@ -21,28 +18,6 @@ export const renderCompactAtom = atom<boolean>({
   key: 'renderCompactAtom',
   default: false,
   effects: [persistAtomToConfigEffect('isl.render-compact', false as boolean)],
-});
-
-const DEFAULT_FONT_SIZE = 16 as number;
-export const fontSizeAtom = atom<number>({
-  key: 'fontSizeAtom',
-  default: DEFAULT_FONT_SIZE,
-  effects: [
-    persistAtomToLocalStorageEffect('isl.font-size'),
-    ({onSet, getLoadable}) => {
-      const set = (value: number) => document.body.style.setProperty('--font-size-raw', `${value}`);
-
-      // Set font size immediately
-      const val = getLoadable(fontSizeAtom).valueMaybe();
-      if (val != null) {
-        set(val);
-      }
-
-      onSet((newValue, _oldValue) => {
-        set(newValue);
-      });
-    },
-  ],
 });
 
 export function useMainContentWidth() {
