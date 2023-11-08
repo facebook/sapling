@@ -9,6 +9,7 @@ import type {EnabledSCMApiFeature} from './types';
 import type {Logger} from 'isl-server/src/logger';
 
 import packageJson from '../package.json';
+import {DeletedFileContentProvider} from './DeletedFileContentProvider';
 import {registerSaplingDiffContentProvider} from './DiffContentProvider';
 import {Internal} from './Internal';
 import {VSCodeReposList} from './VSCodeRepo';
@@ -40,6 +41,8 @@ export async function activate(context: vscode.ExtensionContext) {
       context.subscriptions.push(new InlineBlameProvider(reposList, logger, extensionTracker));
     }
     context.subscriptions.push(registerSaplingDiffContentProvider(logger));
+    context.subscriptions.push(new DeletedFileContentProvider());
+
     context.subscriptions.push(...registerCommands(extensionTracker));
 
     Internal?.registerInternalBugLogsProvider != null &&
