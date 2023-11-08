@@ -41,10 +41,12 @@ UBUNTU_DEPS = [
 
 MACOS_RELEASES = {
     "x86": {
+        "target": "x86_64-apple-darwin",
         "runson": "macos-12",
         "mac_release": "monterey",
     },
     "arm64": {
+        "target": "aarch64-apple-darwin",
         "runson": "macos-13-xlarge",
         "mac_release": "ventura",
     },
@@ -345,7 +347,7 @@ RUN rm -rf /tmp/repo
         }
         self._write_file("sapling-cli-windows-amd64-release.yml", gh_action)
 
-    def gen_homebrew_macos_release(self, arch, runson, mac_release) -> str:
+    def gen_homebrew_macos_release(self, arch, target, runson, mac_release) -> str:
         BUILD = "build"
         artifact_key = f"macos-homebrew-{arch}-bottle"
         extension = f"{mac_release}.bottle.tar.gz"
@@ -359,12 +361,23 @@ RUN rm -rf /tmp/repo
                 grant_repo_access(),
                 create_set_env_step(SAPLING_VERSION, "$(ci/tag-name.sh)"),
                 {
+                    "name": "Tap homebrew-core",
+                    "run": "brew tap homebrew/core",
+                },
+                {
+                    "name": "Prepare build environment",
+                    "run": "eden/scm/packaging/mac/prepare_formula.py \\\n"
+                    + f"-t {target} \\\n"
+                    + "-r ${{ env.SAPLING_VERSION }} \\\n"
+                    + "-o $(brew --repository)/Library/Taps/homebrew/homebrew-core/Formula/s/sapling.rb",
+                },
+                {
                     "name": "Install and build Sapling bottle",
-                    "run": "brew install --build-bottle sapling",
+                    "run": "HOMEBREW_NO_INSTALL_FROM_API=1 brew install --build-bottle sapling",
                 },
                 {
                     "name": "Create Sapling bottle",
-                    "run": "brew bottle sapling",
+                    "run": "HOMEBREW_NO_INSTALL_FROM_API=1 brew bottle sapling",
                 },
                 {
                     "name": "Rename bottle to some platform specific name",

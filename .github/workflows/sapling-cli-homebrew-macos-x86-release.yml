@@ -16,10 +16,20 @@ jobs:
     - name: set-env SAPLING_VERSION
       shell: bash
       run: echo "SAPLING_VERSION=$(ci/tag-name.sh)" >> $GITHUB_ENV
+    - name: Tap homebrew-core
+      run: brew tap homebrew/core
+    - name: Prepare build environment
+      run: 'eden/scm/packaging/mac/prepare_formula.py \
+
+        -t x86_64-apple-darwin \
+
+        -r ${{ env.SAPLING_VERSION }} \
+
+        -o $(brew --repository)/Library/Taps/homebrew/homebrew-core/Formula/s/sapling.rb'
     - name: Install and build Sapling bottle
-      run: brew install --build-bottle sapling
+      run: HOMEBREW_NO_INSTALL_FROM_API=1 brew install --build-bottle sapling
     - name: Create Sapling bottle
-      run: brew bottle sapling
+      run: HOMEBREW_NO_INSTALL_FROM_API=1 brew bottle sapling
     - name: Rename bottle to some platform specific name
       run: mv sapling*monterey.bottle*.tar.gz sapling_${{ env.SAPLING_VERSION }}.monterey.bottle.tar.gz
     - name: Upload Artifact
