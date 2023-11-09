@@ -318,6 +318,17 @@ RUN rm -rf /tmp/repo
                 # This makes vcpkg packages available globally.
                 {"name": "integrate vcpkg", "run": "vcpkg integrate install"},
                 create_set_env_step(SAPLING_VERSION, "$(ci/tag-name.sh)"),
+                create_set_env_step(
+                    "OPENSSL_DIR", "C:/vcpkg/packages/openssl_x64-windows-static-md"
+                ),
+                create_set_env_step(
+                    "OPENSSL_LIB_DIR",
+                    "C:/vcpkg/packages/openssl_x64-windows-static-md/lib",
+                ),
+                create_set_env_step(
+                    "OPENSSL_INCLUDE_DIR",
+                    "C:/vcpkg/packages/openssl_x64-windows-static-md/include",
+                ),
                 {
                     "name": "build and zip",
                     "run": "python3 ./eden/scm/packaging/windows/build_windows_zip.py",
