@@ -31,45 +31,7 @@ function validate_commit_sync() {
 }
 
 function large_small_megarepo_config() {
-cat >> "$TESTTMP/mononoke-config/common/commitsyncmap.toml" <<EOF
-[megarepo_test]
-large_repo_id = 0
-common_pushrebase_bookmarks = ["master_bookmark"]
- [[megarepo_test.small_repos]]
- repoid = 1
- bookmark_prefix = "bookprefix/"
- default_action = "prepend_prefix"
- default_prefix = "smallrepofolder"
- direction = "large_to_small"
-    [megarepo_test.small_repos.mapping]
-    "non_path_shifting" = "non_path_shifting"
-EOF
-
   if [ -n "$COMMIT_SYNC_CONF" ]; then
-    cat > "$COMMIT_SYNC_CONF/current" << EOF
-{
-  "repos": {
-    "megarepo_test": {
-      "large_repo_id": 0,
-      "common_pushrebase_bookmarks": ["master_bookmark"],
-      "small_repos": [
-        {
-          "repoid": 1,
-          "bookmark_prefix": "bookprefix/",
-          "default_action": "prepend_prefix",
-          "default_prefix": "smallrepofolder",
-          "direction": "large_to_small",
-          "mapping": {
-            "non_path_shifting": "non_path_shifting"
-          }
-        }
-      ],
-      "version_name": "test_version"
-    }
-  }
-}
-EOF
-
     cat > "$COMMIT_SYNC_CONF/all" << EOF
 {
   "repos": {
@@ -112,10 +74,7 @@ EOF
   }
 }
 EOF
-
   fi
-
-
 }
 
 function large_small_config() {
@@ -192,30 +151,6 @@ EOF
 }
 
 function update_commit_sync_map_first_option {
-  cat > "$COMMIT_SYNC_CONF/current" << EOF
-{
-  "repos": {
-    "megarepo_test": {
-      "large_repo_id": 0,
-      "common_pushrebase_bookmarks": ["master_bookmark"],
-      "small_repos": [
-        {
-          "repoid": 1,
-          "bookmark_prefix": "bookprefix/",
-          "default_action": "prepend_prefix",
-          "default_prefix": "smallrepofolder_after",
-          "direction": "large_to_small",
-          "mapping": {
-            "non_path_shifting": "non_path_shifting"
-          }
-        }
-      ],
-      "version_name": "new_version"
-    }
-  }
-}
-EOF
-
   cat > "$COMMIT_SYNC_CONF/all" << EOF
 {
   "repos": {
@@ -273,32 +208,6 @@ EOF
 }
 
 function update_commit_sync_map_second_option {
-  cat > "$COMMIT_SYNC_CONF/current" <<EOF
-{
-  "repos": {
-    "megarepo_test": {
-        "large_repo_id": 0,
-        "common_pushrebase_bookmarks": [
-          "master_bookmark"
-        ],
-        "small_repos": [
-          {
-            "repoid": 1,
-            "default_action": "prepend_prefix",
-            "default_prefix": "smallrepofolder1",
-            "bookmark_prefix": "bookprefix1/",
-            "mapping": {
-              "special": "specialsmallrepofolder_after_change"
-            },
-            "direction": "large_to_small"
-          }
-        ],
-        "version_name": "TEST_VERSION_NAME_LIVE_V2"
-    }
-  }
-}
-EOF
-
   cat > "$COMMIT_SYNC_CONF/all" << EOF
 {
   "repos": {
