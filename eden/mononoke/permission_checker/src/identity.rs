@@ -44,15 +44,11 @@ impl MononokeIdentity {
     pub fn is_of_type(&self, id_type: &str) -> bool {
         self.id_type == id_type
     }
-
-    pub fn to_string(&self) -> String {
-        format!("{}:{}", self.id_type, self.id_data)
-    }
 }
 
 impl fmt::Display for MononokeIdentity {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(fmt, "{}", self.to_string())
+        write!(fmt, "{}:{}", self.id_type, self.id_data)
     }
 }
 
