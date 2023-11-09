@@ -125,6 +125,8 @@ pub enum PrefetchCmd {
             help = "The checkout for which you want to see all the profiles"
         )]
         checkout: PathBuf,
+        #[clap(long, help = "Output in json rather than human readable text")]
+        json: bool,
     },
     #[clap(about = "Tell EdenFS to smart prefetch the files specified by the \
         prefetch profile. (EdenFS will prefetch the files in this profile \
@@ -232,7 +234,29 @@ impl PrefetchCmd {
         Ok(0)
     }
 
-    async fn list(&self, checkout: &Path) -> Result<ExitCode> {
+    pub fn print_prefetch_profiles(&self, profiles: Option<&Vec<String>>) -> Result<()> {
+        match profiles {
+            Some(profiles) if !profiles.is_empty() => {
+                for s in profiles.iter() {
+                    println!("{}", s);
+                }
+            }
+            _ => println!("No active prefetch profiles."),
+        };
+        Ok(())
+    }
+
+    fn print_prefetch_profiles_json(&self, profiles: Option<&Vec<String>>) -> Result<()> {
+        let out = match profiles {
+            Some(profiles) if !profiles.is_empty() => serde_json::to_string(profiles)
+                .context("Failed to serialize list of active prfetch profiles as JSON")?,
+            _ => "[]".to_owned(),
+        };
+        println!("{}", out);
+        Ok(())
+    }
+
+    async fn list(&self, checkout: &Path, json: bool) -> Result<ExitCode> {
         let instance = EdenFsInstance::global();
         let client_name = instance.client_name(checkout).with_context(|| {
             anyhow!(
@@ -244,7 +268,12 @@ impl PrefetchCmd {
         let checkout_config = CheckoutConfig::parse_config(config_dir);
         match checkout_config {
             Ok(checkout_config) => {
-                checkout_config.print_prefetch_profiles();
+                let profiles = checkout_config.get_prefetch_profiles().ok();
+                if json {
+                    self.print_prefetch_profiles_json(profiles)?;
+                } else {
+                    self.print_prefetch_profiles(profiles)?;
+                }
                 Ok(0)
             }
             Err(_) => Err(anyhow!(
@@ -628,7 +657,7 @@ impl Subcommand for PrefetchCmd {
         match self {
             Self::Finish { output_path } => self.finish(output_path).await,
             Self::Record {} => self.record().await,
-            Self::List { checkout } => self.list(checkout).await,
+            Self::List { checkout, json } => self.list(checkout, *json).await,
             Self::Activate {
                 options,
                 profile_name,

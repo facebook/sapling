@@ -282,17 +282,6 @@ impl CheckoutConfig {
         Ok(config)
     }
 
-    pub fn print_prefetch_profiles(&self) {
-        match &self.profiles {
-            Some(profiles) if !profiles.active.is_empty() => {
-                for s in profiles.active.iter() {
-                    println!("{}", s);
-                }
-            }
-            _ => println!("No active prefetch profiles."),
-        }
-    }
-
     pub fn get_prefetch_profiles(&self) -> Result<&Vec<String>> {
         if let Some(profiles) = &self.profiles {
             Ok(&profiles.active)
