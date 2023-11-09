@@ -38,7 +38,7 @@ class TopLevelIgnores {
   TopLevelIgnores(TopLevelIgnores&&) = delete;
   TopLevelIgnores& operator=(const TopLevelIgnores&) = delete;
   TopLevelIgnores& operator=(TopLevelIgnores&&) = delete;
-  ~TopLevelIgnores() {}
+  ~TopLevelIgnores() = default;
   const GitIgnoreStack* getStack() const {
     if (!userIgnoreStack_.empty()) {
       return &userIgnoreStack_;

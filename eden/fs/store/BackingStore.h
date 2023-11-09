@@ -53,8 +53,8 @@ enum class ObjectComparison : uint8_t {
  */
 class BackingStore : public RootIdCodec, public ObjectIdCodec {
  public:
-  BackingStore() {}
-  virtual ~BackingStore() {}
+  BackingStore() = default;
+  virtual ~BackingStore() = default;
 
   /**
    * A BackingStore may support multiple object ID encodings. To help EdenFS

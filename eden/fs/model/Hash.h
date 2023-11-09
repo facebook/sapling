@@ -7,8 +7,8 @@
 
 #pragma once
 
-#include <stdint.h>
 #include <array>
+#include <cstdint>
 #include <cstring>
 #include <iosfwd>
 #include <string>

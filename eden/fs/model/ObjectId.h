@@ -10,8 +10,8 @@
 #include <fmt/core.h>
 #include <folly/FBString.h>
 #include <folly/Range.h>
-#include <stdint.h>
 #include <array>
+#include <cstdint>
 #include <iosfwd>
 
 namespace folly {
