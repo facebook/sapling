@@ -86,6 +86,9 @@ fn should_call_chg(args: &[String]) -> (bool, &'static str) {
     if cfg!(target_os = "windows") {
         return (false, "windows");
     }
+    if !cfg!(feature = "fb") && cfg!(target_os = "macos") {
+        return (false, "macos");
+    }
     // This means we're already inside the chg call chain
     if std::env::var_os("CHGINTERNALMARK").is_some() {
         return (false, "CHGINTERNALMARK");
