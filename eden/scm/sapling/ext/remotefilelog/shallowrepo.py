@@ -133,9 +133,14 @@ def wraprepo(repo) -> None:
                     mfctx = ctx.manifestctx()
                     mf = mfctx.read()
 
-                    for path, (new, old) in mf.diff(basemf, matcher).items():
-                        if new[0]:
-                            files.add((path, new[0]))
+                    if base is None and hasattr(mf, "walkfiles"):
+                        # If there is no base, skip diff and use more efficient walk.
+                        files.update(mf.walkfiles(matcher))
+                    else:
+                        for path, (new, _old) in mf.diff(basemf, matcher).items():
+                            if new[0]:
+                                files.add((path, new[0]))
+
                     prog.value += 1
 
             if files:

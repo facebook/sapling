@@ -170,6 +170,22 @@ py_class!(pub class treemanifest |py| {
         Ok(result)
     }
 
+    /// Like walk(), but includes file node as well.
+    def walkfiles(&self, pymatcher: PyObject) -> PyResult<Vec<(PyPathBuf, PyBytes)>> {
+        let tree = self.underlying(py);
+        let matcher = extract_matcher(py, pymatcher)?;
+        let files = py.allow_threads(move || -> Vec<_> {
+            let tree = tree.read();
+            tree.files(matcher).collect()
+        });
+        let mut result = Vec::new();
+        for entry in files.into_iter() {
+            let file = entry.map_pyerr(py)?;
+            result.push((file.path.into(), PyBytes::new(py, file.meta.hgid.as_ref())));
+        }
+        Ok(result)
+    }
+
     /// Returns [(path, id)] for directories.
     def walkdirs(&self, pymatcher: PyObject) -> PyResult<Vec<(PyPathBuf, Option<PyBytes>)>> {
         let mut result = Vec::new();
