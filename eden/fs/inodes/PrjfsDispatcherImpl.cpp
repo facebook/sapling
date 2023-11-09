@@ -261,8 +261,8 @@ PrjfsDispatcherImpl::resolveSymlinkPathImpl(
     std::vector<RelativePath> pathParts,
     const size_t solvedLen,
     const size_t remainingRecursionDepth) {
-  if (solvedLen >= pathParts.size()) {
-    // Everything is resolved
+  if (solvedLen >= pathParts.size() || remainingRecursionDepth == 0) {
+    // Either everything is resolved or we should give up due to recursion depth
     return std::move(path);
   }
   RelativePath target = pathParts[solvedLen];
