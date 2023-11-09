@@ -66,7 +66,6 @@
       "headers_duration_ms": *, (glob)
       "http_status": 200,
       "request_content_length": *, (glob)
-      "request_load": *, (glob)
       "response_bytes_sent": *, (glob)
       "response_content_length": *, (glob)
       "seq": 0,
@@ -122,7 +121,6 @@
       "http_status": 200,
       "request_bytes_received": 2048,
       "request_content_length": 2048,
-      "request_load": *, (glob)
       "response_bytes_sent": 0,
       "response_content_length": 0,
       "seq": 0,
@@ -183,7 +181,6 @@
       "headers_duration_ms": *, (glob)
       "http_status": 200,
       "request_content_length": *, (glob)
-      "request_load": *, (glob)
       "response_bytes_sent": *, (glob)
       "response_content_length": *, (glob)
       "seq": 0,
@@ -240,7 +237,6 @@
       "error_count": 0,
       "headers_duration_ms": *, (glob)
       "http_status": 200,
-      "request_load": *, (glob)
       "response_bytes_sent": 2048,
       "response_content_length": 2048,
       "seq": 0,
@@ -302,7 +298,6 @@
       "error_count": 0,
       "headers_duration_ms": *, (glob)
       "http_status": 200,
-      "request_load": *, (glob)
       "seq": 0,
       "time": * (glob)
     },
@@ -335,6 +330,7 @@
   
   Caused by:
       invalid blake2 input: need exactly 64 hex digits
+
 
 # Send a request after corrupting our data, and check that this gets logged
 # too. Silence the error we get so that output variations in Curl don't break

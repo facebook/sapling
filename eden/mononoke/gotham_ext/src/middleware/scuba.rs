@@ -27,7 +27,6 @@ use scuba_ext::ScubaValue;
 use time_ext::DurationExt;
 
 use super::HeadersDuration;
-use super::RequestLoad;
 use crate::middleware::MetadataState;
 use crate::middleware::Middleware;
 use crate::middleware::PostResponseCallbacks;
@@ -64,8 +63,6 @@ pub enum HttpScubaKey {
     ClientCorrelator,
     /// The client identities received for the client, if any.
     ClientIdentities,
-    /// The request load when this request was admitted.
-    RequestLoad,
     /// A unique ID identifying this request.
     RequestId,
     /// How long it took to send headers.
@@ -97,7 +94,6 @@ impl AsRef<str> for HttpScubaKey {
             ClientIp => "client_ip",
             ClientCorrelator => "client_correlator",
             ClientIdentities => "client_identities",
-            RequestLoad => "request_load",
             RequestId => "request_id",
             HeadersDurationMs => "headers_duration_ms",
             DurationMs => "duration_ms",
@@ -229,10 +225,6 @@ fn populate_scuba(scuba: &mut MononokeScubaSampleBuilder, state: &mut State) {
         scuba.sample_for_identities(identities);
         let identities: Vec<_> = identities.iter().map(|i| i.to_string()).collect();
         scuba.add(HttpScubaKey::ClientIdentities, identities);
-    }
-
-    if let Some(request_load) = RequestLoad::try_borrow_from(state) {
-        scuba.add(HttpScubaKey::RequestLoad, request_load.0);
     }
 
     scuba.add(HttpScubaKey::RequestId, state.short_request_id());
