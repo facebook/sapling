@@ -5,9 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use gotham::prelude::FromState;
 use gotham::state::State;
 use gotham_ext::middleware::Middleware;
 use gotham_ext::middleware::PostResponseCallbacks;
+use gotham_ext::middleware::RequestLoad;
 use hyper::Body;
 use hyper::Response;
 use hyper::StatusCode;
@@ -19,6 +21,7 @@ use super::RequestContext;
 
 define_stats! {
     prefix = "mononoke.lfs.request";
+    request_load: histogram(100, 0, 5000, Average; P 50; P 75; P 95; P 99),
     success: timeseries(Rate, Sum),
     requests: timeseries(Rate, Sum),
     failure_4xx: timeseries(Rate, Sum),
@@ -94,6 +97,10 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
             STATS::response_bytes_sent.add_value(response_bytes_sent as i64, (repo_and_method,))
         }
     });
+
+    if let Some(request_load) = RequestLoad::try_borrow_from(state) {
+        STATS::request_load.add_value(request_load.0);
+    }
 
     Some(())
 }
