@@ -116,7 +116,7 @@ pub enum PrefetchCmd {
     },
     #[clap(about = "Start recording fetched file paths.")]
     Record,
-    #[clap(about = "List all of the currenly activated prefetch profiles for a checkout.")]
+    #[clap(about = "List all of the currently activated prefetch profiles for a checkout.")]
     List {
         #[clap(
             long,
@@ -244,7 +244,6 @@ impl PrefetchCmd {
         let checkout_config = CheckoutConfig::parse_config(config_dir);
         match checkout_config {
             Ok(checkout_config) => {
-                println!("NAME");
                 checkout_config.print_prefetch_profiles();
                 Ok(0)
             }
