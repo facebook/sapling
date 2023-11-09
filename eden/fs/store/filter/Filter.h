@@ -37,7 +37,7 @@ enum FilterCoverage {
 
 class Filter {
  public:
-  virtual ~Filter() {}
+  virtual ~Filter() = default;
 
   /*
    * Returns a FilterCoverage struct that indicates whether the filter applies

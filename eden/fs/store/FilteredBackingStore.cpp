@@ -275,7 +275,6 @@ FilteredBackingStore::filterImpl(
               }
               // Recursively filtered objects don't need to be handled. They are
               // simply omitted from the PathMap.
-              continue;
             }
 
             // The result is a PathMap containing only unfiltered or

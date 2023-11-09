@@ -55,7 +55,7 @@ struct ImporterOptions {
 
 class Importer {
  public:
-  virtual ~Importer() {}
+  virtual ~Importer() = default;
 
   /**
    * Resolve the manifest node for the specified revision.

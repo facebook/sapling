@@ -25,7 +25,7 @@ class TakeoverData;
  */
 class TakeoverHandler {
  public:
-  virtual ~TakeoverHandler() {}
+  virtual ~TakeoverHandler() = default;
 
   /**
    * startTakeoverShutdown() will be called when a graceful shutdown has been

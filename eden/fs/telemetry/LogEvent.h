@@ -270,8 +270,8 @@ struct ServerDataFetch {
 
 struct EdenApiMiss {
   enum MissType : bool {
-    Blob = 0,
-    Tree = 1,
+    Blob = false,
+    Tree = true,
   };
 
   static constexpr const char* type = "edenapi_miss";
@@ -400,7 +400,7 @@ struct NfsCrawlDetected {
   int64_t readDirThreshold = 0;
   // root->leaf formatted as:
   //   "[simple_name (pid): full_name] -> [simple_name (pid): full_name] -> ..."
-  std::string processHierarchy = "";
+  std::string processHierarchy;
 
   void populate(DynamicEvent& event) const {
     event.addInt("read_count", readCount);
@@ -414,8 +414,8 @@ struct NfsCrawlDetected {
 struct HgImportFailure {
   static constexpr const char* type = "hgimport_failure";
 
-  std::string hgImportMethod = "";
-  std::string hgImportResult = "";
+  std::string hgImportMethod;
+  std::string hgImportResult;
 
   void populate(DynamicEvent& event) const {
     event.addString("method", hgImportMethod);

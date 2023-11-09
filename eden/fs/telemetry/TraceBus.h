@@ -9,8 +9,8 @@
 
 #include <folly/Synchronized.h>
 #include <folly/synchronization/CallOnce.h>
-#include <stdint.h>
 #include <chrono>
+#include <cstdint>
 #include <memory>
 #include <thread>
 #include <utility>

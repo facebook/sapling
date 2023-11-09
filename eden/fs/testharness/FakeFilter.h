@@ -16,7 +16,7 @@ namespace facebook::eden {
  */
 class FakeSubstringFilter final : public Filter {
  public:
-  ~FakeSubstringFilter() override {}
+  ~FakeSubstringFilter() override = default;
 
   /*
    * Checks whether a path is filtered by the given filter.
@@ -46,7 +46,7 @@ class FakeSubstringFilter final : public Filter {
  */
 class FakePrefixFilter final : public Filter {
  public:
-  ~FakePrefixFilter() override {}
+  ~FakePrefixFilter() override = default;
 
   /*
    * Checks whether a path is filtered by the given filter.

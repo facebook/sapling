@@ -29,7 +29,7 @@ class HgSparseFilter : public Filter {
     profiles_ = std::make_shared<folly::Synchronized<MercurialMatcherMap>>(
         std::in_place);
   }
-  ~HgSparseFilter() override {}
+  ~HgSparseFilter() override = default;
 
   /*
    * Checks whether a path is filtered by the given filter.

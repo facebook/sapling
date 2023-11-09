@@ -28,7 +28,7 @@ class FakeFuse;
  */
 class FakePrivHelper final : public PrivHelper {
  public:
-  FakePrivHelper() {}
+  FakePrivHelper() = default;
 
   class MountDelegate {
    public:
