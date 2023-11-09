@@ -1285,8 +1285,28 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
-    async fn test_rewrite_commit_with_file_changes_filter(fb: FacebookInit) -> Result<(), Error> {
+    /**
+     * Set up a small repo to test multiple scenarios with file change filters.
+     *
+     * The first commit sets the following structure:
+     * foo
+     *  └── bar
+     *      ├── a
+     *      ├── b
+     *      │   ├── d
+     *      │   └── e
+     *      └── c
+     *          ├── f
+     *          └── g
+     *
+     * The second commit adds two files `foo/bar/b` (executable) and `foo/bar/c`
+     * which implicitly deletes some files under `foo/bar`.
+     */
+    async fn test_rewrite_commit_with_file_changes_filter_impl(
+        fb: FacebookInit,
+        file_change_filters: Vec<FileChangeFilter<'_>>,
+        mut expected_affected_paths: HashMap<&str, HashSet<NonRootMPath>>,
+    ) -> Result<(), Error> {
         let repo: blobrepo::BlobRepo = TestRepoFactory::new(fb)?.build().await?;
 
         let ctx = CoreContext::test_mock(fb);
@@ -1304,7 +1324,9 @@ mod test {
         // files under those directories.
         let second = CreateCommitContext::new(&ctx, &repo, vec![first])
             // Implicitly deletes `foo/bar/b/d` and `foo/bar/b/e`.
-            .add_file("foo/bar/b", "new b")
+            // Adding it as an executable so we can test filters that apply on
+            // conditions other than paths.
+            .add_file_with_type("foo/bar/b", "new b", FileType::Executable)
             // Implicitly deletes `foo/bar/c/f` and `foo/bar/c/g`.
             .add_file("foo/bar/c", "new c")
             .commit()
@@ -1315,13 +1337,6 @@ mod test {
                 Ok(vec![path.clone()])
             },
         );
-
-        let file_change_filter: Vec<FileChangeFilter<'_>> = vec![Arc::new(
-            |(source_path, _): (&NonRootMPath, &FileChange)| -> bool {
-                let ignored_path_prefix: NonRootMPath = NonRootMPath::new("foo/bar/b").unwrap();
-                !ignored_path_prefix.is_prefix_of(source_path)
-            },
-        )];
 
         async fn verify_affected_paths(
             ctx: &CoreContext,
@@ -1347,22 +1362,15 @@ mod test {
             HashMap::new(),
             identity_multi_mover.clone(),
             None,
-            file_change_filter.clone(),
+            file_change_filters.clone(),
         )
         .await?;
-
-        // Changes to `foo/bar/b` are filtered out.
-        let expected_affected_paths: HashSet<NonRootMPath> = hashset! {
-            NonRootMPath::new("foo/bar/a").unwrap(),
-            NonRootMPath::new("foo/bar/c/f").unwrap(),
-            NonRootMPath::new("foo/bar/c/g").unwrap()
-        };
 
         verify_affected_paths(
             &ctx,
             &repo,
             &first_rewritten_bcs_id,
-            expected_affected_paths,
+            expected_affected_paths.remove("first").unwrap(),
         )
         .await?;
 
@@ -1375,21 +1383,49 @@ mod test {
             },
             identity_multi_mover.clone(),
             None,
-            file_change_filter,
+            file_change_filters,
         )
         .await?;
-
-        // We expect only the added file to be affected. The delete of
-        // `foo/bar/c/g` and `foo/bar/c/f` will remain implicit because
-        // the change to `foo/bar/c` is present in the bonsai.
-        let expected_affected_paths: HashSet<NonRootMPath> = hashset! {
-            NonRootMPath::new("foo/bar/c").unwrap()
-        };
 
         verify_affected_paths(
             &ctx,
             &repo,
             &second_rewritten_bcs_id,
+            expected_affected_paths.remove("second").unwrap(),
+        )
+        .await?;
+
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_rewrite_commit_with_file_changes_filter(fb: FacebookInit) -> Result<(), Error> {
+        let file_change_filters: Vec<FileChangeFilter<'_>> = vec![Arc::new(
+            |(source_path, _): (&NonRootMPath, &FileChange)| -> bool {
+                let ignored_path_prefix: NonRootMPath = NonRootMPath::new("foo/bar/b").unwrap();
+                !ignored_path_prefix.is_prefix_of(source_path)
+            },
+        )];
+
+        let expected_affected_paths: HashMap<&str, HashSet<NonRootMPath>> = hashmap! {
+            // Changes to `foo/bar/b/d` and `foo/bar/b/e` are removed in the
+            // final bonsai because the filter ran before the multi-mover.
+            "first" => hashset! {
+                NonRootMPath::new("foo/bar/a").unwrap(),
+                NonRootMPath::new("foo/bar/c/f").unwrap(),
+                NonRootMPath::new("foo/bar/c/g").unwrap()
+            },
+            // We expect only the added file to be affected. The delete of
+            // `foo/bar/c/g` and `foo/bar/c/f` will remain implicit because
+            // the change to `foo/bar/c` is present in the bonsai.
+            "second" => hashset! {
+                NonRootMPath::new("foo/bar/c").unwrap()
+            },
+        };
+
+        test_rewrite_commit_with_file_changes_filter_impl(
+            fb,
+            file_change_filters,
             expected_affected_paths,
         )
         .await?;
