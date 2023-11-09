@@ -474,7 +474,7 @@ TreePtr HgBackingStore::processTree(
   auto manifest = Manifest(std::move(content));
   Tree::container entries{kPathMapDefaultCaseSensitive};
   auto hgObjectIdFormat = config_->getEdenConfig()->hgObjectIdFormat.getValue();
-  const auto& filteredPaths =
+  const auto filteredPaths =
       config_->getEdenConfig()->hgFilteredPaths.getValue();
 
   for (auto& entry : manifest) {
@@ -482,7 +482,7 @@ TreePtr HgBackingStore::processTree(
                << " node: " << entry.node << " flag: " << entry.type;
 
     auto relPath = path + entry.name;
-    if (filteredPaths.count(relPath) == 0) {
+    if (filteredPaths->count(relPath) == 0) {
       auto proxyHash =
           HgProxyHash::store(relPath, entry.node, hgObjectIdFormat);
 

@@ -740,10 +740,11 @@ class EdenConfig : private ConfigSettingManager {
    *
    * DO NOT USE UNLESS YOU HAVE THE OK FROM THE EDENFS TEAM.
    */
-  ConfigSetting<std::unordered_set<RelativePath>> hgFilteredPaths{
-      "hg:filtered-paths",
-      std::unordered_set<RelativePath>{},
-      this};
+  ConfigSetting<std::shared_ptr<std::unordered_set<RelativePath>>>
+      hgFilteredPaths{
+          "hg:filtered-paths",
+          std::make_shared<std::unordered_set<RelativePath>>(),
+          this};
 
   // [backingstore]
 

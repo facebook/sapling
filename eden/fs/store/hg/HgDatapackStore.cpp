@@ -125,14 +125,15 @@ void HgDatapackStore::getTreeBatch(const ImportRequestsList& importRequests) {
   auto importRequestsMap = std::move(preparedRequests.first);
   auto requests = std::move(preparedRequests.second);
   auto hgObjectIdFormat = config_->getEdenConfig()->hgObjectIdFormat.getValue();
-  const auto& filteredPaths =
+  const auto filteredPaths =
       config_->getEdenConfig()->hgFilteredPaths.getValue();
 
   store_.getTreeBatch(
       folly::range(requests),
       false,
       // store_.getTreeBatch is blocking, hence we can take these by reference.
-      [&](size_t index,
+      [&, filteredPaths](
+          size_t index,
           folly::Try<std::shared_ptr<sapling::Tree>> content) mutable {
         if (config_->getEdenConfig()->hgTreeFetchFallback.getValue() &&
             content.hasException()) {
@@ -163,7 +164,7 @@ void HgDatapackStore::getTreeBatch(const ImportRequestsList& importRequests) {
                     treeRequest->hash,
                     treeRequest->proxyHash.path(),
                     hgObjectIdFormat,
-                    filteredPaths)};
+                    *filteredPaths)};
               });
         }
 
@@ -197,10 +198,10 @@ TreePtr HgDatapackStore::getTree(
   if (tree) {
     auto hgObjectIdFormat =
         config_->getEdenConfig()->hgObjectIdFormat.getValue();
-    const auto& filteredPaths =
+    const auto filteredPaths =
         config_->getEdenConfig()->hgFilteredPaths.getValue();
     return fromRawTree(
-        tree.get(), edenTreeId, path, hgObjectIdFormat, filteredPaths);
+        tree.get(), edenTreeId, path, hgObjectIdFormat, *filteredPaths);
   }
   return nullptr;
 }
@@ -212,14 +213,14 @@ TreePtr HgDatapackStore::getTreeLocal(
   if (tree) {
     auto hgObjectIdFormat =
         config_->getEdenConfig()->hgObjectIdFormat.getValue();
-    const auto& filteredPaths =
+    const auto filteredPaths =
         config_->getEdenConfig()->hgFilteredPaths.getValue();
     return fromRawTree(
         tree.get(),
         edenTreeId,
         proxyHash.path(),
         hgObjectIdFormat,
-        filteredPaths);
+        *filteredPaths);
   }
 
   return nullptr;
