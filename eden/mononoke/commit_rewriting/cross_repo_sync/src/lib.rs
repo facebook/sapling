@@ -864,8 +864,8 @@ where
             if !public_unsynced_ancestors.is_empty() {
                 return Err(format_err!(
                     "unexpected sync lookup attempt - trying to sync \
-                     a public commit from small repo to a large repo. Syncing public commits is \
-                     only supported from a large repo to a small repo"
+                      a public commit from small repo to a large repo. Syncing public commits is \
+                      only supported from a large repo to a small repo"
                 ));
             }
         }

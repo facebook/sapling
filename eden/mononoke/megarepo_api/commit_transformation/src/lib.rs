@@ -24,6 +24,7 @@ use changeset_fetcher::ChangesetFetcherArc;
 use changesets::ChangesetsRef;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
+use derivative::Derivative;
 use filestore::FilestoreConfigRef;
 use futures::future::try_join_all;
 use futures::stream;
@@ -61,12 +62,40 @@ pub type DirectoryMultiMover = Arc<
         + 'static,
 >;
 
-// Functions that can be used to filter out irrelevant file changes from the commit
-// before getting its implicit deletes and calling the multi mover.
+/// Determines when a file change filter should be applied.
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub enum FileChangeFilterApplication {
+    /// Filter only before getting the implicit deletes from the bonsai
+    ImplicitDeletes,
+    /// Filter only before calling the multi mover
+    MultiMover,
+    /// Filter both before getting the implicit deletes from the bonsai and
+    /// before calling the multi mover
+    Both,
+}
+
+// Function that can be used to filter out irrelevant file changes from the bonsai
+// before getting its implicit deletes and/or calling the multi mover.
 // Getting implicit deletes requires doing manifest lookups that are O(file changes),
 // so removing unnecessary changes before can significantly speed up rewrites.
-pub type FileChangeFilter<'a> =
+// This can also be used to filter out specific kinds of file changes, e.g.
+// git submodules or untracked changes.
+pub type FileChangeFilterFunc<'a> =
     Arc<dyn Fn((&NonRootMPath, &FileChange)) -> bool + Send + Sync + 'a>;
+
+/// Specifies a filter to be applied to file changes from a bonsai to remove
+/// unwanted changes before certain stages of the rewrite process, e.g. before
+/// getting the implicit deletes from the bonsai or before calling the multi
+/// mover.
+#[derive(Derivative, Clone)]
+#[derivative(Debug)]
+pub struct FileChangeFilter<'a> {
+    /// Function containing the filter logic
+    #[derivative(Debug = "ignore")]
+    pub func: FileChangeFilterFunc<'a>,
+    /// When to apply the filter
+    pub application: FileChangeFilterApplication,
+}
 
 pub trait Repo = RepoIdentityRef
     + RepoBlobstoreArc
@@ -328,11 +357,27 @@ pub async fn rewrite_commit_with_file_changes_filter<'a>(
     rewrite_opts: RewriteOpts,
     file_change_filters: Vec<FileChangeFilter<'a>>,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
+    // All file change filters that should be applied before getting implicit
+    // deletes.
+    let implicit_deletes_filters = file_change_filters
+        .iter()
+        .filter_map(|filter| match filter.application {
+            FileChangeFilterApplication::ImplicitDeletes | FileChangeFilterApplication::Both => {
+                Some(filter.func.clone())
+            }
+            FileChangeFilterApplication::MultiMover => None,
+        })
+        .collect::<Vec<_>>();
+
     let filtered_file_changes: Vec<(&NonRootMPath, &FileChange)> = cs
         .file_changes
         .iter()
         // Keep file changes that pass all the filters
-        .filter(|fc| file_change_filters.iter().all(|filter| filter(*fc)))
+        .filter(|fc| {
+            implicit_deletes_filters
+                .iter()
+                .all(|filter_func| filter_func(*fc))
+        })
         .collect();
 
     let renamed_implicit_deletes = if !filtered_file_changes.is_empty() {
@@ -506,10 +551,25 @@ pub fn rewrite_commit_with_implicit_deletes<'a>(
     if !empty_commit
         || rewrite_opts.empty_commit_from_large_repo == EmptyCommitFromLargeRepo::Discard
     {
+        // All file change filters that should be applied before calling the
+        // multi mover.
+        let multi_mover_filters = file_change_filters
+            .iter()
+            .filter_map(|filter| match filter.application {
+                FileChangeFilterApplication::MultiMover | FileChangeFilterApplication::Both => {
+                    Some(filter.func.clone())
+                }
+                FileChangeFilterApplication::ImplicitDeletes => None,
+            })
+            .collect::<Vec<_>>();
         let path_rewritten_changes = cs
             .file_changes
             .iter()
-            .filter(|fc| file_change_filters.iter().all(|filter| filter(*fc)))
+            .filter(|fc| {
+                multi_mover_filters
+                    .iter()
+                    .all(|filter_func| filter_func(*fc))
+            })
             .map(|(path, change)| {
                 // Just rewrite copy_from information, when we have it
                 fn rewrite_copy_from(
@@ -610,6 +670,7 @@ pub fn rewrite_commit_with_implicit_deletes<'a>(
             .flat_map(|changes| changes.into_iter())
             .collect();
 
+        // Add the implicit deletes as explicit delete changes.
         let implicit_delete_file_changes: Vec<(NonRootMPath, FileChange)> =
             renamed_implicit_deletes
                 .into_iter()
@@ -617,6 +678,10 @@ pub fn rewrite_commit_with_implicit_deletes<'a>(
                 .map(|implicit_delete_mpath| (implicit_delete_mpath, FileChange::Deletion))
                 .collect();
         path_rewritten_changes.extend(implicit_delete_file_changes);
+
+        // Then minimize the file changes by removing the deletes that don't
+        // need to be explicit because they'll still be expressed implicitly
+        // after the rewrite.
         let path_rewritten_changes = minimize_file_change_set(path_rewritten_changes);
 
         let is_merge = cs.parents.len() >= 2;
@@ -1302,7 +1367,7 @@ mod test {
      * The second commit adds two files `foo/bar/b` (executable) and `foo/bar/c`
      * which implicitly deletes some files under `foo/bar`.
      */
-    async fn test_rewrite_commit_with_file_changes_filter_impl(
+    async fn test_rewrite_commit_with_file_changes_filter(
         fb: FacebookInit,
         file_change_filters: Vec<FileChangeFilter<'_>>,
         mut expected_affected_paths: HashMap<&str, HashSet<NonRootMPath>>,
@@ -1398,14 +1463,22 @@ mod test {
         Ok(())
     }
 
+    /// Tests applying a file change filter before getting the implicit deletes
+    /// and calling the multi mover.
     #[fbinit::test]
-    async fn test_rewrite_commit_with_file_changes_filter(fb: FacebookInit) -> Result<(), Error> {
-        let file_change_filters: Vec<FileChangeFilter<'_>> = vec![Arc::new(
-            |(source_path, _): (&NonRootMPath, &FileChange)| -> bool {
+    async fn test_rewrite_commit_with_file_changes_filter_on_both_based_on_path(
+        fb: FacebookInit,
+    ) -> Result<(), Error> {
+        let file_change_filter_func: FileChangeFilterFunc<'_> =
+            Arc::new(|(source_path, _): (&NonRootMPath, &FileChange)| -> bool {
                 let ignored_path_prefix: NonRootMPath = NonRootMPath::new("foo/bar/b").unwrap();
                 !ignored_path_prefix.is_prefix_of(source_path)
-            },
-        )];
+            });
+
+        let file_change_filters: Vec<FileChangeFilter<'_>> = vec![FileChangeFilter {
+            func: file_change_filter_func,
+            application: FileChangeFilterApplication::Both,
+        }];
 
         let expected_affected_paths: HashMap<&str, HashSet<NonRootMPath>> = hashmap! {
             // Changes to `foo/bar/b/d` and `foo/bar/b/e` are removed in the
@@ -1423,7 +1496,164 @@ mod test {
             },
         };
 
-        test_rewrite_commit_with_file_changes_filter_impl(
+        test_rewrite_commit_with_file_changes_filter(
+            fb,
+            file_change_filters,
+            expected_affected_paths,
+        )
+        .await?;
+
+        Ok(())
+    }
+
+    /// Tests applying a file change filter before getting the implicit deletes
+    /// and calling the multi mover.
+    #[fbinit::test]
+    async fn test_rewrite_commit_with_file_changes_filter_on_both_based_on_file_type(
+        fb: FacebookInit,
+    ) -> Result<(), Error> {
+        let file_change_filter_func: FileChangeFilterFunc<'_> =
+            Arc::new(|(_, fc): (&NonRootMPath, &FileChange)| -> bool {
+                match fc {
+                    FileChange::Change(tfc) => tfc.file_type() != FileType::Executable,
+                    _ => true,
+                }
+            });
+
+        let file_change_filters: Vec<FileChangeFilter<'_>> = vec![FileChangeFilter {
+            func: file_change_filter_func,
+            application: FileChangeFilterApplication::Both,
+        }];
+
+        let expected_affected_paths: HashMap<&str, HashSet<NonRootMPath>> = hashmap! {
+             // All changes are synced because there are no executable files.
+             "first" => hashset! {
+                NonRootMPath::new("foo/bar/a").unwrap(),
+                NonRootMPath::new("foo/bar/c/f").unwrap(),
+                NonRootMPath::new("foo/bar/c/g").unwrap(),
+                NonRootMPath::new("foo/bar/b/e").unwrap(),
+                NonRootMPath::new("foo/bar/b/d").unwrap(),
+            },
+            // We expect only the added file to be affected. The delete of
+            // `foo/bar/c/g` and `foo/bar/c/f` will remain implicit because
+            // the change to `foo/bar/c` is present in the bonsai.
+            // The files under `foo/bar/b` will not be implicitly or explicitly
+            // deleted because the addition of the executable file was ignored
+            // when getting the implicit deletes and rewriting the changes.
+            "second" => hashset! {
+                NonRootMPath::new("foo/bar/c").unwrap()
+            },
+        };
+
+        test_rewrite_commit_with_file_changes_filter(
+            fb,
+            file_change_filters,
+            expected_affected_paths,
+        )
+        .await?;
+
+        Ok(())
+    }
+
+    /// Tests applying a file change filter only before getting the
+    /// implicit deletes.
+    #[fbinit::test]
+    async fn test_rewrite_commit_with_file_changes_filter_implicit_deletes_only(
+        fb: FacebookInit,
+    ) -> Result<(), Error> {
+        let file_change_filter_func: FileChangeFilterFunc<'_> =
+            Arc::new(|(source_path, _): (&NonRootMPath, &FileChange)| -> bool {
+                let ignored_path_prefix: NonRootMPath = NonRootMPath::new("foo/bar/b").unwrap();
+                !ignored_path_prefix.is_prefix_of(source_path)
+            });
+
+        let file_change_filters: Vec<FileChangeFilter<'_>> = vec![FileChangeFilter {
+            func: file_change_filter_func,
+            application: FileChangeFilterApplication::ImplicitDeletes,
+        }];
+        // Applying the filter only before the implicit deletes should increase
+        // performance because it won't do unnecessary work, but it should NOT
+        // affect which file changes are synced.
+        // That's because even if implicit deletes are found, because no filter
+        // is applied before the multi-mover, they will still be expressed
+        // implicitly in the final bonsai.
+        let expected_affected_paths: HashMap<&str, HashSet<NonRootMPath>> = hashmap! {
+            // Since the filter for `foo/bar/b` is applied only before getting
+            // the implicit deletes, all changes will be synced.
+            "first" => hashset! {
+                NonRootMPath::new("foo/bar/a").unwrap(),
+                NonRootMPath::new("foo/bar/b/d").unwrap(),
+                NonRootMPath::new("foo/bar/b/e").unwrap(),
+                NonRootMPath::new("foo/bar/c/f").unwrap(),
+                NonRootMPath::new("foo/bar/c/g").unwrap()
+            },
+            // The same applies to the second commit. The same paths are synced.
+            "second" => hashset! {
+                NonRootMPath::new("foo/bar/c").unwrap(),
+                // The path file added that implicitly deletes the two above
+                NonRootMPath::new("foo/bar/b").unwrap(),
+                // `foo/bar/b/d` and `foo/bar/b/e` will not be present in the
+                // bonsai, because they're being deleted implicitly.
+                //
+                // WHY: the filter is applied only when getting the implicit deletes.
+                // So `foo/bar/b` is synced via the multi mover, which means that
+                // the delete is already expressed implicitly, so `minimize_file_change_set`
+                // will remove the unnecessary explicit deletes.
+            },
+        };
+
+        test_rewrite_commit_with_file_changes_filter(
+            fb,
+            file_change_filters,
+            expected_affected_paths,
+        )
+        .await?;
+
+        Ok(())
+    }
+
+    /// Tests applying a file change filter only before calling the
+    /// multi mover.
+    /// This test uses the file type as the filter condition, to showcase
+    /// a more realistic scenario where we only want to apply the filter to
+    /// the multi mover.
+    #[fbinit::test]
+    async fn test_rewrite_commit_with_file_changes_filter_multi_mover_only(
+        fb: FacebookInit,
+    ) -> Result<(), Error> {
+        let file_change_filter_func: FileChangeFilterFunc<'_> =
+            Arc::new(|(_, fc): (&NonRootMPath, &FileChange)| -> bool {
+                match fc {
+                    FileChange::Change(tfc) => tfc.file_type() != FileType::Executable,
+                    _ => true,
+                }
+            });
+        let file_change_filters: Vec<FileChangeFilter<'_>> = vec![FileChangeFilter {
+            func: file_change_filter_func,
+            application: FileChangeFilterApplication::MultiMover,
+        }];
+
+        let expected_affected_paths: HashMap<&str, HashSet<NonRootMPath>> = hashmap! {
+            // All changes are synced because there are no executable files.
+            "first" => hashset! {
+                NonRootMPath::new("foo/bar/a").unwrap(),
+                NonRootMPath::new("foo/bar/c/f").unwrap(),
+                NonRootMPath::new("foo/bar/c/g").unwrap(),
+                NonRootMPath::new("foo/bar/b/e").unwrap(),
+                NonRootMPath::new("foo/bar/b/d").unwrap(),
+            },
+            "second" => hashset! {
+                NonRootMPath::new("foo/bar/c").unwrap(),
+                // `foo/bar/b` implicitly deletes these two files below in the
+                // source bonsai. However, because the change to `foo/bar/b`
+                // will not be synced (is't an executable file), these implicit
+                // deletes will be added explicitly to the rewritten bonsai.
+                NonRootMPath::new("foo/bar/b/e").unwrap(),
+                NonRootMPath::new("foo/bar/b/d").unwrap(),
+            },
+        };
+
+        test_rewrite_commit_with_file_changes_filter(
             fb,
             file_change_filters,
             expected_affected_paths,
