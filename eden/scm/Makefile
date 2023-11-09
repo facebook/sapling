@@ -81,7 +81,7 @@ install-oss: oss
 	  install --root="$(DESTDIR)/" --prefix="$(PREFIX)" \
 	  --install-lib="$(PREFIX)"/lib/python3.$(PYTHON_MINOR_VERSION)/site-packages \
 	  --install-scripts="$(PREFIX)/bin" --force
-	cp isl-dist.tar.xz $(PREFIX)/bin
+	cp isl-dist.tar.xz $(DESTDIR)/$(PREFIX)/bin
 
 local:
 	SAPLING_OSS_BUILD=$(OSS) HGNAME=$(HGNAME) \
