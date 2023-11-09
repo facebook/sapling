@@ -19,6 +19,7 @@ python_unittest(
     srcs = ["spec_formatting_test.py"],
     compatible_with = [
         "ovr_config//os:linux",
+        "ovr_config//os:macos",
         "ovr_config//os:windows",
     ],
     env = {
