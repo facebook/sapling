@@ -16,7 +16,7 @@ anyhow = "=1.0.72"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
 cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }
-clap = { version = "4.3.5", features = ["derive", "env", "string", "unicode", "wrap_help"] }
+clap = { version = "4.4.7", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 context = { version = "0.1.0", path = "../../server/context" }
 criterion = "=0.3.1"
 environment = { version = "0.1.0", path = "../../cmdlib/environment" }

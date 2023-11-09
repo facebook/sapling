@@ -10,7 +10,7 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "=1.0.72"
 async-trait = "0.1.71"
-clap = { version = "4.3.5", features = ["derive", "env", "string", "unicode", "wrap_help"] }
+clap = { version = "4.4.7", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 executor_lib = { version = "0.1.0", path = "../../cmdlib/sharding" }
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }
