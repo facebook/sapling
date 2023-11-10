@@ -14,7 +14,7 @@ anyhow = "=1.0.72"
 byteorder = "1.3"
 indexedlog = { version = "0.1.0", path = "../indexedlog" }
 lazy_static = "1.4"
-libc = "0.2.139"
+libc = "0.2.149"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_alt = { version = "0.1.0", path = "serde_alt" }

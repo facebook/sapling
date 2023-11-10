@@ -9,10 +9,10 @@ edition = "2021"
 anyhow = "=1.0.72"
 
 [target.'cfg(target_os = "linux")'.dependencies]
-libc = "0.2.139"
+libc = "0.2.149"
 
 [target.'cfg(target_os = "macos")'.dependencies]
-libc = "0.2.139"
+libc = "0.2.149"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 identity = { version = "0.1.0", path = "../identity" }

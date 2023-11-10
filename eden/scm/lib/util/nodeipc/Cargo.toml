@@ -9,7 +9,7 @@ edition = "2021"
 [dependencies]
 anyhow = "=1.0.72"
 filedescriptor = "0.7"
-libc = "0.2.139"
+libc = "0.2.149"
 nodeipc_derive = { version = "0.1.0", path = "derive" }
 paste = "1.0.14"
 serde = { version = "1.0.185", features = ["derive", "rc"] }

@@ -9,10 +9,10 @@ edition = "2021"
 tempfile = "3.8"
 
 [target.'cfg(target_os = "linux")'.dependencies]
-libc = "0.2.139"
+libc = "0.2.149"
 
 [target.'cfg(target_os = "macos")'.dependencies]
-libc = "0.2.139"
+libc = "0.2.149"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 winapi = { version = "0.3", features = ["everything"] }

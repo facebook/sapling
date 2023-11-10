@@ -23,7 +23,7 @@ util = { version = "0.1.0", path = "../util" }
 tempfile = "3.8"
 
 [target.'cfg(target_os = "linux")'.dependencies]
-libc = "0.2.139"
+libc = "0.2.149"
 
 [target.'cfg(target_os = "macos")'.dependencies]
-libc = "0.2.139"
+libc = "0.2.149"

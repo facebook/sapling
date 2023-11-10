@@ -10,6 +10,6 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "=1.0.72"
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
-libc = "0.2.139"
+libc = "0.2.149"
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }

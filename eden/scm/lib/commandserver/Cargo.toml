@@ -22,10 +22,10 @@ udsipc = { version = "0.1.0", path = "../util/udsipc" }
 version = { version = "0.1.0", path = "../version" }
 
 [target.'cfg(target_os = "linux")'.dependencies]
-libc = "0.2.139"
+libc = "0.2.149"
 
 [target.'cfg(target_os = "macos")'.dependencies]
-libc = "0.2.139"
+libc = "0.2.149"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 atexit = { version = "0.1.0", path = "../util/atexit" }
