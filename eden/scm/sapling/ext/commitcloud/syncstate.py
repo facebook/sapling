@@ -29,20 +29,6 @@ class SyncState:
     # best with fixed filenames.
     v2filename = "cloudsyncstate"
 
-    # Version 1: a JSON file "commitcloudstate.<workspace>.<hash>" per
-    # workspace.
-    v1prefix = "commitcloudstate."
-
-    @classmethod
-    def _v1filename(cls, workspacename):
-        """filename for workspace, only for compatibility"""
-        # make a unique valid filename
-        return (
-            cls.v1prefix
-            + "".join(x for x in workspacename if x.isalnum())
-            + ".%s" % (hashlib.sha256(encodeutf8(workspacename)).hexdigest()[0:5])
-        )
-
     @classmethod
     def erasestate(cls, repo, workspacename):
         # update v2 states
@@ -51,10 +37,6 @@ class SyncState:
             if workspacename in states:
                 del states[workspacename]
                 cls.savev2states(repo.svfs, states)
-        # update v1 states
-        filename = cls._v1filename(workspacename)
-        # clean up the current state in force recover mode
-        repo.svfs.tryunlink(filename)
 
     @classmethod
     def movestate(cls, repo, workspacename, new_workspacename):
@@ -64,10 +46,6 @@ class SyncState:
             if workspacename in states:
                 states[new_workspacename] = states[workspacename]
                 cls.savev2states(repo.svfs, states)
-        # update v1 states
-        src = cls._v1filename(workspacename)
-        dst = cls._v1filename(new_workspacename)
-        repo.svfs.rename(src, dst)
 
     @classmethod
     def loadv2states(cls, svfs):
@@ -86,30 +64,12 @@ class SyncState:
 
     def __init__(self, repo, workspacename):
         self.workspacename = workspacename
-        self.v1filename = self._v1filename(workspacename)
         self.repo = repo
         self.prevstate = None
 
         # Try v2 state first.
         states = self.loadv2states(repo.svfs)
         data = states.get(workspacename)
-
-        # If v2 state is missing, try load from v1 state.
-        if data is None and repo.svfs.exists(self.v1filename):
-            # Migra v1 state to v2 so v2 state gets used going forward.
-            with repo.lock(), repo.transaction("cloudstate"):
-                # Reload since v2 states might have changed.
-                states = self.loadv2states(repo.svfs)
-                with repo.svfs.open(self.v1filename, "r") as f:
-                    try:
-                        data = json.load(f)
-                    except Exception:
-                        raise ccerror.InvalidWorkspaceDataError(
-                            repo.ui, _("failed to parse %s") % self.v1filename
-                        )
-                    states[workspacename] = data
-                self.savev2states(repo.svfs, states)
-
         if data is not None:
             self.version = data["version"]
             self.heads = [ensurestr(h) for h in data["heads"]]
@@ -176,11 +136,6 @@ class SyncState:
             "omittedremotebookmarks": omittedremotebookmarks,
             "lastupdatetime": time.time(),
         }
-        tr.addfilegenerator(
-            self.v1filename,
-            [self.v1filename],
-            lambda f, data=data: f.write(encodeutf8(json.dumps(data))),
-        )
         svfs = tr._vfsmap[""]
         states = self.loadv2states(svfs)
         states[self.workspacename] = data
