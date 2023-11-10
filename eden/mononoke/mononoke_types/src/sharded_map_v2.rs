@@ -42,6 +42,13 @@ use crate::TrieMap;
 pub trait ShardedMapV2Value: ThriftConvert + Debug + Clone + Send + Sync + 'static {
     type NodeId: MononokeId<Thrift = thrift::ShardedMapV2NodeId, Value = ShardedMapV2Node<Self>>;
     type Context: IdContext<Id = Self::NodeId>;
+    type RollupData: Rollup<Self>;
+}
+
+pub trait Rollup<Value: ShardedMapV2Value>:
+    ThriftConvert + Debug + Clone + PartialEq + Eq + Send + Sync + 'static
+{
+    fn rollup(value: Option<&Value>, child_rollup_data: Vec<Self>) -> Self;
 }
 
 type SmallBinary = SmallVec<[u8; 24]>;
@@ -70,6 +77,7 @@ pub struct ShardedMapV2StoredNode<Value: ShardedMapV2Value> {
     id: Value::NodeId,
     weight: usize,
     size: usize,
+    rollup_data: Value::RollupData,
 }
 
 impl<Value: ShardedMapV2Value> ShardedMapV2StoredNode<Value> {
@@ -78,6 +86,7 @@ impl<Value: ShardedMapV2Value> ShardedMapV2StoredNode<Value> {
             id: Value::NodeId::from_thrift(t.id)?,
             weight: t.weight as usize,
             size: t.size as usize,
+            rollup_data: Value::RollupData::from_bytes(&t.rollup_data)?,
         })
     }
 
@@ -86,6 +95,7 @@ impl<Value: ShardedMapV2Value> ShardedMapV2StoredNode<Value> {
             id: self.id.into_thrift(),
             weight: self.weight as i64,
             size: self.size as i64,
+            rollup_data: self.rollup_data.into_bytes(),
         }
     }
 }
@@ -130,6 +140,7 @@ impl<Value: ShardedMapV2Value> LoadableShardedMapV2Node<Value> {
             Self::Inlined(inlined) => Ok(Self::Stored(ShardedMapV2StoredNode {
                 weight: inlined.weight(),
                 size: inlined.size(),
+                rollup_data: inlined.rollup_data(),
                 id: inlined.into_blob().store(ctx, blobstore).await?,
             })),
             stored @ Self::Stored(_) => Ok(stored),
@@ -148,6 +159,13 @@ impl<Value: ShardedMapV2Value> LoadableShardedMapV2Node<Value> {
         match self {
             LoadableShardedMapV2Node::Inlined(inlined) => inlined.size(),
             LoadableShardedMapV2Node::Stored(stored) => stored.size,
+        }
+    }
+
+    pub fn rollup_data(&self) -> Value::RollupData {
+        match self {
+            Self::Inlined(inlined) => inlined.rollup_data(),
+            Self::Stored(stored) => stored.rollup_data.clone(),
         }
     }
 
@@ -206,6 +224,16 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
                     .map(|child| child.size())
                     .sum::<usize>()
         })
+    }
+
+    pub fn rollup_data(&self) -> Value::RollupData {
+        Value::RollupData::rollup(
+            self.value.as_ref(),
+            self.children
+                .iter()
+                .map(|(_byte, child)| child.rollup_data())
+                .collect(),
+        )
     }
 
     /// Create a ShardedMapV2Node out of an iterator of key-value pairs.
@@ -565,6 +593,9 @@ mod test {
     #[derive(Debug, Clone, Copy, Eq, PartialEq)]
     pub struct TestValue(i32);
 
+    #[derive(Debug, Clone, Copy, Eq, PartialEq)]
+    pub struct MaxTestValue(i32);
+
     #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
     pub struct ShardedMapV2NodeTestId(Blake2);
 
@@ -585,6 +616,21 @@ mod test {
     impl ShardedMapV2Value for TestValue {
         type NodeId = ShardedMapV2NodeTestId;
         type Context = ShardedMapV2NodeTestContext;
+        type RollupData = MaxTestValue;
+    }
+
+    impl Rollup<TestValue> for MaxTestValue {
+        fn rollup(value: Option<&TestValue>, child_rollup_data: Vec<Self>) -> Self {
+            let mut max_test_value = value.map_or(MaxTestValue(0), |value| MaxTestValue(value.0));
+
+            for child_max_test_value in child_rollup_data {
+                if child_max_test_value.0 > max_test_value.0 {
+                    max_test_value = child_max_test_value;
+                }
+            }
+
+            max_test_value
+        }
     }
 
     impl ThriftConvert for TestValue {
@@ -595,6 +641,17 @@ mod test {
         }
         fn from_thrift(t: Self::Thrift) -> Result<Self> {
             Ok(TestValue(t))
+        }
+    }
+
+    impl ThriftConvert for MaxTestValue {
+        const NAME: &'static str = "MaxTestValue";
+        type Thrift = i32;
+        fn into_thrift(self) -> Self::Thrift {
+            self.0
+        }
+        fn from_thrift(t: Self::Thrift) -> Result<Self> {
+            Ok(MaxTestValue(t))
         }
     }
 
@@ -635,6 +692,7 @@ mod test {
     struct CalculatedValues {
         weight: usize,
         size: usize,
+        rollup_data: MaxTestValue,
     }
 
     #[derive(Clone)]
@@ -755,6 +813,8 @@ mod test {
                 to_test_vec(&EXAMPLE_ENTRIES[10..12])
             );
 
+            assert_eq!(map.rollup_data(), MaxTestValue(12),);
+
             Ok(())
         }
 
@@ -780,6 +840,9 @@ mod test {
 
             let mut calculated_weight = map.value.iter().len();
             let mut calculated_size = map.value.iter().len();
+            let mut calculated_rollup_data = map
+                .value
+                .map_or(MaxTestValue(0), |value| MaxTestValue(value.0));
 
             for (_next_byte, child) in map.children.iter() {
                 let child_calculated_values = self
@@ -795,6 +858,9 @@ mod test {
                     }
                 }
                 calculated_size += child_calculated_values.size;
+                if child_calculated_values.rollup_data.0 > calculated_rollup_data.0 {
+                    calculated_rollup_data = child_calculated_values.rollup_data;
+                }
             }
 
             if calculated_weight != map.weight() {
@@ -803,10 +869,14 @@ mod test {
             if calculated_size != map.size() {
                 bail!("size of sharded map node does not match its calculated size");
             }
+            if calculated_rollup_data != map.rollup_data() {
+                bail!("sharded map node rollup data does not match its calculated rollup data");
+            }
 
             Ok(CalculatedValues {
                 weight: calculated_weight,
                 size: calculated_size,
+                rollup_data: calculated_rollup_data,
             })
         }
 
@@ -839,6 +909,7 @@ mod test {
             node: ShardedMapV2Node<TestValue>,
             weight: usize,
             size: usize,
+            rollup_data: i32,
             blobstore_key: &str,
         ) -> Result<LoadableShardedMapV2Node<TestValue>> {
             let id = node.into_blob().store(&self.0, &self.1).await?;
@@ -848,6 +919,7 @@ mod test {
                 id,
                 weight,
                 size,
+                rollup_data: MaxTestValue(rollup_data),
             }))
         }
     }
@@ -917,6 +989,7 @@ mod test {
                 ),
                 5,
                 5,
+                11,
                 "test.map2node.blake2.d40e11f4f3f08ad21b5eb6bab17e0916d449bffde464048dfb27efa3f9c19cee",
             )
             .await?;
@@ -993,6 +1066,7 @@ mod test {
         let map_o = helper
             .stored_node(
                 test_node("m", None, vec![(b'i', map_omi), (b'u', map_omu)]),
+                4,
                 4,
                 4,
                 "test.map2node.blake2.6f7dc1a2ad07d16eb4d3e586e2f7361c0990dcf4a29b0bb06fa5d04e69710a64"
@@ -1198,7 +1272,7 @@ mod test {
                     }
 
                     let roundtrip_map = helper
-                        .into_entries(map)
+                        .into_entries(map.clone())
                         .await?
                         .into_iter()
                         .map(|(key, value)| (String::from_utf8(key.to_vec()).unwrap(), value.0))
@@ -1206,6 +1280,15 @@ mod test {
                     if roundtrip_map != values {
                         return Err(anyhow!(
                             "sharded map entries do not round trip back to original values"
+                        ));
+                    }
+
+                    let max_value = values.values().max().copied().unwrap_or_default();
+                    let rollup_data = map.rollup_data();
+
+                    if rollup_data != MaxTestValue(max_value) {
+                        return Err(anyhow!(
+                            "sharded map rollup data does not match expected value"
                         ));
                     }
 

@@ -420,11 +420,13 @@ union ShardedMapNode {
 const i32 SHARDED_MAP_V2_WEIGHT_LIMIT = 2000;
 
 typedef binary_bytes ShardedMapV2Value
+typedef binary_bytes ShardedMapV2RollupData
 
 struct ShardedMapV2StoredNode {
   1: ShardedMapV2NodeId id;
   2: i64 weight;
   3: i64 size;
+  4: ShardedMapV2RollupData rollup_data;
 } (rust.exhaustive)
 
 union LoadableShardedMapV2Node {
