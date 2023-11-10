@@ -7,7 +7,7 @@
  * This file is generated with cbindgen. Please run `./tools/cbindgen.sh` to
  * update this file.
  *
- * @generated SignedSource<<1ae5e8aa5170c38a67fa3c73f34f54c4>>
+ * @generated SignedSource<<5432de8f25501a01600d8b7617c7351c>>
  *
  */
 
@@ -104,6 +104,10 @@ extern "C" {
 
 void sapling_file_aux_free(FileAuxData *aux);
 
+void sapling_cbytes_free(CBytes *vec);
+
+void sapling_cfallible_free_error(char *ptr);
+
 CFallibleBase sapling_backingstore_new(Slice<uint8_t> repository,
                                        const BackingStoreOptions *options);
 
@@ -138,10 +142,6 @@ void sapling_backingstore_get_file_aux_batch(BackingStore *store,
                                              void (*resolve)(void*, uintptr_t, CFallibleBase));
 
 void sapling_backingstore_flush(BackingStore *store);
-
-void sapling_cbytes_free(CBytes *vec);
-
-void sapling_cfallible_free_error(char *ptr);
 
 /// Returns a `CFallible` with success return value 1. This function is intended to be called from
 /// C++ tests.
