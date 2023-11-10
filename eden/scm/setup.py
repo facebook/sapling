@@ -37,6 +37,9 @@ import tempfile
 import time
 import zipfile
 
+from contrib.pick_python import load_build_env
+
+
 ossbuild = bool(os.environ.get("SAPLING_OSS_BUILD"))
 
 # If this is set, then skip downloading third-party dependencies
@@ -50,10 +53,7 @@ def ensureenv():
     If build/env has specified a different set of environment variables,
     restart the current command. Otherwise do nothing.
     """
-    if not os.path.exists("build/env"):
-        return
-    with open("build/env", "r") as f:
-        env = dict(l.split("=", 1) for l in f.read().splitlines() if "=" in l)
+    env = load_build_env()
     if all(os.environ.get(k) == v for k, v in env.items()):
         # No restart needed
         return

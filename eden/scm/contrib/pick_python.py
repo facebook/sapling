@@ -20,7 +20,19 @@ import sys
 EXE = ".exe" if os.name == "nt" else ""
 
 
+def load_build_env():
+    """Load build/env's as environment variables."""
+    up = os.path.dirname
+    hgdir = up(up(os.path.realpath(__file__)))
+    envpath = os.path.join(hgdir, "build", "env")
+    if not os.path.exists(envpath):
+        return {}
+    with open(envpath, "r") as f:
+        return dict(l.split("=", 1) for l in f.read().splitlines() if "=" in l)
+
+
 def main(args):
+    os.environ.update(load_build_env())
     names = (
         list(filter(None, [os.getenv("PYTHON_SYS_EXECUTABLE")]))
         + [
