@@ -423,9 +423,10 @@ typedef binary_bytes ShardedMapV2Value
 
 struct ShardedMapV2StoredNode {
   1: ShardedMapV2NodeId id;
+  2: i64 weight;
 } (rust.exhaustive)
 
-union ShardedMapV2Child {
+union LoadableShardedMapV2Node {
   1: ShardedMapV2Node inlined;
   2: ShardedMapV2StoredNode stored;
 }
@@ -453,7 +454,7 @@ union ShardedMapV2Child {
 struct ShardedMapV2Node {
   1: small_binary prefix;
   2: optional ShardedMapV2Value value;
-  3: map<byte, ShardedMapV2Child> (
+  3: map<byte, LoadableShardedMapV2Node> (
     rust.type = "sorted_vector_map::SortedVectorMap",
   ) children;
 } (rust.exhaustive)
