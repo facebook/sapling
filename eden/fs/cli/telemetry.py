@@ -169,6 +169,12 @@ class TelemetryLogger(abc.ABC):
         sample.add_fields(**kwargs)
         return sample
 
+    def new_empty_sample(self, log_session_id: bool = False) -> TelemetrySample:
+        sample = self._create_sample()
+        if log_session_id:
+            sample.add_int("session_id", self.session_id)
+        return sample
+
     def log(self, event_type: str, **kwargs: TelemetryTypes) -> None:
         self.new_sample(event_type, **kwargs).log()
 

@@ -17,6 +17,7 @@ python_library(
         "//configerator/structs/scm/eden/config:edenfs_config-py3-types",
         "//eden/fs/cli:hostname",
         "//eden/fs/cli:lib",
+        "//eden/fs/cli:telemetry",
         "//thrift/lib/py3:common",
         "//thrift/lib/py3:types",
     ],
@@ -28,5 +29,7 @@ python_binary(
     main_function = "eden.fs.config.facebook.edenfs_config_manager.main",
     deps = [
         ":edenfs_config_manager_lib",
+        "//eden/fs/cli:lib",
+        "//eden/fs/cli:telemetry",
     ],
 )
