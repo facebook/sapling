@@ -19,14 +19,14 @@ use revisionstore::scmstore::FileAuxData as ScmStoreFileAuxData;
 use types::HgId;
 use types::Key;
 
+use crate::auxdata::FileAuxData;
 use crate::backingstore::BackingStore;
-use crate::raw::CBytes;
-use crate::raw::CFallible;
-use crate::raw::CFallibleBase;
-use crate::raw::FileAuxData;
-use crate::raw::Request;
-use crate::raw::Slice;
-use crate::raw::Tree;
+use crate::cbytes::CBytes;
+use crate::cfallible::CFallible;
+use crate::cfallible::CFallibleBase;
+use crate::request::Request;
+use crate::slice::Slice;
+use crate::tree::Tree;
 
 fn fetch_mode_from_local(local: bool) -> FetchMode {
     if local {

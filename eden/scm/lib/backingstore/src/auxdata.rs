@@ -7,7 +7,7 @@
 
 use revisionstore::scmstore::file::FileAuxData as ScmStoreFileAuxData;
 
-use crate::raw::CBytes;
+use crate::cbytes::CBytes;
 
 #[repr(C)]
 pub struct FileAuxData {

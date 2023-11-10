@@ -9,9 +9,9 @@
 
 use anyhow::anyhow;
 
-use crate::raw::CBytes;
-use crate::raw::CFallible;
-use crate::raw::CFallibleBase;
+use crate::cbytes::CBytes;
+use crate::cfallible::CFallible;
+use crate::cfallible::CFallibleBase;
 
 /// Returns a `CFallible` with success return value 1. This function is intended to be called from
 /// C++ tests.
