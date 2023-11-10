@@ -6,6 +6,7 @@
  */
 
 use std::fmt::Debug;
+use std::num::NonZeroUsize;
 use std::sync::OnceLock;
 
 use anyhow::bail;
@@ -15,12 +16,16 @@ use async_recursion::async_recursion;
 use blobstore::Blobstore;
 use blobstore::Loadable;
 use blobstore::Storable;
+use bounded_traversal::OrderedTraversal;
 use context::CoreContext;
 use derivative::Derivative;
 use futures::stream;
+use futures::stream::Stream;
+use futures::FutureExt;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use itertools::Either;
+use nonzero_ext::nonzero;
 use smallvec::SmallVec;
 use sorted_vector_map::SortedVectorMap;
 
@@ -50,6 +55,8 @@ pub struct ShardedMapV2Node<Value: ShardedMapV2Value> {
     children: SortedVectorMap<u8, LoadableShardedMapV2Node<Value>>,
     #[derivative(PartialEq = "ignore", Debug = "ignore")]
     weight: OnceLock<usize>,
+    #[derivative(PartialEq = "ignore", Debug = "ignore")]
+    size: OnceLock<usize>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -62,6 +69,7 @@ pub enum LoadableShardedMapV2Node<Value: ShardedMapV2Value> {
 pub struct ShardedMapV2StoredNode<Value: ShardedMapV2Value> {
     id: Value::NodeId,
     weight: usize,
+    size: usize,
 }
 
 impl<Value: ShardedMapV2Value> ShardedMapV2StoredNode<Value> {
@@ -69,6 +77,7 @@ impl<Value: ShardedMapV2Value> ShardedMapV2StoredNode<Value> {
         Ok(Self {
             id: Value::NodeId::from_thrift(t.id)?,
             weight: t.weight as usize,
+            size: t.size as usize,
         })
     }
 
@@ -76,6 +85,7 @@ impl<Value: ShardedMapV2Value> ShardedMapV2StoredNode<Value> {
         thrift::ShardedMapV2StoredNode {
             id: self.id.into_thrift(),
             weight: self.weight as i64,
+            size: self.size as i64,
         }
     }
 }
@@ -119,6 +129,7 @@ impl<Value: ShardedMapV2Value> LoadableShardedMapV2Node<Value> {
         match self {
             Self::Inlined(inlined) => Ok(Self::Stored(ShardedMapV2StoredNode {
                 weight: inlined.weight(),
+                size: inlined.size(),
                 id: inlined.into_blob().store(ctx, blobstore).await?,
             })),
             stored @ Self::Stored(_) => Ok(stored),
@@ -130,6 +141,13 @@ impl<Value: ShardedMapV2Value> LoadableShardedMapV2Node<Value> {
         match self {
             Self::Inlined(inlined) => inlined.weight(),
             Self::Stored(stored) => stored.weight,
+        }
+    }
+
+    fn size(&self) -> usize {
+        match self {
+            LoadableShardedMapV2Node::Inlined(inlined) => inlined.size(),
+            LoadableShardedMapV2Node::Stored(stored) => stored.size,
         }
     }
 
@@ -168,7 +186,7 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
 
     fn weight(&self) -> usize {
         *self.weight.get_or_init(|| {
-            self.value.is_some() as usize
+            self.value.iter().len()
                 + self
                     .children
                     .iter()
@@ -176,6 +194,17 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
                         LoadableShardedMapV2Node::Inlined(inlined) => acc + inlined.weight(),
                         LoadableShardedMapV2Node::Stored(_) => acc + 1,
                     })
+        })
+    }
+
+    fn size(&self) -> usize {
+        *self.size.get_or_init(|| {
+            self.value.iter().len()
+                + self
+                    .children
+                    .values()
+                    .map(|child| child.size())
+                    .sum::<usize>()
         })
     }
 
@@ -250,7 +279,7 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
 
         // Assume that all children are not going to be inlined, then the weight of the
         // node will be the number of children plus one if the current node has a value.
-        let weight = &mut (current_value.is_some() as usize + children.len());
+        let weight = &mut (current_value.iter().len() + children.len());
 
         let children_pre_inlining_futures = children
             .into_iter()
@@ -293,6 +322,7 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
             value: current_value,
             children,
             weight: OnceLock::from(*weight),
+            size: OnceLock::new(),
         }))
     }
 
@@ -343,6 +373,116 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
             }
         }
     }
+
+    /// Returns an ordered stream over all key-value pairs in the map.
+    pub fn into_entries<'a>(
+        self,
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+    ) -> impl Stream<Item = Result<(SmallBinary, Value)>> + 'a {
+        self.into_prefix_entries(ctx, blobstore, &[])
+    }
+
+    /// Returns an ordered stream over all key-value pairs in the map for which
+    /// the key starts with the given prefix.
+    pub fn into_prefix_entries<'a>(
+        self,
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+        prefix: &'a [u8],
+    ) -> impl Stream<Item = Result<(SmallBinary, Value)>> + 'a {
+        const BOUNDED_TRAVERSAL_SCHEDULED_MAX: NonZeroUsize = nonzero!(256usize);
+        const BOUNDED_TRAVERSAL_QUEUED_MAX: NonZeroUsize = nonzero!(256usize);
+
+        bounded_traversal::bounded_traversal_ordered_stream(
+            BOUNDED_TRAVERSAL_SCHEDULED_MAX,
+            BOUNDED_TRAVERSAL_QUEUED_MAX,
+            vec![(
+                self.size(),
+                (
+                    SmallBinary::new(),
+                    prefix,
+                    LoadableShardedMapV2Node::Inlined(self),
+                ),
+            )],
+            move |(mut accumulated_prefix, target_prefix, current_node): (
+                SmallBinary,
+                &[u8],
+                LoadableShardedMapV2Node<Value>,
+            )| {
+                async move {
+                    let Self {
+                        prefix: current_prefix,
+                        value,
+                        mut children,
+                        ..
+                    } = current_node.load(ctx, blobstore).await?;
+
+                    if target_prefix.len() <= current_prefix.len() {
+                        // Exit early if the current prefix doesn't start with the target prefix,
+                        // as this means all keys in this node and its descendants don't start with
+                        // the target prefix.
+                        if !current_prefix.starts_with(target_prefix) {
+                            return Ok(vec![]);
+                        }
+
+                        // If target_prefix is a prefix of the current node, then
+                        // we should output all the values included in this node and
+                        // its descendants.
+
+                        accumulated_prefix.extend(current_prefix);
+
+                        Ok(value
+                            .into_iter()
+                            .map(|value| {
+                                OrderedTraversal::Output((accumulated_prefix.clone(), value))
+                            })
+                            .chain(children.into_iter().map(|(byte, child)| {
+                                let mut accumulated_prefix = accumulated_prefix.clone();
+                                accumulated_prefix.push(byte);
+
+                                OrderedTraversal::Recurse(
+                                    child.size(),
+                                    (accumulated_prefix, b"".as_slice(), child),
+                                )
+                            }))
+                            .collect::<Vec<_>>())
+                    } else {
+                        // target_prefix is longer than the prefix of the curernt node. This
+                        // means that there's at most one child we should recurse to while
+                        // ignoring the value of the current node and all other children.
+
+                        let target_prefix =
+                            match target_prefix.strip_prefix(current_prefix.as_slice()) {
+                                Some(remaining_prefix) => remaining_prefix,
+                                // The target prefix doesn't start with current node's prefix. Exit early
+                                // as none of the keys in the map can start with the target prefix.
+                                None => return Ok(vec![]),
+                            };
+
+                        let (first, rest) = target_prefix.split_first().unwrap();
+
+                        let child = match children.remove(first) {
+                            Some(child) => child,
+                            // Exit early if we can't find the child corresponding to the first byte of
+                            // the remainder of target prefix, as that's the only child whose keys can
+                            // start with the target prefix.
+                            None => return Ok(vec![]),
+                        };
+
+                        accumulated_prefix.extend(current_prefix);
+                        accumulated_prefix.push(*first);
+
+                        Ok(vec![OrderedTraversal::Recurse(
+                            child.size(),
+                            (accumulated_prefix, rest, child),
+                        )])
+                    }
+                }
+                .boxed()
+            },
+        )
+    }
 }
 
 impl<Value: ShardedMapV2Value> ThriftConvert for ShardedMapV2Node<Value> {
@@ -363,6 +503,7 @@ impl<Value: ShardedMapV2Value> ThriftConvert for ShardedMapV2Node<Value> {
                 .map(|(key, child)| Ok((key as u8, LoadableShardedMapV2Node::from_thrift(child)?)))
                 .collect::<Result<_>>()?,
             weight: OnceLock::new(),
+            size: OnceLock::new(),
         })
     }
 
@@ -472,6 +613,13 @@ mod test {
         ("omungal", 4),
     ];
 
+    fn to_test_vec(entries: &[(&str, i32)]) -> Vec<(SmallBinary, TestValue)> {
+        entries
+            .iter()
+            .map(|(key, value)| (SmallBinary::from_slice(key.as_bytes()), TestValue(*value)))
+            .collect()
+    }
+
     fn check_round_trip(map: ShardedMapV2Node<TestValue>) -> Result<()> {
         let map_t = map.clone().into_thrift();
 
@@ -486,6 +634,7 @@ mod test {
 
     struct CalculatedValues {
         weight: usize,
+        size: usize,
     }
 
     #[derive(Clone)]
@@ -545,6 +694,25 @@ mod test {
             map.lookup(&self.0, &self.1, key.as_bytes()).await
         }
 
+        async fn into_entries(
+            &self,
+            map: ShardedMapV2Node<TestValue>,
+        ) -> Result<Vec<(SmallBinary, TestValue)>> {
+            map.into_entries(&self.0, &self.1)
+                .try_collect::<Vec<_>>()
+                .await
+        }
+
+        async fn into_prefix_entries(
+            &self,
+            map: ShardedMapV2Node<TestValue>,
+            prefix: impl AsRef<[u8]>,
+        ) -> Result<Vec<(SmallBinary, TestValue)>> {
+            map.into_prefix_entries(&self.0, &self.1, prefix.as_ref())
+                .try_collect::<Vec<_>>()
+                .await
+        }
+
         async fn check_example_map(&self, map: ShardedMapV2Node<TestValue>) -> Result<()> {
             self.check_sharded_map(map.clone()).await?;
 
@@ -552,6 +720,40 @@ mod test {
                 assert_eq!(self.lookup(&map, key).await?, Some(TestValue(*value)));
             }
             assert_eq!(self.lookup(&map, "NOT_IN_MAP").await?, None);
+
+            assert_eq!(
+                self.into_entries(map.clone()).await?,
+                to_test_vec(EXAMPLE_ENTRIES)
+            );
+
+            assert_eq!(
+                self.into_prefix_entries(map.clone(), "a").await?,
+                to_test_vec(&EXAMPLE_ENTRIES[0..8])
+            );
+            assert_eq!(
+                self.into_prefix_entries(map.clone(), "ab").await?,
+                to_test_vec(&EXAMPLE_ENTRIES[0..8])
+            );
+            assert_eq!(
+                self.into_prefix_entries(map.clone(), "aba").await?,
+                to_test_vec(&EXAMPLE_ENTRIES[0..8])
+            );
+            assert_eq!(
+                self.into_prefix_entries(map.clone(), "o").await?,
+                to_test_vec(&EXAMPLE_ENTRIES[8..12])
+            );
+            assert_eq!(
+                self.into_prefix_entries(map.clone(), "om").await?,
+                to_test_vec(&EXAMPLE_ENTRIES[8..12])
+            );
+            assert_eq!(
+                self.into_prefix_entries(map.clone(), "omi").await?,
+                to_test_vec(&EXAMPLE_ENTRIES[8..10])
+            );
+            assert_eq!(
+                self.into_prefix_entries(map.clone(), "omu").await?,
+                to_test_vec(&EXAMPLE_ENTRIES[10..12])
+            );
 
             Ok(())
         }
@@ -565,7 +767,7 @@ mod test {
 
             // The minimum weight that this node could have is the number of its children
             // plus one if it has a value.
-            let min_possible_weight = map.value.is_some() as usize + map.children.len();
+            let min_possible_weight = map.value.iter().len() + map.children.len();
 
             let weight_limit = ShardedMapV2Node::<TestValue>::weight_limit()?;
 
@@ -576,7 +778,8 @@ mod test {
                 bail!("weight of sharded map node exceeds the limit");
             }
 
-            let mut calculated_weight = map.value.is_some() as usize;
+            let mut calculated_weight = map.value.iter().len();
+            let mut calculated_size = map.value.iter().len();
 
             for (_next_byte, child) in map.children.iter() {
                 let child_calculated_values = self
@@ -591,14 +794,19 @@ mod test {
                         calculated_weight += 1;
                     }
                 }
+                calculated_size += child_calculated_values.size;
             }
 
             if calculated_weight != map.weight() {
                 bail!("weight of sharded map node does not match its calculated weight");
             }
+            if calculated_size != map.size() {
+                bail!("size of sharded map node does not match its calculated size");
+            }
 
             Ok(CalculatedValues {
                 weight: calculated_weight,
+                size: calculated_size,
             })
         }
 
@@ -630,6 +838,7 @@ mod test {
             &self,
             node: ShardedMapV2Node<TestValue>,
             weight: usize,
+            size: usize,
             blobstore_key: &str,
         ) -> Result<LoadableShardedMapV2Node<TestValue>> {
             let id = node.into_blob().store(&self.0, &self.1).await?;
@@ -638,6 +847,7 @@ mod test {
             Ok(LoadableShardedMapV2Node::Stored(ShardedMapV2StoredNode {
                 id,
                 weight,
+                size,
             }))
         }
     }
@@ -652,6 +862,7 @@ mod test {
             value: value.map(TestValue),
             children: children.into_iter().collect(),
             weight: Default::default(),
+            size: Default::default(),
         }
     }
 
@@ -704,6 +915,7 @@ mod test {
                         (b'x', inlined_node("i", Some(11), vec![])),
                     ],
                 ),
+                5,
                 5,
                 "test.map2node.blake2.d40e11f4f3f08ad21b5eb6bab17e0916d449bffde464048dfb27efa3f9c19cee",
             )
@@ -781,6 +993,7 @@ mod test {
         let map_o = helper
             .stored_node(
                 test_node("m", None, vec![(b'i', map_omi), (b'u', map_omu)]),
+                4,
                 4,
                 "test.map2node.blake2.6f7dc1a2ad07d16eb4d3e586e2f7361c0990dcf4a29b0bb06fa5d04e69710a64"
             )
@@ -982,6 +1195,18 @@ mod test {
                         if correct_v != test_v {
                             return Err(anyhow!("sharded map lookup returns incorrect value"));
                         }
+                    }
+
+                    let roundtrip_map = helper
+                        .into_entries(map)
+                        .await?
+                        .into_iter()
+                        .map(|(key, value)| (String::from_utf8(key.to_vec()).unwrap(), value.0))
+                        .collect::<BTreeMap<_, _>>();
+                    if roundtrip_map != values {
+                        return Err(anyhow!(
+                            "sharded map entries do not round trip back to original values"
+                        ));
                     }
 
                     anyhow::Ok(())

@@ -424,6 +424,7 @@ typedef binary_bytes ShardedMapV2Value
 struct ShardedMapV2StoredNode {
   1: ShardedMapV2NodeId id;
   2: i64 weight;
+  3: i64 size;
 } (rust.exhaustive)
 
 union LoadableShardedMapV2Node {
