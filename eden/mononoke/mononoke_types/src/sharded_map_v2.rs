@@ -295,6 +295,54 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
             weight: OnceLock::from(*weight),
         }))
     }
+
+    /// Returns the value corresponding to the given key, or None if there's no value
+    /// corresponding to it.
+    #[async_recursion]
+    pub async fn lookup(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &impl Blobstore,
+        key: &[u8],
+    ) -> Result<Option<Value>> {
+        // If the key starts with the prefix of this node then strip it, otherwise
+        // there's no value corresponding to this key.
+        let key = match key.strip_prefix(self.prefix.as_ref()) {
+            None => {
+                return Ok(None);
+            }
+            Some(key) => key,
+        };
+
+        // If the key becomes empty after stripping the prefix, then the value of
+        // this node corresponds to the key. Otherwise split the first character
+        // of the key to find out which child node to recurse onto.
+        let (first, rest) = match key.split_first() {
+            None => {
+                return Ok(self.value.clone());
+            }
+            Some((first, rest)) => (first, rest),
+        };
+
+        let child = match self.children.get(first) {
+            None => {
+                return Ok(None);
+            }
+            Some(child) => child,
+        };
+
+        match child {
+            LoadableShardedMapV2Node::Inlined(inlined) => {
+                inlined.lookup(ctx, blobstore, rest).await
+            }
+            LoadableShardedMapV2Node::Stored(ShardedMapV2StoredNode { id, .. }) => {
+                id.load(ctx, blobstore)
+                    .await?
+                    .lookup(ctx, blobstore, rest)
+                    .await
+            }
+        }
+    }
 }
 
 impl<Value: ShardedMapV2Value> ThriftConvert for ShardedMapV2Node<Value> {
@@ -489,8 +537,22 @@ mod test {
             .await
         }
 
+        async fn lookup(
+            &self,
+            map: &ShardedMapV2Node<TestValue>,
+            key: &str,
+        ) -> Result<Option<TestValue>> {
+            map.lookup(&self.0, &self.1, key.as_bytes()).await
+        }
+
         async fn check_example_map(&self, map: ShardedMapV2Node<TestValue>) -> Result<()> {
             self.check_sharded_map(map.clone()).await?;
+
+            for (key, value) in EXAMPLE_ENTRIES {
+                assert_eq!(self.lookup(&map, key).await?, Some(TestValue(*value)));
+            }
+            assert_eq!(self.lookup(&map, "NOT_IN_MAP").await?, None);
+
             Ok(())
         }
 
@@ -906,7 +968,21 @@ mod test {
                         )
                         .await?;
 
-                    helper.check_sharded_map(map).await?;
+                    helper.check_sharded_map(map.clone()).await?;
+
+                    let mut queries: Vec<String> = Arbitrary::arbitrary(gen);
+                    let keys: Vec<&String> = values.keys().collect();
+                    for _ in 0..values.len() / 2 {
+                        queries.push(gen.choose(&keys).unwrap().to_string());
+                    }
+
+                    for k in queries {
+                        let correct_v = values.get(&k).cloned().map(TestValue);
+                        let test_v = helper.lookup(&map, &k).await?;
+                        if correct_v != test_v {
+                            return Err(anyhow!("sharded map lookup returns incorrect value"));
+                        }
+                    }
 
                     anyhow::Ok(())
                 });
