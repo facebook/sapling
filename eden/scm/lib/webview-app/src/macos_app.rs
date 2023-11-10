@@ -49,9 +49,22 @@ pub fn maybe_become_webview_app(force_foreground: bool) -> Option<()> {
     }
 
     // start the webview, and print any error it encounters
-    start_webview_app(force_foreground)
-        .unwrap_or_else(|e| eprintln!("error starting webview app: {}", e));
+    let result = start_webview_app(force_foreground);
+
+    if result.is_err() {
+        show_error_dialog("Could not open Sapling ISL", result.as_ref().err());
+    }
+
     Some(())
+}
+
+fn show_error_dialog(title: &str, error: Option<&anyhow::Error>) {
+    let message = error
+        .map_or_else(|| "Unknown Error".into(), |e| e.to_string())
+        // for whatever reason, tinyfiledialogs doesn't like quotes.
+        .replace(['"', '\''], "`");
+    println!("{}: {}", title, message);
+    tinyfiledialogs::message_box_ok(title, &message, tinyfiledialogs::MessageBoxIcon::Error);
 }
 
 #[cfg(target_os = "macos")]
@@ -70,10 +83,7 @@ fn start_webview_app(force_foreground: bool) -> anyhow::Result<()> {
     // This would of course mean we would also spawn multiple node servers.
     // We would probably want to also save window size and position, so they can be restored fully.
 
-    let server_output = server_options
-        .spawn_isl_server_json()
-        .context("could not start ISL server")?;
-
+    let server_output = server_options.spawn_isl_server_json()?;
     println!("Server output: {:?}", server_output);
 
     if force_foreground {

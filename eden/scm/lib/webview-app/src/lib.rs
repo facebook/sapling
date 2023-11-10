@@ -104,6 +104,13 @@ pub struct ISLSpawnOptions {
     pub dev: bool,
 }
 
+#[derive(Debug, Default, Deserialize, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct ISLSpawnOptionsError {
+    pub error: String,
+}
+
 impl ISLSpawnOptions {
     fn spawn_isl_server(&self, pipe_stdout: bool) -> io::Result<Child> {
         let mut cmd = Command::new(&self.nodepath);
@@ -148,9 +155,22 @@ impl ISLSpawnOptions {
         let output = child.wait_with_output()?;
         let stdout = String::from_utf8(output.stdout).context("invalid utf-8 from ISL server")?;
 
-        let json = serde_json::from_str::<ISLSpawnResult>(&stdout)
-            .context("failed to parse JSON from ISL server")?;
-        Ok(json)
+        let json = serde_json::from_str::<ISLSpawnResult>(&stdout);
+
+        match json {
+            // if we fail to parse as normal json, try parsing as an error to get a better message.
+            Err(_) => {
+                let err = serde_json::from_str::<ISLSpawnOptionsError>(&stdout);
+                match err {
+                    Err(_) => Err(anyhow::anyhow!(
+                        "Invalid response from ISL server: {}",
+                        stdout
+                    )),
+                    Ok(err) => Err(anyhow::anyhow!(err.error)),
+                }
+            }
+            Ok(json) => Ok(json),
+        }
     }
 
     /// Override arguments that make the spawned server compatible with connecting to the webview.
