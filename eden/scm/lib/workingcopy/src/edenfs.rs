@@ -17,13 +17,15 @@ use configmodel::ConfigExt;
 use edenfs_client::EdenFsClient;
 use edenfs_client::FileStatus;
 use io::IO;
+use manifest_tree::TreeManifest;
 use parking_lot::Mutex;
+use parking_lot::RwLock;
 use pathmatcher::DynMatcher;
 use treestate::treestate::TreeState;
 use types::hgid::NULL_ID;
 
+use crate::filesystem::FileSystem;
 use crate::filesystem::PendingChange;
-use crate::filesystem::PendingChanges;
 
 pub struct EdenFileSystem {
     treestate: Arc<Mutex<TreeState>>,
@@ -44,7 +46,7 @@ impl EdenFileSystem {
     }
 }
 
-impl PendingChanges for EdenFileSystem {
+impl FileSystem for EdenFileSystem {
     fn pending_changes(
         &self,
         _matcher: DynMatcher,
@@ -93,5 +95,14 @@ impl PendingChanges for EdenFileSystem {
             std::thread::sleep(Duration::from_millis(interval_ms));
         }
         Ok(())
+    }
+
+    fn sparse_matcher(
+        &self,
+        manifests: &[Arc<RwLock<TreeManifest>>],
+        _dot_dir: &'static str,
+    ) -> Result<Option<DynMatcher>> {
+        assert!(!manifests.is_empty());
+        Ok(None)
     }
 }

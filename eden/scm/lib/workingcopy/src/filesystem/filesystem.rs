@@ -6,6 +6,7 @@
  */
 
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::Duration;
 use std::time::SystemTime;
 
@@ -13,6 +14,8 @@ use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use io::IO;
+use manifest_tree::TreeManifest;
+use parking_lot::RwLock;
 use pathmatcher::DynMatcher;
 use serde::Serialize;
 use types::RepoPathBuf;
@@ -38,7 +41,7 @@ impl PendingChange {
     }
 }
 
-pub trait PendingChanges {
+pub trait FileSystem {
     fn pending_changes(
         &self,
         // The full matcher including user specified filters.
@@ -67,4 +70,10 @@ pub trait PendingChanges {
         std::thread::sleep(Duration::from_millis(interval_ms));
         Ok(())
     }
+
+    fn sparse_matcher(
+        &self,
+        manifests: &[Arc<RwLock<TreeManifest>>],
+        dot_dir: &'static str,
+    ) -> Result<Option<DynMatcher>>;
 }

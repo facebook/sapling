@@ -103,10 +103,7 @@ impl Wait {
             let new_wait = Self::new(wc, &self.dot_dir, config)?;
             if new_wait.metadata_map == self.metadata_map {
                 // Not changed.
-                wc.filesystem
-                    .lock()
-                    .inner
-                    .wait_for_potential_change(config)?;
+                wc.filesystem.lock().wait_for_potential_change(config)?;
             } else {
                 *self = new_wait;
                 break;

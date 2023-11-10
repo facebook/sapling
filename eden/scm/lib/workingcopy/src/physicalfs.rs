@@ -15,9 +15,12 @@ use configmodel::Config;
 use configmodel::ConfigExt;
 use io::IO;
 use manifest_tree::ReadTreeManifest;
+use manifest_tree::TreeManifest;
 use parking_lot::Mutex;
+use parking_lot::RwLock;
 use pathmatcher::DynMatcher;
 use pathmatcher::Matcher;
+use pathmatcher::UnionMatcher;
 use repolock::RepoLocker;
 use storemodel::FileStore;
 use treestate::filestate::StateFlags;
@@ -29,8 +32,8 @@ use vfs::VFS;
 use crate::filechangedetector::FileChangeDetector;
 use crate::filechangedetector::FileChangeResult;
 use crate::filechangedetector::ResolvedFileChangeResult;
+use crate::filesystem::FileSystem;
 use crate::filesystem::PendingChange;
-use crate::filesystem::PendingChanges as PendingChangesTrait;
 use crate::metadata;
 use crate::metadata::Metadata;
 use crate::util::dirstate_write_time_override;
@@ -45,11 +48,11 @@ type ArcReadTreeManifest = Arc<dyn ReadTreeManifest + Send + Sync>;
 
 pub struct PhysicalFileSystem {
     // TODO: Make this an Arc<Mutex<VFS>> so we can persist the vfs pathauditor cache
-    vfs: VFS,
-    tree_resolver: ArcReadTreeManifest,
-    store: ArcFileStore,
-    treestate: Arc<Mutex<TreeState>>,
-    locker: Arc<RepoLocker>,
+    pub(crate) vfs: VFS,
+    pub(crate) tree_resolver: ArcReadTreeManifest,
+    pub(crate) store: ArcFileStore,
+    pub(crate) treestate: Arc<Mutex<TreeState>>,
+    pub(crate) locker: Arc<RepoLocker>,
 }
 
 impl PhysicalFileSystem {
@@ -70,7 +73,7 @@ impl PhysicalFileSystem {
     }
 }
 
-impl PendingChangesTrait for PhysicalFileSystem {
+impl FileSystem for PhysicalFileSystem {
     fn pending_changes(
         &self,
         matcher: DynMatcher,
@@ -116,6 +119,33 @@ impl PendingChangesTrait for PhysicalFileSystem {
             vfs: self.vfs.clone(),
         };
         Ok(Box::new(pending_changes))
+    }
+
+    fn sparse_matcher(
+        &self,
+        manifests: &[Arc<RwLock<TreeManifest>>],
+        dot_dir: &'static str,
+    ) -> Result<Option<DynMatcher>> {
+        assert!(!manifests.is_empty());
+
+        let mut sparse_matchers: Vec<DynMatcher> = Vec::new();
+        for manifest in manifests.iter() {
+            if let Some((matcher, _hash)) = crate::sparse::repo_matcher(
+                &self.vfs,
+                &self.vfs.root().join(dot_dir),
+                manifest.read().clone(),
+                self.store.clone(),
+            )? {
+                sparse_matchers.push(matcher);
+            }
+        }
+
+        if sparse_matchers.is_empty() {
+            // Indicates we have no .hg/sparse (i.e. sparse is disabled).
+            Ok(None)
+        } else {
+            Ok(Some(Arc::new(UnionMatcher::new(sparse_matchers))))
+        }
     }
 }
 
