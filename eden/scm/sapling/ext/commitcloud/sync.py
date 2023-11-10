@@ -1121,6 +1121,7 @@ def _submitlocalchanges(repo, reponame, workspacename, lastsyncstate, failed, se
     oldremotebookmarks = []
     newremotebookmarks = {}
     newomittedremotebookmarks = []
+    remotebookmarkschanged = True
     if _isremotebookmarkssyncenabled(repo.ui):
         # do not need to submit local remote bookmarks if the feature is not enabled
         oldremotebookmarks = lastsyncstate.remotebookmarks.keys()
@@ -1135,6 +1136,9 @@ def _submitlocalchanges(repo, reponame, workspacename, lastsyncstate, failed, se
         newomittedremotebookmarks = list(
             set(newremotebookmarks.keys()).difference(localremotebookmarks.keys())
         )
+        # compare dicts
+        if newremotebookmarks == lastsyncstate.remotebookmarks:
+            remotebookmarkschanged = False
 
     backuplock.progress(repo, "finishing synchronizing with '%s'" % workspacename)
     synced, cloudrefs = serv.updatereferences(
@@ -1145,8 +1149,8 @@ def _submitlocalchanges(repo, reponame, workspacename, lastsyncstate, failed, se
         newcloudheads,
         lastsyncstate.bookmarks.keys(),
         newcloudbookmarks,
-        oldremotebookmarks,
-        newremotebookmarks,
+        oldremotebookmarks if remotebookmarkschanged else [],
+        newremotebookmarks if remotebookmarkschanged else {},
         clientinfo=service.makeclientinfo(repo, lastsyncstate),
         logopts={"metalogroot": hex(repo.svfs.metalog.root())},
     )
@@ -1160,8 +1164,8 @@ def _submitlocalchanges(repo, reponame, workspacename, lastsyncstate, failed, se
             newcloudheads,
             lastsyncstate.bookmarks,
             newcloudbookmarks,
-            oldremotebookmarks,
-            newremotebookmarks,
+            oldremotebookmarks if remotebookmarkschanged else [],
+            newremotebookmarks if remotebookmarkschanged else {},
         )
         lastsyncstate.update(
             tr,
