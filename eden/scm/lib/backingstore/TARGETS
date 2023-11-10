@@ -1,6 +1,34 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
 load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
 
 oncall("mercurial_release")
+
+cpp_library(
+    name = "sapling_native_backingstore-include",
+    srcs = [],
+    headers = glob(["include/**/*.h"]),
+    exported_deps = [
+        ":backingstore",
+        "//folly:function",
+        "//folly:range",
+        "//folly:try",
+    ],
+)
+
+cpp_library(
+    name = "sapling_native_backingstore",
+    srcs = glob(["src/**/*.cpp"]),
+    headers = [],
+    preferred_linkage = "static",
+    undefined_symbols = True,
+    deps = [
+        ":sapling_native_backingstore-include",
+        "//folly:range",
+        "//folly:string",
+        "//folly/io:iobuf",
+        "//folly/logging:logging",
+    ],
+)
 
 rust_library(
     name = "backingstore",

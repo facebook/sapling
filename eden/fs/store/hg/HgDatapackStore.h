@@ -16,7 +16,7 @@
 #include "eden/fs/model/TreeFwd.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/PathFuncs.h"
-#include "eden/scm/lib/backingstore/c_api/SaplingNativeBackingStore.h"
+#include "eden/scm/lib/backingstore/include/SaplingNativeBackingStore.h"
 
 namespace facebook::eden {
 

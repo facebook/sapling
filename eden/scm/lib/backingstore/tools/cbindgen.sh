@@ -15,7 +15,7 @@ cd "$(dirname "$0")"/..
 set -e
 
 CONFIG="cbindgen.toml"
-OUTPUT="c_api/BackingStoreBindings.h"
+OUTPUT="include/BackingStoreBindings.h"
 
 main() {
   cbindgen --config "$CONFIG" --output "$OUTPUT"
