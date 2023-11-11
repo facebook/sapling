@@ -66,6 +66,7 @@ Insert unsupported advisory merge record:
   labels:
     local: dest
     other: source
+    base:  base
   unrecognized entry: x	advisory record
   file extras: common (ancestorlinknode = 3163e20567cc93074fbb7a53c8b93312e59dbf2c)
   file: common (record type "F", state "u", hash 94c8c21d08740f5da9eaa38d1f175c592692f0d1)
@@ -84,6 +85,7 @@ Insert unsupported mandatory merge record:
   labels:
     local: dest
     other: source
+    base:  base
   file extras: common (ancestorlinknode = 3163e20567cc93074fbb7a53c8b93312e59dbf2c)
   file: common (record type "F", state "u", hash 94c8c21d08740f5da9eaa38d1f175c592692f0d1)
     local path: common (flags "")

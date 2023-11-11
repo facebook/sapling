@@ -1721,9 +1721,13 @@ def rebasenode(repo, rev, p1, base, state, collapse, dest, wctx):
     # Prepare the labels for rebase. This is currently a config option since
     # not all users are ready for the new label.
     if repo.ui.configbool("experimental", "rebase-long-labels"):
-        labels = ["dest (rebasing onto)", "source (being rebased)"]
+        labels = [
+            "dest (rebasing onto)",
+            "source (being rebased)",
+            "base (parent of source)",
+        ]
     else:
-        labels = ["dest", "source"]
+        labels = ["dest", "source", "base"]
     # When collapsing in-place, the parent is the common ancestor, we
     # have to allow merging with it.
     stats = mergemod.merge(
