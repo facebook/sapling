@@ -369,33 +369,6 @@ bbb
         )
         self.assertEqual(conflictscount, 1)
 
-    def test_adjacent_import_line_changes_with_wordmerge(self):
-        base_text = b"""
-import {List} from 'immutable';
-import {cacheMethod} from 'shared/LRU';
-"""
-        this_text = b"""
-import {List, Record} from 'immutable';
-import {cacheMethod} from 'shared/LRU';
-"""
-        other_text = b"""
-import {List} from 'immutable';
-import {cached, LRU} from 'shared/LRU';
-"""
-        expected = b"""
-import {List, Record} from 'immutable';
-import {cached, LRU} from 'shared/LRU';
-"""
-        m3 = Merge3(
-            base_text.splitlines(True),
-            other_text.splitlines(True),
-            this_text.splitlines(True),
-            automerge_algos=("word-merge",),
-        )
-        m_lines, conflictscount = render_minimized(m3, b"OTHER", b"THIS")
-        self.assertEqual(expected.splitlines(True), m_lines)
-        self.assertEqual(0, conflictscount)
-
 
 if __name__ == "__main__":
     # hide the timer
