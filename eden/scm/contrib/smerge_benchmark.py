@@ -53,7 +53,7 @@ def debugsmerge(ui, repo, *args, **opts):
 
     desttext, srctext, basetext = [readfile(p) for p in args]
     m3 = SmartMerge3Text(basetext, desttext, srctext)
-    lines = render_mergediff2(m3, b"dest", b"source")[0]
+    lines = render_mergediff2(m3, b"dest", b"source", b"base")[0]
     mergedtext = b"".join(lines)
     ui.fout.write(mergedtext)
 
@@ -99,7 +99,7 @@ def sresolve(ui, repo, *args, **opts):
     else:
         m3 = Merge3Text(basetext, desttext, srctext)
 
-    mergedtext = b"".join(render_mergediff2(m3, b"dest", b"source")[0])
+    mergedtext = b"".join(render_mergediff2(m3, b"dest", b"source", b"base")[0])
 
     if output := opts.get("output"):
         ui.write(f"writing to file: {output}\n")

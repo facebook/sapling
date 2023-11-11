@@ -66,7 +66,7 @@ test merge adjacent changes -- insertion case
    b
   +c
   +d
-  =======
+  ======= base
   -b
   +b'
   >>>>>>> source

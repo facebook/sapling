@@ -602,108 +602,103 @@ def _picklabels(overrides):
 
 
 def render_mergediff(m3, name_a, name_b, name_base):
+    return _render_mergediff_ext(m3, name_a, name_b, name_base, one_side=True)
+
+
+def render_mergediff2(m3, name_a, name_b, name_base):
+    return _render_mergediff_ext(m3, name_a, name_b, name_base, one_side=False)
+
+
+def _render_mergediff_ext(m3, name_a, name_b, name_base, one_side=True):
     newline = _detect_newline(m3)
     lines = []
     conflictscount = 0
     for what, group_lines in m3.merge_groups():
         if what == "conflict":
             base_lines, a_lines, b_lines = group_lines
-            basetext = b"".join(base_lines)
-            bblocks = list(
-                mdiff.allblocks(
-                    basetext,
-                    b"".join(b_lines),
-                    lines1=base_lines,
-                    lines2=b_lines,
+            lines.extend(
+                _render_diff_conflict(
+                    base_lines,
+                    a_lines,
+                    b_lines,
+                    name_base,
+                    name_a,
+                    name_b,
+                    newline,
+                    one_side=one_side,
                 )
             )
-            ablocks = list(
-                mdiff.allblocks(
-                    basetext,
-                    b"".join(a_lines),
-                    lines1=base_lines,
-                    lines2=b_lines,
-                )
-            )
-
-            def matchinglines(blocks):
-                return sum(block[1] - block[0] for block, kind in blocks if kind == "=")
-
-            def difflines(blocks, lines1, lines2):
-                for block, kind in blocks:
-                    if kind == "=":
-                        for line in lines1[block[0] : block[1]]:
-                            yield b" " + line
-                    else:
-                        for line in lines1[block[0] : block[1]]:
-                            yield b"-" + line
-                        for line in lines2[block[2] : block[3]]:
-                            yield b"+" + line
-
-            lines.append(b"<<<<<<<" + newline)
-            if matchinglines(ablocks) < matchinglines(bblocks):
-                lines.append(b"======= " + name_a + newline)
-                lines.extend(a_lines)
-                lines.append(b"------- " + name_base + newline)
-                lines.append(b"+++++++ " + name_b + newline)
-                lines.extend(difflines(bblocks, base_lines, b_lines))
-            else:
-                lines.append(b"------- " + name_base + newline)
-                lines.append(b"+++++++ " + name_a + newline)
-                lines.extend(difflines(ablocks, base_lines, a_lines))
-                lines.append(b"======= " + name_b + newline)
-                lines.extend(b_lines)
-            lines.append(b">>>>>>>" + newline)
             conflictscount += 1
         else:
             lines.extend(group_lines)
     return lines, conflictscount
 
 
-def render_mergediff2(m3, name_a, name_b):
+def _render_diff_conflict(
+    base_lines,
+    a_lines,
+    b_lines,
+    name_base=b"",
+    name_a=b"",
+    name_b=b"",
+    newline=b"\n",
+    one_side=True,  # diff on one side of the conflict, other diff on both sides
+):
+    basetext = b"".join(base_lines)
+    bblocks = list(
+        mdiff.allblocks(
+            basetext,
+            b"".join(b_lines),
+            lines1=base_lines,
+            lines2=b_lines,
+        )
+    )
+    ablocks = list(
+        mdiff.allblocks(
+            basetext,
+            b"".join(a_lines),
+            lines1=base_lines,
+            lines2=b_lines,
+        )
+    )
+
+    def matchinglines(blocks):
+        return sum(block[1] - block[0] for block, kind in blocks if kind == "=")
+
+    def difflines(blocks, lines1, lines2):
+        for block, kind in blocks:
+            if kind == "=":
+                for line in lines1[block[0] : block[1]]:
+                    yield b" " + line
+            else:
+                for line in lines1[block[0] : block[1]]:
+                    yield b"-" + line
+                for line in lines2[block[2] : block[3]]:
+                    yield b"+" + line
+
     lines = []
-    conflicts = False
-    for what, group_lines in m3.merge_groups():
-        if what == "conflict":
-            base_lines, a_lines, b_lines = group_lines
-            basetext = b"".join(base_lines)
-            bblocks = list(
-                mdiff.allblocks(
-                    basetext,
-                    b"".join(b_lines),
-                    lines1=base_lines,
-                    lines2=b_lines,
-                )
-            )
-            ablocks = list(
-                mdiff.allblocks(
-                    basetext,
-                    b"".join(a_lines),
-                    lines1=base_lines,
-                    lines2=b_lines,
-                )
-            )
-
-            def difflines(blocks, lines1, lines2):
-                for block, kind in blocks:
-                    if kind == "=":
-                        for line in lines1[block[0] : block[1]]:
-                            yield b" " + line
-                    else:
-                        for line in lines1[block[0] : block[1]]:
-                            yield b"-" + line
-                        for line in lines2[block[2] : block[3]]:
-                            yield b"+" + line
-
-            lines.append(b"<<<<<<< %s\n" % name_a)
-            lines.extend(difflines(ablocks, base_lines, a_lines))
-            lines.append(b"=======\n")
+    if one_side:
+        lines.append(b"<<<<<<<" + newline)
+        if matchinglines(ablocks) < matchinglines(bblocks):
+            lines.append(b"======= " + name_a + newline)
+            lines.extend(a_lines)
+            lines.append(b"------- " + name_base + newline)
+            lines.append(b"+++++++ " + name_b + newline)
             lines.extend(difflines(bblocks, base_lines, b_lines))
-            lines.append(b">>>>>>> %s\n" % name_b)
-            conflicts = True
         else:
-            lines.extend(group_lines)
-    return lines, conflicts
+            lines.append(b"------- " + name_base + newline)
+            lines.append(b"+++++++ " + name_a + newline)
+            lines.extend(difflines(ablocks, base_lines, a_lines))
+            lines.append(b"======= " + name_b + newline)
+            lines.extend(b_lines)
+        lines.append(b">>>>>>>" + newline)
+    else:
+        lines.append(b"<<<<<<< " + name_a + newline)
+        lines.extend(difflines(ablocks, base_lines, a_lines))
+        lines.append(b"======= " + name_base + newline)
+        lines.extend(difflines(bblocks, base_lines, b_lines))
+        lines.append(b">>>>>>> " + name_b + newline)
+    return lines
 
 
 def _resolve(m3, sides):
