@@ -25,7 +25,7 @@ class SmartMerge3Text(Merge3Text):
     """
 
     def __init__(self, basetext, atext, btext):
-        automerge_algos = ["adjacent-changes", "common-changes"]
+        automerge_algos = ["adjacent-changes", "subset-changes"]
         Merge3Text.__init__(
             self, basetext, atext, btext, automerge_algos=automerge_algos
         )

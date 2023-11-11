@@ -2,7 +2,7 @@
 
   $ configure modern
   $ enable rebase
-  $ setconfig merge.automerge-algos=adjacent-changes,common-changes
+  $ setconfig merge.automerge-algos=adjacent-changes,subset-changes
 
 Successful adjacent-changes merge:
 
@@ -44,7 +44,7 @@ Unsuccessful adjacent-changes merge - overlap:
   >>>>>>> source: a2c2f719de49 - test: C
   e
 
-Successful common-changes merge:
+Successful subset-changes merge:
 
   $ newrepo
   $ drawdag <<'EOS'

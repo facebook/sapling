@@ -141,11 +141,11 @@ def automerge_adjacent_changes(base_lines, a_lines, b_lines) -> Optional[List[by
     return merged_lines
 
 
-def automerge_common_changes(base_lines, a_lines, b_lines) -> Optional[List[bytes]]:
+def automerge_subset_changes(base_lines, a_lines, b_lines) -> Optional[List[bytes]]:
     if base_lines:
         return None
     if len(a_lines) > len(b_lines):
-        return automerge_common_changes(base_lines, b_lines, a_lines)
+        return automerge_subset_changes(base_lines, b_lines, a_lines)
     if is_sub_list(a_lines, b_lines):
         return b_lines
 
@@ -219,7 +219,7 @@ def splitwordswithoutemptylines(text):
 AUTOMERGE_ALGORITHMS = {
     "word-merge": automerge_wordmerge,
     "adjacent-changes": automerge_adjacent_changes,
-    "common-changes": automerge_common_changes,
+    "subset-changes": automerge_subset_changes,
 }
 
 
