@@ -224,7 +224,7 @@ AUTOMERGE_ALGORITHMS = {
 
 
 def get_automerge_algos(ui):
-    return ui.configlist("merge", "automerge-algos")
+    return ui.configlist("automerge", "merge-algos")
 
 
 class Merge3Text:

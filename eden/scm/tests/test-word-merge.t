@@ -2,7 +2,7 @@
 
   $ configure modern
   $ enable rebase
-  $ setconfig merge.automerge-algos=word-merge
+  $ setconfig automerge.merge-algos=word-merge
 
 Successful word merge:
 

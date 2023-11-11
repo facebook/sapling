@@ -2,7 +2,7 @@
 
   $ configure modern
   $ enable rebase
-  $ setconfig merge.automerge-algos=adjacent-changes,subset-changes
+  $ setconfig automerge.merge-algos=adjacent-changes,subset-changes
 
 Successful adjacent-changes merge:
 

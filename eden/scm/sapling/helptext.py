@@ -4511,3 +4511,52 @@ position. Log files beyond max-log-count are deleted. Note that there are no LRU
 sematics.
 
 """
+
+automerge = r"""@Product@ provides a number of automatic merge algorithms to resolve
+conflicts that can not be resolved in the traditional 3-way merge.
+
+Configuration
+=============
+
+The following config sections control the behavior of automerge::
+
+  [automerge]
+
+  # Decision mode for the automerged result. `reject` means disable automerge feature.
+  mode = prompt|accept|reject|review-in-file
+
+  # A list of automerge algorithms separated by comma.
+  merge-algos = adjacent-changes,subset-changes,word-merge
+
+
+Automerge Mode
+==============
+
+prompt
+    Prompt the user to accept, reject the automerged result, or keep the conflict and
+    automerged result in the file and review them later.
+
+accept
+    Auto accept the automerged the result.
+
+reject
+    Auto reject the automerged result. If you want to disable automerge feature, you can
+    select this mode.
+
+review-in-file
+    Keep the conflict and automerged result in the file and review them later.
+
+
+Merge Algorithms
+================
+
+subset-changes
+    If the changes of one side is the subset of the other side, then the conflict will
+    be resolved and the other side changes are kept.
+
+adjacent-changes
+    Merge adjacent, non-overlapping modifications on both sides.
+
+word-merge
+    Run traditional 3-way file merge on word level.
+"""

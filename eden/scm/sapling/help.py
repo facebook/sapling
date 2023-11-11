@@ -188,6 +188,11 @@ def loaddoc(topic, subdir=None):
 
 helptable = sorted(
     [
+        (
+            ["automerge"],
+            _("Automerge Algorithms in 3-way File Merge"),
+            loaddoc("automerge"),
+        ),
         (["bundlespec"], _("Bundle File Formats"), loaddoc("bundlespec")),
         (["cache"], _("File/Manifest Cache"), cachehelp),
         (["color"], _("Colorizing Outputs"), loaddoc("color")),
