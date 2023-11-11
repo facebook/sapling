@@ -375,26 +375,6 @@ std::unique_ptr<IOBuf> HgImporter::fetchTree(
   return buf;
 }
 
-Hash20 HgImporter::resolveManifestNode(folly::StringPiece revName) {
-  auto requestID = sendManifestNodeRequest(revName);
-
-  auto header = readChunkHeader(requestID, "CMD_MANIFEST_NODE_FOR_COMMIT");
-  if (header.dataLength != 20) {
-    throw std::runtime_error(folly::to<string>(
-        "expected a 20-byte hash for the manifest node '",
-        revName,
-        "' but got data of length ",
-        header.dataLength));
-  }
-
-  Hash20::Storage buffer;
-  readFromHelper(
-      buffer.data(),
-      folly::to_narrow(buffer.size()),
-      "CMD_MANIFEST_NODE_FOR_COMMIT response body");
-  return Hash20(buffer);
-}
-
 HgImporter::ChunkHeader HgImporter::readChunkHeader(
     TransactionID txnID,
     StringPiece cmdName) {
@@ -442,48 +422,6 @@ HgImporter::ChunkHeader HgImporter::readChunkHeader(
   XLOG(WARNING) << "error received from hg helper process: " << errorType
                 << ": " << message;
   throw HgImportPyError(errorType, message);
-}
-
-HgImporter::TransactionID HgImporter::sendManifestRequest(
-    folly::StringPiece revName) {
-  stats_->increment(&HgImporterStats::manifest);
-
-  auto txnID = nextRequestID_++;
-  ChunkHeader header;
-  header.command = Endian::big<uint32_t>(CMD_MANIFEST);
-  header.requestID = Endian::big<uint32_t>(txnID);
-  header.flags = 0;
-  header.dataLength = Endian::big<uint32_t>(folly::to_narrow(revName.size()));
-
-  std::array<struct iovec, 2> iov;
-  iov[0].iov_base = &header;
-  iov[0].iov_len = sizeof(header);
-  iov[1].iov_base = const_cast<char*>(revName.data());
-  iov[1].iov_len = revName.size();
-  writeToHelper(iov, "CMD_MANIFEST");
-
-  return txnID;
-}
-
-HgImporter::TransactionID HgImporter::sendManifestNodeRequest(
-    folly::StringPiece revName) {
-  stats_->increment(&HgImporterStats::manifestNodeForCommit);
-
-  auto txnID = nextRequestID_++;
-  ChunkHeader header;
-  header.command = Endian::big<uint32_t>(CMD_MANIFEST_NODE_FOR_COMMIT);
-  header.requestID = Endian::big<uint32_t>(txnID);
-  header.flags = 0;
-  header.dataLength = Endian::big<uint32_t>(folly::to_narrow(revName.size()));
-
-  std::array<struct iovec, 2> iov;
-  iov[0].iov_base = &header;
-  iov[0].iov_len = sizeof(header);
-  iov[1].iov_base = const_cast<char*>(revName.data());
-  iov[1].iov_len = revName.size();
-  writeToHelper(iov, "CMD_MANIFEST_NODE_FOR_COMMIT");
-
-  return txnID;
 }
 
 HgImporter::TransactionID HgImporter::sendFileRequest(
@@ -633,14 +571,6 @@ auto HgImporterManager::retryOnError(Fn&& fn, StringPiece func) {
         HgImportFailure{folly::to<string>(func), folly::to<string>(ex.what())});
     throw;
   }
-}
-
-Hash20 HgImporterManager::resolveManifestNode(StringPiece revName) {
-  return retryOnError(
-      [&](HgImporter* importer) {
-        return importer->resolveManifestNode(revName);
-      },
-      __func__);
 }
 
 BlobPtr HgImporterManager::importFileContents(

@@ -58,16 +58,6 @@ class Importer {
   virtual ~Importer() = default;
 
   /**
-   * Resolve the manifest node for the specified revision.
-   *
-   * This is used to locate the mercurial tree manifest data for
-   * the root tree of a given commit.
-   *
-   * Returns a Hash identifying the manifest node for the revision.
-   */
-  virtual Hash20 resolveManifestNode(folly::StringPiece revName) = 0;
-
-  /**
    * Import file information
    *
    * Takes a hash identifying the requested blob.  (For instance, blob hashes
@@ -122,7 +112,6 @@ class HgImporter : public Importer {
 
   ProcessStatus debugStopHelperProcess();
 
-  Hash20 resolveManifestNode(folly::StringPiece revName) override;
   BlobPtr importFileContents(RelativePathPiece path, Hash20 blobHash) override;
   std::unique_ptr<folly::IOBuf> fetchTree(
       RelativePathPiece path,
@@ -170,9 +159,9 @@ class HgImporter : public Importer {
   enum CommandType : uint32_t {
     CMD_STARTED = 0,
     CMD_RESPONSE = 1,
-    CMD_MANIFEST = 2,
+    CMD_MANIFEST = 2, // REMOVED
     CMD_OLD_CAT_FILE = 3,
-    CMD_MANIFEST_NODE_FOR_COMMIT = 4,
+    CMD_MANIFEST_NODE_FOR_COMMIT = 4, // REMOVED
     CMD_FETCH_TREE = 5,
     CMD_PREFETCH_FILES = 6, // REMOVED
     CMD_CAT_FILE = 7,
@@ -228,20 +217,10 @@ class HgImporter : public Importer {
   }
 
   /**
-   * Send a request to the helper process, asking it to send us the manifest
-   * for the specified revision.
-   */
-  TransactionID sendManifestRequest(folly::StringPiece revName);
-  /**
    * Send a request to the helper process, asking it to send us the contents
    * of the given file at the specified file revision.
    */
   TransactionID sendFileRequest(RelativePathPiece path, Hash20 fileRevHash);
-  /**
-   * Send a request to the helper process, asking it to send us the
-   * manifest node (NOT the full manifest!) for the specified revision.
-   */
-  TransactionID sendManifestNodeRequest(folly::StringPiece revName);
   /**
    * Send a request to the helper process asking it to prefetch data for trees
    * under the specified path, at the specified manifest node for the given
@@ -293,8 +272,6 @@ class HgImporterManager : public Importer {
       EdenStatsPtr,
       std::shared_ptr<StructuredLogger> logger,
       std::optional<AbsolutePath> importHelperScript = std::nullopt);
-
-  Hash20 resolveManifestNode(folly::StringPiece revName) override;
 
   BlobPtr importFileContents(RelativePathPiece path, Hash20 blobHash) override;
   std::unique_ptr<folly::IOBuf> fetchTree(
