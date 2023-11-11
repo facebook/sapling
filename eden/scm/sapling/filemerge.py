@@ -574,7 +574,7 @@ def _underlyingfctxifabsent(filectx):
         return filectx
 
 
-def _premerge(repo, fcd, fco, fca, toolconf, files, labels=None):
+def _premerge(repo, fcd, fco, fca, toolconf, files, labels):
     tool, toolpath, binary, symlink = toolconf
     if symlink or fcd.isabsent() or fco.isabsent():
         return 1
@@ -597,8 +597,6 @@ def _premerge(repo, fcd, fco, fca, toolconf, files, labels=None):
             )
 
     if premerge:
-        if not labels:
-            labels = _defaultconflictlabels
         if len(labels) < 3:
             labels.append("base")
         mode = "merge"
