@@ -1031,17 +1031,16 @@ class rebaseruntime:
 
 
 def _simplemerge(ui, basectx, ctx, p1ctx, manifestbuilder):
-    from ..simplemerge import get_automerge_algos, Merge3Text, render_minimized
+    from ..simplemerge import Merge3Text, render_minimized
 
     conflicts = []
     resolved = {}
-    automerge_algos = get_automerge_algos(ui)
     for file in manifestbuilder.modifiedconflicts():
         basetext = basectx[file].data()
         localtext = ctx[file].data()
         othertext = p1ctx[file].data()
 
-        m3 = Merge3Text(basetext, localtext, othertext, automerge_algos=automerge_algos)
+        m3 = Merge3Text(basetext, localtext, othertext, ui=ui)
 
         merged_lines, conflictscount = render_minimized(m3)
         merged = b"".join(merged_lines)

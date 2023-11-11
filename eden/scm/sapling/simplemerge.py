@@ -223,24 +223,25 @@ AUTOMERGE_ALGORITHMS = {
 }
 
 
-def get_automerge_algos(ui):
-    return ui.configlist("automerge", "merge-algos")
-
-
 class Merge3Text:
     """3-way merge of texts.
 
     Given strings BASE, OTHER, THIS, tries to produce a combined text
     incorporating the changes from both BASE->OTHER and BASE->THIS."""
 
-    def __init__(self, basetext, atext, btext, automerge_algos=(), in_wordmerge=False):
-        if in_wordmerge and automerge_algos:
+    def __init__(self, basetext, atext, btext, ui=None, in_wordmerge=False):
+        self.in_wordmerge = in_wordmerge
+
+        # ui is used for (1) getting automerge configs; (2) prompt choices
+        self.ui = ui
+        self.automerge_fns = {}
+        self.automerge_mode = ""
+        self.init_automerge_fields(ui)
+
+        if in_wordmerge and self.automerge_fns:
             raise error.Abort(
                 _("word-level merge does not support automerge algorithms")
             )
-
-        self.in_wordmerge = in_wordmerge
-        self.automerge_fns = self.init_automerge_fns(automerge_algos)
 
         self.basetext = basetext
         self.atext = atext
@@ -253,17 +254,20 @@ class Merge3Text:
         self.a = split(atext)
         self.b = split(btext)
 
-    def init_automerge_fns(self, automerge_algos):
-        automerge_fns = []
+    def init_automerge_fields(self, ui):
+        if not ui:
+            return
+        self.automerge_mode = ui.config("automerge", "mode", "prompt")
+        automerge_fns = self.automerge_fns
+        automerge_algos = ui.configlist("automerge", "merge-algos")
         for name in automerge_algos:
             try:
-                automerge_fns.append(AUTOMERGE_ALGORITHMS[name])
+                automerge_fns[name] = AUTOMERGE_ALGORITHMS[name]
             except KeyError:
                 raise error.Abort(
                     _("unknown automerge algorithm '%s', availabe algorithms are %s")
                     % (name, list(AUTOMERGE_ALGORITHMS.keys()))
                 )
-        return automerge_fns
 
     def merge_groups(self, disable_automerge=False):
         """Yield sequence of line groups.
@@ -305,7 +309,7 @@ class Merge3Text:
                 b_lines = self.b[t[5] : t[6]]
                 merged_lines = None
                 if not disable_automerge:
-                    for fn in self.automerge_fns:
+                    for _name, fn in self.automerge_fns.items():
                         merged_lines = fn(base_lines, a_lines, b_lines)
                         if merged_lines is not None:
                             yield "automerge", merged_lines
@@ -742,8 +746,7 @@ def simplemerge(ui, localctx, basectx, otherctx, **opts):
     except error.Abort:
         return 1
 
-    automerge_algos = get_automerge_algos(ui)
-    m3 = Merge3Text(basetext, localtext, othertext, automerge_algos=automerge_algos)
+    m3 = Merge3Text(basetext, localtext, othertext, ui=ui)
 
     conflictscount = 0
     if mode == "union":

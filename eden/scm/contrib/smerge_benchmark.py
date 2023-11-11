@@ -8,7 +8,7 @@ import re
 import time
 from dataclasses import dataclass
 
-from sapling import error, mdiff, registrar, scmutil
+from sapling import error, mdiff, registrar, scmutil, ui
 from sapling.i18n import _
 from sapling.simplemerge import Merge3Text, render_mergediff2, render_minimized
 
@@ -25,10 +25,10 @@ class SmartMerge3Text(Merge3Text):
     """
 
     def __init__(self, basetext, atext, btext):
-        automerge_algos = ["adjacent-changes", "subset-changes"]
-        Merge3Text.__init__(
-            self, basetext, atext, btext, automerge_algos=automerge_algos
-        )
+        lui = ui.ui()
+        lui.setconfig("automerge", "mode", "accept")
+        lui.setconfig("automerge", "merge-algos", "adjacent-changes,subset-changes")
+        Merge3Text.__init__(self, basetext, atext, btext, ui=lui)
 
 
 @dataclass

@@ -36,15 +36,13 @@ class Merge3(Merge3Text):
     incorporating the changes from both BASE->OTHER and BASE->THIS.
     All three will typically be sequences of lines."""
 
-    def __init__(self, base, a, b, automerge_algos=()):
+    def __init__(self, base, a, b):
         basetext = b"\n".join([i.strip(b"\n") for i in base] + [b""])
         atext = b"\n".join([i.strip(b"\n") for i in a] + [b""])
         btext = b"\n".join([i.strip(b"\n") for i in b] + [b""])
         if util.binary(basetext) or util.binary(atext) or util.binary(btext):
             raise error.Abort("don't know how to merge binary files")
-        Merge3Text.__init__(
-            self, basetext, atext, btext, automerge_algos=automerge_algos
-        )
+        Merge3Text.__init__(self, basetext, atext, btext)
         self.base = base
         self.a = a
         self.b = b
