@@ -20,7 +20,7 @@ use revisionstore::scmstore::file::FileAuxData;
 use types::HgId;
 use types::PathComponentBuf;
 
-use crate::raw::CBytes;
+use crate::cbytes::CBytes;
 
 #[repr(u8)]
 pub enum TreeEntryType {
