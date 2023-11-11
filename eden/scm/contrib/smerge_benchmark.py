@@ -10,7 +10,7 @@ from dataclasses import dataclass
 
 from sapling import error, mdiff, registrar, scmutil
 from sapling.i18n import _
-from sapling.simplemerge import Merge3Text, render_minimized
+from sapling.simplemerge import Merge3Text, render_mergediff2, render_minimized
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -301,52 +301,6 @@ def unidiff(atext, btext, filepath="") -> bytes:
     for hunk in hunks:
         result.append(b"".join(hunk[1]))
     return b"\n".join(result)
-
-
-def render_mergediff2(m3, name_a, name_b):
-    lines = []
-    conflicts = False
-    for what, group_lines in m3.merge_groups():
-        if what == "conflict":
-            base_lines, a_lines, b_lines = group_lines
-            basetext = b"".join(base_lines)
-            bblocks = list(
-                mdiff.allblocks(
-                    basetext,
-                    b"".join(b_lines),
-                    lines1=base_lines,
-                    lines2=b_lines,
-                )
-            )
-            ablocks = list(
-                mdiff.allblocks(
-                    basetext,
-                    b"".join(a_lines),
-                    lines1=base_lines,
-                    lines2=b_lines,
-                )
-            )
-
-            def difflines(blocks, lines1, lines2):
-                for block, kind in blocks:
-                    if kind == "=":
-                        for line in lines1[block[0] : block[1]]:
-                            yield b" " + line
-                    else:
-                        for line in lines1[block[0] : block[1]]:
-                            yield b"-" + line
-                        for line in lines2[block[2] : block[3]]:
-                            yield b"+" + line
-
-            lines.append(b"<<<<<<< %s\n" % name_a)
-            lines.extend(difflines(ablocks, base_lines, a_lines))
-            lines.append(b"=======\n")
-            lines.extend(difflines(bblocks, base_lines, b_lines))
-            lines.append(b">>>>>>> %s\n" % name_b)
-            conflicts = True
-        else:
-            lines.extend(group_lines)
-    return lines, conflicts
 
 
 def readfile(path):
