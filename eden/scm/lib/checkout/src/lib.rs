@@ -832,7 +832,7 @@ pub fn checkout(
 
     let unknown_conflicts = plan.check_unknown_files(
         &*target_mf.read(),
-        &repo.file_store()?,
+        repo.file_store()?.as_ref(),
         &mut wc.treestate().lock(),
         &status,
     )?;
@@ -864,7 +864,7 @@ pub fn checkout(
     })?;
 
     // 3. Execute the plan
-    let apply_result = plan.apply_store(&repo.file_store()?)?;
+    let apply_result = plan.apply_store(repo.file_store()?.as_ref())?;
 
     for (path, err) in apply_result.remove_failed {
         let _ = write!(io.error(), "update failed to remove {}: {:#}!\n", path, err);
