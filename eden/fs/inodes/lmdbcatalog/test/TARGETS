@@ -1,0 +1,20 @@
+load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
+
+oncall("scm_client_infra")
+
+cpp_unittest(
+    name = "lmdb_store_if",
+    srcs = ["LMDBStoreInterfaceTest.cpp"],
+    deps = [
+        "//eden/fs/inodes:inode_number",
+        "//eden/fs/inodes/lmdbcatalog:lmdbstoreif",
+        "//eden/fs/inodes/overlay:serialization-cpp2-types",
+        "//eden/fs/lmdb:lmdb",
+        "//eden/fs/model:model",
+        "//eden/fs/testharness:temp_file",
+        "//eden/fs/utils:path",
+        "//eden/fs/utils:utils",
+        "//folly/portability:gtest",
+        "//thrift/lib/cpp2/protocol:protocol",
+    ],
+)

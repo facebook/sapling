@@ -1,0 +1,18 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("scm_client_infra")
+
+cpp_library(
+    name = "lmdb",
+    srcs = glob(["*.cpp"]),
+    headers = glob(["*.h"]),
+    deps = [
+        "//folly/logging:logging",
+    ],
+    exported_deps = [
+        "fbsource//third-party/lmdb/libraries/liblmdb:liblmdb",  # @manual
+        "//eden/fs/utils:path",
+        "//folly:synchronized",
+    ],
+)
