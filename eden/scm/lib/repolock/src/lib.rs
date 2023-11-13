@@ -93,7 +93,7 @@ struct LockConfigs {
 }
 
 impl LockConfigs {
-    pub fn new(config: &dyn Config) -> anyhow::Result<Self, LockError> {
+    pub fn new(config: &dyn Config) -> Result<Self, LockError> {
         let deadline =
             Duration::from_secs_f64(config.get_or_default::<f64>("ui", "timeout")?.max(0_f64));
 
@@ -117,7 +117,7 @@ impl LockConfigs {
 }
 
 impl RepoLocker {
-    pub fn new(config: &dyn Config, store_path: PathBuf) -> anyhow::Result<Self, LockError> {
+    pub fn new(config: &dyn Config, store_path: PathBuf) -> Result<Self, LockError> {
         Ok(RepoLocker {
             inner: Arc::new(Mutex::new(RepoLockerInner {
                 config: LockConfigs::new(config)?,
@@ -128,21 +128,21 @@ impl RepoLocker {
         })
     }
 
-    pub fn lock_store(&self) -> anyhow::Result<RepoLockHandle, LockError> {
+    pub fn lock_store(&self) -> Result<RepoLockHandle, LockError> {
         self.lock_store_maybe_wait(true)
     }
 
-    pub fn try_lock_store(&self) -> anyhow::Result<RepoLockHandle, LockError> {
+    pub fn try_lock_store(&self) -> Result<RepoLockHandle, LockError> {
         self.lock_store_maybe_wait(false)
     }
 
-    fn lock_store_maybe_wait(&self, wait: bool) -> anyhow::Result<RepoLockHandle, LockError> {
+    fn lock_store_maybe_wait(&self, wait: bool) -> Result<RepoLockHandle, LockError> {
         let mut inner = self.inner.lock();
         inner.lock_store(wait)?;
         Ok(RepoLockHandle::new_store_lock(self.inner.clone()))
     }
 
-    pub fn ensure_store_locked(&self) -> anyhow::Result<(), LockError> {
+    pub fn ensure_store_locked(&self) -> Result<(), LockError> {
         let inner = self.inner.lock();
         if inner.store_lock.is_some() {
             Ok(())
@@ -160,14 +160,14 @@ impl RepoLocker {
     pub fn lock_working_copy(
         &self,
         wc_dot_hg: PathBuf,
-    ) -> anyhow::Result<RepoLockHandle, LockError> {
+    ) -> Result<RepoLockHandle, LockError> {
         self.lock_working_copy_maybe_wait(wc_dot_hg, true)
     }
 
     pub fn try_lock_working_copy(
         &self,
         wc_dot_hg: PathBuf,
-    ) -> anyhow::Result<RepoLockHandle, LockError> {
+    ) -> Result<RepoLockHandle, LockError> {
         self.lock_working_copy_maybe_wait(wc_dot_hg, false)
     }
 
@@ -175,7 +175,7 @@ impl RepoLocker {
         &self,
         wc_dot_hg: PathBuf,
         wait: bool,
-    ) -> anyhow::Result<RepoLockHandle, LockError> {
+    ) -> Result<RepoLockHandle, LockError> {
         let mut inner = self.inner.lock();
         inner.lock_working_copy(wc_dot_hg.clone(), wait)?;
         Ok(RepoLockHandle::new_working_copy_lock(
@@ -184,7 +184,7 @@ impl RepoLocker {
         ))
     }
 
-    pub fn ensure_working_copy_locked(&self, wc_path: &Path) -> anyhow::Result<(), LockError> {
+    pub fn ensure_working_copy_locked(&self, wc_path: &Path) -> Result<(), LockError> {
         let inner = self.inner.lock();
         if inner.wc_locks.contains_key(wc_path) {
             Ok(())
@@ -200,7 +200,7 @@ impl RepoLocker {
 }
 
 impl RepoLockerInner {
-    pub fn lock_store(&mut self, wait: bool) -> anyhow::Result<(), LockError> {
+    pub fn lock_store(&mut self, wait: bool) -> Result<(), LockError> {
         if let Some(store_lock) = &mut self.store_lock {
             store_lock.inc_ref_count();
         } else {
@@ -223,7 +223,7 @@ impl RepoLockerInner {
         &mut self,
         wc_dot_hg: PathBuf,
         wait: bool,
-    ) -> anyhow::Result<(), LockError> {
+    ) -> Result<(), LockError> {
         if let Some(wc_lock) = self.wc_locks.get_mut(&wc_dot_hg) {
             wc_lock.inc_ref_count();
         } else {
@@ -339,7 +339,7 @@ impl Drop for RepoLockHandle {
     }
 }
 
-fn lock_contents() -> anyhow::Result<String, LockError> {
+fn lock_contents() -> Result<String, LockError> {
     Ok(format!("{}:{}", util::sys::hostname()?, std::process::id()))
 }
 
@@ -351,7 +351,7 @@ fn lock(
     dir: &Path,
     name: &str,
     contents: &[u8],
-) -> anyhow::Result<LockHandle, LockError> {
+) -> Result<LockHandle, LockError> {
     let now = SystemTime::now();
 
     let deadline = now.add(config.deadline);
@@ -416,7 +416,7 @@ impl LockPaths {
 /// atomic as long as the content reader also uses this method. If
 /// the lock is not available, LockContendederror is returned
 /// immediately containing the lock's current contents.
-pub fn try_lock(dir: &Path, name: &str, contents: &[u8]) -> anyhow::Result<LockHandle, LockError> {
+pub fn try_lock(dir: &Path, name: &str, contents: &[u8]) -> Result<LockHandle, LockError> {
     let lock_paths = LockPaths::new(dir, name);
 
     // Our locking strategy uses three files:

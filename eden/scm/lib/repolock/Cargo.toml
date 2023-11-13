@@ -6,7 +6,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "=1.0.72"
 configmodel = { version = "0.1.0", path = "../config/model" }
 fs-err = "2.6.0"
 fs2 = "0.4"
@@ -16,4 +15,5 @@ tracing = "0.1.35"
 util = { version = "0.1.0", path = "../util" }
 
 [dev-dependencies]
+anyhow = "=1.0.72"
 tempfile = "3.8"
