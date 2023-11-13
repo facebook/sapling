@@ -34,8 +34,9 @@ use types::HgId;
 use types::Key;
 use types::RepoPath;
 
+/// A store where content is indexed by "(path, hash)", aka "Key".
 #[async_trait]
-pub trait FileStore: Send + Sync + 'static {
+pub trait KeyStore: Send + Sync {
     /// Read the content of specified files.
     ///
     /// The returned content should be just the file contents. This means:
@@ -46,14 +47,6 @@ pub trait FileStore: Send + Sync + 'static {
         &self,
         keys: Vec<Key>,
     ) -> BoxStream<anyhow::Result<(minibytes::Bytes, Key)>>;
-
-    /// Read rename metadata of specified files.
-    ///
-    /// The result is a vector of (key, rename_from_key) pairs for files with
-    /// rename information.
-    async fn get_rename_stream(&self, _keys: Vec<Key>) -> BoxStream<anyhow::Result<(Key, Key)>> {
-        Box::pin(futures::stream::empty())
-    }
 
     /// Read the content of the specified file without connecting to a remote server.
     /// Return `None` if the file is available locally.
@@ -68,6 +61,18 @@ pub trait FileStore: Send + Sync + 'static {
     /// as `Some(self)` explicitly.
     fn maybe_as_any(&self) -> Option<&dyn Any> {
         None
+    }
+}
+
+/// A store for files.
+#[async_trait]
+pub trait FileStore: KeyStore + 'static {
+    /// Read rename metadata of specified files.
+    ///
+    /// The result is a vector of (key, rename_from_key) pairs for files with
+    /// rename information.
+    async fn get_rename_stream(&self, _keys: Vec<Key>) -> BoxStream<anyhow::Result<(Key, Key)>> {
+        Box::pin(futures::stream::empty())
     }
 }
 

@@ -26,6 +26,7 @@ use manifest_tree::TreeStore;
 use storemodel::futures::stream;
 use storemodel::futures::StreamExt;
 use storemodel::FileStore;
+use storemodel::KeyStore;
 use storemodel::ReadRootTreeIds;
 use storemodel::TreeFormat;
 use tracing_test::traced_test;
@@ -184,7 +185,7 @@ impl ReadRootTreeIds for CopyTraceTestCase {
 }
 
 #[async_trait]
-impl FileStore for CopyTraceTestCase {
+impl KeyStore for CopyTraceTestCase {
     #[allow(dead_code)]
     async fn get_content_stream(
         &self,
@@ -194,6 +195,16 @@ impl FileStore for CopyTraceTestCase {
         todo!()
     }
 
+    fn get_local_content(
+        &self,
+        _key: &Key,
+    ) -> anyhow::Result<Option<storemodel::minibytes::Bytes>> {
+        Ok(None)
+    }
+}
+
+#[async_trait]
+impl FileStore for CopyTraceTestCase {
     async fn get_rename_stream(
         &self,
         keys: Vec<Key>,
@@ -210,13 +221,6 @@ impl FileStore for CopyTraceTestCase {
                 .collect()
         };
         stream::iter(renames).boxed()
-    }
-
-    fn get_local_content(
-        &self,
-        _key: &Key,
-    ) -> anyhow::Result<Option<storemodel::minibytes::Bytes>> {
-        Ok(None)
     }
 }
 

@@ -17,6 +17,7 @@ use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use minibytes::Bytes;
 use storemodel::FileStore;
+use storemodel::KeyStore;
 use types::Key;
 
 pub struct PythonFileScmStore {
@@ -36,7 +37,7 @@ impl PythonFileScmStore {
 }
 
 #[async_trait]
-impl FileStore for PythonFileScmStore {
+impl KeyStore for PythonFileScmStore {
     async fn get_content_stream(&self, keys: Vec<Key>) -> BoxStream<anyhow::Result<(Bytes, Key)>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
@@ -62,3 +63,6 @@ impl FileStore for PythonFileScmStore {
         Ok(None)
     }
 }
+
+#[async_trait]
+impl FileStore for PythonFileScmStore {}

@@ -14,6 +14,7 @@ use hgstore::split_hg_file_metadata;
 use hgstore::strip_hg_file_metadata;
 use storemodel::types;
 use storemodel::FileStore;
+use storemodel::KeyStore;
 use storemodel::TreeFormat;
 use storemodel::TreeStore;
 use types::HgId;
@@ -25,7 +26,7 @@ use crate::EagerRepoStore;
 // storemodel traits
 
 #[async_trait]
-impl FileStore for EagerRepoStore {
+impl KeyStore for EagerRepoStore {
     async fn get_content_stream(
         &self,
         keys: Vec<Key>,
@@ -37,22 +38,6 @@ impl FileStore for EagerRepoStore {
                 None => anyhow::bail!("no such file: {:?}", &k),
             };
             Ok((data, k))
-        });
-        futures::stream::iter(iter).boxed()
-    }
-
-    async fn get_rename_stream(&self, keys: Vec<Key>) -> BoxStream<anyhow::Result<(Key, Key)>> {
-        let iter = keys.into_iter().filter_map(|k| {
-            let id = k.hgid;
-            match self.get_content(id) {
-                Err(e) => Some(Err(e.into())),
-                Ok(Some(data)) => match strip_hg_file_metadata(&data) {
-                    Err(e) => Some(Err(e)),
-                    Ok((_, Some(copy_from))) => Some(Ok((k, copy_from))),
-                    Ok((_, None)) => None,
-                },
-                Ok(None) => Some(Err(anyhow::format_err!("no such file: {:?}", &k))),
-            }
         });
         futures::stream::iter(iter).boxed()
     }
@@ -73,6 +58,25 @@ impl FileStore for EagerRepoStore {
 
     fn maybe_as_any(&self) -> Option<&dyn std::any::Any> {
         Some(self)
+    }
+}
+
+#[async_trait]
+impl FileStore for EagerRepoStore {
+    async fn get_rename_stream(&self, keys: Vec<Key>) -> BoxStream<anyhow::Result<(Key, Key)>> {
+        let iter = keys.into_iter().filter_map(|k| {
+            let id = k.hgid;
+            match self.get_content(id) {
+                Err(e) => Some(Err(e.into())),
+                Ok(Some(data)) => match strip_hg_file_metadata(&data) {
+                    Err(e) => Some(Err(e)),
+                    Ok((_, Some(copy_from))) => Some(Ok((k, copy_from))),
+                    Ok((_, None)) => None,
+                },
+                Ok(None) => Some(Err(anyhow::format_err!("no such file: {:?}", &k))),
+            }
+        });
+        futures::stream::iter(iter).boxed()
     }
 }
 

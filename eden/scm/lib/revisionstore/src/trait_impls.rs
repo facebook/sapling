@@ -36,7 +36,7 @@ pub struct ArcFileStore(pub Arc<FileStore>);
 pub struct ArcRemoteDataStore<T: ?Sized>(pub Arc<T>);
 
 #[async_trait]
-impl<T> storemodel::FileStore for ArcRemoteDataStore<T>
+impl<T> storemodel::KeyStore for ArcRemoteDataStore<T>
 where
     T: RemoteDataStore + 'static + ?Sized,
 {
@@ -49,6 +49,16 @@ where
             .boxed()
     }
 
+    fn get_local_content(&self, _key: &Key) -> anyhow::Result<Option<minibytes::Bytes>> {
+        Ok(None)
+    }
+}
+
+#[async_trait]
+impl<T> storemodel::FileStore for ArcRemoteDataStore<T>
+where
+    T: RemoteDataStore + 'static + ?Sized,
+{
     async fn get_rename_stream(&self, keys: Vec<Key>) -> BoxStream<anyhow::Result<(Key, Key)>> {
         stream_data_from_remote_data_store(self.0.clone(), keys)
             .filter_map(|result| async move {
@@ -60,31 +70,15 @@ where
             })
             .boxed()
     }
-
-    fn get_local_content(&self, _key: &Key) -> anyhow::Result<Option<minibytes::Bytes>> {
-        Ok(None)
-    }
 }
 
 #[async_trait]
-impl storemodel::FileStore for ArcFileStore {
+impl storemodel::KeyStore for ArcFileStore {
     async fn get_content_stream(&self, keys: Vec<Key>) -> BoxStream<Result<(Bytes, Key)>> {
         stream_data_from_scmstore(self.0.clone(), keys)
             .map(|result| match result {
                 Ok((data, key, _copy_from)) => Ok((data, key)),
                 Err(err) => Err(err),
-            })
-            .boxed()
-    }
-
-    async fn get_rename_stream(&self, keys: Vec<Key>) -> BoxStream<anyhow::Result<(Key, Key)>> {
-        stream_data_from_scmstore(self.0.clone(), keys)
-            .filter_map(|result| async move {
-                match result {
-                    Ok((_data, _key, None)) => None,
-                    Ok((_data, key, Some(copy_from))) => Some(Ok((key, copy_from))),
-                    Err(err) => Some(Err(err)),
-                }
             })
             .boxed()
     }
@@ -95,6 +89,21 @@ impl storemodel::FileStore for ArcFileStore {
 
     fn refresh(&self) -> Result<()> {
         FileStore::refresh(&self.0)
+    }
+}
+
+#[async_trait]
+impl storemodel::FileStore for ArcFileStore {
+    async fn get_rename_stream(&self, keys: Vec<Key>) -> BoxStream<anyhow::Result<(Key, Key)>> {
+        stream_data_from_scmstore(self.0.clone(), keys)
+            .filter_map(|result| async move {
+                match result {
+                    Ok((_data, _key, None)) => None,
+                    Ok((_data, key, Some(copy_from))) => Some(Ok((key, copy_from))),
+                    Err(err) => Some(Err(err)),
+                }
+            })
+            .boxed()
     }
 }
 

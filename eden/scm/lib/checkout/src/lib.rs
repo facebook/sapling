@@ -46,6 +46,7 @@ use progress_model::ProgressBar;
 use progress_model::Registry;
 use repo::repo::Repo;
 use storemodel::FileStore;
+use storemodel::KeyStore;
 use tracing::debug;
 use tracing::instrument;
 use tracing::warn;
@@ -1323,7 +1324,7 @@ mod test {
     struct DummyFileContentStore;
 
     #[async_trait::async_trait]
-    impl FileStore for DummyFileContentStore {
+    impl KeyStore for DummyFileContentStore {
         async fn get_content_stream(&self, keys: Vec<Key>) -> BoxStream<Result<(Bytes, Key)>> {
             stream::iter(keys)
                 .map(|key| Ok((hgid_file(&key.hgid).into(), key)))
@@ -1334,6 +1335,9 @@ mod test {
             Ok(None)
         }
     }
+
+    #[async_trait::async_trait]
+    impl FileStore for DummyFileContentStore {}
 
     fn hgid_file(hgid: &HgId) -> Vec<u8> {
         hgid.to_string().into_bytes()

@@ -28,6 +28,7 @@ use pathmatcher::UnionMatcher;
 pub use sparse::Root;
 use storemodel::futures::StreamExt;
 use storemodel::FileStore;
+use storemodel::KeyStore;
 use types::Key;
 use types::RepoPath;
 use types::RepoPathBuf;
@@ -515,7 +516,7 @@ inc
     }
 
     #[async_trait::async_trait]
-    impl FileStore for StubCommit {
+    impl KeyStore for StubCommit {
         async fn get_content_stream(
             &self,
             keys: Vec<Key>,
@@ -537,4 +538,7 @@ inc
             Ok(None)
         }
     }
+
+    #[async_trait::async_trait]
+    impl FileStore for StubCommit {}
 }

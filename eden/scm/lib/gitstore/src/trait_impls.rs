@@ -11,6 +11,7 @@ use async_trait::async_trait;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use storemodel::FileStore;
+use storemodel::KeyStore;
 use storemodel::TreeFormat;
 use storemodel::TreeStore;
 use types::HgId;
@@ -20,7 +21,7 @@ use types::RepoPath;
 use crate::GitStore;
 
 #[async_trait]
-impl FileStore for GitStore {
+impl KeyStore for GitStore {
     async fn get_content_stream(
         &self,
         keys: Vec<Key>,
@@ -47,6 +48,9 @@ impl FileStore for GitStore {
         Ok(())
     }
 }
+
+#[async_trait]
+impl FileStore for GitStore {}
 
 impl TreeStore for GitStore {
     fn get(&self, _path: &RepoPath, hgid: HgId) -> anyhow::Result<minibytes::Bytes> {
