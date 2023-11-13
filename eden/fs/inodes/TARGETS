@@ -128,6 +128,22 @@ cpp_library(
         "VirtualInode.h",
         "VirtualInodeLoader.h",
     ],
+    os_deps = [
+        (
+            "linux",
+            [
+                "//eden/fs/inodes/lmdbcatalog:bufferedlmdbinodecatalog",
+                "//eden/fs/inodes/lmdbcatalog:lmdbinodecatalog",
+            ],
+        ),
+        (
+            "macos",
+            [
+                "//eden/fs/inodes/lmdbcatalog:bufferedlmdbinodecatalog",
+                "//eden/fs/inodes/lmdbcatalog:lmdbinodecatalog",
+            ],
+        ),
+    ],
     deps = [
         "fbsource//third-party/cpptoml:cpptoml",
         "fbsource//third-party/fmt:fmt",

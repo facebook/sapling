@@ -34,6 +34,11 @@
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/PathFuncs.h"
 
+#ifndef _WIN32
+#include "eden/fs/inodes/lmdbcatalog/BufferedLMDBInodeCatalog.h" // @manual
+#include "eden/fs/inodes/lmdbcatalog/LMDBInodeCatalog.h" // @manual
+#endif
+
 namespace facebook::eden {
 
 namespace {
@@ -94,10 +99,23 @@ std::unique_ptr<InodeCatalog> makeInodeCatalog(
   if (inodeCatalogType == InodeCatalogType::Legacy) {
     throw std::runtime_error(
         "Legacy overlay type is not supported. Please reclone.");
+  } else if (inodeCatalogType == InodeCatalogType::LMDB) {
+    throw std::runtime_error(
+        "LMDB overlay type is not supported. Please reclone.");
   }
   XLOG(DBG4) << "Sqlite overlay being used.";
   return std::make_unique<SqliteInodeCatalog>(localDir, logger);
 #else
+  if (inodeCatalogType == InodeCatalogType::LMDB) {
+    if (inodeCatalogOptions.containsAllOf(INODE_CATALOG_BUFFERED)) {
+      XLOG(DBG4) << "Buffered LMDB overlay being used";
+      return std::make_unique<BufferedLMDBInodeCatalog>(
+          static_cast<LMDBFileContentStore*>(fileContentStore), config);
+    }
+    XLOG(DBG4) << "LMDB overlay being used";
+    return std::make_unique<LMDBInodeCatalog>(
+        static_cast<LMDBFileContentStore*>(fileContentStore));
+  }
   XLOG(DBG4) << "Legacy overlay being used.";
   return std::make_unique<FsInodeCatalog>(
       static_cast<FsFileContentStore*>(fileContentStore));
@@ -105,12 +123,19 @@ std::unique_ptr<InodeCatalog> makeInodeCatalog(
 }
 
 std::unique_ptr<FileContentStore> makeFileContentStore(
-    AbsolutePathPiece localDir) {
+    AbsolutePathPiece localDir,
+    const std::shared_ptr<StructuredLogger>& logger,
+    InodeCatalogType inodeCatalogType) {
 #ifdef _WIN32
   (void)localDir;
+  (void)logger;
   return nullptr;
 #else
-  return std::make_unique<FsFileContentStore>(localDir);
+  if (inodeCatalogType == InodeCatalogType::Legacy) {
+    return std::make_unique<FsFileContentStore>(localDir);
+  } else {
+    return std::make_unique<LMDBFileContentStore>(localDir, logger);
+  }
 #endif
 }
 } // namespace
@@ -168,7 +193,10 @@ Overlay::Overlay(
     EdenStatsPtr stats,
     bool windowsSymlinksEnabled,
     const EdenConfig& config)
-    : fileContentStore_{makeFileContentStore(localDir)},
+    : fileContentStore_{makeFileContentStore(
+          localDir,
+          logger,
+          inodeCatalogType)},
       inodeCatalog_{makeInodeCatalog(
           localDir,
           inodeCatalogType,
@@ -289,11 +317,30 @@ void Overlay::initOverlay(
   IORequest req{this};
   auto optNextInodeNumber =
       inodeCatalog_->initOverlay(/*createIfNonExisting=*/true);
-  if (fileContentStore_ && inodeCatalogType_ != InodeCatalogType::Legacy) {
+  if (fileContentStore_ && inodeCatalogType_ == InodeCatalogType::Sqlite) {
+    // Initialize the file content store after the inode catalog has been.
+    // The fileContentStore will only exist on non-Windows platforms.
+    //
+    // We only need to do this for Sqlite overlays because they use a Legacy
+    // FileContentStore on non-Windows platforms. Other InodeCatalogTypes use
+    // their corresponding FileContentStore, meaning calling `initialize` here
+    // would double-initialize the FileContentStore the objects.
+    //
+    // If we had a SQLiteFileContentStore, this code block would be unnecessary.
     fileContentStore_->initialize(/*createIfNonExisting=*/true);
   }
   if (!optNextInodeNumber.has_value()) {
 #ifndef _WIN32
+    // FSCK is not currently supported for LMDB overlays. If we cannot load the
+    // next inode number, then we cannot continue. LMDB should always be able to
+    // load the inode number, if this case is hit, then the assumption about
+    // LMDB being resilient is incorrect (unless the user manually corrupted
+    // their overlay directory).
+    if (inodeCatalogType_ != InodeCatalogType::Legacy) {
+      throw std::runtime_error(
+          "Corrupted LMDB overlay " + localDir_.asString() +
+          ": could not load next inode number");
+    }
     // If the next-inode-number data is missing it means that this overlay was
     // not shut down cleanly the last time it was used.  If this was caused by a
     // hard system reboot this can sometimes cause corruption and/or missing

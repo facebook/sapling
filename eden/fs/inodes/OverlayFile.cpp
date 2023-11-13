@@ -12,6 +12,7 @@
 #include <folly/FileUtil.h>
 
 #include "eden/fs/inodes/Overlay.h"
+#include "eden/fs/inodes/lmdbcatalog/LMDBInodeCatalog.h" // @manual
 #include "eden/fs/utils/NotImplemented.h"
 
 namespace facebook::eden {
@@ -42,7 +43,19 @@ folly::Expected<struct stat, int> OverlayFile::fstat() const {
     }
     return st;
   } else {
-    NOT_IMPLEMENTED();
+    auto& ino = std::get<InodeNumber>(data_);
+    auto fsc = reinterpret_cast<LMDBFileContentStore*>(
+        overlay->getRawFileContentStore());
+    // fstat is only called when calculating the file size, so that is the only
+    // field we need to get. We need to include the header length because that's
+    // expected in the OverlayFileAccess
+    auto fileSize = fsc->getOverlayFileSize(ino) +
+        static_cast<FileOffset>(FsFileContentStore::kHeaderLength);
+    if (fileSize == -1) {
+      return folly::makeUnexpected(errno);
+    }
+    st.st_size = fileSize;
+    return st;
   }
 }
 
@@ -62,7 +75,15 @@ OverlayFile::preadNoInt(void* buf, size_t n, FileOffset offset) const {
     }
     return ret;
   } else {
-    NOT_IMPLEMENTED();
+    auto& ino = std::get<InodeNumber>(data_);
+    auto fsc = reinterpret_cast<LMDBFileContentStore*>(
+        overlay->getRawFileContentStore());
+    ssize_t ret = fsc->preadOverlayFile(
+        ino, buf, n, offset - FsFileContentStore::kHeaderLength);
+    if (ret == -1) {
+      return folly::makeUnexpected(errno);
+    }
+    return ret;
   }
 }
 
@@ -84,6 +105,9 @@ folly::Expected<FileOffset, int> OverlayFile::lseek(
     }
     return ret;
   } else {
+    // lseek is only called by readAllContents to offset the header, so LMDB
+    // doesn't need to honor this call. readAllContents knows to skip the lseek,
+    // so we can throw here to ensure it isn't called by new callers.
     NOT_IMPLEMENTED();
   }
 }
@@ -104,7 +128,16 @@ OverlayFile::pwritev(const iovec* iov, int iovcnt, FileOffset offset) const {
     }
     return ret;
   } else {
-    NOT_IMPLEMENTED();
+    auto& ino = std::get<InodeNumber>(data_);
+    auto fsc = reinterpret_cast<LMDBFileContentStore*>(
+        overlay->getRawFileContentStore());
+
+    ssize_t ret = fsc->pwriteOverlayFile(
+        ino, iov, iovcnt, offset - FsFileContentStore::kHeaderLength);
+    if (ret == -1) {
+      return folly::makeUnexpected(errno);
+    }
+    return ret;
   }
 }
 
@@ -123,7 +156,16 @@ folly::Expected<int, int> OverlayFile::ftruncate(FileOffset length) const {
     }
     return folly::makeExpected<int>(ret);
   } else {
-    NOT_IMPLEMENTED();
+    auto& ino = std::get<InodeNumber>(data_);
+    auto fsc = reinterpret_cast<LMDBFileContentStore*>(
+        overlay->getRawFileContentStore());
+
+    ssize_t ret = fsc->truncateOverlayFile(
+        ino, length - FsFileContentStore::kHeaderLength);
+    if (ret == -1) {
+      return folly::makeUnexpected(errno);
+    }
+    return folly::makeExpected<int>(ret);
   }
 }
 
@@ -142,7 +184,10 @@ folly::Expected<int, int> OverlayFile::fsync() const {
     }
     return folly::makeExpected<int>(ret);
   } else {
-    NOT_IMPLEMENTED();
+    // We could possibly call checkpoint() here, but otherwise this is a no-op
+    // since we're not managing indivudial files and rely on the database to
+    // keep data up to date internally
+    return folly::makeExpected<int>(0);
   }
 }
 
@@ -166,7 +211,15 @@ folly::Expected<int, int> OverlayFile::fallocate(
     }
     return folly::makeExpected<int>(ret);
   } else {
-    NOT_IMPLEMENTED();
+    auto& ino = std::get<InodeNumber>(data_);
+    auto fsc = reinterpret_cast<LMDBFileContentStore*>(
+        overlay->getRawFileContentStore());
+    ssize_t ret = fsc->allocateOverlayFile(
+        ino, offset, length - FsFileContentStore::kHeaderLength);
+    if (ret == -1) {
+      return folly::makeUnexpected(errno);
+    }
+    return folly::makeExpected<int>(ret);
   }
 #else
   (void)offset;
@@ -191,7 +244,10 @@ folly::Expected<int, int> OverlayFile::fdatasync() const {
     }
     return folly::makeExpected<int>(ret);
   } else {
-    NOT_IMPLEMENTED();
+    // We could possibly call checkpoint() here, but otherwise this is a no-op
+    // since we're not managing indivudial files and rely on the database to
+    // keep data up to date internally
+    return folly::makeExpected<int>(0);
   }
 #else
   return fsync();
@@ -213,7 +269,11 @@ folly::Expected<std::string, int> OverlayFile::readFile() const {
     }
     return folly::makeExpected<int>(std::move(out));
   } else {
-    NOT_IMPLEMENTED();
+    auto& ino = std::get<InodeNumber>(data_);
+    auto fsc = reinterpret_cast<LMDBFileContentStore*>(
+        overlay->getRawFileContentStore());
+    std::string out = fsc->readOverlayFile(ino);
+    return folly::makeExpected<int>(std::move(out));
   }
 }
 

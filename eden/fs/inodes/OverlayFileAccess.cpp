@@ -240,12 +240,15 @@ std::string OverlayFileAccess::readAllContents(FileInode& inode) {
   // TODO: implement readFile with pread instead of lseek.
   auto info = entry->info.wlock();
 
-  auto rc = entry->file.lseek(FsFileContentStore::kHeaderLength, SEEK_SET);
-  if (rc.hasError()) {
-    throw InodeError(
-        rc.error(),
-        inode.inodePtrFromThis(),
-        "unable to seek in materialized FileInode");
+  // Only the LegacyInodeCatalog uses header files
+  if (overlay_->getInodeCatalogType() == InodeCatalogType::Legacy) {
+    auto rc = entry->file.lseek(FsFileContentStore::kHeaderLength, SEEK_SET);
+    if (rc.hasError()) {
+      throw InodeError(
+          rc.error(),
+          inode.inodePtrFromThis(),
+          "unable to seek in materialized FileInode");
+    }
   }
   auto result = entry->file.readFile();
 

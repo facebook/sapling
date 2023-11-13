@@ -73,7 +73,7 @@ const SNAPSHOT_MAGIC_4: &[u8] = b"eden\x00\x00\x00\x04";
 // the Daemon's CheckoutConfig at fs/config/CheckoutConfig.h.
 const SUPPORTED_REPOS: &[&str] = &["git", "hg", "recas"];
 const SUPPORTED_MOUNT_PROTOCOLS: &[&str] = &["fuse", "nfs", "prjfs"];
-const SUPPORTED_INODE_CATALOG_TYPES: &[&str] = &["legacy", "sqlite", "inmemory"];
+const SUPPORTED_INODE_CATALOG_TYPES: &[&str] = &["legacy", "sqlite", "inmemory", "lmdb"];
 
 #[derive(Deserialize, Serialize, Debug)]
 struct Repository {

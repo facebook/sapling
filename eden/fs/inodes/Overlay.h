@@ -288,6 +288,14 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
     return inodeCatalog_.get();
   }
 
+  FileContentStore* getRawFileContentStore() {
+    return fileContentStore_.get();
+  }
+
+  InodeCatalogType getInodeCatalogType() const {
+    return inodeCatalogType_;
+  }
+
   overlay::OverlayDir serializeOverlayDir(
       InodeNumber inodeNumber,
       const DirContents& dir);

@@ -339,6 +339,28 @@ cpp_unittest(
 )
 
 cpp_unittest(
+    name = "overlay_file",
+    srcs = ["OverlayFileTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "fbsource//third-party/fmt:fmt",
+        ":overlay_test_util",
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/inodes/fscatalog:fsinodecatalog",
+        "//eden/fs/telemetry:structured_logger",
+        "//eden/fs/telemetry:telemetry",
+        "//eden/fs/testharness:temp_file",
+        "//eden/fs/testharness:test_util",
+        "//folly:exception",
+        "//folly:expected",
+        "//folly:file_util",
+        "//folly:range",
+        "//folly/experimental:test_util",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
     name = "remove",
     srcs = ["RemoveTest.cpp"],
     supports_static_listing = False,
