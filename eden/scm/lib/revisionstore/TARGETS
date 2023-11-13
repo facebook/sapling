@@ -1,5 +1,4 @@
 load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
-load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
 load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
 
 oncall("mercurial_release")
@@ -17,7 +16,6 @@ rust_library(
             },
             "extra_buck_dependencies": {
                 "dependencies": [
-                    "fbsource//third-party/rust:blake3",
                     "//common/rust/shed/fbinit:fbinit",
                     "//common/rust/shed/stats:stats",
                 ],
@@ -38,9 +36,6 @@ rust_library(
         "fb",
         "for-tests",
     ],
-    named_deps = {
-        "blake3-constant": "//blake3:blake3-constants-rust-nothrift",
-    },
     test_deps = [
         "fbsource//third-party/rust:maplit",
         "fbsource//third-party/rust:mockito",
@@ -55,7 +50,6 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",
-        "fbsource//third-party/rust:blake2",
         "fbsource//third-party/rust:byteorder",
         "fbsource//third-party/rust:crossbeam",
         "fbsource//third-party/rust:curl",
@@ -81,7 +75,6 @@ rust_library(
         "fbsource//third-party/rust:tracing",
         "fbsource//third-party/rust:url",
         ":revisionstore_types",
-        "//common/rust/blake3_c_ffi:blake3_c_ffi",
         "//common/rust/shed/quickcheck_arbitrary_derive:quickcheck_arbitrary_derive",
         "//eden/mononoke/lfs_protocol:lfs_protocol",
         "//eden/scm/lib/async-runtime:async-runtime",
@@ -108,9 +101,7 @@ rust_library(
         "//eden/scm/lib/util:util",
         "//eden/scm/lib/version:rust_version",
         "//eden/scm/lib/vlqencoding:vlqencoding",
-    ] + ([
-        "fbsource//third-party/rust:blake3",
-    ] if rust_oss.is_oss_build() else []),
+    ],
 )
 
 rust_library(
@@ -124,9 +115,6 @@ rust_library(
         "for-tests",
         "ods",
     ],
-    named_deps = {
-        "blake3-constant": "//blake3:blake3-constants-rust-nothrift",
-    },
     test_deps = [
         "fbsource//third-party/rust:maplit",
         "fbsource//third-party/rust:mockito",
@@ -141,7 +129,6 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",
-        "fbsource//third-party/rust:blake2",
         "fbsource//third-party/rust:byteorder",
         "fbsource//third-party/rust:crossbeam",
         "fbsource//third-party/rust:curl",
@@ -167,7 +154,6 @@ rust_library(
         "fbsource//third-party/rust:tracing",
         "fbsource//third-party/rust:url",
         ":revisionstore_types",
-        "//common/rust/blake3_c_ffi:blake3_c_ffi",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/quickcheck_arbitrary_derive:quickcheck_arbitrary_derive",
         "//common/rust/shed/stats:stats",
@@ -196,9 +182,7 @@ rust_library(
         "//eden/scm/lib/util:util",
         "//eden/scm/lib/version:rust_version",
         "//eden/scm/lib/vlqencoding:vlqencoding",
-    ] + ([
-        "fbsource//third-party/rust:blake3",
-    ] if rust_oss.is_oss_build() else []),
+    ],
 )
 
 rust_library(

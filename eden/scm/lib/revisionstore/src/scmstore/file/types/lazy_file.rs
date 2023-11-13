@@ -18,7 +18,6 @@ use crate::indexedlogdatastore::Entry;
 use crate::lfs::rebuild_metadata;
 use crate::lfs::LfsPointersEntry;
 use crate::scmstore::file::FileAuxData;
-use crate::ContentHash;
 use crate::Metadata;
 
 /// A minimal file enum that simply wraps the possible underlying file types,
@@ -54,13 +53,7 @@ impl LazyFile {
     pub(crate) fn aux_data(&mut self) -> Result<FileAuxData> {
         // TODO(meyer): Implement the rest of the aux data fields
         let aux_data = match self {
-            LazyFile::Lfs(content, ref ptr) => FileAuxData {
-                total_size: content.len() as u64,
-                content_id: ContentHash::content_id(content),
-                sha1: ContentHash::sha1(content),
-                sha256: ptr.sha256().into_inner().into(),
-                seeded_blake3: Some(ContentHash::seeded_blake3(content)),
-            },
+            LazyFile::Lfs(content, _) => FileAuxData::from_content(&content),
             LazyFile::EdenApi(entry) if entry.aux_data.is_some() => entry
                 .aux_data()
                 .cloned()
@@ -70,16 +63,7 @@ impl LazyFile {
                 .into(),
             _ => {
                 let content = self.file_content()?;
-                FileAuxData {
-                    total_size: content.len() as u64,
-                    content_id: ContentHash::content_id(&content),
-                    sha1: ContentHash::sha1(&content),
-                    sha256: ContentHash::sha256(&content)
-                        .unwrap_sha256()
-                        .into_inner()
-                        .into(),
-                    seeded_blake3: Some(ContentHash::seeded_blake3(&content)),
-                }
+                FileAuxData::from_content(&content)
             }
         };
         Ok(aux_data)
