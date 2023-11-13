@@ -57,7 +57,7 @@ use edenapi_types::UploadHgChangeset;
 use edenapi_types::UploadToken;
 use futures::prelude::*;
 use futures::stream;
-use hgstore::separate_metadata;
+use hgstore::split_hg_file_metadata;
 use progress_model::ProgressBar;
 use pyrevisionstore::as_legacystore;
 use revisionstore::HgIdMutableDeltaStore;
@@ -609,7 +609,7 @@ pub trait EdenApiPyExt: EdenApi {
                     StoreResult::Found(raw_content) => {
                         let raw_content = raw_content.into();
                         let (raw_data, copy_from) =
-                            separate_metadata(&raw_content).map_pyerr(py)?;
+                            split_hg_file_metadata(&raw_content).map_pyerr(py)?;
                         let content_id = calc_contentid(&raw_data);
                         Ok((
                             (content_id, raw_data),

@@ -17,7 +17,7 @@ use futures::stream;
 use futures::stream::BoxStream;
 use futures::Stream;
 use futures::StreamExt;
-use hgstore::strip_metadata;
+use hgstore::strip_hg_file_metadata;
 use minibytes::Bytes;
 use tokio::runtime::Handle;
 use types::Key;
@@ -124,8 +124,10 @@ fn stream_data_from_remote_data_store<DS: RemoteDataStore + Clone + 'static>(
                             let store_result = store.get(store_key.clone());
                             let result = match store_result {
                                 Err(err) => Err(err),
-                                Ok(StoreResult::Found(data)) => strip_metadata(&data.into())
-                                    .map(|(d, copy_from)| (d, key.clone(), copy_from)),
+                                Ok(StoreResult::Found(data)) => {
+                                    strip_hg_file_metadata(&data.into())
+                                        .map(|(d, copy_from)| (d, key.clone(), copy_from))
+                                }
                                 Ok(StoreResult::NotFound(k)) => {
                                     Err(format_err!("{:?} not found in store", k))
                                 }

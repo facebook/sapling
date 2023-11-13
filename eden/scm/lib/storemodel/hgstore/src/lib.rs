@@ -9,5 +9,5 @@
 
 mod filestore_util;
 
-pub use filestore_util::separate_metadata;
-pub use filestore_util::strip_metadata;
+pub use filestore_util::split_hg_file_metadata;
+pub use filestore_util::strip_hg_file_metadata;

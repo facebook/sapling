@@ -9,7 +9,7 @@ use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
 use edenapi_types::FileEntry;
-use hgstore::strip_metadata;
+use hgstore::strip_hg_file_metadata;
 use minibytes::Bytes;
 use types::HgId;
 use types::Key;
@@ -89,11 +89,11 @@ impl LazyFile {
     pub(crate) fn file_content(&mut self) -> Result<Bytes> {
         use LazyFile::*;
         Ok(match self {
-            IndexedLog(ref mut entry) => strip_metadata(&entry.content()?)?.0,
+            IndexedLog(ref mut entry) => strip_hg_file_metadata(&entry.content()?)?.0,
             Lfs(ref blob, _) => blob.clone(),
-            ContentStore(ref blob, _) => strip_metadata(blob)?.0,
+            ContentStore(ref blob, _) => strip_hg_file_metadata(blob)?.0,
             // TODO(meyer): Convert EdenApi to use minibytes
-            EdenApi(ref entry) => strip_metadata(&entry.data()?.into())?.0,
+            EdenApi(ref entry) => strip_hg_file_metadata(&entry.data()?.into())?.0,
         })
     }
 
@@ -101,10 +101,10 @@ impl LazyFile {
     pub(crate) fn file_content_with_copy_info(&mut self) -> Result<(Bytes, Option<Key>)> {
         use LazyFile::*;
         Ok(match self {
-            IndexedLog(ref mut entry) => strip_metadata(&entry.content()?)?,
+            IndexedLog(ref mut entry) => strip_hg_file_metadata(&entry.content()?)?,
             Lfs(ref blob, ref ptr) => (blob.clone(), ptr.copy_from().clone()),
-            ContentStore(ref blob, _) => strip_metadata(blob)?,
-            EdenApi(ref entry) => strip_metadata(&entry.data()?.into())?,
+            ContentStore(ref blob, _) => strip_hg_file_metadata(blob)?,
+            EdenApi(ref entry) => strip_hg_file_metadata(&entry.data()?.into())?,
         })
     }
 

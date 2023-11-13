@@ -48,7 +48,7 @@ use futures::stream::FuturesUnordered;
 use futures::stream::StreamExt;
 use hg_http::http_client;
 use hg_http::http_config;
-use hgstore::strip_metadata;
+use hgstore::strip_hg_file_metadata;
 use http::status::StatusCode;
 use http_client::Encoding;
 use http_client::HttpClient;
@@ -802,7 +802,7 @@ pub(crate) fn lfs_from_hg_file_blob(
     hgid: HgId,
     raw_content: &Bytes,
 ) -> Result<(LfsPointersEntry, Bytes)> {
-    let (data, copy_from) = strip_metadata(raw_content)?;
+    let (data, copy_from) = strip_hg_file_metadata(raw_content)?;
     let pointer = LfsPointersEntry::from_file_content(hgid, &data, copy_from)?;
     Ok((pointer, data))
 }
@@ -2426,7 +2426,7 @@ mod tests {
             };
 
             let with_metadata = rebuild_metadata(data.clone(), &pointer);
-            let (without, copy) = strip_metadata(&with_metadata)?;
+            let (without, copy) = strip_hg_file_metadata(&with_metadata)?;
 
             Ok(data == without && copy == copy_from)
         }

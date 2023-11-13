@@ -10,8 +10,8 @@
 use async_trait::async_trait;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
-use hgstore::separate_metadata;
-use hgstore::strip_metadata;
+use hgstore::split_hg_file_metadata;
+use hgstore::strip_hg_file_metadata;
 use storemodel::types;
 use storemodel::FileStore;
 use storemodel::TreeFormat;
@@ -33,7 +33,7 @@ impl FileStore for EagerRepoStore {
         let iter = keys.into_iter().map(|k| {
             let id = k.hgid;
             let data = match self.get_content(id)? {
-                Some(data) => separate_metadata(&data)?.0,
+                Some(data) => split_hg_file_metadata(&data)?.0,
                 None => anyhow::bail!("no such file: {:?}", &k),
             };
             Ok((data, k))
@@ -48,7 +48,7 @@ impl FileStore for EagerRepoStore {
         let iter = keys.into_iter().map(|k| {
             let id = k.hgid;
             let copy_from = match self.get_content(id)? {
-                Some(data) => strip_metadata(&data)?.1,
+                Some(data) => strip_hg_file_metadata(&data)?.1,
                 None => anyhow::bail!("no such file: {:?}", &k),
             };
             Ok((k, copy_from))
@@ -59,7 +59,7 @@ impl FileStore for EagerRepoStore {
     fn get_local_content(&self, key: &Key) -> anyhow::Result<Option<minibytes::Bytes>> {
         let id = key.hgid;
         match self.get_content(id)? {
-            Some(data) => Ok(Some(separate_metadata(&data)?.0)),
+            Some(data) => Ok(Some(split_hg_file_metadata(&data)?.0)),
             None => Ok(None),
         }
     }
