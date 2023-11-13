@@ -426,9 +426,10 @@ class Client:
                 )
                 if active_version is None:
                     active_version = node.get("latest_active_phabricator_version", {})
-                commit_hash = active_version.get("commit_hash_best_effort")
-                if commit_hash is not None:
-                    info["hash"] = commit_hash
+                if active_version is not None:
+                    commit_hash = active_version.get("commit_hash_best_effort")
+                    if commit_hash is not None:
+                        info["hash"] = commit_hash
 
         except (AttributeError, KeyError, TypeError):
             raise ClientError(None, "Unexpected graphql response format")
