@@ -13,8 +13,6 @@ use std::io::BufReader;
 use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
-use std::sync::atomic::AtomicUsize;
-use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::SystemTime;
 
@@ -125,10 +123,6 @@ struct UpdateMetaAction {
 
 #[derive(Default)]
 pub struct CheckoutStats {
-    removed: AtomicUsize,
-    updated: AtomicUsize,
-    meta_updated: AtomicUsize,
-    written_bytes: AtomicUsize,
     pub remove_failed: Vec<(RepoPathBuf, Error)>,
 }
 
@@ -239,7 +233,7 @@ impl CheckoutPlan {
 
             let remove_files = stream::iter(self.remove.clone().into_iter())
                 .chunks(VFS_BATCH_SIZE)
-                .map(|paths| Self::remove_files(async_vfs, &stats, paths, bar));
+                .map(|paths| Self::remove_files(async_vfs, paths, bar));
             let remove_files = remove_files.buffer_unordered(self.checkout.concurrency);
 
             stats.remove_failed = Self::process_vec_work_stream(remove_files).await?;
@@ -264,18 +258,17 @@ impl CheckoutPlan {
             });
 
             let progress_ref = self.progress.as_ref();
-            let stats_ref = &stats;
             let update_content = update_content
                 .chunks(VFS_BATCH_SIZE)
                 .map(|actions| async move {
                     let actions: Result<Vec<_>, _> = actions.into_iter().collect();
-                    Self::write_files(async_vfs, stats_ref, actions?, progress_ref, bar).await
+                    Self::write_files(async_vfs, actions?, progress_ref, bar).await
                 });
 
             let update_content = update_content.buffer_unordered(self.checkout.concurrency);
 
             let update_meta = stream::iter(self.update_meta.iter()).map(|action| {
-                Self::set_exec_on_file(async_vfs, &stats, &action.path, action.set_x_flag, bar)
+                Self::set_exec_on_file(async_vfs, &action.path, action.set_x_flag, bar)
             });
             let update_meta = update_meta.buffer_unordered(self.checkout.concurrency);
 
@@ -468,7 +461,6 @@ impl CheckoutPlan {
     // all of them into single spawn_blocking.
     async fn write_files(
         async_vfs: &AsyncVfsWriter,
-        stats: &CheckoutStats,
         actions: Vec<(RepoPathBuf, HgId, Bytes, UpdateFlag)>,
         progress: Option<&Mutex<CheckoutProgress>>,
         bar: &Arc<ProgressBar>,
@@ -489,9 +481,7 @@ impl CheckoutPlan {
         let actions = actions
             .into_iter()
             .map(|(path, _, content, flag)| (path, content, flag));
-        let w = async_vfs.write_batch(actions).await?;
-        stats.updated.fetch_add(count, Ordering::Relaxed);
-        stats.written_bytes.fetch_add(w, Ordering::Relaxed);
+        async_vfs.write_batch(actions).await?;
 
         if let Some(progress) = progress {
             progress.lock().record_writes(paths);
@@ -505,20 +495,17 @@ impl CheckoutPlan {
 
     async fn remove_files(
         async_vfs: &AsyncVfsWriter,
-        stats: &CheckoutStats,
         paths: Vec<RepoPathBuf>,
         bar: &Arc<ProgressBar>,
     ) -> Result<Vec<(RepoPathBuf, Error)>> {
         let count = paths.len();
         let failed = async_vfs.remove_batch(paths).await?;
-        stats.removed.fetch_add(count, Ordering::Relaxed);
         bar.increase_position(count as u64);
         Ok(failed)
     }
 
     async fn set_exec_on_file(
         async_vfs: &AsyncVfsWriter,
-        stats: &CheckoutStats,
         path: &RepoPath,
         flag: bool,
         bar: &Arc<ProgressBar>,
@@ -527,7 +514,6 @@ impl CheckoutPlan {
             .set_executable(path.to_owned(), flag)
             .await
             .context(format!("Updating exec on {}", path))?;
-        stats.meta_updated.fetch_add(1, Ordering::Relaxed);
         bar.increase_position(1);
         Ok(())
     }
