@@ -119,19 +119,6 @@ def parsemeta(text, flags=0):
     return meta or {}, text
 
 
-def sumdicts(*dicts):
-    """Adds all the values of *dicts together into one dictionary. This assumes
-    the values in *dicts are all summable.
-
-    e.g. [{'a': 4', 'b': 2}, {'b': 3, 'c': 1}] -> {'a': 4, 'b': 5, 'c': 1}
-    """
-    result = defaultdict(lambda: 0)
-    for dict in dicts:
-        for k, v in pycompat.iteritems(dict):
-            result[k] += v
-    return result
-
-
 def prefixkeys(dict, prefix):
     """Returns ``dict`` with ``prefix`` prepended to all its keys."""
     result = {}

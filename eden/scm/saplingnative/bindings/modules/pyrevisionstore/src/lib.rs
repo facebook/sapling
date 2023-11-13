@@ -276,39 +276,6 @@ py_class!(class datapack |py| {
     }
 });
 
-/// Scan the filesystem for files with `extensions`, and compute their size.
-fn compute_store_size<P: AsRef<Path>>(
-    storepath: P,
-    extensions: Vec<&str>,
-) -> Result<(usize, usize)> {
-    let dirents = read_dir(storepath)?;
-
-    assert_eq!(extensions.len(), 2);
-
-    let mut count = 0;
-    let mut size = 0;
-
-    for dirent in dirents {
-        let dirent = dirent?;
-        let path = dirent.path();
-
-        if let Some(file_ext) = path.extension() {
-            for extension in &extensions {
-                if extension == &file_ext {
-                    size += dirent.metadata()?.len();
-                    count += 1;
-                    break;
-                }
-            }
-        }
-    }
-
-    // We did count the indexes too, but we do not want them counted.
-    count /= 2;
-
-    Ok((size as usize, count))
-}
-
 py_class!(class datapackstore |py| {
     data store: Box<DataPackStore>;
     data path: PathBuf;
@@ -346,18 +313,6 @@ py_class!(class datapackstore |py| {
     def markforrefresh(&self) -> PyResult<PyObject> {
         self.store(py).force_rescan();
         Ok(Python::None(py))
-    }
-
-    def getmetrics(&self) -> PyResult<PyDict> {
-        let (size, count) = match compute_store_size(self.path(py), vec!["datapack", "dataidx"]) {
-            Ok((size, count)) => (size, count),
-            Err(_) => (0, 0),
-        };
-
-        let res = PyDict::new(py);
-        res.set_item(py, "numpacks", count)?;
-        res.set_item(py, "totalpacksize", size)?;
-        Ok(res)
     }
 });
 
@@ -427,18 +382,6 @@ py_class!(class historypackstore |py| {
     def markforrefresh(&self) -> PyResult<PyObject> {
         self.store(py).force_rescan();
         Ok(Python::None(py))
-    }
-
-    def getmetrics(&self) -> PyResult<PyDict> {
-        let (size, count) = match compute_store_size(self.path(py), vec!["histpack", "histidx"]) {
-            Ok((size, count)) => (size, count),
-            Err(_) => (0, 0),
-        };
-
-        let res = PyDict::new(py);
-        res.set_item(py, "numpacks", count)?;
-        res.set_item(py, "totalpacksize", size)?;
-        Ok(res)
     }
 });
 

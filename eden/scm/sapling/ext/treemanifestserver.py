@@ -2596,9 +2596,6 @@ class generatingdatastore(pycompat.ABC):
     def getmissing(self, keys):
         return keys
 
-    def getmetrics(self):
-        return {}
-
     def getnodeinfo(self, name, node):
         with self._generating(name, node):
             self._generatetrees(name, node)

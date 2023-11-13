@@ -113,10 +113,6 @@ class unioncontentstore:
                 pass
         raise KeyError((name, hex(node)))
 
-    def getmetrics(self):
-        metrics = [s.getmetrics() for s in self.stores]
-        return shallowutil.sumdicts(*metrics)
-
     def _getpartialchain(self, name, node):
         """Returns a partial delta chain for the given name/node pair.
 

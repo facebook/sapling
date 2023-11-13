@@ -31,10 +31,6 @@ class unionmetadatastore:
                 missing = store.getmissing(missing)
         return missing
 
-    def getmetrics(self):
-        metrics = [s.getmetrics() for s in self.stores]
-        return shallowutil.sumdicts(*metrics)
-
     def markforrefresh(self):
         for store in self.stores:
             if hasattr(store, "markforrefresh"):

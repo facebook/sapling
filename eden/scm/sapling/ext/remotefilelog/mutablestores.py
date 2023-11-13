@@ -149,6 +149,3 @@ class mutabledatahistorystore:
             raise KeyError(name, hex(node))
 
         return hpack.getnodeinfo(name, node)
-
-    def getmetrics(self):
-        return {}

@@ -160,26 +160,6 @@ class basepackstore:
         for __, __, path in files:
             yield path
 
-    def gettotalsizeandcount(self):
-        """Returns the total disk size (in bytes) of all the pack files in
-        this store, and the count of pack files.
-
-        (This might be smaller than the total size of the ``self.path``
-        directory, since this only considers fuly-writen pack files, and not
-        temporary files or other detritus on the directory.)
-        """
-        totalsize = 0
-        count = 0
-        for __, __, size in self._getavailablepackfiles():
-            totalsize += size
-            count += 1
-        return totalsize, count
-
-    def getmetrics(self):
-        """Returns metrics on the state of this store."""
-        size, count = self.gettotalsizeandcount()
-        return {"numpacks": count, "totalpacksize": size}
-
     def getpack(self, path):
         raise NotImplemented()
 
