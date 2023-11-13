@@ -523,7 +523,7 @@ async fn check_if_independent_branch_and_return(
         .commit_graph()
         .ancestors_difference_stream(ctx, branch_tips.clone(), other_branches)
         .await?
-        .map_ok({ move |cs| async move { Ok(cs.load(ctx, blobstore).await?) } })
+        .map_ok(move |cs| async move { Ok(cs.load(ctx, blobstore).await?) })
         .try_buffered(100)
         .try_collect::<Vec<_>>()
         .await?;
