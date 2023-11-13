@@ -221,9 +221,6 @@ async def update_commits_in_stack(
         (none_throws(p[0].pr).number, len(p)) for p in partitions
     ]
 
-    # Add the head of the stack to the sapling-pr-archive branch.
-    tip = hex(partitions[0][0].node)
-
     if not repository:
         repository = await get_repository_for_origin(origin, github_repo.hostname)
     rewrite_and_archive_requests = [
@@ -231,15 +228,19 @@ async def update_commits_in_stack(
             partitions, index, workflow, pr_numbers_and_num_commits, repository, ui
         )
         for index in range(len(partitions))
-    ] + [
-        add_commit_to_archives(
-            oid_to_archive=tip,
-            ui=ui,
-            origin=origin,
-            repository=repository,
-            get_gitdir=get_gitdir,
-        )
     ]
+    if not ui.configbool("github", "no-archive", "false"):
+        # Add the head of the stack to the sapling-pr-archive branch.
+        tip = hex(partitions[0][0].node)
+        rewrite_and_archive_requests.append(
+            add_commit_to_archives(
+                oid_to_archive=tip,
+                ui=ui,
+                origin=origin,
+                repository=repository,
+                get_gitdir=get_gitdir,
+            )
+        )
     await asyncio.gather(*rewrite_and_archive_requests)
     return 0
 
