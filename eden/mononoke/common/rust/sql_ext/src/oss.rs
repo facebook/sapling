@@ -67,6 +67,7 @@ pub fn create_oss_mysql_connections_unsharded(
     _port: i16,
     _user: String,
     _secret_name: String,
+    _database: String,
     _label: String,
 ) -> Result<SqlConnections, Error> {
     fb_unimplemented!()

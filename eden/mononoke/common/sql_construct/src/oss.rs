@@ -32,6 +32,7 @@ pub trait FbSqlConstruct: SqlConstruct + Sized + Send + Sync + 'static {
         _port: i16,
         _user: String,
         _secret_name: String,
+        _database: String,
         _readonly: bool,
     ) -> Result<Self> {
         fb_unimplemented!()

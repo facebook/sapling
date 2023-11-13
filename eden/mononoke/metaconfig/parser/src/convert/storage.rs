@@ -268,6 +268,7 @@ impl Convert for RawOssDbRemote {
             port: self.port,
             user: self.user,
             secret_name: self.secret_name,
+            database: self.database,
         })
     }
 }

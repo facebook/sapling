@@ -12,6 +12,7 @@ use fbinit::FacebookInit;
 use metaconfig_types::DatabaseConfig;
 use metaconfig_types::LocalDatabaseConfig;
 use metaconfig_types::MetadataDatabaseConfig;
+use metaconfig_types::OssRemoteDatabaseConfig;
 use metaconfig_types::OssRemoteMetadataDatabaseConfig;
 use metaconfig_types::RemoteDatabaseConfig;
 use metaconfig_types::RemoteMetadataDatabaseConfig;
@@ -124,12 +125,16 @@ pub trait SqlConstructFromMetadataDatabaseConfig: FbSqlConstruct + SqlConstruct 
         remote: &OssRemoteMetadataDatabaseConfig,
         readonly: bool,
     ) -> Result<Self> {
+        let config = Self::oss_remote_database_config(remote)
+            .ok_or_else(|| anyhow!("no configuration available"))?;
+
         Self::with_oss_mysql(
             fb,
-            remote.primary.host.clone(),
-            remote.primary.port,
-            remote.primary.user.clone(),
-            remote.primary.secret_name.clone(),
+            config.host.clone(),
+            config.port,
+            config.user.clone(),
+            config.secret_name.clone(),
+            config.database.clone(),
             readonly,
         )
         .await
@@ -140,6 +145,12 @@ pub trait SqlConstructFromMetadataDatabaseConfig: FbSqlConstruct + SqlConstruct 
     fn remote_database_config(
         remote: &RemoteMetadataDatabaseConfig,
     ) -> Option<&RemoteDatabaseConfig> {
+        Some(&remote.primary)
+    }
+
+    fn oss_remote_database_config(
+        remote: &OssRemoteMetadataDatabaseConfig,
+    ) -> Option<&OssRemoteDatabaseConfig> {
         Some(&remote.primary)
     }
 }

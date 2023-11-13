@@ -994,6 +994,8 @@ pub struct OssRemoteDatabaseConfig {
     pub user: String,
     /// Name of the secret where the DB password is stored
     pub secret_name: String,
+    /// Name of the database
+    pub database: String,
 }
 
 /// Configuration for a sharded remote MySQL database
