@@ -9,7 +9,9 @@
 
 use async_trait::async_trait;
 use storemodel::FileStore;
+use storemodel::InsertOpts;
 use storemodel::KeyStore;
+use storemodel::Kind;
 use storemodel::SerializationFormat;
 use storemodel::TreeStore;
 use types::HgId;
@@ -29,6 +31,20 @@ impl KeyStore for GitStore {
             Err(e) if e.code() == git2::ErrorCode::NotFound => Ok(None),
             Err(e) => Err(e.into()),
         }
+    }
+
+    fn insert_data(&self, opts: InsertOpts, path: &RepoPath, data: &[u8]) -> anyhow::Result<HgId> {
+        let kind = match opts.kind {
+            Kind::File => git2::ObjectType::Blob,
+            Kind::Tree => git2::ObjectType::Tree,
+        };
+        let id = self.write_obj(kind, data)?;
+        if let Some(forced_id) = opts.forced_id {
+            if forced_id.as_ref() != &id {
+                anyhow::bail!("hash mismatch when writing {}@{}", path, forced_id);
+            }
+        }
+        Ok(id)
     }
 
     fn format(&self) -> SerializationFormat {
