@@ -9,6 +9,7 @@ rust_library(
     crate_root = "src/lib.rs",
     test_deps = [
         "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:sha1",
         "fbsource//third-party/rust:tokio",
         "//eden/scm/lib/dev-logger:dev-logger",
         "//eden/scm/lib/manifest:manifest",

@@ -25,7 +25,6 @@ use storemodel::FileStore;
 use storemodel::KeyStore;
 use storemodel::TreeStore;
 use types::Key;
-use types::Node;
 use types::RepoPath;
 
 use crate::contentstore;
@@ -126,10 +125,4 @@ impl<T: HgIdDataStore + RemoteDataStore> KeyStore for ManifestStore<T> {
     }
 }
 
-impl<T: HgIdDataStore + RemoteDataStore> TreeStore for ManifestStore<T> {
-    fn insert(&self, _path: &RepoPath, _node: Node, _data: Bytes) -> Result<()> {
-        unimplemented!(
-            "At this time we don't expect to ever write manifest in rust using python stores."
-        );
-    }
-}
+impl<T: HgIdDataStore + RemoteDataStore> TreeStore for ManifestStore<T> {}

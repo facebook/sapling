@@ -256,29 +256,18 @@ impl Manifest for TreeManifest {
 
     /// Write dirty trees using specified format to disk. Return the root tree id.
     fn flush(&mut self) -> Result<HgId> {
-        fn compute_sha1(content: &[u8], format: SerializationFormat) -> HgId {
-            let mut hasher = Sha1::new();
-            match format {
-                SerializationFormat::Git => hasher.update(format!("tree {}\0", content.len())),
-                SerializationFormat::Hg => {
-                    // XXX: No p1, p2 to produce a genuine SHA1.
-                    // This code path is only meaningful for tests.
-                    assert!(
-                        cfg!(test),
-                        "flush() cannot be used with hg store, consider finalize() instead"
-                    );
-                }
-            }
-            hasher.update(content);
-            let buf: [u8; HgId::len()] = hasher.finalize().into();
-            (&buf).into()
-        }
         fn do_flush<'a, 'b, 'c>(
             store: &'a InnerStore,
             pathbuf: &'b mut RepoPathBuf,
             cursor: &'c mut Link,
             format: SerializationFormat,
         ) -> Result<(HgId, store::Flag)> {
+            #[cfg(not(test))]
+            assert_eq!(
+                format,
+                SerializationFormat::Git,
+                "flush() cannot be used with hg store, use finalize() instead"
+            );
             loop {
                 let new_cursor = match cursor.as_mut_ref()? {
                     Leaf(file_metadata) => {
@@ -301,8 +290,7 @@ impl Manifest for TreeManifest {
                         });
                         let elements: Vec<_> = iter.collect::<Result<Vec<_>>>()?;
                         let entry = store::Entry::from_elements(elements, format);
-                        let hgid = compute_sha1(entry.as_ref(), format);
-                        store.insert_entry(pathbuf, hgid, entry)?;
+                        let hgid = store.insert_entry(pathbuf, entry)?;
 
                         let cell = OnceCell::new();
                         // TODO: remove clone
@@ -722,11 +710,29 @@ mod tests {
     use manifest::testutil::*;
     use manifest::FileType;
     use store::Element;
+    use storemodel::InsertOpts;
+    use storemodel::Kind;
     use types::hgid::NULL_ID;
     use types::testutil::*;
 
     use self::testutil::*;
     use super::*;
+
+    trait TestInsert {
+        fn insert(&self, path: &RepoPath, hgid: HgId, data: Bytes) -> Result<()>;
+    }
+
+    impl<T: TreeStore> TestInsert for T {
+        fn insert(&self, path: &RepoPath, hgid: HgId, data: Bytes) -> Result<()> {
+            let opts = InsertOpts {
+                kind: Kind::Tree,
+                forced_id: Some(Box::new(hgid)),
+                ..Default::default()
+            };
+            self.insert_data(opts, path, data.as_ref())?;
+            Ok(())
+        }
+    }
 
     impl store::Entry {
         fn from_elements_hg(elements: Vec<Element>) -> Self {

@@ -171,9 +171,7 @@ pub trait ReadRootTreeIds {
 /// The `TreeStore` is an abstraction layer for the tree manifest that decouples how or where the
 /// data is stored. This allows more easy iteration on serialization format. It also simplifies
 /// writing storage migration.
-pub trait TreeStore: KeyStore {
-    fn insert(&self, path: &RepoPath, hgid: HgId, data: minibytes::Bytes) -> anyhow::Result<()>;
-}
+pub trait TreeStore: KeyStore {}
 
 /// Decides the serialization format. This exists so different parts of the code
 /// base can agree on how to generate a SHA1, how to lookup in a tree, etc.

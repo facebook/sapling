@@ -60,12 +60,4 @@ impl KeyStore for GitStore {
 #[async_trait]
 impl FileStore for GitStore {}
 
-impl TreeStore for GitStore {
-    fn insert(&self, _path: &RepoPath, hgid: HgId, data: minibytes::Bytes) -> anyhow::Result<()> {
-        let id = self.write_obj(git2::ObjectType::Tree, data.as_ref())?;
-        if id != hgid {
-            anyhow::bail!("tree id mismatch: {} (written) != {} (expected)", id, hgid);
-        }
-        Ok(())
-    }
-}
+impl TreeStore for GitStore {}

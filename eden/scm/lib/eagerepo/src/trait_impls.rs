@@ -107,8 +107,4 @@ impl FileStore for EagerRepoStore {
     }
 }
 
-impl TreeStore for EagerRepoStore {
-    fn insert(&self, _path: &RepoPath, _hgid: HgId, _data: minibytes::Bytes) -> anyhow::Result<()> {
-        anyhow::bail!("insert cannot be used for Hg trees");
-    }
-}
+impl TreeStore for EagerRepoStore {}

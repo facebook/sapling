@@ -575,8 +575,4 @@ impl storemodel::KeyStore for TreeStore {
     }
 }
 
-impl storemodel::TreeStore for TreeStore {
-    fn insert(&self, _path: &RepoPath, _node: Node, _data: Bytes) -> Result<()> {
-        unimplemented!("not needed yet");
-    }
-}
+impl storemodel::TreeStore for TreeStore {}

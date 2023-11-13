@@ -119,13 +119,4 @@ impl KeyStore for TestStore {
     }
 }
 
-impl TreeStore for TestStore {
-    fn insert(&self, path: &RepoPath, hgid: HgId, data: Bytes) -> Result<()> {
-        let mut underlying = self.entries.write();
-        underlying
-            .entry(path.to_owned())
-            .or_insert(HashMap::new())
-            .insert(hgid, data);
-        Ok(())
-    }
-}
+impl TreeStore for TestStore {}

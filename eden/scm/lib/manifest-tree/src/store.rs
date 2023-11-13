@@ -14,6 +14,8 @@ use manifest::FileMetadata;
 use manifest::FileType;
 use manifest::FsNodeMetadata;
 use minibytes::Bytes;
+use storemodel::InsertOpts;
+use storemodel::Kind;
 use storemodel::SerializationFormat;
 pub use storemodel::TreeStore;
 use types::HgId;
@@ -47,13 +49,15 @@ impl InnerStore {
         })
     }
 
-    pub fn insert_entry(&self, path: &RepoPath, hgid: HgId, entry: Entry) -> Result<()> {
-        tracing::debug_span!(
-            "tree::store::insert",
-            path = path.as_str(),
-            id = AsRef::<str>::as_ref(&hgid.to_hex())
-        )
-        .in_scope(|| self.tree_store.insert(path, hgid, entry.0))
+    pub(crate) fn insert_entry(&self, path: &RepoPath, entry: Entry) -> Result<HgId> {
+        tracing::debug_span!("tree::store::insert", path = path.as_str(),).in_scope(|| {
+            let opts = InsertOpts {
+                kind: Kind::Tree,
+                ..Default::default()
+            };
+            let id = self.tree_store.insert_data(opts, path, entry.0.as_ref())?;
+            Ok(id)
+        })
     }
 
     pub fn prefetch(&self, keys: impl IntoIterator<Item = Key>) -> Result<()> {
