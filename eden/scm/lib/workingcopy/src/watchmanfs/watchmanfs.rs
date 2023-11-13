@@ -156,52 +156,7 @@ impl WatchmanFileSystem {
 
         Ok(result)
     }
-}
 
-async fn crawl_progress(root: PathBuf, approx_file_count: u64) -> Result<()> {
-    let client = {
-        let _bar = ProgressBar::new_detached("connecting watchman", 0, "");
-
-        // If watchman just started (and we issued "watch-project" from
-        // query_files), this connect gets stuck indefinitely. Work around by
-        // timing out and retrying until we get through.
-        loop {
-            match tokio::time::timeout(Duration::from_secs(1), Connector::new().connect()).await {
-                Ok(client) => break client?,
-                Err(_) => {}
-            };
-
-            tokio::time::sleep(Duration::from_secs(1)).await;
-        }
-    };
-
-    let mut bar = None;
-
-    let req = DebugRootStatusRequest(
-        "debug-root-status",
-        CanonicalPath::canonicalize(root)?.into_path_buf(),
-    );
-
-    loop {
-        let response: DebugRootStatusResponse = client.generic_request(req.clone()).await?;
-
-        if let Some(RootStatus {
-            recrawl_info: Some(RecrawlInfo { stats: Some(stats) }),
-        }) = response.root_status
-        {
-            bar.get_or_insert_with(|| {
-                ProgressBar::new_detached("crawling", approx_file_count, "files (approx)")
-            })
-            .set_position(stats);
-        } else if bar.is_some() {
-            return Ok(());
-        }
-
-        tokio::time::sleep(Duration::from_millis(100)).await;
-    }
-}
-
-impl FileSystem for WatchmanFileSystem {
     #[tracing::instrument(skip_all)]
     fn pending_changes(
         &self,
@@ -265,10 +220,13 @@ impl FileSystem for WatchmanFileSystem {
                         })?,
                 },
                 ignore_dirs,
-            ))?
+            ))
         };
 
+        // Make sure we always abort - even in case of error.
         progress_handle.abort();
+
+        let result = result?;
 
         tracing::debug!(
             target: "watchman_info",
@@ -396,6 +354,102 @@ impl FileSystem for WatchmanFileSystem {
         }
 
         Ok(Box::new(pending_changes.into_iter()))
+    }
+}
+
+async fn crawl_progress(root: PathBuf, approx_file_count: u64) -> Result<()> {
+    let client = {
+        let _bar = ProgressBar::new_detached("connecting watchman", 0, "");
+
+        // If watchman just started (and we issued "watch-project" from
+        // query_files), this connect gets stuck indefinitely. Work around by
+        // timing out and retrying until we get through.
+        loop {
+            match tokio::time::timeout(Duration::from_secs(1), Connector::new().connect()).await {
+                Ok(client) => break client?,
+                Err(_) => {}
+            };
+
+            tokio::time::sleep(Duration::from_secs(1)).await;
+        }
+    };
+
+    let mut bar = None;
+
+    let req = DebugRootStatusRequest(
+        "debug-root-status",
+        CanonicalPath::canonicalize(root)?.into_path_buf(),
+    );
+
+    loop {
+        let response: DebugRootStatusResponse = client.generic_request(req.clone()).await?;
+
+        if let Some(RootStatus {
+            recrawl_info: Some(RecrawlInfo { stats: Some(stats) }),
+        }) = response.root_status
+        {
+            bar.get_or_insert_with(|| {
+                ProgressBar::new_detached("crawling", approx_file_count, "files (approx)")
+            })
+            .set_position(stats);
+        } else if bar.is_some() {
+            return Ok(());
+        }
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+}
+
+impl FileSystem for WatchmanFileSystem {
+    fn pending_changes(
+        &self,
+        matcher: DynMatcher,
+        ignore_matcher: DynMatcher,
+        ignore_dirs: Vec<PathBuf>,
+        include_ignored: bool,
+        last_write: SystemTime,
+        config: &dyn Config,
+        io: &IO,
+    ) -> Result<Box<dyn Iterator<Item = Result<PendingChange>>>> {
+        let result = self.pending_changes(
+            matcher.clone(),
+            ignore_matcher.clone(),
+            ignore_dirs.clone(),
+            include_ignored,
+            last_write,
+            config,
+            io,
+        );
+
+        match result {
+            Ok(result) => Ok(result),
+            Err(err) if err.is::<watchman_client::Error>() => {
+                if !config.get_or("fsmonitor", "fallback-on-watchman-exception", || true)? {
+                    return Err(err);
+                }
+
+                // On watchman error, fall back to manual walk. This is important for errors such as:
+                //   - "watchman" binary not in PATH
+                //   - unsupported filesystem (e.g. NFS)
+                //
+                // A better approach might be an allowlist of errors to fall
+                // back on so we can fail hard in cases where watchman "should"
+                // work, but that is probably still an unacceptable UX in general.
+
+                tracing::debug!(target: "watchman_info", watchmanfallback=1);
+                tracing::warn!(?err, "watchman error - falling back to slow crawl");
+                self.inner.pending_changes(
+                    matcher,
+                    ignore_matcher,
+                    ignore_dirs,
+                    include_ignored,
+                    last_write,
+                    config,
+                    io,
+                )
+            }
+            Err(err) => Err(err),
+        }
     }
 
     fn sparse_matcher(
