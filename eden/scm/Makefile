@@ -87,7 +87,8 @@ oss: local
 install-oss: oss
 	mkdir -p $(DESTDIR)/$(PREFIX)/bin
 	cp $(SL_NAME) $(DESTDIR)/$(PREFIX)/bin
-	cp isl-dist.tar.xz $(DESTDIR)/$(PREFIX)/bin
+	mkdir -p $(DESTDIR)/$(PREFIX)/lib
+	cp isl-dist.tar.xz $(DESTDIR)/$(PREFIX)/lib
 
 local:
 	SAPLING_OSS_BUILD=$(OSS) HGNAME=$(HGNAME) \
