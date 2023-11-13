@@ -26,3 +26,7 @@ mod request;
 mod slice;
 mod tests;
 mod tree;
+
+pub use revisionstore::scmstore::FetchMode;
+
+pub use crate::backingstore::BackingStore;

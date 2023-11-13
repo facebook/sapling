@@ -12,6 +12,7 @@ members = [
   "lib/atomicfile",
   "lib/auth",
   "lib/backingstore",
+  "lib/backingstore/benches",
   "lib/blackbox",
   "lib/blackbox/serde_alt",
   "lib/cats",

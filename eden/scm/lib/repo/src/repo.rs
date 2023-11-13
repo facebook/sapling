@@ -736,7 +736,7 @@ impl Repo {
     }
 }
 
-fn read_sharedpath(dot_path: &Path) -> Result<Option<(PathBuf, identity::Identity)>> {
+pub fn read_sharedpath(dot_path: &Path) -> Result<Option<(PathBuf, identity::Identity)>> {
     let sharedpath = fs::read_to_string(dot_path.join("sharedpath"))
         .ok()
         .map(PathBuf::from)

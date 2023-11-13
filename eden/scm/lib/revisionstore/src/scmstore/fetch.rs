@@ -19,7 +19,7 @@ use types::Key;
 use crate::scmstore::attrs::StoreAttrs;
 use crate::scmstore::value::StoreValue;
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum FetchMode {
     /// The fetch may hit remote servers.
     AllowRemote,
