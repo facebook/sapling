@@ -68,6 +68,7 @@ fsmonitor=
 
 [fsmonitor]
 detectrace=True
+fallback-on-watchman-exception=false
 """
 
     return content
