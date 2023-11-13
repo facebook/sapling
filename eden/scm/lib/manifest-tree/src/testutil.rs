@@ -14,6 +14,9 @@ use manifest::Manifest;
 use minibytes::Bytes;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
+use sha1::Digest;
+use sha1::Sha1;
+use storemodel::InsertOpts;
 use storemodel::KeyStore;
 use storemodel::SerializationFormat;
 use types::testutil::*;
@@ -76,6 +79,13 @@ impl TestStore {
     }
 }
 
+fn compute_sha1(content: &[u8]) -> HgId {
+    let mut hasher = Sha1::new();
+    hasher.update(content);
+    let buf: [u8; HgId::len()] = hasher.finalize().into();
+    (&buf).into()
+}
+
 impl KeyStore for TestStore {
     fn get_local_content(&self, path: &RepoPath, hgid: HgId) -> anyhow::Result<Option<Bytes>> {
         let underlying = self.entries.read();
@@ -84,6 +94,19 @@ impl KeyStore for TestStore {
             .and_then(|hgid_hash| hgid_hash.get(&hgid))
             .cloned();
         Ok(result)
+    }
+
+    fn insert_data(&self, opts: InsertOpts, path: &RepoPath, data: &[u8]) -> anyhow::Result<HgId> {
+        let mut underlying = self.entries.write();
+        let hgid = match opts.forced_id {
+            Some(id) => *id,
+            None => compute_sha1(data),
+        };
+        underlying
+            .entry(path.to_owned())
+            .or_insert(HashMap::new())
+            .insert(hgid, Bytes::copy_from_slice(data));
+        Ok(hgid)
     }
 
     fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
