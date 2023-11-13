@@ -114,7 +114,7 @@ impl storemodel::FileStore for ArcFileStore {
 const PREFETCH_CHUNK_SIZE: usize = 1000;
 const FETCH_PARALLELISM: usize = 20;
 
-fn stream_data_from_remote_data_store<DS: RemoteDataStore + Clone + 'static>(
+pub(crate) fn stream_data_from_remote_data_store<DS: RemoteDataStore + Clone + 'static>(
     store: DS,
     keys: Vec<Key>,
 ) -> impl Stream<Item = Result<(Bytes, Key, Option<Key>)>> {

@@ -24,11 +24,15 @@ impl KeyStore for GitStore {
         _path: &RepoPath,
         id: HgId,
     ) -> anyhow::Result<Option<minibytes::Bytes>> {
-        match self.read_obj(id, git2::ObjectType::Blob) {
+        match self.read_obj(id, git2::ObjectType::Any) {
             Ok(data) => Ok(Some(data.into())),
             Err(e) if e.code() == git2::ErrorCode::NotFound => Ok(None),
             Err(e) => Err(e.into()),
         }
+    }
+
+    fn format(&self) -> SerializationFormat {
+        SerializationFormat::Git
     }
 
     fn refresh(&self) -> anyhow::Result<()> {
@@ -41,25 +45,11 @@ impl KeyStore for GitStore {
 impl FileStore for GitStore {}
 
 impl TreeStore for GitStore {
-    fn get(&self, _path: &RepoPath, hgid: HgId) -> anyhow::Result<minibytes::Bytes> {
-        let data = self.read_obj(hgid, git2::ObjectType::Tree)?;
-        Ok(data.into())
-    }
-
     fn insert(&self, _path: &RepoPath, hgid: HgId, data: minibytes::Bytes) -> anyhow::Result<()> {
         let id = self.write_obj(git2::ObjectType::Tree, data.as_ref())?;
         if id != hgid {
             anyhow::bail!("tree id mismatch: {} (written) != {} (expected)", id, hgid);
         }
-        Ok(())
-    }
-
-    fn format(&self) -> SerializationFormat {
-        SerializationFormat::Git
-    }
-
-    fn refresh(&self) -> anyhow::Result<()> {
-        // We don't hold state in memory, so no need to refresh.
         Ok(())
     }
 }

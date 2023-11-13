@@ -25,6 +25,7 @@ use manifest::FileType;
 use manifest::Manifest;
 use manifest_tree::TreeManifest;
 use storemodel::minibytes::Bytes;
+use storemodel::KeyStore;
 use storemodel::ReadRootTreeIds;
 use storemodel::SerializationFormat;
 use storemodel::TreeStore;
@@ -225,22 +226,18 @@ impl<I: Iterator<Item = u64>> From<(u64, I)> for BuildSetParam {
     }
 }
 
-impl TreeStore for TestHistory {
-    fn get(&self, path: &RepoPath, hgid: HgId) -> Result<Bytes> {
+#[async_trait]
+impl KeyStore for TestHistory {
+    fn get_local_content(&self, path: &RepoPath, hgid: HgId) -> anyhow::Result<Option<Bytes>> {
         let key = Key::new(path.to_owned(), hgid);
         let inner = self.inner.lock().unwrap();
         if !inner.prefetched_trees.contains(&key) {
             bail!("not prefetched: {:?}", &key);
         }
         match inner.trees.get(&hgid) {
-            Some(v) => Ok(v.clone()),
+            Some(v) => Ok(Some(v.clone())),
             None => bail!("{:?} not found", &key),
         }
-    }
-
-    fn insert(&self, _path: &RepoPath, hgid: HgId, data: Bytes) -> Result<()> {
-        self.inner.lock().unwrap().trees.insert(hgid, data);
-        Ok(())
     }
 
     fn prefetch(&self, mut keys: Vec<Key>) -> Result<()> {
@@ -261,6 +258,13 @@ impl TreeStore for TestHistory {
 
     fn format(&self) -> SerializationFormat {
         SerializationFormat::Git
+    }
+}
+
+impl TreeStore for TestHistory {
+    fn insert(&self, _path: &RepoPath, hgid: HgId, data: Bytes) -> Result<()> {
+        self.inner.lock().unwrap().trees.insert(hgid, data);
+        Ok(())
     }
 }
 

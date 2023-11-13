@@ -9,6 +9,7 @@ use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use ::types::HgId;
 use ::types::Key;
 use ::types::Node;
 use ::types::RepoPath;
@@ -522,12 +523,37 @@ impl ContentDataStore for TreeStore {
     }
 }
 
-impl storemodel::TreeStore for TreeStore {
-    fn get(&self, path: &RepoPath, node: Node) -> Result<minibytes::Bytes> {
+#[async_trait::async_trait]
+impl storemodel::KeyStore for TreeStore {
+    async fn get_content_stream(
+        &self,
+        _keys: Vec<Key>,
+    ) -> futures::stream::BoxStream<anyhow::Result<(minibytes::Bytes, Key)>> {
+        todo!("TreeStore::get_content_stream is not yet used");
+    }
+
+    fn get_local_content(
+        &self,
+        path: &RepoPath,
+        node: HgId,
+    ) -> anyhow::Result<Option<minibytes::Bytes>> {
+        if node.is_null() {
+            return Ok(Some(Default::default()));
+        }
+        let key = Key::new(path.to_owned(), node);
+        match self
+            .fetch_batch(std::iter::once(key.clone()), FetchMode::LocalOnly)
+            .single()?
+        {
+            Some(entry) => Ok(Some(entry.content.expect("no tree content").hg_content()?)),
+            None => Ok(None),
+        }
+    }
+
+    fn get_content(&self, path: &RepoPath, node: Node) -> Result<minibytes::Bytes> {
         if node.is_null() {
             return Ok(Default::default());
         }
-
         let key = Key::new(path.to_owned(), node);
         match self
             .fetch_batch(std::iter::once(key.clone()), FetchMode::AllowRemote)
@@ -544,11 +570,13 @@ impl storemodel::TreeStore for TreeStore {
         Ok(())
     }
 
+    fn refresh(&self) -> Result<()> {
+        TreeStore::refresh(self)
+    }
+}
+
+impl storemodel::TreeStore for TreeStore {
     fn insert(&self, _path: &RepoPath, _node: Node, _data: Bytes) -> Result<()> {
         unimplemented!("not needed yet");
-    }
-
-    fn refresh(&self) -> Result<()> {
-        self.refresh()
     }
 }

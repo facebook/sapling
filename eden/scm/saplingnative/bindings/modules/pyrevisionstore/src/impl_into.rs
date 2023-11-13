@@ -9,7 +9,6 @@
 
 use std::sync::Arc;
 
-use anyhow::format_err;
 use anyhow::Result;
 use cpython::*;
 use cpython_ext::convert::register_into;
@@ -23,6 +22,7 @@ use revisionstore::StoreKey;
 use revisionstore::StoreResult;
 use storemodel::minibytes::Bytes;
 use storemodel::FileStore;
+use storemodel::KeyStore;
 use storemodel::TreeStore;
 use types::Key;
 use types::Node;
@@ -95,22 +95,20 @@ impl<T> ManifestStore<T> {
     }
 }
 
-impl<T: HgIdDataStore + RemoteDataStore> TreeStore for ManifestStore<T> {
-    fn get(&self, path: &RepoPath, node: Node) -> Result<Bytes> {
+impl<T: HgIdDataStore + RemoteDataStore> KeyStore for ManifestStore<T> {
+    fn get_local_content(
+        &self,
+        path: &RepoPath,
+        node: types::HgId,
+    ) -> anyhow::Result<Option<Bytes>> {
         if node.is_null() {
-            return Ok(Default::default());
+            return Ok(Some(Default::default()));
         }
         let key = Key::new(path.to_owned(), node);
         match self.underlying.get(StoreKey::hgid(key))? {
-            StoreResult::NotFound(key) => Err(format_err!("Key {:?} not found in manifest", key)),
-            StoreResult::Found(data) => Ok(data.into()),
+            StoreResult::NotFound(_key) => Ok(None),
+            StoreResult::Found(data) => Ok(Some(data.into())),
         }
-    }
-
-    fn insert(&self, _path: &RepoPath, _node: Node, _data: Bytes) -> Result<()> {
-        unimplemented!(
-            "At this time we don't expect to ever write manifest in rust using python stores."
-        );
     }
 
     fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
@@ -125,5 +123,13 @@ impl<T: HgIdDataStore + RemoteDataStore> TreeStore for ManifestStore<T> {
             })
             .collect::<Vec<_>>();
         self.underlying.prefetch(&keys).map(|_| ())
+    }
+}
+
+impl<T: HgIdDataStore + RemoteDataStore> TreeStore for ManifestStore<T> {
+    fn insert(&self, _path: &RepoPath, _node: Node, _data: Bytes) -> Result<()> {
+        unimplemented!(
+            "At this time we don't expect to ever write manifest in rust using python stores."
+        );
     }
 }

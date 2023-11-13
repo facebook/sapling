@@ -8,13 +8,13 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use anyhow::format_err;
 use anyhow::Result;
 use manifest::testutil::*;
 use manifest::Manifest;
 use minibytes::Bytes;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
+use storemodel::KeyStore;
 use storemodel::SerializationFormat;
 use types::testutil::*;
 use types::HgId;
@@ -76,23 +76,14 @@ impl TestStore {
     }
 }
 
-impl TreeStore for TestStore {
-    fn get(&self, path: &RepoPath, hgid: HgId) -> Result<Bytes> {
+impl KeyStore for TestStore {
+    fn get_local_content(&self, path: &RepoPath, hgid: HgId) -> anyhow::Result<Option<Bytes>> {
         let underlying = self.entries.read();
         let result = underlying
             .get(path)
             .and_then(|hgid_hash| hgid_hash.get(&hgid))
             .cloned();
-        result.ok_or_else(|| format_err!("Could not find manifest entry for ({}, {})", path, hgid))
-    }
-
-    fn insert(&self, path: &RepoPath, hgid: HgId, data: Bytes) -> Result<()> {
-        let mut underlying = self.entries.write();
-        underlying
-            .entry(path.to_owned())
-            .or_insert(HashMap::new())
-            .insert(hgid, data);
-        Ok(())
+        Ok(result)
     }
 
     fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
@@ -102,5 +93,16 @@ impl TreeStore for TestStore {
 
     fn format(&self) -> SerializationFormat {
         self.format
+    }
+}
+
+impl TreeStore for TestStore {
+    fn insert(&self, path: &RepoPath, hgid: HgId, data: Bytes) -> Result<()> {
+        let mut underlying = self.entries.write();
+        underlying
+            .entry(path.to_owned())
+            .or_insert(HashMap::new())
+            .insert(hgid, data);
+        Ok(())
     }
 }

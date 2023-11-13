@@ -44,6 +44,10 @@ impl KeyStore for EagerRepoStore {
         Ok(())
     }
 
+    fn format(&self) -> SerializationFormat {
+        SerializationFormat::Hg
+    }
+
     fn maybe_as_any(&self) -> Option<&dyn std::any::Any> {
         Some(self)
     }
@@ -69,25 +73,7 @@ impl FileStore for EagerRepoStore {
 }
 
 impl TreeStore for EagerRepoStore {
-    fn get(&self, path: &RepoPath, hgid: HgId) -> anyhow::Result<minibytes::Bytes> {
-        let data = match self.get_content(hgid)? {
-            Some(data) => data,
-            None => anyhow::bail!("no such tree: {:?} {:?}", path, hgid),
-        };
-        Ok(data)
-    }
-
     fn insert(&self, _path: &RepoPath, _hgid: HgId, _data: minibytes::Bytes) -> anyhow::Result<()> {
         anyhow::bail!("insert cannot be used for Hg trees");
-    }
-
-    fn format(&self) -> SerializationFormat {
-        SerializationFormat::Hg
-    }
-
-    fn refresh(&self) -> anyhow::Result<()> {
-        let mut inner = self.inner.write();
-        inner.flush()?;
-        Ok(())
     }
 }

@@ -171,33 +171,16 @@ pub trait ReadRootTreeIds {
 /// The `TreeStore` is an abstraction layer for the tree manifest that decouples how or where the
 /// data is stored. This allows more easy iteration on serialization format. It also simplifies
 /// writing storage migration.
-pub trait TreeStore: Send + Sync {
+pub trait TreeStore: KeyStore {
     /// Read the contents of a directory.
     ///
     /// The result is opaque bytes data, encoded using the format specified by `format()`.
     /// To parse the bytes consider `manifest_tree::TreeEntry`.
-    fn get(&self, path: &RepoPath, hgid: HgId) -> anyhow::Result<minibytes::Bytes>;
+    fn get(&self, path: &RepoPath, hgid: HgId) -> anyhow::Result<minibytes::Bytes> {
+        KeyStore::get_content(self, path, hgid)
+    }
 
     fn insert(&self, path: &RepoPath, hgid: HgId, data: minibytes::Bytes) -> anyhow::Result<()>;
-
-    /// Indicate to the store that we will be attempting to access the given
-    /// tree nodes soon. Some stores (especially ones that may perform network
-    /// I/O) may use this information to prepare for these accesses (e.g., by
-    /// by prefetching the nodes in bulk). For some stores this operation does
-    /// not make sense, so the default implementation is a no-op.
-    fn prefetch(&self, _keys: Vec<Key>) -> anyhow::Result<()> {
-        Ok(())
-    }
-
-    /// Decides whether the store uses git or hg format.
-    fn format(&self) -> SerializationFormat {
-        SerializationFormat::Hg
-    }
-
-    /// Refresh the store so it might pick up new contents written by other processes.
-    fn refresh(&self) -> anyhow::Result<()> {
-        Ok(())
-    }
 }
 
 /// Decides the serialization format. This exists so different parts of the code
