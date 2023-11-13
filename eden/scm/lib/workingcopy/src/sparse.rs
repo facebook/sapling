@@ -530,13 +530,6 @@ inc
             .boxed()
         }
 
-        async fn get_rename_stream(
-            &self,
-            _keys: Vec<Key>,
-        ) -> BoxStream<anyhow::Result<(Key, Key)>> {
-            stream::empty().boxed()
-        }
-
         fn get_local_content(
             &self,
             _key: &Key,

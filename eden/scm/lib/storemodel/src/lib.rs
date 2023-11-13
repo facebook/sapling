@@ -51,7 +51,9 @@ pub trait FileStore: Send + Sync + 'static {
     ///
     /// The result is a vector of (key, rename_from_key) pairs for files with
     /// rename information.
-    async fn get_rename_stream(&self, keys: Vec<Key>) -> BoxStream<anyhow::Result<(Key, Key)>>;
+    async fn get_rename_stream(&self, _keys: Vec<Key>) -> BoxStream<anyhow::Result<(Key, Key)>> {
+        Box::pin(futures::stream::empty())
+    }
 
     /// Read the content of the specified file without connecting to a remote server.
     /// Return `None` if the file is available locally.

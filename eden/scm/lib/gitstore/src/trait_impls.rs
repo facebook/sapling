@@ -33,10 +33,6 @@ impl FileStore for GitStore {
         futures::stream::iter(iter).boxed()
     }
 
-    async fn get_rename_stream(&self, _keys: Vec<Key>) -> BoxStream<anyhow::Result<(Key, Key)>> {
-        futures::stream::empty().boxed()
-    }
-
     fn get_local_content(&self, key: &Key) -> anyhow::Result<Option<minibytes::Bytes>> {
         let id = key.hgid;
         match self.read_obj(id, git2::ObjectType::Blob) {

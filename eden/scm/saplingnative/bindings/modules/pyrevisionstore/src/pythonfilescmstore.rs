@@ -58,10 +58,6 @@ impl FileStore for PythonFileScmStore {
         futures::stream::iter(contents.into_iter()).boxed()
     }
 
-    async fn get_rename_stream(&self, _keys: Vec<Key>) -> BoxStream<anyhow::Result<(Key, Key)>> {
-        futures::stream::empty().boxed()
-    }
-
     fn get_local_content(&self, _key: &Key) -> anyhow::Result<Option<minibytes::Bytes>> {
         Ok(None)
     }
