@@ -216,10 +216,15 @@ def find_nodejs(ui) -> str:
 
 def get_isl_args_cwd(ui) -> Tuple[List[str], str]:
     # find "isl-dist.tar.xz"
-    candidates = ui.configlist("web", "isl-dist-path") + ["isl-dist.tar.xz"]
+    isl_dist_name = "isl-dist.tar.xz"
+    candidates = ui.configlist("web", "isl-dist-path") + [
+        os.path.join("..", "lib", isl_dist_name),
+        isl_dist_name,
+    ]
+    exe_dir = os.path.dirname(os.path.realpath(sys.executable))
     isl_tar_path = resolve_path(
         candidates,
-        lambda p: os.path.join(os.path.dirname(os.path.realpath(sys.executable)), p),
+        lambda p: os.path.join(exe_dir, p),
     )
     if isl_tar_path is None:
         raise error.Abort(_("ISL is not available with this @prog@ install"))
