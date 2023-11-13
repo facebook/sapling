@@ -226,7 +226,7 @@ export const Commit = memo(
           onClick: hasUncommittedChanges ? () => null : handleSplit,
         });
         items.push({
-          label: <T>Hide Commit and Descendants</T>,
+          label: hasChildren ? <T>Hide Commit and Descendants</T> : <T>Hide Commit</T>,
           onClick: () =>
             setOperationBeingPreviewed(
               new HideOperation(latestSuccessorUnlessExplicitlyObsolete(commit)),

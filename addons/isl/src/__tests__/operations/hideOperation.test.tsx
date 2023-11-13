@@ -90,7 +90,7 @@ describe('hide operation', () => {
       });
     });
 
-    rightClickAndChooseFromContextMenu(screen.getByText('Commit A'), 'Hide Commit and Descendants');
+    rightClickAndChooseFromContextMenu(screen.getByText('Commit A'), 'Hide Commit');
 
     const runHideButton = screen.getByText('Hide');
     expect(runHideButton).toBeInTheDocument();
