@@ -591,10 +591,10 @@ mod test {
     use crate::BlobstoreKey;
 
     #[derive(Debug, Clone, Copy, Eq, PartialEq)]
-    pub struct TestValue(i32);
+    pub struct TestValue(u32);
 
     #[derive(Debug, Clone, Copy, Eq, PartialEq)]
-    pub struct MaxTestValue(i32);
+    pub struct MaxTestValue(u32);
 
     #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
     pub struct ShardedMapV2NodeTestId(Blake2);
@@ -637,10 +637,10 @@ mod test {
         const NAME: &'static str = "TestValue";
         type Thrift = i32;
         fn into_thrift(self) -> Self::Thrift {
-            self.0
+            self.0 as i32
         }
         fn from_thrift(t: Self::Thrift) -> Result<Self> {
-            Ok(TestValue(t))
+            Ok(TestValue(t as u32))
         }
     }
 
@@ -648,14 +648,14 @@ mod test {
         const NAME: &'static str = "MaxTestValue";
         type Thrift = i32;
         fn into_thrift(self) -> Self::Thrift {
-            self.0
+            self.0 as i32
         }
         fn from_thrift(t: Self::Thrift) -> Result<Self> {
-            Ok(MaxTestValue(t))
+            Ok(MaxTestValue(t as u32))
         }
     }
 
-    const EXAMPLE_ENTRIES: &[(&str, i32)] = &[
+    const EXAMPLE_ENTRIES: &[(&str, u32)] = &[
         ("aba", 12),
         ("abacab", 7),
         ("abacaba", 8),
@@ -670,7 +670,7 @@ mod test {
         ("omungal", 4),
     ];
 
-    fn to_test_vec(entries: &[(&str, i32)]) -> Vec<(SmallBinary, TestValue)> {
+    fn to_test_vec(entries: &[(&str, u32)]) -> Vec<(SmallBinary, TestValue)> {
         entries
             .iter()
             .map(|(key, value)| (SmallBinary::from_slice(key.as_bytes()), TestValue(*value)))
@@ -700,7 +700,7 @@ mod test {
     impl MapHelper {
         async fn from_entries_removed_prefix(
             &self,
-            entries: &[(&str, i32)],
+            entries: &[(&str, u32)],
             prefix_len: usize,
         ) -> Result<ShardedMapV2Node<TestValue>> {
             ShardedMapV2Node::from_entries(
@@ -716,14 +716,14 @@ mod test {
 
         async fn from_entries(
             &self,
-            entries: &[(&str, i32)],
+            entries: &[(&str, u32)],
         ) -> Result<ShardedMapV2Node<TestValue>> {
             self.from_entries_removed_prefix(entries, 0).await
         }
 
         async fn from_entries_and_partial_maps(
             &self,
-            entries: &[(&str, Either<i32, ShardedMapV2Node<TestValue>>)],
+            entries: &[(&str, Either<u32, ShardedMapV2Node<TestValue>>)],
         ) -> Result<ShardedMapV2Node<TestValue>> {
             ShardedMapV2Node::from_entries_and_partial_maps(
                 &self.0,
@@ -909,7 +909,7 @@ mod test {
             node: ShardedMapV2Node<TestValue>,
             weight: usize,
             size: usize,
-            rollup_data: i32,
+            rollup_data: u32,
             blobstore_key: &str,
         ) -> Result<LoadableShardedMapV2Node<TestValue>> {
             let id = node.into_blob().store(&self.0, &self.1).await?;
@@ -926,7 +926,7 @@ mod test {
 
     fn test_node(
         prefix: &str,
-        value: Option<i32>,
+        value: Option<u32>,
         children: Vec<(u8, LoadableShardedMapV2Node<TestValue>)>,
     ) -> ShardedMapV2Node<TestValue> {
         ShardedMapV2Node {
@@ -940,7 +940,7 @@ mod test {
 
     fn inlined_node(
         prefix: &str,
-        value: Option<i32>,
+        value: Option<u32>,
         children: Vec<(u8, LoadableShardedMapV2Node<TestValue>)>,
     ) -> LoadableShardedMapV2Node<TestValue> {
         LoadableShardedMapV2Node::Inlined(test_node(prefix, value, children))
@@ -1243,7 +1243,7 @@ mod test {
         impl Testable for TestHelper {
             fn result(&self, gen: &mut Gen) -> TestResult {
                 let res = self.0.block_on(async {
-                    let values: BTreeMap<String, i32> = Arbitrary::arbitrary(gen);
+                    let values: BTreeMap<String, u32> = Arbitrary::arbitrary(gen);
                     let helper = MapHelper(self.1.clone(), self.2.clone());
 
                     let map = helper
