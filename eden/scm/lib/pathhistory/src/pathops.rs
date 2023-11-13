@@ -183,7 +183,7 @@ impl<'a> State<'a> {
             Some(Some(item)) => item,
         };
         if item.loaded.is_none() {
-            let entry = tree_store.get(item.path, item.id)?;
+            let entry = tree_store.get_content(item.path, item.id)?;
             let format = tree_store.format();
             item.loaded = Some(TreeEntry(entry, format));
         }
