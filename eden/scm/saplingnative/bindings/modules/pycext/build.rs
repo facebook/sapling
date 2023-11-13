@@ -99,6 +99,9 @@ fn main() {
     if !cfg!(windows) {
         c.flag("-std=c++11").flag("-Wno-unused-function");
     }
+    if cfg!(target_os = "macos") {
+        c.flag("-stdlib=libc++");
+    }
     config.add_python_flags(&mut c);
     c.compile("traceprofimpl");
 
