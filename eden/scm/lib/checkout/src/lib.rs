@@ -46,7 +46,6 @@ use progress_model::ProgressBar;
 use progress_model::Registry;
 use repo::repo::Repo;
 use storemodel::FileStore;
-use storemodel::KeyStore;
 use tracing::debug;
 use tracing::instrument;
 use tracing::warn;
@@ -1038,13 +1037,13 @@ mod test {
     #[cfg(unix)]
     use anyhow::ensure;
     use anyhow::Context;
-    use futures::stream::BoxStream;
     use manifest_tree::testutil::make_tree_manifest_from_meta;
     use manifest_tree::testutil::TestStore;
     use manifest_tree::Diff;
     use pathmatcher::AlwaysMatcher;
     use quickcheck::Arbitrary;
     use quickcheck::Gen;
+    use storemodel::KeyStore;
     use tempfile::TempDir;
     use types::testutil::generate_repo_paths;
     use walkdir::DirEntry;
@@ -1325,10 +1324,8 @@ mod test {
 
     #[async_trait::async_trait]
     impl KeyStore for DummyFileContentStore {
-        async fn get_content_stream(&self, keys: Vec<Key>) -> BoxStream<Result<(Bytes, Key)>> {
-            stream::iter(keys)
-                .map(|key| Ok((hgid_file(&key.hgid).into(), key)))
-                .boxed()
+        fn get_local_content(&self, _path: &RepoPath, hgid: HgId) -> anyhow::Result<Option<Bytes>> {
+            Ok(Some(hgid_file(&hgid).into()))
         }
     }
 

@@ -185,16 +185,7 @@ impl ReadRootTreeIds for CopyTraceTestCase {
 }
 
 #[async_trait]
-impl KeyStore for CopyTraceTestCase {
-    #[allow(dead_code)]
-    async fn get_content_stream(
-        &self,
-        _keys: Vec<Key>,
-    ) -> stream::BoxStream<anyhow::Result<(storemodel::minibytes::Bytes, Key)>> {
-        // We will need this for computing content similarity score later.
-        todo!()
-    }
-}
+impl KeyStore for CopyTraceTestCase {}
 
 #[async_trait]
 impl FileStore for CopyTraceTestCase {

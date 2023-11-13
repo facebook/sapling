@@ -8,32 +8,17 @@
 //! Implement traits from other crates.
 
 use async_trait::async_trait;
-use futures::stream::BoxStream;
-use futures::stream::StreamExt;
 use storemodel::FileStore;
 use storemodel::KeyStore;
 use storemodel::SerializationFormat;
 use storemodel::TreeStore;
 use types::HgId;
-use types::Key;
 use types::RepoPath;
 
 use crate::GitStore;
 
 #[async_trait]
 impl KeyStore for GitStore {
-    async fn get_content_stream(
-        &self,
-        keys: Vec<Key>,
-    ) -> BoxStream<anyhow::Result<(minibytes::Bytes, Key)>> {
-        let iter = keys.into_iter().map(|k| {
-            let id = k.hgid;
-            let data = self.read_obj(id, git2::ObjectType::Blob)?;
-            Ok((data.into(), k))
-        });
-        futures::stream::iter(iter).boxed()
-    }
-
     fn get_local_content(
         &self,
         _path: &RepoPath,

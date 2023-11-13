@@ -28,7 +28,6 @@ use pathmatcher::UnionMatcher;
 pub use sparse::Root;
 use storemodel::futures::StreamExt;
 use storemodel::FileStore;
-use storemodel::KeyStore;
 use types::Key;
 use types::RepoPath;
 use types::RepoPathBuf;
@@ -202,9 +201,9 @@ pub fn disk_overrides(dot_path: &Path) -> anyhow::Result<HashMap<String, String>
 mod tests {
     use std::collections::BTreeMap;
 
-    use futures::stream;
-    use futures::stream::BoxStream;
     use pathmatcher::Matcher;
+    use storemodel::minibytes::Bytes;
+    use storemodel::KeyStore;
     use types::HgId;
     use types::Parents;
     use types::RepoPath;
@@ -517,18 +516,13 @@ inc
 
     #[async_trait::async_trait]
     impl KeyStore for StubCommit {
-        async fn get_content_stream(
-            &self,
-            keys: Vec<Key>,
-        ) -> BoxStream<anyhow::Result<(storemodel::minibytes::Bytes, Key)>> {
-            stream::iter(keys.into_iter().map(|k| match self.file_id(&k.path) {
-                None => Err(anyhow!("no such path")),
-                Some(id) if id == k.hgid => {
-                    Ok((self.files.get(&k.path).unwrap().clone().into(), k))
+        fn get_local_content(&self, path: &RepoPath, hgid: HgId) -> anyhow::Result<Option<Bytes>> {
+            match self.file_id(path) {
+                Some(id) if id == hgid => {
+                    Ok(Some(Bytes::copy_from_slice(self.files.get(path).unwrap())))
                 }
-                Some(_) => Err(anyhow!("bad file id")),
-            }))
-            .boxed()
+                _ => Ok(None),
+            }
         }
     }
 

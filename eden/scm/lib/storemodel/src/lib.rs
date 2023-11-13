@@ -50,7 +50,20 @@ pub trait KeyStore: Send + Sync {
     async fn get_content_stream(
         &self,
         keys: Vec<Key>,
-    ) -> BoxStream<anyhow::Result<(minibytes::Bytes, Key)>>;
+    ) -> BoxStream<anyhow::Result<(minibytes::Bytes, Key)>> {
+        let iter = keys
+            .into_iter()
+            .map(|k| match self.get_local_content(&k.path, k.hgid) {
+                Err(e) => Err(e),
+                Ok(None) => Err(anyhow::format_err!(
+                    "{}@{}: not found locally",
+                    k.path,
+                    k.hgid
+                )),
+                Ok(Some(data)) => Ok((data, k)),
+            });
+        futures::stream::iter(iter).boxed()
+    }
 
     /// Read the content of the specified file without connecting to a remote server.
     /// Return `None` if the file is not available locally.

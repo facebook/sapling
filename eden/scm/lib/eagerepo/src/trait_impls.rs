@@ -27,21 +27,6 @@ use crate::EagerRepoStore;
 
 #[async_trait]
 impl KeyStore for EagerRepoStore {
-    async fn get_content_stream(
-        &self,
-        keys: Vec<Key>,
-    ) -> BoxStream<anyhow::Result<(minibytes::Bytes, Key)>> {
-        let iter = keys.into_iter().map(|k| {
-            let id = k.hgid;
-            let data = match self.get_content(id)? {
-                Some(data) => split_hg_file_metadata(&data)?.0,
-                None => anyhow::bail!("no such file: {:?}", &k),
-            };
-            Ok((data, k))
-        });
-        futures::stream::iter(iter).boxed()
-    }
-
     fn get_local_content(
         &self,
         _path: &RepoPath,
