@@ -33,10 +33,7 @@ impl FileStore for GitStore {
         futures::stream::iter(iter).boxed()
     }
 
-    async fn get_rename_stream(
-        &self,
-        _keys: Vec<Key>,
-    ) -> BoxStream<anyhow::Result<(Key, Option<Key>)>> {
+    async fn get_rename_stream(&self, _keys: Vec<Key>) -> BoxStream<anyhow::Result<(Key, Key)>> {
         futures::stream::empty().boxed()
     }
 

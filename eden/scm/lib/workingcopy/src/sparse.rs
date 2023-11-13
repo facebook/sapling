@@ -533,7 +533,7 @@ inc
         async fn get_rename_stream(
             &self,
             _keys: Vec<Key>,
-        ) -> BoxStream<anyhow::Result<(Key, Option<Key>)>> {
+        ) -> BoxStream<anyhow::Result<(Key, Key)>> {
             stream::empty().boxed()
         }
 

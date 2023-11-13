@@ -41,17 +41,18 @@ impl FileStore for EagerRepoStore {
         futures::stream::iter(iter).boxed()
     }
 
-    async fn get_rename_stream(
-        &self,
-        keys: Vec<Key>,
-    ) -> BoxStream<anyhow::Result<(Key, Option<Key>)>> {
-        let iter = keys.into_iter().map(|k| {
+    async fn get_rename_stream(&self, keys: Vec<Key>) -> BoxStream<anyhow::Result<(Key, Key)>> {
+        let iter = keys.into_iter().filter_map(|k| {
             let id = k.hgid;
-            let copy_from = match self.get_content(id)? {
-                Some(data) => strip_hg_file_metadata(&data)?.1,
-                None => anyhow::bail!("no such file: {:?}", &k),
-            };
-            Ok((k, copy_from))
+            match self.get_content(id) {
+                Err(e) => Some(Err(e.into())),
+                Ok(Some(data)) => match strip_hg_file_metadata(&data) {
+                    Err(e) => Some(Err(e)),
+                    Ok((_, Some(copy_from))) => Some(Ok((k, copy_from))),
+                    Ok((_, None)) => None,
+                },
+                Ok(None) => Some(Err(anyhow::format_err!("no such file: {:?}", &k))),
+            }
         });
         futures::stream::iter(iter).boxed()
     }

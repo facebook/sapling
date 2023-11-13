@@ -47,13 +47,11 @@ pub trait FileStore: Send + Sync + 'static {
         keys: Vec<Key>,
     ) -> BoxStream<anyhow::Result<(minibytes::Bytes, Key)>>;
 
-    /// Read rename metadata of sepcified files.
+    /// Read rename metadata of specified files.
     ///
-    /// The result is a vector of (key, Option<rename_from_key>) pairs for success case.
-    async fn get_rename_stream(
-        &self,
-        keys: Vec<Key>,
-    ) -> BoxStream<anyhow::Result<(Key, Option<Key>)>>;
+    /// The result is a vector of (key, rename_from_key) pairs for files with
+    /// rename information.
+    async fn get_rename_stream(&self, keys: Vec<Key>) -> BoxStream<anyhow::Result<(Key, Key)>>;
 
     /// Read the content of the specified file without connecting to a remote server.
     /// Return `None` if the file is available locally.

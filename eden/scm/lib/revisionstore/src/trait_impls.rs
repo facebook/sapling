@@ -49,14 +49,14 @@ where
             .boxed()
     }
 
-    async fn get_rename_stream(
-        &self,
-        keys: Vec<Key>,
-    ) -> BoxStream<anyhow::Result<(Key, Option<Key>)>> {
+    async fn get_rename_stream(&self, keys: Vec<Key>) -> BoxStream<anyhow::Result<(Key, Key)>> {
         stream_data_from_remote_data_store(self.0.clone(), keys)
-            .map(|result| match result {
-                Ok((_data, key, copy_from)) => Ok((key, copy_from)),
-                Err(err) => Err(err),
+            .filter_map(|result| async move {
+                match result {
+                    Ok((_data, _key, None)) => None,
+                    Ok((_data, key, Some(copy_from))) => Some(Ok((key, copy_from))),
+                    Err(err) => Some(Err(err)),
+                }
             })
             .boxed()
     }
@@ -77,14 +77,14 @@ impl storemodel::FileStore for ArcFileStore {
             .boxed()
     }
 
-    async fn get_rename_stream(
-        &self,
-        keys: Vec<Key>,
-    ) -> BoxStream<anyhow::Result<(Key, Option<Key>)>> {
+    async fn get_rename_stream(&self, keys: Vec<Key>) -> BoxStream<anyhow::Result<(Key, Key)>> {
         stream_data_from_scmstore(self.0.clone(), keys)
-            .map(|result| match result {
-                Ok((_data, key, copy_from)) => Ok((key, copy_from)),
-                Err(err) => Err(err),
+            .filter_map(|result| async move {
+                match result {
+                    Ok((_data, _key, None)) => None,
+                    Ok((_data, key, Some(copy_from))) => Some(Ok((key, copy_from))),
+                    Err(err) => Some(Err(err)),
+                }
             })
             .boxed()
     }

@@ -197,10 +197,16 @@ impl FileStore for CopyTraceTestCase {
     async fn get_rename_stream(
         &self,
         keys: Vec<Key>,
-    ) -> stream::BoxStream<anyhow::Result<(Key, Option<Key>)>> {
+    ) -> stream::BoxStream<anyhow::Result<(Key, Key)>> {
         let renames: Vec<_> = {
             keys.iter()
-                .map(|k| Ok((k.clone(), self.inner.copies.get(k).cloned())))
+                .filter_map(|k| {
+                    self.inner
+                        .copies
+                        .get(k)
+                        .cloned()
+                        .map(|v| Ok((k.clone(), v)))
+                })
                 .collect()
         };
         stream::iter(renames).boxed()

@@ -330,10 +330,8 @@ impl RenameFinderInner {
         let mut renames = self.file_reader.get_rename_stream(keys).await;
         while let Some(rename) = renames.next().await {
             let (key, rename_from_key) = rename?;
-            if let Some(rename_from_key) = rename_from_key {
-                if rename_from_key.path.as_repo_path() == old_path {
-                    return Ok(Some(key.path));
-                }
+            if rename_from_key.path.as_repo_path() == old_path {
+                return Ok(Some(key.path));
             }
         }
         Ok(None)
@@ -343,7 +341,7 @@ impl RenameFinderInner {
         let mut renames = self.file_reader.get_rename_stream(vec![key]).await;
         if let Some(rename) = renames.next().await {
             let (_, rename_from_key) = rename?;
-            return Ok(rename_from_key.map(|k| k.path));
+            return Ok(Some(rename_from_key.path));
         }
         Ok(None)
     }
