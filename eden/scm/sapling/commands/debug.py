@@ -3819,38 +3819,6 @@ def debugthrowexception(ui, _repo):
     raise error.IntentionalError("intentional failure in debugthrowexception")
 
 
-@command(
-    "debugscmstore",
-    [
-        ("", "mode", "", _("entity type to fetch, 'file' or 'tree'")),
-        (
-            "",
-            "path",
-            "",
-            _("input file containing keys to fetch (hgid,path separated by newlines)"),
-        ),
-        ("", "python", False, _("signal rust command dispatch to fall back to python")),
-        (
-            "",
-            "local",
-            False,
-            _("only check for the entity locally, don't make a remote request"),
-        ),
-    ],
-)
-def debugscmstore(
-    ui, repo, mode=None, path=None, python: bool = False, local: bool = False
-) -> None:
-    if mode not in ["file", "tree"]:
-        raise error.Abort("mode must be one of 'file' and 'tree'")
-    if path is None:
-        raise error.Abort("path is required")
-    if mode == "tree":
-        repo.manifestlog.treescmstore.test_fetch(path, local)
-    if mode == "file":
-        repo.fileslog.filestore.test_fetch(path, local)
-
-
 @command("debugrevlogclone", [], _("source"))
 def debugrevlogclone(ui, repo, source) -> None:
     """download revlog and bookmarks into a newly initialized repo"""

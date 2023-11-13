@@ -26,9 +26,6 @@ use super::IO;
 
 define_flags! {
     pub struct DebugScmStoreOpts {
-        /// Run the python version of the command instead (actually runs mostly in rust, but uses store constructed for python, with legacy fallback).
-        python: bool,
-
         /// Fetch mode (file or tree)
         mode: String,
 
@@ -46,10 +43,6 @@ enum FetchType {
 }
 
 pub fn run(ctx: ReqCtx<DebugScmStoreOpts>, repo: &mut Repo) -> Result<u8> {
-    if ctx.opts.python {
-        return Err(errors::FallbackToPython("--python option selected".to_owned()).into());
-    }
-
     let mode = match ctx.opts.mode.as_ref() {
         "file" => FetchType::File,
         "tree" => FetchType::Tree,

@@ -1179,26 +1179,6 @@ py_class!(pub class filescmstore |py| {
         contentstore::create_instance(py, self.contentstore(py).clone())
     }
 
-    def test_fetch(&self, path: PyPathBuf, local: bool) -> PyResult<PyNone> {
-        let fetch_mode = if local {  FetchMode::LocalOnly } else { FetchMode::AllowRemote };
-        let keys: Vec<_> = block_on_stream(block_on(file_to_async_key_stream(path.to_path_buf())).map_pyerr(py)?).collect();
-        let fetch_result = self.store(py).fetch(keys.into_iter(), FileAttributes { content: true, aux_data: true }, fetch_mode);
-
-        let io = IO::main().map_pyerr(py)?;
-        let mut stdout = io.output();
-
-        let (found, missing, _errors) = fetch_result.consume();
-
-        for (_, file) in found.into_iter() {
-            write!(stdout, "Successfully fetched file: {:#?}\n", file).map_pyerr(py)?;
-        }
-        for (key, _) in missing.into_iter() {
-            write!(stdout, "Failed to fetch file: {:#?}\n", key).map_pyerr(py)?;
-        }
-
-        Ok(PyNone)
-    }
-
     def fetch_contentsha256(&self, keys: PyList) -> PyResult<PyList> {
         let keys = keys
             .iter(py)
@@ -1425,25 +1405,6 @@ py_class!(pub class treescmstore |py| {
 
     def get_contentstore(&self) -> PyResult<contentstore> {
         contentstore::create_instance(py, self.contentstore(py).clone())
-    }
-
-    def test_fetch(&self, path: PyPathBuf, local: bool) -> PyResult<PyNone> {
-        let fetch_mode = if local {  FetchMode::LocalOnly } else { FetchMode::AllowRemote };
-        let keys: Vec<_> = block_on_stream(block_on(file_to_async_key_stream(path.to_path_buf())).map_pyerr(py)?).collect();
-        let fetch_result = self.store(py).fetch_batch(keys.into_iter(), fetch_mode);
-
-        let io = IO::main().map_pyerr(py)?;
-        let mut stdout = io.output();
-
-        let (found, missing, _errors) = fetch_result.consume();
-        for complete in found.into_iter() {
-            write!(stdout, "Successfully fetched tree: {:#?}\n", complete).map_pyerr(py)?;
-        }
-        for incomplete in missing.into_iter() {
-            write!(stdout, "Failed to fetch tree: {:#?}\n", incomplete).map_pyerr(py)?;
-        }
-
-        Ok(PyNone)
     }
 
     def get(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyBytes> {
