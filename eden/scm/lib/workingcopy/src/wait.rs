@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Duration;
 use std::time::SystemTime;
 
 use configmodel::Config;
@@ -100,6 +101,18 @@ impl Wait {
         }
 
         loop {
+            // If the wlock is taken, wait for it to avoid "status" in the middle of a (slow)
+            // checkout. Note the check is racy (the "status" might still run when a slow checkout
+            // is in-progress).
+            // Consider making non-edenfs "status" error out if a slow checkout is in-progress,
+            // then turn the error to wait (ex. D50712012).
+            if let Err(e) = wc.locker.try_lock_working_copy(wc.dot_hg_path.clone()) {
+                if e.is_contended() {
+                    std::thread::sleep(Duration::from_secs(1));
+                    continue;
+                }
+            }
+
             let new_wait = Self::new(wc, &self.dot_dir, config)?;
             if new_wait.metadata_map == self.metadata_map {
                 // Not changed.

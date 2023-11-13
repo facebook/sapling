@@ -71,8 +71,8 @@ pub struct WorkingCopy {
     filestore: ArcFileStore,
     pub(crate) filesystem: Mutex<BoxFileSystem>,
     ignore_matcher: Arc<GitignoreMatcher>,
-    locker: Arc<RepoLocker>,
-    dot_hg_path: PathBuf,
+    pub(crate) locker: Arc<RepoLocker>,
+    pub(crate) dot_hg_path: PathBuf,
 }
 
 impl WorkingCopy {
