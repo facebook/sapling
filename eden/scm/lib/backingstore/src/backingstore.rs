@@ -40,11 +40,26 @@ pub struct BackingStore {
 }
 
 impl BackingStore {
+    /// Initialize `BackingStore` with the `allow_retries` setting.
     pub fn new<P: AsRef<Path>>(root: P, allow_retries: bool) -> Result<Self> {
+        Self::new_impl(root.as_ref(), allow_retries, &[])
+    }
+
+    /// Initialize `BackingStore` with the `allow_retries` setting and extra configs.
+    /// This is used by benches/ to set cache path to control warm/code test cases.
+    pub fn new_with_config(
+        root: impl AsRef<Path>,
+        allow_retries: bool,
+        extra_configs: &[String],
+    ) -> Result<Self> {
+        Self::new_impl(root.as_ref(), allow_retries, extra_configs)
+    }
+
+    fn new_impl(root: &Path, allow_retries: bool, extra_configs: &[String]) -> Result<Self> {
         constructors::init();
 
         let root = root.as_ref();
-        let mut config = configloader::hg::load(Some(root), &[], &[])?;
+        let mut config = configloader::hg::load(Some(root), &extra_configs, &[])?;
 
         if !allow_retries {
             let source = configloader::config::Options::new().source("backingstore");
