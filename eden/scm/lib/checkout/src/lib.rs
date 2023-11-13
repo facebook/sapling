@@ -1330,10 +1330,6 @@ mod test {
                 .map(|key| Ok((hgid_file(&key.hgid).into(), key)))
                 .boxed()
         }
-
-        fn get_local_content(&self, _key: &Key) -> anyhow::Result<Option<minibytes::Bytes>> {
-            Ok(None)
-        }
     }
 
     #[async_trait::async_trait]

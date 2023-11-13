@@ -42,8 +42,11 @@ impl KeyStore for EagerRepoStore {
         futures::stream::iter(iter).boxed()
     }
 
-    fn get_local_content(&self, key: &Key) -> anyhow::Result<Option<minibytes::Bytes>> {
-        let id = key.hgid;
+    fn get_local_content(
+        &self,
+        _path: &RepoPath,
+        id: HgId,
+    ) -> anyhow::Result<Option<minibytes::Bytes>> {
         match self.get_content(id)? {
             Some(data) => Ok(Some(split_hg_file_metadata(&data)?.0)),
             None => Ok(None),

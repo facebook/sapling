@@ -20,7 +20,9 @@ use futures::StreamExt;
 use hgstore::strip_hg_file_metadata;
 use minibytes::Bytes;
 use tokio::runtime::Handle;
+use types::HgId;
 use types::Key;
+use types::RepoPath;
 
 use crate::scmstore::fetch::FetchMode;
 use crate::scmstore::FileAttributes;
@@ -47,10 +49,6 @@ where
                 Err(err) => Err(err),
             })
             .boxed()
-    }
-
-    fn get_local_content(&self, _key: &Key) -> anyhow::Result<Option<minibytes::Bytes>> {
-        Ok(None)
     }
 }
 
@@ -83,8 +81,14 @@ impl storemodel::KeyStore for ArcFileStore {
             .boxed()
     }
 
-    fn get_local_content(&self, key: &Key) -> anyhow::Result<Option<minibytes::Bytes>> {
-        self.0.get_file_content_impl(key, FetchMode::LocalOnly)
+    fn get_local_content(
+        &self,
+        path: &RepoPath,
+        hgid: HgId,
+    ) -> anyhow::Result<Option<minibytes::Bytes>> {
+        // PERF: unnecessary clones on path and key.
+        let key = Key::new(path.to_owned(), hgid);
+        self.0.get_file_content_impl(&key, FetchMode::LocalOnly)
     }
 
     fn refresh(&self) -> Result<()> {

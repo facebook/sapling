@@ -194,13 +194,6 @@ impl KeyStore for CopyTraceTestCase {
         // We will need this for computing content similarity score later.
         todo!()
     }
-
-    fn get_local_content(
-        &self,
-        _key: &Key,
-    ) -> anyhow::Result<Option<storemodel::minibytes::Bytes>> {
-        Ok(None)
-    }
 }
 
 #[async_trait]

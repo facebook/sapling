@@ -530,13 +530,6 @@ inc
             }))
             .boxed()
         }
-
-        fn get_local_content(
-            &self,
-            _key: &Key,
-        ) -> anyhow::Result<Option<storemodel::minibytes::Bytes>> {
-            Ok(None)
-        }
     }
 
     #[async_trait::async_trait]

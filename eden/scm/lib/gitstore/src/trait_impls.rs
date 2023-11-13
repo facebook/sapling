@@ -34,8 +34,11 @@ impl KeyStore for GitStore {
         futures::stream::iter(iter).boxed()
     }
 
-    fn get_local_content(&self, key: &Key) -> anyhow::Result<Option<minibytes::Bytes>> {
-        let id = key.hgid;
+    fn get_local_content(
+        &self,
+        _path: &RepoPath,
+        id: HgId,
+    ) -> anyhow::Result<Option<minibytes::Bytes>> {
         match self.read_obj(id, git2::ObjectType::Blob) {
             Ok(data) => Ok(Some(data.into())),
             Err(e) if e.code() == git2::ErrorCode::NotFound => Ok(None),

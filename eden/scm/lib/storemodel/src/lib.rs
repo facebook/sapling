@@ -49,8 +49,14 @@ pub trait KeyStore: Send + Sync {
     ) -> BoxStream<anyhow::Result<(minibytes::Bytes, Key)>>;
 
     /// Read the content of the specified file without connecting to a remote server.
-    /// Return `None` if the file is available locally.
-    fn get_local_content(&self, key: &Key) -> anyhow::Result<Option<minibytes::Bytes>>;
+    /// Return `None` if the file is not available locally.
+    fn get_local_content(
+        &self,
+        _path: &RepoPath,
+        _hgid: HgId,
+    ) -> anyhow::Result<Option<minibytes::Bytes>> {
+        Ok(None)
+    }
 
     /// Refresh the store so it might pick up new contents written by other processes.
     fn refresh(&self) -> anyhow::Result<()> {
