@@ -27,7 +27,7 @@ jobs:
 
         -o $(brew --repository)/Library/Taps/homebrew/homebrew-core/Formula/s/sapling.rb'
     - name: Install and build Sapling bottle
-      run: HOMEBREW_NO_INSTALL_FROM_API=1 brew install --build-bottle sapling
+      run: HOMEBREW_NO_INSTALL_FROM_API=1 HOMEBREW_FAIL_LOG_LINES=100 brew install --build-bottle sapling
     - name: Create Sapling bottle
       run: HOMEBREW_NO_INSTALL_FROM_API=1 brew bottle sapling
     - name: Rename bottle to some platform specific name

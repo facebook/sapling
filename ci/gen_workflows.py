@@ -384,7 +384,7 @@ RUN rm -rf /tmp/repo
                 },
                 {
                     "name": "Install and build Sapling bottle",
-                    "run": "HOMEBREW_NO_INSTALL_FROM_API=1 brew install --build-bottle sapling",
+                    "run": "HOMEBREW_NO_INSTALL_FROM_API=1 HOMEBREW_FAIL_LOG_LINES=100 brew install --build-bottle sapling",
                 },
                 {
                     "name": "Create Sapling bottle",
