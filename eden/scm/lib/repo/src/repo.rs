@@ -472,7 +472,7 @@ impl Repo {
 
     pub fn file_store(&mut self) -> Result<Arc<dyn FileStore>> {
         if let Some(fs) = &self.file_store {
-            return Ok(Arc::new(fs.clone()));
+            return Ok(Arc::clone(fs));
         }
 
         if let Some((store, _)) = self.try_construct_file_tree_store()? {
@@ -519,7 +519,7 @@ impl Repo {
 
     pub fn tree_store(&mut self) -> Result<Arc<dyn TreeStore>> {
         if let Some(ts) = &self.tree_store {
-            return Ok(Arc::new(ts.clone()));
+            return Ok(ts.clone());
         }
 
         if let Some((_, store)) = self.try_construct_file_tree_store()? {
