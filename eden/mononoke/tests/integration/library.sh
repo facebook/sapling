@@ -929,7 +929,6 @@ function setup_mononoke_repo_config {
   mkdir -p "repo_definitions/$reponame_urlencoded"
   mkdir -p "$TESTTMP/monsql"
   mkdir -p "$TESTTMP/$reponame_urlencoded"
-  mkdir -p "$TESTTMP/traffic-replay-blobstore"
   cat > "repos/$reponame_urlencoded/server.toml" <<CONFIG
 hash_validation_percentage=100
 CONFIG
