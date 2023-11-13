@@ -14,6 +14,7 @@ use hgstore::split_hg_file_metadata;
 use hgstore::strip_hg_file_metadata;
 use storemodel::types;
 use storemodel::FileStore;
+use storemodel::InsertOpts;
 use storemodel::KeyStore;
 use storemodel::SerializationFormat;
 use storemodel::TreeStore;
@@ -36,6 +37,40 @@ impl KeyStore for EagerRepoStore {
             Some(data) => Ok(Some(split_hg_file_metadata(&data)?.0)),
             None => Ok(None),
         }
+    }
+
+    fn insert_data(
+        &self,
+        mut opts: InsertOpts,
+        _path: &RepoPath,
+        data: &[u8],
+    ) -> anyhow::Result<HgId> {
+        let mut sha1_data = Vec::with_capacity(data.len() + HgId::len() * 2);
+
+        // Calculate the "hg" text: sorted([p1, p2]) + data
+        opts.parents.sort_unstable();
+        let mut iter = opts.parents.iter().rev();
+        let p2 = iter.next().copied().unwrap_or_else(|| *HgId::null_id());
+        let p1 = iter.next().copied().unwrap_or_else(|| *HgId::null_id());
+        sha1_data.extend_from_slice(p1.as_ref());
+        sha1_data.extend_from_slice(p2.as_ref());
+        sha1_data.extend_from_slice(data);
+        drop(iter);
+
+        if let Some(id) = opts.forced_id {
+            let id = *id;
+            self.add_arbitrary_blob(id, &sha1_data)?;
+            Ok(id)
+        } else {
+            let id = self.add_sha1_blob(&sha1_data, &opts.parents)?;
+            Ok(id)
+        }
+    }
+
+    fn flush(&self) -> anyhow::Result<()> {
+        let mut inner = self.inner.write();
+        inner.flush()?;
+        Ok(())
     }
 
     fn refresh(&self) -> anyhow::Result<()> {
