@@ -339,6 +339,10 @@ impl Convert for RawMetadataConfig {
                 "unsupported metadata database configuration ({})",
                 f
             )),
+            // TODO(clararull): properly support RawMetadataConfig::oss_remote
+            RawMetadataConfig::oss_remote(_) => Err(anyhow!(
+                "unsupported metadata database configuration: RawMetadataConfig::oss_remote",
+            )),
         }
     }
 }
