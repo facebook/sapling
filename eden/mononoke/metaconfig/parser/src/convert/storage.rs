@@ -24,6 +24,8 @@ use metaconfig_types::LocalDatabaseConfig;
 use metaconfig_types::MetadataDatabaseConfig;
 use metaconfig_types::MultiplexId;
 use metaconfig_types::MultiplexedStoreType;
+use metaconfig_types::OssRemoteDatabaseConfig;
+use metaconfig_types::OssRemoteMetadataDatabaseConfig;
 use metaconfig_types::PackConfig;
 use metaconfig_types::PackFormat;
 use metaconfig_types::RemoteDatabaseConfig;
@@ -49,6 +51,7 @@ use repos::RawMetadataConfig;
 use repos::RawMultiplexedStoreNormal;
 use repos::RawMultiplexedStoreType;
 use repos::RawMultiplexedStoreWriteOnly;
+use repos::RawOssDbRemote;
 use repos::RawShardedDbConfig;
 use repos::RawStorageConfig;
 
@@ -256,6 +259,19 @@ impl Convert for RawDbRemote {
     }
 }
 
+impl Convert for RawOssDbRemote {
+    type Output = OssRemoteDatabaseConfig;
+
+    fn convert(self) -> Result<Self::Output> {
+        Ok(OssRemoteDatabaseConfig {
+            host: self.host,
+            port: self.port,
+            user: self.user,
+            secret_name: self.secret_name,
+        })
+    }
+}
+
 impl Convert for RawDbShardedRemote {
     type Output = ShardedRemoteDatabaseConfig;
 
@@ -335,13 +351,19 @@ impl Convert for RawMetadataConfig {
                     deletion_log: raw.deletion_log.convert()?,
                 },
             )),
+            RawMetadataConfig::oss_remote(raw) => Ok(MetadataDatabaseConfig::OssRemote(
+                OssRemoteMetadataDatabaseConfig {
+                    primary: raw.primary.convert()?,
+                    filenodes: raw.filenodes.convert()?,
+                    mutation: raw.mutation.convert()?,
+                    sparse_profiles: raw.sparse_profiles.convert()?,
+                    bonsai_blob_mapping: raw.bonsai_blob_mapping.convert()?,
+                    deletion_log: raw.deletion_log.convert()?,
+                },
+            )),
             RawMetadataConfig::UnknownField(f) => Err(anyhow!(
                 "unsupported metadata database configuration ({})",
                 f
-            )),
-            // TODO(clararull): properly support RawMetadataConfig::oss_remote
-            RawMetadataConfig::oss_remote(_) => Err(anyhow!(
-                "unsupported metadata database configuration: RawMetadataConfig::oss_remote",
             )),
         }
     }

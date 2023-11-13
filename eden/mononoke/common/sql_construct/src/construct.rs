@@ -77,6 +77,7 @@ pub trait SqlShardedConstruct: Sized + Send + Sync + 'static {
     fn from_sql_shard_connections(shard_connections: SqlShardedConnections) -> Self;
 }
 
+#[async_trait::async_trait]
 impl<T> SqlConstruct for T
 where
     T: SqlShardedConstruct,

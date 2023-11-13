@@ -150,7 +150,7 @@ impl SegmentedChangelogTailer {
         let repo_id = blobrepo.repo_identity().id();
 
         let db_address = match storage_config_metadata {
-            MetadataDatabaseConfig::Local(_) => None,
+            MetadataDatabaseConfig::Local(_) | MetadataDatabaseConfig::OssRemote(_) => None,
             MetadataDatabaseConfig::Remote(remote_config) => {
                 Some(remote_config.primary.db_address.clone())
             }

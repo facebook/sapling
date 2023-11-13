@@ -43,6 +43,9 @@ rust_library(
         "fbsource//third-party/rust:vec1",
         "//common/rust/shed/sql:sql_common",
         "//common/rust/shed/stats:stats",
+        "fbsource//third-party/rust:mysql_async",
         "//eden/mononoke/common/time_measuring:time_measuring",
+        "//crypto/keychain_service:if-rust",
+        "//crypto/keychain_service:if-rust-srclients",
     ]),
 )

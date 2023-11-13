@@ -1279,7 +1279,8 @@ async fn run<'a>(
         verify_server_bookmark_on_failure,
     )?;
     let bookmarks =
-        args::open_sql_with_config::<SqlBookmarksBuilder>(ctx.fb, matches, &resolved_repo.config)?;
+        args::open_sql_with_config::<SqlBookmarksBuilder>(ctx.fb, matches, &resolved_repo.config)
+            .await?;
 
     let bookmarks = bookmarks.with_repo_id(repo_id);
     let reporting_handler = build_reporting_handler(ctx, &scuba_sample, retry_num, &bookmarks);
@@ -1293,7 +1294,8 @@ async fn run<'a>(
         &repo_config.storage_config.metadata,
         mysql_options,
         readonly_storage.0,
-    )?;
+    )
+    .await?;
 
     let repo_lock: Arc<dyn RepoLock> = Arc::new(MutableRepoLock::new(sql_repo_lock, repo_id));
 

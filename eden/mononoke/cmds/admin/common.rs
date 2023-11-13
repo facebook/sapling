@@ -176,7 +176,8 @@ where
         fb,
         config_store,
         matches,
-    )?;
+    )
+    .await?;
 
     Ok((source_repo, target_repo, mapping))
 }

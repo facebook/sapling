@@ -227,13 +227,15 @@ async fn async_main(app: MononokeApp) -> Result<()> {
         &repo_config.storage_config.metadata,
         &env.mysql_options,
         env.readonly_storage.0,
-    )?;
+    )
+    .await?;
     let synced_commit_mapping = SqlSyncedCommitMapping::with_metadata_database_config(
         app.fb,
         &repo_config.storage_config.metadata,
         &env.mysql_options,
         env.readonly_storage.0,
-    )?;
+    )
+    .await?;
 
     let blobrepo: BlobRepo = if args.no_create {
         app.open_repo_unredacted(repo_arg).await?

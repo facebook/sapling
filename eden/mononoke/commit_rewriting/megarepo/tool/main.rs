@@ -280,7 +280,8 @@ async fn run_sync_diamond_merge<'a>(
         ctx.fb,
         config_store,
         matches,
-    )?;
+    )
+    .await?;
 
     let merge_commit_hash = sub_m.value_of(COMMIT_HASH).unwrap().to_owned();
     let (source_repo, target_repo): (InnerRepo, InnerRepo) =
@@ -1135,7 +1136,7 @@ async fn process_stream_and_wait_for_replication<'a, R: cross_repo_sync::Repo>(
     let storage_config = small_repo_config.storage_config;
 
     let db_address = match &storage_config.metadata {
-        MetadataDatabaseConfig::Local(_) => None,
+        MetadataDatabaseConfig::Local(_) | MetadataDatabaseConfig::OssRemote(_) => None,
         MetadataDatabaseConfig::Remote(remote_config) => {
             Some(remote_config.primary.db_address.clone())
         }

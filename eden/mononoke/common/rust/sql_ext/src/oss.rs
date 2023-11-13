@@ -61,6 +61,16 @@ pub fn create_mysql_connections_unsharded(
 ) -> Result<SqlConnections, Error> {
     fb_unimplemented!()
 }
+pub fn create_oss_mysql_connections_unsharded(
+    _fb: FacebookInit,
+    _host: String,
+    _port: i16,
+    _user: String,
+    _secret_name: String,
+    _label: String,
+) -> Result<SqlConnections, Error> {
+    fb_unimplemented!()
+}
 
 pub fn create_mysql_connections_sharded<S>(
     _fb: FacebookInit,

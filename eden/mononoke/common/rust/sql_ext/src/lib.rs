@@ -56,6 +56,8 @@ pub mod facebook {
     #[cfg(fbcode_build)]
     pub use r#impl::create_mysql_connections_unsharded;
     #[cfg(fbcode_build)]
+    pub use r#impl::create_oss_mysql_connections_unsharded;
+    #[cfg(fbcode_build)]
     pub use r#impl::myadmin::replication_status_chunked;
     #[cfg(fbcode_build)]
     pub use r#impl::myadmin::MyAdmin;

@@ -905,7 +905,7 @@ fn get_config_by_repoid(
         .map(|(name, config)| (name.clone(), config.clone()))
 }
 
-fn open_sql<T>(
+async fn open_sql<T>(
     fb: FacebookInit,
     repo_id: RepositoryId,
     configs: &RepoConfigs,
@@ -921,6 +921,7 @@ where
         &env.mysql_options.clone(),
         env.readonly_storage.clone().0,
     )
+    .await
 }
 
 async fn get_pushredirected_vars(
@@ -956,7 +957,7 @@ async fn get_pushredirected_vars(
             large_repo.name()
         ));
     }
-    let mapping = open_sql::<SqlSyncedCommitMapping>(ctx.fb, repo.repo_id(), configs, env)?;
+    let mapping = open_sql::<SqlSyncedCommitMapping>(ctx.fb, repo.repo_id(), configs, env).await?;
     let syncers = create_commit_syncers(
         ctx,
         repo.clone(),

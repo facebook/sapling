@@ -1401,7 +1401,7 @@ impl RepoFactory {
         Ok(Arc::new(RepoSparseProfiles { sql_profile_sizes }))
     }
 
-    pub fn repo_lock(
+    pub async fn repo_lock(
         &self,
         repo_config: &ArcRepoConfig,
         repo_identity: &ArcRepoIdentity,
@@ -1417,7 +1417,8 @@ impl RepoFactory {
                     &repo_config.storage_config.metadata,
                     &self.env.mysql_options,
                     self.env.readonly_storage.0,
-                )?;
+                )
+                .await?;
 
                 Ok(Arc::new(MutableRepoLock::new(sql, repo_identity.id())))
             }

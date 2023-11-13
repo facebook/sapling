@@ -21,8 +21,19 @@ macro_rules! fb_unimplemented {
 }
 
 /// Construct a SQL data manager backed by Facebook infrastructure
+#[async_trait::async_trait]
 pub trait FbSqlConstruct: SqlConstruct + Sized + Send + Sync + 'static {
     fn with_mysql<'a>(_: FacebookInit, _: String, _: &'a MysqlOptions, _: bool) -> Result<Self> {
+        fb_unimplemented!()
+    }
+    async fn with_oss_mysql(
+        _: FacebookInit,
+        _host: String,
+        _port: i16,
+        _user: String,
+        _secret_name: String,
+        _readonly: bool,
+    ) -> Result<Self> {
         fb_unimplemented!()
     }
 }

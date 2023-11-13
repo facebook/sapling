@@ -80,7 +80,7 @@ pub async fn subcommand_truncate_segmented_changelog<'a>(
     let readonly_storage = ReadOnlyStorage(false);
 
     let db_address = match &storage_config.metadata {
-        MetadataDatabaseConfig::Local(_) => None,
+        MetadataDatabaseConfig::Local(_) | MetadataDatabaseConfig::OssRemote(_) => None,
         MetadataDatabaseConfig::Remote(remote_config) => {
             Some(remote_config.primary.db_address.clone())
         }
