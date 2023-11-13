@@ -35,7 +35,6 @@ use types::Key;
 use types::RepoPath;
 
 #[async_trait]
-#[auto_impl::auto_impl(Arc)]
 pub trait FileStore: Send + Sync + 'static {
     /// Read the content of specified files.
     ///
@@ -82,7 +81,6 @@ pub trait ReadRootTreeIds {
 /// The `TreeStore` is an abstraction layer for the tree manifest that decouples how or where the
 /// data is stored. This allows more easy iteration on serialization format. It also simplifies
 /// writing storage migration.
-#[auto_impl::auto_impl(Arc)]
 pub trait TreeStore: Send + Sync {
     /// Read the contents of a directory.
     ///
