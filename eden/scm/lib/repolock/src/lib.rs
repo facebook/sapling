@@ -547,6 +547,13 @@ impl fmt::Display for LockContendedError {
     }
 }
 
+impl LockError {
+    /// Test if the error is contended, aka. held by others.
+    pub fn is_contended(&self) -> bool {
+        matches!(self, LockError::Contended(_))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeMap;
