@@ -10,6 +10,8 @@ rust_library(
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:serde",
+        "//eden/scm/lib/async-runtime:async-runtime",
         "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/edenapi/trait:edenapi_trait",
         "//eden/scm/lib/minibytes:minibytes",

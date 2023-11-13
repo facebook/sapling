@@ -24,11 +24,15 @@ use std::any::Any;
 use std::path::Path;
 use std::sync::Arc;
 
+use async_runtime::block_on;
 use async_trait::async_trait;
 use edenapi_trait::EdenApi;
 pub use futures;
 use futures::stream::BoxStream;
+use futures::StreamExt;
 pub use minibytes;
+use serde::Deserialize;
+use serde::Serialize;
 pub use types;
 use types::HgId;
 use types::Key;
@@ -58,9 +62,71 @@ pub trait KeyStore: Send + Sync {
         Ok(None)
     }
 
+    /// Read the content of the specified file. Ask a remote server on demand.
+    /// When fetching many files, use `get_content_stream` instead of calling
+    /// this in a loop.
+    fn get_content(&self, path: &RepoPath, hgid: HgId) -> anyhow::Result<minibytes::Bytes> {
+        if let Some(data) = self.get_local_content(path, hgid)? {
+            return Ok(data);
+        }
+
+        let key = Key::new(path.to_owned(), hgid);
+        block_on(async {
+            match self.get_content_stream(vec![key]).await.next().await {
+                None => Err(anyhow::format_err!("{}@{}: not found", path, hgid)),
+                Some(Err(e)) => Err(e),
+                Some(Ok((data, _key))) => Ok(data),
+            }
+        })
+    }
+
+    /// Indicate to the store that we will be attempting to access the given
+    /// items soon. Some stores (especially ones that may perform network
+    /// I/O) may use this information to prepare for these accesses (e.g., by
+    /// by prefetching the nodes in bulk). For some stores this operation does
+    /// not make sense, so the default implementation is a no-op.
+    ///
+    /// This is an old API. Consider `get_content_stream` instead.
+    fn prefetch(&self, _keys: Vec<Key>) -> anyhow::Result<()> {
+        Ok(())
+    }
+
+    /// Insert a serialized entry. Return the hash to the entry.
+    ///
+    /// After calling this function, the data can be fetched via
+    /// `get_local_content` on the same store. The store can buffer pending data
+    /// in memory until `flush()`, or `flush()` automatically to keep memory
+    /// usage bounded.
+    ///
+    /// For stores using hg format:
+    /// - `parents` is required, and will affect the hash.
+    /// - `data` should contain the filelog metadata header.
+    ///
+    /// For stores using git format:
+    /// - `parents` is a hint to choose delta base.
+    /// - `data` is the pure content without headers.
+    fn insert_data(
+        &self,
+        _opts: InsertOpts,
+        _path: &RepoPath,
+        _data: &[u8],
+    ) -> anyhow::Result<HgId> {
+        anyhow::bail!("store is read-only")
+    }
+
+    /// Write pending changes to disk.
+    fn flush(&self) -> anyhow::Result<()> {
+        anyhow::bail!("store is read-only")
+    }
+
     /// Refresh the store so it might pick up new contents written by other processes.
     fn refresh(&self) -> anyhow::Result<()> {
         Ok(())
+    }
+
+    /// Decides whether the store uses git or hg format.
+    fn format(&self) -> TreeFormat {
+        TreeFormat::Hg
     }
 
     /// Optional downcasting. If a store wants downcasting support, implement this
@@ -131,6 +197,41 @@ pub enum TreeFormat {
     // MODE: '40000' (tree), '100644' (regular), '100755' (executable),
     //       '120000' (symlink), '160000' (gitlink)
     Git,
+}
+
+/// Options used by `insert_data`
+#[derive(Deserialize, Default)]
+pub struct InsertOpts {
+    /// Parent hashes.
+    /// For Hg it's required and affects SHA1.
+    /// For Git it's a hint about the delta bases.
+    pub parents: Vec<HgId>,
+
+    /// Whether this is a file or a tree.
+    /// For Hg it's ignored. For Git it affects SHA1.
+    pub kind: Kind,
+
+    /// Forced SHA1 to use. Mainly for testing purpose.
+    #[serde(default)]
+    pub forced_id: Option<Box<HgId>>,
+
+    /// Hg flags to use. Used for legacy LFS support.
+    #[serde(default)]
+    pub hg_flags: u32,
+}
+
+/// Distinguish between a file and a tree.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Kind {
+    File,
+    Tree,
+}
+
+impl Default for Kind {
+    fn default() -> Self {
+        Kind::File
+    }
 }
 
 /// Provide information about how to build a file and tree store.
