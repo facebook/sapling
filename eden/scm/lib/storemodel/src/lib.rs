@@ -125,8 +125,8 @@ pub trait KeyStore: Send + Sync {
     }
 
     /// Decides whether the store uses git or hg format.
-    fn format(&self) -> TreeFormat {
-        TreeFormat::Hg
+    fn format(&self) -> SerializationFormat {
+        SerializationFormat::Hg
     }
 
     /// Optional downcasting. If a store wants downcasting support, implement this
@@ -177,8 +177,8 @@ pub trait TreeStore: Send + Sync {
     }
 
     /// Decides whether the store uses git or hg format.
-    fn format(&self) -> TreeFormat {
-        TreeFormat::Hg
+    fn format(&self) -> SerializationFormat {
+        SerializationFormat::Hg
     }
 
     /// Refresh the store so it might pick up new contents written by other processes.
@@ -187,15 +187,35 @@ pub trait TreeStore: Send + Sync {
     }
 }
 
+/// Decides the serialization format. This exists so different parts of the code
+/// base can agree on how to generate a SHA1, how to lookup in a tree, etc.
+/// Ideally this information is private and the differences are behind
+/// abstractions too.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
-pub enum TreeFormat {
-    // NAME '\0' HEX_SHA1 MODE '\n'
-    // MODE: 't' (tree), 'l' (symlink), 'x' (executable)
+pub enum SerializationFormat {
+    // Hg SHA1:
+    //   SORTED_PARENTS CONTENT
+    //
+    // Hg file:
+    //   FILELOG_METADATA CONTENT
+    //
+    // Hg tree:
+    //   NAME '\0' HEX_SHA1 MODE '\n'
+    //   MODE: 't' (tree), 'l' (symlink), 'x' (executable)
+    //   (sorted by name)
     Hg,
 
-    // MODE ' ' NAME '\0' BIN_SHA1
-    // MODE: '40000' (tree), '100644' (regular), '100755' (executable),
-    //       '120000' (symlink), '160000' (gitlink)
+    // Git SHA1:
+    //   TYPE LENGTH CONTENT
+    //
+    // Git file:
+    //   CONTENT
+    //
+    // Git tree:
+    //   MODE ' ' NAME '\0' BIN_SHA1
+    //   MODE: '40000' (tree), '100644' (regular), '100755' (executable),
+    //         '120000' (symlink), '160000' (gitlink)
+    //   (sorted by name, but directory names are treated as ending with '/')
     Git,
 }
 

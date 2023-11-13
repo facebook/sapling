@@ -12,7 +12,7 @@ use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use storemodel::FileStore;
 use storemodel::KeyStore;
-use storemodel::TreeFormat;
+use storemodel::SerializationFormat;
 use storemodel::TreeStore;
 use types::HgId;
 use types::Key;
@@ -69,8 +69,8 @@ impl TreeStore for GitStore {
         Ok(())
     }
 
-    fn format(&self) -> TreeFormat {
-        TreeFormat::Git
+    fn format(&self) -> SerializationFormat {
+        SerializationFormat::Git
     }
 
     fn refresh(&self) -> anyhow::Result<()> {

@@ -29,7 +29,7 @@ use metalog::CommitOptions;
 use metalog::MetaLog;
 use minibytes::Bytes;
 use parking_lot::RwLock;
-use storemodel::TreeFormat;
+use storemodel::SerializationFormat;
 use zstore::Id20;
 use zstore::Zstore;
 
@@ -166,7 +166,7 @@ impl EagerRepoStore {
         };
         // Check subfiles or subtrees.
         if matches!(flag, Flag::Directory) {
-            let entry = TreeEntry(content, TreeFormat::Hg);
+            let entry = TreeEntry(content, SerializationFormat::Hg);
             for element in entry.elements() {
                 let element = element?;
                 let name = element.component.into_string();
@@ -663,7 +663,7 @@ mod tests {
                 TreeElement::new(p("a"), missing_id, Flag::Directory),
                 TreeElement::new(p("b"), missing_id, Flag::File(FileType::Regular)),
             ],
-            TreeFormat::Hg,
+            SerializationFormat::Hg,
         )
         .to_bytes();
         let subtree_id = repo
@@ -674,7 +674,7 @@ mod tests {
                 TreeElement::new(p("c"), subtree_id, Flag::Directory),
                 TreeElement::new(p("d"), missing_id, Flag::File(FileType::Regular)),
             ],
-            TreeFormat::Hg,
+            SerializationFormat::Hg,
         )
         .to_bytes();
         let root_tree_id = repo

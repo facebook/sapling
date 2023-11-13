@@ -15,7 +15,7 @@ use hgstore::strip_hg_file_metadata;
 use storemodel::types;
 use storemodel::FileStore;
 use storemodel::KeyStore;
-use storemodel::TreeFormat;
+use storemodel::SerializationFormat;
 use storemodel::TreeStore;
 use types::HgId;
 use types::Key;
@@ -96,8 +96,8 @@ impl TreeStore for EagerRepoStore {
         anyhow::bail!("insert cannot be used for Hg trees");
     }
 
-    fn format(&self) -> TreeFormat {
-        TreeFormat::Hg
+    fn format(&self) -> SerializationFormat {
+        SerializationFormat::Hg
     }
 
     fn refresh(&self) -> anyhow::Result<()> {

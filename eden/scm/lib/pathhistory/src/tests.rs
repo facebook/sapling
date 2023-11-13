@@ -26,7 +26,7 @@ use manifest::Manifest;
 use manifest_tree::TreeManifest;
 use storemodel::minibytes::Bytes;
 use storemodel::ReadRootTreeIds;
-use storemodel::TreeFormat;
+use storemodel::SerializationFormat;
 use storemodel::TreeStore;
 use types::HgId;
 use types::Key;
@@ -259,8 +259,8 @@ impl TreeStore for TestHistory {
         Ok(())
     }
 
-    fn format(&self) -> TreeFormat {
-        TreeFormat::Git
+    fn format(&self) -> SerializationFormat {
+        SerializationFormat::Git
     }
 }
 

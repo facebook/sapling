@@ -37,7 +37,7 @@ use pathmatcher::Matcher;
 use sha1::Digest;
 use sha1::Sha1;
 pub use store::Flag;
-use storemodel::TreeFormat;
+use storemodel::SerializationFormat;
 use thiserror::Error;
 use types::HgId;
 pub use types::PathComponent;
@@ -256,11 +256,11 @@ impl Manifest for TreeManifest {
 
     /// Write dirty trees using specified format to disk. Return the root tree id.
     fn flush(&mut self) -> Result<HgId> {
-        fn compute_sha1(content: &[u8], format: TreeFormat) -> HgId {
+        fn compute_sha1(content: &[u8], format: SerializationFormat) -> HgId {
             let mut hasher = Sha1::new();
             match format {
-                TreeFormat::Git => hasher.update(format!("tree {}\0", content.len())),
-                TreeFormat::Hg => {
+                SerializationFormat::Git => hasher.update(format!("tree {}\0", content.len())),
+                SerializationFormat::Hg => {
                     // XXX: No p1, p2 to produce a genuine SHA1.
                     // This code path is only meaningful for tests.
                     assert!(
@@ -277,7 +277,7 @@ impl Manifest for TreeManifest {
             store: &'a InnerStore,
             pathbuf: &'b mut RepoPathBuf,
             cursor: &'c mut Link,
-            format: TreeFormat,
+            format: SerializationFormat,
         ) -> Result<(HgId, store::Flag)> {
             loop {
                 let new_cursor = match cursor.as_mut_ref()? {
@@ -545,7 +545,7 @@ impl TreeManifest {
                 // need to convert to Ephemeral instead only verify the hash.
                 let links = link.mut_ephemeral_links(self.store, &self.path)?;
                 // finalize() is only used for hg format.
-                let format = TreeFormat::Hg;
+                let format = SerializationFormat::Hg;
                 let mut entry = store::EntryMut::new(format);
                 for (component, link) in links.iter_mut() {
                     self.path.push(component.as_path_component());
@@ -579,7 +579,7 @@ impl TreeManifest {
 
         assert_eq!(
             self.store.format(),
-            TreeFormat::Hg,
+            SerializationFormat::Hg,
             "finalize() can only be used for hg store, use flush() instead"
         );
         let mut executor = Executor::new(&self.store, &parent_trees)?;
@@ -730,7 +730,7 @@ mod tests {
 
     impl store::Entry {
         fn from_elements_hg(elements: Vec<Element>) -> Self {
-            Self::from_elements(elements, TreeFormat::Hg)
+            Self::from_elements(elements, SerializationFormat::Hg)
         }
     }
     fn store_element(path: &str, hex: &str, flag: store::Flag) -> store::Element {
@@ -1479,11 +1479,11 @@ mod tests {
 
     #[test]
     fn test_list() {
-        test_list_format(TreeFormat::Git);
-        test_list_format(TreeFormat::Hg);
+        test_list_format(SerializationFormat::Git);
+        test_list_format(SerializationFormat::Hg);
     }
 
-    fn test_list_format(format: TreeFormat) {
+    fn test_list_format(format: SerializationFormat) {
         let mut tree = TreeManifest::ephemeral(Arc::new(TestStore::new().with_format(format)));
         let c1_meta = make_meta("10");
         tree.insert(repo_path_buf("a1/b1/c1"), c1_meta).unwrap();

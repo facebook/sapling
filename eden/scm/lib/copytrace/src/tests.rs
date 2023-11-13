@@ -28,7 +28,7 @@ use storemodel::futures::StreamExt;
 use storemodel::FileStore;
 use storemodel::KeyStore;
 use storemodel::ReadRootTreeIds;
-use storemodel::TreeFormat;
+use storemodel::SerializationFormat;
 use tracing_test::traced_test;
 use types::HgId;
 use types::Key;
@@ -76,7 +76,7 @@ impl CopyTraceTestCase {
 
         let mut commit_to_tree: HashMap<Vertex, HgId> = Default::default();
         let mut copies: HashMap<Key, Key> = Default::default();
-        let tree_store = Arc::new(TestStore::new().with_format(TreeFormat::Git));
+        let tree_store = Arc::new(TestStore::new().with_format(SerializationFormat::Git));
         let changes = Change::build_changes(changes);
         let config: BTreeMap<&'static str, &'static str> = Default::default();
 
