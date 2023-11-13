@@ -254,19 +254,23 @@
   margin-right: var(--halfpad);
 }
 
-.goto-button {
-  opacity: 0;
-  transition: opacity 0.1s;
-}
-
 .goto-button .codicon {
   margin-left: var(--halfpad);
 }
 
-.commit:hover .goto-button {
+.goto-button,
+.open-commit-info-button {
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.commit:hover .goto-button,
+.commit:hover .open-commit-info-button {
   opacity: 1;
 }
-.goto-button:focus-within {
+
+.goto-button:focus-within,
+.open-commit-info-button:focus-within {
   opacity: 1;
 }
 

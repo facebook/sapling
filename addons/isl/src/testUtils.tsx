@@ -108,7 +108,7 @@ export function resetTestMessages() {
   testMessageBus.resetTestMessages();
 }
 
-function commitInfoIsOpen() {
+export function commitInfoIsOpen(): boolean {
   return (
     screen.queryByTestId('commit-info-view') != null ||
     screen.queryByTestId('commit-info-view-loading') != null

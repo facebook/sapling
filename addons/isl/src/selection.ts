@@ -77,6 +77,7 @@ export function useCommitSelection(hash: string): {
   onClickToSelect: (
     _e: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>,
   ) => unknown;
+  overrideSelection: (newSelected: Array<Hash>) => void;
 } {
   const selected = useRecoilValue(selectedCommits);
   const onClickToSelect = useRecoilCallback(
@@ -140,7 +141,26 @@ export function useCommitSelection(hash: string): {
       },
     [hash],
   );
-  return {isSelected: selected.has(hash), onClickToSelect};
+
+  const overrideSelection = useRecoilCallback(
+    ({set, snapshot}) =>
+      (newSelected: Array<Hash>) => {
+        // previews won't change a commit from draft -> public, so we don't need
+        // to use previews here
+        const loadable = snapshot.getLoadable(latestCommitTreeMap);
+        if (loadable.getValue().get(hash)?.info.phase === 'public') {
+          // don't bother selecting public commits
+          return;
+        }
+        const nonPublicToSelect = newSelected.filter(
+          hash => loadable.getValue().get(hash)?.info.phase !== 'public',
+        );
+        set(selectedCommits, new Set(nonPublicToSelect));
+      },
+    [hash],
+  );
+
+  return {isSelected: selected.has(hash), onClickToSelect, overrideSelection};
 }
 
 /**

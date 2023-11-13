@@ -123,7 +123,7 @@ export const Commit = memo(
 
     const inlineProgress = useRecoilValue(inlineProgressByHash(commit.hash));
 
-    const {isSelected, onClickToSelect} = useCommitSelection(commit.hash);
+    const {isSelected, onClickToSelect, overrideSelection} = useCommitSelection(commit.hash);
     const actionsPrevented = previewPreventsActions(previewType);
 
     const isNarrow = useRecoilValue(isNarrowCommitTree);
@@ -132,10 +132,10 @@ export const Commit = memo(
 
     const isNonActionable = previewType === CommitPreview.NON_ACTIONABLE_COMMIT;
 
-    function onDoubleClickToShowDrawer(e: React.MouseEvent<HTMLDivElement>) {
+    function onDoubleClickToShowDrawer() {
       // Select the commit if it was deselected.
       if (!isSelected) {
-        onClickToSelect(e);
+        overrideSelection([commit.hash]);
       }
       // Show the drawer.
       setDrawerState(state => ({
@@ -270,25 +270,27 @@ export const Commit = memo(
     if (!actionsPrevented && !commit.isHead) {
       commitActions.push(
         <span className="goto-button" key="goto-button">
-          <VSCodeButton
-            appearance="secondary"
-            onClick={event => {
-              runOperation(
-                new GotoOperation(
-                  // If the commit has a remote bookmark, use that instead of the hash. This is easier to read in the command history
-                  // and works better with optimistic state
-                  commit.remoteBookmarks.length > 0
-                    ? succeedableRevset(commit.remoteBookmarks[0])
-                    : latestSuccessorUnlessExplicitlyObsolete(commit),
-                ),
-              );
-              event.stopPropagation(); // don't toggle selection by letting click propagate onto selection target.
-              // Instead, ensure we remove the selection, so we view the new head commit by default
-              // (since the head commit is the default thing shown in the sidebar)
-              globalRecoil().reset(selectedCommits);
-            }}>
-            <T>Goto</T> <Icon icon="newline" />
-          </VSCodeButton>
+          <Tooltip title={t('Move the working copy to this commit')} delayMs={250}>
+            <VSCodeButton
+              appearance="secondary"
+              onClick={event => {
+                runOperation(
+                  new GotoOperation(
+                    // If the commit has a remote bookmark, use that instead of the hash. This is easier to read in the command history
+                    // and works better with optimistic state
+                    commit.remoteBookmarks.length > 0
+                      ? succeedableRevset(commit.remoteBookmarks[0])
+                      : latestSuccessorUnlessExplicitlyObsolete(commit),
+                  ),
+                );
+                event.stopPropagation(); // don't toggle selection by letting click propagate onto selection target.
+                // Instead, ensure we remove the selection, so we view the new head commit by default
+                // (since the head commit is the default thing shown in the sidebar)
+                globalRecoil().reset(selectedCommits);
+              }}>
+              <T>Goto</T> <Icon icon="newline" />
+            </VSCodeButton>
+          </Tooltip>
         </span>,
       );
     }
@@ -297,6 +299,12 @@ export const Commit = memo(
     }
     if (!isPublic && !actionsPrevented && commit.isHead) {
       commitActions.push(<SplitButton key="split" commit={commit} />);
+    }
+
+    if (!isPublic && !actionsPrevented) {
+      commitActions.push(
+        <OpenCommitInfoButton key="open-sidebar" revealCommit={onDoubleClickToShowDrawer} />,
+      );
     }
 
     return (
@@ -373,6 +381,24 @@ export const Commit = memo(
     );
   },
 );
+
+function OpenCommitInfoButton({revealCommit}: {revealCommit: () => unknown}) {
+  return (
+    <Tooltip title={t("Open commit's details in sidebar")} delayMs={250}>
+      <VSCodeButton
+        appearance="icon"
+        onClick={e => {
+          revealCommit();
+          e.stopPropagation();
+          e.preventDefault();
+        }}
+        className="open-commit-info-button"
+        data-testid="open-commit-info-button">
+        <Icon icon="chevron-right" />
+      </VSCodeButton>
+    </Tooltip>
+  );
+}
 
 function ConfirmHideButton({onClick}: {onClick: () => unknown}) {
   const ref = useAutofocusRef() as React.MutableRefObject<null>;
