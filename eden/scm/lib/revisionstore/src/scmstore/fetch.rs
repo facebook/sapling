@@ -214,12 +214,12 @@ impl FetchErrors {
 }
 
 pub struct FetchResults<T> {
-    iterator: Box<dyn Iterator<Item = Result<(Key, T), KeyFetchError>>>,
+    iterator: Box<dyn Iterator<Item = Result<(Key, T), KeyFetchError>> + Send>,
 }
 
 impl<T> IntoIterator for FetchResults<T> {
     type Item = Result<(Key, T), KeyFetchError>;
-    type IntoIter = Box<dyn Iterator<Item = Result<(Key, T), KeyFetchError>>>;
+    type IntoIter = Box<dyn Iterator<Item = Result<(Key, T), KeyFetchError>> + Send>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iterator
@@ -227,7 +227,7 @@ impl<T> IntoIterator for FetchResults<T> {
 }
 
 impl<T> FetchResults<T> {
-    pub fn new(iterator: Box<dyn Iterator<Item = Result<(Key, T), KeyFetchError>>>) -> Self {
+    pub fn new(iterator: Box<dyn Iterator<Item = Result<(Key, T), KeyFetchError>> + Send>) -> Self {
         FetchResults { iterator }
     }
 
