@@ -159,6 +159,13 @@ pub trait FileStore: KeyStore + 'static {
     async fn get_rename_stream(&self, _keys: Vec<Key>) -> BoxStream<anyhow::Result<(Key, Key)>> {
         Box::pin(futures::stream::empty())
     }
+
+    fn as_key_store(&self) -> &dyn KeyStore
+    where
+        Self: Sized,
+    {
+        self
+    }
 }
 
 #[async_trait]
@@ -171,7 +178,14 @@ pub trait ReadRootTreeIds {
 /// The `TreeStore` is an abstraction layer for the tree manifest that decouples how or where the
 /// data is stored. This allows more easy iteration on serialization format. It also simplifies
 /// writing storage migration.
-pub trait TreeStore: KeyStore {}
+pub trait TreeStore: KeyStore {
+    fn as_key_store(&self) -> &dyn KeyStore
+    where
+        Self: Sized,
+    {
+        self
+    }
+}
 
 /// Decides the serialization format. This exists so different parts of the code
 /// base can agree on how to generate a SHA1, how to lookup in a tree, etc.
