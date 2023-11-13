@@ -53,11 +53,14 @@ export function CommitInfoTextField({
       setTypeaheadSuggestions({type: 'loading'});
     }
     fetchNewSuggestions(typeaheadKind, newValue).then(({values, fetchStartTimestamp}) => {
+      // don't show typeahead suggestions that are already entered
+      const newValues = values.filter(v => !tokens.includes(v.value));
+
       setTypeaheadSuggestions(last =>
         last?.type === 'success' && last.timestamp > fetchStartTimestamp
           ? // this result is older than the one we've already set: ignore it
             last
-          : {type: 'success', values, timestamp: fetchStartTimestamp},
+          : {type: 'success', values: newValues, timestamp: fetchStartTimestamp},
       );
     });
   };
@@ -67,7 +70,7 @@ export function CommitInfoTextField({
   const isReviewers = fieldKey === 'reviewers';
 
   const saveNewValue = (value: string | undefined) => {
-    if (value) {
+    if (value && !tokens.includes(value)) {
       setEditedCommitMessage(
         tokensToString(
           tokens,
