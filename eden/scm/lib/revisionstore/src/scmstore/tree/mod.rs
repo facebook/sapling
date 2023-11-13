@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -13,7 +12,6 @@ use ::types::HgId;
 use ::types::Key;
 use ::types::Node;
 use ::types::RepoPath;
-use ::types::RepoPathBuf;
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Result;
@@ -342,12 +340,6 @@ impl LegacyStore for TreeStore {
             filestore: None,
             flush_on_drop: true,
         })
-    }
-
-    fn get_logged_fetches(&self) -> HashSet<RepoPathBuf> {
-        unimplemented!(
-            "get_logged_fetches is not implemented for trees, it should only ever be falled for files"
-        );
     }
 
     fn get_file_content(&self, _key: &Key) -> Result<Option<Bytes>> {

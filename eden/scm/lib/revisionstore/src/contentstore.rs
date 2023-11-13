@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashSet;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -22,7 +21,6 @@ use minibytes::Bytes;
 use regex::Regex;
 use tracing::info_span;
 use types::Key;
-use types::RepoPathBuf;
 
 use crate::datastore::ContentDataStore;
 use crate::datastore::ContentMetadata;
@@ -138,14 +136,6 @@ impl LegacyStore for ContentStore {
             Ok(Some(bytes))
         } else {
             Ok(None)
-        }
-    }
-
-    fn get_logged_fetches(&self) -> HashSet<RepoPathBuf> {
-        if let Some(remote_store) = &self.remote_store {
-            remote_store.take_seen()
-        } else {
-            HashSet::new()
         }
     }
 

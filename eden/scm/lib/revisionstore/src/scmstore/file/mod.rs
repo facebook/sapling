@@ -9,13 +9,11 @@ mod fetch;
 mod metrics;
 mod types;
 
-use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 
 use ::types::Key;
-use ::types::RepoPathBuf;
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::ensure;
@@ -489,18 +487,6 @@ impl LegacyStore for FileStore {
             // Conservatively flushing on drop here, didn't see perf problems and might be needed by Python
             flush_on_drop: true,
         })
-    }
-
-    fn get_logged_fetches(&self) -> HashSet<RepoPathBuf> {
-        let mut seen = self
-            .fetch_logger
-            .as_ref()
-            .map(|fl| fl.take_seen())
-            .unwrap_or_default();
-        if let Some(contentstore) = self.contentstore.as_ref() {
-            seen.extend(contentstore.get_logged_fetches());
-        }
-        seen
     }
 
     fn get_file_content(&self, key: &Key) -> Result<Option<Bytes>> {

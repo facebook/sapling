@@ -1046,11 +1046,6 @@ py_class!(pub class contentstore |py| {
         store.metadata_py(py, name, node)
     }
 
-    def getloggedfetches(&self) -> PyResult<Vec<PyPathBuf>> {
-        let store = self.store(py);
-        Ok(store.get_logged_fetches().into_iter().map(|p| p.into()).collect::<Vec<PyPathBuf>>())
-    }
-
     def getsharedmutable(&self) -> PyResult<mutabledeltastore> {
         let store = self.store(py);
         mutabledeltastore::create_instance(py, store.get_shared_mutable())
@@ -1355,11 +1350,6 @@ py_class!(pub class filescmstore |py| {
         store.metadata_py(py, name, node)
     }
 
-    def getloggedfetches(&self) -> PyResult<Vec<PyPathBuf>> {
-        let store = self.store(py);
-        Ok(store.get_logged_fetches().into_iter().map(|p| p.into()).collect::<Vec<PyPathBuf>>())
-    }
-
     def getmetrics(&self) -> PyResult<Vec<PyTuple>> {
         let store = self.store(py);
         Ok(store.metrics().into_iter().map(|(k, v)| {
@@ -1571,12 +1561,6 @@ py_class!(pub class treescmstore |py| {
     def metadata(&self, name: &PyPath, node: &PyBytes) -> PyResult<PyDict> {
         let store = self.store(py);
         store.metadata_py(py, name, node)
-    }
-
-    def getloggedfetches(&self) -> PyResult<Vec<PyPathBuf>> {
-        let _ = py;
-        // TODO(meyer): Make sure we're only supposed to be tracking fetches for files, not trees.
-        Ok(Vec::new())
     }
 
     def getsharedmutable(&self) -> PyResult<mutabledeltastore> {

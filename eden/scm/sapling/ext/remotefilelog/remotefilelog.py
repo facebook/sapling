@@ -591,17 +591,6 @@ class remotefileslog(filelog.fileslog):
             return
 
         ui = self.repo.ui
-        fetched = self.filestore.getloggedfetches()
-        if fetched:
-            for path in fetched:
-                ui.log(
-                    "undesired_file_fetches",
-                    "",
-                    filename=path,
-                    reponame=self.repo.name,
-                )
-            ui.metrics.gauge("undesiredfilefetches", len(fetched))
-
         if type(self.filestore) is revisionstore.filescmstore:
             metrics = self.filestore.getmetrics()
             for (metric, value) in metrics:

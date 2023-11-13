@@ -191,10 +191,6 @@ impl LegacyStore for PythonHgIdDataStore {
         unimplemented!("")
     }
 
-    fn get_logged_fetches(&self) -> HashSet<RepoPathBuf> {
-        unimplemented!("")
-    }
-
     fn get_shared_mutable(&self) -> Arc<dyn HgIdMutableDeltaStore> {
         unimplemented!("")
     }
