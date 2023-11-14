@@ -18,7 +18,7 @@ use anyhow::anyhow;
 use anyhow::Result;
 use async_trait::async_trait;
 use bytes::Bytes;
-use caching_ext::fill_cache;
+use caching_ext::fill_cachelib;
 use caching_ext::get_or_fill;
 use caching_ext::get_or_fill_chunked;
 use caching_ext::CacheDisposition;
@@ -278,9 +278,14 @@ impl KeyedEntityStore<ChangesetId, CachedPrefetchedChangesetEdges> for CacheRequ
         if self.prefetch.is_include() {
             // We were asked to prefetch. We must separate out the prefetched
             // values from the fetched values as we may only return the
-            // fetched values.
+            // fetched values, and need to attach the prefetched values to
+            // the fetched values for memcache.
             let mut fetched = HashMap::new();
             let mut prefetched = HashMap::new();
+            // Also collect the prefetched values indexed by the original commit
+            // they were prefetched for.  This is used to populate memcache
+            // prefetch values.
+            let mut prefetched_by_origin = HashMap::new();
             for (cs_id, edges) in entries {
                 if keys.contains(&cs_id) {
                     fetched.insert(cs_id, CachedPrefetchedChangesetEdges::fetched(edges.into()));
@@ -289,11 +294,25 @@ impl KeyedEntityStore<ChangesetId, CachedPrefetchedChangesetEdges> for CacheRequ
                         cs_id,
                         CachedPrefetchedChangesetEdges::prefetched(edges.clone().into()),
                     );
+                    if let Some(origin_cs_id) = edges.prefetched_for() {
+                        prefetched_by_origin
+                            .entry(origin_cs_id)
+                            .or_insert_with(HashMap::new)
+                            .insert(cs_id, edges.into());
+                    }
                 }
             }
             if !prefetched.is_empty() {
+                // Fill cachelib with all the additionally prefetched values.
                 STATS::prefetched.add_value(prefetched.len() as i64);
-                fill_cache(self, &prefetched).await;
+                fill_cachelib(self, &prefetched);
+            }
+            // Add all prefetched values to their fetched origin.  This will
+            // be stored in memcache.
+            for (origin_csid, prefetched_edges) in prefetched_by_origin {
+                if let Some(edges) = fetched.get_mut(&origin_csid) {
+                    edges.prefetched_edges.extend(prefetched_edges);
+                }
             }
             STATS::fetched.add_value(fetched.len() as i64);
             Ok(fetched)
@@ -304,6 +323,22 @@ impl KeyedEntityStore<ChangesetId, CachedPrefetchedChangesetEdges> for CacheRequ
                     (cs_id, CachedPrefetchedChangesetEdges::fetched(edges.into()))
                 })
                 .collect())
+        }
+    }
+
+    fn on_memcache_hits<'a>(
+        &self,
+        values: impl IntoIterator<Item = (&'a ChangesetId, &'a CachedPrefetchedChangesetEdges)>,
+    ) {
+        for (_cs_id, edges) in values {
+            if !edges.prefetched_edges.is_empty() {
+                let prefetched_edges = edges
+                    .prefetched_edges
+                    .iter()
+                    .map(|(k, v)| (*k, CachedPrefetchedChangesetEdges::prefetched(v.clone())))
+                    .collect::<HashMap<_, _>>();
+                fill_cachelib(self, &prefetched_edges);
+            }
         }
     }
 }

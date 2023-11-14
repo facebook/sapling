@@ -199,6 +199,13 @@ impl FetchedChangesetEdges {
     pub fn edges(self) -> ChangesetEdges {
         ChangesetEdges::from(self)
     }
+
+    pub fn prefetched_for(&self) -> Option<ChangesetId> {
+        match self {
+            Self::Fetched { .. } => None,
+            Self::Prefetched { cs_id, .. } => Some(*cs_id),
+        }
+    }
 }
 
 /// Commit Graph Storage.
