@@ -197,30 +197,3 @@ impl CommitGraphStorage for InMemoryCommitGraphStorage {
             .collect())
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use std::future::Future;
-    use std::sync::Arc;
-
-    use commit_graph_testlib::*;
-    use commit_graph_types::storage::CommitGraphStorage;
-    use context::CoreContext;
-    use fbinit::FacebookInit;
-
-    use super::*;
-
-    async fn run_test<Fut>(
-        fb: FacebookInit,
-        test_function: impl FnOnce(CoreContext, Arc<dyn CommitGraphStorage>) -> Fut,
-    ) -> Result<()>
-    where
-        Fut: Future<Output = Result<()>>,
-    {
-        let ctx = CoreContext::test_mock(fb);
-        let storage = Arc::new(InMemoryCommitGraphStorage::new(RepositoryId::new(1)));
-        test_function(ctx, storage).await
-    }
-
-    impl_commit_graph_tests!(run_test);
-}

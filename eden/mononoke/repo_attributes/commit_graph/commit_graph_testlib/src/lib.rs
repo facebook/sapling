@@ -25,6 +25,8 @@ use vec1::vec1;
 
 use crate::utils::*;
 
+#[cfg(test)]
+pub mod tests;
 pub mod utils;
 
 #[macro_export]

@@ -5,6 +5,10 @@ oncall("mononoke")
 rust_library(
     name = "commit_graph_testlib",
     srcs = glob(["src/**/*.rs"]),
+    test_deps = [
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:futures",

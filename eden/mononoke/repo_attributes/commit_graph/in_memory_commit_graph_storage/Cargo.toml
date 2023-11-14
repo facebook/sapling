@@ -15,8 +15,3 @@ context = { version = "0.1.0", path = "../../../server/context" }
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 vec1 = { version = "1", features = ["serde"] }
-
-[dev-dependencies]
-commit_graph_testlib = { version = "0.1.0", path = "../commit_graph_testlib" }
-fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
