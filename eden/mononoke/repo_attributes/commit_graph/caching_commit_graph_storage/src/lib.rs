@@ -84,6 +84,7 @@ struct CacheRequest<'a> {
     caching_storage: &'a CachingCommitGraphStorage,
     prefetch: Prefetch,
     required: bool,
+    memcache_prefetch: bool,
 }
 
 /// Origin of a value in the cachelib cache.
@@ -258,12 +259,16 @@ impl EntityStore<CachedPrefetchedChangesetEdges> for CacheRequest<'_> {
     }
 
     fn keygen(&self) -> &KeyGen {
-        match self.prefetch.target_edge() {
-            Some(PrefetchEdge::FirstParent) => &self.caching_storage.keygen_prefetch_p1_linear,
-            Some(PrefetchEdge::SkipTreeSkewAncestor) => {
-                &self.caching_storage.keygen_prefetch_skip_tree
+        if self.memcache_prefetch {
+            match self.prefetch.target_edge() {
+                Some(PrefetchEdge::FirstParent) => &self.caching_storage.keygen_prefetch_p1_linear,
+                Some(PrefetchEdge::SkipTreeSkewAncestor) => {
+                    &self.caching_storage.keygen_prefetch_skip_tree
+                }
+                None => &self.caching_storage.keygen_single,
             }
-            None => &self.caching_storage.keygen_single,
+        } else {
+            &self.caching_storage.keygen_single
         }
     }
 
@@ -348,11 +353,13 @@ impl KeyedEntityStore<ChangesetId, CachedPrefetchedChangesetEdges> for CacheRequ
                 STATS::prefetched.add_value(prefetched.len() as i64);
                 fill_cachelib(self, &prefetched);
             }
-            // Add all prefetched values to their fetched origin.  This will
-            // be stored in memcache.
-            for (origin_csid, prefetched_edges) in prefetched_by_origin {
-                if let Some(edges) = fetched.get_mut(&origin_csid) {
-                    edges.prefetched_edges.extend(prefetched_edges);
+            if self.memcache_prefetch {
+                // Add all prefetched values to their fetched origin.  This will
+                // be stored in memcache.
+                for (origin_csid, prefetched_edges) in prefetched_by_origin {
+                    if let Some(edges) = fetched.get_mut(&origin_csid) {
+                        edges.prefetched_edges.extend(prefetched_edges);
+                    }
                 }
             }
             STATS::fetched.add_value(fetched.len() as i64);
@@ -424,7 +431,9 @@ impl CachingCommitGraphStorage {
         Self::new(storage, CacheHandlerFactory::Mocked)
     }
 
-    fn request<'a>(&'a self, ctx: &'a CoreContext, prefetch: Prefetch) -> CacheRequest<'a> {
+    /// Determine prefetch parameters for this request based on the prefetch
+    /// requested by the user and current rollout values.
+    fn request_prefetch_params(prefetch: Prefetch) -> (Prefetch, bool) {
         let prefetch = if justknobs::eval("scm/mononoke:disable_commit_graph_prefetch", None, None)
             .unwrap_or_default()
         {
@@ -432,10 +441,22 @@ impl CachingCommitGraphStorage {
         } else {
             prefetch.include_hint()
         };
+        let memcache_prefetch = justknobs::eval(
+            "scm/mononoke:commit_graph_prefetch_store_in_memcache",
+            None,
+            None,
+        )
+        .unwrap_or_default();
+        (prefetch, memcache_prefetch)
+    }
+
+    fn request<'a>(&'a self, ctx: &'a CoreContext, prefetch: Prefetch) -> CacheRequest<'a> {
+        let (prefetch, memcache_prefetch) = Self::request_prefetch_params(prefetch);
         CacheRequest {
             ctx,
             caching_storage: self,
             prefetch,
+            memcache_prefetch,
             required: false,
         }
     }
@@ -445,17 +466,12 @@ impl CachingCommitGraphStorage {
         ctx: &'a CoreContext,
         prefetch: Prefetch,
     ) -> CacheRequest<'a> {
-        let prefetch = if justknobs::eval("scm/mononoke:disable_commit_graph_prefetch", None, None)
-            .unwrap_or_default()
-        {
-            Prefetch::None
-        } else {
-            prefetch.include_hint()
-        };
+        let (prefetch, memcache_prefetch) = Self::request_prefetch_params(prefetch);
         CacheRequest {
             ctx,
             caching_storage: self,
             prefetch,
+            memcache_prefetch,
             required: true,
         }
     }
