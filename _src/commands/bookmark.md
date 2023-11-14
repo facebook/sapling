@@ -2,9 +2,9 @@
 sidebar_position: 6
 ---
 
-## bookmark | bo | book
+## bookmark | bo | book | bookmarks
 <!--
-  @generated SignedSource<<33d9c3a4e740d1830162333f66ce45e5>>
+  @generated SignedSource<<b74586308219e0d1021c5b174fe05007>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
