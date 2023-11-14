@@ -9,7 +9,7 @@ include "eden/mononoke/mononoke_types/if/mononoke_types_thrift.thrift"
 
 # Memcache constants. Should be changed when we want to invalidate memcache
 # entries
-const i32 MC_CODEVER = 0;
+const i32 MC_CODEVER = 1;
 const i32 MC_SITEVER = 0;
 
 typedef i64 Generation (rust.newtype)
@@ -28,6 +28,11 @@ struct ChangesetEdges {
   4: optional ChangesetNode skip_tree_parent;
   5: optional ChangesetNode skip_tree_skew_ancestor;
   6: optional ChangesetNode p1_linear_skew_ancestor;
+} (rust.exhaustive)
+
+struct CachedChangesetEdges {
+  1: ChangesetEdges edges;
+  2: optional list<ChangesetEdges> prefetched_edges;
 } (rust.exhaustive)
 
 struct PreloadedEdges {

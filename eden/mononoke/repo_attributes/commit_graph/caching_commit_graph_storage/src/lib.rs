@@ -7,9 +7,12 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::io::Result as IoResult;
+use std::io::Write;
 use std::ops::Deref;
 use std::sync::Arc;
 
+use abomonation::Abomonation;
 use abomonation_derive::Abomonation;
 use anyhow::anyhow;
 use anyhow::Result;
@@ -64,7 +67,7 @@ const PARALLEL_CHUNKS: usize = 2;
 /// Caching Commit Graph Storage
 pub struct CachingCommitGraphStorage {
     storage: Arc<dyn CommitGraphStorage>,
-    cachelib: CachelibHandler<CachedChangesetEdges>,
+    cachelib: CachelibHandler<CachedPrefetchedChangesetEdges>,
     memcache: MemcacheHandler,
     keygen: KeyGen,
     repo_id: RepositoryId,
@@ -78,6 +81,9 @@ struct CacheRequest<'a> {
 }
 
 #[derive(Clone, Debug, Abomonation)]
+/// A cached copy of changeset edges
+///
+/// This structure contains what is stored in the in-memory cache (cachelib).
 pub struct CachedChangesetEdges {
     /// The cached edges.
     edges: ChangesetEdges,
@@ -86,62 +92,133 @@ pub struct CachedChangesetEdges {
     prefetched: bool,
 }
 
-impl Deref for CachedChangesetEdges {
-    type Target = ChangesetEdges;
+#[derive(Clone, Debug)]
+/// A cached copy of changeset edges, along with the edges that were prefetched alongside them.
+///
+/// This structure contains what is stored in the shared remote cache (memcache).  When serialized
+/// for the in-memory cache (cachelib), the prefetched edges are omitted.
+pub struct CachedPrefetchedChangesetEdges {
+    /// The cached edges for the changeset referenced by the cache key.
+    inner: CachedChangesetEdges,
 
-    fn deref(&self) -> &ChangesetEdges {
-        &self.edges
+    /// Edges that were prefetched alongside this changeset.  These are only stored in memcache,
+    /// which means that we can retrieve more than one edge at a time when the cache hits.  The
+    /// prefetch parameter may not exactly match the value we are looking for when prefetching
+    /// later on, but this should not matter.  If it is too small, when we encounter something
+    /// that is missing, we will fetch from that point, which is still better than nothing.
+    prefetched_edges: HashMap<ChangesetId, ChangesetEdges>,
+}
+
+impl Abomonation for CachedPrefetchedChangesetEdges {
+    #[inline(always)]
+    unsafe fn entomb<W: Write>(&self, write: &mut W) -> IoResult<()> {
+        // SAFETY: This implementation matches the proc-macro-generated version but with `prefetched_edges` excluded, and matches the exhume method below.
+        self.inner.entomb(write)?;
+        // We deliberately do not entomb the contents of `prefetched_edges`.  It will be re-initialized when exhumed.
+        Ok(())
+    }
+
+    #[inline(always)]
+    unsafe fn exhume<'a, 'b>(&'a mut self, bytes: &'b mut [u8]) -> Option<&'b mut [u8]> {
+        // SAFETY: This implementation matches the proc-macro-generated version but with `prefetched_edges` re-initialized, and matches the entomb method above.
+        let bytes = self.inner.exhume(bytes)?;
+        // Re-initialize `prefetched_edges` as its contents were not entombed.
+        std::ptr::write(&mut self.prefetched_edges, HashMap::new());
+        Some(bytes)
+    }
+
+    #[inline(always)]
+    fn extent(&self) -> usize {
+        self.inner.extent()
     }
 }
 
-impl CachedChangesetEdges {
+impl Deref for CachedPrefetchedChangesetEdges {
+    type Target = ChangesetEdges;
+
+    fn deref(&self) -> &ChangesetEdges {
+        &self.inner.edges
+    }
+}
+
+impl CachedPrefetchedChangesetEdges {
     fn fetched(edges: ChangesetEdges) -> Self {
-        CachedChangesetEdges {
-            edges,
-            prefetched: false,
+        CachedPrefetchedChangesetEdges {
+            inner: CachedChangesetEdges {
+                edges,
+                prefetched: false,
+            },
+            prefetched_edges: HashMap::new(),
         }
     }
 
     fn prefetched(edges: ChangesetEdges) -> Self {
-        CachedChangesetEdges {
-            edges,
-            prefetched: true,
+        CachedPrefetchedChangesetEdges {
+            inner: CachedChangesetEdges {
+                edges,
+                prefetched: true,
+            },
+            prefetched_edges: HashMap::new(),
         }
     }
 
     fn take(self) -> ChangesetEdges {
-        if self.prefetched {
+        if self.inner.prefetched {
             STATS::hit.add_value(1);
         }
-        self.edges
+        self.inner.edges
     }
 
-    fn to_thrift(&self) -> thrift::ChangesetEdges {
-        self.edges.to_thrift()
+    fn to_thrift(&self) -> thrift::CachedChangesetEdges {
+        let prefetched_edges = Some(
+            self.prefetched_edges
+                .values()
+                .map(ChangesetEdges::to_thrift)
+                .collect::<Vec<_>>(),
+        )
+        .filter(|prefetched_edges| !prefetched_edges.is_empty());
+
+        thrift::CachedChangesetEdges {
+            edges: self.inner.edges.to_thrift(),
+            prefetched_edges,
+        }
     }
 
-    fn from_thrift(edges: thrift::ChangesetEdges) -> Result<Self> {
-        Ok(Self {
-            edges: ChangesetEdges::from_thrift(edges)?,
+    fn from_thrift(cached_edges: thrift::CachedChangesetEdges) -> Result<Self> {
+        let inner = CachedChangesetEdges {
+            edges: ChangesetEdges::from_thrift(cached_edges.edges)?,
             prefetched: false,
+        };
+        let mut prefetched_edges = HashMap::new();
+        if let Some(cached_prefetched_edges) = cached_edges.prefetched_edges {
+            for edges in cached_prefetched_edges {
+                prefetched_edges.insert(
+                    ChangesetId::from_thrift(edges.node.cs_id.clone())?,
+                    ChangesetEdges::from_thrift(edges)?,
+                );
+            }
+        }
+        Ok(CachedPrefetchedChangesetEdges {
+            inner,
+            prefetched_edges,
         })
     }
 }
 
-impl MemcacheEntity for CachedChangesetEdges {
+impl MemcacheEntity for CachedPrefetchedChangesetEdges {
     fn serialize(&self) -> Bytes {
         compact_protocol::serialize(&self.to_thrift())
     }
 
     fn deserialize(bytes: Bytes) -> McResult<Self> {
         compact_protocol::deserialize(bytes)
-            .and_then(CachedChangesetEdges::from_thrift)
+            .and_then(CachedPrefetchedChangesetEdges::from_thrift)
             .map_err(|_| McErrorKind::Deserialization)
     }
 }
 
-impl EntityStore<CachedChangesetEdges> for CacheRequest<'_> {
-    fn cachelib(&self) -> &CachelibHandler<CachedChangesetEdges> {
+impl EntityStore<CachedPrefetchedChangesetEdges> for CacheRequest<'_> {
+    fn cachelib(&self) -> &CachelibHandler<CachedPrefetchedChangesetEdges> {
         &self.caching_storage.cachelib
     }
 
@@ -169,7 +246,7 @@ impl EntityStore<CachedChangesetEdges> for CacheRequest<'_> {
         }
     }
 
-    fn cache_determinator(&self, _: &CachedChangesetEdges) -> CacheDisposition {
+    fn cache_determinator(&self, _: &CachedPrefetchedChangesetEdges) -> CacheDisposition {
         CacheDisposition::Cache(CacheTtl::NoTtl)
     }
 
@@ -177,7 +254,7 @@ impl EntityStore<CachedChangesetEdges> for CacheRequest<'_> {
 }
 
 #[async_trait]
-impl KeyedEntityStore<ChangesetId, CachedChangesetEdges> for CacheRequest<'_> {
+impl KeyedEntityStore<ChangesetId, CachedPrefetchedChangesetEdges> for CacheRequest<'_> {
     fn get_cache_key(&self, cs_id: &ChangesetId) -> String {
         self.caching_storage.cache_key(cs_id)
     }
@@ -185,7 +262,7 @@ impl KeyedEntityStore<ChangesetId, CachedChangesetEdges> for CacheRequest<'_> {
     async fn get_from_db(
         &self,
         keys: HashSet<ChangesetId>,
-    ) -> Result<HashMap<ChangesetId, CachedChangesetEdges>> {
+    ) -> Result<HashMap<ChangesetId, CachedPrefetchedChangesetEdges>> {
         let cs_ids: Vec<ChangesetId> = keys.iter().copied().collect();
         let entries = if self.required {
             self.caching_storage
@@ -206,9 +283,12 @@ impl KeyedEntityStore<ChangesetId, CachedChangesetEdges> for CacheRequest<'_> {
             let mut prefetched = HashMap::new();
             for (cs_id, edges) in entries {
                 if keys.contains(&cs_id) {
-                    fetched.insert(cs_id, CachedChangesetEdges::fetched(edges.into()));
+                    fetched.insert(cs_id, CachedPrefetchedChangesetEdges::fetched(edges.into()));
                 } else {
-                    prefetched.insert(cs_id, CachedChangesetEdges::prefetched(edges.into()));
+                    prefetched.insert(
+                        cs_id,
+                        CachedPrefetchedChangesetEdges::prefetched(edges.clone().into()),
+                    );
                 }
             }
             if !prefetched.is_empty() {
@@ -220,7 +300,9 @@ impl KeyedEntityStore<ChangesetId, CachedChangesetEdges> for CacheRequest<'_> {
         } else {
             Ok(entries
                 .into_iter()
-                .map(|(cs_id, edges)| (cs_id, CachedChangesetEdges::fetched(edges.into())))
+                .map(|(cs_id, edges)| {
+                    (cs_id, CachedPrefetchedChangesetEdges::fetched(edges.into()))
+                })
                 .collect())
         }
     }
@@ -325,7 +407,9 @@ impl CommitGraphStorage for CachingCommitGraphStorage {
         cs_id: ChangesetId,
     ) -> Result<Option<ChangesetEdges>> {
         let mut found = get_or_fill(&self.request(ctx, Prefetch::None), hashset![cs_id]).await?;
-        Ok(found.remove(&cs_id).map(CachedChangesetEdges::take))
+        Ok(found
+            .remove(&cs_id)
+            .map(CachedPrefetchedChangesetEdges::take))
     }
 
     async fn fetch_many_edges(
