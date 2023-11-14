@@ -11,4 +11,4 @@ dag = { version = "0.1.0", path = ".." }
 git2 = "0.14"
 nonblocking = { version = "0.1.0", path = "../../nonblocking" }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
-tracing = "0.1.35"
+tracing = "0.1.40"

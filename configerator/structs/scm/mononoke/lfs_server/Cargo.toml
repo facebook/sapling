@@ -24,7 +24,7 @@ lfs_server_config__types = { package = "lfs_server_config_types", version = "0.1
 rate_limiting_config = { version = "0.1.0", path = "../ratelimiting" }
 ref-cast = "1.0.18"
 thiserror = "1.0.43"
-tracing = "0.1.35"
+tracing = "0.1.40"
 tracing-futures = { version = "0.2.5", features = ["futures-03"] }
 
 [build-dependencies]

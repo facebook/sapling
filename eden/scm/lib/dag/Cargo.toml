@@ -26,7 +26,7 @@ renderdag = { version = "0.1.0", path = "../renderdag", optional = true }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 tempfile = { version = "3.8", optional = true }
 thiserror = "1.0.43"
-tracing = "0.1.35"
+tracing = "0.1.40"
 vlqencoding = { version = "0.1.0", path = "../vlqencoding" }
 
 [dev-dependencies]

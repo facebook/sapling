@@ -24,7 +24,7 @@ nonblocking = { version = "0.1.0", path = "../nonblocking" }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 storemodel = { version = "0.1.0", path = "../storemodel" }
 thiserror = "1.0.43"
-tracing = "0.1.35"
+tracing = "0.1.40"
 zstore = { version = "0.1.0", path = "../zstore" }
 
 [dev-dependencies]

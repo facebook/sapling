@@ -25,7 +25,7 @@ mutable_rename_thrift__types = { package = "mutable_rename_thrift_types", versio
 ref-cast = "1.0.18"
 smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }
 thiserror = "1.0.43"
-tracing = "0.1.35"
+tracing = "0.1.40"
 tracing-futures = { version = "0.2.5", features = ["futures-03"] }
 
 [build-dependencies]

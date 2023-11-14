@@ -19,5 +19,5 @@ minibytes = { version = "0.1.0", path = "../../minibytes" }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 refencode = { version = "0.1.0", path = "../../refencode" }
 storemodel = { version = "0.1.0", path = "../../storemodel" }
-tracing = "0.1.35"
+tracing = "0.1.40"
 types = { version = "0.1.0", path = "../../types" }

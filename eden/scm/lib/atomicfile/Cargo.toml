@@ -8,4 +8,4 @@ license = "MIT"
 
 [dependencies]
 tempfile = "3.8"
-tracing = "0.1.35"
+tracing = "0.1.40"

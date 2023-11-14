@@ -23,7 +23,7 @@ futures = { version = "0.3.28", features = ["async-await", "compat"] }
 ref-cast = "1.0.18"
 replication_lag_config__types = { package = "replication_lag_config_types", version = "0.1.0", path = "types" }
 thiserror = "1.0.43"
-tracing = "0.1.35"
+tracing = "0.1.40"
 tracing-futures = { version = "0.2.5", features = ["futures-03"] }
 
 [build-dependencies]

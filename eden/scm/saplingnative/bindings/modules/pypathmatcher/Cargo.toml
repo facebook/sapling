@@ -10,5 +10,5 @@ anyhow = "=1.0.72"
 cpython = { version = "0.7.1", default-features = false }
 cpython_ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
 pathmatcher = { version = "0.1.0", path = "../../../../lib/pathmatcher" }
-tracing = "0.1.35"
+tracing = "0.1.40"
 types = { version = "0.1.0", path = "../../../../lib/types" }

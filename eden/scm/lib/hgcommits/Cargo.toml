@@ -19,6 +19,6 @@ parking_lot = { version = "0.12.1", features = ["send_guard"] }
 revlogindex = { version = "0.1.0", path = "../revlogindex" }
 storemodel = { version = "0.1.0", path = "../storemodel" }
 streams = { version = "0.1.0", path = "../streams" }
-tracing = "0.1.35"
+tracing = "0.1.40"
 types = { version = "0.1.0", path = "../types" }
 zstore = { version = "0.1.0", path = "../zstore" }

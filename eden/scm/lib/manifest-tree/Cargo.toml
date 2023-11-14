@@ -25,7 +25,7 @@ rand = { version = "0.8", features = ["small_rng"], optional = true }
 sha1 = "0.10.5"
 storemodel = { version = "0.1.0", path = "../storemodel" }
 thiserror = "1.0.43"
-tracing = "0.1.35"
+tracing = "0.1.40"
 types = { version = "0.1.0", path = "../types" }
 
 [dev-dependencies]

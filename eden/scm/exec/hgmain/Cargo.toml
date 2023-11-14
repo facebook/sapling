@@ -12,7 +12,7 @@ clidispatch = { version = "0.1.0", path = "../../lib/clidispatch" }
 configparser = { package = "configloader", version = "0.1.0", path = "../../lib/config/loader" }
 hgcommands = { version = "0.1.0", path = "../../lib/hgcommands", default-features = false }
 pyblackbox = { path = "../../saplingnative/bindings/modules/pyblackbox" }
-tracing = "0.1.35"
+tracing = "0.1.40"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 dirs = { version = "2.0", optional = true }

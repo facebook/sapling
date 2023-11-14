@@ -21,7 +21,7 @@ pathmatcher = { version = "0.1.0", path = "../pathmatcher" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 storemodel = { version = "0.1.0", path = "../storemodel" }
 thiserror = "1.0.43"
-tracing = "0.1.35"
+tracing = "0.1.40"
 types = { version = "0.1.0", path = "../types" }
 xdiff = { version = "0.1.0", path = "../xdiff" }
 
