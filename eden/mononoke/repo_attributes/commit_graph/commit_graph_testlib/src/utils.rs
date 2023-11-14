@@ -13,13 +13,14 @@ use anyhow::Result;
 use commit_graph::AncestorsStreamBuilder;
 use commit_graph::CommitGraph;
 use commit_graph_types::edges::ChangesetNode;
-use commit_graph_types::storage::CommitGraphStorage;
 use context::CoreContext;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures::Future;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
+
+use crate::CommitGraphStorageTest;
 
 /// Generate a fake changeset id for graph testing purposes by using the raw
 /// bytes of the changeset name, padded with zeroes.
@@ -51,7 +52,7 @@ pub fn name_cs_node(
 pub async fn from_dag(
     ctx: &CoreContext,
     dag: &str,
-    storage: Arc<dyn CommitGraphStorage>,
+    storage: Arc<dyn CommitGraphStorageTest>,
 ) -> Result<CommitGraph> {
     let mut added: BTreeMap<String, ChangesetId> = BTreeMap::new();
     let dag = drawdag::parse(dag);
@@ -85,7 +86,7 @@ pub async fn from_dag(
 }
 
 pub async fn assert_skip_tree_parent(
-    storage: &Arc<dyn CommitGraphStorage>,
+    storage: &Arc<dyn CommitGraphStorageTest>,
     ctx: &CoreContext,
     u: &str,
     u_skip_tree_parent: &str,
@@ -103,7 +104,7 @@ pub async fn assert_skip_tree_parent(
 }
 
 pub async fn assert_skip_tree_skew_ancestor(
-    storage: &Arc<dyn CommitGraphStorage>,
+    storage: &Arc<dyn CommitGraphStorageTest>,
     ctx: &CoreContext,
     u: &str,
     u_skip_tree_skew_ancestor: &str,
@@ -285,7 +286,7 @@ where
 }
 
 pub async fn assert_p1_linear_skew_ancestor(
-    storage: &Arc<dyn CommitGraphStorage>,
+    storage: &Arc<dyn CommitGraphStorageTest>,
     ctx: &CoreContext,
     u: &str,
     u_p1_linear_skew_ancestor: Option<&str>,

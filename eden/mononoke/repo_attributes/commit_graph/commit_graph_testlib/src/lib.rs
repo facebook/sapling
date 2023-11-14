@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#![feature(trait_upcasting)]
+
 use std::collections::HashSet;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -28,6 +30,12 @@ use crate::utils::*;
 #[cfg(test)]
 pub mod tests;
 pub mod utils;
+
+pub trait CommitGraphStorageTest: CommitGraphStorage {
+    fn flush(&self) {}
+}
+
+impl CommitGraphStorageTest for InMemoryCommitGraphStorage {}
 
 #[macro_export]
 macro_rules! impl_commit_graph_tests {
@@ -66,7 +74,7 @@ macro_rules! impl_commit_graph_tests_internal {
 
 pub async fn test_storage_store_and_fetch(
     ctx: CoreContext,
-    storage: Arc<dyn CommitGraphStorage>,
+    storage: Arc<dyn CommitGraphStorageTest>,
 ) -> Result<()> {
     let graph = from_dag(
         &ctx,
@@ -78,6 +86,7 @@ pub async fn test_storage_store_and_fetch(
         storage.clone(),
     )
     .await?;
+    storage.flush();
 
     // Check the public API.
     assert!(graph.exists(&ctx, name_cs_id("A")).await?);
@@ -292,7 +301,10 @@ pub async fn test_storage_store_and_fetch(
     Ok(())
 }
 
-pub async fn test_skip_tree(ctx: CoreContext, storage: Arc<dyn CommitGraphStorage>) -> Result<()> {
+pub async fn test_skip_tree(
+    ctx: CoreContext,
+    storage: Arc<dyn CommitGraphStorageTest>,
+) -> Result<()> {
     let graph = from_dag(
         &ctx,
         r"
@@ -305,6 +317,7 @@ pub async fn test_skip_tree(ctx: CoreContext, storage: Arc<dyn CommitGraphStorag
         storage.clone(),
     )
     .await?;
+    storage.flush();
 
     assert_eq!(
         storage
@@ -345,7 +358,7 @@ pub async fn test_skip_tree(ctx: CoreContext, storage: Arc<dyn CommitGraphStorag
 
 pub async fn test_p1_linear_tree(
     ctx: CoreContext,
-    storage: Arc<dyn CommitGraphStorage>,
+    storage: Arc<dyn CommitGraphStorageTest>,
 ) -> Result<()> {
     let graph = from_dag(
         &ctx,
@@ -359,6 +372,7 @@ pub async fn test_p1_linear_tree(
         storage.clone(),
     )
     .await?;
+    storage.flush();
 
     assert_p1_linear_skew_ancestor(&storage, &ctx, "A", None).await?;
     assert_p1_linear_skew_ancestor(&storage, &ctx, "B", Some("A")).await?;
@@ -390,7 +404,7 @@ pub async fn test_p1_linear_tree(
 
 pub async fn test_ancestors_difference(
     ctx: CoreContext,
-    storage: Arc<dyn CommitGraphStorage>,
+    storage: Arc<dyn CommitGraphStorageTest>,
 ) -> Result<()> {
     let graph = from_dag(
         &ctx,
@@ -404,6 +418,7 @@ pub async fn test_ancestors_difference(
         storage.clone(),
     )
     .await?;
+    storage.flush();
 
     assert_ancestors_difference(
         &graph,
@@ -514,7 +529,7 @@ pub async fn test_ancestors_difference(
 
 pub async fn test_find_by_prefix(
     ctx: CoreContext,
-    storage: Arc<dyn CommitGraphStorage>,
+    storage: Arc<dyn CommitGraphStorageTest>,
 ) -> Result<()> {
     let graph = from_dag(
         &ctx,
@@ -529,6 +544,7 @@ pub async fn test_find_by_prefix(
         storage.clone(),
     )
     .await?;
+    storage.flush();
 
     assert_eq!(
         graph
@@ -579,7 +595,7 @@ pub async fn test_find_by_prefix(
 
 pub async fn test_add_recursive(
     ctx: CoreContext,
-    storage: Arc<dyn CommitGraphStorage>,
+    storage: Arc<dyn CommitGraphStorageTest>,
 ) -> Result<()> {
     let reference_storage = Arc::new(InMemoryCommitGraphStorage::new(RepositoryId::new(1)));
 
@@ -596,7 +612,7 @@ pub async fn test_add_recursive(
         .await?,
     );
 
-    let graph = CommitGraph::new(storage);
+    let graph = CommitGraph::new(storage.clone());
     assert_eq!(
         graph
             .add_recursive(
@@ -617,6 +633,7 @@ pub async fn test_add_recursive(
             .await?,
         1
     );
+    storage.flush();
 
     assert!(graph.exists(&ctx, name_cs_id("A")).await?);
 
@@ -654,7 +671,7 @@ pub async fn test_add_recursive(
 
 pub async fn test_add_recursive_many_changesets(
     ctx: CoreContext,
-    storage: Arc<dyn CommitGraphStorage>,
+    storage: Arc<dyn CommitGraphStorageTest>,
 ) -> Result<()> {
     let reference_storage = Arc::new(InMemoryCommitGraphStorage::new(RepositoryId::new(1)));
 
@@ -671,7 +688,7 @@ pub async fn test_add_recursive_many_changesets(
         .await?,
     );
 
-    let graph = CommitGraph::new(storage);
+    let graph = CommitGraph::new(storage.clone());
     assert_eq!(
         graph
             .add_recursive(
@@ -687,6 +704,7 @@ pub async fn test_add_recursive_many_changesets(
             .await?,
         13
     );
+    storage.flush();
 
     assert_eq!(
         graph
@@ -728,7 +746,7 @@ pub async fn test_add_recursive_many_changesets(
 
 pub async fn test_ancestors_frontier_with(
     ctx: CoreContext,
-    storage: Arc<dyn CommitGraphStorage>,
+    storage: Arc<dyn CommitGraphStorageTest>,
 ) -> Result<()> {
     let graph = from_dag(
         &ctx,
@@ -742,6 +760,7 @@ pub async fn test_ancestors_frontier_with(
         storage.clone(),
     )
     .await?;
+    storage.flush();
 
     let set1 = ["A", "B", "C", "D", "E", "F", "G", "H", "I"]
         .into_iter()
@@ -830,7 +849,7 @@ pub async fn test_ancestors_frontier_with(
 
 pub async fn test_range_stream(
     ctx: CoreContext,
-    storage: Arc<dyn CommitGraphStorage>,
+    storage: Arc<dyn CommitGraphStorageTest>,
 ) -> Result<()> {
     let graph = from_dag(
         &ctx,
@@ -844,6 +863,7 @@ pub async fn test_range_stream(
         storage.clone(),
     )
     .await?;
+    storage.flush();
 
     assert_range_stream(
         &graph,
@@ -862,7 +882,7 @@ pub async fn test_range_stream(
 
 pub async fn test_common_base(
     ctx: CoreContext,
-    storage: Arc<dyn CommitGraphStorage>,
+    storage: Arc<dyn CommitGraphStorageTest>,
 ) -> Result<()> {
     let graph = from_dag(
         &ctx,
@@ -878,6 +898,7 @@ pub async fn test_common_base(
         storage.clone(),
     )
     .await?;
+    storage.flush();
 
     assert_common_base(&graph, &ctx, "J", "J", vec!["J"]).await?;
     assert_common_base(&graph, &ctx, "K", "J", vec!["J"]).await?;
@@ -895,7 +916,7 @@ pub async fn test_common_base(
 
 pub async fn test_slice_ancestors(
     ctx: CoreContext,
-    storage: Arc<dyn CommitGraphStorage>,
+    storage: Arc<dyn CommitGraphStorageTest>,
 ) -> Result<()> {
     let graph = from_dag(
         &ctx,
@@ -909,6 +930,7 @@ pub async fn test_slice_ancestors(
         storage.clone(),
     )
     .await?;
+    storage.flush();
 
     assert_slice_ancestors(
         &graph,
@@ -965,7 +987,10 @@ pub async fn test_slice_ancestors(
     Ok(())
 }
 
-pub async fn test_children(ctx: CoreContext, storage: Arc<dyn CommitGraphStorage>) -> Result<()> {
+pub async fn test_children(
+    ctx: CoreContext,
+    storage: Arc<dyn CommitGraphStorageTest>,
+) -> Result<()> {
     let graph = from_dag(
         &ctx,
         r"
@@ -975,9 +1000,10 @@ pub async fn test_children(ctx: CoreContext, storage: Arc<dyn CommitGraphStorage
              \     /  /
               I-J-K--/
         ",
-        storage,
+        storage.clone(),
     )
     .await?;
+    storage.flush();
 
     assert_children(&graph, &ctx, "A", vec!["B"]).await?;
     assert_children(&graph, &ctx, "B", vec!["C", "F"]).await?;
@@ -999,7 +1025,7 @@ pub async fn test_children(ctx: CoreContext, storage: Arc<dyn CommitGraphStorage
 
 pub async fn test_ancestors_difference_segments_1(
     ctx: CoreContext,
-    storage: Arc<dyn CommitGraphStorage>,
+    storage: Arc<dyn CommitGraphStorageTest>,
 ) -> Result<()> {
     let graph = from_dag(
         &ctx,
@@ -1012,9 +1038,10 @@ pub async fn test_ancestors_difference_segments_1(
                  \
                   \---------P
         ",
-        storage,
+        storage.clone(),
     )
     .await?;
+    storage.flush();
 
     assert_ancestors_difference_segments(&ctx, &graph, vec!["N"], vec![], 3).await?;
     assert_ancestors_difference_segments(&ctx, &graph, vec!["N"], vec!["D"], 3).await?;
@@ -1032,7 +1059,7 @@ pub async fn test_ancestors_difference_segments_1(
 
 pub async fn test_ancestors_difference_segments_2(
     ctx: CoreContext,
-    storage: Arc<dyn CommitGraphStorage>,
+    storage: Arc<dyn CommitGraphStorageTest>,
 ) -> Result<()> {
     let graph = from_dag(
         &ctx,
@@ -1045,9 +1072,10 @@ pub async fn test_ancestors_difference_segments_2(
              \     \
               \-P   \--I--N----O
         ",
-        storage,
+        storage.clone(),
     )
     .await?;
+    storage.flush();
 
     assert_ancestors_difference_segments(&ctx, &graph, vec!["K"], vec![], 1).await?;
     assert_ancestors_difference_segments(&ctx, &graph, vec!["L"], vec![], 1).await?;

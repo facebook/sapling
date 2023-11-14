@@ -22,11 +22,14 @@ use mononoke_types::RepositoryId;
 use rendezvous::RendezVousOptions;
 use sql_construct::SqlConstruct;
 
+use crate::SqlCommitGraphStorage;
 use crate::SqlCommitGraphStorageBuilder;
+
+impl CommitGraphStorageTest for SqlCommitGraphStorage {}
 
 async fn run_test<Fut>(
     fb: FacebookInit,
-    test_function: impl FnOnce(CoreContext, Arc<dyn CommitGraphStorage>) -> Fut,
+    test_function: impl FnOnce(CoreContext, Arc<dyn CommitGraphStorageTest>) -> Fut,
 ) -> Result<()>
 where
     Fut: Future<Output = Result<()>>,

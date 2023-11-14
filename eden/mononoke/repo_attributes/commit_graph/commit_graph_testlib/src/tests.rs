@@ -16,7 +16,7 @@ use super::*;
 
 async fn run_test<Fut>(
     fb: FacebookInit,
-    test_function: impl FnOnce(CoreContext, Arc<dyn CommitGraphStorage>) -> Fut,
+    test_function: impl FnOnce(CoreContext, Arc<dyn CommitGraphStorageTest>) -> Fut,
 ) -> Result<()>
 where
     Fut: Future<Output = Result<()>>,
