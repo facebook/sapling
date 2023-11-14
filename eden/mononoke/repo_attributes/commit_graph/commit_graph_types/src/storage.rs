@@ -126,6 +126,17 @@ impl Prefetch {
             Prefetch::Include(target) => Some(target),
         }
     }
+
+    /// Target edge type that is being prefetched, if prefetching should included.
+    ///
+    /// If prefetching is merely hinted, this won't return the target edge
+    /// type, as prefetching should not be performed.
+    pub fn target_edge(self) -> Option<PrefetchEdge> {
+        match self {
+            Prefetch::None | Prefetch::Hint(..) => None,
+            Prefetch::Include(target) => Some(target.edge),
+        }
+    }
 }
 
 /// Wrapper for `ChangesetEdges` indicating why it was fetched.

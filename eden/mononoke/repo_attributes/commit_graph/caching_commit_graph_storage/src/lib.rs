@@ -36,6 +36,7 @@ use commit_graph_types::edges::ChangesetEdges;
 use commit_graph_types::storage::CommitGraphStorage;
 use commit_graph_types::storage::FetchedChangesetEdges;
 use commit_graph_types::storage::Prefetch;
+use commit_graph_types::storage::PrefetchEdge;
 use context::CoreContext;
 use fbthrift::compact_protocol;
 use maplit::hashset;
@@ -69,7 +70,9 @@ pub struct CachingCommitGraphStorage {
     storage: Arc<dyn CommitGraphStorage>,
     cachelib: CachelibHandler<CachedPrefetchedChangesetEdges>,
     memcache: MemcacheHandler,
-    keygen: KeyGen,
+    keygen_single: KeyGen,
+    keygen_prefetch_p1_linear: KeyGen,
+    keygen_prefetch_skip_tree: KeyGen,
     repo_id: RepositoryId,
 }
 
@@ -223,7 +226,13 @@ impl EntityStore<CachedPrefetchedChangesetEdges> for CacheRequest<'_> {
     }
 
     fn keygen(&self) -> &KeyGen {
-        &self.caching_storage.keygen
+        match self.prefetch.target_edge() {
+            Some(PrefetchEdge::FirstParent) => &self.caching_storage.keygen_prefetch_p1_linear,
+            Some(PrefetchEdge::SkipTreeSkewAncestor) => {
+                &self.caching_storage.keygen_prefetch_skip_tree
+            }
+            None => &self.caching_storage.keygen_single,
+        }
     }
 
     fn memcache(&self) -> &MemcacheHandler {
@@ -344,9 +353,7 @@ impl KeyedEntityStore<ChangesetId, CachedPrefetchedChangesetEdges> for CacheRequ
 }
 
 impl CachingCommitGraphStorage {
-    fn keygen() -> KeyGen {
-        let key_prefix = "scm.mononoke.commitgraph";
-
+    fn keygen(key_prefix: &'static str) -> KeyGen {
         KeyGen::new(
             key_prefix,
             thrift::MC_CODEVER as u32,
@@ -367,7 +374,9 @@ impl CachingCommitGraphStorage {
             storage,
             cachelib: cache_handler_factory.cachelib(),
             memcache: cache_handler_factory.memcache(),
-            keygen: Self::keygen(),
+            keygen_single: Self::keygen("scm.mononoke.commitgraph"),
+            keygen_prefetch_p1_linear: Self::keygen("scm.mononoke.commitgraph.p1"),
+            keygen_prefetch_skip_tree: Self::keygen("scm.mononoke.commitgraph.sk"),
         }
     }
 
