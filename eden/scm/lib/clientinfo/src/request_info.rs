@@ -133,6 +133,8 @@ pub enum ClientEntryPoint {
     MirrorHgCommits,
     StreamingClone,
     ScmDaemon,
+    BookmarkService,
+    BookmarkServiceClientCli,
 }
 
 impl ClientRequestInfo {
@@ -208,6 +210,8 @@ impl Display for ClientEntryPoint {
             ClientEntryPoint::MirrorHgCommits => "mirror_hg_commits",
             ClientEntryPoint::StreamingClone => "streaming_clone",
             ClientEntryPoint::ScmDaemon => "scm_daemon",
+            ClientEntryPoint::BookmarkService => "bookmark_service",
+            ClientEntryPoint::BookmarkServiceClientCli => "bookmark_service_client_cli",
         };
         write!(f, "{}", out)
     }
@@ -242,6 +246,8 @@ impl TryFrom<&str> for ClientEntryPoint {
             "mirror_hg_commits" => Ok(ClientEntryPoint::MirrorHgCommits),
             "streaming_clone" => Ok(ClientEntryPoint::StreamingClone),
             "scm_daemon" => Ok(ClientEntryPoint::ScmDaemon),
+            "bookmark_service" => Ok(ClientEntryPoint::BookmarkService),
+            "bookmark_service_client_clie" => Ok(ClientEntryPoint::BookmarkServiceClientCli),
             _ => Err(anyhow!("Invalid client entry point")),
         }
     }

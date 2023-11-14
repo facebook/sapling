@@ -79,6 +79,17 @@ dott_test(
 )
 
 dott_test(
+    name = "test-bookmark-service",
+    disable_all_network_access_target = False,
+    dott_files = glob(["test-bookmark-service*.t"]),
+    deps = [
+        "//eden/mononoke/facebook/bookmark_service:bookmark_service_client_cli",
+        "//eden/mononoke/facebook/bookmark_service:bookmark_service_server",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)
+
+dott_test(
     name = "gitbundle",
     dott_files =
         glob([

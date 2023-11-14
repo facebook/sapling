@@ -16,6 +16,8 @@ MONONOKE_TARGETS_TO_ENV = {
     "//eden/mononoke/commit_rewriting/commit_validator:commit_validator": "COMMIT_VALIDATOR",
     "//eden/mononoke/commit_rewriting/megarepo:megarepotool": "MEGAREPO_TOOL",
     "//eden/mononoke/commit_rewriting/mononoke_x_repo_sync_job:mononoke_x_repo_sync_job": "MONONOKE_X_REPO_SYNC",
+    "//eden/mononoke/facebook/bookmark_service:bookmark_service_client_cli": "MONONOKE_BOOKMARK_SERVICE_CLIENT",
+    "//eden/mononoke/facebook/bookmark_service:bookmark_service_server": "MONONOKE_BOOKMARK_SERVICE_SERVER",
     "//eden/mononoke/facebook/derived_data_service:2ds_client": "DERIVED_DATA_CLIENT",
     "//eden/mononoke/facebook/derived_data_service:derivation_worker": "DERIVED_DATA_WORKER",
     "//eden/mononoke/facebook/derived_data_service:derived_data_service": "DERIVED_DATA_SERVICE",
