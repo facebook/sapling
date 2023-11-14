@@ -375,23 +375,15 @@ impl CheckoutConfig {
     }
 
     /// Add a profile to the config (read the config file and write it back
-    /// with profile added). Returns true if we should fetch, false otherwise.
-    pub fn activate_profile(
-        &mut self,
-        profile: &str,
-        config_dir: PathBuf,
-        force_fetch: &bool,
-    ) -> Result<bool> {
+    /// with profile added).
+    pub fn activate_profile(&mut self, profile: &str, config_dir: PathBuf) -> Result<()> {
         if let Some(profiles) = &mut self.profiles {
             if profiles.active.iter().any(|x| x == profile) {
-                // The profile is already activated so we don't need to update the profile list,
-                // but we want to return a success so we continue with the fetch
-                if *force_fetch {
-                    return Ok(true);
-                }
+                // The profile is already activated so we don't need to update the profile list
                 eprintln!("{} is already an active prefetch profile", profile);
-                return Ok(false);
+                return Ok(());
             }
+
             profiles.push(profile);
             self.save_config(config_dir.clone()).with_context(|| {
                 anyhow!(
@@ -399,8 +391,13 @@ impl CheckoutConfig {
                     &config_dir.display()
                 )
             })?;
+            Ok(())
+        } else {
+            Err(EdenFsError::Other(anyhow!(
+                "failed to activate prefetch profile '{}'; could not find active profile list",
+                profile
+            )))
         }
-        Ok(true)
     }
 
     /// Switch on predictive prefetch profiles (read the config file and write

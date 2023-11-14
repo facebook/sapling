@@ -36,7 +36,8 @@ pub struct ActivationOptions {
     #[clap(
         short,
         long,
-        help = "Print extra info including warnings and the names of the matching files to fetch."
+        help = "Print extra info and warnings. This includes the names of \
+    matching files for fetch commands."
     )]
     verbose: bool,
     #[clap(
@@ -46,15 +47,12 @@ pub struct ActivationOptions {
         help = "The checkout for which you want to activate this profile"
     )]
     checkout: PathBuf,
-    #[clap(
-        short,
-        long,
-        help = "DEPRECATED: Do not prefetch profiles only find all the files that match \
-    them. This will still list the names of matching files when the \
-    verbose flag is also used, and will activate the profile when running \
-    `activate`."
-    )]
-    skip_prefetch: bool,
+}
+
+#[derive(Parser, Debug)]
+pub struct FetchOptions {
+    #[clap(flatten)]
+    options: ActivationOptions,
     #[clap(
         short,
         long,
@@ -71,12 +69,6 @@ pub struct ActivationOptions {
     all of the files are prefetched."
     )]
     foreground: bool,
-}
-
-#[derive(Parser, Debug)]
-pub struct FetchOptions {
-    #[clap(flatten)]
-    options: ActivationOptions,
     #[clap(
         long,
         multiple_values = true,
@@ -100,8 +92,12 @@ pub struct FetchOptions {
 
 #[derive(Parser, Debug)]
 #[clap(name = "prefetch-profile")]
-#[clap(about = "Create, manage, and use Prefetch Profiles. This command is \
-    primarily for use in automation.")]
+#[clap(
+    about = "Create, manage, and use Prefetch Profiles. Prefetch profiles \
+    describe lists of files that Eden will preemptively fetch when directed \
+    to do so. Fetching files in advance helps warm caches and leads to faster \
+    file operations. This command is primarily for use in automation."
+)]
 pub enum PrefetchCmd {
     #[clap(about = "Stop recording fetched file paths and save previously \
         collected fetched file paths in the output prefetch profile")]
@@ -116,7 +112,7 @@ pub enum PrefetchCmd {
     },
     #[clap(about = "Start recording fetched file paths.")]
     Record,
-    #[clap(about = "List all of the currently activated prefetch profiles for a checkout.")]
+    #[clap(about = "List all of the activated prefetch profiles for a checkout.")]
     List {
         #[clap(
             long,
@@ -128,19 +124,13 @@ pub enum PrefetchCmd {
         #[clap(long, help = "Output in json rather than human readable text")]
         json: bool,
     },
-    #[clap(about = "Tell EdenFS to smart prefetch the files specified by the \
-        prefetch profile. (EdenFS will prefetch the files in this profile \
-        immediately, when checking out a new commit, and for some pulls).")]
+    #[clap(about = "Adds an entry to the list of profiles to be fetched \
+        whenever the `prefetch-profile fetch` subcommand is invoked.")]
     Activate {
         #[clap(flatten)]
         options: ActivationOptions,
         #[clap(help = "Profile to activate.")]
         profile_name: String,
-        #[clap(
-            long,
-            help = "Fetch the profile even if the profile has already been activated"
-        )]
-        force_fetch: bool,
     },
     #[clap(hide = true)]
     ActivatePredictive {
@@ -154,7 +144,8 @@ pub enum PrefetchCmd {
         num_dirs: u32,
     },
     #[clap(
-        about = "Tell EdenFS to STOP smart prefetching the files specified by the prefetch profile."
+        about = "Tell EdenFS to STOP smart prefetching the files specified by \
+        the prefetch profile."
     )]
     Deactivate {
         #[clap(flatten)]
@@ -167,10 +158,8 @@ pub enum PrefetchCmd {
         #[clap(flatten)]
         options: ActivationOptions,
     },
-    #[clap(
-        about = "Prefetch all the active prefetch profiles or specified prefetch profiles. \
-        This is intended for use after checkout and pull."
-    )]
+    #[clap(about = "Prefetch all the files for the specified prefetch profiles. \
+        This is intended for use after checkout and pull.")]
     Fetch {
         #[clap(flatten)]
         options: FetchOptions,
@@ -283,12 +272,7 @@ impl PrefetchCmd {
         }
     }
 
-    async fn activate(
-        &self,
-        options: &ActivationOptions,
-        profile_name: &str,
-        force_fetch: &bool,
-    ) -> Result<ExitCode> {
+    async fn activate(&self, options: &ActivationOptions, profile_name: &str) -> Result<ExitCode> {
         let instance = EdenFsInstance::global();
         let client_name = instance.client_name(&options.checkout).with_context(|| {
             anyhow!(
@@ -297,26 +281,18 @@ impl PrefetchCmd {
             )
         })?;
 
-        let directories_only = options.directories_only || options.skip_prefetch;
-
         #[cfg(fbcode_build)]
-        let mut sample = edenfs_telemetry::prefetch_profile::activate_event(
-            profile_name,
-            client_name.as_str(),
-            directories_only,
-        );
+        let mut sample =
+            edenfs_telemetry::prefetch_profile::activate_event(profile_name, client_name.as_str());
 
         let config_dir = instance.config_directory(&client_name);
         let checkout_config = CheckoutConfig::parse_config(config_dir.clone());
         let result = checkout_config
-            .and_then(|mut config| config.activate_profile(profile_name, config_dir, force_fetch));
+            .and_then(|mut config| config.activate_profile(profile_name, config_dir));
         match result {
-            Ok(res) => {
+            Ok(_) => {
                 #[cfg(fbcode_build)]
                 send(EDEN_EVENTS_SCUBA.to_string(), sample);
-                if !res {
-                    return Ok(0);
-                }
             }
             Err(e) => {
                 #[cfg(fbcode_build)]
@@ -327,36 +303,6 @@ impl PrefetchCmd {
                 return Err(anyhow::Error::new(e));
             }
         };
-
-        let checkout = find_checkout(instance, &options.checkout).with_context(|| {
-            anyhow!(
-                "Failed to find checkout with path {}",
-                &options.checkout.display()
-            )
-        })?;
-        let result_globs = checkout
-            .prefetch_profiles(
-                instance,
-                &vec![profile_name.to_string()],
-                !options.foreground,
-                directories_only,
-                !options.verbose,
-                None,
-                false,
-                false,
-                0,
-            )
-            .await?;
-        // there will only every be one commit used to query globFiles here,
-        // so no need to list which commit a file is fetched for, it will
-        // be the current commit.
-        if options.verbose {
-            for result in result_globs {
-                for name in result.matchingFiles {
-                    println!("{}", String::from_utf8_lossy(&name));
-                }
-            }
-        }
 
         Ok(0)
     }
@@ -374,12 +320,9 @@ impl PrefetchCmd {
             )
         })?;
 
-        let directories_only = options.directories_only || options.skip_prefetch;
-
         #[cfg(fbcode_build)]
         let mut sample = edenfs_telemetry::prefetch_profile::activate_predictive_event(
             client_name.as_str(),
-            directories_only,
             num_dirs,
         );
 
@@ -398,36 +341,6 @@ impl PrefetchCmd {
         }
         #[cfg(fbcode_build)]
         send(EDEN_EVENTS_SCUBA.to_string(), sample);
-
-        let checkout = find_checkout(instance, &options.checkout).with_context(|| {
-            anyhow!(
-                "Failed to find checkout with path {}",
-                &options.checkout.display()
-            )
-        })?;
-        let result_globs = checkout
-            .prefetch_profiles(
-                instance,
-                &vec![],
-                !options.foreground,
-                directories_only,
-                !options.verbose,
-                None,
-                false,
-                true,
-                num_dirs,
-            )
-            .await?;
-        // there will only every be one commit used to query globFiles here,
-        // so no need to list which commit a file is fetched for, it will
-        // be the current commit.
-        if options.verbose {
-            for result in result_globs {
-                for name in result.matchingFiles {
-                    println!("{}", String::from_utf8_lossy(&name));
-                }
-            }
-        }
 
         Ok(0)
     }
@@ -536,7 +449,7 @@ impl PrefetchCmd {
             return Ok(0);
         }
 
-        let directories_only = options.options.directories_only || options.options.skip_prefetch;
+        let directories_only = options.directories_only;
 
         let checkout = find_checkout(instance, checkout_path).with_context(|| {
             anyhow!(
@@ -548,7 +461,7 @@ impl PrefetchCmd {
             .prefetch_profiles(
                 instance,
                 profiles_to_prefetch,
-                !options.options.foreground,
+                !options.foreground,
                 directories_only,
                 !options.options.verbose,
                 Some(&options.commits),
@@ -614,7 +527,7 @@ impl PrefetchCmd {
             0
         };
 
-        let directories_only = options.options.directories_only || options.options.skip_prefetch;
+        let directories_only = options.directories_only;
 
         let checkout = find_checkout(instance, checkout_path).with_context(|| {
             anyhow!(
@@ -626,7 +539,7 @@ impl PrefetchCmd {
             .prefetch_profiles(
                 instance,
                 &vec![],
-                !options.options.foreground,
+                !options.foreground,
                 directories_only,
                 !options.options.verbose,
                 Some(&options.commits),
@@ -661,8 +574,7 @@ impl Subcommand for PrefetchCmd {
             Self::Activate {
                 options,
                 profile_name,
-                force_fetch,
-            } => self.activate(options, profile_name, force_fetch).await,
+            } => self.activate(options, profile_name).await,
             Self::ActivatePredictive { options, num_dirs } => {
                 self.activate_predictive(options, *num_dirs).await
             }
