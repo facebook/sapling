@@ -157,17 +157,11 @@ impl RepoLocker {
         }
     }
 
-    pub fn lock_working_copy(
-        &self,
-        wc_dot_hg: PathBuf,
-    ) -> Result<RepoLockHandle, LockError> {
+    pub fn lock_working_copy(&self, wc_dot_hg: PathBuf) -> Result<RepoLockHandle, LockError> {
         self.lock_working_copy_maybe_wait(wc_dot_hg, true)
     }
 
-    pub fn try_lock_working_copy(
-        &self,
-        wc_dot_hg: PathBuf,
-    ) -> Result<RepoLockHandle, LockError> {
+    pub fn try_lock_working_copy(&self, wc_dot_hg: PathBuf) -> Result<RepoLockHandle, LockError> {
         self.lock_working_copy_maybe_wait(wc_dot_hg, false)
     }
 
@@ -219,11 +213,7 @@ impl RepoLockerInner {
         Ok(())
     }
 
-    pub fn lock_working_copy(
-        &mut self,
-        wc_dot_hg: PathBuf,
-        wait: bool,
-    ) -> Result<(), LockError> {
+    pub fn lock_working_copy(&mut self, wc_dot_hg: PathBuf, wait: bool) -> Result<(), LockError> {
         if let Some(wc_lock) = self.wc_locks.get_mut(&wc_dot_hg) {
             wc_lock.inc_ref_count();
         } else {
