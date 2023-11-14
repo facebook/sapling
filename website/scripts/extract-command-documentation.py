@@ -89,7 +89,7 @@ class Command:
 
 
 def main():
-    commands_table = e.commands.table  # noqa: F821
+    commands_table = sapling.commands.table  # noqa: F821
     commands_to_generate: List[str] = json.loads(sys.argv[1])
     commands_json = {}
 
