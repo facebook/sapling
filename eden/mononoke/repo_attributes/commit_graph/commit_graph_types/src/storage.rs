@@ -128,9 +128,31 @@ impl Prefetch {
     }
 }
 
+/// Wrapper for `ChangesetEdges` indicating why it was fetched.
+///
+/// This is used to populate the memcache cache entries for prefetches.  In
+/// the memcache cache, we store prefetched edges alongside the changeset that
+/// they were fetched for, so that memcache hits also benefit from caching the
+/// prefetch.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum FetchedChangesetEdges {
+    /// These edges were fetched directly.
+    ///
+    /// When cached, they will be stored in cachelib and memcache by the key
+    /// of the target changeset.
     Fetched { edges: ChangesetEdges },
+    /// These edges were prefetched.
+    ///
+    /// When cached, they will be stored in cachelib directly, but in memcache
+    /// they will be stored alongside the edges for the target they were
+    /// originally prefetched for.
+    Prefetched {
+        edges: ChangesetEdges,
+
+        /// The changeset these edges were prefetched for.  These edges will
+        /// be stored alongside the edges for this changeset in memcache.
+        cs_id: ChangesetId,
+    },
 }
 
 impl Deref for FetchedChangesetEdges {
@@ -138,7 +160,7 @@ impl Deref for FetchedChangesetEdges {
 
     fn deref(&self) -> &Self::Target {
         match self {
-            Self::Fetched { edges } => edges,
+            Self::Fetched { edges } | Self::Prefetched { edges, .. } => edges,
         }
     }
 }
@@ -146,7 +168,7 @@ impl Deref for FetchedChangesetEdges {
 impl DerefMut for FetchedChangesetEdges {
     fn deref_mut(&mut self) -> &mut Self::Target {
         match self {
-            Self::Fetched { edges } => edges,
+            Self::Fetched { edges } | Self::Prefetched { edges, .. } => edges,
         }
     }
 }
@@ -160,12 +182,20 @@ impl From<ChangesetEdges> for FetchedChangesetEdges {
 impl From<FetchedChangesetEdges> for ChangesetEdges {
     fn from(fetched: FetchedChangesetEdges) -> Self {
         match fetched {
-            FetchedChangesetEdges::Fetched { edges } => edges,
+            FetchedChangesetEdges::Fetched { edges }
+            | FetchedChangesetEdges::Prefetched { edges, .. } => edges,
         }
     }
 }
 
 impl FetchedChangesetEdges {
+    pub fn new(prefetch_target_cs_id: Option<ChangesetId>, edges: ChangesetEdges) -> Self {
+        match prefetch_target_cs_id {
+            Some(cs_id) if cs_id != edges.node.cs_id => Self::Prefetched { cs_id, edges },
+            _ => Self::Fetched { edges },
+        }
+    }
+
     pub fn edges(self) -> ChangesetEdges {
         ChangesetEdges::from(self)
     }

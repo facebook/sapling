@@ -232,6 +232,7 @@ mononoke_queries! {
 
     read SelectManyChangesets(repo_id: RepositoryId, >list cs_ids: ChangesetId) -> (
         ChangesetId, // cs_id
+        Option<ChangesetId>, // origin_cs_id
         Option<u64>, // gen
         Option<u64>, // skip_tree_depth
         Option<u64>, // p1_linear_depth
@@ -261,6 +262,7 @@ mononoke_queries! {
         "
         SELECT
             cs0.cs_id AS cs_id,
+            NULL AS origin_cs_id,
             NULL AS gen,
             NULL AS skip_tree_depth,
             NULL AS p1_linear_depth,
@@ -295,6 +297,7 @@ mononoke_queries! {
 
         SELECT
             cs0.cs_id AS cs_id,
+            NULL AS origin_cs_id,
             cs0.gen AS gen,
             cs0.skip_tree_depth AS skip_tree_depth,
             cs0.p1_linear_depth AS p1_linear_depth,
@@ -334,6 +337,7 @@ mononoke_queries! {
 
     read SelectManyChangesetsWithFirstParentPrefetch(repo_id: RepositoryId, step_limit: u64, prefetch_gen: u64, >list cs_ids: ChangesetId) -> (
         ChangesetId, // cs_id
+        Option<ChangesetId>, // origin_cs_id
         Option<u64>, // gen
         Option<u64>, // skip_tree_depth
         Option<u64>, // p1_linear_depth
@@ -363,12 +367,12 @@ mononoke_queries! {
         "
         WITH RECURSIVE csp AS (
             SELECT
-                cs.id, 1 AS step, cs.p1_parent AS next
+                cs.id, cs.cs_id AS origin_cs_id, 1 AS step, cs.p1_parent AS next
             FROM commit_graph_edges cs
             WHERE cs.repo_id = {repo_id} AND cs.cs_id IN {cs_ids}
             UNION ALL
             SELECT
-                cs.id, csp.step + 1, cs.p1_parent AS next
+                cs.id, csp.origin_cs_id AS origin_cs_id, csp.step + 1, cs.p1_parent AS next
             FROM csp
             INNER JOIN commit_graph_edges cs ON cs.id = csp.next
             WHERE csp.step < {step_limit} AND cs.gen >= {prefetch_gen}
@@ -376,6 +380,7 @@ mononoke_queries! {
 
         SELECT
             cs0.cs_id AS cs_id,
+            csp.origin_cs_id AS origin_cs_id,
             NULL AS gen,
             NULL AS skip_tree_depth,
             NULL AS p1_linear_depth,
@@ -411,6 +416,7 @@ mononoke_queries! {
 
         SELECT
             cs0.cs_id AS cs_id,
+            csp.origin_cs_id AS origin_cs_id,
             cs0.gen AS gen,
             cs0.skip_tree_depth AS skip_tree_depth,
             cs0.p1_linear_depth AS p1_linear_depth,
@@ -449,6 +455,7 @@ mononoke_queries! {
 
     read SelectManyChangesetsWithSkipTreeSkewAncestorPrefetch(repo_id: RepositoryId, step_limit: u64, prefetch_gen: u64, >list cs_ids: ChangesetId) -> (
         ChangesetId, // cs_id
+        Option<ChangesetId>, // origin_cs_id
         Option<u64>, // gen
         Option<u64>, // skip_tree_depth
         Option<u64>, // p1_linear_depth
@@ -478,12 +485,12 @@ mononoke_queries! {
         "
         WITH RECURSIVE csp AS (
             SELECT
-                cs.id, 1 AS step, COALESCE(cs.skip_tree_skew_ancestor, cs.p1_parent) AS next
+                cs.id, cs.cs_id as origin_cs_id, 1 AS step, COALESCE(cs.skip_tree_skew_ancestor, cs.p1_parent) AS next
             FROM commit_graph_edges cs
             WHERE cs.repo_id = {repo_id} AND cs.cs_id IN {cs_ids}
             UNION ALL
             SELECT
-                cs.id, csp.step + 1, COALESCE(cs.skip_tree_skew_ancestor, cs.p1_parent) AS next
+                cs.id, csp.origin_cs_id, csp.step + 1, COALESCE(cs.skip_tree_skew_ancestor, cs.p1_parent) AS next
             FROM csp
             INNER JOIN commit_graph_edges cs ON cs.id = csp.next
             WHERE csp.step < {step_limit} AND cs.gen >= {prefetch_gen}
@@ -491,6 +498,7 @@ mononoke_queries! {
 
         SELECT
             cs0.cs_id AS cs_id,
+            csp.origin_cs_id AS origin_cs_id,
             NULL AS gen,
             NULL AS skip_tree_depth,
             NULL AS p1_linear_depth,
@@ -526,6 +534,7 @@ mononoke_queries! {
 
         SELECT
             cs0.cs_id AS cs_id,
+            csp.origin_cs_id AS origin_cs_id,
             cs0.gen AS gen,
             cs0.skip_tree_depth AS skip_tree_depth,
             cs0.p1_linear_depth AS p1_linear_depth,
@@ -565,6 +574,7 @@ mononoke_queries! {
     // The only difference between mysql and sqlite is the FORCE INDEX
     read SelectManyChangesetsInIdRange(repo_id: RepositoryId, start_id: u64, end_id: u64, limit: u64) -> (
         ChangesetId, // cs_id
+        Option<ChangesetId>, // origin_cs_id
         Option<u64>, // gen
         Option<u64>, // skip_tree_depth
         Option<u64>, // p1_linear_depth
@@ -601,6 +611,7 @@ mononoke_queries! {
 
         SELECT
             cs0.cs_id AS cs_id,
+            NULL AS origin_cs_id,
             NULL AS gen,
             NULL AS skip_tree_depth,
             NULL AS p1_linear_depth,
@@ -636,6 +647,7 @@ mononoke_queries! {
 
         SELECT
             cs0.cs_id AS cs_id,
+            NULL AS origin_cs_id,
             cs0.gen AS gen,
             cs0.skip_tree_depth AS skip_tree_depth,
             cs0.p1_linear_depth AS p1_linear_depth,
@@ -679,6 +691,7 @@ mononoke_queries! {
 
         SELECT
             cs0.cs_id AS cs_id,
+            NULL AS origin_cs_id,
             NULL AS gen,
             NULL AS skip_tree_depth,
             NULL AS p1_linear_depth,
@@ -714,6 +727,7 @@ mononoke_queries! {
 
         SELECT
             cs0.cs_id AS cs_id,
+            NULL AS origin_cs_id,
             cs0.gen AS gen,
             cs0.skip_tree_depth AS skip_tree_depth,
             cs0.p1_linear_depth AS p1_linear_depth,
@@ -833,6 +847,7 @@ impl SqlCommitGraphStorage {
     fn collect_changeset_edges(
         fetched_edges: &[(
             ChangesetId,         // cs_id
+            Option<ChangesetId>, // origin_cs_id
             Option<u64>,         // gen
             Option<u64>,         // skip_tree_depth
             Option<u64>,         // p1_linear_depth
@@ -882,6 +897,7 @@ impl SqlCommitGraphStorage {
             match *row {
                 (
                     cs_id,
+                    origin_cs_id,
                     Some(gen),
                     Some(skip_tree_depth),
                     Some(p1_linear_depth),
@@ -905,39 +921,42 @@ impl SqlCommitGraphStorage {
                     ..,
                 ) => {
                     cs_id_to_cs_edges.entry(cs_id).or_insert_with(|| {
-                        FetchedChangesetEdges::from(ChangesetEdges {
-                            node: ChangesetNode {
-                                cs_id,
-                                generation: Generation::new(gen),
-                                skip_tree_depth,
-                                p1_linear_depth,
+                        FetchedChangesetEdges::new(
+                            origin_cs_id,
+                            ChangesetEdges {
+                                node: ChangesetNode {
+                                    cs_id,
+                                    generation: Generation::new(gen),
+                                    skip_tree_depth,
+                                    p1_linear_depth,
+                                },
+                                parents: ChangesetNodeParents::new(),
+                                merge_ancestor: option_fields_to_option_node(
+                                    merge_ancestor,
+                                    merge_ancestor_gen,
+                                    merge_ancestor_skip_tree_depth,
+                                    merge_ancestor_p1_linear_depth,
+                                ),
+                                skip_tree_parent: option_fields_to_option_node(
+                                    skip_tree_parent,
+                                    skip_tree_parent_gen,
+                                    skip_tree_parent_skip_tree_depth,
+                                    skip_tree_parent_p1_linear_depth,
+                                ),
+                                skip_tree_skew_ancestor: option_fields_to_option_node(
+                                    skip_tree_skew_ancestor,
+                                    skip_tree_skew_ancestor_gen,
+                                    skip_tree_skew_ancestor_skip_tree_depth,
+                                    skip_tree_skew_ancestor_p1_linear_depth,
+                                ),
+                                p1_linear_skew_ancestor: option_fields_to_option_node(
+                                    p1_linear_skew_ancestor,
+                                    p1_linear_skew_ancestor_gen,
+                                    p1_linear_skew_ancestor_skip_tree_depth,
+                                    p1_linear_skew_ancestor_p1_linear_depth,
+                                ),
                             },
-                            parents: ChangesetNodeParents::new(),
-                            merge_ancestor: option_fields_to_option_node(
-                                merge_ancestor,
-                                merge_ancestor_gen,
-                                merge_ancestor_skip_tree_depth,
-                                merge_ancestor_p1_linear_depth,
-                            ),
-                            skip_tree_parent: option_fields_to_option_node(
-                                skip_tree_parent,
-                                skip_tree_parent_gen,
-                                skip_tree_parent_skip_tree_depth,
-                                skip_tree_parent_p1_linear_depth,
-                            ),
-                            skip_tree_skew_ancestor: option_fields_to_option_node(
-                                skip_tree_skew_ancestor,
-                                skip_tree_skew_ancestor_gen,
-                                skip_tree_skew_ancestor_skip_tree_depth,
-                                skip_tree_skew_ancestor_p1_linear_depth,
-                            ),
-                            p1_linear_skew_ancestor: option_fields_to_option_node(
-                                p1_linear_skew_ancestor,
-                                p1_linear_skew_ancestor_gen,
-                                p1_linear_skew_ancestor_skip_tree_depth,
-                                p1_linear_skew_ancestor_p1_linear_depth,
-                            ),
-                        })
+                        )
                     });
                 }
                 _ => continue,
