@@ -10,11 +10,14 @@ on:
     branches:
     - main
 
+permissions:
+  contents: read  #  to fetch code (actions/checkout)
+
 jobs:
   build:
     runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Show disk space at start
       run: df -h
     - name: Free up disk space
@@ -25,10 +28,10 @@ jobs:
       run: sudo apt-get update
     - name: Install system deps
       run: sudo python3 build/fbcode_builder/getdeps.py --allow-system-packages install-system-deps --recursive mononoke
+    - name: Install packaging system deps
+      run: sudo python3 build/fbcode_builder/getdeps.py --allow-system-packages install-system-deps --recursive patchelf
     - name: Install Rust Stable
       uses: dtolnay/rust-toolchain@stable
-    - name: Fetch lld
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests lld
     - name: Fetch ninja
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests ninja
     - name: Fetch cmake
@@ -89,8 +92,6 @@ jobs:
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests fb303
     - name: Fetch rust-shed
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests rust-shed
-    - name: Build lld
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --free-up-disk --no-tests lld
     - name: Build ninja
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --free-up-disk --no-tests ninja
     - name: Build cmake
