@@ -10,6 +10,8 @@
 //! Trait for the storage back-end for the commit graph.
 
 use std::collections::HashMap;
+use std::ops::Deref;
+use std::ops::DerefMut;
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -126,6 +128,49 @@ impl Prefetch {
     }
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum FetchedChangesetEdges {
+    Fetched { edges: ChangesetEdges },
+}
+
+impl Deref for FetchedChangesetEdges {
+    type Target = ChangesetEdges;
+
+    fn deref(&self) -> &Self::Target {
+        match self {
+            Self::Fetched { edges } => edges,
+        }
+    }
+}
+
+impl DerefMut for FetchedChangesetEdges {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        match self {
+            Self::Fetched { edges } => edges,
+        }
+    }
+}
+
+impl From<ChangesetEdges> for FetchedChangesetEdges {
+    fn from(edges: ChangesetEdges) -> Self {
+        Self::Fetched { edges }
+    }
+}
+
+impl From<FetchedChangesetEdges> for ChangesetEdges {
+    fn from(fetched: FetchedChangesetEdges) -> Self {
+        match fetched {
+            FetchedChangesetEdges::Fetched { edges } => edges,
+        }
+    }
+}
+
+impl FetchedChangesetEdges {
+    pub fn edges(self) -> ChangesetEdges {
+        ChangesetEdges::from(self)
+    }
+}
+
 /// Commit Graph Storage.
 #[async_trait]
 pub trait CommitGraphStorage: Send + Sync {
@@ -164,7 +209,7 @@ pub trait CommitGraphStorage: Send + Sync {
         ctx: &CoreContext,
         cs_ids: &[ChangesetId],
         prefetch: Prefetch,
-    ) -> Result<HashMap<ChangesetId, ChangesetEdges>>;
+    ) -> Result<HashMap<ChangesetId, FetchedChangesetEdges>>;
 
     /// Same as fetch_many_edges but doesn't return an error if any of
     /// the changesets are missing from the commit graph and instead
@@ -174,7 +219,7 @@ pub trait CommitGraphStorage: Send + Sync {
         ctx: &CoreContext,
         cs_ids: &[ChangesetId],
         prefetch: Prefetch,
-    ) -> Result<HashMap<ChangesetId, ChangesetEdges>>;
+    ) -> Result<HashMap<ChangesetId, FetchedChangesetEdges>>;
 
     /// Find all changeset ids with a given prefix.
     async fn find_by_prefix(

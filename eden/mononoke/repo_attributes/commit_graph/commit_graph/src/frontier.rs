@@ -105,7 +105,7 @@ impl CommitGraph {
                                     .insert(ancestor.cs_id);
                             }
                             None => {
-                                for parent in edges.parents {
+                                for parent in &edges.parents {
                                     frontier
                                         .entry(parent.generation)
                                         .or_default()

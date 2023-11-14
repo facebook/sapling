@@ -126,7 +126,7 @@ pub async fn test_lower_level_api(fb: FacebookInit) -> Result<()> {
             .into_iter()
             .map(|id| {
                 let cs_id = name_cs_id(id);
-                (cs_id, all_edges.get(&cs_id).unwrap().clone())
+                (cs_id, all_edges.get(&cs_id).unwrap().clone().into())
             })
             .collect::<HashMap<_, _>>(),
     );
@@ -138,7 +138,7 @@ pub async fn test_lower_level_api(fb: FacebookInit) -> Result<()> {
             .into_iter()
             .map(|id| {
                 let cs_id = name_cs_id(id);
-                (cs_id, all_edges.get(&cs_id).unwrap().clone())
+                (cs_id, all_edges.get(&cs_id).unwrap().clone().into())
             })
             .collect::<HashMap<_, _>>(),
     );
@@ -150,7 +150,7 @@ pub async fn test_lower_level_api(fb: FacebookInit) -> Result<()> {
             .into_iter()
             .map(|id| {
                 let cs_id = name_cs_id(id);
-                (cs_id, all_edges.get(&cs_id).unwrap().clone())
+                (cs_id, all_edges.get(&cs_id).unwrap().clone().into())
             })
             .collect::<HashMap<_, _>>(),
     );

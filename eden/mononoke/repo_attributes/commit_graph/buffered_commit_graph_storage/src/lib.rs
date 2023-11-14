@@ -13,6 +13,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use commit_graph_types::edges::ChangesetEdges;
 use commit_graph_types::storage::CommitGraphStorage;
+use commit_graph_types::storage::FetchedChangesetEdges;
 use commit_graph_types::storage::Prefetch;
 use context::CoreContext;
 use in_memory_commit_graph_storage::InMemoryCommitGraphStorage;
@@ -96,7 +97,7 @@ impl CommitGraphStorage for BufferedCommitGraphStorage {
         ctx: &CoreContext,
         cs_ids: &[ChangesetId],
         prefetch: Prefetch,
-    ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
+    ) -> Result<HashMap<ChangesetId, FetchedChangesetEdges>> {
         let mut fetched_edges = self
             .in_memory_storage
             .maybe_fetch_many_edges(ctx, cs_ids, prefetch)
@@ -124,7 +125,7 @@ impl CommitGraphStorage for BufferedCommitGraphStorage {
         ctx: &CoreContext,
         cs_ids: &[ChangesetId],
         prefetch: Prefetch,
-    ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
+    ) -> Result<HashMap<ChangesetId, FetchedChangesetEdges>> {
         let mut fetched_edges = self
             .in_memory_storage
             .maybe_fetch_many_edges(ctx, cs_ids, prefetch)

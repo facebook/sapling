@@ -69,7 +69,8 @@ impl CommitGraph {
                         .maybe_fetch_many_edges(ctx, &parents_to_fetch, Prefetch::None)
                         .await
                         .with_context(|| "during commit_graph::add_recursive (fetch_many_edges)")?
-                        .into_iter(),
+                        .into_iter()
+                        .map(|(k, v)| (k, v.into())),
                 );
             }
 

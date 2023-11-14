@@ -23,6 +23,7 @@ use commit_graph_types::edges::ChangesetNode;
 use commit_graph_types::edges::ChangesetNodeParents;
 use commit_graph_types::edges::ChangesetParents;
 use commit_graph_types::storage::CommitGraphStorage;
+use commit_graph_types::storage::FetchedChangesetEdges;
 use commit_graph_types::storage::Prefetch;
 use commit_graph_types::storage::PrefetchEdge;
 use context::CoreContext;
@@ -90,7 +91,7 @@ impl SqlCommitGraphStorageBuilder {
 
 #[derive(Clone)]
 struct RendezVousConnection {
-    fetch_single: RendezVous<ChangesetId, ChangesetEdges>,
+    fetch_single: RendezVous<ChangesetId, FetchedChangesetEdges>,
     conn: Connection,
 }
 
@@ -858,7 +859,7 @@ impl SqlCommitGraphStorage {
             Option<u64>,         // parent_skip_tree_depth
             Option<u64>,         // parent_p1_linear_depth
         )],
-    ) -> HashMap<ChangesetId, ChangesetEdges> {
+    ) -> HashMap<ChangesetId, FetchedChangesetEdges> {
         let option_fields_to_option_node =
             |cs_id, generation, skip_tree_depth, p1_linear_depth| match (
                 cs_id,
@@ -903,9 +904,8 @@ impl SqlCommitGraphStorage {
                     p1_linear_skew_ancestor_p1_linear_depth,
                     ..,
                 ) => {
-                    cs_id_to_cs_edges
-                        .entry(cs_id)
-                        .or_insert_with(|| ChangesetEdges {
+                    cs_id_to_cs_edges.entry(cs_id).or_insert_with(|| {
+                        FetchedChangesetEdges::from(ChangesetEdges {
                             node: ChangesetNode {
                                 cs_id,
                                 generation: Generation::new(gen),
@@ -937,7 +937,8 @@ impl SqlCommitGraphStorage {
                                 p1_linear_skew_ancestor_skip_tree_depth,
                                 p1_linear_skew_ancestor_p1_linear_depth,
                             ),
-                        });
+                        })
+                    });
                 }
                 _ => continue,
             }
@@ -979,7 +980,7 @@ impl SqlCommitGraphStorage {
         cs_ids: &[ChangesetId],
         prefetch: Prefetch,
         rendezvous: &RendezVousConnection,
-    ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
+    ) -> Result<HashMap<ChangesetId, FetchedChangesetEdges>> {
         if cs_ids.is_empty() {
             // This is actually NECESSARY, because SQL doesn't deal well with
             // querying empty arrays
@@ -1066,7 +1067,10 @@ impl SqlCommitGraphStorage {
                 &limit,
             )
             .await?,
-        ))
+        )
+        .into_iter()
+        .map(|(k, v)| (k, v.into()))
+        .collect())
     }
 
     /// Fetch a maximum of `limit` changeset ids for changesets having
@@ -1349,6 +1353,7 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
         self.fetch_many_edges(ctx, &[cs_id], Prefetch::None)
             .await?
             .remove(&cs_id)
+            .map(|edges| edges.into())
             .ok_or_else(|| anyhow!("Missing changeset from sql commit graph storage: {}", cs_id))
     }
 
@@ -1360,7 +1365,8 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
         Ok(self
             .maybe_fetch_many_edges(ctx, &[cs_id], Prefetch::None)
             .await?
-            .remove(&cs_id))
+            .remove(&cs_id)
+            .map(|edges| edges.into()))
     }
 
     async fn fetch_many_edges(
@@ -1368,7 +1374,7 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
         ctx: &CoreContext,
         cs_ids: &[ChangesetId],
         prefetch: Prefetch,
-    ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
+    ) -> Result<HashMap<ChangesetId, FetchedChangesetEdges>> {
         let mut edges = self.maybe_fetch_many_edges(ctx, cs_ids, prefetch).await?;
         let unfetched_ids: Vec<ChangesetId> = cs_ids
             .iter()
@@ -1392,7 +1398,7 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
         ctx: &CoreContext,
         cs_ids: &[ChangesetId],
         prefetch: Prefetch,
-    ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
+    ) -> Result<HashMap<ChangesetId, FetchedChangesetEdges>> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
         let mut edges = self

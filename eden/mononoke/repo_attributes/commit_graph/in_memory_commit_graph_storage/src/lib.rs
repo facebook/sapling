@@ -14,6 +14,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use commit_graph_types::edges::ChangesetEdges;
 use commit_graph_types::storage::CommitGraphStorage;
+use commit_graph_types::storage::FetchedChangesetEdges;
 use commit_graph_types::storage::Prefetch;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
@@ -128,7 +129,7 @@ impl CommitGraphStorage for InMemoryCommitGraphStorage {
         ctx: &CoreContext,
         cs_ids: &[ChangesetId],
         prefetch: Prefetch,
-    ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
+    ) -> Result<HashMap<ChangesetId, FetchedChangesetEdges>> {
         let edges = self.maybe_fetch_many_edges(ctx, cs_ids, prefetch).await?;
         let missing_changesets: Vec<_> = cs_ids
             .iter()
@@ -153,12 +154,12 @@ impl CommitGraphStorage for InMemoryCommitGraphStorage {
         _ctx: &CoreContext,
         cs_ids: &[ChangesetId],
         _prefetch: Prefetch,
-    ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
+    ) -> Result<HashMap<ChangesetId, FetchedChangesetEdges>> {
         let mut result = HashMap::with_capacity(cs_ids.len());
         let changesets = self.changesets.read();
         for cs_id in cs_ids {
             if let Some(edges) = changesets.get(cs_id) {
-                result.insert(*cs_id, edges.clone());
+                result.insert(*cs_id, edges.clone().into());
             }
         }
         Ok(result)

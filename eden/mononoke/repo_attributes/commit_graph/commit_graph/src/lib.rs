@@ -68,7 +68,10 @@ impl CommitGraph {
         let parent_edges = self
             .storage
             .fetch_many_edges(ctx, &parents, Prefetch::None)
-            .await?;
+            .await?
+            .into_iter()
+            .map(|(k, v)| (k, v.into()))
+            .collect();
 
         self.storage
             .add(

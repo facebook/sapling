@@ -20,6 +20,7 @@ use commit_graph_types::edges::ChangesetEdges;
 use commit_graph_types::edges::ChangesetNode;
 use commit_graph_types::edges::CompactChangesetEdges;
 use commit_graph_types::storage::CommitGraphStorage;
+use commit_graph_types::storage::FetchedChangesetEdges;
 use commit_graph_types::storage::Prefetch;
 use context::CoreContext;
 use fbthrift::compact_protocol;
@@ -354,7 +355,7 @@ impl CommitGraphStorage for PreloadedCommitGraphStorage {
         ctx: &CoreContext,
         cs_ids: &[ChangesetId],
         prefetch: Prefetch,
-    ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
+    ) -> Result<HashMap<ChangesetId, FetchedChangesetEdges>> {
         let edges = self.maybe_fetch_many_edges(ctx, cs_ids, prefetch).await?;
         if let Some(missing_changeset) = cs_ids.iter().find(|cs_id| !edges.contains_key(cs_id)) {
             Err(anyhow!(
@@ -371,14 +372,14 @@ impl CommitGraphStorage for PreloadedCommitGraphStorage {
         ctx: &CoreContext,
         cs_ids: &[ChangesetId],
         prefetch: Prefetch,
-    ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
+    ) -> Result<HashMap<ChangesetId, FetchedChangesetEdges>> {
         let preloaded_edges = self.preloaded_edges.load();
         let mut fetched_edges: HashMap<_, _> = cs_ids
             .iter()
             .filter_map(|cs_id| {
                 preloaded_edges
                     .get(cs_id)
-                    .map(|edges| edges.map(|edges| (*cs_id, edges)))
+                    .map(|edges| edges.map(|edges| (*cs_id, edges.into())))
                     .transpose()
             })
             .collect::<Result<_>>()?;

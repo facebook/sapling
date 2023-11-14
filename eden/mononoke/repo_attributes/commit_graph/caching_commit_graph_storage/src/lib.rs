@@ -31,6 +31,7 @@ use caching_ext::MemcacheHandler;
 use commit_graph_thrift as thrift;
 use commit_graph_types::edges::ChangesetEdges;
 use commit_graph_types::storage::CommitGraphStorage;
+use commit_graph_types::storage::FetchedChangesetEdges;
 use commit_graph_types::storage::Prefetch;
 use context::CoreContext;
 use fbthrift::compact_protocol;
@@ -205,9 +206,9 @@ impl KeyedEntityStore<ChangesetId, CachedChangesetEdges> for CacheRequest<'_> {
             let mut prefetched = HashMap::new();
             for (cs_id, edges) in entries {
                 if keys.contains(&cs_id) {
-                    fetched.insert(cs_id, CachedChangesetEdges::fetched(edges));
+                    fetched.insert(cs_id, CachedChangesetEdges::fetched(edges.into()));
                 } else {
-                    prefetched.insert(cs_id, CachedChangesetEdges::prefetched(edges));
+                    prefetched.insert(cs_id, CachedChangesetEdges::prefetched(edges.into()));
                 }
             }
             if !prefetched.is_empty() {
@@ -219,7 +220,7 @@ impl KeyedEntityStore<ChangesetId, CachedChangesetEdges> for CacheRequest<'_> {
         } else {
             Ok(entries
                 .into_iter()
-                .map(|(cs_id, edges)| (cs_id, CachedChangesetEdges::fetched(edges)))
+                .map(|(cs_id, edges)| (cs_id, CachedChangesetEdges::fetched(edges.into())))
                 .collect())
         }
     }
@@ -332,7 +333,7 @@ impl CommitGraphStorage for CachingCommitGraphStorage {
         ctx: &CoreContext,
         cs_ids: &[ChangesetId],
         prefetch: Prefetch,
-    ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
+    ) -> Result<HashMap<ChangesetId, FetchedChangesetEdges>> {
         let cs_ids: HashSet<ChangesetId> = cs_ids.iter().copied().collect();
         let found = get_or_fill_chunked(
             &self.request_required(ctx, prefetch),
@@ -343,7 +344,7 @@ impl CommitGraphStorage for CachingCommitGraphStorage {
         .await?;
         Ok(found
             .into_iter()
-            .map(|(cs_id, edges)| (cs_id, edges.take()))
+            .map(|(cs_id, edges)| (cs_id, edges.take().into()))
             .collect())
     }
 
@@ -352,7 +353,7 @@ impl CommitGraphStorage for CachingCommitGraphStorage {
         ctx: &CoreContext,
         cs_ids: &[ChangesetId],
         prefetch: Prefetch,
-    ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
+    ) -> Result<HashMap<ChangesetId, FetchedChangesetEdges>> {
         let cs_ids: HashSet<ChangesetId> = cs_ids.iter().copied().collect();
         let found = get_or_fill_chunked(
             &self.request(ctx, prefetch),
@@ -363,7 +364,7 @@ impl CommitGraphStorage for CachingCommitGraphStorage {
         .await?;
         Ok(found
             .into_iter()
-            .map(|(cs_id, edges)| (cs_id, edges.take()))
+            .map(|(cs_id, edges)| (cs_id, edges.take().into()))
             .collect())
     }
 

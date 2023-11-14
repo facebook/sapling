@@ -176,7 +176,7 @@ impl CommitGraph {
 
                 let parents: Vec<_> = all_edges
                     .into_iter()
-                    .flat_map(|(_cs_id, edges)| edges.parents)
+                    .flat_map(|(_cs_id, edges)| edges.edges().parents)
                     .map(|node| node.cs_id)
                     .collect();
 
@@ -513,7 +513,7 @@ impl CommitGraph {
 
             let parents: Vec<_> = all_edges
                 .into_iter()
-                .flat_map(|(_cs_id, edges)| edges.parents)
+                .flat_map(|(_cs_id, edges)| edges.edges().parents)
                 .map(|node| node.cs_id)
                 .collect();
 
