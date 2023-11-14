@@ -2,9 +2,9 @@
 sidebar_position: 6
 ---
 
-## bookmark | bo | book
+## bookmark | bo | book | bookmarks
 <!--
-  @generated SignedSource<<33d9c3a4e740d1830162333f66ce45e5>>
+  @generated SignedSource<<2d4c9603d4c48737784dfa6f3d829d49>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -100,6 +100,7 @@ sl bookmark --remote --remote-path my-fork
 | `-i`| `--inactive`| `false`| mark a bookmark inactive|
 | `-t`| `--track`| | track this bookmark or remote name|
 | `-u`| `--untrack`| | remove tracking for this bookmark|
+| | `--list-remote`| | list remote bookmarks. Positional arguments are interpreted as wildcard patterns. Only allowed wildcard is '*' in the end of the pattern. If no positional arguments are specified then it will list the most "important" remote bookmarks. Otherwise it will list remote bookmarks that match at least one pattern |
 | `-a`| `--all`| | show both remote and local bookmarks|
 | | `--remote`| | fetch remote Git refs|
 | | `--remote-path`| | remote path from which to fetch bookmarks|

@@ -4,7 +4,7 @@ sidebar_position: 11
 
 ## diff | d
 <!--
-  @generated SignedSource<<436d8d5f631816632d6e8c15fb2a179c>>
+  @generated SignedSource<<f69de176a6bd8e694e8db7d378aaf5d3>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -88,3 +88,5 @@ Returns 0 on success.
 | `-I`| `--include`| | include files matching the given patterns|
 | `-X`| `--exclude`| | exclude files matching the given patterns|
 | `-s`| `--sparse`| | only show changes in files in the sparse config|
+| | `--since-last-submit`| | show changes since last Phabricator submit|
+| | `--since-last-submit-2o`| | show diff of current diff and last Phabricator submit|

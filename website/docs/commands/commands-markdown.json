@@ -3,7 +3,8 @@
     "name": "absorb",
     "aliases": [
       "absorb",
-      "ab"
+      "ab",
+      "sf"
     ],
     "doc": "\n**intelligently integrate pending changes into current stack**\n\nAttempt to amend each pending change to the proper commit in your\nstack. Absorb does not write to the working copy.\n\nIf absorb cannot find an unambiguous commit to amend for a change, that\nchange will be left in the working copy, untouched. The unabsorbed\nchanges can be observed by `sl status` or `sl diff` afterwards.\n\nCommits outside the revset `::. and not public() and not merge()` will\nnot be changed.\n\nCommits that become empty after applying the changes will be deleted.\n\nBy default, absorb will show what it plans to do and prompt for\nconfirmation.  If you are confident that the changes will be absorbed\nto the correct place, run `sl absorb -a` to apply the changes\nimmediately.\n\nReturns 0 if anything was absorbed, 1 if nothing was absorbed.\n",
     "args": [
@@ -453,7 +454,8 @@
     "aliases": [
       "bookmark",
       "bo",
-      "book"
+      "book",
+      "bookmarks"
     ],
     "doc": "\n**create a new bookmark or list existing bookmarks**\n\nBookmarks are labels on changesets to help track lines of development.\nBookmarks are unversioned and can be moved, renamed and deleted.\nDeleting or moving a bookmark has no effect on the associated changesets.\n\nCreating or updating to a bookmark causes it to be marked as 'active'.\nThe active bookmark is indicated with a '*'.\nWhen a commit is made, the active bookmark will advance to the new commit.\nA plain `sl goto` will also advance an active bookmark, if possible.\nUpdating away from a bookmark will cause it to be deactivated.\n\nBookmarks can be pushed and pulled between repositories (see\n`sl help push` and `sl help pull`). If a shared bookmark has\ndiverged, a new 'divergent bookmark' of the form 'name@path' will\nbe created. Using `sl merge` will resolve the divergence.\n\nSpecifying bookmark as '.' to -m or -d options is equivalent to specifying\nthe active bookmark's name.\n\nExamples:\n\n- create an active bookmark for a new line of development:\n\n```\nsl book new-feature\n```\n\n- create an inactive bookmark as a place marker:\n\n```\nsl book -i reviewed\n```\n\n- create an inactive bookmark on another changeset:\n\n```\nsl book -r .^ tested\n```\n\n- rename bookmark turkey to dinner:\n\n```\nsl book -m turkey dinner\n```\n\n- move the '@' bookmark from another branch:\n\n```\nsl book -f @\n```\n\nIn Git repos, bookmarks correspond to branches. Remote Git branches can be listed using the `--remote` flag.\n\nExamples:\n\n- list remote branches:\n\n```\nsl bookmark --remote\n```\n\n- list remote tags:\n\n```\nsl bookmark --remote tags\n```\n\n- list all refs:\n\n```\nsl bookmark --remote 'refs/*'\n```\n\n- list branches from specified path:\n\n```\nsl bookmark --remote --remote-path my-fork\n```\n",
     "args": [
@@ -510,6 +512,12 @@
         "fullname": "untrack",
         "default": null,
         "description": "remove tracking for this bookmark"
+      },
+      {
+        "shortname": "",
+        "fullname": "list-remote",
+        "default": null,
+        "description": "list remote bookmarks. Positional arguments are interpreted as wildcard patterns. Only allowed wildcard is '*' in the end of the pattern. If no positional arguments are specified then it will list the most \"important\" remote bookmarks. Otherwise it will list remote bookmarks that match at least one pattern "
       },
       {
         "shortname": "a",
@@ -643,7 +651,7 @@
       {
         "shortname": "",
         "fullname": "shallow",
-        "default": true,
+        "default": null,
         "description": "\"use remotefilelog (only turn it off in legacy tests) (ADVANCED)\""
       },
       {
@@ -984,6 +992,18 @@
         "fullname": "sparse",
         "default": null,
         "description": "only show changes in files in the sparse config"
+      },
+      {
+        "shortname": "",
+        "fullname": "since-last-submit",
+        "default": null,
+        "description": "show changes since last Phabricator submit"
+      },
+      {
+        "shortname": "",
+        "fullname": "since-last-submit-2o",
+        "default": null,
+        "description": "show diff of current diff and last Phabricator submit"
       }
     ],
     "subcommands": null
@@ -1184,7 +1204,11 @@
     "name": "goto",
     "aliases": [
       "goto",
-      "go"
+      "go",
+      "up",
+      "update",
+      "co",
+      "checkout"
     ],
     "doc": "\n**update working copy to a given commit**\n\nUpdate your working copy to the given destination commit. More\nprecisely, make the destination commit the current commit and update the\ncontents of all files in your working copy to match their state in the\ndestination commit.\n\nBy default, if you attempt to go to a commit while you have pending\nchanges, and the destination commit is not an ancestor or descendant of\nthe current commit, the checkout will abort. However, if the destination\ncommit is an ancestor or descendant of the current commit, the pending\nchanges will be merged with the destination.\n\nUse one of the following flags to modify this behavior:\n\n```\n--check: abort if there are pending changes\n```\n\n```\n--clean: permanently discard any pending changes (use with caution)\n```\n\n```\n--merge: always attempt to merge the pending changes into the destination\n```\n\nIf merge conflicts occur during update, Sapling enters an unfinished\nmerge state. If this happens, fix the conflicts manually and then run\n`sl commit` to exit the unfinished merge state and save your changes\nin a new commit. Alternatively, run `sl goto --clean` to discard your\npending changes.\n\nSpecify null as the destination commit to get an empty working copy\n(sometimes known as a bare repository).\n\nReturns 0 on success, 1 if there are unresolved files.\n",
     "args": [
@@ -1599,7 +1623,7 @@
         "shortname": "b",
         "fullname": "branch",
         "default": [],
-        "description": "show changesets within the given named branch"
+        "description": "show changesets within the given named branch (DEPRECATED)"
       },
       {
         "shortname": "P",
@@ -2163,16 +2187,16 @@
         "description": "variables that can be sent to server (ADVANCED)"
       },
       {
-        "shortname": "t",
+        "shortname": "",
         "fullname": "to",
         "default": "",
-        "description": "push commits to this bookmark"
+        "description": "push revs to this bookmark"
       },
       {
-        "shortname": "d",
-        "fullname": "delete",
-        "default": "",
-        "description": "delete remote bookmark"
+        "shortname": "",
+        "fullname": "non-forward-move",
+        "default": null,
+        "description": "allows moving a remote bookmark to an arbitrary place"
       },
       {
         "shortname": "",
@@ -2182,15 +2206,21 @@
       },
       {
         "shortname": "",
-        "fullname": "allow-anon",
+        "fullname": "bundle-store",
         "default": null,
-        "description": "allow a new unbookmarked head (DEPRECATED)"
+        "description": "force push to go to bundle store (EXPERIMENTAL)"
+      },
+      {
+        "shortname": "d",
+        "fullname": "delete",
+        "default": "",
+        "description": "delete remote bookmark"
       },
       {
         "shortname": "",
-        "fullname": "non-forward-move",
+        "fullname": "allow-anon",
         "default": null,
-        "description": "allows moving a remote bookmark to an arbitrary place (ADVANCED)"
+        "description": "allow a new unbookmarked head (DEPRECATED)"
       }
     ],
     "subcommands": null
@@ -2762,7 +2792,7 @@
       {
         "shortname": "",
         "fullname": "root-relative",
-        "default": false,
+        "default": null,
         "description": "show status relative to root"
       },
       {
@@ -2945,7 +2975,7 @@
       "web",
       "isl"
     ],
-    "doc": "\n**launch Sapling Web GUI on localhost**\n\nSapling Web is a collection of web-based tools including Interactive Smartlog,\nwhich is a GUI that facilitates source control operations such as creating,\nreordering, or rebasing commits.\nRunning this command launches a web server that makes Sapling Web and\nInteractive Smartlog available in a local web browser.\n\nExamples:\n\nLaunch Sapling Web locally on port 8081:\n\n```\n$ sl web --port 8081\nListening on http://localhost:8081/?token=bbe168b7b4af1614dd5b9ddc48e7d30e&cwd=%2Fhome%2Falice%2Fsapling\nServer logs will be written to /dev/shm/tmp/isl-server-logrkrmxp/isl-server.log\n```\n\nUsing the `--json` option to get the current status of Sapling Web:\n\n```\n$ sl web --port 8081 --json | jq\n{\n    \"url\": \"http://localhost:8081/?token=bbe168b7b4af1614dd5b9ddc48e7d30e&cwd=%2Fhome%2Falice%2Fsapling\",\n    \"port\": 8081,\n    \"token\": \"bbe168b7b4af1614dd5b9ddc48e7d30e\",\n    \"pid\": 1521158,\n    \"wasServerReused\": true,\n    \"logFileLocation\": \"/dev/shm/tmp/isl-server-logrkrmxp/isl-server.log\",\n    \"cwd\": \"/home/alice/sapling\"\n}\n```\n\nUsing the `--kill` option to shut down the server:\n\n```\n$ sl web --port 8081 --kill\nkilled ISL server process 1521158\n```\n",
+    "doc": "\n**launch Sapling Web GUI on localhost**\n\nSapling Web is a collection of web-based tools including Interactive Smartlog,\nwhich is a GUI that facilitates source control operations such as creating,\nreordering, or rebasing commits.\nRunning this command launches a web server that makes Sapling Web and\nInteractive Smartlog available in a local web browser.\nWhen possible, this command opens a separate OS window,\neither using a webview or a Chrome-like browser with --app.\n\nExamples:\n\nLaunch Sapling Web locally on port 8081:\n\n```\n$ sl web --port 8081\nListening on http://localhost:8081/?token=bbe168b7b4af1614dd5b9ddc48e7d30e&cwd=%2Fhome%2Falice%2Fsapling\nServer logs will be written to /dev/shm/tmp/isl-server-logrkrmxp/isl-server.log\n```\n\nUsing the `--json` option to get the current status of Sapling Web:\n\n```\n$ sl web --port 8081 --json | jq\n{\n    \"url\": \"http://localhost:8081/?token=bbe168b7b4af1614dd5b9ddc48e7d30e&cwd=%2Fhome%2Falice%2Fsapling\",\n    \"port\": 8081,\n    \"token\": \"bbe168b7b4af1614dd5b9ddc48e7d30e\",\n    \"pid\": 1521158,\n    \"wasServerReused\": true,\n    \"logFileLocation\": \"/dev/shm/tmp/isl-server-logrkrmxp/isl-server.log\",\n    \"cwd\": \"/home/alice/sapling\"\n}\n```\n\nUsing the `--kill` option to shut down the server:\n\n```\n$ sl web --port 8081 --kill\nkilled ISL server process 1521158\n```\n",
     "args": [
       {
         "shortname": "p",
@@ -2986,8 +3016,26 @@
       {
         "shortname": "",
         "fullname": "platform",
-        "default": "",
+        "default": "browser",
         "description": "which environment ISL is being embedded in, used to support IDE integrations (ADVANCED)"
+      },
+      {
+        "shortname": "",
+        "fullname": "app",
+        "default": true,
+        "description": "Use a native OS window or Chrome-like browser to open ISL in a standalone window. Use --no-app to use a normal browser tab instead."
+      },
+      {
+        "shortname": "",
+        "fullname": "browser",
+        "default": "",
+        "description": "Path to a specific Chrome-like browser to open ISL in as a standalone window (ADVANCED)"
+      },
+      {
+        "shortname": "",
+        "fullname": "dev",
+        "default": false,
+        "description": "Spawn in dev mode on port 3000. ISL must have already been built from source.  See addons/isl/README.md for more information. (ADVANCED)"
       }
     ],
     "subcommands": null
