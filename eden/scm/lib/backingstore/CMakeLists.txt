@@ -15,13 +15,14 @@ install_rust_static_library(
   INSTALL_DIR lib
 )
 
-file(GLOB C_API_SRCS "c_api/*.cpp")
+file(GLOB C_API_SRCS "src/*.cpp")
+file(GLOB C_API_HDRS "include/*.h")
 add_library(backingstore "${C_API_SRCS}")
 set_target_properties(
   backingstore
   PROPERTIES
   PUBLIC_HEADER
-  "c_api/SaplingNativeBackingStore.h;c_api/BackingStoreBindings.h"
+  "${C_API_HDRS}"
 )
 target_include_directories(backingstore PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -68,5 +69,5 @@ install(
   TARGETS backingstore
   EXPORT mercurial
   LIBRARY DESTINATION ${LIB_INSTALL_DIR}
-  PUBLIC_HEADER DESTINATION "include/eden/scm/lib/backingstore/c_api"
+  PUBLIC_HEADER DESTINATION "include/eden/scm/lib/backingstore/include"
 )

@@ -6,10 +6,10 @@
  */
 
 #include <folly/Range.h>
-#include <gtest/gtest.h>
+#include <folly/portability/GTest.h>
 #include <cstring>
 
-#include "eden/scm/lib/backingstore/c_api/BackingStoreBindings.h"
+#include "eden/scm/lib/backingstore/include/BackingStoreBindings.h"
 
 namespace {
 

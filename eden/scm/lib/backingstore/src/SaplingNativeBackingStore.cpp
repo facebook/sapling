@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/scm/lib/backingstore/c_api/SaplingNativeBackingStore.h"
+#include "eden/scm/lib/backingstore/include/SaplingNativeBackingStore.h"
 
 #include <folly/Range.h>
 #include <folly/String.h>
