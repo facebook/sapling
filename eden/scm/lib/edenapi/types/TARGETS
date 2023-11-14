@@ -1,6 +1,5 @@
 load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
 load("@fbcode_macros//build_defs:rust_unittest.bzl", "rust_unittest")
-load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
 load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
 
 oncall("mercurial_release")
@@ -14,11 +13,6 @@ rust_library(
                 "dependencies": {
                     "dag-types": {"features": ["for-tests"]},
                 },
-            },
-            "extra_buck_dependencies": {
-                "dependencies": [
-                    "fbsource//third-party/rust:blake3",
-                ],
             },
         },
     },
@@ -37,6 +31,7 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:blake2",
+        "fbsource//third-party/rust:blake3",
         "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:paste",
         "fbsource//third-party/rust:quickcheck",
@@ -47,14 +42,11 @@ rust_library(
         "fbsource//third-party/rust:sha2",
         "fbsource//third-party/rust:thiserror",
         ":type_macros",
-        "//common/rust/blake3_c_ffi:blake3_c_ffi",
         "//common/rust/shed/quickcheck_arbitrary_derive:quickcheck_arbitrary_derive",
         "//eden/scm/lib/dag/dag-types:dag-types",
         "//eden/scm/lib/revisionstore:revisionstore_types",
         "//eden/scm/lib/types:types",
-    ] + ([
-        "fbsource//third-party/rust:blake3",
-    ] if rust_oss.is_oss_build() else []),
+    ],
 )
 
 rust_library(
