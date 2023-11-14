@@ -20,8 +20,9 @@ thrift_library(
     thrift_srcs = {
         "mononoke_types_thrift.thrift": [],
     },
-    # The Thrift definitions are private and only used for serialization -- do
-    # not allow other code to use them, except for other private Thrift code.
+    # The Thrift definitions are private and only used for serialization and for mononoke-internal
+    # thrift services -- do not allow other code to use them, except for other private Thrift code.
+    # THIS IS NOT A PUBLIC SOURCE CONTROL API AND THERE IS NO BACKWARDS COMPAT GUARANTEEE.
     visibility = [
         "//eden/mononoke/bonsai_globalrev_mapping/if:",
         "//eden/mononoke/bonsai_hg_mapping/if:",
@@ -31,6 +32,7 @@ thrift_library(
         "//eden/mononoke/derived_data:fastlog-unittest",
         "//eden/mononoke/derived_data/changeset_info/if:",
         "//eden/mononoke/derived_data/remote/if:",
+        "//eden/mononoke/facebook/bookmark_service/if:",
         "//eden/mononoke/facebook/derived_data_service/derivation_queue/if:",
         "//eden/mononoke/facebook/get_bundle:bundle_store_lib",
         "//eden/mononoke/filenodes/if:",

@@ -13,6 +13,7 @@ thrift_library(
         "bookmark_service.thrift": ["BookmarkService"],
     },
     deps = [
+        "//eden/mononoke/mononoke_types/if:mononoke_types-thrift",
         "//fb303/thrift:fb303_core",
     ],
 )
