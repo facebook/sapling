@@ -638,7 +638,7 @@ python_unittest(
     ],
 )
 
-# Also run basic sanity tests on the -oss build flavor.
+# Also run basic sanity tests on the non-oss build flavor.
 # We don't run all the tests on both flavors since it takes a while, and the
 # two build flavors are almost the same, with only some minor differences in
 # the initialization code.
