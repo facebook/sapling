@@ -680,7 +680,7 @@ impl EdenFsCheckout {
         background: bool,
         predictive: bool,
         predictive_num_dirs: u32,
-    ) -> Result<Glob> {
+    ) -> Result<()> {
         let mut commit_vec = vec![];
         if predict_revisions {
             // The arc and hg commands need to be run in the mount mount, so we need
@@ -791,8 +791,11 @@ impl EdenFsCheckout {
                 predictiveGlob: Some(predictive_params),
                 ..Default::default()
             };
-            let res = client.predictiveGlobFiles(&glob_params).await;
-            Ok(res.context("Failed predictiveGlobFiles() thrift call")?)
+            client
+                .predictiveGlobFiles(&glob_params)
+                .await
+                .context("Failed predictiveGlobFiles() thrift call")?;
+            Ok(())
         } else {
             let profile_set = all_profile_contents.into_iter().collect::<Vec<_>>();
             let prefetch_params = PrefetchParams {
@@ -806,7 +809,7 @@ impl EdenFsCheckout {
             let res = client.prefetchFiles(&prefetch_params).await;
 
             match res {
-                Ok(_) => Ok(Glob::default()),
+                Ok(_) => Ok(()),
                 Err(error) => {
                     if is_unknown_method_error(&error) {
                         let glob_params = GlobParams {
@@ -819,8 +822,11 @@ impl EdenFsCheckout {
                             background,
                             ..Default::default()
                         };
-                        let glob_res = client.globFiles(&glob_params).await;
-                        Ok(glob_res.context("Failed globFiles() thrift call")?)
+                        client
+                            .globFiles(&glob_params)
+                            .await
+                            .context("Failed globFiles() thrift call")?;
+                        Ok(())
                     } else {
                         Err(EdenFsError::Other(error.into()))
                     }
@@ -851,7 +857,7 @@ impl EdenFsCheckout {
         predict_revisions: bool,
         predictive: bool,
         predictive_num_dirs: u32,
-    ) -> Result<Vec<Glob>> {
+    ) -> Result<()> {
         let mut profiles_to_fetch = profiles.clone();
 
         let config = instance
@@ -866,7 +872,7 @@ impl EdenFsCheckout {
                     the EdenFS configs.",
                 );
             } else {
-                return Ok(vec![Glob::default()]);
+                return Ok(());
             }
         }
 
@@ -878,11 +884,10 @@ impl EdenFsCheckout {
                     the EdenFS configs."
                 );
             }
-            return Ok(vec![Glob::default()]);
+            return Ok(());
         }
 
         let mut profile_contents = HashSet::new();
-        let mut glob_results = vec![];
 
         if !predictive {
             // special trees prefetch profile which fetches all of the trees in the repo, kick this
@@ -893,23 +898,21 @@ impl EdenFsCheckout {
                 let mut profile_set = HashSet::new();
                 profile_set.insert("**/*".to_owned());
 
-                let blob_res = self
-                    .make_prefetch_request(
-                        instance,
-                        profile_set,
-                        true, // only prefetch directories
-                        silent,
-                        revisions.clone(),
-                        predict_revisions,
-                        background,
-                        predictive,
-                        predictive_num_dirs,
-                    )
-                    .await
-                    .with_context(|| anyhow!("make_prefetch_request() failed, returning early"))?;
-                glob_results.push(blob_res);
+                self.make_prefetch_request(
+                    instance,
+                    profile_set,
+                    true, // only prefetch directories
+                    silent,
+                    revisions.clone(),
+                    predict_revisions,
+                    background,
+                    predictive,
+                    predictive_num_dirs,
+                )
+                .await
+                .with_context(|| anyhow!("make_prefetch_request() failed, returning early"))?;
                 if profiles_to_fetch.is_empty() {
-                    return Ok(glob_results);
+                    return Ok(());
                 }
             }
 
@@ -922,22 +925,20 @@ impl EdenFsCheckout {
                 profile_contents.extend(res);
             }
         }
-        let blob_res = self
-            .make_prefetch_request(
-                instance,
-                profile_contents,
-                directories_only,
-                silent,
-                revisions,
-                predict_revisions,
-                background,
-                predictive,
-                predictive_num_dirs,
-            )
-            .await
-            .with_context(|| anyhow!("make_prefetch_request() failed, returning early"))?;
-        glob_results.push(blob_res);
-        Ok(glob_results)
+        self.make_prefetch_request(
+            instance,
+            profile_contents,
+            directories_only,
+            silent,
+            revisions,
+            predict_revisions,
+            background,
+            predictive,
+            predictive_num_dirs,
+        )
+        .await
+        .with_context(|| anyhow!("make_prefetch_request() failed, returning early"))?;
+        Ok(())
     }
 }
 

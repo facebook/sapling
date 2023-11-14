@@ -33,12 +33,7 @@ use crate::Subcommand;
 
 #[derive(Parser, Debug)]
 pub struct ActivationOptions {
-    #[clap(
-        short,
-        long,
-        help = "Print extra info and warnings. This includes the names of \
-    matching files for fetch commands."
-    )]
+    #[clap(short, long, help = "Print extra info and warnings.")]
     verbose: bool,
     #[clap(
         long,
@@ -125,7 +120,8 @@ pub enum PrefetchCmd {
         json: bool,
     },
     #[clap(about = "Adds an entry to the list of profiles to be fetched \
-        whenever the `prefetch-profile fetch` subcommand is invoked.")]
+        whenever the `prefetch-profile fetch` subcommand is invoked without \
+        additional arguments.")]
     Activate {
         #[clap(flatten)]
         options: ActivationOptions,
@@ -158,8 +154,9 @@ pub enum PrefetchCmd {
         #[clap(flatten)]
         options: ActivationOptions,
     },
-    #[clap(about = "Prefetch all the files for the specified prefetch profiles. \
-        This is intended for use after checkout and pull.")]
+    #[clap(about = "Prefetch all files for the specified prefetch profiles. \
+        If no profiles are provided, prefetches all files for all activated \
+        proifles instead. This is intended for use after checkout and pull.")]
     Fetch {
         #[clap(flatten)]
         options: FetchOptions,
@@ -168,6 +165,8 @@ pub enum PrefetchCmd {
             help = "Fetch only these named profiles instead of the active set of profiles."
         )]
         profile_names: Vec<String>,
+        #[clap(long, help = "Output in json rather than human readable text")]
+        json: bool,
     },
     #[clap(hide = true)]
     FetchPredictive {
@@ -411,7 +410,12 @@ impl PrefetchCmd {
         Ok(0)
     }
 
-    async fn fetch(&self, profile_names: &Vec<String>, options: &FetchOptions) -> Result<ExitCode> {
+    async fn fetch(
+        &self,
+        profile_names: &Vec<String>,
+        options: &FetchOptions,
+        json: bool,
+    ) -> Result<ExitCode> {
         let instance = EdenFsInstance::global();
         let checkout_path = &options.options.checkout;
         let client_name = instance.client_name(checkout_path).with_context(|| {
@@ -430,10 +434,12 @@ impl PrefetchCmd {
             })?;
         let profiles_to_prefetch = if profile_names.is_empty() {
             match checkout_config.get_prefetch_profiles() {
-                Ok(res) => res,
-                Err(_) => {
-                    if options.options.verbose {
-                        println!("No profiles to fetch")
+                Ok(res) if !res.is_empty() => res,
+                _ => {
+                    if json {
+                        println!("[]");
+                    } else {
+                        println!("No profiles to fetch: active profile set is empty.")
                     }
                     return Ok(0);
                 }
@@ -441,13 +447,6 @@ impl PrefetchCmd {
         } else {
             profile_names
         };
-
-        if profiles_to_prefetch.is_empty() {
-            if options.options.verbose {
-                println!("No profiles to fetch")
-            }
-            return Ok(0);
-        }
 
         let directories_only = options.directories_only;
 
@@ -457,7 +456,23 @@ impl PrefetchCmd {
                 checkout_path.display()
             )
         })?;
-        let result_globs = checkout
+
+        if json {
+            println!("{}", serde_json::to_string(&profiles_to_prefetch)?);
+        } else {
+            let fetched_text = if directories_only {
+                "directories"
+            } else {
+                "files and directories"
+            };
+            println!(
+                "Fetching {} for the following profiles:\n\n  - {}",
+                fetched_text,
+                profiles_to_prefetch.join("\n  - ")
+            );
+        }
+
+        checkout
             .prefetch_profiles(
                 instance,
                 profiles_to_prefetch,
@@ -470,16 +485,6 @@ impl PrefetchCmd {
                 0,
             )
             .await?;
-        // there will only every be one commit used to query globFiles here,
-        // so no need to list which commit a file is fetched for, it will
-        // be the current commit.
-        if options.options.verbose {
-            for result in result_globs {
-                for name in result.matchingFiles {
-                    println!("{}", String::from_utf8_lossy(&name));
-                }
-            }
-        }
 
         Ok(0)
     }
@@ -535,7 +540,7 @@ impl PrefetchCmd {
                 checkout_path.display()
             )
         })?;
-        let result_globs = checkout
+        checkout
             .prefetch_profiles(
                 instance,
                 &vec![],
@@ -548,18 +553,6 @@ impl PrefetchCmd {
                 predictive_num_dirs,
             )
             .await?;
-
-        // there will only every be one commit used to query globFiles here,
-        // so no need to list which commit a file is fetched for, it will
-        // be the current commit.
-        if options.options.verbose {
-            for result in result_globs {
-                for name in result.matchingFiles {
-                    println!("{}", String::from_utf8_lossy(&name));
-                }
-            }
-        }
-
         Ok(0)
     }
 }
@@ -586,7 +579,8 @@ impl Subcommand for PrefetchCmd {
             Self::Fetch {
                 profile_names,
                 options,
-            } => self.fetch(profile_names, options).await,
+                json,
+            } => self.fetch(profile_names, options, *json).await,
             Self::FetchPredictive {
                 options,
                 num_dirs,
