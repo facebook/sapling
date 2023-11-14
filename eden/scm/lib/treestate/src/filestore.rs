@@ -74,7 +74,7 @@ pub struct FileStore {
 }
 
 impl FileStore {
-    /// Create a new FileStore, overwriting any existing file.
+    /// Create a new FileStore, avoid overwriting any existing file.
     pub fn create<P: AsRef<Path>>(path: P) -> Result<FileStore> {
         let path = path.as_ref();
         tracing::trace!(target: "treestate::filestore::create", ?path);
@@ -83,7 +83,7 @@ impl FileStore {
                 .read(true)
                 .write(true)
                 .create(true)
-                .truncate(true)
+                .create_new(true)
                 .open(path)?
                 .into(),
         );
