@@ -55,8 +55,11 @@ define_stats! {
     prefix = "mononoke.cache.commit_graph.prefetch";
 
     hit: timeseries("hit"; Rate, Sum),
+    memcache_hit: timeseries("memcache_hit"; Rate, Sum),
     fetched: timeseries("fetched"; Rate, Sum),
     prefetched: timeseries("prefetched"; Rate, Sum),
+    memcache_fetched: timeseries("memcache_fetched"; Rate, Sum),
+    memcache_prefetched: timeseries("memcache_prefetched"; Rate, Sum),
 }
 
 /// Size of chunk when fetching from the backing store
@@ -83,6 +86,22 @@ struct CacheRequest<'a> {
     required: bool,
 }
 
+/// Origin of a value in the cachelib cache.
+#[derive(Copy, Clone, Debug, Abomonation)]
+pub enum CacheOrigin {
+    /// This cached value originated from a direct fetch.
+    Fetched,
+
+    /// This cached value originated from a prefetch.
+    Prefetched,
+
+    /// This cached value originated from a memcache hit of a direct fetch.
+    MemcacheFetched,
+
+    /// This cached value originated from a memcache hit of a prefetch.
+    MemcachePrefetched,
+}
+
 #[derive(Clone, Debug, Abomonation)]
 /// A cached copy of changeset edges
 ///
@@ -91,8 +110,9 @@ pub struct CachedChangesetEdges {
     /// The cached edges.
     edges: ChangesetEdges,
 
-    /// Whether these edges were originally fetched via a prefetch operation.
-    prefetched: bool,
+    /// Whether these edges were originally fetched directly, or from some
+    /// prefetch operation.
+    cache_origin: CacheOrigin,
 }
 
 #[derive(Clone, Debug)]
@@ -149,7 +169,7 @@ impl CachedPrefetchedChangesetEdges {
         CachedPrefetchedChangesetEdges {
             inner: CachedChangesetEdges {
                 edges,
-                prefetched: false,
+                cache_origin: CacheOrigin::Fetched,
             },
             prefetched_edges: HashMap::new(),
         }
@@ -159,15 +179,27 @@ impl CachedPrefetchedChangesetEdges {
         CachedPrefetchedChangesetEdges {
             inner: CachedChangesetEdges {
                 edges,
-                prefetched: true,
+                cache_origin: CacheOrigin::Prefetched,
+            },
+            prefetched_edges: HashMap::new(),
+        }
+    }
+
+    fn memcache_prefetched(edges: ChangesetEdges) -> Self {
+        CachedPrefetchedChangesetEdges {
+            inner: CachedChangesetEdges {
+                edges,
+                cache_origin: CacheOrigin::MemcachePrefetched,
             },
             prefetched_edges: HashMap::new(),
         }
     }
 
     fn take(self) -> ChangesetEdges {
-        if self.inner.prefetched {
-            STATS::hit.add_value(1);
+        match self.inner.cache_origin {
+            CacheOrigin::Fetched | CacheOrigin::MemcacheFetched => {}
+            CacheOrigin::Prefetched => STATS::hit.add_value(1),
+            CacheOrigin::MemcachePrefetched => STATS::memcache_hit.add_value(1),
         }
         self.inner.edges
     }
@@ -190,7 +222,7 @@ impl CachedPrefetchedChangesetEdges {
     fn from_thrift(cached_edges: thrift::CachedChangesetEdges) -> Result<Self> {
         let inner = CachedChangesetEdges {
             edges: ChangesetEdges::from_thrift(cached_edges.edges)?,
-            prefetched: false,
+            cache_origin: CacheOrigin::MemcacheFetched,
         };
         let mut prefetched_edges = HashMap::new();
         if let Some(cached_prefetched_edges) = cached_edges.prefetched_edges {
@@ -339,16 +371,23 @@ impl KeyedEntityStore<ChangesetId, CachedPrefetchedChangesetEdges> for CacheRequ
         &self,
         values: impl IntoIterator<Item = (&'a ChangesetId, &'a CachedPrefetchedChangesetEdges)>,
     ) {
+        let mut fetched = 0;
         for (_cs_id, edges) in values {
+            fetched += 1;
             if !edges.prefetched_edges.is_empty() {
                 let prefetched_edges = edges
                     .prefetched_edges
                     .iter()
-                    .map(|(k, v)| (*k, CachedPrefetchedChangesetEdges::prefetched(v.clone())))
+                    .map(|(k, v)| {
+                        let edges = CachedPrefetchedChangesetEdges::memcache_prefetched(v.clone());
+                        (*k, edges)
+                    })
                     .collect::<HashMap<_, _>>();
+                STATS::memcache_prefetched.add_value(prefetched_edges.len() as i64);
                 fill_cachelib(self, &prefetched_edges);
             }
         }
+        STATS::memcache_fetched.add_value(fetched);
     }
 }
 
