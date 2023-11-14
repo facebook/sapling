@@ -154,9 +154,17 @@ pub enum PrefetchCmd {
         #[clap(flatten)]
         options: ActivationOptions,
     },
-    #[clap(about = "Prefetch all files for the specified prefetch profiles. \
+    #[clap(
+        about = "Prefetch all files for the specified prefetch profiles. \
         If no profiles are provided, prefetches all files for all activated \
-        proifles instead. This is intended for use after checkout and pull.")]
+        proifles instead. This is intended for use after checkout and pull.",
+        after_help = "NOTE: When providing both --commits and a list of \
+        profiles, you must separate these two lists with `--`. For example: \
+        \n\neden prefetch-profile fetch --commits ff77d28f9 dd76d27fa -- \
+        eden arc_focus_large trees \n\
+        eden prefetch-profile fetch eden arc_focus_large trees \n\
+        eden prefetch-profile fetch --commits ff77d28f9"
+    )]
     Fetch {
         #[clap(flatten)]
         options: FetchOptions,
