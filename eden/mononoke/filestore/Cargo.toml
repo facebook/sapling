@@ -10,7 +10,7 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "=1.0.72"
 async-trait = "0.1.71"
-blake3 = { version = "=1.3.1", features = ["traits-preview"] }
+blake3 = { version = "=1.5.0", features = ["traits-preview"] }
 blobstore = { version = "0.1.0", path = "../blobstore" }
 bytes = { version = "1.1", features = ["serde"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
