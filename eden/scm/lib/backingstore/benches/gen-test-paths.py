@@ -23,19 +23,35 @@ def yield_path_nodes(repo, main, n):
             yield path, nodes[0]
 
 
+def yield_tree_root_nodes(repo, main, n):
+    # For simplicity, we just provide root trees.
+    s = repo.revs("limit(reverse(::%s), %z)", main, n).prefetch("text")
+    for ctx in s.iterctx():
+        yield ctx.manifestnode()
+
+
 def main(repo):
     n = int(os.getenv("N") or "20000")
     main = os.getenv("MAIN") or bookmarks.mainbookmark(repo)
 
     print(f"MAIN={main}\nN={n}", file=sys.stderr)
 
-    diff = yield_path_nodes(repo, main, n)
     out = "test-paths.txt"
-    with open(out, "wb") as f:
-        for path, node in itertools.islice(diff, n):
-            f.write(("%s %s\n" % (hex(node), path)).encode())
+    if not os.path.exists(out):
+        diff = yield_path_nodes(repo, main, n)
+        with open(out, "wb") as f:
+            for path, node in itertools.islice(diff, n):
+                f.write(("%s %s\n" % (hex(node), path)).encode())
 
-    print(f"{out} written", file=sys.stderr)
+        print(f"{out} written", file=sys.stderr)
+
+    out = "test-trees.txt"
+    if not os.path.exists(out):
+        with open(out, "wb") as f:
+            for node in yield_tree_root_nodes(repo, main, n):
+                f.write(("%s\n" % hex(node)).encode())
+
+        print(f"{out} written", file=sys.stderr)
 
 
 main(repo)  # noqa

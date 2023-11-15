@@ -19,6 +19,8 @@
 use std::fs;
 use std::path::Path;
 use std::process::Command;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
 use std::sync::OnceLock;
 
 use backingstore::BackingStore;
@@ -63,6 +65,24 @@ fn main() {
         },
     );
 
+    let n = load_tree_keys().len();
+
+    bench_matrix("get_tree serial (1k)", |store, mode| {
+        for key in load_tree_keys().iter().take(1000) {
+            let fetched = store.get_tree(key.hgid.as_ref(), mode);
+            assert!(matches!(mode, FetchMode::LocalOnly) || matches!(fetched, Ok(Some(_))));
+        }
+    });
+
+    bench_matrix(&format!("get_tree_batch ({}k)", n / 1000), |store, mode| {
+        let fetch_count = AtomicUsize::new(0);
+        store.get_tree_batch(load_tree_keys().clone(), mode, |_, fetched| {
+            fetch_count.fetch_add(1, Ordering::Release);
+            assert!(matches!(mode, FetchMode::LocalOnly) || matches!(fetched, Ok(Some(_))));
+        });
+        assert_eq!(fetch_count.load(Ordering::Acquire), load_tree_keys().len());
+    });
+
     eprintln!("Max RSS: {} MB", rss_mb());
 }
 
@@ -83,7 +103,7 @@ fn bench_matrix(name: &str, func: fn(&BackingStore, FetchMode)) {
     let title = format!("{name} (local, warm cache)");
     if bench_enabled(&title) {
         let dir = tempdir();
-        dir.warm_up_files();
+        dir.warm_up(name);
         bench(&title, move || {
             let store = dir.store();
             measured(move || func(&store, FetchMode::LocalOnly))
@@ -93,7 +113,7 @@ fn bench_matrix(name: &str, func: fn(&BackingStore, FetchMode)) {
     let title = format!("{name} (remote, warm cache)");
     if bench_enabled(&title) {
         let dir = tempdir();
-        dir.warm_up_files();
+        dir.warm_up(name);
         bench(title, move || {
             let store = dir.store();
             measured(move || func(&store, FetchMode::AllowRemote))
@@ -114,7 +134,7 @@ fn tempdir() -> tempfile::TempDir {
 
 trait TempDirExt {
     fn store(&self) -> BackingStore;
-    fn warm_up_files(&self);
+    fn warm_up(&self, title: &str);
 }
 
 impl TempDirExt for tempfile::TempDir {
@@ -146,10 +166,15 @@ impl TempDirExt for tempfile::TempDir {
         BackingStore::new_with_config(root, false, &configs).unwrap()
     }
 
-    fn warm_up_files(&self) {
+    fn warm_up(&self, test_title: &str) {
         let store = self.store();
-        let keys = load_test_keys();
-        store.get_blob_batch(keys.clone(), FetchMode::AllowRemote, |_, _| ());
+        if test_title.contains("tree") {
+            let keys = load_tree_keys();
+            store.get_tree_batch(keys.clone(), FetchMode::AllowRemote, |_, _| ());
+        } else {
+            let keys = load_test_keys();
+            store.get_blob_batch(keys.clone(), FetchMode::AllowRemote, |_, _| ());
+        }
         store.flush();
     }
 }
@@ -182,6 +207,28 @@ fn load_test_keys() -> &'static Vec<Key> {
             keys.push(Key::new(path, id));
         }
         eprintln!("KEYS={}: {} files", test_input_path, keys.len());
+        keys
+    })
+}
+
+/// Load (path, node) pairs for tree tests.
+fn load_tree_keys() -> &'static Vec<Key> {
+    static KEYS: OnceLock<Vec<Key>> = OnceLock::new();
+    KEYS.get_or_init(|| {
+        let n: usize = match std::env::var("N") {
+            Ok(n) => n.parse().unwrap_or(usize::MAX),
+            _ => usize::MAX,
+        };
+        let test_input_path =
+            std::env::var("TREE_KEYS").unwrap_or_else(|_| "test-trees.txt".to_owned());
+        let data = fs::read_to_string(&test_input_path).unwrap();
+        let mut keys = Vec::new();
+        for hex_node in data.lines().take(n) {
+            let id = HgId::from_hex(hex_node.as_bytes()).unwrap();
+            let path = RepoPathBuf::new();
+            keys.push(Key::new(path, id));
+        }
+        eprintln!("TREE_KEYS={}: {} trees", test_input_path, keys.len());
         keys
     })
 }
