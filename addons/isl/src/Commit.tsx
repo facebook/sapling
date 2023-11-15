@@ -643,7 +643,7 @@ function DraggableCommit({
 }
 
 function hasUncommittedChanges(snapshot: Snapshot): boolean {
-  const loadable = snapshot.getLoadable(latestUncommittedChanges);
+  const loadable = snapshot.getLoadable(uncommittedChangesWithPreviews);
   return (
     loadable.state === 'hasValue' &&
     loadable.contents.filter(

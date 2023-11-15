@@ -9,6 +9,7 @@ import type {Hash} from '../../types';
 
 import App from '../../App';
 import {CommitPreview} from '../../previews';
+import {ignoreRTL} from '../../testQueries';
 import {
   resetTestMessages,
   expectMessageSentToServer,
@@ -20,7 +21,7 @@ import {
   simulateUncommittedChangedFiles,
 } from '../../testUtils';
 import {CommandRunner, succeedableRevset} from '../../types';
-import {fireEvent, render, screen, within} from '@testing-library/react';
+import {fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import {act} from 'react-dom/test-utils';
 
 /*eslint-disable @typescript-eslint/no-non-null-assertion */
@@ -156,6 +157,21 @@ describe('rebase operation', () => {
 
     expect(screen.queryByText('Run Rebase')).not.toBeInTheDocument();
     expect(screen.getByText('Cannot drag to rebase with uncommitted changes.')).toBeInTheDocument();
+  });
+
+  it('can drag if uncommitted changes are optimistically removed', async () => {
+    act(() => simulateUncommittedChangedFiles({value: [{path: 'file1.txt', status: 'M'}]}));
+    act(() => {
+      fireEvent.click(screen.getByTestId('quick-commit-button'));
+    });
+    await waitFor(() => {
+      expect(screen.queryByText(ignoreRTL('file1.txt'))).not.toBeInTheDocument();
+    });
+    dragAndDropCommits('d', '2');
+
+    expect(
+      screen.queryByText('Cannot drag to rebase with uncommitted changes.'),
+    ).not.toBeInTheDocument();
   });
 
   it('can drag with untracked changes', () => {
