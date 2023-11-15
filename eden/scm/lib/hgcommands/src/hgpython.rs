@@ -67,7 +67,6 @@ impl HgPython {
 
         // Putting the module in sys.modules makes it importable.
         let sys = py.import("sys").unwrap();
-        HgPython::update_path(py, &sys);
 
         // If this fails, it's a fatal error.
         let name = "bindings";
@@ -104,42 +103,6 @@ impl HgPython {
         let meta_path_finder = pymodules::BindingsModuleFinder::new(py, home).unwrap();
         let meta_path = PyList::extract(py, &sys.get(py, "meta_path").unwrap()).unwrap();
         meta_path.insert(py, 0, meta_path_finder.into_object());
-    }
-
-    fn update_path(py: Python, sys: &PyModule) {
-        // In homebrew and other environments, the python modules may be installed isolated
-        // alongside the binary. Let's setup the PATH so we discover those python modules.
-        // An example layout:
-        //   $PREFIX/usr/local/bin/hg
-        //   $PREFIX/usr/local/lib/python3.8/site-packages/sapling
-        let py_version: (i32, i32, i32, String, i32) =
-            sys.get(py, "version_info").unwrap().extract(py).unwrap();
-
-        let path_for_prefix = |prefix: &str| -> String {
-            let rel_path = PathBuf::from(format!(
-                "{}/python{}.{}/site-packages",
-                prefix, py_version.0, py_version.1
-            ));
-            std::env::current_exe()
-                .unwrap()
-                .parent()
-                .unwrap()
-                .parent()
-                .unwrap()
-                .join(rel_path)
-                .into_os_string()
-                .into_string()
-                .unwrap()
-        };
-        let py_path: PyList = sys.get(py, "path").unwrap().extract(py).unwrap();
-        py_path.append(
-            py,
-            PyUnicode::new(py, &path_for_prefix("lib")).into_object(),
-        );
-        py_path.append(
-            py,
-            PyUnicode::new(py, &path_for_prefix("lib64")).into_object(),
-        );
     }
 
     fn prepare_args(args: &[String]) -> Vec<String> {
