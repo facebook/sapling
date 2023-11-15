@@ -13,6 +13,7 @@ use std::str;
 use anyhow::Error;
 use anyhow::Result;
 use configmodel::Config;
+use configmodel::ConfigExt;
 use configmodel::Text;
 use indexmap::IndexMap;
 use thiserror::Error;
@@ -231,9 +232,9 @@ impl<'a> AuthSection<'a> {
 
             let mut best = best.clone();
             if best.cacerts.is_none() {
-                if let Some(cacerts) = self.config.get("web", "cacerts") {
-                    tracing::debug!(%url, %cacerts, "using web.cacerts bundle");
-                    best.cacerts = Some(cacerts.to_string().into());
+                if let Ok(cacerts) = self.config.must_get("web", "cacerts") {
+                    tracing::debug!(%url, ?cacerts, "using web.cacerts bundle");
+                    best.cacerts = Some(cacerts);
                 }
             }
             Ok(Some(best))
