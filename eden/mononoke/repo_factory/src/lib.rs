@@ -47,6 +47,10 @@ use bonsai_svnrev_mapping::CachingBonsaiSvnrevMapping;
 use bonsai_svnrev_mapping::SqlBonsaiSvnrevMappingBuilder;
 use bonsai_tag_mapping::ArcBonsaiTagMapping;
 use bonsai_tag_mapping::SqlBonsaiTagMappingBuilder;
+#[cfg(fbcode_build)]
+use bookmark_service_client::BookmarkServiceClient;
+#[cfg(fbcode_build)]
+use bookmark_service_client::RepoBookmarkServiceClient;
 use bookmarks::bookmark_heads_fetcher;
 use bookmarks::ArcBookmarkUpdateLog;
 use bookmarks::ArcBookmarks;
@@ -83,6 +87,8 @@ use derived_data_client_library::Client as DerivationServiceClient;
 use derived_data_remote::Address;
 use derived_data_remote::DerivationClient;
 use derived_data_remote::RemoteDerivationOptions;
+#[cfg(fbcode_build)]
+use environment::BookmarkCacheAddress;
 use environment::BookmarkCacheKind;
 use environment::Caching;
 use environment::MononokeEnvironment;
@@ -1486,6 +1492,33 @@ impl RepoFactory {
                 Ok(Arc::new(
                     wbc_builder.build().watched(&self.env.logger).await?,
                 ))
+            }
+            #[cfg(fbcode_build)]
+            BookmarkCacheKind::Remote(address) => {
+                anyhow::ensure!(
+                    self.env.bookmark_cache_options.derived_data
+                        == WarmBookmarksCacheDerivedData::HgOnly,
+                    "HgOnly derivation supported right now"
+                );
+
+                let client = match address {
+                    BookmarkCacheAddress::HostPort(host_port) => {
+                        BookmarkServiceClient::from_host_port(self.env.fb, host_port.to_string())?
+                    }
+                    BookmarkCacheAddress::SmcTier(tier_name) => {
+                        BookmarkServiceClient::from_tier_name(self.env.fb, tier_name.to_string())?
+                    }
+                };
+                let repo_client =
+                    RepoBookmarkServiceClient::new(repo_identity.name().to_string(), client);
+
+                Ok(Arc::new(repo_client))
+            }
+            #[cfg(not(fbcode_build))]
+            BookmarkCacheKind::Remote(_addr) => {
+                return Err(anyhow::anyhow!(
+                    "Remote bookmark cache not supported in non-fbcode builds"
+                ));
             }
             BookmarkCacheKind::Disabled => Ok(Arc::new(NoopBookmarksCache::new(bookmarks.clone()))),
         }

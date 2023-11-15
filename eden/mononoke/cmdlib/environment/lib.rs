@@ -60,9 +60,16 @@ pub enum WarmBookmarksCacheDerivedData {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub enum BookmarkCacheAddress {
+    SmcTier(String),
+    HostPort(String),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum BookmarkCacheKind {
     Disabled,
     Local,
+    Remote(BookmarkCacheAddress),
 }
 
 #[derive(Clone, Debug)]

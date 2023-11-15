@@ -49,6 +49,7 @@ rust_library(
         "//eden/mononoke/common/scuba_ext:scuba_ext",
         "//eden/mononoke/common/sql_construct:sql_construct",
         "//eden/mononoke/derived_data:derived_data_remote",
+        "//eden/mononoke/facebook/bookmark_service:bookmark_service_client",
         "//eden/mononoke/facebook/derived_data_service:derived_data_client_library",
         "//eden/mononoke/filenodes:filenodes",
         "//eden/mononoke/filestore:filestore",
