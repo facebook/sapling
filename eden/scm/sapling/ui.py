@@ -1681,6 +1681,10 @@ class ui:
           env_vars = PATH,SHELL
         """
 
+        if event == "metrics":
+            # This is sampled in Rust.
+            return
+
         category = bindings.hgmetrics.samplingcategory(event)
         if category is None:
             return
@@ -1695,9 +1699,7 @@ class ui:
             }
 
         opts["metrics_type"] = event
-        if msg and event != "metrics":
-            # do not keep message for "metrics", which only wants
-            # to log key/value dict.
+        if msg:
             if len(msg) == 1:
                 # don't try to format if there is only one item.
                 opts["msg"] = msg[0]

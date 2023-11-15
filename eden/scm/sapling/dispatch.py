@@ -359,9 +359,7 @@ def dispatch(req):
                     ui.write_err(msg, label="hgmetrics")
 
                 # Write to blackbox, and sampling
-                ui.log(
-                    "metrics", pformat({"metrics": metrics}, width=1024), **hgmetrics
-                )
+                ui.log("metrics", pformat({"metrics": metrics}, width=1024))
         blackbox.sync()
 
     versionthresholddays = req.ui.configint("ui", "version-age-threshold-days")

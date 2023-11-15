@@ -32,7 +32,16 @@ pub fn flush() {
     }
 }
 
+/// Log a single key->value pair.
 pub fn append_sample<V: ?Sized>(key: &str, name: &str, value: &V)
+where
+    V: Serialize,
+{
+    append_sample_map(key, &HashMap::from([(name, value)]));
+}
+
+/// Log a key->value map of some kind. `value` should serialize to a JSON object.
+pub fn append_sample_map<V: ?Sized>(key: &str, value: &V)
 where
     V: Serialize,
 {
@@ -41,7 +50,7 @@ where
             Some(v) => v,
             None => return,
         };
-        let _ = sc.append(category, &HashMap::from([(name, value)]));
+        let _ = sc.append(category, value);
     }
 }
 

@@ -190,7 +190,18 @@ Test ui.metrics.gauge API
     bar=2
     foo_a=1
     foo_b=5
-    metrics_type=metrics
+
+Counters get logged for native commands:
+  $ SCM_SAMPLING_FILEPATH=$TESTTMP/native.txt hg debugmetrics --config sampling.key.metrics=aaa
+  >>> import os, json
+  >>> with open(os.path.join(os.environ["TESTTMP"], "native.txt"), "r") as f:
+  ...     lines = filter(None, f.read().split("\0"))
+  ...     for line in lines:
+  ...         obj = json.loads(line)
+  ...         if obj["category"] == "aaa":
+  ...             for k, v in sorted(obj["data"].items()):
+  ...                 print("  %s=%s" % (k, v))
+    test_counter=1
 
 Metrics can be printed if devel.print-metrics is set:
   $ hg log -r null -T '.\n' --config extensions.gauge=$TESTTMP/a.py --config devel.print-metrics=1 --config devel.skip-metrics=watchman

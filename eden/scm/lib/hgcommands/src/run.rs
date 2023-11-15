@@ -782,6 +782,11 @@ fn log_end(
         }
         blackbox::sync();
     });
+
+    let counters = hg_metrics::summarize();
+    if !counters.is_empty() {
+        sampling::append_sample_map("metrics", &counters);
+    }
 }
 
 #[derive(Copy, Clone)]
