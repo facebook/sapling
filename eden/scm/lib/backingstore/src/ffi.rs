@@ -21,7 +21,6 @@ use revisionstore::scmstore::FileAuxData as ScmStoreFileAuxData;
 use types::HgId;
 use types::Key;
 
-use crate::auxdata::FileAuxData;
 use crate::backingstore::BackingStore;
 use crate::cbytes::CBytes;
 use crate::cfallible::CFallible;
@@ -63,6 +62,15 @@ pub(crate) mod ffi {
         pub(crate) bytes: Vec<u8>,
     }
 
+    pub struct FileAuxData {
+        total_size: u64,
+        content_id: [u8; 32],
+        content_sha1: [u8; 20],
+        content_sha256: [u8; 32],
+        has_blake3: bool,
+        content_blake3: [u8; 32],
+    }
+
     extern "Rust" {
         type BackingStore;
 
@@ -87,6 +95,12 @@ pub(crate) mod ffi {
             node: &[u8],
             local: bool,
         ) -> Result<Box<Blob>>;
+
+        pub fn sapling_backingstore_get_file_aux(
+            store: &mut BackingStore,
+            node: &[u8],
+            local: bool,
+        ) -> Result<SharedPtr<FileAuxData>>;
 
         pub fn sapling_backingstore_flush(store: &mut BackingStore);
     }
@@ -179,19 +193,17 @@ pub extern "C" fn sapling_backingstore_get_blob_batch(
     });
 }
 
-#[no_mangle]
-pub extern "C" fn sapling_backingstore_get_file_aux(
+pub fn sapling_backingstore_get_file_aux(
     store: &mut BackingStore,
-    node: Slice<u8>,
+    node: &[u8],
     local: bool,
-) -> CFallibleBase {
-    CFallible::<FileAuxData>::make_with(|| {
+) -> Result<SharedPtr<ffi::FileAuxData>> {
+    Ok(SharedPtr::new(
         store
-            .get_file_aux(node.slice(), fetch_mode_from_local(local))
-            .and_then(|opt| opt.ok_or_else(|| Error::msg("no file aux data found")))
-            .map(|aux| aux.into())
-    })
-    .into()
+            .get_file_aux(node, fetch_mode_from_local(local))
+            .and_then(|opt| opt.ok_or_else(|| Error::msg("no file aux data found")))?
+            .into(),
+    ))
 }
 
 #[no_mangle]
@@ -207,7 +219,7 @@ pub extern "C" fn sapling_backingstore_get_file_aux_batch(
     store.get_file_aux_batch(keys, fetch_mode_from_local(local), |idx, result| {
         let result: Result<ScmStoreFileAuxData> =
             result.and_then(|opt| opt.ok_or_else(|| Error::msg("no file aux data found")));
-        let result: CFallible<FileAuxData> = result.map(|aux| aux.into()).into();
+        let result: CFallible<ffi::FileAuxData> = result.map(|aux| aux.into()).into();
         unsafe { resolve(data, idx, result.into()) };
     });
 }

@@ -284,11 +284,13 @@ BlobMetadataPtr HgDatapackStore::getLocalBlobMetadata(
       store_.getBlobMetadata(hgInfo.byteHash(), true /*local_only*/);
   if (metadata) {
     std::optional<Hash32> blake3;
-    if (metadata->content_blake3 != nullptr) {
-      blake3.emplace(*metadata->content_blake3);
+    if (metadata->has_blake3) {
+      blake3.emplace(Hash32{std::move(metadata->content_blake3)});
     }
     return std::make_shared<BlobMetadataPtr::element_type>(BlobMetadata{
-        Hash20{metadata->content_sha1}, blake3, metadata->total_size});
+        Hash20{std::move(metadata->content_sha1)},
+        blake3,
+        metadata->total_size});
   }
   return nullptr;
 }
@@ -326,12 +328,12 @@ void HgDatapackStore::getBlobMetadataBatch(
         } else {
           auto& aux = auxTry.value();
           std::optional<Hash32> blake3;
-          if (aux->content_blake3 != nullptr) {
-            blake3.emplace(*aux->content_blake3);
+          if (aux->has_blake3) {
+            blake3.emplace(Hash32{std::move(aux->content_blake3)});
           }
 
           result = folly::Try{std::make_shared<BlobMetadataPtr::element_type>(
-              Hash20{aux->content_sha1}, blake3, aux->total_size)};
+              Hash20{std::move(aux->content_sha1)}, blake3, aux->total_size)};
         }
         for (auto& importRequest : importRequestList) {
           importRequest->getPromise<BlobMetadataPtr>()->setWith(

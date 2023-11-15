@@ -7,7 +7,7 @@
  * This file is generated with cbindgen. Please run `./tools/cbindgen.sh` to
  * update this file.
  *
- * @generated SignedSource<<713e84b2c54e15b5b3fa1675e8969f16>>
+ * @generated SignedSource<<acd2733514d3f5e17ff03431ac01b0a3>>
  *
  */
 
@@ -26,6 +26,8 @@ namespace sapling {
 
 struct BackingStore;
 
+struct FileAuxData;
+
 struct Tree;
 
 template<typename T = void>
@@ -42,14 +44,6 @@ struct CBytes {
   operator folly::ByteRange() const {
     return asByteRange();
   }
-};
-
-struct FileAuxData {
-  uint64_t total_size;
-  CBytes content_id;
-  CBytes content_sha1;
-  CBytes content_sha256;
-  CBytes *content_blake3;
 };
 
 struct Request {
@@ -94,10 +88,6 @@ void sapling_backingstore_get_blob_batch(BackingStore *store,
                                          bool local,
                                          void *data,
                                          void (*resolve)(void*, uintptr_t, CFallibleBase));
-
-CFallibleBase sapling_backingstore_get_file_aux(BackingStore *store,
-                                                Slice<uint8_t> node,
-                                                bool local);
 
 void sapling_backingstore_get_file_aux_batch(BackingStore *store,
                                              Slice<Request> requests,

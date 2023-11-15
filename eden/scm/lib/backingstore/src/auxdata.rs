@@ -7,46 +7,20 @@
 
 use revisionstore::scmstore::file::FileAuxData as ScmStoreFileAuxData;
 
-use crate::cbytes::CBytes;
-
-#[repr(C)]
-pub struct FileAuxData {
-    total_size: u64,
-    content_id: CBytes,
-    content_sha1: CBytes,
-    content_sha256: CBytes,
-    // Using pointer as `Option<CBytes>`
-    content_blake3: *mut CBytes,
-}
+use crate::ffi::ffi::FileAuxData;
 
 impl From<ScmStoreFileAuxData> for FileAuxData {
     fn from(v: ScmStoreFileAuxData) -> Self {
-        // TODO(meyer): Yet more unnecessary allocation, need to convert backing to cxx
         FileAuxData {
             total_size: v.total_size,
-            content_id: v.content_id.as_ref().to_vec().into(),
-            content_sha1: v.sha1.as_ref().to_vec().into(),
-            content_sha256: v.sha256.as_ref().to_vec().into(),
+            content_id: v.content_id.into(),
+            content_sha1: v.sha1.into(),
+            content_sha256: v.sha256.into_byte_array(),
+            has_blake3: v.seeded_blake3.is_some(),
             content_blake3: v
                 .seeded_blake3
-                .map_or(std::ptr::null_mut(), |content_blake3| {
-                    let boxed_blake3 = Box::new(content_blake3.as_ref().to_vec().into());
-                    Box::into_raw(boxed_blake3)
-                }),
+                .map_or([0u8; 32], |content_blake3| content_blake3.into_byte_array()),
         }
-    }
-}
-
-impl Drop for FileAuxData {
-    fn drop(&mut self) {
-        let content_blake3 = unsafe {
-            if self.content_blake3.is_null() {
-                None
-            } else {
-                Some(Box::from_raw(self.content_blake3))
-            }
-        };
-        drop(content_blake3);
     }
 }
 

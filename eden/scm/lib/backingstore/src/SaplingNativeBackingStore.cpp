@@ -147,6 +147,7 @@ std::unique_ptr<folly::IOBuf> SaplingNativeBackingStore::getBlob(
     bool local) {
   XLOG(DBG7) << "Importing blob node=" << folly::hexlify(node)
              << " from hgcache";
+
   try {
     auto blob = sapling_backingstore_get_blob(
                     *store_.get(),
@@ -228,17 +229,18 @@ std::shared_ptr<FileAuxData> SaplingNativeBackingStore::getBlobMetadata(
     bool local) {
   XLOG(DBG7) << "Importing blob metadata"
              << " node=" << folly::hexlify(node) << " from hgcache";
-  CFallible<FileAuxData, sapling_file_aux_free> result{
-      sapling_backingstore_get_file_aux(store_.get(), node, local)};
 
-  if (result.isError()) {
+  try {
+    return sapling_backingstore_get_file_aux(
+        *store_.get(),
+        rust::Slice<const uint8_t>{node.data(), node.size()},
+        local);
+  } catch (const rust::Error& error) {
     XLOG(DBG5) << "Error while getting blob metadata"
                << " node=" << folly::hexlify(node)
-               << " from backingstore: " << result.getError();
+               << " from backingstore: " << error.what();
     return nullptr;
   }
-
-  return result.unwrap();
 }
 
 void SaplingNativeBackingStore::getBlobMetadataBatch(
