@@ -13,6 +13,7 @@ rust_library(
         "fbsource//third-party/rust:serde",
         "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/edenapi/trait:edenapi_trait",
+        "//eden/scm/lib/edenapi/types:edenapi_types",
         "//eden/scm/lib/minibytes:minibytes",
         "//eden/scm/lib/types:types",
     ],

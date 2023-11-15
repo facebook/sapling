@@ -26,6 +26,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use edenapi_trait::EdenApi;
+pub use edenapi_types::FileAuxData;
 pub use futures;
 pub use minibytes;
 pub use minibytes::Bytes;
@@ -143,6 +144,11 @@ pub trait KeyStore: Send + Sync {
         SerializationFormat::Hg
     }
 
+    /// Free-form statistics.
+    fn statistics(&self) -> Vec<(String, usize)> {
+        Vec::new()
+    }
+
     /// Optional downcasting. If a store wants downcasting support, implement this
     /// as `Some(self)` explicitly.
     fn maybe_as_any(&self) -> Option<&dyn Any> {
@@ -163,6 +169,66 @@ pub trait FileStore: KeyStore + 'static {
         _keys: Vec<Key>,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Key)>>> {
         Ok(Box::new(std::iter::empty()))
+    }
+
+    /// Get auxiliary metadata for a single file.
+    /// Returns `None` if the information is unavailable locally.
+    /// The default implementation falls back to calculating them from content.
+    fn get_local_aux(&self, path: &RepoPath, id: HgId) -> anyhow::Result<Option<FileAuxData>> {
+        Ok(self
+            .get_local_content(path, id)?
+            .map(|data| FileAuxData::from_content(&data)))
+    }
+
+    /// Get auxiliary metadata for the given files.
+    /// Contact remote server on demand. Might block.
+    /// The default implementation falls back to calculating them from content.
+    fn get_aux_iter(
+        &self,
+        keys: Vec<Key>,
+    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, FileAuxData)>>> {
+        let iter = self.get_content_iter(keys)?.map(|entry| match entry {
+            Err(e) => Err(e),
+            Ok((key, data)) => Ok((key, FileAuxData::from_content(&data))),
+        });
+        Ok(Box::new(iter))
+    }
+
+    /// Get auxiliary metadata for the given file.
+    /// Contact remote server on demand. Might block.
+    /// When fetching many files, use `get_aux_iter` instead of calling this in a loop.
+    fn get_aux(&self, path: &RepoPath, id: HgId) -> anyhow::Result<FileAuxData> {
+        let key = Key::new(path.to_owned(), id);
+        match self.get_aux_iter(vec![key])?.next() {
+            None => Err(anyhow::format_err!("{}@{}: not found remotely", path, id)),
+            Some(Err(e)) => Err(e),
+            Some(Ok((_k, aux))) => Ok(aux),
+        }
+    }
+
+    /// Get parents at the file store layer.
+    /// This is only used by legacy Hg logic and is incompatible with Git.
+    /// New logic should use `pathhistory` or server-provided history instead.
+    fn get_hg_parents(&self, _path: &RepoPath, _id: HgId) -> anyhow::Result<Vec<HgId>> {
+        Ok(Vec::new())
+    }
+
+    /// Get the "raw" content. For LFS this returns its raw pointer.
+    /// This is only used by legacy Hg logic and is incompatible with Git.
+    fn get_hg_raw_content(&self, path: &RepoPath, id: HgId) -> anyhow::Result<minibytes::Bytes> {
+        self.get_content(path, id)
+    }
+
+    /// Get the "raw" flags. For LFS this is non-zero.
+    /// This is only used by legacy Hg logic and is incompatible with Git.
+    fn get_hg_flags(&self, _path: &RepoPath, _id: HgId) -> anyhow::Result<u32> {
+        Ok(0)
+    }
+
+    /// Upload LFS files specified by the keys.
+    /// This is called before push.
+    fn upload_lfs(&self, _keys: Vec<Key>) -> anyhow::Result<()> {
+        Ok(())
     }
 
     fn as_key_store(&self) -> &dyn KeyStore
