@@ -189,7 +189,7 @@ export function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.Reac
       );
       // NO existing diffs -> show submit stack ()
       actions.push(
-        <Tooltip key="submit-stack" title={tooltip}>
+        <Tooltip key="submit-stack" title={tooltip} placement="bottom">
           <HighlightCommitsWhileHovering toHighlight={submittableStack}>
             <OperationDisabledButton
               contextKey={contextKey}
