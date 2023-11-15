@@ -30,11 +30,15 @@ pub use edenapi_types::FileAuxData;
 pub use futures;
 pub use minibytes;
 pub use minibytes::Bytes;
+use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use serde::Serialize;
 pub use types;
+pub use types::tree::TreeItemFlag;
 use types::HgId;
 use types::Key;
+use types::PathComponent;
+use types::PathComponentBuf;
 use types::RepoPath;
 
 /// Boxed dynamic iterator. Similar to `BoxStream`.
@@ -248,10 +252,73 @@ pub trait ReadRootTreeIds {
     async fn read_root_tree_ids(&self, commits: Vec<HgId>) -> anyhow::Result<Vec<(HgId, HgId)>>;
 }
 
+/// Abstracted tree entry.
+pub trait TreeEntry: Send + 'static {
+    // PERF: PathComponentBuf is used because manifest-tree implementation detail.
+    // There should be a way to avoid allocation.
+    /// Iterate through the tree items.
+    /// Note the iteration order is serialization format defined.
+    /// Practically, Git appends `/` to directories when sorting them.
+    fn iter(
+        &self,
+    ) -> anyhow::Result<BoxIterator<anyhow::Result<(PathComponentBuf, HgId, TreeItemFlag)>>>;
+
+    /// Lookup a single item.
+    /// The actual implementation might use bisect under the hood.
+    /// Practically, only hg tree supports bisecting.
+    fn lookup(&self, name: &PathComponent) -> anyhow::Result<Option<(HgId, TreeItemFlag)>>;
+
+    /// Iterate through the file aux data if they are available.
+    /// For performance reasons, the iteration is on `HgId`.
+    fn file_aux_iter(&self) -> anyhow::Result<BoxIterator<anyhow::Result<(HgId, FileAuxData)>>> {
+        Ok(Box::new(std::iter::empty()))
+    }
+}
+
 /// The `TreeStore` is an abstraction layer for the tree manifest that decouples how or where the
 /// data is stored. This allows more easy iteration on serialization format. It also simplifies
 /// writing storage migration.
 pub trait TreeStore: KeyStore {
+    /// List a tree with optional auxiliary metadata.
+    /// Returns `None` if the information is unavailable locally.
+    ///
+    /// The default implementation does not provide the aux data.
+    /// Currently mainly used by EdenFS.
+    fn get_local_tree(
+        &self,
+        path: &RepoPath,
+        id: HgId,
+    ) -> anyhow::Result<Option<Box<dyn TreeEntry>>> {
+        let data = match self.get_local_content(path, id)? {
+            None => return Ok(None),
+            Some(v) => v,
+        };
+        Ok(Some(basic_parse_tree(data, self.format())?))
+    }
+
+    /// List trees with optional auxiliary metadata.
+    /// Get tree entries auxiliary metadata for the given files.
+    /// Contact remote server on demand. Might block.
+    ///
+    /// Currently mainly used by EdenFS.
+    fn get_tree_iter(
+        &self,
+        keys: Vec<Key>,
+    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Box<dyn TreeEntry>)>>> {
+        let iter = keys
+            .into_iter()
+            .map(|k| match self.get_local_tree(&k.path, k.hgid) {
+                Err(e) => Err(e),
+                Ok(None) => Err(anyhow::format_err!(
+                    "{}@{}: not found locally",
+                    k.path,
+                    k.hgid
+                )),
+                Ok(Some(data)) => Ok((k, data)),
+            });
+        Ok(Box::new(iter))
+    }
+
     fn as_key_store(&self) -> &dyn KeyStore
     where
         Self: Sized,
@@ -359,4 +426,22 @@ impl<T: FileStore + TreeStore> StoreOutput for Arc<T> {
     fn tree_store(&self) -> Arc<dyn TreeStore> {
         self.clone() as Arc<dyn TreeStore>
     }
+}
+
+#[doc(hidden)]
+pub type StaticSerializedTreeParseFunc =
+    fn(Bytes, SerializationFormat) -> anyhow::Result<Box<dyn TreeEntry>>;
+
+/// Parse a serialized git or hg tree into `TreeEntry`.
+/// This is basic parsing that does not provide `FileAuxData`.
+/// The actual implementation is elsewhere to avoid cyclic dependencies.
+pub fn basic_parse_tree(
+    data: Bytes,
+    format: SerializationFormat,
+) -> anyhow::Result<Box<dyn TreeEntry>> {
+    // Only call `call_constructor` once to avoid overhead in `factory`.
+    static TREE_PARSER: OnceCell<StaticSerializedTreeParseFunc> = OnceCell::new();
+    let parse = TREE_PARSER
+        .get_or_try_init(|| factory::call_constructor::<(), StaticSerializedTreeParseFunc>(&()))?;
+    parse(data, format)
 }
