@@ -979,6 +979,16 @@ class EdenConfig : private ConfigSettingManager {
       folly::kIsWindows,
       this};
 
+  /**
+   * Controls whether EdenFS symlinks are enabled on Windows.
+   *
+   * On Windows this is on by default but can be disabled via this setting.
+   */
+  ConfigSetting<bool> windowsSymlinksEnabled{
+      "experimental:windows-symlinks-enabled",
+      folly::kIsWindows,
+      this};
+
   // [blobcache]
 
   /**

@@ -107,7 +107,11 @@ struct Repository {
     #[serde(rename = "use-write-back-cache", default)]
     use_write_back_cache: bool,
 
-    #[serde(rename = "enable-windows-symlinks", default)]
+    #[serde(
+        rename = "enable-windows-symlinks",
+        default = "default_enable_windows_symlinks",
+        deserialize_with = "deserialize_enable_windows_symlinks"
+    )]
     enable_windows_symlinks: bool,
 
     #[serde(
@@ -116,6 +120,23 @@ struct Repository {
         deserialize_with = "deserialize_inode_catalog_type"
     )]
     inode_catalog_type: Option<String>,
+}
+
+fn default_enable_windows_symlinks() -> bool {
+    cfg!(target_os = "windows")
+}
+
+fn deserialize_enable_windows_symlinks<'de, D>(deserializer: D) -> Result<bool, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s = bool::deserialize(deserializer)?;
+
+    if cfg!(target_os = "windows") {
+        Ok(true)
+    } else {
+        Ok(s)
+    }
 }
 
 fn default_sqlite_overlay() -> bool {

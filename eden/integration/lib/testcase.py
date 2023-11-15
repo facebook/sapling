@@ -241,7 +241,9 @@ class EdenTestCase(EdenTestCaseBase):
         The format is the following:
         {"namespace": ["key1=value1", "key2=value2"}
         """
-        configs = {"experimental": ["enable-nfs-server = true"]}
+        configs = {
+            "experimental": ["enable-nfs-server = true\nwindows-symlinks = false"]
+        }
         if self.use_nfs():
             configs["clone"] = ['default-mount-protocol = "NFS"']
         # The number of concurrent APFS volumes we can create on macOS
