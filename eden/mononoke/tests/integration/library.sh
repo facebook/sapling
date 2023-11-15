@@ -540,6 +540,16 @@ function force_update_configerator {
   sslcurl -X POST -fsS "https://localhost:$MONONOKE_SOCKET/control/force_update_configerator"
 }
 
+# We can't use the "with client certs" option everywhere
+# because it breaks connecting to ephemeral mysql instances.
+function start_and_wait_for_mononoke_server_with_client_certs {
+    THRIFT_TLS_CL_CA_PATH="$TEST_CERTDIR/root-ca.crt" \
+    THRIFT_TLS_CL_CERT_PATH="$TEST_CERTDIR/proxy.crt" \
+    THRIFT_TLS_CL_KEY_PATH="$TEST_CERTDIR/proxy.key" \
+    mononoke "$@"
+    wait_for_mononoke
+}
+
 function start_and_wait_for_mononoke_server {
     mononoke "$@"
     wait_for_mononoke

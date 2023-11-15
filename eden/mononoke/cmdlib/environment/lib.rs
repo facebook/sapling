@@ -65,6 +65,12 @@ pub enum BookmarkCacheAddress {
     HostPort(String),
 }
 
+impl Default for BookmarkCacheAddress {
+    fn default() -> Self {
+        Self::SmcTier("mononoke-bookmark-cache".to_string())
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum BookmarkCacheKind {
     Disabled,
