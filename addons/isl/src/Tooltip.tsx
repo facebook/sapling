@@ -6,6 +6,7 @@
  */
 
 import type {MouseEvent, ReactNode} from 'react';
+import type {TypedEventEmitter} from 'shared/TypedEventEmitter';
 import type {ExclusiveOr} from 'shared/typeUtils';
 
 import React, {useLayoutEffect, useEffect, useRef, useState} from 'react';
@@ -47,6 +48,7 @@ type TooltipProps = {
     trigger: 'click';
     component: (dismiss: () => void) => JSX.Element;
     title?: string | React.ReactNode;
+    additionalToggles?: TypedEventEmitter<'change', unknown>;
   }
 >;
 
@@ -87,6 +89,7 @@ export function Tooltip({
   delayMs,
   shouldShow,
   onDismiss,
+  additionalToggles,
 }: TooltipProps) {
   const trigger = triggerProp ?? 'hover';
   const placement = placementProp ?? 'top';
@@ -130,6 +133,14 @@ export function Tooltip({
       }
     }
   }, [visible, setVisible, trigger]);
+
+  useEffect(() => {
+    const cb = () => setVisible(last => !last);
+    additionalToggles?.addListener('change', cb);
+    return () => {
+      additionalToggles?.removeListener('change', cb);
+    };
+  }, [additionalToggles]);
 
   // scrolling or resizing the window should hide all tooltips to prevent lingering.
   useEffect(() => {

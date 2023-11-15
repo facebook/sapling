@@ -5,7 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {useMemo} from 'react';
 import {makeCommandDispatcher, KeyCode, Modifier} from 'shared/KeyboardShortcuts';
+import {TypedEventEmitter} from 'shared/TypedEventEmitter';
 
 /* eslint-disable no-bitwise */
 export const [ISLCommandContext, useCommand, dispatchCommand] = makeCommandDispatcher({
@@ -22,3 +24,12 @@ export const [ISLCommandContext, useCommand, dispatchCommand] = makeCommandDispa
 });
 
 export type ISLCommandName = Parameters<typeof useCommand>[0];
+
+/** Like useCommand, but returns an eventEmitter you can subscribe to */
+export function useCommandEvent(commandName: ISLCommandName): TypedEventEmitter<'change', null> {
+  const emitter = useMemo(() => new TypedEventEmitter<'change', null>(), []);
+  useCommand(commandName, () => {
+    emitter.emit('change', null);
+  });
+  return emitter;
+}
