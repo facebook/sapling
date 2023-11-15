@@ -10,10 +10,10 @@ import {makeCommandDispatcher, KeyCode, Modifier} from 'shared/KeyboardShortcuts
 import {TypedEventEmitter} from 'shared/TypedEventEmitter';
 
 /* eslint-disable no-bitwise */
-export const [ISLCommandContext, useCommand, dispatchCommand] = makeCommandDispatcher({
+export const [ISLCommandContext, useCommand, dispatchCommand, allCommands] = makeCommandDispatcher({
   ToggleSidebar: [Modifier.CMD, KeyCode.Period],
   OpenUncommittedChangesComparisonView: [Modifier.CMD, KeyCode.SingleQuote],
-  OpenHeadChangesComparisonView: [Modifier.CMD | Modifier.SHIFT, KeyCode.SingleQuote],
+  OpenHeadChangesComparisonView: [[Modifier.CMD, Modifier.SHIFT], KeyCode.SingleQuote],
   Escape: [Modifier.NONE, KeyCode.Escape],
   SelectUpwards: [Modifier.NONE, KeyCode.UpArrow],
   SelectDownwards: [Modifier.NONE, KeyCode.DownArrow],

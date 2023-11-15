@@ -11,7 +11,7 @@ import {createContext, useContext, useEffect} from 'react';
 
 /* eslint-disable no-bitwise */
 
-type Modifiers = number;
+type Modifiers = Modifier | Array<Modifier>;
 /**
  * Modifiers for keyboard shortcuts, intended to be bitwise-OR'd together.
  * e.g. `Modifier.CMD | Modifier.CTRL`.
@@ -95,7 +95,7 @@ class CommandDispatcher<CommandName extends string> extends (
         [CommandName, CommandDefinition]
       >) {
         const [mods, key] = cmdAttrs;
-        if (key === event.keyCode && mods === modValue) {
+        if (key === event.keyCode && collapseModifiersToNumber(mods) === modValue) {
           this.dispatchEvent(new Event(command));
           break;
         }
@@ -103,6 +103,10 @@ class CommandDispatcher<CommandName extends string> extends (
     };
     document.body.addEventListener('keydown', this.keydownListener);
   }
+}
+
+function collapseModifiersToNumber(mods: Modifiers): number {
+  return Array.isArray(mods) ? mods.reduce((acc, mod) => acc | mod, Modifier.NONE) : mods;
 }
 
 /**
@@ -123,6 +127,7 @@ export function makeCommandDispatcher<CommandName extends string>(
   FunctionComponent<PropsWithChildren>,
   (command: CommandName, handler: () => void) => void,
   (command: CommandName) => void,
+  CommandMap<CommandName>,
 ] {
   const commandDispatcher = new CommandDispatcher(commands);
   const Context = createContext(commandDispatcher);
@@ -141,5 +146,6 @@ export function makeCommandDispatcher<CommandName extends string>(
     ({children}) => <Context.Provider value={commandDispatcher}>{children}</Context.Provider>,
     useCommand,
     (command: CommandName) => commandDispatcher.dispatchEvent(new Event(command)),
+    commands,
   ];
 }
