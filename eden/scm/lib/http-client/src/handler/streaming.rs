@@ -254,7 +254,7 @@ mod tests {
         let receiver = TestReceiver::new();
         let mut handler = Streaming::new(Box::new(receiver.clone()), RequestContext::dummy());
 
-        let reporter = ProgressReporter::with_callback(|_| ());
+        let reporter = ProgressReporter::default();
         handler
             .request_context_mut()
             .event_listeners()

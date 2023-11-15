@@ -298,7 +298,7 @@ mod tests {
 
     #[test]
     fn test_progress() {
-        let reporter = ProgressReporter::with_callback(|_| ());
+        let reporter = ProgressReporter::default();
 
         let mut handler = Buffered::new(RequestContext::dummy());
         handler

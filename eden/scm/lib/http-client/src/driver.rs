@@ -17,7 +17,6 @@ use curl::multi::Multi;
 use crate::errors::Abort;
 use crate::errors::HttpClientError;
 use crate::handler::HandlerExt;
-use crate::progress::Progress;
 use crate::progress::ProgressReporter;
 use crate::stats::Stats;
 use crate::Easy2H;
@@ -51,25 +50,19 @@ impl Complete {
 
 /// Struct that manages a curl::Multi session, synchronously driving
 /// all of the transfers therein to completion.
-pub(crate) struct MultiDriver<'a, P>
-where
-    P: FnMut(Progress),
-{
+pub(crate) struct MultiDriver<'a> {
     multi: &'a Multi,
     handles: RefCell<Vec<Option<Easy2Handle<Box<dyn HandlerExt>>>>>,
-    progress: ProgressReporter<P>,
+    progress: ProgressReporter,
     verbose: bool,
 }
 
-impl<'a, P> MultiDriver<'a, P>
-where
-    P: FnMut(Progress),
-{
-    pub(crate) fn new(multi: &'a Multi, progress_cb: P, verbose: bool) -> Self {
+impl<'a> MultiDriver<'a> {
+    pub(crate) fn new(multi: &'a Multi, verbose: bool) -> Self {
         Self {
             multi,
             handles: RefCell::new(Vec::new()),
-            progress: ProgressReporter::with_callback(progress_cb),
+            progress: ProgressReporter::default(),
             verbose,
         }
     }
@@ -244,10 +237,7 @@ where
     }
 }
 
-impl<'a, P> Drop for MultiDriver<'a, P>
-where
-    P: FnMut(Progress),
-{
+impl<'a> Drop for MultiDriver<'a> {
     fn drop(&mut self) {
         self.drop_all();
     }

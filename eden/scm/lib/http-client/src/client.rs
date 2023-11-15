@@ -132,7 +132,7 @@ impl HttpClient {
         multi
             .get_mut()
             .set_max_total_connections(self.config.max_concurrent_requests.unwrap_or(0))?;
-        let driver = MultiDriver::new(multi.get(), |_| (), self.config.verbose_stats);
+        let driver = MultiDriver::new(multi.get(), self.config.verbose_stats);
 
         for mut request in requests {
             self.event_listeners.trigger_new_request(request.ctx_mut());
@@ -232,7 +232,7 @@ impl HttpClient {
         multi
             .get_mut()
             .set_max_total_connections(self.config.max_concurrent_requests.unwrap_or(0))?;
-        let driver = MultiDriver::new(multi.get(), |_| (), self.config.verbose_stats);
+        let driver = MultiDriver::new(multi.get(), self.config.verbose_stats);
         for mut request in requests {
             self.event_listeners
                 .trigger_new_request(request.request.ctx_mut());
