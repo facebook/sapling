@@ -156,11 +156,13 @@ export function startServer({
       let providedToken: string | undefined;
       let cwd: string | undefined;
       let platform: string | undefined;
+      let sessionId: string | undefined;
       if (connectionRequest.url) {
         const searchParams = getSearchParams(connectionRequest.url);
         providedToken = searchParams.get('token');
         const cwdParam = searchParams.get('cwd');
         platform = searchParams.get('platform') as string;
+        sessionId = searchParams.get('sessionId');
         if (cwdParam) {
           cwd = decodeURIComponent(cwdParam);
         }
@@ -198,6 +200,9 @@ export function startServer({
         default:
         case undefined:
           break;
+      }
+      if (sessionId != null && platformImpl) {
+        platformImpl.sessionId = sessionId;
       }
 
       const dispose = onClientConnection({

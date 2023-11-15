@@ -94,6 +94,11 @@ export class LocalWebSocketEventBus {
       const cwd = decodeURIComponent(cwdParam);
       wsUrl.searchParams.append('cwd', cwd);
     }
+    const sessionIdParam = initialParams.get('sessionId');
+    if (sessionIdParam) {
+      const sessionId = decodeURIComponent(sessionIdParam);
+      wsUrl.searchParams.append('sessionId', sessionId);
+    }
     const platformName = window.islPlatform?.platformName;
     if (platformName) {
       wsUrl.searchParams.append('platform', platformName);

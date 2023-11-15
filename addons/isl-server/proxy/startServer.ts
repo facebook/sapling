@@ -45,6 +45,7 @@ optional arguments:
   --sl-version v   Set version number of sl was used to spawn the server (default: '(dev)')
   --platform       Set which platform implementation to use by changing the resulting URL.
                    Used to embed Sapling Web into non-browser web environments like IDEs.
+  --session id     Provide a specific ID for this session used in analytics.
 `;
 
 type JsonOutput =
@@ -81,6 +82,7 @@ type Args = {
   slVersion: string;
   command: string;
   cwd: string | undefined;
+  sessionId: string | undefined;
 };
 
 // Rudimentary arg parser to avoid the need for a third-party dependency.
@@ -103,6 +105,7 @@ export function parseArgs(args: Array<string> = process.argv.slice(2)): Args {
   let cwd: string | undefined = undefined;
   let slVersion = '(dev)';
   let platform: string | undefined = undefined;
+  let sessionId: string | undefined = undefined;
   let i = 0;
   function consumeArgValue(arg: string) {
     if (i >= len) {
@@ -166,6 +169,10 @@ export function parseArgs(args: Array<string> = process.argv.slice(2)): Args {
         stdout = true;
         break;
       }
+      case '--session': {
+        sessionId = consumeArgValue(arg);
+        break;
+      }
       case '--platform': {
         platform = consumeArgValue(arg);
         if (!isValidCustomPlatform(platform)) {
@@ -216,6 +223,7 @@ export function parseArgs(args: Array<string> = process.argv.slice(2)): Args {
     slVersion,
     command,
     cwd,
+    sessionId,
   };
 }
 
@@ -322,6 +330,7 @@ export async function runProxyMain(args: Args) {
     force,
     slVersion,
     command,
+    sessionId,
   } = args;
   if (help) {
     errorAndExit(HELP_MESSAGE, 0);
@@ -408,6 +417,9 @@ export async function runProxyMain(args: Args) {
       token: encodeURIComponent(token),
       cwd: encodeURIComponent(cwd),
     };
+    if (sessionId) {
+      urlArgs.sessionId = encodeURIComponent(sessionId);
+    }
     const platformPath =
       platform && platform !== 'browser' && isValidCustomPlatform(platform)
         ? `${encodeURIComponent(platform)}.html`

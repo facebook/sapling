@@ -90,6 +90,7 @@ describe('run-proxy', () => {
     slVersion: '1.0',
     command: 'sl',
     cwd: undefined,
+    sessionId: undefined,
   };
 
   it('spawns a server', async () => {
