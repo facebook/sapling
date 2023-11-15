@@ -44,9 +44,12 @@ fn main() {
     });
 
     bench_matrix(&format!("get_blob_batch ({}k)", n / 1000), |store, mode| {
+        let fetch_count = AtomicUsize::new(0);
         store.get_blob_batch(load_test_keys().clone(), mode, |_, fetched| {
+            fetch_count.fetch_add(1, Ordering::Release);
             assert!(matches!(mode, FetchMode::LocalOnly) || matches!(fetched, Ok(Some(_))));
-        })
+        });
+        assert_eq!(fetch_count.load(Ordering::Acquire), load_test_keys().len());
     });
 
     bench_matrix("get_file_aux serial (1k)", |store, mode| {
@@ -59,9 +62,12 @@ fn main() {
     bench_matrix(
         &format!("get_file_aux_batch ({}k)", n / 1000),
         |store, mode| {
+            let fetch_count = AtomicUsize::new(0);
             store.get_file_aux_batch(load_test_keys().clone(), mode, |_, fetched| {
+                fetch_count.fetch_add(1, Ordering::Release);
                 assert!(matches!(mode, FetchMode::LocalOnly) || matches!(fetched, Ok(Some(_))));
-            })
+            });
+            assert_eq!(fetch_count.load(Ordering::Acquire), load_test_keys().len());
         },
     );
 
