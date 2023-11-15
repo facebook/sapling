@@ -7,7 +7,7 @@
  * This file is generated with cbindgen. Please run `./tools/cbindgen.sh` to
  * update this file.
  *
- * @generated SignedSource<<0ae4c801e02b9dd151c19bfb40efdd50>>
+ * @generated SignedSource<<7062595ef7762d1c25d4a867295f6a69>>
  *
  */
 
@@ -24,14 +24,9 @@
 
 namespace sapling {
 
-enum class TreeEntryType : uint8_t {
-  Tree,
-  RegularFile,
-  ExecutableFile,
-  Symlink,
-};
-
 struct BackingStore;
+
+struct Tree;
 
 template<typename T = void>
 struct Vec;
@@ -57,11 +52,8 @@ struct FileAuxData {
   CBytes *content_blake3;
 };
 
-/// The monomorphized version of `CFallible` used solely because MSVC
-/// does not allow returning template functions from extern "C" functions.
-struct CFallibleBase {
-  void *value;
-  char *error;
+struct Request {
+  const uint8_t *node;
 };
 
 template<typename T>
@@ -76,24 +68,11 @@ struct Slice {
     : ptr{range.data()}, len{range.size()} {}
 };
 
-struct Request {
-  const uint8_t *node;
-};
-
-struct TreeEntry {
-  CBytes hash;
-  CBytes name;
-  TreeEntryType ttype;
-  uint64_t *size;
-  CBytes *content_sha1;
-  CBytes *content_blake3;
-};
-
-struct Tree {
-  const TreeEntry *entries;
-  /// This makes sure `entries` above is pointing to a valid memory.
-  Vec<TreeEntry> *entries_ptr;
-  uintptr_t length;
+/// The monomorphized version of `CFallible` used solely because MSVC
+/// does not allow returning template functions from extern "C" functions.
+struct CFallibleBase {
+  void *value;
+  char *error;
 };
 
 extern "C" {
@@ -103,8 +82,6 @@ void sapling_file_aux_free(FileAuxData *aux);
 void sapling_cbytes_free(CBytes *vec);
 
 void sapling_cfallible_free_error(char *ptr);
-
-CFallibleBase sapling_backingstore_get_tree(BackingStore *store, Slice<uint8_t> node, bool local);
 
 void sapling_backingstore_get_tree_batch(BackingStore *store,
                                          Slice<Request> requests,

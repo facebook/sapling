@@ -189,7 +189,6 @@ cpp_library(
         "//eden/fs/telemetry:structured_logger",
         "//eden/fs/utils:ref_ptr",
         "//eden/fs/utils:utils",
-        "//folly:optional",
         "//folly/io:iobuf",
         "//folly/logging:logging",
     ],

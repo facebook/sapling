@@ -7,7 +7,7 @@
 
 #include "eden/fs/store/hg/HgDatapackStore.h"
 
-#include <folly/Optional.h>
+#include <folly/Range.h>
 #include <folly/io/IOBuf.h>
 #include <folly/logging/xlog.h>
 #include <memory>
@@ -54,20 +54,21 @@ Tree::value_type fromRawTreeEntry(
   std::optional<Hash20> contentSha1;
   std::optional<Hash32> contentBlake3;
 
-  if (entry.size != nullptr) {
-    size = *entry.size;
+  if (entry.has_size) {
+    size = entry.size;
   }
 
-  if (entry.content_sha1 != nullptr) {
-    contentSha1.emplace(*entry.content_sha1);
+  if (entry.has_sha1) {
+    contentSha1.emplace(Hash20(std::move(entry.content_sha1)));
   }
 
-  if (entry.content_blake3 != nullptr) {
-    contentBlake3.emplace(*entry.content_blake3);
+  if (entry.has_blake3) {
+    contentBlake3.emplace(Hash32(std::move(entry.content_blake3)));
   }
 
-  auto name = PathComponent(folly::StringPiece{entry.name.asByteRange()});
-  auto hash = Hash20{entry.hash};
+  auto name = PathComponent(folly::StringPiece{
+      folly::ByteRange{entry.name.data(), entry.name.size()}});
+  Hash20 hash(std::move(entry.hash));
 
   auto fullPath = path + name;
   auto proxyHash = HgProxyHash::store(fullPath, hash, hgObjectIdFormat);
@@ -89,8 +90,8 @@ TreePtr fromRawTree(
     const std::unordered_set<RelativePath>& filteredPaths) {
   Tree::container entries{kPathMapDefaultCaseSensitive};
 
-  entries.reserve(tree->length);
-  for (uintptr_t i = 0; i < tree->length; i++) {
+  entries.reserve(tree->entries.size());
+  for (uintptr_t i = 0; i < tree->entries.size(); i++) {
     try {
       auto entry = fromRawTreeEntry(tree->entries[i], path, hgObjectIdFormat);
       // TODO(xavierd): In the case where this checks becomes too hot, we may

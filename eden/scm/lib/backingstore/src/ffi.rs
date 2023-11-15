@@ -13,6 +13,7 @@ use std::os::raw::c_char;
 
 use anyhow::Error;
 use anyhow::Result;
+use cxx::SharedPtr;
 use libc::c_void;
 use manifest::List;
 use revisionstore::scmstore::FetchMode;
@@ -27,12 +28,35 @@ use crate::cfallible::CFallible;
 use crate::cfallible::CFallibleBase;
 use crate::request::Request;
 use crate::slice::Slice;
-use crate::tree::Tree;
 
 #[cxx::bridge(namespace = sapling)]
-mod ffi {
+pub(crate) mod ffi {
     pub struct BackingStoreOptions {
         allow_retries: bool,
+    }
+
+    #[repr(u8)]
+    pub enum TreeEntryType {
+        Tree,
+        RegularFile,
+        ExecutableFile,
+        Symlink,
+    }
+
+    pub struct TreeEntry {
+        hash: [u8; 20],
+        name: Vec<u8>,
+        ttype: TreeEntryType,
+        has_size: bool,
+        size: u64,
+        has_sha1: bool,
+        content_sha1: [u8; 20],
+        has_blake3: bool,
+        content_blake3: [u8; 32],
+    }
+
+    pub struct Tree {
+        entries: Vec<TreeEntry>,
     }
 
     extern "Rust" {
@@ -47,6 +71,12 @@ mod ffi {
             store: &mut BackingStore,
             node: &[u8],
         ) -> Result<[u8; 20]>;
+
+        pub fn sapling_backingstore_get_tree(
+            store: &mut BackingStore,
+            node: &[u8],
+            local: bool,
+        ) -> Result<SharedPtr<Tree>>;
 
         pub fn sapling_backingstore_flush(store: &mut BackingStore);
     }
@@ -78,19 +108,17 @@ pub fn sapling_backingstore_get_manifest(
     store.get_manifest(node)
 }
 
-#[no_mangle]
-pub extern "C" fn sapling_backingstore_get_tree(
+pub fn sapling_backingstore_get_tree(
     store: &mut BackingStore,
-    node: Slice<u8>,
+    node: &[u8],
     local: bool,
-) -> CFallibleBase {
-    CFallible::<Tree>::make_with(|| {
+) -> Result<SharedPtr<ffi::Tree>> {
+    Ok(SharedPtr::new(
         store
-            .get_tree(node.slice(), fetch_mode_from_local(local))
+            .get_tree(node, fetch_mode_from_local(local))
             .and_then(|opt| opt.ok_or_else(|| Error::msg("no tree found")))
-            .and_then(|list| (list, HashMap::new()).try_into())
-    })
-    .into()
+            .and_then(|list| (list, HashMap::new()).try_into())?,
+    ))
 }
 
 #[no_mangle]
@@ -106,8 +134,8 @@ pub extern "C" fn sapling_backingstore_get_tree_batch(
     store.get_tree_batch(keys, fetch_mode_from_local(local), |idx, result| {
         let result: Result<(List, HashMap<HgId, ScmStoreFileAuxData>)> =
             result.and_then(|opt| opt.ok_or_else(|| Error::msg("no tree found")));
-        let result: Result<Tree> = result.and_then(|list| list.try_into());
-        let result: CFallible<Tree> = result.into();
+        let result: Result<ffi::Tree> = result.and_then(|list| list.try_into());
+        let result: CFallible<ffi::Tree> = result.into();
         unsafe { resolve(data, idx, result.into()) };
     });
 }

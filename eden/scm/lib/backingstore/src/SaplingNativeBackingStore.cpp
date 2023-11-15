@@ -75,16 +75,16 @@ std::shared_ptr<Tree> SaplingNativeBackingStore::getTree(
   XLOG(DBG7) << "Importing tree node=" << folly::hexlify(node)
              << " from hgcache";
 
-  CFallible<Tree, sapling_tree_free> manifest{
-      sapling_backingstore_get_tree(store_.get(), node, local)};
-
-  if (manifest.isError()) {
+  try {
+    return sapling_backingstore_get_tree(
+        *store_.get(),
+        rust::Slice<const uint8_t>{node.data(), node.size()},
+        local);
+  } catch (const rust::Error& error) {
     XLOG(DBG5) << "Error while getting tree node=" << folly::hexlify(node)
-               << " from backingstore: " << manifest.getError();
+               << " from backingstore: " << error.what();
     return nullptr;
   }
-
-  return manifest.unwrap();
 }
 
 void SaplingNativeBackingStore::getTreeBatch(

@@ -83,7 +83,6 @@ sys_includes = [
 
 [export]
 exclude = ["CFallible"]
-include = ["Tree", "TreeEntry", "TreeEntryType"]
 
 [export.rename]
 
