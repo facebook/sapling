@@ -18,11 +18,10 @@ Verify error message when no cachepath specified
   $ cp $HGRCPATH $HGRCPATH.bak
   $ sed -i.bak -n "/cachepath/!p" $HGRCPATH
   $ hg up tip
-  abort: failed to get cache path with suffix "manifests"
+  abort: get_cache_path
   
   Caused by:
-      0: failed to get config cache path
-      1: config remotefilelog.cachepath is not set
+      config remotefilelog.cachepath is not set
   [255]
   $ mv $HGRCPATH.bak $HGRCPATH
 

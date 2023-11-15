@@ -9,6 +9,7 @@ edition = "2021"
 anyhow = "=1.0.72"
 atomicfile = { version = "0.1.0", path = "../atomicfile" }
 dirs = "2.0"
+fn-error-context = "0.2"
 fs2 = "0.4"
 hostname = "0.3"
 lazystr = { version = "0.1.0", path = "../lazystr" }

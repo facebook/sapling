@@ -64,6 +64,7 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:dirs",
+        "fbsource//third-party/rust:fn-error-context",
         "fbsource//third-party/rust:fs2",
         "fbsource//third-party/rust:hostname",
         "fbsource//third-party/rust:rand",
