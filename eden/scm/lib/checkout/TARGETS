@@ -34,7 +34,6 @@ rust_library(
         "fbsource//third-party/rust:parking_lot",
         "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:thiserror",
-        "fbsource//third-party/rust:tokio",
         "fbsource//third-party/rust:tracing",
         "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/io:io",

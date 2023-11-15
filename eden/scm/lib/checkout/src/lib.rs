@@ -42,7 +42,6 @@ use progress_model::ProgressBar;
 use progress_model::Registry;
 use repo::repo::Repo;
 use storemodel::FileStore;
-use tokio::task::block_in_place;
 use tracing::debug;
 use tracing::instrument;
 use tracing::warn;
@@ -404,22 +403,20 @@ impl CheckoutPlan {
         .max(1)
     }
 
-    pub async fn apply_store_dry_run(&self, store: &dyn FileStore) -> Result<(usize, u64)> {
+    pub fn apply_store_dry_run(&self, store: &dyn FileStore) -> Result<(usize, u64)> {
         let keys = self
             .filtered_update_content
             .iter()
             .map(|(p, u)| Key::new(p.clone(), u.content_hgid.clone()));
         let keys: Vec<_> = keys.collect();
-        block_in_place(move || {
-            let (mut count, mut size) = (0, 0);
-            let iter = store.get_content_iter(keys)?;
-            for result in iter {
-                let (_key, data) = result?;
-                count += 1;
-                size += data.len() as u64;
-            }
-            Ok((count, size))
-        })
+        let (mut count, mut size) = (0, 0);
+        let iter = store.get_content_iter(keys)?;
+        for result in iter {
+            let (_key, data) = result?;
+            count += 1;
+            size += data.len() as u64;
+        }
+        Ok((count, size))
     }
 
     pub fn check_conflicts(&self, status: &Status) -> Vec<&RepoPath> {

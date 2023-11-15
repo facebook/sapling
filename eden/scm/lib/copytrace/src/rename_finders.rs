@@ -11,6 +11,7 @@ use std::iter::zip;
 use std::sync::Arc;
 
 use anyhow::Result;
+use async_runtime::block_in_place;
 use async_runtime::spawn_blocking;
 use async_trait::async_trait;
 use configmodel::Config;
@@ -24,7 +25,6 @@ use manifest_tree::Diff;
 use manifest_tree::TreeManifest;
 use parking_lot::Mutex;
 use pathmatcher::AlwaysMatcher;
-use storemodel::futures::StreamExt;
 use storemodel::FileStore;
 use types::Key;
 use types::RepoPath;
@@ -328,23 +328,27 @@ impl RenameFinderInner {
         old_path: &RepoPath,
     ) -> Result<Option<RepoPathBuf>> {
         tracing::trace!(keys_len = keys.len(), " read_renamed_metadata_forward");
-        let mut renames = self.file_reader.get_rename_stream(keys).await;
-        while let Some(rename) = renames.next().await {
-            let (key, rename_from_key) = rename?;
-            if rename_from_key.path.as_repo_path() == old_path {
-                return Ok(Some(key.path));
+        block_in_place(move || {
+            let renames = self.file_reader.get_rename_iter(keys)?;
+            for rename in renames {
+                let (key, rename_from_key) = rename?;
+                if rename_from_key.path.as_repo_path() == old_path {
+                    return Ok(Some(key.path));
+                }
             }
-        }
-        Ok(None)
+            Ok(None)
+        })
     }
 
     async fn read_renamed_metadata_backward(&self, key: Key) -> Result<Option<RepoPathBuf>> {
-        let mut renames = self.file_reader.get_rename_stream(vec![key]).await;
-        if let Some(rename) = renames.next().await {
-            let (_, rename_from_key) = rename?;
-            return Ok(Some(rename_from_key.path));
-        }
-        Ok(None)
+        block_in_place(move || {
+            let renames = self.file_reader.get_rename_iter(vec![key])?;
+            for rename in renames {
+                let (_, rename_from_key) = rename?;
+                return Ok(Some(rename_from_key.path));
+            }
+            Ok(None)
+        })
     }
 
     async fn find_rename_in_direction(

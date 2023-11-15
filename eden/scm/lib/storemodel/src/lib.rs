@@ -27,7 +27,6 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use edenapi_trait::EdenApi;
 pub use futures;
-use futures::stream::BoxStream;
 pub use minibytes;
 pub use minibytes::Bytes;
 use serde::Deserialize;
@@ -41,7 +40,6 @@ use types::RepoPath;
 pub type BoxIterator<'a, T> = Box<dyn Iterator<Item = T> + Send + 'a>;
 
 /// A store where content is indexed by "(path, hash)", aka "Key".
-#[async_trait]
 pub trait KeyStore: Send + Sync {
     /// Read the content of specified files.
     ///
@@ -153,14 +151,18 @@ pub trait KeyStore: Send + Sync {
 }
 
 /// A store for files.
-#[async_trait]
 pub trait FileStore: KeyStore + 'static {
     /// Read rename metadata of specified files.
     ///
     /// The result is a vector of (key, rename_from_key) pairs for files with
     /// rename information.
-    async fn get_rename_stream(&self, _keys: Vec<Key>) -> BoxStream<anyhow::Result<(Key, Key)>> {
-        Box::pin(futures::stream::empty())
+    ///
+    /// The iterator might block waiting for network.
+    fn get_rename_iter(
+        &self,
+        _keys: Vec<Key>,
+    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Key)>>> {
+        Ok(Box::new(std::iter::empty()))
     }
 
     fn as_key_store(&self) -> &dyn KeyStore

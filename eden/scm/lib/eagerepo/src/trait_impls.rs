@@ -7,12 +7,10 @@
 
 //! Implement traits from other crates.
 
-use async_trait::async_trait;
-use futures::stream::BoxStream;
-use futures::stream::StreamExt;
 use hgstore::split_hg_file_metadata;
 use hgstore::strip_hg_file_metadata;
 use storemodel::types;
+use storemodel::BoxIterator;
 use storemodel::FileStore;
 use storemodel::InsertOpts;
 use storemodel::KeyStore;
@@ -26,7 +24,6 @@ use crate::EagerRepoStore;
 
 // storemodel traits
 
-#[async_trait]
 impl KeyStore for EagerRepoStore {
     fn get_local_content(
         &self,
@@ -88,9 +85,11 @@ impl KeyStore for EagerRepoStore {
     }
 }
 
-#[async_trait]
 impl FileStore for EagerRepoStore {
-    async fn get_rename_stream(&self, keys: Vec<Key>) -> BoxStream<anyhow::Result<(Key, Key)>> {
+    fn get_rename_iter(
+        &self,
+        keys: Vec<Key>,
+    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Key)>>> {
         let iter = keys.into_iter().filter_map(|k| {
             let id = k.hgid;
             match self.get_content(id) {
@@ -103,7 +102,7 @@ impl FileStore for EagerRepoStore {
                 Ok(None) => Some(Err(anyhow::format_err!("no such file: {:?}", &k))),
             }
         });
-        futures::stream::iter(iter).boxed()
+        Ok(Box::new(iter))
     }
 }
 

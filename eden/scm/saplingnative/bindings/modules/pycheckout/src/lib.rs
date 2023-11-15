@@ -11,7 +11,6 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::Result;
-use async_runtime::try_block_unless_interrupted;
 use checkout::Action;
 use checkout::ActionMap;
 use checkout::Checkout;
@@ -158,9 +157,7 @@ py_class!(class checkoutplan |py| {
     def apply_dry_run(&self, store: ImplInto<ArcFileStore>) -> PyResult<(usize, u64)> {
         let plan = self.plan(py);
         let store = store.into();
-        py.allow_threads(|| try_block_unless_interrupted(
-            plan.apply_store_dry_run(store.as_ref())
-        )).map_pyerr(py)
+        py.allow_threads(|| plan.apply_store_dry_run(store.as_ref())).map_pyerr(py)
     }
 
     def stats(&self) -> PyResult<(usize, usize, usize, usize)> {

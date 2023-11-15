@@ -21,7 +21,6 @@ rust_python_library(
     crate_root = "src/lib.rs",
     deps = [
         "fbsource//third-party/rust:anyhow",
-        "//eden/scm/lib/async-runtime:async-runtime",
         "//eden/scm/lib/checkout:checkout",
         "//eden/scm/lib/cpython-ext:cpython-ext",
         "//eden/scm/lib/manifest-tree:manifest-tree",
