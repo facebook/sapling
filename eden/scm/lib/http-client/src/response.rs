@@ -118,10 +118,19 @@ impl Response {
     }
 }
 
-impl TryFrom<&mut Buffered> for Response {
+impl TryFrom<&mut Box<dyn HandlerExt>> for Response {
     type Error = HttpClientError;
 
-    fn try_from(buffered: &mut Buffered) -> Result<Self, Self::Error> {
+    fn try_from(buffered: &mut Box<dyn HandlerExt>) -> Result<Self, Self::Error> {
+        let buffered = match buffered.as_any_mut().downcast_mut::<Buffered>() {
+            Some(v) => v,
+            None => {
+                return Err(HttpClientError::Other(anyhow::format_err!(
+                    "wrong type for Response::try_from"
+                )));
+            }
+        };
+
         let (version, status) = match (buffered.version(), buffered.status()) {
             (Some(version), Some(status)) => (version, status),
             _ => {

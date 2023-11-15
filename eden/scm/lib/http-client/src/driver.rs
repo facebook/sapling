@@ -10,7 +10,6 @@ use std::time::Duration;
 use std::time::Instant;
 
 use anyhow::Context;
-use curl::easy::Easy2;
 use curl::multi::Easy2Handle;
 use curl::multi::Message;
 use curl::multi::Multi;
@@ -21,6 +20,7 @@ use crate::handler::HandlerExt;
 use crate::progress::Progress;
 use crate::progress::ProgressReporter;
 use crate::stats::Stats;
+use crate::Easy2H;
 
 /// Maximum time that libcurl should wait for socket activity during a call to
 /// `Multi::wait`. The Multi session maintains its own timeout internally based
@@ -30,17 +30,17 @@ const MULTI_WAIT_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// A complete transfer, along with the associated error
 /// if the transfer did not complete successfully.
-struct Complete<H> {
+struct Complete {
     token: usize,
-    handle: Easy2<H>,
+    handle: Easy2H,
     result: Result<(), curl::Error>,
 }
 
-impl<H> Complete<H> {
+impl Complete {
     /// If we encountered an error, we should still return the
     /// handle, as the callback may want to access the Handler
     /// inside.
-    fn into_result(self) -> Result<Easy2<H>, (Easy2<H>, curl::Error)> {
+    fn into_result(self) -> Result<Easy2H, (Easy2H, curl::Error)> {
         let Self { handle, result, .. } = self;
         match result {
             Ok(()) => Ok(handle),
@@ -51,20 +51,18 @@ impl<H> Complete<H> {
 
 /// Struct that manages a curl::Multi session, synchronously driving
 /// all of the transfers therein to completion.
-pub(crate) struct MultiDriver<'a, H, P>
+pub(crate) struct MultiDriver<'a, P>
 where
-    H: HandlerExt,
     P: FnMut(Progress),
 {
     multi: &'a Multi,
-    handles: RefCell<Vec<Option<Easy2Handle<H>>>>,
+    handles: RefCell<Vec<Option<Easy2Handle<Box<dyn HandlerExt>>>>>,
     progress: ProgressReporter<P>,
     verbose: bool,
 }
 
-impl<'a, H, P> MultiDriver<'a, H, P>
+impl<'a, P> MultiDriver<'a, P>
 where
-    H: HandlerExt,
     P: FnMut(Progress),
 {
     pub(crate) fn new(multi: &'a Multi, progress_cb: P, verbose: bool) -> Self {
@@ -81,7 +79,7 @@ where
     }
 
     /// Add an Easy2 handle to the Multi stack.
-    pub(crate) fn add(&self, mut easy: Easy2<H>) -> Result<(), HttpClientError> {
+    pub(crate) fn add(&self, mut easy: Easy2H) -> Result<(), HttpClientError> {
         // Register this Easy2 handle's Handler with our ProgressReporter
         // so we can aggregate progress across all transfers in the stack.
         easy.get_mut()
@@ -112,7 +110,7 @@ where
     /// method to return early (aborting all other active transfers).
     pub(crate) fn perform<F>(&self, mut callback: F) -> Result<Stats, HttpClientError>
     where
-        F: FnMut(Result<Easy2<H>, (Easy2<H>, curl::Error)>) -> Result<(), Abort>,
+        F: FnMut(Result<Easy2H, (Easy2H, curl::Error)>) -> Result<(), Abort>,
     {
         let total = self.num_transfers();
         let mut in_progress = total;
@@ -198,7 +196,7 @@ where
     /// underlying transfers. Based on the current implementation details
     /// of libcurl, a message should only be emitted when a transfer has
     /// completed (successfully or otherwise).
-    fn handle_msg(&self, msg: &Message<'_>) -> Result<Complete<H>, HttpClientError> {
+    fn handle_msg(&self, msg: &Message<'_>) -> Result<Complete, HttpClientError> {
         let (token, result) = {
             let token = msg.token()?;
             let handles = self.handles.borrow();
@@ -221,7 +219,7 @@ where
     }
 
     /// Remove and return an Easy2 handle from the Multi stack.
-    fn remove(&self, index: usize) -> Result<Option<Easy2<H>>, HttpClientError> {
+    fn remove(&self, index: usize) -> Result<Option<Easy2H>, HttpClientError> {
         if let Some(handle) = self.handles.borrow_mut()[index].take() {
             let easy = self.multi.remove2(handle)?;
             Ok(Some(easy))
@@ -246,9 +244,8 @@ where
     }
 }
 
-impl<'a, H, P> Drop for MultiDriver<'a, H, P>
+impl<'a, P> Drop for MultiDriver<'a, P>
 where
-    H: HandlerExt,
     P: FnMut(Progress),
 {
     fn drop(&mut self) {

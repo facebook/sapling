@@ -27,11 +27,13 @@ pub use client::Config;
 pub use client::HttpClient;
 pub use client::ResponseFuture;
 pub use client::StatsFuture;
+use curl::easy::Easy2;
 pub use curl::easy::HttpVersion;
 pub use errors::Abort;
 pub use errors::HttpClientError;
 pub use errors::TlsError;
 pub use errors::TlsErrorKind;
+use handler::HandlerExt;
 pub use header::Header;
 pub use progress::Progress;
 pub use receiver::Receiver;
@@ -48,3 +50,6 @@ pub use response::Response;
 pub use stats::Stats;
 pub use stream::BufferedStream;
 pub use stream::CborStream;
+
+/// The only Easy2 type used by this crate.
+pub(crate) type Easy2H = Easy2<Box<dyn HandlerExt>>;

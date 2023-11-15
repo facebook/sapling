@@ -9,7 +9,6 @@ use std::collections::HashSet;
 use std::path::PathBuf;
 use std::pin::Pin;
 
-use curl::easy::Easy2;
 use futures::prelude::*;
 use url::Url;
 
@@ -17,9 +16,7 @@ use crate::driver::MultiDriver;
 use crate::errors::Abort;
 use crate::errors::HttpClientError;
 use crate::event_listeners::HttpClientEventListeners;
-use crate::handler::Buffered;
 use crate::handler::HandlerExt;
-use crate::handler::Streaming;
 use crate::pool::Pool;
 use crate::progress::Progress;
 use crate::receiver::ChannelReceiver;
@@ -29,6 +26,7 @@ use crate::request::StreamRequest;
 use crate::response::AsyncResponse;
 use crate::response::Response;
 use crate::stats::Stats;
+use crate::Easy2H;
 
 pub type ResponseFuture =
     Pin<Box<dyn Future<Output = Result<AsyncResponse, HttpClientError>> + Send + 'static>>;
@@ -157,7 +155,7 @@ impl HttpClient {
 
         for mut request in requests {
             self.event_listeners.trigger_new_request(request.ctx_mut());
-            let handle: Easy2<Buffered> = request.try_into()?;
+            let handle: Easy2H = request.try_into()?;
             driver.add(handle)?;
         }
 
@@ -290,7 +288,7 @@ impl HttpClient {
         for mut request in requests {
             self.event_listeners
                 .trigger_new_request(request.request.ctx_mut());
-            let handle: Easy2<Streaming> = request.try_into()?;
+            let handle: Easy2H = request.try_into()?;
             driver.add(handle)?;
         }
 
@@ -337,7 +335,7 @@ impl HttpClient {
     /// completed request to the handler's `Receiver`.
     fn report_result_and_drop_receiver(
         &self,
-        res: Result<Easy2<Streaming>, (Easy2<Streaming>, curl::Error)>,
+        res: Result<Easy2H, (Easy2H, curl::Error)>,
     ) -> Result<(), Abort> {
         // We need to get the `Easy2` handle in both the
         // success and error cases since we ultimately

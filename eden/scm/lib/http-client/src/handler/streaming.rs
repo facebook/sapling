@@ -144,6 +144,14 @@ impl HandlerExt for Streaming {
     fn request_context(&self) -> &RequestContext {
         &self.request_context
     }
+
+    fn take_receiver(&mut self) -> Option<Box<dyn Receiver>> {
+        Streaming::take_receiver(self)
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
 }
 
 #[cfg(test)]
