@@ -59,6 +59,10 @@ pub(crate) mod ffi {
         entries: Vec<TreeEntry>,
     }
 
+    pub struct Blob {
+        pub(crate) bytes: Vec<u8>,
+    }
+
     extern "Rust" {
         type BackingStore;
 
@@ -77,6 +81,12 @@ pub(crate) mod ffi {
             node: &[u8],
             local: bool,
         ) -> Result<SharedPtr<Tree>>;
+
+        pub fn sapling_backingstore_get_blob(
+            store: &mut BackingStore,
+            node: &[u8],
+            local: bool,
+        ) -> Result<Box<Blob>>;
 
         pub fn sapling_backingstore_flush(store: &mut BackingStore);
     }
@@ -140,19 +150,15 @@ pub extern "C" fn sapling_backingstore_get_tree_batch(
     });
 }
 
-#[no_mangle]
-pub extern "C" fn sapling_backingstore_get_blob(
+pub fn sapling_backingstore_get_blob(
     store: &mut BackingStore,
-    node: Slice<u8>,
+    node: &[u8],
     local: bool,
-) -> CFallibleBase {
-    CFallible::make_with(|| {
-        store
-            .get_blob(node.slice(), fetch_mode_from_local(local))
-            .and_then(|opt| opt.ok_or_else(|| Error::msg("no blob found")))
-            .map(CBytes::from_vec)
-    })
-    .into()
+) -> Result<Box<ffi::Blob>> {
+    let bytes = store
+        .get_blob(node, fetch_mode_from_local(local))
+        .and_then(|opt| opt.ok_or_else(|| Error::msg("no blob found")))?;
+    Ok(Box::new(ffi::Blob { bytes }))
 }
 
 #[no_mangle]

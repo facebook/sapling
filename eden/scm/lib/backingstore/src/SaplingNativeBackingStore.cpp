@@ -13,6 +13,7 @@
 #include <folly/logging/xlog.h>
 #include <rust/cxx.h>
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -146,16 +147,24 @@ std::unique_ptr<folly::IOBuf> SaplingNativeBackingStore::getBlob(
     bool local) {
   XLOG(DBG7) << "Importing blob node=" << folly::hexlify(node)
              << " from hgcache";
-  CFallible<CBytes, sapling_cbytes_free> result{
-      sapling_backingstore_get_blob(store_.get(), node, local)};
-
-  if (result.isError()) {
+  try {
+    auto blob = sapling_backingstore_get_blob(
+                    *store_.get(),
+                    rust::Slice<const uint8_t>{node.data(), node.size()},
+                    local)
+                    .into_raw();
+    return folly::IOBuf::takeOwnership(
+        reinterpret_cast<void*>(blob->bytes.data()),
+        blob->bytes.size(),
+        [](void* /* buf */, void* blob) mutable {
+          auto vec = rust::Box<Blob>::from_raw(reinterpret_cast<Blob*>(blob));
+        },
+        reinterpret_cast<void*>(blob));
+  } catch (const rust::Error& error) {
     XLOG(DBG5) << "Error while getting blob node=" << folly::hexlify(node)
-               << " from backingstore: " << result.getError();
+               << " from backingstore: " << error.what();
     return nullptr;
   }
-
-  return bytesToIOBuf(result.unwrap().release());
 }
 
 void SaplingNativeBackingStore::getBlobBatch(
