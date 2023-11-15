@@ -286,6 +286,7 @@ async fn create_rewritten_merge_commit(
             .await?,
         syncers.small_to_large.get_source_repo(),
         Default::default(),
+        Default::default(),
     )
     .await?;
     let mut rewritten =

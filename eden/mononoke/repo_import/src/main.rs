@@ -235,6 +235,7 @@ async fn rewrite_file_paths(
             mover.clone(),
             repo,
             Default::default(),
+            Default::default(),
         )
         .await?;
 

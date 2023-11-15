@@ -19,17 +19,41 @@ use metaconfig_types::CommitSyncConfig;
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::CommitSyncDirection;
 use metaconfig_types::CommonCommitSyncConfig;
+use metaconfig_types::GitSubmodulesChangesAction;
 use mononoke_types::RepositoryId;
 use movers::get_movers;
 use movers::Mover;
 use movers::Movers;
 
+// TODO(T169306120): Delete CommitSyncDataProvider
 #[derive(Clone)]
 pub enum CommitSyncDataProvider {
     Live(Arc<dyn LiveCommitSyncConfig>),
 }
 
 impl CommitSyncDataProvider {
+    pub async fn get_strip_git_submodules_by_version(
+        &self,
+        version: &CommitSyncConfigVersion,
+        source_repo_id: RepositoryId, // Treat this as small_repo for now
+    ) -> Result<GitSubmodulesChangesAction, Error> {
+        use CommitSyncDataProvider::*;
+
+        match self {
+            Live(live_commit_sync_config) => {
+                let commit_sync_config = live_commit_sync_config
+                    .get_commit_sync_config_by_version(source_repo_id, version)
+                    .await?;
+                let small_repo_configs = commit_sync_config.small_repos;
+                if let Some(small_repo_config) = small_repo_configs.get(&source_repo_id) {
+                    return Ok(small_repo_config.git_submodules_action.clone());
+                };
+
+                Ok(GitSubmodulesChangesAction::default())
+            }
+        }
+    }
+
     pub async fn get_mover(
         &self,
         version: &CommitSyncConfigVersion,

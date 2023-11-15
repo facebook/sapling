@@ -1347,6 +1347,9 @@ async fn init_repos(
     lv_cfg_src.add_common_config(common);
 
     let commit_sync_data_provider = CommitSyncDataProvider::Live(Arc::new(lv_cfg));
+    let git_submodules_action = commit_sync_data_provider
+        .get_strip_git_submodules_by_version(&version, source_repo_id)
+        .await?;
     let commit_syncer =
         CommitSyncer::new_with_provider(&ctx, mapping.clone(), repos, commit_sync_data_provider);
 
@@ -1374,6 +1377,7 @@ async fn init_repos(
             commit_syncer.get_mover_by_version(&version).await?,
             &source_repo,
             Default::default(),
+            git_submodules_action,
         )
         .await
     }?;

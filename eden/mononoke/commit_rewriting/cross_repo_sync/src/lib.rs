@@ -43,10 +43,13 @@ use changesets::Changesets;
 use changesets::ChangesetsRef;
 use commit_graph::CommitGraph;
 use commit_graph::CommitGraphRef;
-use commit_transformation::rewrite_commit as multi_mover_rewrite_commit;
+use commit_transformation::rewrite_commit_with_file_changes_filter;
 use commit_transformation::upload_commits;
 pub use commit_transformation::CommitRewrittenToEmpty;
 pub use commit_transformation::EmptyCommitFromLargeRepo;
+use commit_transformation::FileChangeFilter;
+use commit_transformation::FileChangeFilterApplication;
+use commit_transformation::FileChangeFilterFunc;
 use commit_transformation::MultiMover;
 pub use commit_transformation::RewriteOpts;
 use context::CoreContext;
@@ -69,6 +72,7 @@ use maplit::hashset;
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::CommitSyncDirection;
 use metaconfig_types::CommonCommitSyncConfig;
+use metaconfig_types::GitSubmodulesChangesAction;
 use metaconfig_types::PushrebaseFlags;
 use metaconfig_types::RepoConfig;
 use metaconfig_types::RepoConfigRef;
@@ -76,6 +80,7 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
+use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use movers::Mover;
@@ -247,8 +252,26 @@ pub async fn rewrite_commit<'a>(
     mover: Mover,
     source_repo: &impl Repo,
     rewrite_opts: RewriteOpts,
+    git_submodules_action: GitSubmodulesChangesAction,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
-    multi_mover_rewrite_commit(
+    // TODO(T169695293): add filter to only keep submodules for implicit deletes?
+    let file_changes_filters: Vec<FileChangeFilter<'a>> = match git_submodules_action {
+        GitSubmodulesChangesAction::Strip => {
+            let filter_func: FileChangeFilterFunc<'a> = Arc::new(move |(_path, fc)| match fc {
+                FileChange::Change(tfc) => tfc.file_type() != FileType::GitSubmodule,
+                _ => true,
+            });
+            let filter: FileChangeFilter<'a> = FileChangeFilter {
+                func: filter_func,
+                application: FileChangeFilterApplication::MultiMover,
+            };
+
+            vec![filter]
+        }
+        GitSubmodulesChangesAction::Keep => vec![],
+    };
+
+    rewrite_commit_with_file_changes_filter(
         ctx,
         cs,
         remapped_parents,
@@ -256,6 +279,7 @@ pub async fn rewrite_commit<'a>(
         source_repo,
         None,
         rewrite_opts,
+        file_changes_filters,
     )
     .await
 }
@@ -299,7 +323,7 @@ async fn remap_parents<'a, M: SyncedCommitMapping + Clone + 'static, R: Repo>(
     Ok(remapped_parents)
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct SyncedAncestorsVersions {
     // Versions of all synced ancestors
     versions: HashSet<CommitSyncConfigVersion>,
@@ -1134,6 +1158,13 @@ where
     ) -> Result<Option<ChangesetId>, Error> {
         let (source_repo, target_repo) = self.get_source_target();
         let mover = self.get_mover_by_version(sync_config_version).await?;
+        let git_submodules_action = self
+            .commit_sync_data_provider
+            .get_strip_git_submodules_by_version(
+                sync_config_version,
+                self.repos.get_source_repo().repo_identity().id(),
+            )
+            .await?;
         let source_cs = source_cs_id.load(ctx, source_repo.repo_blobstore()).await?;
 
         let source_cs = source_cs.clone().into_mut();
@@ -1149,6 +1180,7 @@ where
             mover,
             &source_repo,
             Default::default(),
+            git_submodules_action,
         )
         .await?;
         match rewritten_commit {
@@ -1277,6 +1309,13 @@ where
         };
 
         let mover = self.get_mover_by_version(&version_name).await?;
+        let git_submodules_action = self
+            .commit_sync_data_provider
+            .get_strip_git_submodules_by_version(
+                &version_name,
+                self.repos.get_source_repo().repo_identity().id(),
+            )
+            .await?;
         let source_cs_mut = source_cs.clone().into_mut();
         let remapped_parents =
             remap_parents(ctx, &source_cs_mut, self, parent_selection_hint).await?;
@@ -1287,6 +1326,7 @@ where
             mover,
             &source_repo,
             Default::default(),
+            git_submodules_action,
         )
         .await?;
 
@@ -1619,6 +1659,10 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
             self.target_repo_id,
         )
         .await?;
+        let git_submodules_action = self
+            .provider
+            .get_strip_git_submodules_by_version(&expected_version, self.source_repo_id().0)
+            .await?;
 
         match rewrite_commit(
             self.ctx,
@@ -1627,6 +1671,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
             mover,
             self.source_repo.0,
             rewrite_opts,
+            git_submodules_action,
         )
         .await?
         {
@@ -1699,6 +1744,11 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                 let mut remapped_parents = HashMap::new();
                 remapped_parents.insert(p, remapped_p);
 
+                let git_submodules_action = self
+                    .provider
+                    .get_strip_git_submodules_by_version(&version, self.source_repo_id().0)
+                    .await?;
+
                 let maybe_rewritten = rewrite_commit(
                     self.ctx,
                     cs,
@@ -1706,6 +1756,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                     rewrite_paths,
                     self.source_repo.0,
                     rewrite_opts,
+                    git_submodules_action,
                 )
                 .await?;
                 match maybe_rewritten {
@@ -1847,6 +1898,10 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                     .into());
                 }
             }
+            let git_submodules_action = self
+                .provider
+                .get_strip_git_submodules_by_version(&version, self.source_repo_id().0)
+                .await?;
 
             match rewrite_commit(
                 self.ctx,
@@ -1855,6 +1910,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                 mover,
                 self.source_repo.0,
                 Default::default(),
+                git_submodules_action,
             )
             .await?
             {
