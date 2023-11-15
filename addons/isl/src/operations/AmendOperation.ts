@@ -15,6 +15,8 @@ import type {
 import type {CommandArg, Hash, RepoRelativePath, UncommittedChanges} from '../types';
 import type {ImportAmendCommit, ImportStack} from 'shared/types/stack';
 
+import {globalRecoil} from '../AccessGlobalRecoil';
+import {AmendRestackBehavior, restackBehaviorAtom} from '../RestackBehavior';
 import {t} from '../i18n';
 import {Operation} from './Operation';
 
@@ -25,12 +27,21 @@ export class AmendOperation extends Operation {
    */
   constructor(private filePathsToAmend?: Array<RepoRelativePath>, private message?: string) {
     super('AmendOperation');
+
+    this.restackBehavior =
+      globalRecoil().getLoadable(restackBehaviorAtom).valueMaybe() ?? AmendRestackBehavior.ALWAYS;
   }
+
+  restackBehavior: AmendRestackBehavior;
 
   static opName = 'Amend';
 
   getArgs() {
-    const args: Array<CommandArg> = ['amend', '--addremove'];
+    const args: Array<CommandArg> = [
+      {type: 'config', key: 'amend.autorestack', value: this.restackBehavior},
+      'amend',
+      '--addremove',
+    ];
     if (this.filePathsToAmend) {
       args.push(
         ...this.filePathsToAmend.map(file =>

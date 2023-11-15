@@ -11,6 +11,7 @@ import type {ReactNode} from 'react';
 
 import {confirmShouldSubmitEnabledAtom} from './ConfirmSubmitStack';
 import {DropdownField, DropdownFields} from './DropdownFields';
+import {RestackBehaviorSetting} from './RestackBehavior';
 import {Tooltip} from './Tooltip';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {showDiffNumberConfig} from './codeReview/DiffBadge';
@@ -33,6 +34,7 @@ import {useRecoilState, useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 import {unwrap} from 'shared/utils';
 
+import './VSCodeDropdown.css';
 import './SettingsTooltip.css';
 
 export function SettingsGearButton() {
@@ -72,6 +74,9 @@ function SettingsDropdown() {
       )}
       <Setting title={<T>Commits</T>}>
         <RenderCompactSetting />
+      </Setting>
+      <Setting title={<T>Conflicts</T>}>
+        <RestackBehaviorSetting />
       </Setting>
       {/* TODO: enable this setting when there is actually a chocie to be made here. */}
       {/* <Setting

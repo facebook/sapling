@@ -233,6 +233,7 @@ describe('CommitInfoView', () => {
             type: 'runOperation',
             operation: {
               args: [
+                {type: 'config', key: 'amend.autorestack', value: 'always'},
                 'amend',
                 '--addremove',
                 {type: 'repo-relative-file', path: 'src/file2.js'},
@@ -613,6 +614,7 @@ describe('CommitInfoView', () => {
                 type: 'runOperation',
                 operation: {
                   args: [
+                    {type: 'config', key: 'amend.autorestack', value: 'always'},
                     'amend',
                     '--addremove',
                     '--message',
