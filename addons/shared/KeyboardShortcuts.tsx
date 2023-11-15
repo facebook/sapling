@@ -37,6 +37,7 @@ export enum KeyCode {
   N = 78,
   P = 80,
   R = 82,
+  T = 84,
   Period = 190,
   SingleQuote = 222,
   LeftArrow = 37,
@@ -59,7 +60,14 @@ function isTargetTextInputElement(event: KeyboardEvent): boolean {
   );
 }
 
-class CommandDispatcher<CommandName extends string> extends window.EventTarget {
+class CommandDispatcher<CommandName extends string> extends (
+  window as {
+    EventTarget: {
+      new (): EventTarget;
+      prototype: EventTarget;
+    };
+  }
+).EventTarget {
   private keydownListener: (event: KeyboardEvent) => void;
   constructor(commands: CommandMap<CommandName>) {
     super();

@@ -18,6 +18,7 @@ export const [ISLCommandContext, useCommand, dispatchCommand] = makeCommandDispa
   ContinueSelectionUpwards: [Modifier.SHIFT, KeyCode.UpArrow],
   ContinueSelectionDownwards: [Modifier.SHIFT, KeyCode.DownArrow],
   HideSelectedCommits: [Modifier.NONE, KeyCode.Backspace],
+  ToggleTheme: [Modifier.ALT, KeyCode.T],
 });
 
 export type ISLCommandName = Parameters<typeof useCommand>[0];

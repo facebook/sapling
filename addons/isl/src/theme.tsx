@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {globalRecoil} from './AccessGlobalRecoil';
+import {useCommand} from './ISLShortcuts';
 import platform from './platform';
 import {atom} from 'recoil';
 
@@ -35,3 +37,11 @@ export const themeState = atom<ThemeColor>({
     },
   ],
 });
+
+export function useThemeShortcut() {
+  useCommand('ToggleTheme', () => {
+    if (platform.theme == null) {
+      globalRecoil().set(themeState, theme => (theme === 'dark' ? 'light' : 'dark'));
+    }
+  });
+}

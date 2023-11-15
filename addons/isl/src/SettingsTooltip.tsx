@@ -11,7 +11,9 @@ import type {ReactNode} from 'react';
 
 import {confirmShouldSubmitEnabledAtom} from './ConfirmSubmitStack';
 import {DropdownField, DropdownFields} from './DropdownFields';
+import {Kbd} from './Kbd';
 import {RestackBehaviorSetting} from './RestackBehavior';
+import {Subtle} from './Subtle';
 import {Tooltip} from './Tooltip';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {showDiffNumberConfig} from './codeReview/DiffBadge';
@@ -22,7 +24,7 @@ import {SetConfigOperation} from './operations/SetConfigOperation';
 import platform from './platform';
 import {renderCompactAtom} from './responsive';
 import {repositoryInfo, useRunOperation} from './serverAPIState';
-import {themeState} from './theme';
+import {useThemeShortcut, themeState} from './theme';
 import {
   VSCodeButton,
   VSCodeCheckbox,
@@ -32,12 +34,14 @@ import {
 } from '@vscode/webview-ui-toolkit/react';
 import {useRecoilState, useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
+import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
 import {unwrap} from 'shared/utils';
 
 import './VSCodeDropdown.css';
 import './SettingsTooltip.css';
 
 export function SettingsGearButton() {
+  useThemeShortcut();
   return (
     <Tooltip trigger="click" component={() => <SettingsDropdown />} placement="bottom">
       <VSCodeButton appearance="icon" data-testid="settings-gear-button">
@@ -70,6 +74,12 @@ function SettingsDropdown() {
               <T>Light</T>
             </VSCodeOption>
           </VSCodeDropdown>
+          <div style={{marginTop: 'var(--pad)'}}>
+            <Subtle>
+              <T>Toggle: </T>
+              <Kbd keycode={KeyCode.T} modifiers={[Modifier.ALT]} />
+            </Subtle>
+          </div>
         </Setting>
       )}
       <Setting title={<T>Commits</T>}>
