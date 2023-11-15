@@ -18,7 +18,6 @@ use crate::errors::HttpClientError;
 use crate::event_listeners::HttpClientEventListeners;
 use crate::handler::HandlerExt;
 use crate::pool::Pool;
-use crate::progress::Progress;
 use crate::receiver::ChannelReceiver;
 use crate::request::Method;
 use crate::request::Request;
@@ -124,34 +123,16 @@ impl HttpClient {
     ///
     /// The closure returns a boolean. If false, this function will
     /// return early and all other pending transfers will be aborted.
-    pub fn send<I, F>(&self, requests: I, response_cb: F) -> Result<Stats, HttpClientError>
+    pub fn send<I, F>(&self, requests: I, mut response_cb: F) -> Result<Stats, HttpClientError>
     where
         I: IntoIterator<Item = Request>,
         F: FnMut(Result<Response, HttpClientError>) -> Result<(), Abort>,
-    {
-        self.send_with_progress(requests, response_cb, |_| ())
-    }
-
-    /// Same as `send()`, but takes an additional closure for
-    /// monitoring the collective progress of all of the transfers.
-    /// The closure will be called whenever any of the underlying
-    /// transfers make progress.
-    pub fn send_with_progress<I, F, P>(
-        &self,
-        requests: I,
-        mut response_cb: F,
-        progress_cb: P,
-    ) -> Result<Stats, HttpClientError>
-    where
-        I: IntoIterator<Item = Request>,
-        F: FnMut(Result<Response, HttpClientError>) -> Result<(), Abort>,
-        P: FnMut(Progress),
     {
         let mut multi = self.pool.multi();
         multi
             .get_mut()
             .set_max_total_connections(self.config.max_concurrent_requests.unwrap_or(0))?;
-        let driver = MultiDriver::new(multi.get(), progress_cb, self.config.verbose_stats);
+        let driver = MultiDriver::new(multi.get(), |_| (), self.config.verbose_stats);
 
         for mut request in requests {
             self.event_listeners.trigger_new_request(request.ctx_mut());
@@ -210,21 +191,6 @@ impl HttpClient {
         &self,
         requests: I,
     ) -> Result<(Vec<ResponseFuture>, StatsFuture), HttpClientError> {
-        self.send_async_with_progress(requests, |_| ())
-    }
-
-    /// Same as `send_async()`, but takes an additional closure for monitoring
-    /// the collective progress of all of the transfers. The closure will be
-    /// called whenever any of the underlying transfers make progress.
-    pub fn send_async_with_progress<I, P>(
-        &self,
-        requests: I,
-        progress_cb: P,
-    ) -> Result<(Vec<ResponseFuture>, StatsFuture), HttpClientError>
-    where
-        I: IntoIterator<Item = Request>,
-        P: FnMut(Progress) + Send + 'static,
-    {
         let client = self.clone();
 
         let mut stream_requests = Vec::new();
@@ -244,9 +210,7 @@ impl HttpClient {
             responses.push(AsyncResponse::new(streams, request_info).boxed());
         }
 
-        let task = async_runtime::spawn_blocking(move || {
-            client.stream_with_progress(stream_requests, progress_cb)
-        });
+        let task = async_runtime::spawn_blocking(move || client.stream(stream_requests));
 
         let stats = task.err_into::<HttpClientError>().map(|res| res?).boxed();
 
@@ -264,27 +228,11 @@ impl HttpClient {
     where
         I: IntoIterator<Item = StreamRequest>,
     {
-        self.stream_with_progress(requests, |_| ())
-    }
-
-    /// Same as `stream()`, but takes an additional closure for
-    /// monitoring the collective progress of all of the transfers.
-    /// The closure will be called whenever any of the underlying
-    /// transfers make progress.
-    pub fn stream_with_progress<I, P>(
-        &self,
-        requests: I,
-        progress_cb: P,
-    ) -> Result<Stats, HttpClientError>
-    where
-        I: IntoIterator<Item = StreamRequest>,
-        P: FnMut(Progress),
-    {
         let mut multi = self.pool.multi();
         multi
             .get_mut()
             .set_max_total_connections(self.config.max_concurrent_requests.unwrap_or(0))?;
-        let driver = MultiDriver::new(multi.get(), progress_cb, self.config.verbose_stats);
+        let driver = MultiDriver::new(multi.get(), |_| (), self.config.verbose_stats);
         for mut request in requests {
             self.event_listeners
                 .trigger_new_request(request.request.ctx_mut());
@@ -700,7 +648,7 @@ mod tests {
         assert_eq!(stats, rx.recv()?);
         check_events(true);
 
-        let stats = client.send_with_progress(vec![request.clone()], |_| Ok(()), |_| ())?;
+        let stats = client.send(vec![request.clone()], |_| Ok(()))?;
         assert_eq!(stats, rx.recv()?);
         check_events(true);
 
@@ -709,7 +657,7 @@ mod tests {
         assert_eq!(stats, rx.recv()?);
         check_events(false);
 
-        let (_stream, stats) = client.send_async_with_progress(vec![request.clone()], |_| ())?;
+        let (_stream, stats) = client.send_async(vec![request.clone()])?;
         let stats = stats.await?;
         assert_eq!(stats, rx.recv()?);
         check_events(false);
@@ -724,7 +672,7 @@ mod tests {
         assert_eq!(stats, rx.recv()?);
         check_events(false);
 
-        let stats = client.stream_with_progress(vec![my_stream_req()], |_| ())?;
+        let stats = client.stream(vec![my_stream_req()])?;
         assert_eq!(stats, rx.recv()?);
         check_events(false);
 
