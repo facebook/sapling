@@ -61,7 +61,7 @@ impl<'a> FileStoreBuilder<'a> {
             config,
             local_path: None,
             suffix: None,
-            store_aux_data: false,
+            store_aux_data: config.get_or("store", "aux", || true).unwrap_or(true),
             override_edenapi: None,
             indexedlog_local: None,
             indexedlog_cache: None,
