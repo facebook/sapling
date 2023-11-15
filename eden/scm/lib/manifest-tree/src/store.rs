@@ -18,6 +18,7 @@ use storemodel::InsertOpts;
 use storemodel::Kind;
 use storemodel::SerializationFormat;
 pub use storemodel::TreeStore;
+pub use types::tree::TreeItemFlag as Flag;
 use types::HgId;
 use types::Key;
 use types::PathComponent;
@@ -107,13 +108,6 @@ pub struct Element {
     pub component: PathComponentBuf,
     pub hgid: HgId,
     pub flag: Flag,
-}
-
-/// Used to signal the type of element in a directory: file or directory.
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub enum Flag {
-    File(FileType),
-    Directory,
 }
 
 impl Entry {

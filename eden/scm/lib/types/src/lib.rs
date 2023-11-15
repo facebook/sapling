@@ -19,6 +19,7 @@ pub mod path;
 pub mod repo;
 pub mod serde_with;
 pub mod sha;
+pub mod tree;
 
 pub use crate::hgid::HgId;
 pub use crate::key::Key;

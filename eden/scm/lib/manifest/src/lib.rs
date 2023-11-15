@@ -19,6 +19,7 @@ use anyhow::Result;
 use pathmatcher::Matcher;
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck_arbitrary_derive::Arbitrary;
+pub use types::tree::FileType;
 use types::HgId;
 use types::PathComponentBuf;
 use types::RepoPath;
@@ -185,23 +186,6 @@ pub struct FileMetadata {
     pub file_type: FileType,
 }
 
-/// The types of files (leaf nodes in a tree).
-///
-/// The type needs to round-trip tree serialization.
-#[derive(Clone, Copy, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
-#[derive(Default)]
-pub enum FileType {
-    /// Regular files.
-    #[default]
-    Regular,
-    /// Executable files. Like Regular files but with the executable flag set.
-    Executable,
-    /// Symlinks. Their targets are not limited to repository paths. They can point anywhere.
-    Symlink,
-    /// Git submodule. It's up to the higher layer to decide what to do with them.
-    GitSubmodule,
-}
-
 impl FileMetadata {
     pub fn new(hgid: HgId, file_type: FileType) -> Self {
         Self { hgid, file_type }
@@ -283,14 +267,5 @@ impl DiffType {
             DiffType::RightOnly(right_metadata) => Some(*right_metadata),
             DiffType::Changed(_, right_metadata) => Some(*right_metadata),
         }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl quickcheck::Arbitrary for FileType {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        g.choose(&[FileType::Regular, FileType::Executable, FileType::Symlink])
-            .unwrap()
-            .to_owned()
     }
 }
