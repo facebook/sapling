@@ -224,3 +224,10 @@ mononoke_fbpkg(
         "gitexport": "//eden/mononoke/git/gitexport:gitexport",
     },
 )
+
+mononoke_fbpkg(
+    name = "mononoke.bookmark_service",
+    path_actions = {
+        "bookmark_service_server": "//eden/mononoke/facebook/bookmark_service:bookmark_service_server",
+    },
+)
