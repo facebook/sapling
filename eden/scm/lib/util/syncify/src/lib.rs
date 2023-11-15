@@ -44,6 +44,7 @@ pub fn syncify(attr: TokenStream, mut tokens: TokenStream) -> TokenStream {
         .replace_all(parse(".boxed()"), parse(""))
         .replace_all(parse("async move"), parse(""))
         .replace_all(parse("async"), parse(""))
+        .replace_all(parse("#[tokio::test]"), parse("#[test]"))
         .replace_all(parse("__::block_on(___g1)"), parse("___g1"));
 
     // Apply customized replaces.

@@ -14,7 +14,6 @@ use std::path::Path;
 use std::sync::Arc;
 
 use anyhow::Error;
-use async_runtime::try_block_unless_interrupted;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use manifest::FileMetadata;
@@ -93,16 +92,15 @@ pub fn build_matcher(
     let hasher = Mutex::new(DefaultHasher::new());
     prof.hash(hasher.lock().deref_mut());
 
-    let matcher = try_block_unless_interrupted(prof.matcher(|path| async {
+    let matcher = prof.matcher(|path| {
         let path = path;
 
         let file_id = {
             let manifest = manifest.clone();
             let repo_path = RepoPathBuf::from_string(path.clone())?;
 
-            // Work around nested block_on() calls by spawning a new thread.
-            // Once the Manifest is async this can go away.
-            async_runtime::spawn_blocking(move || match manifest.get(&repo_path)? {
+            // This might block.
+            match manifest.get(&repo_path)? {
                 None => {
                     tracing::warn!(?repo_path, "non-existent sparse profile include");
                     Ok::<_, Error>(None)
@@ -114,28 +112,23 @@ pub fn build_matcher(
                         Ok(None)
                     }
                 },
-            })
-            .await??
+            }
         };
 
-        let file_id = match file_id {
+        let file_id = match file_id? {
             Some(id) => id,
             None => return Ok(None),
         };
 
         let repo_path = RepoPathBuf::from_string(path.clone())?;
-        let bytes = async_runtime::spawn_blocking({
-            let store = store.clone();
-            move || store.get_content(&repo_path, file_id)
-        })
-        .await??;
+        let bytes = store.get_content(&repo_path, file_id)?;
         let mut bytes = bytes.into_vec();
         if let Some(extra) = overrides.get(&path) {
             bytes.append(&mut extra.to_string().into_bytes());
         }
         bytes.hash(hasher.lock().deref_mut());
         Ok(Some(bytes))
-    }))?;
+    })?;
 
     Ok((matcher, hasher.into_inner()))
 }

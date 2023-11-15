@@ -95,7 +95,7 @@ skeleton_manifest = { version = "0.1.0", path = "../derived_data/skeleton_manife
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }
 sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-sparse = { version = "0.1.0", path = "../../scm/lib/sparse" }
+sparse = { version = "0.1.0", path = "../../scm/lib/sparse", features = ["async"] }
 sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

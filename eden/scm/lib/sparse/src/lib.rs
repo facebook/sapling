@@ -14,10 +14,6 @@ use std::io;
 use std::io::BufRead;
 use std::io::BufReader;
 
-use futures::executor;
-use futures::future::BoxFuture;
-use futures::future::FutureExt;
-use futures::Future;
 use once_cell::sync::Lazy;
 use pathmatcher::DirectoryMatch;
 use pathmatcher::Matcher as MatcherTrait;
@@ -26,6 +22,22 @@ use pathmatcher::TreeMatcher;
 use pathmatcher::UnionMatcher;
 use regex::Regex;
 use types::RepoPath;
+
+#[cfg(feature = "async")]
+mod extra_use {
+    pub(crate) use futures::executor;
+    pub(crate) use futures::future::BoxFuture;
+    pub(crate) use futures::future::FutureExt;
+    pub(crate) use futures::Future;
+}
+
+#[cfg(not(feature = "async"))]
+mod extra_use {
+    pub(crate) use syncify::syncify;
+    pub(crate) type BoxFuture<'a, T> = T;
+}
+
+use extra_use::*;
 
 #[derive(Default, Debug)]
 pub struct Profile {
@@ -110,6 +122,7 @@ pub enum Error {
     GlobsetError(#[from] globset::Error),
 }
 
+#[cfg_attr(not(feature="async"), syncify([<B: ____>] => [], [B] => [anyhow::Result<Option<Vec<u8>>>]))]
 impl Root {
     pub fn from_bytes(data: impl AsRef<[u8]>, source: String) -> Result<Self, io::Error> {
         Ok(Self {
@@ -238,15 +251,13 @@ impl Root {
         // TODO(cuev): Add a warning when sparse profiles contain a %include.
         // Filters don't support that.
         let matcher =
-            executor::block_on(
-                async move { self.matcher(|_| async move { Ok(Some(vec![])) }).await },
-            )
-            .unwrap();
+            executor::block_on(self.matcher(|_| async move { Ok(Some(vec![])) })).unwrap();
         let repo_path = RepoPath::from_str(path).unwrap();
         !matcher.matches(repo_path).unwrap_or(true)
     }
 }
 
+#[cfg_attr(not(feature="async"), syncify([B: ____>] => [>], [B] => [anyhow::Result<Option<Vec<u8>>>]))]
 impl Profile {
     fn from_bytes(data: impl AsRef<[u8]>, source: String) -> Result<Self, io::Error> {
         let mut prof = Profile {
@@ -601,6 +612,7 @@ fn convert_regex_to_glob(pat: &str) -> Option<Vec<String>> {
 }
 
 #[cfg(test)]
+#[cfg_attr(not(feature = "async"), syncify)]
 mod tests {
     use anyhow::anyhow;
 
