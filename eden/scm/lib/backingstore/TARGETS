@@ -97,6 +97,7 @@ rust_library(
         "//eden/scm/lib/indexedlog:indexedlog",
         "//eden/scm/lib/manifest:manifest",
         "//eden/scm/lib/repo:repo",
+        "//eden/scm/lib/storemodel:storemodel",
         "//eden/scm/lib/tracing-collector:tracing-collector",
         "//eden/scm/lib/types:types",
     ],

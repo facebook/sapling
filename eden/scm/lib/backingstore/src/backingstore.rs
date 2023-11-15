@@ -19,22 +19,24 @@ use repo::repo::Repo;
 use revisionstore::scmstore::file::FileAuxData;
 use revisionstore::scmstore::FetchMode;
 use revisionstore::scmstore::FileAttributes;
-use revisionstore::scmstore::FileStore;
 use revisionstore::scmstore::FileStoreBuilder;
 use revisionstore::scmstore::KeyFetchError;
 use revisionstore::scmstore::StoreFile;
 use revisionstore::scmstore::TreeStore;
 use revisionstore::scmstore::TreeStoreBuilder;
+use revisionstore::trait_impls::ArcFileStore;
 use revisionstore::HgIdDataStore;
+use storemodel::KeyStore;
 use tracing::event;
 use tracing::instrument;
 use tracing::Level;
 use types::HgId;
 use types::Key;
+use types::RepoPath;
 use types::RepoPathBuf;
 
 pub struct BackingStore {
-    filestore: Arc<FileStore>,
+    filestore: ArcFileStore,
     treestore: Arc<TreeStore>,
     repo: Repo,
 }
@@ -83,8 +85,8 @@ impl BackingStore {
             .local_path(&store_path)
             .suffix(Path::new("manifests"));
 
-        let filestore = Arc::new(filestore.build()?);
-        let treestore = treestore.filestore(filestore.clone());
+        let filestore = ArcFileStore(Arc::new(filestore.build()?));
+        let treestore = treestore.filestore(filestore.0.clone());
         let repo = Repo::load_with_config(root, config.clone())?;
 
         Ok(Self {
@@ -96,6 +98,11 @@ impl BackingStore {
 
     pub fn get_blob(&self, node: &[u8], fetch_mode: FetchMode) -> Result<Option<Vec<u8>>> {
         let hgid = HgId::from_slice(node)?;
+        if matches!(fetch_mode, FetchMode::LocalOnly) {
+            let blob = KeyStore::get_local_content(&self.filestore, RepoPath::empty(), hgid)?
+                .map(|v| v.into_vec());
+            return Ok(blob);
+        }
         let key = Key::new(RepoPathBuf::new(), hgid);
         self.get_blob_by_key(key, fetch_mode)
     }
@@ -107,6 +114,7 @@ impl BackingStore {
         }
         let fetch_result = self
             .filestore
+            .0
             .fetch(std::iter::once(key), FileAttributes::CONTENT, fetch_mode)
             .single();
 
@@ -151,6 +159,7 @@ impl BackingStore {
 
         let fetch_results = self
             .filestore
+            .0
             .fetch(indexes.keys().cloned(), attrs, fetch_mode);
 
         for result in fetch_results {
@@ -328,6 +337,7 @@ impl BackingStore {
         }
         let fetch_results =
             self.filestore
+                .0
                 .fetch(std::iter::once(key), FileAttributes::AUX, fetch_mode);
 
         if let Some(entry) = fetch_results.single()? {
