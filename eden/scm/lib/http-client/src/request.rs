@@ -610,7 +610,7 @@ impl Request {
     pub async fn send_async(self) -> Result<AsyncResponse, HttpClientError> {
         let request_info = self.ctx().info().clone();
         let (receiver, streams) = ChannelReceiver::new();
-        let request = self.into_streaming(receiver);
+        let request = self.into_streaming(Box::new(receiver));
 
         // Spawn the request as another task, which will block
         // the worker it is scheduled on until completion.
@@ -630,7 +630,7 @@ impl Request {
     /// Turn this `Request` into a streaming request. The
     /// received data for this request will be passed as
     /// it arrives to the given `Receiver`.
-    pub fn into_streaming<R>(self, receiver: R) -> StreamRequest<R> {
+    pub fn into_streaming(self, receiver: Box<dyn Receiver>) -> StreamRequest {
         StreamRequest {
             request: self,
             receiver,
@@ -809,14 +809,14 @@ impl TryFrom<Request> for Easy2<Buffered> {
     }
 }
 
-pub struct StreamRequest<R> {
+pub struct StreamRequest {
     pub(crate) request: Request,
-    pub(crate) receiver: R,
+    pub(crate) receiver: Box<dyn Receiver>,
 }
 
-impl<R: Receiver> StreamRequest<R> {
+impl StreamRequest {
     pub fn send(self) -> Result<(), HttpClientError> {
-        let mut easy: Easy2<Streaming<R>> = self.try_into()?;
+        let mut easy: Easy2<Streaming> = self.try_into()?;
         let res = easy.perform().map_err(Into::into);
         let _ = easy
             .get_mut()
@@ -827,10 +827,10 @@ impl<R: Receiver> StreamRequest<R> {
     }
 }
 
-impl<R: Receiver> TryFrom<StreamRequest<R>> for Easy2<Streaming<R>> {
+impl TryFrom<StreamRequest> for Easy2<Streaming> {
     type Error = HttpClientError;
 
-    fn try_from(req: StreamRequest<R>) -> Result<Self, Self::Error> {
+    fn try_from(req: StreamRequest) -> Result<Self, Self::Error> {
         let StreamRequest { request, receiver } = req;
         request.into_handle(|ctx| Streaming::new(receiver, ctx))
     }
