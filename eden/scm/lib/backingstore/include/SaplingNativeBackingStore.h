@@ -14,7 +14,7 @@
 #include <optional>
 #include <string_view>
 
-#include "eden/scm/lib/backingstore/c_api/BackingStoreBindings.h"
+#include "eden/scm/lib/backingstore/include/BackingStoreBindings.h"
 
 namespace folly {
 class IOBuf;

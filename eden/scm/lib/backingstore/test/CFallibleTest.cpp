@@ -5,10 +5,10 @@
  * GNU General Public License version 2.
  */
 
-#include <gtest/gtest.h>
+#include <folly/portability/GTest.h>
 #include <cstdio>
 
-#include "eden/scm/lib/backingstore/c_api/BackingStoreBindings.h"
+#include "eden/scm/lib/backingstore/include/BackingStoreBindings.h"
 
 namespace {
 
