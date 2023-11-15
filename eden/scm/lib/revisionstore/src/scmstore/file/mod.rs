@@ -13,6 +13,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 
+use ::types::HgId;
 use ::types::Key;
 use anyhow::anyhow;
 use anyhow::bail;
@@ -118,7 +119,26 @@ impl Drop for FileStore {
     }
 }
 
+macro_rules! try_local_content {
+    ($id:ident, $e:expr) => {
+        if let Some(store) = $e.as_ref() {
+            if let Some(data) = store.get_local_content_direct($id)? {
+                return Ok(Some(data));
+            }
+        }
+    };
+}
+
 impl FileStore {
+    /// Get the "local content" without going through the heavyweight "fetch" API.
+    pub(crate) fn get_local_content_direct(&self, id: &HgId) -> Result<Option<Bytes>> {
+        try_local_content!(id, self.indexedlog_cache);
+        try_local_content!(id, self.indexedlog_local);
+        try_local_content!(id, self.lfs_cache);
+        try_local_content!(id, self.lfs_local);
+        Ok(None)
+    }
+
     pub fn fetch(
         &self,
         keys: impl Iterator<Item = Key>,

@@ -116,12 +116,10 @@ impl storemodel::KeyStore for ArcFileStore {
 
     fn get_local_content(
         &self,
-        path: &RepoPath,
+        _path: &RepoPath,
         hgid: HgId,
     ) -> anyhow::Result<Option<minibytes::Bytes>> {
-        // PERF: unnecessary clones on path and key.
-        let key = Key::new(path.to_owned(), hgid);
-        self.0.get_file_content_impl(&key, FetchMode::LocalOnly)
+        self.0.get_local_content_direct(&hgid)
     }
 
     fn refresh(&self) -> Result<()> {
