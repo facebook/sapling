@@ -39,8 +39,15 @@ type TooltipProps = {
   onDismiss?: () => unknown;
 } & ExclusiveOr<
   ExclusiveOr<{trigger: 'manual'; shouldShow: boolean}, {trigger?: 'hover' | 'disabled'}> &
-    ExclusiveOr<{component: (dismiss: () => void) => JSX.Element}, {title: string}>,
-  {trigger: 'click'; component: (dismiss: () => void) => JSX.Element; title?: string}
+    ExclusiveOr<
+      {component: (dismiss: () => void) => JSX.Element},
+      {title: string | React.ReactNode}
+    >,
+  {
+    trigger: 'click';
+    component: (dismiss: () => void) => JSX.Element;
+    title?: string | React.ReactNode;
+  }
 >;
 
 type VisibleState =
