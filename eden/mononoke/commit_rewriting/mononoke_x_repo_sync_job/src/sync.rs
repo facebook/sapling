@@ -8,10 +8,12 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 
+use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
+use anyhow::Result;
 use blobstore::Loadable;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogEntry;
@@ -382,6 +384,99 @@ pub async fn sync_commit_without_pushrebase<M: SyncedCommitMapping + Clone + 'st
 
     let maybe_cs_id = result?;
     Ok(maybe_cs_id.into_iter().collect())
+}
+
+/// Run the initial import of a small repo into a large repo.
+/// It will sync a specific commit (i.e. head commit) and all of its ancestors
+/// and optionally bookmark the head commit.
+pub async fn sync_commits_for_initial_import<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
+    ctx: &CoreContext,
+    commit_syncer: &CommitSyncer<M, R>,
+    scuba_sample: MononokeScubaSampleBuilder,
+    // Head commit to sync. All of its unsynced ancestors will be synced as well.
+    cs_id: ChangesetId,
+    // Sync config version to use for importing the commits.
+    config_version: CommitSyncConfigVersion,
+    // Optional: Bookmark head commit synced in the large repo.
+    mb_new_bookmark: Option<BookmarkKey>,
+) -> Result<Vec<ChangesetId>> {
+    info!(ctx.logger(), "syncing {}", cs_id);
+
+    let (unsynced_ancestors, _unsynced_ancestors_versions) =
+        find_toposorted_unsynced_ancestors(ctx, commit_syncer, cs_id.clone()).await?;
+
+    let mut res = vec![];
+    // Sync all of the ancestors first
+    for ancestor_cs_id in unsynced_ancestors {
+        let mb_synced = commit_syncer
+            .unsafe_sync_commit_with_expected_version(
+                ctx,
+                ancestor_cs_id,
+                CandidateSelectionHint::Only,
+                config_version.clone(),
+                CommitSyncContext::XRepoSyncJob,
+            )
+            .await?;
+        let synced =
+            mb_synced.ok_or(anyhow!("Failed to sync ancestor commit {}", ancestor_cs_id))?;
+        res.push(synced);
+    }
+
+    let (stats, result) = commit_syncer
+        .unsafe_sync_commit_with_expected_version(
+            ctx,
+            cs_id,
+            CandidateSelectionHint::Only,
+            config_version,
+            CommitSyncContext::XRepoSyncJob,
+        )
+        .timed()
+        .await;
+
+    let maybe_cs_id: Option<ChangesetId> = result?;
+
+    // Check that the head commit was synced properly and log something otherwise
+    let new_cs_id = maybe_cs_id.ok_or_else(|| {
+        let err = Err(anyhow!("Head changeset wasn't synced"));
+        log_non_pushrebase_sync_single_changeset_result(
+            ctx.clone(),
+            scuba_sample.clone(),
+            cs_id,
+            &err,
+            stats.clone(),
+            None,
+        );
+
+        err.unwrap_err()
+    })?;
+
+    res.push(new_cs_id.clone());
+
+    // If a bookmark name to tag the head commit was provided, create the
+    // bookmark.
+    if let Some(new_bookmark) = mb_new_bookmark {
+        info!(
+            ctx.logger(),
+            "Setting bookmark {} to changeset {}", &new_bookmark, &new_cs_id
+        );
+        move_or_create_bookmark(
+            ctx,
+            commit_syncer.get_target_repo(),
+            &new_bookmark,
+            new_cs_id,
+        )
+        .await?;
+    }
+
+    log_non_pushrebase_sync_single_changeset_result(
+        ctx.clone(),
+        scuba_sample,
+        cs_id,
+        &Ok(Some(new_cs_id)),
+        stats,
+        None,
+    );
+    Ok(res)
 }
 
 async fn process_bookmark_deletion<M: SyncedCommitMapping + Clone + 'static, R: Repo>(

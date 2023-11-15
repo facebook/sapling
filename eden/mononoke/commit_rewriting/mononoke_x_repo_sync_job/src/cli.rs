@@ -11,9 +11,12 @@ use cmdlib::args;
 use cmdlib::args::MononokeClapApp;
 
 pub const ARG_ONCE: &str = "once";
+pub const ARG_INITIAL_IMPORT: &str = "initial-import";
+pub const ARG_SYNC_CONFIG_VERSION_NAME: &str = "version-name";
 pub const ARG_COMMIT: &str = "commit";
 pub const ARG_TAIL: &str = "tail";
 pub const ARG_TARGET_BOOKMARK: &str = "target-bookmark";
+pub const ARG_NEW_BOOKMARK: &str = "new-bookmark";
 pub const ARG_CATCH_UP_ONCE: &str = "catch-up-once";
 pub const ARG_LOG_TO_SCUBA: &str = "log-to-scuba";
 pub const ARG_BACKSYNC_BACKPRESSURE_REPOS_IDS: &str = "backsync-backpressure-repo-ids";
@@ -59,6 +62,30 @@ pub fn create_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
                 .takes_value(true)
                 .required(true)
                 .help("A commit to sync"),
+        );
+
+    let initial_import = SubCommand::with_name(ARG_INITIAL_IMPORT)
+        .about("Import all commits from a small repo into a large one")
+        .arg(
+            Arg::with_name(ARG_SYNC_CONFIG_VERSION_NAME)
+                .long(ARG_SYNC_CONFIG_VERSION_NAME)
+                .takes_value(true)
+                .required(true)
+                .help("Name of the sync config version to use for the sync"),
+        )
+        .arg(
+            Arg::with_name(ARG_COMMIT)
+                .long(ARG_COMMIT)
+                .takes_value(true)
+                .required(true)
+                .help("The head commit to be synced. The commit and all of its ancestors will be imported in the large repo."),
+        )
+        .arg(
+            Arg::with_name(ARG_NEW_BOOKMARK)
+                .long(ARG_NEW_BOOKMARK)
+                .takes_value(true)
+                .required(false)
+                .help("Tag the synced head commit in the large repo with the given bookmark"),
         );
 
     let tail = SubCommand::with_name(ARG_TAIL)
@@ -114,6 +141,9 @@ pub fn create_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
                 ),
         );
 
-    let app = app.subcommand(once).subcommand(tail);
+    let app = app
+        .subcommand(once)
+        .subcommand(tail)
+        .subcommand(initial_import);
     app
 }

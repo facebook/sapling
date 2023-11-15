@@ -46,6 +46,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Duration;
 
+use anyhow::anyhow;
 use anyhow::format_err;
 use anyhow::Error;
 use anyhow::Result;
@@ -84,6 +85,7 @@ use futures::StreamExt;
 use futures_stats::TimedFutureExt;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use live_commit_sync_config::LiveCommitSyncConfig;
+use metaconfig_types::CommitSyncConfigVersion;
 use metadata::Metadata;
 use mononoke_api_types::InnerRepo;
 use mononoke_hg_sync_job_helper_lib::wait_for_latest_log_id_to_be_synced;
@@ -116,8 +118,11 @@ use crate::cli::ARG_BOOKMARK_REGEX;
 use crate::cli::ARG_CATCH_UP_ONCE;
 use crate::cli::ARG_DERIVED_DATA_TYPES;
 use crate::cli::ARG_HG_SYNC_BACKPRESSURE;
+use crate::cli::ARG_INITIAL_IMPORT;
+use crate::cli::ARG_NEW_BOOKMARK;
 use crate::cli::ARG_ONCE;
 use crate::cli::ARG_PUSHREBASE_REWRITE_DATES;
+use crate::cli::ARG_SYNC_CONFIG_VERSION_NAME;
 use crate::cli::ARG_TAIL;
 use crate::cli::ARG_TARGET_BOOKMARK;
 use crate::reporting::add_common_fields;
@@ -127,6 +132,7 @@ use crate::setup::get_scuba_sample;
 use crate::setup::get_sleep_duration;
 use crate::setup::get_starting_commit;
 use crate::sync::sync_commit_and_ancestors;
+use crate::sync::sync_commits_for_initial_import;
 use crate::sync::sync_single_bookmark_update_log;
 
 pub trait Repo = cross_repo_sync::Repo
@@ -182,6 +188,48 @@ async fn run_in_single_commit_mode<M: SyncedCommitMapping + Clone + 'static, R: 
         scuba_sample,
         pushrebase_rewrite_dates,
         None,
+    )
+    .await;
+
+    if res.is_ok() {
+        info!(ctx.logger(), "successful sync");
+    }
+    res.map(|_| ())
+}
+
+/// Run the initial import of a small repo into a large repo.
+/// It will sync a specific commit (i.e. head commit) and all of its ancestors
+/// and optionally bookmark the head commit.
+async fn run_in_initial_import_mode<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
+    ctx: &CoreContext,
+    bcs: ChangesetId,
+    commit_syncer: CommitSyncer<M, R>,
+    config_version: CommitSyncConfigVersion,
+    new_bookmark: Option<BookmarkKey>,
+    scuba_sample: MononokeScubaSampleBuilder,
+) -> Result<()> {
+    info!(
+        ctx.logger(),
+        "Checking if {} is already synced {}->{}",
+        bcs,
+        commit_syncer.repos.get_source_repo().repo_identity().id(),
+        commit_syncer.repos.get_target_repo().repo_identity().id()
+    );
+    if commit_syncer
+        .commit_sync_outcome_exists(ctx, Source(bcs))
+        .await?
+    {
+        info!(ctx.logger(), "{} is already synced", bcs);
+        return Ok(());
+    }
+
+    let res = sync_commits_for_initial_import(
+        ctx,
+        &commit_syncer,
+        scuba_sample,
+        bcs,
+        config_version,
+        new_bookmark,
     )
     .await;
 
@@ -496,6 +544,30 @@ async fn run<'a>(
                 maybe_target_bookmark,
                 common_bookmarks,
                 pushrebase_rewrite_dates,
+            )
+            .await
+        }
+        (ARG_INITIAL_IMPORT, Some(sub_m)) => {
+            add_common_fields(&mut scuba_sample, &commit_syncer);
+            let sync_config_version_name = sub_m
+                .value_of(ARG_SYNC_CONFIG_VERSION_NAME)
+                .ok_or(anyhow!("Failed to get sync config version name from args"))?
+                .to_string();
+            let config_version = CommitSyncConfigVersion(sync_config_version_name);
+            let maybe_new_bookmark = sub_m
+                .value_of(ARG_NEW_BOOKMARK)
+                .map(BookmarkKey::new)
+                .transpose()?;
+
+            let bcs = get_starting_commit(&ctx, sub_m, source_repo.blob_repo.clone()).await?;
+
+            run_in_initial_import_mode(
+                &ctx,
+                bcs,
+                commit_syncer,
+                config_version,
+                maybe_new_bookmark,
+                scuba_sample,
             )
             .await
         }
