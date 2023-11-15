@@ -601,7 +601,7 @@ fn eager_clone(
     Ok(repo)
 }
 
-fn recursive_copy(from: &Path, to: &Path) -> std::io::Result<()> {
+fn recursive_copy(from: &Path, to: &Path) -> Result<()> {
     create_shared_dir_all(to)?;
 
     for entry in fs::read_dir(from)? {

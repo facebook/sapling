@@ -348,7 +348,7 @@ fn windows_remove_mmap_file(path: &Path) -> io::Result<()> {
 /// permission then rename the temporary directory to the desired name to prevent leaking directory
 /// with incorrect permissions.
 #[cfg(unix)]
-fn create_dir_with_mode_impl(path: &Path, mode: u32) -> io::Result<()> {
+fn create_dir_with_mode_impl(path: &Path, mode: u32) -> anyhow::Result<()> {
     if path.exists() {
         if path.is_dir() {
             // If metadata operation fails, it's fine.
@@ -362,7 +362,7 @@ fn create_dir_with_mode_impl(path: &Path, mode: u32) -> io::Result<()> {
             }
         }
 
-        return Err(io::ErrorKind::AlreadyExists.into());
+        return Err(io::Error::from(io::ErrorKind::AlreadyExists).into());
     }
     let parent = path.parent().ok_or_else(|| {
         io::Error::new(
@@ -386,8 +386,10 @@ fn create_dir_with_mode_impl(path: &Path, mode: u32) -> io::Result<()> {
         // platform we are on.
         // Similarly, when the destinated directory is a file, we get `ENOTDIR` instead of `EEXIST`.
         match e.raw_os_error() {
-            Some(libc::ENOTEMPTY) | Some(libc::ENOTDIR) => Err(ErrorKind::AlreadyExists.into()),
-            _ => Err(e),
+            Some(libc::ENOTEMPTY) | Some(libc::ENOTDIR) => {
+                Err(io::Error::from(ErrorKind::AlreadyExists).into())
+            }
+            _ => Err(e.into()),
         }
     } else {
         Ok(())
@@ -396,15 +398,21 @@ fn create_dir_with_mode_impl(path: &Path, mode: u32) -> io::Result<()> {
 
 /// Create the directory. The mode argument is ignored on non-UNIX systems.
 #[cfg(not(unix))]
-fn create_dir_with_mode_impl(path: &Path, _mode: u32) -> io::Result<()> {
-    fs::create_dir(path)
+fn create_dir_with_mode_impl(path: &Path, _mode: u32) -> anyhow::Result<()> {
+    fs::create_dir(path)?;
+    Ok(())
 }
 
-fn create_dir_with_mode(path: &Path, mode: u32) -> io::Result<()> {
+fn is_io_error_kind(err: &anyhow::Error, kind: ErrorKind) -> bool {
+    err.downcast_ref::<io::Error>()
+        .is_some_and(|err| err.kind() == kind)
+}
+
+fn create_dir_with_mode(path: &Path, mode: u32) -> anyhow::Result<()> {
     match create_dir_with_mode_impl(path, mode) {
         Ok(()) => Ok(()),
         Err(e) => {
-            if e.kind() == ErrorKind::AlreadyExists && path.is_dir() {
+            if is_io_error_kind(&e, ErrorKind::AlreadyExists) && path.is_dir() {
                 Ok(())
             } else {
                 Err(e)
@@ -414,22 +422,22 @@ fn create_dir_with_mode(path: &Path, mode: u32) -> io::Result<()> {
 }
 
 /// Create the directory and ignore failures when a directory of the same name already exists.
-pub fn create_dir(path: impl AsRef<Path>) -> io::Result<()> {
+pub fn create_dir(path: impl AsRef<Path>) -> anyhow::Result<()> {
     create_dir_with_mode(path.as_ref(), 0o755)
 }
 
 /// Create the directory with group write permission on UNIX systems.
-pub fn create_shared_dir(path: impl AsRef<Path>) -> io::Result<()> {
+pub fn create_shared_dir(path: impl AsRef<Path>) -> anyhow::Result<()> {
     create_dir_with_mode(path.as_ref(), 0o2775)
 }
 
 /// Create the directory and its ancestors. The mode argument is ignored on non-UNIX systems.
-pub fn create_dir_all_with_mode(path: impl AsRef<Path>, mode: u32) -> io::Result<()> {
+pub fn create_dir_all_with_mode(path: impl AsRef<Path>, mode: u32) -> anyhow::Result<()> {
     let mut to_create = vec![path.as_ref()];
     while let Some(dir) = to_create.pop() {
         match create_dir_with_mode(dir, mode) {
             Ok(()) => continue,
-            Err(err) if err.kind() == io::ErrorKind::NotFound => {
+            Err(err) if is_io_error_kind(&err, io::ErrorKind::NotFound) => {
                 to_create.push(dir);
                 match dir.parent() {
                     Some(parent) => to_create.push(parent),
@@ -443,7 +451,7 @@ pub fn create_dir_all_with_mode(path: impl AsRef<Path>, mode: u32) -> io::Result
 }
 
 /// Create the directory and ancestors with group write permission on UNIX systems.
-pub fn create_shared_dir_all(path: impl AsRef<Path>) -> io::Result<()> {
+pub fn create_shared_dir_all(path: impl AsRef<Path>) -> anyhow::Result<()> {
     create_dir_all_with_mode(path, 0o2775)
 }
 
@@ -766,7 +774,7 @@ mod tests {
     }
 
     fn test_create_dir_all_fn(
-        create_fn: &dyn Fn(&PathBuf) -> io::Result<()>,
+        create_fn: &dyn Fn(&PathBuf) -> anyhow::Result<()>,
         mode: u32,
     ) -> Result<()> {
         let tempdir = TempDir::new()?;
@@ -886,7 +894,7 @@ mod tests {
         path.push("dir");
         File::create(&path)?;
         let err = create_dir(&path).unwrap_err();
-        assert_eq!(err.kind(), ErrorKind::AlreadyExists);
+        assert!(is_io_error_kind(&err, ErrorKind::AlreadyExists));
         Ok(())
     }
 
@@ -897,7 +905,7 @@ mod tests {
         path.push("nonexistentparent");
         path.push("dir");
         let err = create_dir(&path).unwrap_err();
-        assert_eq!(err.kind(), ErrorKind::NotFound);
+        assert!(is_io_error_kind(&err, ErrorKind::NotFound));
         Ok(())
     }
 
@@ -905,7 +913,7 @@ mod tests {
     fn test_create_dir_without_empty_path() {
         let empty = Path::new("");
         let err = create_dir(empty).unwrap_err();
-        assert_eq!(err.kind(), ErrorKind::NotFound);
+        assert!(is_io_error_kind(&err, ErrorKind::NotFound));
     }
 
     #[test]
