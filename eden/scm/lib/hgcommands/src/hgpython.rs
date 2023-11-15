@@ -8,7 +8,6 @@
 use std::cell::RefCell;
 use std::env;
 use std::path::Path;
-use std::path::PathBuf;
 use std::sync::RwLock;
 use std::sync::Weak;
 
@@ -33,8 +32,6 @@ use crate::python::py_init_threads;
 use crate::python::py_initialize;
 use crate::python::py_is_initialized;
 use crate::python::py_main;
-use crate::python::py_set_argv;
-use crate::python::py_set_program_name;
 
 const HGPYENTRYPOINT_MOD: &str = "sapling";
 pub struct HgPython {
@@ -56,10 +53,11 @@ impl HgPython {
         let span = info_span!("Initialize Python");
         let _guard = span.enter();
         let args = Self::prepare_args(args);
-        let executable_name = &args[0];
-        py_set_program_name(executable_name);
-        py_initialize();
-        py_set_argv(&args);
+
+        let home = Self::sapling_python_home();
+
+        py_initialize(&args, home.as_ref());
+
         py_init_threads();
 
         let gil = Python::acquire_gil();
@@ -72,32 +70,35 @@ impl HgPython {
         let name = "bindings";
         let bindings_module = PyModule::new(py, name).unwrap();
         prepare_builtin_modules(py, &bindings_module).unwrap();
+
         let sys_modules = PyDict::extract(py, &sys.get(py, "modules").unwrap()).unwrap();
         sys_modules.set_item(py, name, bindings_module).unwrap();
-        Self::update_meta_path(py, &sys);
+        Self::update_meta_path(py, home, &sys);
     }
 
-    fn update_meta_path(py: Python, sys: &PyModule) {
-        // When running inside the repo, auto-enable "dev" mode with desired paths.
-        // This can be overridden by SAPLING_PYTHON_HOME.
-        let mut home: Option<String> = None;
+    fn sapling_python_home() -> Option<String> {
         if let Ok(v) = std::env::var("SAPLING_PYTHON_HOME") {
             if !v.is_empty() && Path::new(&v).is_dir() {
-                home = Some(v)
+                Some(v)
+            } else {
+                None
             }
         } else {
-            home = infer_python_home();
+            infer_python_home()
         }
+    }
+
+    fn update_meta_path(py: Python, home: Option<String>, sys: &PyModule) {
         if let Some(dir) = home.as_ref() {
             // Append the Python home to sys.path.
             tracing::debug!(
                 "Python modules will be imported from filesystem {} (SAPLING_PYTHON_HOME)",
                 dir
             );
+
+            // NB: This has no effect for "debugpython" on Python 3.10 (see py_initialize).
             let sys_path = PyList::extract(py, &sys.get(py, "path").unwrap()).unwrap();
             sys_path.append(py, PyString::new(py, dir).into_object());
-        } else {
-            tracing::debug!("Python modules will be imported by BindingsModuleFinder");
         }
 
         let meta_path_finder = pymodules::BindingsModuleFinder::new(py, home).unwrap();
