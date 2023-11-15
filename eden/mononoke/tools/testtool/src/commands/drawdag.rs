@@ -558,14 +558,16 @@ fn apply_changes<'a>(
                 content,
                 parent,
                 parent_path,
+                file_type,
                 ..
             } => {
                 let parent: CommitIdentifier =
                     committed.get(&parent).map_or(parent.into(), |&c| c.into());
-                c = c.add_file_with_copy_info(
+                c = c.add_file_with_copy_info_and_type(
                     path.as_slice(),
                     content,
                     (parent, parent_path.as_slice()),
+                    file_type,
                 )
             }
         }

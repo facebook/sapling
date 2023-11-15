@@ -459,6 +459,10 @@ function strip_glog {
   sed -E -e 's%^[VDIWECF][[:digit:]]{4} [[:digit:]]{2}:?[[:digit:]]{2}:?[[:digit:]]{2}(\.[[:digit:]]+)?\s+(([0-9a-f]+)\s+)?(\[([^]]+)\]\s+)?(\(([^\)]+)\)\s+)?(([a-zA-Z0-9_./-]+):([[:digit:]]+))\]\s+%%'
 }
 
+function with_stripped_logs {
+  "$@" 2>&1 | strip_glog
+}
+
 function wait_for_json_record_count {
   # We ask jq to count records for us, so that we're a little more robust ot
   # newlines and such.

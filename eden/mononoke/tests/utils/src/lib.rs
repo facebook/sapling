@@ -301,6 +301,24 @@ impl<'a, R: Repo> CreateCommitContext<'a, R> {
         self
     }
 
+    pub fn add_file_with_copy_info_and_type(
+        mut self,
+        path: impl TryInto<NonRootMPath>,
+        content: impl Into<Vec<u8>>,
+        (parent, parent_path): (impl Into<CommitIdentifier>, impl TryInto<NonRootMPath>),
+        file_type: FileType,
+    ) -> Self {
+        let copy_info = (
+            parent_path.try_into().ok().expect("Invalid path"),
+            parent.into(),
+        );
+        self.files.insert(
+            path.try_into().ok().expect("Invalid path"),
+            CreateFileContext::FromHelper(content.into(), file_type, Some(copy_info)),
+        );
+        self
+    }
+
     pub fn add_file_change(
         mut self,
         path: impl TryInto<NonRootMPath>,
