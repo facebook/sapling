@@ -11,6 +11,7 @@ use std::iter::zip;
 use std::sync::Arc;
 
 use anyhow::Result;
+use async_runtime::spawn_blocking;
 use async_trait::async_trait;
 use configmodel::Config;
 use configmodel::ConfigExt;
@@ -375,14 +376,12 @@ impl RenameFinderInner {
         keys: Vec<Key>,
         source_key: Key,
     ) -> Result<Option<RepoPathBuf>> {
-        let mut source = self
-            .file_reader
-            .get_content_stream(vec![source_key.clone()])
-            .await;
-        let source_content = match source.next().await {
-            None => return Err(CopyTraceError::FileNotFound(source_key.path).into()),
-            Some(content_and_key) => content_and_key?.0,
-        };
+        let source_content = spawn_blocking({
+            let path = source_key.path.clone();
+            let reader = self.file_reader.clone();
+            move || reader.get_content(&path, source_key.hgid)
+        })
+        .await??;
 
         let config_percentage = self.get_similarity_threshold()?;
         let config_max_edit_cost = self.get_max_edit_cost()?;
@@ -399,15 +398,20 @@ impl RenameFinderInner {
             " content similarity configs"
         );
 
-        let mut candidates = self.file_reader.get_content_stream(keys).await;
-        while let Some(candidate) = candidates.next().await {
-            let (candidate_content, k) = candidate?;
-            if edit_cost(&source_content, &candidate_content, max_edit_cost + 1) <= max_edit_cost {
-                return Ok(Some(k.path));
+        let file_reader = self.file_reader.clone();
+        spawn_blocking(move || {
+            let iter = file_reader.get_content_iter(keys)?;
+            for entry in iter {
+                let (k, candidate_content) = entry?;
+                if edit_cost(&source_content, &candidate_content, max_edit_cost + 1)
+                    <= max_edit_cost
+                {
+                    return Ok(Some(k.path));
+                }
             }
-        }
-
-        Ok(None)
+            Ok(None)
+        })
+        .await?
     }
 
     fn get_key_from_path(&self, tree: &TreeManifest, path: &RepoPath) -> Result<Key> {

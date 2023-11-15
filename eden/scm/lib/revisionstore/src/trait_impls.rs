@@ -19,6 +19,7 @@ use futures::Stream;
 use futures::StreamExt;
 use hgstore::strip_hg_file_metadata;
 use minibytes::Bytes;
+use storemodel::BoxIterator;
 use tokio::runtime::Handle;
 use types::HgId;
 use types::Key;
@@ -42,13 +43,29 @@ impl<T> storemodel::KeyStore for ArcRemoteDataStore<T>
 where
     T: RemoteDataStore + 'static + ?Sized,
 {
-    async fn get_content_stream(&self, keys: Vec<Key>) -> BoxStream<Result<(Bytes, Key)>> {
-        stream_data_from_remote_data_store(self.0.clone(), keys)
-            .map(|result| match result {
-                Ok((data, key, _copy_from)) => Ok((data, key)),
+    fn get_content_iter(
+        &self,
+        keys: Vec<Key>,
+    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Bytes)>>> {
+        let store = Arc::clone(&self.0);
+        for chunk in keys.chunks(PREFETCH_CHUNK_SIZE) {
+            let store_keys = chunk
+                .iter()
+                .map(|k| StoreKey::HgId(k.clone()))
+                .collect::<Vec<_>>();
+            store.prefetch(&store_keys)?;
+        }
+        let iter = keys.into_iter().map(move |key| {
+            let store_result = store.get(StoreKey::HgId(key.clone()));
+            match store_result {
                 Err(err) => Err(err),
-            })
-            .boxed()
+                Ok(StoreResult::Found(data)) => {
+                    strip_hg_file_metadata(&data.into()).map(|(d, _)| (key, d))
+                }
+                Ok(StoreResult::NotFound(k)) => Err(format_err!("{:?} not found in store", k)),
+            }
+        });
+        Ok(Box::new(iter))
     }
 }
 
@@ -72,13 +89,23 @@ where
 
 #[async_trait]
 impl storemodel::KeyStore for ArcFileStore {
-    async fn get_content_stream(&self, keys: Vec<Key>) -> BoxStream<Result<(Bytes, Key)>> {
-        stream_data_from_scmstore(self.0.clone(), keys)
-            .map(|result| match result {
-                Ok((data, key, _copy_from)) => Ok((data, key)),
-                Err(err) => Err(err),
-            })
-            .boxed()
+    fn get_content_iter(
+        &self,
+        keys: Vec<Key>,
+    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Bytes)>>> {
+        let fetched = self.0.fetch(
+            keys.into_iter(),
+            FileAttributes::CONTENT,
+            FetchMode::AllowRemote,
+        );
+        let iter = fetched
+            .into_iter()
+            .map(|result| -> anyhow::Result<(Key, Bytes)> {
+                let (key, mut store_file) = result?;
+                let content = store_file.file_content()?;
+                Ok((key, content))
+            });
+        Ok(Box::new(iter))
     }
 
     fn get_local_content(

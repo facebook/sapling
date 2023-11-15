@@ -517,13 +517,6 @@ impl ContentDataStore for TreeStore {
 
 #[async_trait::async_trait]
 impl storemodel::KeyStore for TreeStore {
-    async fn get_content_stream(
-        &self,
-        _keys: Vec<Key>,
-    ) -> futures::stream::BoxStream<anyhow::Result<(minibytes::Bytes, Key)>> {
-        todo!("TreeStore::get_content_stream is not yet used");
-    }
-
     fn get_local_content(
         &self,
         path: &RepoPath,

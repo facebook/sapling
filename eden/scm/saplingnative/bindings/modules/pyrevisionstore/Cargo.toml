@@ -7,13 +7,9 @@ edition = "2021"
 
 [dependencies]
 anyhow = "=1.0.72"
-async-runtime = { version = "0.1.0", path = "../../../../lib/async-runtime" }
-async-trait = "0.1.71"
 configmodel = { version = "0.1.0", path = "../../../../lib/config/model" }
 cpython = { version = "0.7.1", default-features = false }
 cpython_ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
-futures = { version = "0.3.28", features = ["async-await", "compat"] }
-io = { version = "0.1.0", path = "../../../../lib/io" }
 minibytes = { version = "0.1.0", path = "../../../../lib/minibytes" }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 pyconfigloader = { version = "0.1.0", path = "../pyconfigloader" }

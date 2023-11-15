@@ -14,19 +14,17 @@ use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::thread;
 use std::time::SystemTime;
 
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::format_err;
-use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use async_runtime::try_block_unless_interrupted as block_on;
-use futures::stream;
-use futures::try_join;
-use futures::Stream;
-use futures::StreamExt;
+use atexit::AtExit;
+use crossbeam::channel;
+use fs_err as fs;
 use io::IO;
 use manifest::FileMetadata;
 use manifest::FileType;
@@ -44,6 +42,7 @@ use progress_model::ProgressBar;
 use progress_model::Registry;
 use repo::repo::Repo;
 use storemodel::FileStore;
+use tokio::task::block_in_place;
 use tracing::debug;
 use tracing::instrument;
 use tracing::warn;
@@ -56,7 +55,6 @@ use types::HgId;
 use types::Key;
 use types::RepoPath;
 use types::RepoPathBuf;
-use vfs::AsyncVfsWriter;
 use vfs::UpdateFlag;
 use vfs::VFS;
 use workingcopy::sparse;
@@ -79,9 +77,9 @@ pub use merge::Merge;
 pub use merge::MergeResult;
 use status::FileStatus;
 use status::Status;
-use tokio::runtime::Handle;
 
-const VFS_BATCH_SIZE: usize = 100;
+// Affects progress update frequency and thread count for small checkout.
+const VFS_BATCH_SIZE: usize = 128;
 
 /// Contains lists of files to be removed / updated during checkout.
 pub struct CheckoutPlan {
@@ -92,7 +90,7 @@ pub struct CheckoutPlan {
     filtered_update_content: HashMap<RepoPathBuf, UpdateContentAction>,
     /// Files that only need X flag updated.
     update_meta: Vec<UpdateMetaAction>,
-    progress: Option<Mutex<CheckoutProgress>>,
+    progress: Option<Arc<Mutex<CheckoutProgress>>>,
     checkout: Checkout,
 }
 
@@ -121,9 +119,22 @@ struct UpdateMetaAction {
     set_x_flag: bool,
 }
 
-#[derive(Default)]
+/// Errors during checkout.
+#[derive(Default, Debug)]
 pub struct CheckoutStats {
+    /// Error on doing `Work`.
     pub remove_failed: Vec<(RepoPathBuf, Error)>,
+    set_exec_failed: Vec<(RepoPathBuf, Error)>,
+    write_failed: Vec<(RepoPathBuf, Error)>,
+
+    /// Errors not associated with a path.
+    other_failed: Vec<Error>,
+}
+
+enum Work {
+    Write(Key, Bytes, UpdateFlag),
+    SetExec(RepoPathBuf, bool),
+    Remove(RepoPathBuf),
 }
 
 const DEFAULT_CONCURRENCY: usize = 16;
@@ -198,24 +209,18 @@ impl CheckoutPlan {
             CheckoutProgress::new(path, vfs.clone())?
         };
         self.filtered_update_content = progress.filter_already_written(&self.update_content);
-        self.progress = Some(Mutex::new(progress));
+        self.progress = Some(Arc::new(Mutex::new(progress)));
         Ok(())
     }
 
     /// Applies plan to the root using store to fetch data.
-    /// This async function offloads file system operation to tokio blocking thread pool.
-    /// It limits number of concurrent fs operations to Checkout::concurrency.
     ///
-    /// This function also designed to leverage async storage API.
-    /// When updating content of the file/symlink, this function first creates list of HgId
-    /// it needs to fetch. This list is then converted to stream and fed into storage for fetching
+    /// Fails fast on critical errors like unable to create threads.
+    /// Otherwise, try to keep going as much as possible.
     ///
-    /// As storage starts returning blobs of data, we start to kick off fs write operations in
-    /// the tokio async worker pool. If more then Checkout::concurrency fs operations are pending, we
-    /// stop polling storage stream, until one of pending fs operations complete
-    ///
-    /// This function fails fast and returns error when first checkout operation fails.
-    /// Pending storage futures are dropped when error is returned
+    /// Returning `Ok` when there is no fatal errors.
+    /// Not able to remove files are considered not fatal.
+    /// The returned error could also be `CheckoutStats` when there are fatal errors.
     #[instrument(skip_all, err)]
     pub fn apply_store(&self, store: &dyn FileStore) -> Result<CheckoutStats> {
         let vfs = &self.checkout.vfs;
@@ -226,77 +231,177 @@ impl CheckoutPlan {
         let total = self.filtered_update_content.len() + self.remove.len() + self.update_meta.len();
         let bar = &ProgressBar::new("Updating", total as u64, "files");
         Registry::main().register_progress_bar(bar);
-        let async_vfs = &AsyncVfsWriter::spawn_new(vfs.clone(), 16);
 
-        block_on(async move {
-            let mut stats = CheckoutStats::default();
+        // Checkout result.
+        let mut stats = CheckoutStats::default();
 
-            let remove_files = stream::iter(self.remove.clone().into_iter())
-                .chunks(VFS_BATCH_SIZE)
-                .map(|paths| Self::remove_files(async_vfs, paths, bar));
-            let remove_files = remove_files.buffer_unordered(self.checkout.concurrency);
+        // Task to write file contents using threads.
+        let actions: HashMap<_, _> = self
+            .filtered_update_content
+            .iter()
+            .map(|(p, u)| (Key::new(p.clone(), u.content_hgid.clone()), u.clone()))
+            .collect();
+        let keys: Vec<_> = actions.keys().cloned().collect();
+        let fetch_data_iter = store.get_content_iter(keys)?;
 
-            stats.remove_failed = Self::process_vec_work_stream(remove_files).await?;
+        let stats = thread::scope(|s| -> Result<CheckoutStats> {
+            let (tx, rx) = channel::unbounded::<Work>();
+            let (err_tx, err_rx) = channel::unbounded();
+            let (progress_tx, progress_rx) = channel::unbounded();
 
-            let actions: HashMap<_, _> = self
-                .filtered_update_content
-                .iter()
-                .map(|(p, u)| (Key::new(p.clone(), u.content_hgid.clone()), u.clone()))
-                .collect();
-            let keys: Vec<_> = actions.keys().cloned().collect();
+            // On Ctrl+C or error, write the "progress" file to help resume.
+            let progress = self.progress.clone();
+            let support_resume = progress.is_some();
+            tracing::debug!(support_resume = support_resume, "apply_store");
 
-            let data_stream = store.get_content_stream(keys).await;
+            let on_abort = AtExit::new(Box::new(move || {
+                if let Some(progress) = progress {
+                    tracing::debug!("writing progress (on abort)");
+                    let id_paths: Vec<_> = progress_rx.into_iter().collect();
+                    progress.lock().record_writes(&id_paths);
+                }
+            }));
 
-            let update_content = data_stream.map(|result| -> Result<_> {
-                let (data, key) = result?;
+            // Spawn writer threads. Thread count is 1 for simple changes.
+            let n = self.vfs_worker_count(total);
+            assert!(n >= 1);
+            for i in 1..=n {
+                let vfs = vfs.clone();
+                let rx = rx.clone();
+                let err_tx = err_tx.clone();
+                let progress_tx = progress_tx.clone();
+                let b = thread::Builder::new().name(format!("checkout-{}/{}", i, n));
+                b.spawn_scoped(s, move || {
+                    let mut bar_count = 0;
+                    while let Ok(work) = rx.recv() {
+                        let result = match &work {
+                            Work::Write(key, data, flag) => {
+                                vfs.write(&key.path, data, *flag).map(|_| ())
+                            }
+                            Work::SetExec(path, exec) => {
+                                vfs.set_executable(path, *exec).map(|_| ())
+                            }
+                            Work::Remove(path) => vfs.remove(path),
+                        };
+                        bar_count += 1;
+                        if bar_count >= VFS_BATCH_SIZE {
+                            bar.increase_position(bar_count as _);
+                            bar.set_message(work.path().to_string());
+                            bar_count = 0;
+                        }
+                        if let Err(e) = result {
+                            if err_tx.send((Some(work), e)).is_err() {
+                                break;
+                            }
+                            // Keep going.
+                            continue;
+                        }
+                        if support_resume {
+                            if let Work::Write(key, ..) = work {
+                                let _ = progress_tx.send((key.hgid, key.path));
+                            }
+                        }
+                    }
+                    bar.increase_position(bar_count as _);
+                })?;
+            }
+
+            drop(rx);
+            drop(progress_tx);
+
+            // Read loop for writer threads.
+            for path in &self.remove {
+                tx.send(Work::Remove(path.to_owned()))?;
+            }
+            for action in &self.update_meta {
+                tx.send(Work::SetExec(action.path.to_owned(), action.set_x_flag))?;
+            }
+            for entry in fetch_data_iter {
+                let (key, data) = match entry {
+                    Err(e) => {
+                        let _ = err_tx.send((None, e));
+                        // Keep going.
+                        continue;
+                    }
+                    Ok(v) => v,
+                };
                 let action = actions
                     .get(&key)
                     .ok_or_else(|| format_err!("Storage returned unknown key {}", key))?;
-                let path = key.path.clone();
                 let flag = type_to_flag(&action.file_type);
-                Ok((path, action.content_hgid, data, flag))
-            });
+                tx.send(Work::Write(key, data, flag))?;
+            }
+            drop(tx);
 
-            let progress_ref = self.progress.as_ref();
-            let update_content = update_content
-                .chunks(VFS_BATCH_SIZE)
-                .map(|actions| async move {
-                    let actions: Result<Vec<_>, _> = actions.into_iter().collect();
-                    Self::write_files(async_vfs, actions?, progress_ref, bar).await
-                });
+            // Error.
+            if fail::eval("checkout-post-progress", |_| ()).is_some() {
+                err_tx.send((
+                    None,
+                    anyhow::format_err!("Error set by checkout-post-progress FAILPOINTS"),
+                ))?;
+            }
+            drop(err_tx);
 
-            let update_content = update_content.buffer_unordered(self.checkout.concurrency);
-
-            let update_meta = stream::iter(self.update_meta.iter()).map(|action| {
-                Self::set_exec_on_file(async_vfs, &action.path, action.set_x_flag, bar)
-            });
-            let update_meta = update_meta.buffer_unordered(self.checkout.concurrency);
-
-            let update_content = Self::process_work_stream(update_content);
-            let update_meta = Self::process_work_stream(update_meta);
-
-            try_join!(update_content, update_meta)?;
-
-            #[cfg(windows)]
-            {
-                if vfs.supports_symlinks() {
-                    let symlinks = self
-                        .filtered_update_content
-                        .iter()
-                        .filter_map(|(p, a)| {
-                            if a.file_type == FileType::Symlink {
-                                Some(p.as_str().to_owned())
-                            } else {
-                                None
-                            }
-                        })
-                        .collect::<Vec<_>>();
-                    update_symlinks(&symlinks, vfs)?;
+            // Turn errors into CheckoutStats.
+            while let Ok((maybe_work, err)) = err_rx.recv() {
+                match maybe_work {
+                    None => stats.other_failed.push(err),
+                    Some(Work::Remove(path)) => stats.remove_failed.push((path, err)),
+                    Some(Work::SetExec(path, _)) => stats.set_exec_failed.push((path, err)),
+                    Some(Work::Write(key, _, _)) => stats.write_failed.push((key.path, err)),
                 }
             }
 
+            let is_fatal = stats.is_fatal();
+            tracing::debug!(is_fatal = is_fatal, "apply_store");
+            if is_fatal {
+                return Err(stats.into());
+            } else {
+                // No need to write progress file on success.
+                on_abort.cancel();
+            }
+
             Ok(stats)
-        })
+        });
+
+        // Windows symlink fixes. This should happen after vfs writes.
+        // The symlink fixes might generate new errors.
+        #[cfg(windows)]
+        let mut stats = stats;
+        #[cfg(windows)]
+        {
+            if vfs.supports_symlinks() {
+                let symlinks = self
+                    .filtered_update_content
+                    .iter()
+                    .filter_map(|(p, a)| {
+                        if a.file_type == FileType::Symlink {
+                            Some(p.as_ref())
+                        } else {
+                            None
+                        }
+                    })
+                    .collect::<Vec<_>>();
+                if let Err(e) = update_symlinks(&symlinks, vfs) {
+                    if let Ok(stats) = stats.as_mut() {
+                        stats.other_failed.push(e);
+                    }
+                }
+            }
+        }
+
+        stats
+    }
+
+    fn vfs_worker_count(&self, total: usize) -> usize {
+        match thread::available_parallelism() {
+            Ok(v) => v
+                .get()
+                .min(self.checkout.concurrency)
+                .min(total / VFS_BATCH_SIZE),
+            Err(_) => 1,
+        }
+        .max(1)
     }
 
     pub async fn apply_store_dry_run(&self, store: &dyn FileStore) -> Result<(usize, u64)> {
@@ -304,14 +409,17 @@ impl CheckoutPlan {
             .filtered_update_content
             .iter()
             .map(|(p, u)| Key::new(p.clone(), u.content_hgid.clone()));
-        let mut stream = store.get_content_stream(keys.collect()).await;
-        let (mut count, mut size) = (0, 0);
-        while let Some(result) = stream.next().await {
-            let (bytes, _) = result?;
-            count += 1;
-            size += bytes.len() as u64;
-        }
-        Ok((count, size))
+        let keys: Vec<_> = keys.collect();
+        block_in_place(move || {
+            let (mut count, mut size) = (0, 0);
+            let iter = store.get_content_iter(keys)?;
+            for result in iter {
+                let (_key, data) = result?;
+                count += 1;
+                size += data.len() as u64;
+            }
+            Ok((count, size))
+        })
     }
 
     pub fn check_conflicts(&self, status: &Status) -> Vec<&RepoPath> {
@@ -395,127 +503,31 @@ impl CheckoutPlan {
             return Ok(unknowns);
         }
 
-        block_on(async move {
-            let check_content = store
-                .get_content_stream(check_content)
-                .await
-                .chunks(VFS_BATCH_SIZE)
-                .map(|v| {
-                    let vfs = vfs.clone();
-                    Handle::current().spawn_blocking(move || -> Result<Vec<RepoPathBuf>> {
-                        let v: std::result::Result<Vec<_>, _> = v.into_iter().collect();
-                        Self::check_content(&vfs, v?)
-                    })
-                })
-                .buffer_unordered(self.checkout.concurrency)
-                .map(|r| r?);
-
-            Self::process_vec_work_stream(check_content).await
-        })
-    }
-
-    /// Drains stream returning error if one of futures fail
-    async fn process_work_stream<S: Stream<Item = Result<()>> + Unpin>(
-        mut stream: S,
-    ) -> Result<()> {
-        while let Some(result) = stream.next().await {
-            result?;
-        }
-        Ok(())
-    }
-
-    async fn process_vec_work_stream<R: Send, S: Stream<Item = Result<Vec<R>>> + Unpin>(
-        mut stream: S,
-    ) -> Result<Vec<R>> {
-        let mut r = vec![];
-        while let Some(result) = stream.next().await {
-            r.append(&mut result?);
-        }
-        Ok(r)
-    }
-
-    fn check_content(vfs: &VFS, files: Vec<(Bytes, Key)>) -> Result<Vec<RepoPathBuf>> {
-        let mut result = vec![];
-        for file in files {
-            let path = &file.1.path;
-            match Self::check_file(vfs, file.0, path) {
-                Err(err) => {
-                    warn!("Can not check {}: {}", path, err);
-                    result.push(path.clone())
-                }
-                Ok(false) => result.push(path.clone()),
-                Ok(true) => {}
+        let mut paths = Vec::new();
+        for entry in store.get_content_iter(check_content)? {
+            let (key, data) = entry?;
+            if let Some(path) = Self::check_content(vfs, key, data) {
+                paths.push(path);
             }
         }
-        Ok(result)
+        Ok(paths)
+    }
+
+    fn check_content(vfs: &VFS, key: Key, data: Bytes) -> Option<RepoPathBuf> {
+        let path = &key.path;
+        match Self::check_file(vfs, data, path) {
+            Err(err) => {
+                warn!("Can not check {}: {}", path, err);
+                Some(key.path)
+            }
+            Ok(false) => Some(key.path),
+            Ok(true) => None,
+        }
     }
 
     fn check_file(vfs: &VFS, expected_content: Bytes, path: &RepoPath) -> Result<bool> {
         let actual_content = vfs.read(path)?;
         Ok(actual_content.eq(&expected_content))
-    }
-
-    // Functions below use blocking fs operations in spawn_blocking proc.
-    // As of today tokio::fs operations do the same.
-    // Since we do multiple fs calls inside, it is beneficial to 'pack'
-    // all of them into single spawn_blocking.
-    async fn write_files(
-        async_vfs: &AsyncVfsWriter,
-        actions: Vec<(RepoPathBuf, HgId, Bytes, UpdateFlag)>,
-        progress: Option<&Mutex<CheckoutProgress>>,
-        bar: &Arc<ProgressBar>,
-    ) -> Result<()> {
-        let count = actions.len();
-
-        let first_file = actions
-            .get(0)
-            .expect("Cant have empty actions in write_files")
-            .0
-            .to_string();
-        bar.set_message(first_file);
-
-        let paths: Vec<_> = actions
-            .iter()
-            .map(|(path, hgid, _, _)| (hgid.clone(), path.as_repo_path().to_owned()))
-            .collect();
-        let actions = actions
-            .into_iter()
-            .map(|(path, _, content, flag)| (path, content, flag));
-        async_vfs.write_batch(actions).await?;
-
-        if let Some(progress) = progress {
-            progress.lock().record_writes(paths);
-        }
-        bar.increase_position(count as u64);
-
-        fail::fail_point!("checkout-post-progress", |_| { bail!("oh no!") });
-
-        Ok(())
-    }
-
-    async fn remove_files(
-        async_vfs: &AsyncVfsWriter,
-        paths: Vec<RepoPathBuf>,
-        bar: &Arc<ProgressBar>,
-    ) -> Result<Vec<(RepoPathBuf, Error)>> {
-        let count = paths.len();
-        let failed = async_vfs.remove_batch(paths).await?;
-        bar.increase_position(count as u64);
-        Ok(failed)
-    }
-
-    async fn set_exec_on_file(
-        async_vfs: &AsyncVfsWriter,
-        path: &RepoPath,
-        flag: bool,
-        bar: &Arc<ProgressBar>,
-    ) -> Result<()> {
-        async_vfs
-            .set_executable(path.to_owned(), flag)
-            .await
-            .context(format!("Updating exec on {}", path))?;
-        bar.increase_position(1);
-        Ok(())
     }
 
     pub fn removed_files(&self) -> impl Iterator<Item = &RepoPathBuf> {
@@ -559,6 +571,43 @@ impl CheckoutPlan {
             progress: None,
             checkout: Checkout::default_config(vfs),
         }
+    }
+}
+
+impl CheckoutStats {
+    fn is_fatal(&self) -> bool {
+        !self.write_failed.is_empty()
+            || !self.other_failed.is_empty()
+            || !self.set_exec_failed.is_empty()
+    }
+}
+
+impl fmt::Display for CheckoutStats {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for (_path, err) in &self.write_failed {
+            err.fmt(f)?;
+        }
+        for (_path, err) in &self.set_exec_failed {
+            err.fmt(f)?;
+        }
+        for (_path, err) in &self.remove_failed {
+            err.fmt(f)?;
+        }
+        for err in &self.other_failed {
+            write!(f, "checkout error: {}", err)?;
+        }
+        Ok(())
+    }
+}
+
+impl std::error::Error for CheckoutStats {
+    // Consider impl sources() after
+    // https://github.com/rust-lang/rust/issues/58520
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        if let Some((_path, err)) = self.write_failed.first() {
+            return Some(err.root_cause());
+        }
+        None
     }
 }
 
@@ -636,11 +685,12 @@ impl CheckoutProgress {
         })
     }
 
-    fn record_writes(&mut self, paths: Vec<(HgId, RepoPathBuf)>) {
-        for (hgid, path) in paths.into_iter() {
+    // PERF: vfs.metadata should not require mut self.
+    fn record_writes(&mut self, paths: &[(HgId, RepoPathBuf)]) {
+        for (hgid, path) in paths {
             // Don't report write failures, just let the checkout continue.
             let _ = (|| -> Result<()> {
-                let stat = self.vfs.metadata(&path)?;
+                let stat = self.vfs.metadata(path)?;
                 let time = stat
                     .modified()?
                     .duration_since(SystemTime::UNIX_EPOCH)?
@@ -709,6 +759,16 @@ impl UpdateContentAction {
         Self {
             content_hgid: meta.hgid,
             file_type: meta.file_type,
+        }
+    }
+}
+
+impl Work {
+    fn path(&self) -> &RepoPath {
+        match self {
+            Self::Write(key, ..) => &key.path,
+            Self::SetExec(path, ..) => path,
+            Self::Remove(path) => path,
         }
     }
 }
@@ -970,15 +1030,24 @@ fn record_updates(plan: &CheckoutPlan, vfs: &VFS, treestate: &mut TreeState) -> 
 
 #[cfg(windows)]
 fn is_final_symlink_target_dir(mut path: PathBuf) -> Result<bool> {
+    use anyhow::Context;
     // On Linux the usual limit for symlinks depth is 40, and symlinks stop
     // being followed after that point:
     // https://elixir.bootlin.com/linux/v6.5-rc7/source/include/linux/namei.h#L13
     // Let's keep a similar limit for Windows
     let mut rem_links = 40;
-    let mut metadata = std::fs::symlink_metadata(path.clone())?;
+    let mut metadata = match fs::symlink_metadata(path.clone()) {
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            // The symlink file does not exist. This can happen when writes
+            // failed earlier. There should be errors about those writes
+            // already. Don't report a different (less readable) error.
+            return Ok(false);
+        }
+        v => v?,
+    };
     while metadata.is_symlink() && rem_links > 0 {
         rem_links -= 1;
-        let target = std::fs::read_link(path.clone())?;
+        let target = fs::read_link(path.clone())?;
         path = path
             .parent()
             .context("unable to determine parent directory for path when resolving symlink")?
@@ -988,7 +1057,7 @@ fn is_final_symlink_target_dir(mut path: PathBuf) -> Result<bool> {
             // If final target doesn't exist report it as a regular file
             return Ok(false);
         }
-        metadata = std::fs::symlink_metadata(path.clone())?;
+        metadata = fs::symlink_metadata(path.clone())?;
     }
     Ok(metadata.is_dir())
 }
@@ -997,8 +1066,9 @@ fn is_final_symlink_target_dir(mut path: PathBuf) -> Result<bool> {
 /// Converts a list of file symlinks into potentially directory symlinks by
 /// checking the final target of that symlink, and converting it into a
 /// directory one if the final target is a directory.
-pub fn update_symlinks(paths: &[String], vfs: &VFS) -> Result<()> {
-    for p in paths.iter() {
+pub fn update_symlinks(paths: &[&RepoPath], vfs: &VFS) -> Result<()> {
+    use anyhow::Context;
+    for p in paths {
         let path = RepoPath::from_str(p.as_str())?;
         if is_final_symlink_target_dir(vfs.join(path))? {
             let (contents, _) = vfs.read_with_metadata(&path)?;
@@ -1017,12 +1087,12 @@ pub fn update_symlinks(paths: &[String], vfs: &VFS) -> Result<()> {
 // todo parallel execution for the test
 mod test {
     use std::collections::HashMap;
-    use std::fs::create_dir;
     use std::path::Path;
 
     #[cfg(unix)]
     use anyhow::ensure;
     use anyhow::Context;
+    use fs::create_dir;
     use manifest_tree::testutil::make_tree_manifest_from_meta;
     use manifest_tree::testutil::TestStore;
     use manifest_tree::Diff;
@@ -1093,7 +1163,7 @@ mod test {
         let file_path = RepoPathBuf::from_string("file".to_string())?;
         vfs.write(file_path.as_repo_path(), &[0b0, 0b01], UpdateFlag::Regular)?;
         let id = hgid(1);
-        progress.record_writes(vec![(id, file_path.clone())]);
+        progress.record_writes(&[(id, file_path.clone())]);
 
         let progress = CheckoutProgress::load(&path, vfs)?;
         assert_eq!(progress.state.len(), 1);
@@ -1237,7 +1307,7 @@ mod test {
     }
 
     fn assert_not_empty_dir(dir: &DirEntry) -> Result<()> {
-        let mut rd = std::fs::read_dir(dir.path())?;
+        let mut rd = fs::read_dir(dir.path())?;
         if rd.next().is_none() {
             bail!("Unexpected empty dir: {}", dir.path().display())
         }

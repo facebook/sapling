@@ -9,7 +9,6 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::Result;
-use futures::StreamExt;
 use manifest::Manifest;
 use manifest_tree::TreeManifest;
 use parking_lot::RwLock;
@@ -422,17 +421,22 @@ impl IntoIterator for FileChangeDetector {
         // TODO: if the underlying stores gain the ability to do hash-based comparisons,
         // switch this to use that (rather than pulling down the entire contents of each
         // file).
-        async_runtime::block_on(async {
-            let _span = tracing::info_span!("get_content_stream").entered();
-
-            let mut results = self.store.get_content_stream(keys).await;
-            while let Some(result) = results.next().await {
-                match result {
-                    Ok((bytes, key)) => disk_send.send((key.path, bytes)).unwrap(),
-                    Err(e) => results_send.send(Err(e)).unwrap(),
-                };
+        let _span = tracing::info_span!("get_content_stream").entered();
+        match self.store.get_content_iter(keys) {
+            Err(e) => results_send.send(Err(e)).unwrap(),
+            Ok(v) => {
+                for entry in v {
+                    let (key, data) = match entry {
+                        Ok(v) => v,
+                        Err(e) => {
+                            results_send.send(Err(e)).unwrap();
+                            continue;
+                        }
+                    };
+                    disk_send.send((key.path, data)).unwrap();
+                }
             }
-        });
+        };
 
         drop(results_send);
         drop(disk_send);

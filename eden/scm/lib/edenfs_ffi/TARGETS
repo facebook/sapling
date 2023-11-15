@@ -29,7 +29,6 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:cxx",
-        "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:once_cell",
         "fbsource//third-party/rust:tokio",
         "//eden/scm/lib/async-runtime:async-runtime",

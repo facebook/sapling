@@ -7,10 +7,11 @@ edition = "2021"
 
 [dependencies]
 anyhow = "=1.0.72"
-async-runtime = { version = "0.1.0", path = "../async-runtime" }
+atexit = { version = "0.1.0", path = "../util/atexit" }
 configmodel = { version = "0.1.0", path = "../config/model" }
+crossbeam = "0.8"
 fail = { version = "0.4", features = ["failpoints"] }
-futures = { version = "0.3.28", features = ["async-await", "compat"] }
+fs-err = "2.6.0"
 io = { version = "0.1.0", path = "../io" }
 manifest = { version = "0.1.0", path = "../manifest", features = ["for-tests"] }
 manifest-tree = { version = "0.1.0", path = "../manifest-tree" }

@@ -12,7 +12,6 @@ crate-type = ["lib", "staticlib"]
 anyhow = "=1.0.72"
 async-runtime = { version = "0.1.0", path = "../async-runtime" }
 cxx = "1.0.100"
-futures = { version = "0.3.28", features = ["async-await", "compat"] }
 identity = { version = "0.1.0", path = "../identity" }
 manifest = { version = "0.1.0", path = "../manifest" }
 manifest-tree = { version = "0.1.0", path = "../manifest-tree" }

@@ -24,19 +24,21 @@ use std::any::Any;
 use std::path::Path;
 use std::sync::Arc;
 
-use async_runtime::block_on;
 use async_trait::async_trait;
 use edenapi_trait::EdenApi;
 pub use futures;
 use futures::stream::BoxStream;
-use futures::StreamExt;
 pub use minibytes;
+pub use minibytes::Bytes;
 use serde::Deserialize;
 use serde::Serialize;
 pub use types;
 use types::HgId;
 use types::Key;
 use types::RepoPath;
+
+/// Boxed dynamic iterator. Similar to `BoxStream`.
+pub type BoxIterator<'a, T> = Box<dyn Iterator<Item = T> + Send + 'a>;
 
 /// A store where content is indexed by "(path, hash)", aka "Key".
 #[async_trait]
@@ -47,10 +49,12 @@ pub trait KeyStore: Send + Sync {
     /// - The returned content does not contain the "copy from" header.
     /// - The returned content does not contain raw LFS content. LFS pointer
     ///   is resolved transparently.
-    async fn get_content_stream(
+    ///
+    /// The iterator might block waiting for network.
+    fn get_content_iter(
         &self,
         keys: Vec<Key>,
-    ) -> BoxStream<anyhow::Result<(minibytes::Bytes, Key)>> {
+    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Bytes)>>> {
         let iter = keys
             .into_iter()
             .map(|k| match self.get_local_content(&k.path, k.hgid) {
@@ -60,9 +64,9 @@ pub trait KeyStore: Send + Sync {
                     k.path,
                     k.hgid
                 )),
-                Ok(Some(data)) => Ok((data, k)),
+                Ok(Some(data)) => Ok((k, data)),
             });
-        futures::stream::iter(iter).boxed()
+        Ok(Box::new(iter))
     }
 
     /// Read the content of the specified file without connecting to a remote server.
@@ -76,21 +80,20 @@ pub trait KeyStore: Send + Sync {
     }
 
     /// Read the content of the specified file. Ask a remote server on demand.
-    /// When fetching many files, use `get_content_stream` instead of calling
+    /// When fetching many files, use `get_content_iter` instead of calling
     /// this in a loop.
     fn get_content(&self, path: &RepoPath, hgid: HgId) -> anyhow::Result<minibytes::Bytes> {
-        if let Some(data) = self.get_local_content(path, hgid)? {
+        // Handle "broken" implementation that returns Err(_) not Ok(None) on not found.
+        if let Ok(Some(data)) = self.get_local_content(path, hgid) {
             return Ok(data);
         }
 
         let key = Key::new(path.to_owned(), hgid);
-        block_on(async {
-            match self.get_content_stream(vec![key]).await.next().await {
-                None => Err(anyhow::format_err!("{}@{}: not found", path, hgid)),
-                Some(Err(e)) => Err(e),
-                Some(Ok((data, _key))) => Ok(data),
-            }
-        })
+        match self.get_content_iter(vec![key])?.next() {
+            None => Err(anyhow::format_err!("{}@{}: not found remotely", path, hgid)),
+            Some(Err(e)) => Err(e),
+            Some(Ok((_k, data))) => Ok(data),
+        }
     }
 
     /// Indicate to the store that we will be attempting to access the given
@@ -99,7 +102,7 @@ pub trait KeyStore: Send + Sync {
     /// by prefetching the nodes in bulk). For some stores this operation does
     /// not make sense, so the default implementation is a no-op.
     ///
-    /// This is an old API. Consider `get_content_stream` instead.
+    /// This is an old API. Consider `get_content_iter` instead.
     fn prefetch(&self, _keys: Vec<Key>) -> anyhow::Result<()> {
         Ok(())
     }

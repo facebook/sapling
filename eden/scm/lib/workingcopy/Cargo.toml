@@ -14,7 +14,6 @@ configmodel = { version = "0.1.0", path = "../config/model" }
 crossbeam = "0.8"
 edenfs-client = { version = "0.1.0", path = "../edenfs-client", optional = true }
 fs-err = "2.6.0"
-futures = { version = "0.3.28", features = ["async-await", "compat"] }
 hgtime = { version = "0.1.0", path = "../hgtime" }
 identity = { version = "0.1.0", path = "../identity" }
 io = { version = "0.1.0", path = "../io" }

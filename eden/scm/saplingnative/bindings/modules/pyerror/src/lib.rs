@@ -77,6 +77,13 @@ fn register_error_handlers() {
         if let Some(e) = e.downcast_ref::<std::io::Error>() {
             return Some(cpython_ext::error::translate_io_error(py, e));
         }
+        // Try harder about io::Error by checking the error source.
+        {
+            let cause = e.root_cause();
+            if let Some(e) = cause.downcast_ref::<std::io::Error>() {
+                return Some(cpython_ext::error::translate_io_error(py, e));
+            }
+        }
 
         if let Some(revlogindex::Error::Corruption(e)) = e.downcast_ref::<revlogindex::Error>() {
             if let revlogindex::errors::CorruptionError::Io(e) = e.as_ref() {

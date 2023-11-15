@@ -9,16 +9,12 @@
 
 #![allow(non_camel_case_types)]
 
-use std::fs::read_dir;
-use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::format_err;
 use anyhow::Error;
-use async_runtime::block_on;
-use async_runtime::stream_to_iter as block_on_stream;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use cpython::*;
@@ -29,11 +25,9 @@ use cpython_ext::PyNone;
 use cpython_ext::PyPath;
 use cpython_ext::PyPathBuf;
 use cpython_ext::ResultPyErrExt;
-use io::IO;
 use parking_lot::RwLock;
 use pyconfigloader::config;
 use revisionstore::repack;
-use revisionstore::scmstore::file_to_async_key_stream;
 use revisionstore::scmstore::FetchMode;
 use revisionstore::scmstore::FileAttributes;
 use revisionstore::scmstore::FileStore;

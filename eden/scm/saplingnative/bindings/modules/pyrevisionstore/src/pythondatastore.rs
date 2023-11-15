@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -34,7 +33,6 @@ use revisionstore::RepackLocation;
 use revisionstore::StoreKey;
 use revisionstore::StoreResult;
 use types::Key;
-use types::RepoPathBuf;
 
 use crate::pythonutil::from_key_to_tuple;
 use crate::pythonutil::from_tuple_to_key;

@@ -33,6 +33,7 @@ rust_library(
         "fbsource//third-party/rust:serde",
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/async-runtime:async-runtime",
         "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/dag:dag",
         "//eden/scm/lib/hg-metrics:hg-metrics",

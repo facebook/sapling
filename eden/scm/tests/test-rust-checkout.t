@@ -67,7 +67,7 @@ Can continue interrupted checkout:
 
   $ hg go -q null
   $ FAILPOINTS=checkout-post-progress=return hg go $A
-  abort: oh no!
+  abort: checkout error: Error set by checkout-post-progress FAILPOINTS
   [255]
 
   $ hg whereami
