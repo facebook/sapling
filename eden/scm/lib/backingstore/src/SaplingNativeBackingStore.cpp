@@ -16,6 +16,7 @@
 #include <memory>
 #include <optional>
 #include <stdexcept>
+#include <type_traits>
 
 namespace sapling {
 
@@ -52,26 +53,20 @@ std::optional<ManifestId> SaplingNativeBackingStore::getManifestNode(
     NodeId node) {
   XLOG(DBG7) << "Importing manifest node=" << folly::hexlify(node)
              << " from backingstore";
-  CFallible<CBytes, sapling_cbytes_free> result{
-      sapling_backingstore_get_manifest(store_.get(), node)};
+  try {
+    static_assert(std::is_same_v<
+                  ManifestId,
+                  decltype(sapling_backingstore_get_manifest(
+                      *store_.get(),
+                      rust::Slice<const uint8_t>{node.data(), node.size()}))>);
 
-  if (result.isError()) {
+    return sapling_backingstore_get_manifest(
+        *store_.get(), rust::Slice<const uint8_t>{node.data(), node.size()});
+  } catch (const rust::Error& error) {
     XLOG(DBG2) << "Error while getting manifest node=" << folly::hexlify(node)
-               << " from backingstore: " << result.getError();
+               << " from backingstore: " << error.what();
     return std::nullopt;
   }
-
-  auto bytes = result.unwrap();
-  ManifestId manifestId;
-
-  if (bytes->len != manifestId.size()) {
-    XLOG(DBG2) << "Invalid manifest node length=" << bytes->len
-               << ", expected=" << manifestId.size();
-    return std::nullopt;
-  }
-
-  std::memcpy(manifestId.data(), bytes->ptr, bytes->len);
-  return manifestId;
 }
 
 std::shared_ptr<Tree> SaplingNativeBackingStore::getTree(

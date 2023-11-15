@@ -213,7 +213,7 @@ impl BackingStore {
     }
 
     #[instrument(level = "debug", skip(self))]
-    pub fn get_manifest(&mut self, node: &[u8]) -> Result<Vec<u8>> {
+    pub fn get_manifest(&mut self, node: &[u8]) -> Result<[u8; 20]> {
         let hgid = HgId::from_slice(node)?;
         let root_tree_id = match block_on(self.repo.get_root_tree_id(hgid)) {
             Ok(root_tree_id) => root_tree_id,
@@ -225,8 +225,7 @@ impl BackingStore {
                 block_on(self.repo.get_root_tree_id(hgid))?
             }
         };
-        let bytes = root_tree_id.into_byte_array();
-        Ok(bytes.to_vec())
+        Ok(root_tree_id.into_byte_array())
     }
 
     #[instrument(level = "debug", skip(self))]

@@ -43,6 +43,11 @@ mod ffi {
             options: &BackingStoreOptions,
         ) -> Result<Box<BackingStore>>;
 
+        pub fn sapling_backingstore_get_manifest(
+            store: &mut BackingStore,
+            node: &[u8],
+        ) -> Result<[u8; 20]>;
+
         pub fn sapling_backingstore_flush(store: &mut BackingStore);
     }
 }
@@ -66,12 +71,11 @@ pub unsafe fn sapling_backingstore_new(
     Ok(Box::new(store))
 }
 
-#[no_mangle]
-pub extern "C" fn sapling_backingstore_get_manifest(
+pub fn sapling_backingstore_get_manifest(
     store: &mut BackingStore,
-    node: Slice<u8>,
-) -> CFallibleBase {
-    CFallible::make_with(|| store.get_manifest(node.slice()).map(CBytes::from_vec)).into()
+    node: &[u8],
+) -> Result<[u8; 20]> {
+    store.get_manifest(node)
 }
 
 #[no_mangle]
