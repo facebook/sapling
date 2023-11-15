@@ -289,7 +289,7 @@ impl FetchState {
 
         self.metrics.indexedlog.store(typ).fetch(pending.len());
         for key in pending.into_iter() {
-            let res = store.get_raw_entry(&key);
+            let res = store.get_raw_entry(&key.hgid);
             match res {
                 Ok(Some(entry)) => {
                     self.metrics.indexedlog.store(typ).hit(1);

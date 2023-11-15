@@ -448,12 +448,15 @@ impl LocalStore for TreeStore {
         missing = if let Some(ref indexedlog_cache) = self.indexedlog_cache {
             missing
                 .into_iter()
-                .filter(
-                    |sk| match sk.maybe_as_key().map(|k| indexedlog_cache.get_raw_entry(k)) {
+                .filter(|sk| {
+                    match sk
+                        .maybe_as_key()
+                        .map(|k| indexedlog_cache.get_raw_entry(&k.hgid))
+                    {
                         Some(Ok(Some(_))) => false,
                         None | Some(Err(_)) | Some(Ok(None)) => true,
-                    },
-                )
+                    }
+                })
                 .collect()
         } else {
             missing
@@ -462,12 +465,15 @@ impl LocalStore for TreeStore {
         missing = if let Some(ref indexedlog_local) = self.indexedlog_local {
             missing
                 .into_iter()
-                .filter(
-                    |sk| match sk.maybe_as_key().map(|k| indexedlog_local.get_raw_entry(k)) {
+                .filter(|sk| {
+                    match sk
+                        .maybe_as_key()
+                        .map(|k| indexedlog_local.get_raw_entry(&k.hgid))
+                    {
                         Some(Ok(Some(_))) => false,
                         None | Some(Err(_)) | Some(Ok(None)) => true,
-                    },
-                )
+                    }
+                })
                 .collect()
         } else {
             missing
