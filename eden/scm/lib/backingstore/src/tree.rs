@@ -11,12 +11,10 @@
 
 use std::collections::HashMap;
 
-use anyhow::format_err;
 use anyhow::Result;
 use manifest::FileType;
-use manifest::FsNodeMetadata;
-use manifest::List;
-use revisionstore::scmstore::file::FileAuxData;
+use storemodel::FileAuxData;
+use storemodel::TreeItemFlag;
 use types::HgId;
 use types::PathComponentBuf;
 
@@ -40,29 +38,29 @@ impl TreeEntryType {
 impl TreeEntry {
     fn try_from_path_node(
         path: PathComponentBuf,
-        node: FsNodeMetadata,
+        hgid: HgId,
+        flag: TreeItemFlag,
         aux: &HashMap<HgId, FileAuxData>,
     ) -> Option<Result<Self>> {
-        let (ttype, hash, size, content_sha1, content_blake3) = match node {
-            FsNodeMetadata::Directory(Some(hgid)) => (TreeEntryType::Tree, hgid, None, None, None),
-            FsNodeMetadata::File(metadata) => {
-                let entry_type = match TreeEntryType::from_file_type(metadata.file_type) {
+        let (ttype, hash, size, content_sha1, content_blake3) = match flag {
+            TreeItemFlag::Directory => (TreeEntryType::Tree, hgid, None, None, None),
+            TreeItemFlag::File(file_type) => {
+                let entry_type = match TreeEntryType::from_file_type(file_type) {
                     None => return None,
                     Some(entry_type) => entry_type,
                 };
-                if let Some(aux_data) = aux.get(&metadata.hgid) {
+                if let Some(aux_data) = aux.get(&hgid) {
                     (
                         entry_type,
-                        metadata.hgid,
+                        hgid,
                         Some(aux_data.total_size),
                         Some(aux_data.sha1),
                         aux_data.seeded_blake3,
                     )
                 } else {
-                    (entry_type, metadata.hgid, None, None, None)
+                    (entry_type, hgid, None, None, None)
                 }
             }
-            _ => return Some(Err(format_err!("received an ephemeral directory"))),
         };
 
         let entry = TreeEntry {
@@ -82,23 +80,21 @@ impl TreeEntry {
     }
 }
 
-impl TryFrom<(List, HashMap<HgId, FileAuxData>)> for Tree {
+impl TryFrom<Box<dyn storemodel::TreeEntry>> for Tree {
     type Error = anyhow::Error;
 
-    fn try_from(entries: (List, HashMap<HgId, FileAuxData>)) -> Result<Self, Self::Error> {
-        match entries.0 {
-            List::NotFound | List::File => Err(format_err!("not found")),
-            List::Directory(list) => {
-                let entries = list
-                    .into_iter()
-                    .filter_map(|(path, node)| {
-                        TreeEntry::try_from_path_node(path, node, &entries.1)
-                    })
-                    .collect::<Result<Vec<_>>>()?;
+    fn try_from(value: Box<dyn storemodel::TreeEntry>) -> Result<Self, Self::Error> {
+        let aux_map: HashMap<HgId, FileAuxData> =
+            value.file_aux_iter()?.collect::<Result<HashMap<_, _>>>()?;
+        let entries = value
+            .iter()?
+            .filter_map(|fallible| match fallible {
+                Err(e) => Some(Err(e)),
+                Ok((path, id, flag)) => TreeEntry::try_from_path_node(path, id, flag, &aux_map),
+            })
+            .collect::<Result<Vec<_>>>()?;
 
-                Ok(Tree { entries })
-            }
-        }
+        Ok(Tree { entries })
     }
 }
 

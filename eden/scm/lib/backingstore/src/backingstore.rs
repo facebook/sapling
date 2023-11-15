@@ -5,39 +5,31 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::hash_map::Entry;
 use std::collections::HashMap;
+use std::fmt;
 use std::path::Path;
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::Result;
 use async_runtime::block_on;
 use log::warn;
-use manifest::List;
 use repo::repo::Repo;
-use revisionstore::scmstore::file::FileAuxData;
-use revisionstore::scmstore::FetchMode;
-use revisionstore::scmstore::FileAttributes;
-use revisionstore::scmstore::FileStoreBuilder;
-use revisionstore::scmstore::KeyFetchError;
-use revisionstore::scmstore::StoreFile;
-use revisionstore::scmstore::TreeStore;
-use revisionstore::scmstore::TreeStoreBuilder;
-use revisionstore::trait_impls::ArcFileStore;
-use revisionstore::HgIdDataStore;
-use storemodel::KeyStore;
-use tracing::event;
+use storemodel::BoxIterator;
+use storemodel::Bytes;
+use storemodel::FileAuxData;
+use storemodel::FileStore;
+use storemodel::TreeEntry;
+use storemodel::TreeStore;
 use tracing::instrument;
-use tracing::Level;
 use types::HgId;
 use types::Key;
 use types::RepoPath;
-use types::RepoPathBuf;
+
+use crate::FetchMode;
 
 pub struct BackingStore {
-    filestore: ArcFileStore,
-    treestore: Arc<TreeStore>,
+    filestore: Arc<dyn FileStore>,
+    treestore: Arc<dyn TreeStore>,
     repo: Repo,
 }
 
@@ -63,8 +55,9 @@ impl BackingStore {
         let root = root.as_ref();
         let mut config = configloader::hg::load(Some(root), &extra_configs, &[])?;
 
+        let source = "backingstore".into();
+        config.set("store", "aux", Some("true"), &source);
         if !allow_retries {
-            let source = configloader::config::Options::new().source("backingstore");
             config.set("lfs", "backofftimes", Some(""), &source);
             config.set("lfs", "throttlebackofftimes", Some(""), &source);
             config.set("edenapi", "max-retry-per-request", Some("0"), &source);
@@ -73,125 +66,20 @@ impl BackingStore {
         // Apply indexed log configs, which can affect edenfs behavior.
         indexedlog::config::configure(&config)?;
 
-        let ident = identity::must_sniff_dir(root)?;
-        let hg = root.join(ident.dot_dir());
-        let store_path = hg.join("store");
-
-        let filestore = FileStoreBuilder::new(&config)
-            .local_path(&store_path)
-            .store_aux_data();
-
-        let treestore = TreeStoreBuilder::new(&config)
-            .local_path(&store_path)
-            .suffix(Path::new("manifests"));
-
-        let filestore = ArcFileStore(Arc::new(filestore.build()?));
-        let treestore = treestore.filestore(filestore.0.clone());
-        let repo = Repo::load_with_config(root, config.clone())?;
+        let mut repo = Repo::load_with_config(root, config.clone())?;
+        let filestore = repo.file_store()?;
+        let treestore = repo.tree_store()?;
 
         Ok(Self {
-            treestore: Arc::new(treestore.build()?),
+            treestore,
             filestore,
             repo,
         })
     }
 
-    pub fn get_blob(&self, node: &[u8], fetch_mode: FetchMode) -> Result<Option<Vec<u8>>> {
-        let hgid = HgId::from_slice(node)?;
-        if matches!(fetch_mode, FetchMode::LocalOnly) {
-            let blob = KeyStore::get_local_content(&self.filestore, RepoPath::empty(), hgid)?
-                .map(|v| v.into_vec());
-            return Ok(blob);
-        }
-        let key = Key::new(RepoPathBuf::new(), hgid);
-        self.get_blob_by_key(key, fetch_mode)
-    }
-
     #[instrument(level = "debug", skip(self))]
-    fn get_blob_by_key(&self, key: Key, fetch_mode: FetchMode) -> Result<Option<Vec<u8>>> {
-        if let FetchMode::LocalOnly = fetch_mode {
-            event!(Level::TRACE, "attempting to fetch blob locally");
-        }
-        let fetch_result = self
-            .filestore
-            .0
-            .fetch(std::iter::once(key), FileAttributes::CONTENT, fetch_mode)
-            .single();
-
-        Ok(if let Some(mut file) = fetch_result? {
-            Some(file.file_content()?.into_vec())
-        } else {
-            None
-        })
-    }
-
-    fn get_file_attrs_batch<F>(
-        &self,
-        keys: Vec<Key>,
-        fetch_mode: FetchMode,
-        resolve: F,
-        attrs: FileAttributes,
-    ) where
-        F: Fn(usize, Result<Option<StoreFile>>),
-    {
-        // Resolve key errors
-        let requests = keys.into_iter().enumerate();
-
-        // Crate key-index mapping and fail fast for duplicate keys
-        let mut indexes: HashMap<Key, usize> = HashMap::new();
-        for (index, key) in requests {
-            if let Entry::Vacant(vacant) = indexes.entry(key) {
-                vacant.insert(index);
-            } else {
-                resolve(
-                    index,
-                    Err(anyhow!(
-                        "duplicated keys are not supported by get_file_attrs_batch when using scmstore",
-                    )),
-                );
-            }
-        }
-
-        // Handle local-only fetching
-        if let FetchMode::LocalOnly = fetch_mode {
-            event!(Level::TRACE, "attempting to fetch file aux data locally");
-        }
-
-        let fetch_results = self
-            .filestore
-            .0
-            .fetch(indexes.keys().cloned(), attrs, fetch_mode);
-
-        for result in fetch_results {
-            match result {
-                Ok((key, value)) => {
-                    if let Some(index) = indexes.remove(&key) {
-                        resolve(index, Ok(Some(value)));
-                    }
-                }
-                Err(err) => {
-                    match err {
-                        KeyFetchError::KeyedError { key, mut errors } => {
-                            if let Some(index) = indexes.remove(&key) {
-                                if let Some(err) = errors.pop() {
-                                    resolve(index, Err(err));
-                                } else {
-                                    resolve(index, Ok(None));
-                                }
-                            } else {
-                                tracing::error!(
-                                    "no index found for {}, scmstore returned a key we have no record of requesting",
-                                    key
-                                );
-                            }
-                        }
-                        KeyFetchError::Other(_) => {
-                            // TODO: How should we handle normal non-keyed errors?
-                        }
-                    };
-                }
-            }
-        }
+    pub fn get_blob(&self, node: &[u8], fetch_mode: FetchMode) -> Result<Option<Vec<u8>>> {
+        self.filestore.single(node, fetch_mode)
     }
 
     /// Fetch file contents in batch. Whenever a blob is fetched, the supplied `resolve` function is
@@ -202,23 +90,8 @@ impl BackingStore {
     where
         F: Fn(usize, Result<Option<Vec<u8>>>),
     {
-        self.get_file_attrs_batch(
-            keys,
-            fetch_mode,
-            move |idx, res| {
-                resolve(
-                    idx,
-                    res.transpose()
-                        .map(|res| {
-                            res.and_then(|mut file| {
-                                file.file_content().map(|content| content.into_vec())
-                            })
-                        })
-                        .transpose(),
-                )
-            },
-            FileAttributes::CONTENT,
-        )
+        self.filestore
+            .batch_with_callback(keys, fetch_mode, resolve)
     }
 
     #[instrument(level = "debug", skip(self))]
@@ -238,20 +111,12 @@ impl BackingStore {
     }
 
     #[instrument(level = "debug", skip(self))]
-    pub fn get_tree(&self, node: &[u8], fetch_mode: FetchMode) -> Result<Option<List>> {
-        let hgid = HgId::from_slice(node)?;
-        let key = Key::new(RepoPathBuf::new(), hgid);
-
-        if let FetchMode::LocalOnly = fetch_mode {
-            event!(Level::TRACE, "attempting to fetch trees locally");
-        }
-        let fetch_results = self.treestore.fetch_batch(std::iter::once(key), fetch_mode);
-
-        if let Some(mut entry) = fetch_results.single()? {
-            Ok(Some(entry.manifest_tree_entry()?.try_into()?))
-        } else {
-            Ok(None)
-        }
+    pub fn get_tree(
+        &self,
+        node: &[u8],
+        fetch_mode: FetchMode,
+    ) -> Result<Option<Box<dyn TreeEntry>>> {
+        self.treestore.single(node, fetch_mode)
     }
 
     /// Fetch tree contents in batch. Whenever a tree is fetched, the supplied `resolve` function is
@@ -260,118 +125,219 @@ impl BackingStore {
     #[instrument(level = "debug", skip(self, resolve))]
     pub fn get_tree_batch<F>(&self, keys: Vec<Key>, fetch_mode: FetchMode, resolve: F)
     where
-        F: Fn(usize, Result<Option<(List, HashMap<HgId, FileAuxData>)>>),
+        F: Fn(usize, Result<Option<Box<dyn TreeEntry>>>),
     {
-        // Handle key errors
-        let requests = keys.into_iter().enumerate();
-
-        // Crate key-index mapping and fail fast for duplicate keys
-        let mut indexes: HashMap<Key, usize> = HashMap::new();
-        for (index, key) in requests {
-            if let Entry::Vacant(vacant) = indexes.entry(key) {
-                vacant.insert(index);
-            } else {
-                resolve(
-                    index,
-                    Err(anyhow!(
-                        "duplicated keys are not supported by get_tree_batch when using scmstore",
-                    )),
-                );
-            }
-        }
-
-        // Handle local-only fetching
-        if let FetchMode::LocalOnly = fetch_mode {
-            event!(Level::TRACE, "attempting to fetch trees locally");
-        }
-        let fetch_results = self
-            .treestore
-            .fetch_batch(indexes.keys().cloned(), fetch_mode);
-
-        // Handle pey-key fetch results
-        for result in fetch_results {
-            match result {
-                Ok((key, mut value)) => {
-                    if let Some(index) = indexes.remove(&key) {
-                        resolve(
-                            index,
-                            Some(value.manifest_tree_entry().and_then(|tree| {
-                                let aux_data = value.aux_data()?;
-                                Ok((tree.try_into()?, aux_data))
-                            }))
-                            .transpose(),
-                        );
-                    }
-                }
-                Err(err) => {
-                    match err {
-                        KeyFetchError::KeyedError { key, mut errors } => {
-                            if let Some(index) = indexes.remove(&key) {
-                                if let Some(err) = errors.pop() {
-                                    resolve(index, Err(err));
-                                } else {
-                                    resolve(index, Ok(None));
-                                }
-                            } else {
-                                tracing::error!(
-                                    "no index found for {}, scmstore returned a key we have no record of requesting",
-                                    key
-                                );
-                            }
-                        }
-                        KeyFetchError::Other(_) => {
-                            // TODO: How should we handle normal non-keyed errors?
-                        }
-                    };
-                }
-            }
-        }
+        self.treestore
+            .batch_with_callback(keys, fetch_mode, resolve)
     }
 
     pub fn get_file_aux(&self, node: &[u8], fetch_mode: FetchMode) -> Result<Option<FileAuxData>> {
-        let hgid = HgId::from_slice(node)?;
-        let key = Key::new(RepoPathBuf::new(), hgid);
-
-        if let FetchMode::LocalOnly = fetch_mode {
-            event!(Level::TRACE, "attempting to fetch file aux data locally");
-        }
-        let fetch_results =
-            self.filestore
-                .0
-                .fetch(std::iter::once(key), FileAttributes::AUX, fetch_mode);
-
-        if let Some(entry) = fetch_results.single()? {
-            Ok(Some(entry.aux_data()?.try_into()?))
-        } else {
-            Ok(None)
-        }
+        self.filestore.single(node, fetch_mode)
     }
 
     pub fn get_file_aux_batch<F>(&self, keys: Vec<Key>, fetch_mode: FetchMode, resolve: F)
     where
         F: Fn(usize, Result<Option<FileAuxData>>),
     {
-        self.get_file_attrs_batch(
-            keys,
-            fetch_mode,
-            move |idx, res| {
-                resolve(
-                    idx,
-                    res.transpose()
-                        .map(|res| res.and_then(|file| file.aux_data()))
-                        .transpose(),
-                )
-            },
-            FileAttributes::AUX,
-        )
+        self.filestore
+            .batch_with_callback(keys, fetch_mode, resolve)
     }
 
     /// Forces backing store to rescan pack files or local indexes
     #[instrument(level = "debug", skip(self))]
-    pub fn flush(&self) {
+    pub fn refresh(&self) {
         self.filestore.refresh().ok();
         self.treestore.refresh().ok();
     }
+
+    #[instrument(level = "debug", skip(self))]
+    pub fn flush(&self) {
+        self.filestore.flush().ok();
+        self.treestore.flush().ok();
+    }
+}
+
+/// Given a single point local fetch function, and a "streaming" (via iterator)
+/// remote fetch function, provide `batch_with_callback` for ease-of-use.
+trait LocalRemoteImpl<IntermediateType, OutputType = IntermediateType> {
+    fn get_local_single(&self, path: &RepoPath, id: HgId) -> Result<Option<IntermediateType>>;
+    fn get_single(&self, path: &RepoPath, id: HgId) -> Result<IntermediateType>;
+    fn get_batch_iter(
+        &self,
+        keys: Vec<Key>,
+    ) -> Result<BoxIterator<Result<(Key, IntermediateType)>>>;
+    fn convert(&self, value: IntermediateType) -> Result<OutputType>;
+
+    // The following methods are "derived" from the above.
+
+    fn single(&self, node: &[u8], fetch_mode: FetchMode) -> Result<Option<OutputType>> {
+        let hgid = HgId::from_slice(node)?;
+        if fetch_mode.is_local() {
+            let maybe_value = match self.get_local_single(RepoPath::empty(), hgid)? {
+                Some(v) => Some(self.convert(v)?),
+                None => None,
+            };
+            Ok(maybe_value)
+        } else {
+            let value = self.get_single(RepoPath::empty(), hgid)?;
+            let value = self.convert(value)?;
+            Ok(Some(value))
+        }
+    }
+
+    fn batch_with_callback<F>(&self, keys: Vec<Key>, fetch_mode: FetchMode, resolve: F)
+    where
+        F: Fn(usize, Result<Option<OutputType>>),
+    {
+        if fetch_mode.is_local() {
+            // PERF: In some cases this might be sped up using threads in theory.
+            // But this needs to be backed by real benchmark data. Besides, edenfs
+            // does not call into this path often.
+            for (i, key) in keys.iter().enumerate() {
+                let result = self.get_local_single(&key.path, key.hgid);
+                let result: Result<Option<OutputType>> = match result {
+                    Ok(Some(v)) => self.convert(v).map(|v| Some(v)),
+                    Ok(None) => Ok(None),
+                    Err(e) => Err(e),
+                };
+                resolve(i, result);
+            }
+        } else {
+            let mut key_to_index = indexed_keys(&keys);
+            let mut remaining = keys.len();
+            let mut errors = Vec::new();
+            match self.get_batch_iter(keys) {
+                Err(e) => errors.push(e),
+                Ok(iter) => {
+                    for entry in iter {
+                        let (key, data) = match entry {
+                            Err(e) => {
+                                errors.push(e);
+                                continue;
+                            }
+                            Ok(v) => v,
+                        };
+                        if let Some(entry) = key_to_index.get_mut(&key) {
+                            if let Some(index) = *entry {
+                                *entry = None;
+                                remaining = remaining.saturating_sub(1);
+                                let result = match self.convert(data) {
+                                    Err(e) => Err(e),
+                                    Ok(v) => Ok(Some(v)),
+                                };
+                                resolve(index, result);
+                            }
+                        }
+                    }
+                }
+            }
+            if remaining > 0 {
+                // Report errors. We don't know the index -> error mapping so
+                // we bundle all errors we received.
+                let error = ErrorCollection(Arc::new(errors));
+                for (_key, entry) in key_to_index.into_iter() {
+                    if let Some(index) = entry {
+                        resolve(index, Err(error.clone().into()));
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Read file content.
+impl LocalRemoteImpl<Bytes, Vec<u8>> for Arc<dyn FileStore> {
+    fn get_local_single(&self, path: &RepoPath, id: HgId) -> Result<Option<Bytes>> {
+        self.get_local_content(path, id)
+    }
+    fn get_single(&self, path: &RepoPath, id: HgId) -> Result<Bytes> {
+        self.get_content(path, id)
+    }
+    fn get_batch_iter(&self, keys: Vec<Key>) -> Result<BoxIterator<Result<(Key, Bytes)>>> {
+        self.get_content_iter(keys)
+    }
+    fn convert(&self, value: Bytes) -> Result<Vec<u8>> {
+        Ok(value.into_vec())
+    }
+}
+
+/// Read file aux.
+impl LocalRemoteImpl<FileAuxData> for Arc<dyn FileStore> {
+    fn get_local_single(&self, path: &RepoPath, id: HgId) -> Result<Option<FileAuxData>> {
+        self.get_local_aux(path, id)
+    }
+    fn get_single(&self, path: &RepoPath, id: HgId) -> Result<FileAuxData> {
+        self.get_aux(path, id)
+    }
+    fn get_batch_iter(&self, keys: Vec<Key>) -> Result<BoxIterator<Result<(Key, FileAuxData)>>> {
+        self.get_aux_iter(keys)
+    }
+    fn convert(&self, value: FileAuxData) -> Result<FileAuxData> {
+        Ok(value)
+    }
+}
+
+/// Read tree content.
+impl LocalRemoteImpl<Box<dyn TreeEntry>> for Arc<dyn TreeStore> {
+    fn get_local_single(&self, path: &RepoPath, id: HgId) -> Result<Option<Box<dyn TreeEntry>>> {
+        self.get_local_tree(path, id)
+    }
+    fn get_single(&self, path: &RepoPath, id: HgId) -> Result<Box<dyn TreeEntry>> {
+        match self
+            .get_tree_iter(vec![Key::new(path.to_owned(), id)])?
+            .next()
+        {
+            Some(Ok((_key, tree))) => Ok(tree),
+            Some(Err(e)) => Err(e),
+            None => Err(anyhow::format_err!("{}@{}: not found remotely", path, id)),
+        }
+    }
+    fn get_batch_iter(
+        &self,
+        keys: Vec<Key>,
+    ) -> Result<BoxIterator<Result<(Key, Box<dyn TreeEntry>)>>> {
+        self.get_tree_iter(keys)
+    }
+    fn convert(&self, value: Box<dyn TreeEntry>) -> Result<Box<dyn TreeEntry>> {
+        Ok(value)
+    }
+}
+
+/// This type is just for display.
+#[derive(Debug, Clone)]
+struct ErrorCollection(Arc<Vec<anyhow::Error>>);
+
+impl fmt::Display for ErrorCollection {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if let Some((first, rest)) = self.0.split_first() {
+            first.fmt(f)?;
+
+            let n = rest.len();
+            if n > 0 {
+                write!(f, "\n-- and {n} more errors --\n")?;
+                for e in rest {
+                    e.fmt(f)?;
+                    write!(f, "\n--\n")?;
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+impl std::error::Error for ErrorCollection {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        self.0.first().map(|e| e.as_ref())
+    }
+}
+
+/// Index &[Key] so they can be converted back to the index.
+fn indexed_keys(keys: &[Key]) -> HashMap<Key, Option<usize>> {
+    keys.iter()
+        .cloned()
+        .enumerate()
+        .map(|(i, k)| (k, Some(i)))
+        .collect()
 }
 
 impl Drop for BackingStore {

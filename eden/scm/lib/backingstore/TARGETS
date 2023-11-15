@@ -57,13 +57,7 @@ rust_library(
                 "dependencies": {
                     "constructors": {"default-features": False},
                     "indexedlog": {"features": ["configurable"]},
-                    "revisionstore": {"features": ["ods"]},
                 },
-            },
-            "extra_buck_dependencies": {
-                "dependencies": [
-                    "//eden/scm/lib/revisionstore:revisionstore",
-                ],
             },
             "features": {
                 "fb": ["configloader/fb"],
@@ -75,9 +69,6 @@ rust_library(
     },
     cpp_deps = [":sapling_native_backingstore"],
     crate_root = "src/lib.rs",
-    named_deps = {
-        "revisionstore": "//eden/scm/lib/revisionstore:revisionstore_with_ods",
-    },
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:cxx",

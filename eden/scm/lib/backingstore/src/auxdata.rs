@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use revisionstore::scmstore::file::FileAuxData as ScmStoreFileAuxData;
+use storemodel::FileAuxData as ScmStoreFileAuxData;
 
 use crate::ffi::ffi::FileAuxData;
 

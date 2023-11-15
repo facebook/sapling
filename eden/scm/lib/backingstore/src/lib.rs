@@ -27,6 +27,26 @@ mod slice;
 mod tests;
 mod tree;
 
-pub use revisionstore::scmstore::FetchMode;
-
 pub use crate::backingstore::BackingStore;
+
+#[derive(Debug, Copy, Clone)]
+pub enum FetchMode {
+    /// The fetch may hit remote servers.
+    AllowRemote,
+    /// The fetch is limited to RAM and disk.
+    LocalOnly,
+}
+
+impl FetchMode {
+    pub fn is_local(self) -> bool {
+        matches!(self, FetchMode::LocalOnly)
+    }
+
+    pub fn from_local(local: bool) -> Self {
+        if local {
+            Self::LocalOnly
+        } else {
+            Self::AllowRemote
+        }
+    }
+}

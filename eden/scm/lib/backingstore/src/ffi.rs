@@ -7,7 +7,6 @@
 
 //! Provides the c-bindings for `crate::backingstore`.
 
-use std::collections::HashMap;
 use std::ffi::CStr;
 use std::os::raw::c_char;
 
@@ -15,10 +14,7 @@ use anyhow::Error;
 use anyhow::Result;
 use cxx::SharedPtr;
 use libc::c_void;
-use manifest::List;
-use revisionstore::scmstore::FetchMode;
-use revisionstore::scmstore::FileAuxData as ScmStoreFileAuxData;
-use types::HgId;
+use storemodel::FileAuxData as ScmStoreFileAuxData;
 use types::Key;
 
 use crate::backingstore::BackingStore;
@@ -27,6 +23,7 @@ use crate::cfallible::CFallible;
 use crate::cfallible::CFallibleBase;
 use crate::request::Request;
 use crate::slice::Slice;
+use crate::FetchMode;
 
 #[cxx::bridge(namespace = sapling)]
 pub(crate) mod ffi {
@@ -141,7 +138,7 @@ pub fn sapling_backingstore_get_tree(
         store
             .get_tree(node, fetch_mode_from_local(local))
             .and_then(|opt| opt.ok_or_else(|| Error::msg("no tree found")))
-            .and_then(|list| (list, HashMap::new()).try_into())?,
+            .and_then(|entry| entry.try_into())?,
     ))
 }
 
@@ -156,7 +153,7 @@ pub extern "C" fn sapling_backingstore_get_tree_batch(
     let keys: Vec<Key> = requests.slice().iter().map(|req| req.key()).collect();
 
     store.get_tree_batch(keys, fetch_mode_from_local(local), |idx, result| {
-        let result: Result<(List, HashMap<HgId, ScmStoreFileAuxData>)> =
+        let result: Result<Box<dyn storemodel::TreeEntry>> =
             result.and_then(|opt| opt.ok_or_else(|| Error::msg("no tree found")));
         let result: Result<ffi::Tree> = result.and_then(|list| list.try_into());
         let result: CFallible<ffi::Tree> = result.into();
@@ -226,4 +223,5 @@ pub extern "C" fn sapling_backingstore_get_file_aux_batch(
 
 pub fn sapling_backingstore_flush(store: &mut BackingStore) {
     store.flush();
+    store.refresh();
 }
