@@ -380,6 +380,7 @@ pub fn base_commit_sync_config(large_repo: &TestRepo, small_repo: &TestRepo) -> 
             NonRootMPath::new("prefix").unwrap(),
         ),
         map: hashmap! {},
+        git_submodules_action: Default::default(),
     };
     CommitSyncConfig {
         large_repo_id: large_repo.repo_identity().id(),
@@ -439,6 +440,7 @@ fn get_small_repo_sync_config_noop() -> SmallRepoCommitSyncConfig {
     SmallRepoCommitSyncConfig {
         default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
         map: hashmap! {},
+        git_submodules_action: Default::default(),
     }
 }
 
@@ -448,6 +450,7 @@ fn get_small_repo_sync_config_1() -> SmallRepoCommitSyncConfig {
             NonRootMPath::new("prefix").unwrap(),
         ),
         map: hashmap! {},
+        git_submodules_action: Default::default(),
     }
 }
 
@@ -459,5 +462,8 @@ fn get_small_repo_sync_config_2() -> SmallRepoCommitSyncConfig {
         map: hashmap! {
             NonRootMPath::new("special").unwrap() => NonRootMPath::new("special").unwrap(),
         },
+        git_submodules_action: Default::default(),
     }
 }
+
+// TODO(T168676855): define small repo config that strips submodules and add tests

@@ -1213,6 +1213,19 @@ pub enum DefaultSmallToLargeCommitSyncPathAction {
     PrependPrefix(NonRootMPath),
 }
 
+/// Whether any changes made to git submodules should be stripped from
+/// the changesets before being synced.
+/// Since this is used in the small repo config, defininig a struct to set the
+/// default to true, to avoid accidentally syncing git submodules to large repos.
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
+pub enum GitSubmodulesChangesAction {
+    /// Sync all changes made to git submodules without alterations.
+    Keep,
+    /// Strip any changes made to git submodules from the synced bonsai.
+    #[default]
+    Strip,
+}
+
 /// Commit sync configuration for a small repo
 /// Note: this configuration is always from the point of view
 /// of the small repo, meaning a key in the `map` is a path
@@ -1223,6 +1236,9 @@ pub struct SmallRepoCommitSyncConfig {
     pub default_action: DefaultSmallToLargeCommitSyncPathAction,
     /// A map of prefix replacements when syncing
     pub map: HashMap<NonRootMPath, NonRootMPath>,
+    /// Whether any changes made to git submodules should be stripped from
+    /// the changesets before being synced.
+    pub git_submodules_action: GitSubmodulesChangesAction,
 }
 
 /// Commit sync direction

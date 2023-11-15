@@ -251,6 +251,7 @@ fn create_commit_sync_config(
             prefix,
         )?),
         map: hashmap! {},
+        git_submodules_action: Default::default(),
     };
 
     Ok(CommitSyncConfig {
@@ -675,6 +676,7 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
             NonRootMPath::new("dir1/subdir1/subsubdir1")? => NonRootMPath::new("prefix1")?,
             NonRootMPath::new("dir1")? => NonRootMPath::new("prefix2")?,
         },
+        git_submodules_action: Default::default(),
     };
 
     let commit_sync_config = CommitSyncConfig {
@@ -1606,6 +1608,7 @@ async fn prepare_commit_syncer_with_mapping_change(
         map: hashmap! {
             NonRootMPath::new("tools")? => NonRootMPath::new("tools")?,
         },
+        git_submodules_action: Default::default(),
     };
 
     let old_version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
@@ -1684,6 +1687,7 @@ fn get_merge_sync_data_provider(
     let small_repo_config = SmallRepoCommitSyncConfig {
         default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
         map: hashmap! {},
+        git_submodules_action: Default::default(),
     };
     let commit_sync_config_v1 = CommitSyncConfig {
         large_repo_id,
@@ -2008,6 +2012,7 @@ async fn test_no_accidental_preserved_roots(
         let small_repo_config = SmallRepoCommitSyncConfig {
             default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
             map: hashmap! {},
+            git_submodules_action: Default::default(),
         };
         let commit_sync_config = CommitSyncConfig {
             large_repo_id: commit_syncer.get_large_repo().repo_identity().id(),
@@ -2124,6 +2129,7 @@ async fn test_not_sync_candidate_if_mapping_does_not_have_small_repo(
             first_small_repo_id => SmallRepoCommitSyncConfig {
                 default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
                 map: hashmap! {},
+                git_submodules_action: Default::default(),
             },
         },
         version_name: noop_version_first_small_repo.clone(),

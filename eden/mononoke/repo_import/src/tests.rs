@@ -529,6 +529,7 @@ mod tests {
             map: hashmap! {
                 mp("dest_path_prefix/B") => mp("random_dir/B"),
             },
+            git_submodules_action: Default::default(),
         }
     }
 
@@ -541,6 +542,7 @@ mod tests {
                 mp("dest_path_prefix/B") => mp("random_dir/B"),
                 mp("dest_path_prefix/C") => mp("random_dir/C"),
             },
+            git_submodules_action: Default::default(),
         }
     }
 
@@ -550,6 +552,7 @@ mod tests {
             map: hashmap! {
                 mp("dest_path_prefix_2") => mp("dpp2"),
             },
+            git_submodules_action: Default::default(),
         }
     }
 

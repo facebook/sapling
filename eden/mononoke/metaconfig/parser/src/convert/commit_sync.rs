@@ -18,12 +18,14 @@ use metaconfig_types::CommitSyncConfig;
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::CommonCommitSyncConfig;
 use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
+use metaconfig_types::GitSubmodulesChangesAction;
 use metaconfig_types::SmallRepoCommitSyncConfig;
 use metaconfig_types::SmallRepoPermanentConfig;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use repos::RawCommitSyncConfig;
 use repos::RawCommitSyncSmallRepoConfig;
+use repos::RawGitSubmodulesChangesAction;
 
 use crate::convert::Convert;
 
@@ -154,6 +156,24 @@ impl Convert for RawCommitSyncConfig {
     }
 }
 
+impl Convert for RawGitSubmodulesChangesAction {
+    type Output = GitSubmodulesChangesAction;
+    fn convert(self) -> Result<Self::Output> {
+        let converted = match self {
+            RawGitSubmodulesChangesAction::KEEP => GitSubmodulesChangesAction::Keep,
+            RawGitSubmodulesChangesAction::STRIP => GitSubmodulesChangesAction::Strip,
+            RawGitSubmodulesChangesAction::UNKNOWN => GitSubmodulesChangesAction::default(),
+            v => {
+                return Err(anyhow!(
+                    "Invalid value {} for enum GitSubmodulesChangesAction",
+                    v
+                ));
+            }
+        };
+        Ok(converted)
+    }
+}
+
 impl Convert for RawCommitSyncSmallRepoConfig {
     type Output = SmallRepoCommitSyncConfig;
 
@@ -163,6 +183,7 @@ impl Convert for RawCommitSyncSmallRepoConfig {
             default_action,
             default_prefix,
             mapping,
+            git_submodules_action,
             ..
         } = self;
 
@@ -187,9 +208,15 @@ impl Convert for RawCommitSyncSmallRepoConfig {
             .map(|(k, v)| Ok((NonRootMPath::new(k)?, NonRootMPath::new(v)?)))
             .collect::<Result<HashMap<_, _>>>()?;
 
+        let git_submodules_action = match git_submodules_action {
+            Some(git_submodules_action) => git_submodules_action.convert()?,
+            None => GitSubmodulesChangesAction::default(),
+        };
+
         Ok(SmallRepoCommitSyncConfig {
             default_action,
             map,
+            git_submodules_action,
         })
     }
 }
