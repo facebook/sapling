@@ -70,10 +70,7 @@ impl LazyTree {
         // TODO(meyer): Make manifest-tree crate use minibytes::Bytes
         // Currently revisionstore is only for hg format.
         let format = SerializationFormat::Hg;
-        Ok(ManifestTreeEntry(
-            self.hg_content()?.into_vec().into(),
-            format,
-        ))
+        Ok(ManifestTreeEntry(self.hg_content()?, format))
     }
 
     pub fn aux_data(&self) -> HashMap<HgId, FileAuxData> {
