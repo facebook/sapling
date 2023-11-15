@@ -102,6 +102,7 @@ pub struct ISLSpawnOptions {
     /// If false (default), spawn with the chromelike --app or in an OS webview application.
     pub no_app: bool,
     pub dev: bool,
+    pub session: Option<String>,
 }
 
 #[derive(Debug, Default, Deserialize, Serialize, Clone)]
@@ -142,6 +143,9 @@ impl ISLSpawnOptions {
         }
         if self.force {
             cmd.arg("--force");
+        }
+        if let Some(session) = &self.session {
+            cmd.args(["--session", session]);
         }
         cmd.stdin(Stdio::null());
         if pipe_stdout {

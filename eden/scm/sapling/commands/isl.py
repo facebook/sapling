@@ -83,6 +83,14 @@ DEFAULT_PORT = 3011
                 + " See addons/isl/README.md for more information. (ADVANCED)"
             ),
         ),
+        (
+            "",
+            "session",
+            "",
+            _(
+                "Provide a specific ID for this ISL session used in analytics. (ADVANCED)"
+            ),
+        ),
     ],
 )
 def isl_cmd(ui, repo, *args, **opts):
@@ -132,6 +140,7 @@ def isl_cmd(ui, repo, *args, **opts):
     browser = opts.get("browser")
     app = opts.get("app")
     dev = opts.get("dev")
+    session = opts.get("session")
 
     force_no_app = ui.configbool("web", "force-no-app")
 
@@ -155,6 +164,7 @@ def isl_cmd(ui, repo, *args, **opts):
             "browser": None if browser == "" else browser,
             "noApp": force_no_app or not app,
             "dev": dev,
+            "session": session,
         }
     )
 
