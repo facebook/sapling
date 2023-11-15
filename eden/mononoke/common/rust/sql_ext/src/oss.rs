@@ -61,6 +61,8 @@ pub fn create_mysql_connections_unsharded(
 ) -> Result<SqlConnections, Error> {
     fb_unimplemented!()
 }
+
+#[cfg(fbcode_build)]
 pub fn create_oss_mysql_connections_unsharded(
     _fb: FacebookInit,
     _host: String,
