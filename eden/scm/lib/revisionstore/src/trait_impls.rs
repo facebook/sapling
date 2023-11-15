@@ -11,6 +11,7 @@ use std::sync::Arc;
 
 use anyhow::format_err;
 use anyhow::Result;
+use edenapi_types::FileAuxData;
 use hgstore::strip_hg_file_metadata;
 use minibytes::Bytes;
 use storemodel::BoxIterator;
@@ -122,8 +123,16 @@ impl storemodel::KeyStore for ArcFileStore {
         self.0.get_local_content_direct(&hgid)
     }
 
+    fn flush(&self) -> Result<()> {
+        FileStore::flush(&self.0)
+    }
+
     fn refresh(&self) -> Result<()> {
         FileStore::refresh(&self.0)
+    }
+
+    fn statistics(&self) -> Vec<(String, usize)> {
+        FileStore::metrics(&self.0)
     }
 }
 
@@ -146,6 +155,44 @@ impl storemodel::FileStore for ArcFileStore {
                     Ok(maybe_copy_from.map(|copy_from| (key, copy_from)))
                 })()
                 .transpose()
+            });
+        Ok(Box::new(iter))
+    }
+
+    fn get_local_aux(
+        &self,
+        path: &RepoPath,
+        id: HgId,
+    ) -> anyhow::Result<Option<edenapi_types::FileAuxData>> {
+        // PERF: This could be made faster by changes like D50935733.
+        let key = Key::new(path.to_owned(), id);
+        let fetched = self.0.fetch(
+            std::iter::once(key),
+            FileAttributes::AUX,
+            FetchMode::LocalOnly,
+        );
+        if let Some(entry) = fetched.single()? {
+            Ok(Some(entry.aux_data()?))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn get_aux_iter(
+        &self,
+        keys: Vec<Key>,
+    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, FileAuxData)>>> {
+        let fetched = self.0.fetch(
+            keys.into_iter(),
+            FileAttributes::AUX,
+            FetchMode::AllowRemote,
+        );
+        let iter = fetched
+            .into_iter()
+            .map(|entry| -> anyhow::Result<(Key, FileAuxData)> {
+                let (key, mut store_file) = entry?;
+                let aux = store_file.aux_data()?;
+                Ok((key, aux))
             });
         Ok(Box::new(iter))
     }
