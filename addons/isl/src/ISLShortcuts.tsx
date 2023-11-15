@@ -23,6 +23,7 @@ export const [ISLCommandContext, useCommand, dispatchCommand] = makeCommandDispa
   ToggleTheme: [Modifier.ALT, KeyCode.T],
   ToggleShelvedChangesDropdown: [Modifier.ALT, KeyCode.S],
   ToggleDownloadCommitsDropdown: [Modifier.ALT, KeyCode.D],
+  ToggleCwdDropdown: [Modifier.ALT, KeyCode.C],
 });
 
 export type ISLCommandName = Parameters<typeof useCommand>[0];

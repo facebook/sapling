@@ -9,6 +9,8 @@ import type {AbsolutePath} from './types';
 
 import serverAPI from './ClientToServerAPI';
 import {DropdownField, DropdownFields} from './DropdownFields';
+import {useCommandEvent} from './ISLShortcuts';
+import {Kbd} from './Kbd';
 import {Tooltip} from './Tooltip';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {T} from './i18n';
@@ -22,6 +24,7 @@ import {
 } from '@vscode/webview-ui-toolkit/react';
 import {atom, useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
+import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
 import {minimalDisambiguousPaths} from 'shared/minimalDisambiguousPaths';
 import {basename} from 'shared/utils';
 
@@ -47,6 +50,7 @@ export const availableCwds = atom<Array<AbsolutePath>>({
 
 export function CwdSelector() {
   const info = useRecoilValue(repositoryInfo);
+  const additionalToggles = useCommandEvent('ToggleCwdDropdown');
   if (info?.type !== 'success') {
     return null;
   }
@@ -55,7 +59,13 @@ export function CwdSelector() {
     <Tooltip
       trigger="click"
       component={dismiss => <CwdDetails dismiss={dismiss} />}
-      placement="bottom">
+      additionalToggles={additionalToggles}
+      placement="bottom"
+      title={
+        <T replace={{$shortcut: <Kbd keycode={KeyCode.C} modifiers={[Modifier.ALT]} />}}>
+          Repository info & cwd ($shortcut)
+        </T>
+      }>
       <VSCodeButton appearance="icon" data-testid="cwd-dropdown-button">
         <Icon icon="folder" slot="start" />
         {repoBasename}
