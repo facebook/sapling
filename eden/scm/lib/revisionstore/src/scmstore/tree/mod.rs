@@ -8,21 +8,30 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use ::types::tree::TreeItemFlag;
 use ::types::HgId;
 use ::types::Key;
 use ::types::Node;
+use ::types::PathComponent;
+use ::types::PathComponentBuf;
 use ::types::RepoPath;
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Result;
 use crossbeam::channel::unbounded;
+use edenapi_types::FileAuxData;
+use edenapi_types::TreeChildEntry;
 use minibytes::Bytes;
+use once_cell::sync::OnceCell;
+use storemodel::SerializationFormat;
 use tracing::field;
 
 pub mod types;
 
 use clientinfo::get_client_request_info_thread_local;
 use clientinfo::set_client_request_info_thread_local;
+use storemodel::BoxIterator;
+use storemodel::TreeEntry;
 
 use crate::datastore::HgIdDataStore;
 use crate::datastore::RemoteDataStore;
@@ -521,7 +530,6 @@ impl ContentDataStore for TreeStore {
     }
 }
 
-#[async_trait::async_trait]
 impl storemodel::KeyStore for TreeStore {
     fn get_local_content(
         &self,
@@ -555,6 +563,23 @@ impl storemodel::KeyStore for TreeStore {
         }
     }
 
+    fn get_content_iter(
+        &self,
+        keys: Vec<Key>,
+    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Bytes)>>> {
+        let fetched = self.fetch_batch(keys.into_iter(), FetchMode::AllowRemote);
+        let iter = fetched
+            .into_iter()
+            .map(|entry| -> anyhow::Result<(Key, Bytes)> {
+                let (key, store_tree) = entry?;
+                let content = store_tree
+                    .content
+                    .ok_or_else(|| anyhow::format_err!("no content available"))?;
+                Ok((key, content.hg_content()?))
+            });
+        Ok(Box::new(iter))
+    }
+
     fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
         self.fetch_batch(keys.into_iter(), FetchMode::AllowRemote)
             .consume();
@@ -566,4 +591,82 @@ impl storemodel::KeyStore for TreeStore {
     }
 }
 
-impl storemodel::TreeStore for TreeStore {}
+/// Extends a basic `TreeEntry` with aux data.
+struct ScmStoreTreeEntry {
+    tree: LazyTree,
+    // The "basic" version of `TreeEntry` that does not have aux data.
+    basic_tree_entry: OnceCell<Box<dyn TreeEntry>>,
+}
+
+impl ScmStoreTreeEntry {
+    fn basic_tree_entry(&self) -> Result<&Box<dyn TreeEntry>> {
+        self.basic_tree_entry.get_or_try_init(|| {
+            let data = self.tree.hg_content()?;
+            let entry = storemodel::basic_parse_tree(data, SerializationFormat::Hg)?;
+            Ok(entry)
+        })
+    }
+}
+
+impl TreeEntry for ScmStoreTreeEntry {
+    fn iter(&self) -> Result<BoxIterator<Result<(PathComponentBuf, HgId, TreeItemFlag)>>> {
+        self.basic_tree_entry()?.iter()
+    }
+
+    fn lookup(&self, name: &PathComponent) -> Result<Option<(HgId, TreeItemFlag)>> {
+        self.basic_tree_entry()?.lookup(name)
+    }
+
+    fn file_aux_iter(&self) -> anyhow::Result<BoxIterator<anyhow::Result<(HgId, FileAuxData)>>> {
+        let maybe_iter = (|| -> Option<BoxIterator<anyhow::Result<(HgId, FileAuxData)>>> {
+            let entry = match &self.tree {
+                LazyTree::EdenApi(entry) => entry,
+                _ => return None,
+            };
+            let children = entry.children.as_ref()?;
+            let iter = children.iter().filter_map(|child| {
+                let child = child.as_ref().ok()?;
+                let file_entry = match child {
+                    TreeChildEntry::File(v) => v,
+                    _ => return None,
+                };
+                let file_metadata = file_entry.file_metadata?;
+                // For easier coding, we simply skip incomplete data here.
+                let aux = FileAuxData {
+                    total_size: file_metadata.size?,
+                    content_id: file_metadata.content_id?,
+                    sha1: file_metadata.content_sha1?,
+                    sha256: file_metadata.content_sha256?,
+                    seeded_blake3: file_metadata.content_seeded_blake3,
+                };
+                Some(Ok((file_entry.key.hgid, aux)))
+            });
+            Some(Box::new(iter))
+        })();
+        Ok(maybe_iter.unwrap_or_else(|| Box::new(std::iter::empty())))
+    }
+}
+
+impl storemodel::TreeStore for TreeStore {
+    fn get_tree_iter(
+        &self,
+        keys: Vec<Key>,
+    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Box<dyn TreeEntry>)>>> {
+        let fetched = self.fetch_batch(keys.into_iter(), FetchMode::AllowRemote);
+        let iter = fetched
+            .into_iter()
+            .map(|entry| -> anyhow::Result<(Key, Box<dyn TreeEntry>)> {
+                let (key, store_tree) = entry?;
+                let tree: LazyTree = store_tree
+                    .content
+                    .ok_or_else(|| anyhow::format_err!("no content available"))?;
+                // ScmStoreTreeEntry supports aux data.
+                let tree_entry = ScmStoreTreeEntry {
+                    tree,
+                    basic_tree_entry: OnceCell::new(),
+                };
+                Ok((key, Box::new(tree_entry)))
+            });
+        Ok(Box::new(iter))
+    }
+}
