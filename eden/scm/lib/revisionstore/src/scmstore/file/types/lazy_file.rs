@@ -93,10 +93,10 @@ impl LazyFile {
     }
 
     /// The file content, as would be encoded in the Mercurial blob (with copy header)
-    pub(crate) fn hg_content(&mut self) -> Result<Bytes> {
+    pub(crate) fn hg_content(&self) -> Result<Bytes> {
         use LazyFile::*;
         Ok(match self {
-            IndexedLog(ref mut entry) => entry.content()?,
+            IndexedLog(ref entry) => entry.content()?,
             Lfs(ref blob, ref ptr) => rebuild_metadata(blob.clone(), ptr),
             ContentStore(ref blob, _) => blob.clone(),
             EdenApi(ref entry) => entry.data()?.into(),
@@ -137,7 +137,7 @@ impl LazyFile {
 impl TryFrom<Entry> for LfsPointersEntry {
     type Error = Error;
 
-    fn try_from(mut e: Entry) -> Result<Self, Self::Error> {
+    fn try_from(e: Entry) -> Result<Self, Self::Error> {
         if e.metadata().is_lfs() {
             Ok(LfsPointersEntry::from_bytes(e.content()?, e.key().hgid)?)
         } else {

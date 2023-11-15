@@ -23,6 +23,7 @@ use indexedlog::log::IndexOutput;
 use lz4_pyframe::compress;
 use lz4_pyframe::decompress;
 use minibytes::Bytes;
+use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
 use tracing::warn;
 use types::hgid::ReadHgIdExt;
@@ -62,7 +63,7 @@ pub struct Entry {
     key: Key,
     metadata: Metadata,
 
-    content: Option<Bytes>,
+    content: OnceCell<Bytes>,
     compressed_content: Option<Bytes>,
 }
 
@@ -81,7 +82,7 @@ impl Entry {
     pub fn new(key: Key, content: Bytes, metadata: Metadata) -> Self {
         Entry {
             key,
-            content: Some(content),
+            content: OnceCell::with_value(content),
             metadata,
             compressed_content: None,
         }
@@ -123,7 +124,7 @@ impl Entry {
 
         Ok(Entry {
             key,
-            content: None,
+            content: OnceCell::new(),
             compressed_content: Some(bytes),
             metadata,
         })
@@ -154,7 +155,7 @@ impl Entry {
 
         let compressed = if let Some(compressed) = self.compressed_content {
             compressed
-        } else if let Some(raw) = self.content {
+        } else if let Some(raw) = self.content.get() {
             compress(&raw)?.into()
         } else {
             bail!("No content");
@@ -167,25 +168,19 @@ impl Entry {
     }
 
     pub(crate) fn calculate_content(&self) -> Result<Bytes> {
-        if let Some(content) = self.content.as_ref() {
-            return Ok(content.clone());
-        }
-
-        if let Some(compressed) = self.compressed_content.as_ref() {
-            let raw = Bytes::from(decompress(compressed)?);
-            Ok(raw)
-        } else {
-            bail!("No content");
-        }
+        let content = self.content.get_or_try_init(|| {
+            if let Some(compressed) = self.compressed_content.as_ref() {
+                let raw = Bytes::from(decompress(compressed)?);
+                Ok(raw)
+            } else {
+                bail!("No content");
+            }
+        })?;
+        Ok(content.clone())
     }
 
-    pub fn content(&mut self) -> Result<Bytes> {
-        if let Some(content) = self.content.as_ref() {
-            return Ok(content.clone());
-        }
-        let content = self.calculate_content()?;
-        self.content = Some(content.clone());
-        Ok(content)
+    pub fn content(&self) -> Result<Bytes> {
+        self.calculate_content()
     }
 
     pub fn metadata(&self) -> &Metadata {
@@ -373,7 +368,7 @@ impl HgIdDataStore for IndexedLogHgIdDataStore {
             content => return Ok(StoreResult::NotFound(content)),
         };
 
-        let mut entry = match self.get_raw_entry(&key.hgid)? {
+        let entry = match self.get_raw_entry(&key.hgid)? {
             None => return Ok(StoreResult::NotFound(StoreKey::HgId(key))),
             Some(entry) => entry,
         };

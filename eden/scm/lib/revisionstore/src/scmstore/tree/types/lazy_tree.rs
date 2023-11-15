@@ -46,10 +46,10 @@ impl LazyTree {
     }
 
     /// The tree content, as would be encoded in the Mercurial blob
-    pub(crate) fn hg_content(&mut self) -> Result<Bytes> {
+    pub(crate) fn hg_content(&self) -> Result<Bytes> {
         use LazyTree::*;
         Ok(match self {
-            IndexedLog(ref mut entry) => entry.content()?,
+            IndexedLog(ref entry) => entry.content()?,
             ContentStore(ref blob, _) => blob.clone(),
             EdenApi(ref entry) => entry.data()?.into(),
         })

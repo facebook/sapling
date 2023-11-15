@@ -190,7 +190,7 @@ impl storemodel::FileStore for ArcFileStore {
         let iter = fetched
             .into_iter()
             .map(|entry| -> anyhow::Result<(Key, FileAuxData)> {
-                let (key, mut store_file) = entry?;
+                let (key, store_file) = entry?;
                 let aux = store_file.aux_data()?;
                 Ok((key, aux))
             });
