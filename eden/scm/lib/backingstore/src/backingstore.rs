@@ -159,14 +159,16 @@ impl BackingStore {
 
 /// Given a single point local fetch function, and a "streaming" (via iterator)
 /// remote fetch function, provide `batch_with_callback` for ease-of-use.
-trait LocalRemoteImpl<IntermediateType, OutputType = IntermediateType> {
+trait LocalRemoteImpl<IntermediateType, OutputType = IntermediateType>
+where
+    IntermediateType: Into<OutputType>,
+{
     fn get_local_single(&self, path: &RepoPath, id: HgId) -> Result<Option<IntermediateType>>;
     fn get_single(&self, path: &RepoPath, id: HgId) -> Result<IntermediateType>;
     fn get_batch_iter(
         &self,
         keys: Vec<Key>,
     ) -> Result<BoxIterator<Result<(Key, IntermediateType)>>>;
-    fn convert(&self, value: IntermediateType) -> Result<OutputType>;
 
     // The following methods are "derived" from the above.
 
@@ -174,13 +176,13 @@ trait LocalRemoteImpl<IntermediateType, OutputType = IntermediateType> {
         let hgid = HgId::from_slice(node)?;
         if fetch_mode.is_local() {
             let maybe_value = match self.get_local_single(RepoPath::empty(), hgid)? {
-                Some(v) => Some(self.convert(v)?),
+                Some(v) => Some(v.into()),
                 None => None,
             };
             Ok(maybe_value)
         } else {
             let value = self.get_single(RepoPath::empty(), hgid)?;
-            let value = self.convert(value)?;
+            let value = value.into();
             Ok(Some(value))
         }
     }
@@ -196,7 +198,7 @@ trait LocalRemoteImpl<IntermediateType, OutputType = IntermediateType> {
             for (i, key) in keys.iter().enumerate() {
                 let result = self.get_local_single(&key.path, key.hgid);
                 let result: Result<Option<OutputType>> = match result {
-                    Ok(Some(v)) => self.convert(v).map(|v| Some(v)),
+                    Ok(Some(v)) => Ok(Some(v.into())),
                     Ok(None) => Ok(None),
                     Err(e) => Err(e),
                 };
@@ -221,10 +223,7 @@ trait LocalRemoteImpl<IntermediateType, OutputType = IntermediateType> {
                             if let Some(index) = *entry {
                                 *entry = None;
                                 remaining = remaining.saturating_sub(1);
-                                let result = match self.convert(data) {
-                                    Err(e) => Err(e),
-                                    Ok(v) => Ok(Some(v)),
-                                };
+                                let result = Ok(Some(data.into()));
                                 resolve(index, result);
                             }
                         }
@@ -256,9 +255,6 @@ impl LocalRemoteImpl<Bytes, Vec<u8>> for Arc<dyn FileStore> {
     fn get_batch_iter(&self, keys: Vec<Key>) -> Result<BoxIterator<Result<(Key, Bytes)>>> {
         self.get_content_iter(keys)
     }
-    fn convert(&self, value: Bytes) -> Result<Vec<u8>> {
-        Ok(value.into_vec())
-    }
 }
 
 /// Read file aux.
@@ -271,9 +267,6 @@ impl LocalRemoteImpl<FileAuxData> for Arc<dyn FileStore> {
     }
     fn get_batch_iter(&self, keys: Vec<Key>) -> Result<BoxIterator<Result<(Key, FileAuxData)>>> {
         self.get_aux_iter(keys)
-    }
-    fn convert(&self, value: FileAuxData) -> Result<FileAuxData> {
-        Ok(value)
     }
 }
 
@@ -297,9 +290,6 @@ impl LocalRemoteImpl<Box<dyn TreeEntry>> for Arc<dyn TreeStore> {
         keys: Vec<Key>,
     ) -> Result<BoxIterator<Result<(Key, Box<dyn TreeEntry>)>>> {
         self.get_tree_iter(keys)
-    }
-    fn convert(&self, value: Box<dyn TreeEntry>) -> Result<Box<dyn TreeEntry>> {
-        Ok(value)
     }
 }
 
