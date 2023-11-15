@@ -11,6 +11,7 @@ eagerepo = { version = "0.1.0", path = "../eagerepo" }
 edenapi = { version = "0.1.0", path = "../edenapi" }
 gitstore = { version = "0.1.0", path = "../gitstore", optional = true }
 hgcommits = { version = "0.1.0", path = "../hgcommits" }
+manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
 once_cell = "1.12"
 
 [features]

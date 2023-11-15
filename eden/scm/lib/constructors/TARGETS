@@ -25,5 +25,6 @@ rust_library(
         "//eden/scm/lib/gitstore:gitstore",
         "//eden/scm/lib/hgcommits:hgcommits",
         "//eden/scm/lib/hgcommits/git:commits-git",
+        "//eden/scm/lib/manifest-tree:manifest-tree",
     ],
 )
