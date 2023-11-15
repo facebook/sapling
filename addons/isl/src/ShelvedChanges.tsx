@@ -13,6 +13,8 @@ import {FlexSpacer} from './ComponentUtils';
 import {DropdownFields} from './DropdownFields';
 import {EmptyState} from './EmptyState';
 import {ErrorNotice} from './ErrorNotice';
+import {useCommandEvent} from './ISLShortcuts';
+import {Kbd} from './Kbd';
 import {OperationDisabledButton} from './OperationDisabledButton';
 import {Subtle} from './Subtle';
 import {Tooltip} from './Tooltip';
@@ -25,6 +27,7 @@ import {useEffect} from 'react';
 import {selector, useRecoilValueLoadable, useRecoilRefresher_UNSTABLE} from 'recoil';
 import {ComparisonType} from 'shared/Comparison';
 import {Icon} from 'shared/Icon';
+import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
 
 import './ShelvedChanges.css';
 
@@ -44,12 +47,18 @@ const shelvedChangesState = selector<Array<ShelvedChange>>({
 });
 
 export function ShelvedChangesMenu() {
+  const additionalToggles = useCommandEvent('ToggleShelvedChangesDropdown');
   return (
     <Tooltip
       component={dismiss => <ShelvedChangesList dismiss={dismiss} />}
       trigger="click"
       placement="bottom"
-      title={t('Shelved Changes')}>
+      additionalToggles={additionalToggles}
+      title={
+        <T replace={{$shortcut: <Kbd keycode={KeyCode.S} modifiers={[Modifier.ALT]} />}}>
+          Shelved Changes ($shortcut)
+        </T>
+      }>
       <VSCodeButton appearance="icon" data-testid="shelved-changes-button">
         <Icon icon="archive" />
       </VSCodeButton>

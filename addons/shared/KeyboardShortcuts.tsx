@@ -37,6 +37,7 @@ export enum KeyCode {
   N = 78,
   P = 80,
   R = 82,
+  S = 83,
   T = 84,
   Period = 190,
   SingleQuote = 222,
