@@ -134,6 +134,7 @@ members = [
   "lib/util/nodeipc",
   "lib/util/nodeipc/derive",
   "lib/util/procutil",
+  "lib/util/syncify",
   "lib/util/syncify/tree-pattern-match",
   "lib/util/system-command",
   "lib/util/testutil",
