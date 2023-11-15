@@ -130,11 +130,13 @@ pub trait KeyStore: Send + Sync {
     }
 
     /// Write pending changes to disk.
+    /// For some implementations, this also includes `refresh()`.
     fn flush(&self) -> anyhow::Result<()> {
         anyhow::bail!("store is read-only")
     }
 
     /// Refresh the store so it might pick up new contents written by other processes.
+    /// For some implementations, this also includes `flush()`.
     fn refresh(&self) -> anyhow::Result<()> {
         Ok(())
     }
