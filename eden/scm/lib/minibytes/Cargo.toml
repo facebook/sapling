@@ -15,6 +15,7 @@ serde = { version = "1.0.185", features = ["derive", "rc"] }
 quickcheck = "1.0"
 
 [features]
-default = ["frombytes", "frommmap"]
+default = ["frombytes", "frommmap", "non-zerocopy-into"]
 frombytes = ["bytes"]
 frommmap = ["memmap2"]
+non-zerocopy-into = []

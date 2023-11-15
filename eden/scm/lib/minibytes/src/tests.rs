@@ -97,6 +97,8 @@ fn test_into_vec() {
     let b = Bytes::from(v);
     let c = b.slice(1..3);
     drop(b);
+    #[cfg(feature = "non-zerocopy-into")]
+    assert_eq!(Vec::<u8>::from(c.slice(..)), b"bc");
     assert_eq!(c.into_vec(), b"bc");
 }
 

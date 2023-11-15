@@ -12,9 +12,11 @@ rust_library(
                 "default": [
                     "frombytes",
                     "frommmap",
+                    "non-zerocopy-into",
                 ],
                 "frombytes": ["bytes"],
                 "frommmap": ["memmap2"],
+                "non-zerocopy-into": [],
             },
             "package": {
                 "license": "MIT",
@@ -25,6 +27,7 @@ rust_library(
     features = [
         "frombytes",
         "frommmap",
+        "non-zerocopy-into",
     ],
     test_deps = [
         "fbsource//third-party/rust:quickcheck",
