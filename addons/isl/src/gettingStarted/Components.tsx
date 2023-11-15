@@ -124,6 +124,26 @@ export function Card({
   );
 }
 
+export function Callout({
+  title,
+  imgDark,
+  imgLight,
+  alt,
+}: {
+  title: React.ReactNode;
+  imgLight: string;
+  imgDark: string;
+  alt: string;
+}) {
+  const theme = useRecoilValue(themeState);
+  return (
+    <div className="callout">
+      <img src={theme === 'light' ? imgLight : imgDark} alt={alt} className="callout-image" />
+      <span>{title}</span>
+    </div>
+  );
+}
+
 export function CallToAction({children}: {children: React.ReactNode}) {
   return (
     <div className="call-to-action">

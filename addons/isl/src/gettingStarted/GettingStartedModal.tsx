@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import serverAPI from '../ClientToServerAPI';
 import {useCommand} from '../ISLShortcuts';
 import {Modal} from '../Modal';
 import {persistAtomToLocalStorageEffect} from '../persistAtomToConfigEffect';
@@ -18,42 +17,7 @@ import {Icon} from 'shared/Icon';
 export const hasShownGettingStarted = atom<boolean | null>({
   key: 'hasShownGettingStarted',
   default: null,
-  effects: [
-    persistAtomToLocalStorageEffect<boolean | null>('isl.has-shown-getting-started'),
-    // We don't want people to have to see the getting started modal more than once.
-    // `sl config`-backed persistence fails on remote machines, where you won't have the same sl config persisted.
-    // So we'll use local storage instead.
-    // However, some users have already used the old sl-config persistance, so we need to add some backwards compatibility logic here.
-    // TODO: Remove this sl config persistence after a few weeks.
-    ({setSelf}) => {
-      const oldSlConfigName = 'isl.hasShownGettingStarted';
-      const foundInLocalStorage = platform.getTemporaryState<boolean>(
-        'isl.has-shown-getting-started',
-      );
-      if (foundInLocalStorage) {
-        // don't bother with config storage if we've already managed to use local storage.
-        return;
-      }
-      serverAPI.onMessageOfType('gotConfig', event => {
-        if (event.name !== oldSlConfigName) {
-          return;
-        }
-        if (event.value != null) {
-          const hasSeen = JSON.parse(event.value);
-          setSelf(hasSeen);
-        } else {
-          // default
-          setSelf(false);
-        }
-      });
-      serverAPI.onConnectOrReconnect(() => {
-        serverAPI.postMessage({
-          type: 'getConfig',
-          name: oldSlConfigName,
-        });
-      });
-    },
-  ],
+  effects: [persistAtomToLocalStorageEffect<boolean | null>('isl.has-shown-getting-started')],
 });
 
 export function GettingStartedModal() {
