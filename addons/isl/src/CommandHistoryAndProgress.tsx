@@ -6,7 +6,7 @@
  */
 
 import type {Operation} from './operations/Operation';
-import type {ValidatedRepoInfo} from './types';
+import type {CommandArg, ValidatedRepoInfo} from './types';
 import type {ReactNode} from 'react';
 
 import {Delayed} from './Delayed';
@@ -25,7 +25,7 @@ import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 import './CommandHistoryAndProgress.css';
-import {truncate} from 'shared/utils';
+import {notEmpty, truncate} from 'shared/utils';
 
 function OperationDescription(props: {
   info: ValidatedRepoInfo;
@@ -59,6 +59,9 @@ function OperationDescription(props: {
           .map(arg => {
             if (typeof arg === 'object') {
               switch (arg.type) {
+                case 'config':
+                  // don't show configs in the UI
+                  return undefined;
                 case 'repo-relative-file':
                   return arg.path;
                 case 'exact-revset':
@@ -77,6 +80,7 @@ function OperationDescription(props: {
             }
             return arg;
           })
+          .filter(notEmpty)
           .join(' ')}
     </code>
   );

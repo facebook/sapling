@@ -200,10 +200,12 @@ export type ExactRevset = {type: 'exact-revset'; revset: Revset};
  *   without a race with the server telling you new versions of those hashes.
  * - If you want an exact commit that's already obsolete or should never be replaced with a succeeded version,
  *   you can use an exact revset.
+ * - Specifying config values to override for just this command, so they can be processed separately.
  */
 export type CommandArg =
   | string
   | {type: 'repo-relative-file'; path: RepoRelativePath}
+  | {type: 'config'; key: string; value: string}
   | ExactRevset
   | SucceedableRevset;
 
