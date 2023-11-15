@@ -29,12 +29,8 @@ struct ChangesetInfo {
   5: optional string committer;
   6: optional mononoke_types_thrift.DateTime committer_date;
   7: ChangesetMessage message;
-  8: map<string, binary> (
-    rust.type = "sorted_vector_map::SortedVectorMap",
-  ) hg_extra;
-  9: optional map<small_binary, binary_bytes> (
-    rust.type = "sorted_vector_map::SortedVectorMap",
-  ) git_extra_headers;
+  8: map_string_binary_3930 hg_extra;
+  9: optional map_small_binary_binary_bytes_5953 git_extra_headers;
 } (rust.exhaustive)
 
 // Commit message is represented by a separate union of formats for the future
@@ -44,3 +40,11 @@ struct ChangesetInfo {
 union ChangesetMessage {
   1: string message;
 }
+
+// The following were automatically generated and may benefit from renaming.
+typedef map<small_binary, binary_bytes> (
+  rust.type = "sorted_vector_map::SortedVectorMap",
+) map_small_binary_binary_bytes_5953
+typedef map<string, binary> (
+  rust.type = "sorted_vector_map::SortedVectorMap",
+) map_string_binary_3930
