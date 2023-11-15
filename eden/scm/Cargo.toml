@@ -84,6 +84,7 @@ members = [
   "lib/migration",
   "lib/mincode",
   "lib/minibench",
+  "lib/minibench/examples",
   "lib/minibytes",
   "lib/mpatch",
   "lib/mpatch-sys",
