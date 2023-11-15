@@ -40,6 +40,7 @@ export enum KeyCode {
   S = 83,
   T = 84,
   Period = 190,
+  QuestionMark = 191,
   SingleQuote = 222,
   LeftArrow = 37,
   UpArrow = 38,

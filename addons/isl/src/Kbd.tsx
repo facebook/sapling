@@ -25,6 +25,8 @@ export function Kbd({keycode, modifiers}: {keycode: KeyCode; modifiers?: Array<M
 
 function keycodeToString(keycode: KeyCode): string {
   switch (keycode) {
+    case KeyCode.QuestionMark:
+      return '?';
     case KeyCode.SingleQuote:
       return "'";
     case KeyCode.Period:
