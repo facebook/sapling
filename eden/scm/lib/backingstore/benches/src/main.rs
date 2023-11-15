@@ -24,6 +24,7 @@ use std::sync::OnceLock;
 use backingstore::BackingStore;
 use backingstore::FetchMode;
 use minibench::bench;
+use minibench::bench_enabled;
 use minibench::measure;
 use minibench::Measure;
 use types::HgId;
@@ -79,23 +80,25 @@ fn bench_matrix(name: &str, func: fn(&BackingStore, FetchMode)) {
         measured(move || func(&store, FetchMode::AllowRemote))
     });
 
-    bench(format!("{name} (local, warm cache)"), {
+    let title = format!("{name} (local, warm cache)");
+    if bench_enabled(&title) {
         let dir = tempdir();
         dir.warm_up_files();
-        move || {
+        bench(&title, move || {
             let store = dir.store();
             measured(move || func(&store, FetchMode::LocalOnly))
-        }
-    });
+        });
+    }
 
-    bench(format!("{name} (remote, warm cache)"), {
+    let title = format!("{name} (remote, warm cache)");
+    if bench_enabled(&title) {
         let dir = tempdir();
         dir.warm_up_files();
-        move || {
+        bench(title, move || {
             let store = dir.store();
             measured(move || func(&store, FetchMode::AllowRemote))
-        }
-    });
+        });
+    }
 }
 
 /// Measure both wall clock and IO (Linux).
