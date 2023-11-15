@@ -48,6 +48,7 @@ use crate::scmstore::fetch::KeyFetchError;
 use crate::scmstore::file::metrics::FileStoreFetchMetrics;
 use crate::scmstore::file::LazyFile;
 use crate::scmstore::value::StoreValue;
+use crate::scmstore::FetchMode;
 use crate::scmstore::FileAttributes;
 use crate::scmstore::FileAuxData;
 use crate::scmstore::FileStore;
@@ -97,9 +98,10 @@ impl FetchState {
         file_store: &FileStore,
         found_tx: Sender<Result<(Key, StoreFile), KeyFetchError>>,
         lfs_enabled: bool,
+        mode: FetchMode,
     ) -> Self {
         FetchState {
-            common: CommonFetchState::new(keys, attrs, found_tx),
+            common: CommonFetchState::new(keys, attrs, found_tx, mode),
             errors: FetchErrors::new(),
             metrics: FileStoreFetchMetrics::default(),
 

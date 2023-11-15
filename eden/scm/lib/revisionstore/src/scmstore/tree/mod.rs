@@ -96,7 +96,7 @@ impl TreeStore {
         let (found_tx, found_rx) = unbounded();
         let found_tx2 = found_tx.clone();
         let mut common: CommonFetchState<StoreTree> =
-            CommonFetchState::new(reqs, TreeAttributes::CONTENT, found_tx);
+            CommonFetchState::new(reqs, TreeAttributes::CONTENT, found_tx, fetch_mode);
 
         let keys_len = common.pending_len();
 

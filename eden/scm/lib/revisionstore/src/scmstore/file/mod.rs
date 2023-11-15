@@ -132,6 +132,7 @@ impl FileStore {
             self,
             found_tx,
             self.lfs_threshold_bytes.is_some(),
+            fetch_mode,
         );
 
         let keys_len = state.pending_len();
