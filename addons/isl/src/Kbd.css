@@ -1,0 +1,45 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.kbd-group {
+  display: inline-flex;
+  gap: 4px;
+  line-height: 12px;
+  padding-inline: 4px;
+}
+
+.dark-theme kbd {
+  --kbd-background: var(--vscode-keybindingLabel-background, rgba(128, 128, 128, 0.17));
+  --kbd-foreground: var(--vscode-keybindingLabel-foreground, #cccccc);
+  --kbd-border: var(--vscode-keybindingLabel-border, rgba(51, 51, 51, 0.6));
+  --kbd-bottomBorder: var(--vscode-keybindingLabel-bottomBorder, rgba(68, 68, 68, 0.6));
+  --kbd-shadow: var(--vscode-widget-shadow, rgba(0, 0, 0, 0.36));
+}
+
+.light-theme kbd {
+  --kbd-background: var(--vscode-keybindingLabel-background, rgba(221, 221, 221, 0.4));
+  --kbd-foreground: var(--vscode-keybindingLabel-foreground, #555555);
+  --kbd-border: var(--vscode-keybindingLabel-border, rgba(204, 204, 204, 0.4));
+  --kbd-bottomBorder: var(--vscode-keybindingLabel-bottomBorder, rgba(187, 187, 187, 0.4));
+  --kbd-shadow: var(--vscode-widget-shadow, rgba(0, 0, 0, 0.16));
+}
+
+kbd {
+  background-color: var(--kbd-background);
+  color: var(--kbd-foreground);
+  border-style: solid;
+  border-width: 1px;
+  border-radius: 3px;
+  border-color: var(--kbd-border);
+  border-bottom-color: var(--kbd-bottomBorder);
+  box-shadow: inset 0 -1px 0 var(--kbd-shadow);
+  vertical-align: middle;
+  padding: 2px 3px;
+  line-height: 10px;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 12px;
+}
