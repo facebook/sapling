@@ -303,6 +303,16 @@ impl LfsPointersStore {
         self.entry(key)
     }
 
+    /// Find the pointer corresponding to the passed in `HgId`.
+    fn get_by_hgid(&self, hgid: &HgId) -> Result<Option<LfsPointersEntry>> {
+        let mut iter = self.0.lookup(Self::INDEX_NODE, &hgid)?;
+        let buf = match iter.next() {
+            None => return Ok(None),
+            Some(buf) => buf?,
+        };
+        Self::get_from_slice(buf).map(Some)
+    }
+
     fn add(&mut self, entry: LfsPointersEntry) -> Result<()> {
         self.0.append(serialize(&entry)?)
     }
@@ -723,6 +733,19 @@ impl LfsStore {
                 }
             },
         }
+    }
+
+    /// Directly get the local content. Do not ask remote servers.
+    pub(crate) fn get_local_content_direct(&self, id: &HgId) -> Result<Option<Bytes>> {
+        let pointer = match self.pointers.read().get_by_hgid(id)? {
+            None => return Ok(None),
+            Some(v) => v,
+        };
+        let hash = match pointer.content_hashes.get(&ContentHashType::Sha256) {
+            None => return Ok(None),
+            Some(v) => v,
+        };
+        self.blobs.get(hash.sha256_ref(), pointer.size)
     }
 
     pub fn add_blob(&self, hash: &Sha256, blob: Bytes) -> Result<()> {

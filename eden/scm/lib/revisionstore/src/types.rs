@@ -56,6 +56,12 @@ impl ContentHash {
             ContentHash::Sha256(hash) => hash,
         }
     }
+
+    pub(crate) fn sha256_ref(&self) -> &Sha256 {
+        match self {
+            ContentHash::Sha256(hash) => hash,
+        }
+    }
 }
 
 impl StoreKey {
