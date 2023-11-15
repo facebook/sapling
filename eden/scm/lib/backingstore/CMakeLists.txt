@@ -4,9 +4,13 @@
 # GNU General Public License version 2.
 
 if (IS_FB_BUILD)
-  rust_static_library(rust_backingstore CRATE backingstore FEATURES fb)
+  rust_static_library(
+    rust_backingstore
+    CRATE backingstore
+    USE_CXX_INCLUDE
+    FEATURES fb)
 else()
-  rust_static_library(rust_backingstore CRATE backingstore)
+  rust_static_library(rust_backingstore CRATE backingstore USE_CXX_INCLUDE)
 endif()
 
 install_rust_static_library(
@@ -15,24 +19,38 @@ install_rust_static_library(
   INSTALL_DIR lib
 )
 
+rust_cxx_bridge(rust_backingstore_bridge "src/ffi.rs")
+
 file(GLOB C_API_SRCS "src/*.cpp")
+file(
+  GLOB
+  RUST_BACKINGSTORE_SRCS
+  "${CMAKE_CURRENT_BINARY_DIR}/cxxbridge/backingstore/src/*.cc"
+)
 file(GLOB C_API_HDRS "include/*.h")
-add_library(backingstore "${C_API_SRCS}")
+add_library(
+  backingstore
+  "${C_API_SRCS}"
+  "${RUST_BACKINGSTORE_SRCS}"
+)
 set_target_properties(
   backingstore
   PROPERTIES
   PUBLIC_HEADER
   "${C_API_HDRS}"
 )
+
 target_include_directories(backingstore PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
 )
 target_link_libraries(
   backingstore
-  PRIVATE
+  PUBLIC
   rust_backingstore
+  rust_backingstore_bridge
   Folly::folly
+  edencommon::edencommon_utils
 )
 
 # curl used in the Rust crate has its own copy of curl compiled and it uses
@@ -68,6 +86,6 @@ endif()
 install(
   TARGETS backingstore
   EXPORT mercurial
-  LIBRARY DESTINATION ${LIB_INSTALL_DIR}
-  PUBLIC_HEADER DESTINATION "include/eden/scm/lib/backingstore/include"
+  LIBRARY DESTINATION lib
+  PUBLIC_HEADER DESTINATION eden/scm/lib/backingstore/include
 )

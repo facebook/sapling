@@ -197,7 +197,8 @@ cpp_library(
         "//eden/fs/model:model-fwd",
         "//eden/fs/telemetry:telemetry",
         "//eden/fs/utils:path",
-        "//eden/scm/lib/backingstore:sapling_native_backingstore",  # @manual
+        "//eden/scm/lib/backingstore:backingstore",  # @manual
+        "//eden/scm/lib/backingstore:backingstore_bridge@header",  # @manual
         "//eden/scm/lib/backingstore:sapling_native_backingstore-include",
         "//folly:range",
         "//folly/futures:core",

@@ -7,7 +7,8 @@ cpp_unittest(
     srcs = glob(["*Test.cpp"]),
     supports_static_listing = False,
     deps = [
-        "//eden/scm/lib/backingstore:sapling_native_backingstore",  # @manual
+        "//eden/scm/lib/backingstore:backingstore",  # @manual
+        "//eden/scm/lib/backingstore:backingstore_bridge@header",  # @manual
         "//eden/scm/lib/backingstore:sapling_native_backingstore-include",
         "//folly:range",
         "//folly/portability:gtest",

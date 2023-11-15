@@ -28,6 +28,11 @@ use crate::request::Request;
 use crate::slice::Slice;
 use crate::tree::Tree;
 
+#[cxx::bridge(namespace = sapling)]
+mod ffi {
+    extern "Rust" {}
+}
+
 fn fetch_mode_from_local(local: bool) -> FetchMode {
     if local {
         FetchMode::LocalOnly
