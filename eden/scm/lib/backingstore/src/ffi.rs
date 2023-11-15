@@ -8,7 +8,8 @@
 //! Provides the c-bindings for `crate::backingstore`.
 
 use std::collections::HashMap;
-use std::str;
+use std::ffi::CStr;
+use std::os::raw::c_char;
 
 use anyhow::Error;
 use anyhow::Result;
@@ -30,7 +31,18 @@ use crate::tree::Tree;
 
 #[cxx::bridge(namespace = sapling)]
 mod ffi {
-    extern "Rust" {}
+    pub struct BackingStoreOptions {
+        allow_retries: bool,
+    }
+
+    extern "Rust" {
+        type BackingStore;
+
+        pub unsafe fn sapling_backingstore_new(
+            repository: &[c_char],
+            options: &BackingStoreOptions,
+        ) -> Result<Box<BackingStore>>;
+    }
 }
 
 fn fetch_mode_from_local(local: bool) -> FetchMode {
@@ -41,30 +53,15 @@ fn fetch_mode_from_local(local: bool) -> FetchMode {
     }
 }
 
-#[repr(C)]
-pub struct BackingStoreOptions {
-    allow_retries: bool,
-}
+pub unsafe fn sapling_backingstore_new(
+    repository: &[c_char],
+    options: &ffi::BackingStoreOptions,
+) -> Result<Box<BackingStore>> {
+    super::init::backingstore_global_init();
 
-#[no_mangle]
-pub extern "C" fn sapling_backingstore_new(
-    repository: Slice<u8>,
-    options: &BackingStoreOptions,
-) -> CFallibleBase {
-    CFallible::make_with(|| {
-        super::init::backingstore_global_init();
-
-        let repo = str::from_utf8(repository.slice())?;
-        BackingStore::new(repo, options.allow_retries)
-    })
-    .into()
-}
-
-#[no_mangle]
-pub extern "C" fn sapling_backingstore_free(store: *mut BackingStore) {
-    assert!(!store.is_null());
-    let store = unsafe { Box::from_raw(store) };
-    drop(store);
+    let repo = CStr::from_ptr(repository.as_ptr()).to_str()?;
+    let store = BackingStore::new(repo, options.allow_retries)?;
+    Ok(Box::new(store))
 }
 
 #[no_mangle]

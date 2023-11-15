@@ -7,7 +7,7 @@
  * This file is generated with cbindgen. Please run `./tools/cbindgen.sh` to
  * update this file.
  *
- * @generated SignedSource<<5432de8f25501a01600d8b7617c7351c>>
+ * @generated SignedSource<<42f006a7a7f61cf1b09323a4194e37f7>>
  *
  */
 
@@ -76,10 +76,6 @@ struct Slice {
     : ptr{range.data()}, len{range.size()} {}
 };
 
-struct BackingStoreOptions {
-  bool allow_retries;
-};
-
 struct Request {
   const uint8_t *node;
 };
@@ -107,11 +103,6 @@ void sapling_file_aux_free(FileAuxData *aux);
 void sapling_cbytes_free(CBytes *vec);
 
 void sapling_cfallible_free_error(char *ptr);
-
-CFallibleBase sapling_backingstore_new(Slice<uint8_t> repository,
-                                       const BackingStoreOptions *options);
-
-void sapling_backingstore_free(BackingStore *store);
 
 CFallibleBase sapling_backingstore_get_manifest(BackingStore *store, Slice<uint8_t> node);
 

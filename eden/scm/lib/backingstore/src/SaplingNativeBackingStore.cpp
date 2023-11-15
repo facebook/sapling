@@ -11,6 +11,7 @@
 #include <folly/String.h>
 #include <folly/io/IOBuf.h>
 #include <folly/logging/xlog.h>
+#include <rust/cxx.h>
 #include <cstddef>
 #include <memory>
 #include <optional>
@@ -37,16 +38,15 @@ std::unique_ptr<folly::IOBuf> bytesToIOBuf(CBytes* bytes) {
 
 SaplingNativeBackingStore::SaplingNativeBackingStore(
     std::string_view repository,
-    const BackingStoreOptions& options) {
-  CFallible<BackingStore, sapling_backingstore_free> store{
-      sapling_backingstore_new(repository, &options)};
-
-  if (store.isError()) {
-    throw std::runtime_error(store.getError());
-  }
-
-  store_ = store.unwrap();
-}
+    const BackingStoreOptions& options)
+    : store_{
+          sapling_backingstore_new(
+              rust::Slice<const char>{repository.data(), repository.size()},
+              options)
+              .into_raw(),
+          [](BackingStore* backingStore) {
+            auto box = rust::Box<BackingStore>::from_raw(backingStore);
+          }} {}
 
 std::optional<ManifestId> SaplingNativeBackingStore::getManifestNode(
     NodeId node) {

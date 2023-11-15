@@ -15,6 +15,7 @@
 #include <string_view>
 
 #include "eden/scm/lib/backingstore/include/BackingStoreBindings.h"
+#include "eden/scm/lib/backingstore/src/ffi.rs.h" // @manual
 
 namespace folly {
 class IOBuf;
@@ -93,9 +94,8 @@ class SaplingNativeBackingStore {
   void flush();
 
  private:
-  sapling::CFallible<
-      sapling::BackingStore,
-      sapling::sapling_backingstore_free>::Ptr store_;
+  std::unique_ptr<sapling::BackingStore, void (*)(sapling::BackingStore*)>
+      store_;
 };
 
 } // namespace sapling
