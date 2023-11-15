@@ -126,7 +126,6 @@ struct LfsPointersStore(Store);
 pub(crate) struct LfsIndexedLogBlobsStore {
     inner: RwLock<Store>,
     chunk_size: usize,
-    skip_hash_on_read: bool,
 }
 
 /// The `LfsBlobsStore` holds the actual blobs. Lookup is done via the content hash (sha256) of the
@@ -367,7 +366,6 @@ impl LfsIndexedLogBlobsStore {
         Ok(Self {
             inner: RwLock::new(LfsIndexedLogBlobsStore::open_options(config)?.shared(path)?),
             chunk_size: LfsIndexedLogBlobsStore::chunk_size(config)?,
-            skip_hash_on_read: config.get_or("lfs", "skiphashonread", || false)?,
         })
     }
 
@@ -428,22 +426,12 @@ impl LfsIndexedLogBlobsStore {
         }
 
         let data: Bytes = res.into();
-        if self.skip_hash_on_read {
-            if data.len() as u64 == total_size || is_redacted(&data) {
-                Ok(Some(data))
-            } else {
-                Ok(None)
-            }
+        // Skip SHA256 hash check on reading. Data integrity is checked by indexedlog xxhash and
+        // length. The SHA256 check can be slow (~90% of data reading time!).
+        if data.len() as u64 == total_size || is_redacted(&data) {
+            Ok(Some(data))
         } else {
-            let apparent_hash = ContentHash::sha256(&data).unwrap_sha256();
-            if &apparent_hash == hash || is_redacted(&data) {
-                Ok(Some(data))
-            } else {
-                if data.len() as u64 == total_size {
-                    tracing::debug!(target: "lfs_read_hash_mismatch", lfs_read_hash_mismatch=&hash.to_hex()[..]);
-                }
-                Ok(None)
-            }
+            Ok(None)
         }
     }
 
