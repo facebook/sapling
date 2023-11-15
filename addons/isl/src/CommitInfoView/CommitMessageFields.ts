@@ -8,6 +8,7 @@
 import type {CommitMessageFields, FieldConfig, FieldsBeingEdited} from './types';
 
 import {Internal} from '../Internal';
+import {t} from '../i18n';
 import {clearOnCwdChange} from '../recoilUtils';
 import {atom} from 'recoil';
 import {notEmpty} from 'shared/utils';
@@ -61,14 +62,24 @@ export function commitMessageFieldsToString(
 ): string {
   return schema
     .filter(config => config.key === 'Title' || isFieldNonEmpty(fields[config.key]))
-    .map(
-      config =>
-        // stringified messages of the form Key: value, except the title or generic description don't need a label
-        (config.key === 'Title' || config.key === 'Description' ? '' : config.key + ': ') +
-        (config.type === 'field'
+    .map(config => {
+      // stringified messages of the form Key: value, except the title or generic description don't need a label
+      const prefix =
+        config.key === 'Title' || config.key === 'Description' ? '' : config.key + ': ';
+
+      if (config.key === 'Title') {
+        const value = fields[config.key] as string;
+        if (value.trim().length === 0) {
+          return t('Temporary Commit');
+        }
+      }
+
+      const value =
+        config.type === 'field'
           ? (config.formatValues ?? joinWithComma)(fields[config.key] as Array<string>)
-          : fields[config.key]),
-    )
+          : fields[config.key];
+      return prefix + value;
+    })
     .join('\n\n');
 }
 

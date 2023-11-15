@@ -40,6 +40,34 @@ line 2`,
     );
   });
 
+  it('handles empty title when coverting to string', () => {
+    expect(
+      commitMessageFieldsToString(OSSDefaultFieldSchema, {
+        Title: '',
+        Description: 'my summary\nline 2',
+      }),
+    ).toEqual(
+      `Temporary Commit
+
+my summary
+line 2`,
+    );
+  });
+
+  it('leading spaces in title is OK', () => {
+    expect(
+      commitMessageFieldsToString(OSSDefaultFieldSchema, {
+        Title: '     title',
+        Description: 'my summary\nline 2',
+      }),
+    ).toEqual(
+      `     title
+
+my summary
+line 2`,
+    );
+  });
+
   describe('mergeCommitMessageFields', () => {
     it('can merge fields', () => {
       expect(
