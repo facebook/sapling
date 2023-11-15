@@ -6,6 +6,7 @@
  */
 
 mod diff;
+mod factory_impls;
 mod iter;
 mod link;
 mod matcher;
@@ -13,6 +14,7 @@ mod namecmp;
 mod store;
 #[cfg(any(test, feature = "for-tests"))]
 pub mod testutil;
+mod trait_impls;
 
 use std::collections::btree_map::Entry;
 use std::collections::BTreeMap;
@@ -703,6 +705,10 @@ pub fn prefetch(
         node?;
     }
     Ok(())
+}
+
+pub fn init() {
+    crate::factory_impls::setup_basic_tree_parser_constructor();
 }
 
 #[cfg(test)]
