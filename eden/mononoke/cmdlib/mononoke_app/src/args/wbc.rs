@@ -7,6 +7,7 @@
 
 use anyhow::Result;
 use clap::Parser;
+use environment::BookmarkCacheKind;
 use environment::MononokeEnvironment;
 use environment::WarmBookmarksCacheDerivedData;
 
@@ -26,8 +27,13 @@ impl AppExtension for WarmBookmarksCacheExtension {
     type Args = WarmBookmarksCacheArgs;
 
     fn environment_hook(&self, args: &Self::Args, env: &mut MononokeEnvironment) -> Result<()> {
-        if let Some(wbc_config) = args.enable_wbc_with {
-            env.warm_bookmarks_cache_derived_data = Some(wbc_config)
+        if let Some(derived_data) = args.enable_wbc_with {
+            // Enable_wbc_with enables local cache by default
+            if env.bookmark_cache_options.cache_kind == BookmarkCacheKind::Disabled {
+                env.bookmark_cache_options.cache_kind = BookmarkCacheKind::Local;
+            }
+            // Derived data type is set regardless of the cache kind
+            env.bookmark_cache_options.derived_data = derived_data;
         }
         Ok(())
     }

@@ -36,8 +36,8 @@ use cmdlib_caching::CachelibSettings;
 use cmdlib_logging::LoggingArgs;
 use cmdlib_logging::ScubaLoggingArgs;
 use derived_data_remote::RemoteDerivationArgs;
+use environment::BookmarkCacheOptions;
 use environment::MononokeEnvironment;
-use environment::WarmBookmarksCacheDerivedData;
 use fbinit::FacebookInit;
 use megarepo_config::MegarepoConfigsArgs;
 use megarepo_config::MononokeMegarepoConfigsOptions;
@@ -78,7 +78,7 @@ pub struct MononokeAppBuilder {
     cachelib_settings: CachelibSettings,
     default_scuba_dataset: Option<String>,
     defaults: HashMap<&'static str, String>,
-    warm_bookmarks_cache_derived_data: Option<WarmBookmarksCacheDerivedData>,
+    bookmark_cache_options: BookmarkCacheOptions,
 }
 
 #[derive(Args, Debug)]
@@ -136,7 +136,7 @@ impl MononokeAppBuilder {
             cachelib_settings: CachelibSettings::default(),
             default_scuba_dataset: None,
             defaults: HashMap::new(),
-            warm_bookmarks_cache_derived_data: None,
+            bookmark_cache_options: Default::default(),
         }
     }
 
@@ -150,11 +150,8 @@ impl MononokeAppBuilder {
         self
     }
 
-    pub fn with_warm_bookmarks_cache(
-        mut self,
-        warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData,
-    ) -> Self {
-        self.warm_bookmarks_cache_derived_data = Some(warm_bookmarks_cache_derived_data);
+    pub fn with_bookmarks_cache(mut self, bookmark_cache_options: BookmarkCacheOptions) -> Self {
+        self.bookmark_cache_options = bookmark_cache_options;
         self
     }
 
@@ -390,7 +387,7 @@ impl MononokeAppBuilder {
             megarepo_configs_options,
             remote_derivation_options,
             disabled_hooks: HashMap::new(),
-            warm_bookmarks_cache_derived_data: self.warm_bookmarks_cache_derived_data,
+            bookmark_cache_options: self.bookmark_cache_options.clone(),
             filter_repos: None,
         })
     }

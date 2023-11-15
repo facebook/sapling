@@ -83,6 +83,7 @@ use derived_data_client_library::Client as DerivationServiceClient;
 use derived_data_remote::Address;
 use derived_data_remote::DerivationClient;
 use derived_data_remote::RemoteDerivationOptions;
+use environment::BookmarkCacheKind;
 use environment::Caching;
 use environment::MononokeEnvironment;
 use environment::WarmBookmarksCacheDerivedData;
@@ -1460,8 +1461,8 @@ impl RepoFactory {
         repo_derived_data: &ArcRepoDerivedData,
         phases: &ArcPhases,
     ) -> Result<ArcBookmarksCache> {
-        match self.env.warm_bookmarks_cache_derived_data {
-            Some(derived_data) => {
+        match &self.env.bookmark_cache_options.cache_kind {
+            BookmarkCacheKind::Local => {
                 let mut scuba = self.env.warm_bookmarks_cache_scuba_sample_builder.clone();
                 scuba.add("repo", repo_identity.name());
 
@@ -1472,7 +1473,7 @@ impl RepoFactory {
                     repo_identity.clone(),
                 );
 
-                match derived_data {
+                match self.env.bookmark_cache_options.derived_data {
                     WarmBookmarksCacheDerivedData::HgOnly => {
                         wbc_builder.add_hg_warmers(repo_derived_data, phases)?;
                     }
@@ -1486,7 +1487,7 @@ impl RepoFactory {
                     wbc_builder.build().watched(&self.env.logger).await?,
                 ))
             }
-            None => Ok(Arc::new(NoopBookmarksCache::new(bookmarks.clone()))),
+            BookmarkCacheKind::Disabled => Ok(Arc::new(NoopBookmarksCache::new(bookmarks.clone()))),
         }
     }
 

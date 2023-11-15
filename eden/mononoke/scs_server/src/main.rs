@@ -20,6 +20,8 @@ use clap::Parser;
 use cloned::cloned;
 use cmdlib_logging::ScribeLoggingArgs;
 use connection_security_checker::ConnectionSecurityChecker;
+use environment::BookmarkCacheKind;
+use environment::BookmarkCacheOptions;
 use environment::WarmBookmarksCacheDerivedData;
 use executor_lib::args::ShardedExecutorArgs;
 use executor_lib::RepoShardedProcess;
@@ -186,7 +188,10 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     panichandler::set_panichandler(Fate::Abort);
 
     let app = MononokeAppBuilder::new(fb)
-        .with_warm_bookmarks_cache(WarmBookmarksCacheDerivedData::AllKinds)
+        .with_bookmarks_cache(BookmarkCacheOptions {
+            cache_kind: BookmarkCacheKind::Local,
+            derived_data: WarmBookmarksCacheDerivedData::AllKinds,
+        })
         .with_app_extension(WarmBookmarksCacheExtension {})
         .with_app_extension(HooksAppExtension {})
         .with_app_extension(RepoFilterAppExtension {})

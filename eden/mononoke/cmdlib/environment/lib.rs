@@ -43,11 +43,41 @@ pub enum Caching {
     Disabled,
 }
 
-#[derive(Copy, Clone, Debug, ValueEnum, EnumString, strum::Display)]
+#[derive(
+    Copy,
+    Clone,
+    Debug,
+    ValueEnum,
+    EnumString,
+    strum::Display,
+    PartialEq,
+    Eq
+)]
 pub enum WarmBookmarksCacheDerivedData {
     HgOnly,
     AllKinds,
     NoDerivation,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum BookmarkCacheKind {
+    Disabled,
+    Local,
+}
+
+#[derive(Clone, Debug)]
+pub struct BookmarkCacheOptions {
+    pub cache_kind: BookmarkCacheKind,
+    pub derived_data: WarmBookmarksCacheDerivedData,
+}
+
+impl Default for BookmarkCacheOptions {
+    fn default() -> Self {
+        Self {
+            cache_kind: BookmarkCacheKind::Disabled,
+            derived_data: WarmBookmarksCacheDerivedData::NoDerivation,
+        }
+    }
 }
 
 /// Struct representing the configuration associated with a MononokeApp instance which
@@ -69,7 +99,7 @@ pub struct MononokeEnvironment {
     pub remote_derivation_options: RemoteDerivationOptions,
     pub disabled_hooks: HashMap<String, HashSet<String>>,
     pub acl_provider: Arc<dyn AclProvider>,
-    pub warm_bookmarks_cache_derived_data: Option<WarmBookmarksCacheDerivedData>,
+    pub bookmark_cache_options: BookmarkCacheOptions,
     /// Function determining whether given repo (identified by name) should be loaded
     pub filter_repos: Option<Arc<dyn Fn(&str) -> bool + Send + Sync + 'static>>,
 }
