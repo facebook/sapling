@@ -296,7 +296,7 @@ void SaplingNativeBackingStore::getBlobMetadataBatch(
 void SaplingNativeBackingStore::flush() {
   XLOG(DBG7) << "Flushing backing store";
 
-  sapling_backingstore_flush(store_.get());
+  sapling_backingstore_flush(*store_.get());
 }
 
 } // namespace sapling

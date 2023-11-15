@@ -42,6 +42,8 @@ mod ffi {
             repository: &[c_char],
             options: &BackingStoreOptions,
         ) -> Result<Box<BackingStore>>;
+
+        pub fn sapling_backingstore_flush(store: &mut BackingStore);
     }
 }
 
@@ -172,7 +174,6 @@ pub extern "C" fn sapling_backingstore_get_file_aux_batch(
     });
 }
 
-#[no_mangle]
-pub extern "C" fn sapling_backingstore_flush(store: &mut BackingStore) {
+pub fn sapling_backingstore_flush(store: &mut BackingStore) {
     store.flush();
 }
