@@ -104,6 +104,23 @@ impl FileStore for EagerRepoStore {
         });
         Ok(Box::new(iter))
     }
+
+    fn get_hg_parents(&self, _path: &RepoPath, id: HgId) -> anyhow::Result<Vec<HgId>> {
+        let mut parents = Vec::new();
+        if let Some(blob) = self.get_sha1_blob(id)? {
+            for start in [HgId::len(), 0] {
+                let end = start + HgId::len();
+                if let Some(slice) = blob.get(start..end) {
+                    if let Ok(id) = HgId::from_slice(slice) {
+                        if !id.is_null() {
+                            parents.push(id);
+                        }
+                    }
+                }
+            }
+        }
+        Ok(parents)
+    }
 }
 
 impl TreeStore for EagerRepoStore {}
