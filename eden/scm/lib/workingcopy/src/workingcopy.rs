@@ -58,6 +58,16 @@ use crate::status::compute_status;
 use crate::util::walk_treestate;
 use crate::watchmanfs::WatchmanFileSystem;
 
+#[cfg(not(feature = "eden"))]
+pub struct EdenFsClient {}
+
+#[cfg(not(feature = "eden"))]
+impl EdenFsClient {
+    pub fn from_wdir(_wdir_root: &Path) -> anyhow::Result<Self> {
+        panic!("cannot use EdenFS in a non-EdenFS build");
+    }
+}
+
 type ArcFileStore = Arc<dyn FileStore>;
 type ArcReadTreeManifest = Arc<dyn ReadTreeManifest + Send + Sync>;
 type BoxFileSystem = Box<dyn FileSystem + Send>;
@@ -73,6 +83,7 @@ pub struct WorkingCopy {
     ignore_matcher: Arc<GitignoreMatcher>,
     pub(crate) locker: Arc<RepoLocker>,
     pub(crate) dot_hg_path: PathBuf,
+    eden_client: Option<Arc<EdenFsClient>>,
 }
 
 impl WorkingCopy {
@@ -98,14 +109,15 @@ impl WorkingCopy {
             vfs.case_sensitive(),
         ));
 
-        let filesystem = Mutex::new(Self::construct_file_system(
+        let (filesystem, eden_client) = Self::construct_file_system(
             vfs.clone(),
             file_system_type,
             treestate.clone(),
             tree_resolver.clone(),
             filestore.clone(),
             locker.clone(),
-        )?);
+        )?;
+        let filesystem = Mutex::new(filesystem);
 
         let root = vfs.root();
         let ident = match identity::sniff_dir(root)? {
@@ -127,6 +139,7 @@ impl WorkingCopy {
             ignore_matcher,
             locker,
             dot_hg_path,
+            eden_client,
         })
     }
 
@@ -205,30 +218,38 @@ impl WorkingCopy {
         tree_resolver: ArcReadTreeManifest,
         store: ArcFileStore,
         locker: Arc<RepoLocker>,
-    ) -> Result<BoxFileSystem> {
+    ) -> Result<(BoxFileSystem, Option<Arc<EdenFsClient>>)> {
         Ok(match file_system_type {
-            FileSystemType::Normal => Box::new(PhysicalFileSystem::new(
-                vfs.clone(),
-                tree_resolver,
-                store.clone(),
-                treestate,
-                locker,
-            )?),
-            FileSystemType::Watchman => Box::new(WatchmanFileSystem::new(
-                vfs.clone(),
-                tree_resolver,
-                store.clone(),
-                treestate,
-                locker,
-            )?),
+            FileSystemType::Normal => (
+                Box::new(PhysicalFileSystem::new(
+                    vfs.clone(),
+                    tree_resolver,
+                    store.clone(),
+                    treestate,
+                    locker,
+                )?),
+                None,
+            ),
+            FileSystemType::Watchman => (
+                Box::new(WatchmanFileSystem::new(
+                    vfs.clone(),
+                    tree_resolver,
+                    store.clone(),
+                    treestate,
+                    locker,
+                )?),
+                None,
+            ),
             FileSystemType::Eden => {
                 #[cfg(not(feature = "eden"))]
                 panic!("cannot use EdenFS in a non-EdenFS build");
                 #[cfg(feature = "eden")]
                 {
-                    let wdir = vfs.root();
-                    let client = EdenFsClient::from_wdir(wdir)?;
-                    Box::new(EdenFileSystem::new(treestate, client)?)
+                    let client = Arc::new(EdenFsClient::from_wdir(vfs.root())?);
+                    (
+                        Box::new(EdenFileSystem::new(treestate, client.clone())?),
+                        Some(client),
+                    )
                 }
             }
         })
@@ -458,5 +479,11 @@ impl WorkingCopy {
         )?;
 
         Ok(copied)
+    }
+
+    pub fn eden_client(&self) -> Result<Arc<EdenFsClient>> {
+        self.eden_client
+            .clone()
+            .context("EdenFS client not available in current working copy")
     }
 }

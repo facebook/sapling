@@ -16,4 +16,4 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 }
 
 #[cfg(feature = "eden")]
-mod feature_eden;
+pub mod feature_eden;

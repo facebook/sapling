@@ -14,11 +14,19 @@ rust_python_library(
                         "git": None,
                         "rev": None,
                     },
+                    "pyedenclient": {"optional": True},
                 },
+            },
+            "features": {
+                "default": [],
+                "eden": [
+                    "pyedenclient",
+                ],
             },
         },
     },
     crate_root = "src/lib.rs",
+    features = ["eden"],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:fs-err",
@@ -30,6 +38,7 @@ rust_python_library(
         "//eden/scm/lib/types:types",
         "//eden/scm/lib/workingcopy:workingcopy",
         "//eden/scm/saplingnative/bindings/modules/pyconfigloader:pyconfigloader",
+        "//eden/scm/saplingnative/bindings/modules/pyedenclient:pyedenclient",
         "//eden/scm/saplingnative/bindings/modules/pypathmatcher:pypathmatcher",
         "//eden/scm/saplingnative/bindings/modules/pystatus:pystatus",
         "//eden/scm/saplingnative/bindings/modules/pytreestate:pytreestate",

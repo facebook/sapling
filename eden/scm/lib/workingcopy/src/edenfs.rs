@@ -29,14 +29,14 @@ use crate::filesystem::PendingChange;
 
 pub struct EdenFileSystem {
     treestate: Arc<Mutex<TreeState>>,
-    client: EdenFsClient,
+    client: Arc<EdenFsClient>,
 
     // For wait_for_potential_change
     journal_position: Cell<(i64, i64)>,
 }
 
 impl EdenFileSystem {
-    pub fn new(treestate: Arc<Mutex<TreeState>>, client: EdenFsClient) -> Result<Self> {
+    pub fn new(treestate: Arc<Mutex<TreeState>>, client: Arc<EdenFsClient>) -> Result<Self> {
         let journal_position = Cell::new(client.get_journal_position()?);
         Ok(EdenFileSystem {
             treestate,

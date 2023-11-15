@@ -35,6 +35,7 @@ rust_python_library(
             "extra_buck_dependencies": {
                 "dependencies": [
                     "//eden/scm/saplingnative/bindings/modules/pyedenclient:pyedenclient",
+                    "//eden/scm/saplingnative/bindings/modules/pyworkingcopy:pyworkingcopy",
                 ],
             },
             "features": {
@@ -42,6 +43,7 @@ rust_python_library(
                 "eden": [
                     "clidispatch/eden",
                     "pyedenclient/eden",
+                    "pyworkingcopy/eden",
                     "edenfs-client",
                 ],
                 "fb": [

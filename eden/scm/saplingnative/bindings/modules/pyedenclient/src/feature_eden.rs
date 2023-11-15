@@ -6,11 +6,11 @@
  */
 
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 use cpython::*;
 use cpython_ext::convert::Serde;
 use cpython_ext::PyNone;
-use cpython_ext::PyPathBuf;
 use cpython_ext::ResultPyErrExt;
 use edenfs_client::CheckoutConflict;
 use edenfs_client::CheckoutMode;
@@ -18,14 +18,8 @@ use edenfs_client::FileStatus;
 use types::HgId;
 use types::RepoPathBuf;
 
-py_class!(pub(crate) class EdenFsClient |py| {
-    data inner: edenfs_client::EdenFsClient;
-
-    @staticmethod
-    def from_wdir(path: PyPathBuf) -> PyResult<Self> {
-        let client = edenfs_client::EdenFsClient::from_wdir(path.as_path()).map_pyerr(py)?;
-        Self::create_instance(py, client)
-    }
+py_class!(pub class EdenFsClient |py| {
+    data inner: Arc<edenfs_client::EdenFsClient>;
 
     @property
     def root(&self) -> PyResult<String> {

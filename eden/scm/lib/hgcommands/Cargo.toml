@@ -61,6 +61,7 @@ pyio = { version = "0.1.0", path = "../../saplingnative/bindings/modules/pyio" }
 pymodules = { version = "0.1.0", path = "../../saplingnative/bindings/modules/pymodules" }
 python3-sys = "0.7.1"
 pytracing = { version = "0.1.0", path = "../../saplingnative/bindings/modules/pytracing", default-features = false }
+pyworkingcopy = { version = "0.1.0", path = "../../saplingnative/bindings/modules/pyworkingcopy" }
 rand = { version = "0.8", features = ["small_rng"] }
 repo = { version = "0.1.0", path = "../repo", features = ["wdir"] }
 repo_name = { version = "0.1.0", path = "../repo_name" }
@@ -86,5 +87,5 @@ zstd = { version = "0.13", features = ["experimental", "zstdmt"] }
 
 [features]
 default = []
-eden = ["clidispatch/eden", "edenfs-client", "pyedenclient/eden"]
+eden = ["clidispatch/eden", "edenfs-client", "pyedenclient/eden", "pyworkingcopy/eden"]
 fb = ["configloader/fb", "identity/fb"]

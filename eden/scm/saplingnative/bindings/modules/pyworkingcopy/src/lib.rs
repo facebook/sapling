@@ -24,6 +24,8 @@ use io::IO;
 use parking_lot::RwLock;
 use pathmatcher::Matcher;
 use pyconfigloader::config;
+#[cfg(feature = "eden")]
+use pyedenclient::feature_eden::EdenFsClient as PyEdenClient;
 use pypathmatcher::extract_matcher;
 use pypathmatcher::extract_option_matcher;
 use pypathmatcher::treematcher;
@@ -32,6 +34,11 @@ use rsworkingcopy::walker::WalkError;
 use rsworkingcopy::walker::Walker;
 use rsworkingcopy::workingcopy::WorkingCopy;
 use types::HgId;
+
+#[cfg(not(feature = "eden"))]
+py_class!(pub class PyEdenClient |py| {
+    data inner: Arc<rsworkingcopy::workingcopy::EdenFsClient>;
+});
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "workingcopy"].join(".");
@@ -166,6 +173,11 @@ py_class!(pub class workingcopy |py| {
             .into_iter()
             .map(|(tm, origins)| Ok((treematcher::create_instance(py, Arc::new(tm))?, origins)))
             .collect::<PyResult<Vec<_>>>()
+    }
+
+    def edenclient(&self) -> PyResult<PyEdenClient> {
+        let wc = self.inner(py).read();
+        PyEdenClient::create_instance(py, wc.eden_client().map_pyerr(py)?)
     }
 });
 
