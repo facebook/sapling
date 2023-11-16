@@ -103,6 +103,9 @@ impl CommandTable {
             return;
         }
         for name in aliases.split('|') {
+            if name.is_empty() {
+                continue;
+            }
             self.alias.insert(name.to_string(), aliases.to_string());
         }
     }

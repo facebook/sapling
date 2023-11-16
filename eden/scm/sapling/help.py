@@ -481,6 +481,10 @@ class _helpdispatch:
         # aliases
         # try to simplify aliases, ex. compress ['ab', 'abc', 'abcd', 'abcde']
         # to ['ab', 'abcde']
+        try:
+            aliases = aliases.documented()
+        except AttributeError:
+            pass
         slimaliases = []
         sortedaliases = sorted(aliases)
         for i, alias in enumerate(sortedaliases):

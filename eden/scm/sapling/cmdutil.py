@@ -262,8 +262,20 @@ def comparechunks(chunks, headers):
     return newpatch.getvalue() == originalpatch.getvalue()
 
 
+class AliasList(list):
+    """Like "list" but provides a "documented" API to hide "undocumented" aliases"""
+
+    _raw = ""
+
+    def documented(self):
+        """documented aliases"""
+        return self._raw.lstrip("^").split("||", 1)[0].split("|")
+
+
 def parsealiases(cmd):
-    return cmd.lstrip("^").split("|")
+    aliases = AliasList(s for s in cmd.lstrip("^").split("|") if s)
+    aliases._raw = cmd
+    return aliases
 
 
 def setupwrapcolorwrite(ui):
