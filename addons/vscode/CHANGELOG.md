@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.31
+
+- Added more keyboard shortcuts and a list of shortcuts openable via Shift-?
+- Add config for amend restacking. This now defaults to "Always" instead of "No Conflict"
+- Allow drag & drop rebase when uncommitted changes have been optimistically removed
+- Fix empty titles eating into the summary
+- Add explicit ">" button next to commits to open them in the sidebar
+- Remove duplicates from values in typeaheads
+- Simplify "Hide" context menu item for non-stack commits
+- Rewrote edited messages implementation, fixing some weird behaviors
+
 ## 0.1.30
 
 ### Nov 8 2023
