@@ -7,6 +7,35 @@
 
 //! An async-compatible HTTP client built on top of libcurl.
 
+// There are many layers about how to read data.
+// - `curl::easy::Handler`: This is the lowest layer. It uses callbacks
+//   to send and recv data, read HTTP header, update progress. However,
+//   the callbacks do not handle request completion (Ok or Err). `curl`
+//   requires completion handled separately by `Multi::messages`.
+// - `crate::Receiver`: This is at a higher level. It uses callbacks to
+//   recv data, recv HTTP header, update progress, and handle completion.
+//   However, it does not handle sending data. It has 1 implementation:
+//   - `ChannelReceiver`: Write data to *async* channels.
+// - `crate::HandlerExt` (private): Extends `curl::easy::Handler` with
+//   richer information. It handles "sending data", and has 2 versions:
+//   - `crate::handler::Buffered`: Buffers data into `Vec<u8>`.
+//      Does *not* use `Receiver` abstraction.
+//   - `crate::handler::Streaming`: Delegates to `crate::Receiver` for
+//     receiving data for async functions.
+//
+// Other types:
+// - `HttpClient`: Configured HTTP client. Uses at least one libcurl
+//   `Multi` to handle multiple requests in a single loop/thread. However,
+//   the `send_async` uses `spawn_blocking` which defeats the benefit
+//   of O(1) thread provided by `Multi`.
+// - `Request` / `StreamRequest`: Similar but duplicated implementation
+//   to send requests.
+// - `CborStream`: Turn a stream of bytes into a stream of CBOR decoded
+//   items in the async world.
+// - `MultiDriver`: Extends `Multi` with some higher level logic/types,
+//    like `HttpClientError`, handle event listeners, progress, etc.
+// - `Pool`: Workaround lifetime / !Send limitation of `Multi`.
+
 #![allow(dead_code)]
 
 mod client;
