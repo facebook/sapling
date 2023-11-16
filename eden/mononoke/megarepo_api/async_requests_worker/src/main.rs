@@ -18,9 +18,9 @@ use anyhow::Error;
 use clap::Parser;
 use cmdlib_logging::ScribeLoggingArgs;
 use context::SessionContainer;
+use environment::BookmarkCacheDerivedData;
 use environment::BookmarkCacheKind;
 use environment::BookmarkCacheOptions;
-use environment::WarmBookmarksCacheDerivedData;
 use fbinit::FacebookInit;
 use hostname::get_hostname;
 use megarepo_api::MegarepoApi;
@@ -55,7 +55,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let app = MononokeAppBuilder::new(fb)
         .with_bookmarks_cache(BookmarkCacheOptions {
             cache_kind: BookmarkCacheKind::Local,
-            derived_data: WarmBookmarksCacheDerivedData::NoDerivation,
+            derived_data: BookmarkCacheDerivedData::NoDerivation,
         })
         .with_app_extension(WarmBookmarksCacheExtension {})
         .with_app_extension(HooksAppExtension {})

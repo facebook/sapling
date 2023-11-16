@@ -53,9 +53,15 @@ pub enum Caching {
     PartialEq,
     Eq
 )]
-pub enum WarmBookmarksCacheDerivedData {
+
+/// Which derived data types should the cache wait for before
+/// exposing the bookmark move to the users.
+pub enum BookmarkCacheDerivedData {
+    /// Only wait for hg derived data - the option used mainly by Mononoke EdenAPI Server.
     HgOnly,
+    /// Wait for all derived data types - mainly used by Mononoke SCS Server.
     AllKinds,
+    /// Don't wait for any derived data - advance bookmarks as they move.
     NoDerivation,
 }
 
@@ -81,14 +87,14 @@ pub enum BookmarkCacheKind {
 #[derive(Clone, Debug)]
 pub struct BookmarkCacheOptions {
     pub cache_kind: BookmarkCacheKind,
-    pub derived_data: WarmBookmarksCacheDerivedData,
+    pub derived_data: BookmarkCacheDerivedData,
 }
 
 impl Default for BookmarkCacheOptions {
     fn default() -> Self {
         Self {
             cache_kind: BookmarkCacheKind::Disabled,
-            derived_data: WarmBookmarksCacheDerivedData::NoDerivation,
+            derived_data: BookmarkCacheDerivedData::NoDerivation,
         }
     }
 }

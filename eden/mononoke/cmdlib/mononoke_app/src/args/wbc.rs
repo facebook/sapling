@@ -8,9 +8,9 @@
 use anyhow::Result;
 use clap::Parser;
 use environment::BookmarkCacheAddress;
+use environment::BookmarkCacheDerivedData;
 use environment::BookmarkCacheKind;
 use environment::MononokeEnvironment;
-use environment::WarmBookmarksCacheDerivedData;
 
 use crate::AppExtension;
 
@@ -19,7 +19,7 @@ use crate::AppExtension;
 pub struct WarmBookmarksCacheArgs {
     /// What needs to be warmed
     #[clap(long, value_enum, value_name = "warm derived data")]
-    pub enable_wbc_with: Option<WarmBookmarksCacheDerivedData>,
+    pub enable_wbc_with: Option<BookmarkCacheDerivedData>,
 
     #[clap(long, value_name = "Use remote bookmark cache")]
     pub use_remote_bookmark_cache: Option<bool>,

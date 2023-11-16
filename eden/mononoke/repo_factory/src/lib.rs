@@ -89,10 +89,10 @@ use derived_data_remote::DerivationClient;
 use derived_data_remote::RemoteDerivationOptions;
 #[cfg(fbcode_build)]
 use environment::BookmarkCacheAddress;
+use environment::BookmarkCacheDerivedData;
 use environment::BookmarkCacheKind;
 use environment::Caching;
 use environment::MononokeEnvironment;
-use environment::WarmBookmarksCacheDerivedData;
 use ephemeral_blobstore::ArcRepoEphemeralStore;
 use ephemeral_blobstore::RepoEphemeralStore;
 use ephemeral_blobstore::RepoEphemeralStoreBuilder;
@@ -1480,13 +1480,13 @@ impl RepoFactory {
                 );
 
                 match self.env.bookmark_cache_options.derived_data {
-                    WarmBookmarksCacheDerivedData::HgOnly => {
+                    BookmarkCacheDerivedData::HgOnly => {
                         wbc_builder.add_hg_warmers(repo_derived_data, phases)?;
                     }
-                    WarmBookmarksCacheDerivedData::AllKinds => {
+                    BookmarkCacheDerivedData::AllKinds => {
                         wbc_builder.add_all_warmers(repo_derived_data, phases)?;
                     }
-                    WarmBookmarksCacheDerivedData::NoDerivation => {}
+                    BookmarkCacheDerivedData::NoDerivation => {}
                 }
 
                 Ok(Arc::new(
@@ -1497,7 +1497,7 @@ impl RepoFactory {
             BookmarkCacheKind::Remote(address) => {
                 anyhow::ensure!(
                     self.env.bookmark_cache_options.derived_data
-                        == WarmBookmarksCacheDerivedData::HgOnly,
+                        == BookmarkCacheDerivedData::HgOnly,
                     "HgOnly derivation supported right now"
                 );
 
