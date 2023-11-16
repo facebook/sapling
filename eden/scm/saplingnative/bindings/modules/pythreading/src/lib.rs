@@ -111,25 +111,15 @@ py_class!(class Condition |py| {
     data owner: Cell<Owner>;
 
 
-    def __new__(_cls, lock: Option<PyObject> = None) -> PyResult<PyObject> {
-        match lock {
-            None => {
-                Ok(Condition::create_instance(
-                    py,
-                    Condvar::new(),
-                    Condvar::new(),
-                    Mutex::new(()),
-                    Mutex::new(()),
-                    Cell::new(Owner::none()),
-                )?.into_object())
-            },
-            Some(lock) => {
-                // Do not support taking a customized "lock".
-                // Fallback to "threading._Condition" in this case.
-                let threading = py.import("threading")?;
-                threading.call(py, "_Condition", (lock,), None)
-            }
-        }
+    def __new__(_cls) -> PyResult<PyObject> {
+        Ok(Condition::create_instance(
+            py,
+            Condvar::new(),
+            Condvar::new(),
+            Mutex::new(()),
+            Mutex::new(()),
+            Cell::new(Owner::none()),
+        )?.into_object())
     }
 
     // RLock APIs
