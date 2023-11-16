@@ -13,7 +13,7 @@ def bisect(l, r, comp, val):
     if r < l:
         return None
     while l < r:
-        m = (l + r) / 2
+        m = int((l + r) / 2)
         cmpresult = comp(m, val)
         if cmpresult == -1:
             l = m + 1

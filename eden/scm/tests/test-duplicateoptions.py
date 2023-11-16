@@ -2,12 +2,7 @@ from __future__ import absolute_import, print_function
 
 import os
 
-from hghave import require
-
 from sapling import commands, extensions, ui as uimod
-
-
-require(["py2"])
 
 
 ignore = {
@@ -26,7 +21,7 @@ ignore = {
 if os.name != "nt":
     ignore.add(b"win32mbcs")
 
-disabled = [ext for ext in extensions.disabled().keys() if ext not in ignore]
+disabled = [ext.encode() for ext in extensions.disabled().keys() if ext not in ignore]
 
 hgrc = open(os.environ["HGRCPATH"], "wb")
 hgrc.write(b"[extensions]\n")

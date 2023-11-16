@@ -8,10 +8,6 @@ from __future__ import absolute_import
 import unittest
 
 import silenttestrunner
-from hghave import require
-
-
-require(["py2"])
 
 
 class BisectTests(unittest.TestCase):

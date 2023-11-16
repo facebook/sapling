@@ -2,16 +2,11 @@ from __future__ import absolute_import
 
 import unittest
 
-from hghave import require
-
 from sapling import error, mdiff
 
 
-require(["py2"])
-
-
 # for readability, line numbers are 0-origin
-text1 = """
+text1 = b"""
            00 at OLD
            01 at OLD
            02 at OLD
@@ -28,7 +23,7 @@ text1 = """
     1:
 ]  # strip initial LF
 
-text2 = """
+text2 = b"""
 00 at NEW
 01 at NEW
 02 at NEW, 03 at OLD
