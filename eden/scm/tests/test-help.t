@@ -360,7 +360,10 @@ Test extension help:
        undo          (no help text available)
        win32mbcs     allow the use of MBCS paths with problematic encodings
 
+Only show documented aliases:
 
+  $ hg help goto | grep '^aliases:'
+  aliases: goto, go
 
 Verify that extension keywords appear in help templates
 

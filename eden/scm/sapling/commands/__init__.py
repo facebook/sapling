@@ -6296,7 +6296,7 @@ def _ensurebaserev(ui, repo, fname):
 
 
 @command(
-    "goto|go|up|update|co|checkout",
+    "goto|go||up|update|co|checkout",
     [
         ("C", "clean", None, _("discard uncommitted changes (no backup)")),
         ("c", "check", None, _("require clean working copy")),
