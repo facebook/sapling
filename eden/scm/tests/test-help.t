@@ -352,7 +352,6 @@ Test extension help:
        smartlog      command to display a relevant subgraph
        snapshot      stores snapshots of uncommitted changes
        sparse        allow sparse checkouts of the working directory
-       sshaskpass    ssh-askpass implementation that works with chg
        stablerev     provide a way to expose the "stable" commit via a revset
        traceprof     (no help text available)
        treemanifestserver

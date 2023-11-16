@@ -148,7 +148,6 @@ Somehow problematic: With many extensions
   > simplecache=
   > smartlog=
   > sparse=
-  > sshaskpass=
   > stat=
   > traceprof=
   > treedirstate=
