@@ -171,49 +171,6 @@ def tempdir():
     return testtmp or tempfile.gettempdir()
 
 
-@check("baz", "GNU Arch baz client", exe=True)
-def has_baz():
-    return matchoutput("baz --version 2>&1", rb"baz Bazaar version")
-
-
-@check("bzr", "Canonical's Bazaar client", exe=True)
-def has_bzr():
-    try:
-        # pyre-fixme[21]: Could not find module `bzrlib`.
-        import bzrlib
-
-        # pyre-fixme[21]: Could not find module `bzrlib.bzrdir`.
-        import bzrlib.bzrdir
-
-        # pyre-fixme[21]: Could not find module `bzrlib.errors`.
-        import bzrlib.errors
-
-        # pyre-fixme[21]: Could not find module `bzrlib.revision`.
-        import bzrlib.revision
-
-        # pyre-fixme[21]: Could not find module `bzrlib.revisionspec`.
-        import bzrlib.revisionspec
-
-        bzrlib.revisionspec.RevisionSpec
-        return bzrlib.__doc__ is not None
-    except (AttributeError, ImportError):
-        return False
-
-
-@checkvers("bzr", "Canonical's Bazaar client >= %s", (1.14,))
-def has_bzr_range(v):
-    major, minor = v.split(".")[0:2]
-    try:
-        import bzrlib
-
-        return bzrlib.__doc__ is not None and bzrlib.version_info[:2] >= (
-            int(major),
-            int(minor),
-        )
-    except ImportError:
-        return False
-
-
 @check("chg", "running with chg")
 def has_chg():
     return "CHGHG" in os.environ
@@ -235,36 +192,6 @@ def has_common_zlib():
 
     return all(
         zlib.compress(k) == binascii.unhexlify(v) for k, v in _zlibsamples.items()
-    )
-
-
-@check("cvs", "cvs client/server", exe=True)
-def has_cvs():
-    re = rb"Concurrent Versions System.*?server"
-    return matchoutput("cvs --version 2>&1", re) and not has_msys()
-
-
-@check("cvs112", "cvs client/server 1.12.* (not cvsnt)")
-def has_cvs112():
-    re = rb"Concurrent Versions System \(CVS\) 1.12.*?server"
-    return matchoutput("cvs --version 2>&1", re) and not has_msys()
-
-
-@check("cvsnt", "cvsnt client/server", exe=True)
-def has_cvsnt():
-    re = rb"Concurrent Versions System \(CVSNT\) (\d+).(\d+).*\(client/server\)"
-    return matchoutput("cvsnt --version 2>&1", re)
-
-
-@check("darcs", "darcs client", exe=True)
-def has_darcs():
-    return matchoutput("darcs --version", rb"\b2\.([2-9]|\d{2})", True)
-
-
-@check("mtn", "monotone client (>= 1.0)", exe=True)
-def has_mtn():
-    return matchoutput("mtn --version", rb"monotone", True) and not matchoutput(
-        "mtn --version", rb"monotone 0\.", True
     )
 
 
@@ -343,78 +270,6 @@ def has_killdaemons():
     return True
 
 
-@check("lsprof", "python lsprof module")
-def has_lsprof():
-    try:
-        # pyre-fixme[21]: Could not find module `_lsprof`.
-        import _lsprof
-
-        _lsprof.Profiler  # silence unused import warning
-        return True
-    except ImportError:
-        return False
-
-
-@check("lz4", "lz4 compress module")
-def has_lz4():
-    try:
-        import lz4
-
-        lz4.compress  # silence unused import warning
-        return True
-    except ImportError:
-        return False
-    except AttributeError:
-        pass
-    # modern lz4 has "compress" defined in lz4.block
-    try:
-        from lz4 import block as lz4block
-
-        lz4block.compress  # silence unused import warning
-        return True
-    except (ImportError, AttributeError):
-        return False
-
-
-def gethgversion():
-    m = matchoutput("hg --version --quiet 2>&1", rb"(\d+)\.(\d+)")
-    if not m:
-        return (0, 0)
-    return (int(m.group(1)), int(m.group(2)))
-
-
-@checkvers("hg", "Mercurial >= %s", list([(1.0 * x) / 10 for x in range(9, 99)]))
-def has_hg_range(v):
-    major, minor = v.split(".")[0:2]
-    return gethgversion() >= (int(major), int(minor))
-
-
-@check("hg08", "Mercurial >= 0.8")
-def has_hg08():
-    if checks["hg09"][0]():
-        return True
-    return matchoutput("hg help annotate 2>&1", "--date")
-
-
-@check("hg07", "Mercurial >= 0.7")
-def has_hg07():
-    if checks["hg08"][0]():
-        return True
-    return matchoutput("hg --version --quiet 2>&1", "Mercurial Distributed SCM")
-
-
-@check("hg06", "Mercurial >= 0.6")
-def has_hg06():
-    if checks["hg07"][0]():
-        return True
-    return matchoutput("hg --version --quiet 2>&1", "Mercurial version")
-
-
-@check("gettext", "GNU Gettext (msgfmt)")
-def has_gettext():
-    return matchoutput("msgfmt --version", rb"GNU gettext-tools")
-
-
 @check("git", "git command line client", exe=True)
 def has_git():
     return matchoutput("git --version 2>&1", rb"^git version")
@@ -443,22 +298,6 @@ def has_lfsserver():
 def has_git_range(v):
     major, minor = v.split(".")[0:2]
     return getgitversion() >= (int(major), int(minor))
-
-
-@check("docutils", "Docutils text processing library")
-def has_docutils():
-    try:
-        import docutils.core
-
-        docutils.core.publish_cmdline  # silence unused import
-        return True
-    except ImportError:
-        return False
-
-
-@check("p4", "Perforce server and client", exe=True)
-def has_p4():
-    return matchoutput("p4 -V", rb"Rev\. P4/") and matchoutput("p4d -V", rb"Rev\. P4D/")
 
 
 @check("jq", "json processing tool", exe=True)
@@ -517,24 +356,9 @@ def has_rmcwd():
             pass
 
 
-@check("tla", "GNU Arch tla client", exe=True)
-def has_tla():
-    return matchoutput("tla --version 2>&1", rb"The GNU Arch Revision")
-
-
-@check("gpg", "gpg client", exe=True)
-def has_gpg():
-    return matchoutput("gpg --version 2>&1", rb"GnuPG")
-
-
 @check("gpg2", "gpg client v2")
 def has_gpg2():
     return matchoutput("gpg --version 2>&1", rb"GnuPG[^0-9]+2\.")
-
-
-@check("gpg21", "gpg client v2.1+")
-def has_gpg21():
-    return matchoutput("gpg --version 2>&1", rb"GnuPG[^0-9]+2\.(?!0)")
 
 
 @check("unix-permissions", "unix-style permissions")
@@ -565,31 +389,11 @@ def has_root():
     return getattr(os, "geteuid", None) and os.geteuid() == 0
 
 
-@check("pyflakes", "Pyflakes python linter", exe=True)
-def has_pyflakes():
-    pyflakespath = os.environ.get("HGTEST_PYFLAKES_PATH", "pyflakes")
-    return matchoutput(
-        "sh -c \"echo 'import re' 2>&1 | %s\"" % pyflakespath,
-        rb"<stdin>:1: 're' imported but unused",
-        True,
-    )
-
-
-@check("pylint", "Pylint python linter", exe=True)
-def has_pylint():
-    return matchoutput("pylint --help", rb"Usage:  pylint", True)
-
-
 @check("clang-format", "clang-format C code formatter", exe=True)
 def has_clang_format():
     return matchoutput(
         "clang-format --help", rb"^OVERVIEW: A tool to format C/C\+\+[^ ]+ code."
     )
-
-
-@check("jshint", "JSHint static code analysis tool", exe=True)
-def has_jshint():
-    return matchoutput("jshint --version 2>&1", rb"jshint v")
 
 
 @check("pygments", "Pygments source highlighting library")
@@ -607,65 +411,6 @@ def has_pygments():
 def has_outer_repo():
     # failing for other reasons than 'no repo' imply that there is a repo
     return not matchoutput("hg root 2>&1", rb"abort: no repository found", True)
-
-
-@check("ssl", "ssl module available")
-def has_ssl():
-    try:
-        import ssl
-
-        ssl.CERT_NONE
-        return True
-    except ImportError:
-        return False
-
-
-@check("sslcontext", "python >= 2.7.9 ssl")
-def has_sslcontext():
-    try:
-        import ssl
-
-        ssl.SSLContext
-        return True
-    except (ImportError, AttributeError):
-        return False
-
-
-@check("defaultcacerts", "can verify SSL certs by system's CA certs store")
-def has_defaultcacerts():
-    from sapling import sslutil, ui as uimod
-
-    ui = uimod.ui.load()
-    return sslutil._defaultcacerts(ui) or sslutil._canloaddefaultcerts
-
-
-@check("defaultcacertsloaded", "detected presence of loaded system CA certs")
-def has_defaultcacertsloaded():
-    import ssl
-
-    from sapling import sslutil, ui as uimod
-
-    if not has_defaultcacerts():
-        return False
-    if not has_sslcontext():
-        return False
-
-    ui = uimod.ui.load()
-    cafile = sslutil._defaultcacerts(ui)
-    ctx = ssl.create_default_context()
-    if cafile:
-        ctx.load_verify_locations(cafile=cafile)
-    else:
-        ctx.load_default_certs()
-
-    return len(ctx.get_ca_certs()) > 0
-
-
-@check("tls1.2", "TLS 1.2 protocol support")
-def has_tls1_2():
-    from sapling import sslutil
-
-    return "tls1.2" in sslutil.supportedprotocols
 
 
 @check("windows", "Windows")
@@ -725,19 +470,6 @@ def has_linux():
     return sys.platform == "linux"
 
 
-@check("osxpackaging", "OS X packaging tools")
-def has_osxpackaging():
-    try:
-        return (
-            matchoutput("pkgbuild", rb"Usage: pkgbuild ", ignorestatus=1)
-            and matchoutput("productbuild", rb"Usage: productbuild ", ignorestatus=1)
-            and matchoutput("lsbom", rb"Usage: lsbom", ignorestatus=1)
-            and matchoutput("xar --help", rb"Usage: xar", ignorestatus=1)
-        )
-    except ImportError:
-        return False
-
-
 @check("security", "OS X security helper", exe=True)
 def has_security():
     return matchoutput("security", rb"security commands are", ignorestatus=1)
@@ -749,65 +481,15 @@ def has_linuxormacos():
     return sys.platform.startswith(("linux", "darwin"))
 
 
-@check("docker", "docker support")
-def has_docker():
-    pat = rb"A self-sufficient runtime for"
-    if matchoutput("docker --help", pat):
-        if "linux" not in sys.platform:
-            # TODO: in theory we should be able to test docker-based
-            # package creation on non-linux using boot2docker, but in
-            # practice that requires extra coordination to make sure
-            # $TESTTEMP is going to be visible at the same path to the
-            # boot2docker VM. If we figure out how to verify that, we
-            # can use the following instead of just saying False:
-            # return 'DOCKER_HOST' in os.environ
-            return False
-
-        return True
-    return False
-
-
-@check("debhelper", "debian packaging tools")
-def has_debhelper():
-    # Some versions of dpkg say `dpkg', some say 'dpkg' (` vs ' on the first
-    # quote), so just accept anything in that spot.
-    dpkg = matchoutput("dpkg --version", rb"Debian .dpkg' package management program")
-    dh = matchoutput("dh --help", rb"dh is a part of debhelper.", ignorestatus=True)
-    dh_py2 = matchoutput("dh_python2 --help", rb"other supported Python versions")
-    # debuild comes from the 'devscripts' package, though you might want
-    # the 'build-debs' package instead, which has a dependency on devscripts.
-    debuild = matchoutput(
-        "debuild --help", rb"to run debian/rules with given parameter"
-    )
-    return dpkg and dh and dh_py2 and debuild
-
-
 @check("demandimport", "demandimport enabled")
 def has_demandimport():
     # chg disables demandimport intentionally for performance wins.
     return (not has_chg()) and os.environ.get("HGDEMANDIMPORT") != "disable"
 
 
-@check("py2", "running with Python 2.x")
-def has_py2():
-    return 2 == sys.version_info[0] or "HGTEST_FORCE_PY2" in os.environ
-
-
 @check("slow", "allow slow tests (use --allow-slow-tests)")
 def has_slow():
     return os.environ.get("HGTEST_SLOW") == "slow"
-
-
-@check("hypothesis", "Hypothesis automated test generation")
-def has_hypothesis():
-    try:
-        # pyre-fixme[21]: Could not find module `hypothesis`.
-        import hypothesis
-
-        hypothesis.given
-        return True
-    except ImportError:
-        return False
 
 
 @check("unziplinks", "unzip(1) understands and extracts symlinks")
@@ -831,33 +513,9 @@ def has_dev_full():
     return os.path.exists("/dev/full")
 
 
-@check("virtualenv", "Python virtualenv support")
-def has_virtualenv():
-    try:
-        # pyre-fixme[21]: Could not find module `virtualenv`.
-        import virtualenv
-
-        virtualenv.ACTIVATE_SH
-        return True
-    except ImportError:
-        return False
-
-
 @check("fsmonitor", "running tests with fsmonitor")
 def has_fsmonitor():
     return "HGFSMONITOR_TESTS" in os.environ
-
-
-@check("fuzzywuzzy", "Fuzzy string matching library")
-def has_fuzzywuzzy():
-    try:
-        # pyre-fixme[21]: Could not find module `fuzzywuzzy`.
-        import fuzzywuzzy
-
-        fuzzywuzzy.__version__
-        return True
-    except ImportError:
-        return False
 
 
 @check("eden", "Eden HG extension")

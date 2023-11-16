@@ -43,7 +43,6 @@ FEATURES = [
     Feature("debugruntest", "#debugruntest-compatible\n"),
     Feature("no-treemanifest", "  $ disable treemanifest\n"),
     Feature("no-ignore-revnum", "  $ setconfig ui.ignorerevnum=false\n"),
-    Feature("py2", "#require py2\n"),
     Feature("no-inprocess-hg", "#inprocess-hg-incompatible\n"),
     Feature("rev-compat", "  $ setconfig devel.segmented-changelog-rev-compat=true\n"),
     Feature("eagerepo", "  $ eagerepo\n"),
