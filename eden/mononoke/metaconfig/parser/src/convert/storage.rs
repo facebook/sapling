@@ -8,6 +8,7 @@
 use std::num::NonZeroU64;
 use std::num::NonZeroUsize;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::time::Duration;
 
 use anyhow::anyhow;
@@ -194,6 +195,16 @@ impl Convert for RawBlobstoreConfig {
                     .map(|x| x.try_into())
                     .transpose()?,
                 secret_name: raw.secret_name,
+            },
+            RawBlobstoreConfig::aws_s3(raw) => BlobConfig::AwsS3 {
+                aws_account_id: raw.aws_account_id,
+                aws_role: raw.aws_role,
+                bucket: raw.bucket,
+                region: rusoto_core::Region::from_str(&raw.region)?,
+                num_concurrent_operations: raw
+                    .num_concurrent_operations
+                    .map(|x| x.try_into())
+                    .transpose()?,
             },
             RawBlobstoreConfig::UnknownField(f) => {
                 return Err(anyhow!("unsupported blobstore configuration ({})", f));
