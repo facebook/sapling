@@ -21,8 +21,8 @@ pub(crate) type Item = tree_pattern_match::Item<TokenInfo>;
 /// Try to make code non-async by removing `async` and `.await` keywords.
 ///
 /// You can add customized replace logic if the default is not sufficient.
-/// For example, use `#[syncify([<B: Future<Output=K>] => [], [B] => [K])]`
-/// to remove `<B: Future<Output=K>` and replace `B` with `K`. You can also
+/// For example, use `#[syncify([<B: Future<Output=K>>] => [], [B] => [K])]`
+/// to remove `<B: Future<Output=K>>` and replace `B` with `K`. You can also
 /// use pattern matching, like`[BoxStream<__1>] => [Iterator<__1>]`.
 /// The placeholder names affect what they match:
 /// - `__1`: double underscore, without `g`: match a single token that is
@@ -34,11 +34,11 @@ pub(crate) type Item = tree_pattern_match::Item<TokenInfo>;
 /// - `___1g`: triple underscore, with `g`: match zero or more tokens,
 ///   including groups.
 ///
-/// Setting `SYNCIFY_DEBUG` environment variable turns on extra output
-/// about expanded code. You can also use `cargo expand`.
+/// Use `debug` in proc macro attribute to turn on extra output about expanded
+/// code. You can also use `cargo expand`.
 #[proc_macro_attribute]
 pub fn syncify(attr: TokenStream, mut tokens: TokenStream) -> TokenStream {
-    let debug = std::env::var_os("SYNCIFY_DEBUG").is_some();
+    let debug = !attr.find_all(parse("debug")).is_empty();
     tokens
         .replace_all(parse(".await"), parse(""))
         .replace_all(parse(".boxed()"), parse(""))
