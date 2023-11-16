@@ -424,6 +424,9 @@ fn infer_python_home() -> Option<String> {
         return None;
     }
 
+    // resolve symbolic links
+    let exe_path = exe_path.canonicalize().ok()?;
+
     // Try to locate the repo root and check the known "home" path.
     let prefix = if cfg!(feature = "fb") {
         // fbsource
