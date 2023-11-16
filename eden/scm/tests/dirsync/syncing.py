@@ -32,7 +32,7 @@ foo.B = dirB
         self.assertFalse(fileB.exists())
 
         wc.commit()
-        self.assertEquals(fileA.content(), fileB.content())
+        self.assertEqual(fileA.content(), fileB.content())
 
     @hgtest
     def test_amend(self, repo: Repo, wc: WorkingCopy) -> None:
@@ -46,13 +46,13 @@ foo.B = dirB
         )
         fileB = wc[f"dirB/file.txt"]
         wc.commit()
-        self.assertEquals(fileA.content(), fileB.content())
+        self.assertEqual(fileA.content(), fileB.content())
 
         fileA.write("modified")
-        self.assertNotEquals(fileA.content(), fileB.content())
+        self.assertNotEqual(fileA.content(), fileB.content())
         wc.amend()
-        self.assertEquals(fileA.content(), fileB.content())
-        self.assertEquals(fileB.content(), "modified")
+        self.assertEqual(fileA.content(), fileB.content())
+        self.assertEqual(fileB.content(), "modified")
 
     @hgtest
     def test_amend_permutations(self, repo: Repo, wc: WorkingCopy) -> None:
@@ -134,12 +134,12 @@ foo.B = {dirB}
             # contents/existence matches.
             status = amend.status()
             other_file = wc[dirB / file.basename()]
-            self.assertEquals(status[file.path], new_state)
-            self.assertEquals(status[file.path], status[other_file.path])
+            self.assertEqual(status[file.path], new_state)
+            self.assertEqual(status[file.path], status[other_file.path])
 
             if new_content is not None:
-                self.assertEquals(file.content(), new_content)
-                self.assertEquals(file.content(), other_file.content())
+                self.assertEqual(file.content(), new_content)
+                self.assertEqual(file.content(), other_file.content())
             else:
                 self.assertFalse(file.exists())
                 self.assertFalse(other_file.exists())
