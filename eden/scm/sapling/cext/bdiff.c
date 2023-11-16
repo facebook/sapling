@@ -76,13 +76,9 @@ static PyObject* bdiff(PyObject* self, PyObject* args) {
 
   l.next = NULL;
 
-#ifdef IS_PY3K
   if (!PyArg_ParseTuple(args, "y*y*:bdiff", &ya, &yb))
     return NULL;
-#else
-  if (!PyArg_ParseTuple(args, "s*s*:bdiff", &ya, &yb))
-    return NULL;
-#endif
+
   sa = ya.buf;
   sb = yb.buf;
   la = ya.len;
@@ -202,7 +198,6 @@ static PyMethodDef methods[] = {
 
 static const int version = 1;
 
-#ifdef IS_PY3K
 static struct PyModuleDef bdiff_module =
     {PyModuleDef_HEAD_INIT, "bdiff", mdiff_doc, -1, methods};
 
@@ -212,10 +207,3 @@ PyMODINIT_FUNC PyInit_bdiff(void) {
   PyModule_AddIntConstant(m, "version", version);
   return m;
 }
-#else
-PyMODINIT_FUNC initbdiff(void) {
-  PyObject* m;
-  m = Py_InitModule3("bdiff", methods, mdiff_doc);
-  PyModule_AddIntConstant(m, "version", version);
-}
-#endif
