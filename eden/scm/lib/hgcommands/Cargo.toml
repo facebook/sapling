@@ -33,7 +33,7 @@ exchange = { version = "0.1.0", path = "../exchange" }
 fail = { version = "0.4", features = ["failpoints"] }
 flate2 = { version = "1.0.26", features = ["rust_backend"], default-features = false }
 formatter = { version = "0.1.0", path = "../formatter" }
-fs-err = "2.6.0"
+fs-err = { version = "2.6.0", features = ["tokio"] }
 fsyncglob = { version = "0.1.0", path = "../fsyncglob" }
 hg-http = { version = "0.1.0", path = "../hg-http" }
 hg-metrics = { version = "0.1.0", path = "../hg-metrics" }

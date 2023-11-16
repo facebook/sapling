@@ -9,7 +9,7 @@ edition = "2021"
 [dependencies]
 anyhow = "=1.0.72"
 fn-error-context = "0.2"
-fs-err = "2.6.0"
+fs-err = { version = "2.6.0", features = ["tokio"] }
 nodeipc = { version = "0.1.0", path = "../nodeipc" }
 
 [target.'cfg(target_os = "windows")'.dependencies]

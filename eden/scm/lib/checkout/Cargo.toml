@@ -11,7 +11,7 @@ atexit = { version = "0.1.0", path = "../util/atexit" }
 configmodel = { version = "0.1.0", path = "../config/model" }
 crossbeam = "0.8"
 fail = { version = "0.4", features = ["failpoints"] }
-fs-err = "2.6.0"
+fs-err = { version = "2.6.0", features = ["tokio"] }
 io = { version = "0.1.0", path = "../io" }
 manifest = { version = "0.1.0", path = "../manifest", features = ["for-tests"] }
 manifest-tree = { version = "0.1.0", path = "../manifest-tree" }

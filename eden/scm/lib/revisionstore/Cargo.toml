@@ -19,7 +19,7 @@ edenapi = { version = "0.1.0", path = "../edenapi" }
 edenapi_types = { version = "0.1.0", path = "../edenapi/types" }
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main", optional = true }
 fn-error-context = "0.2"
-fs-err = "2.6.0"
+fs-err = { version = "2.6.0", features = ["tokio"] }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 hex = "0.4.3"
 hg-http = { version = "0.1.0", path = "../hg-http" }

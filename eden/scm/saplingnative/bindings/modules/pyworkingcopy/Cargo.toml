@@ -9,7 +9,7 @@ edition = "2021"
 anyhow = "=1.0.72"
 cpython = { version = "0.7.1", default-features = false }
 cpython_ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
-fs-err = "2.6.0"
+fs-err = { version = "2.6.0", features = ["tokio"] }
 io = { version = "0.1.0", path = "../../../../lib/io" }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 pathmatcher = { version = "0.1.0", path = "../../../../lib/pathmatcher" }

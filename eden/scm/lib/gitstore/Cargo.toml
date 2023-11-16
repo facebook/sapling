@@ -13,7 +13,7 @@ harness = false
 anyhow = "=1.0.72"
 async-trait = "0.1.71"
 factory = { version = "0.1.0", path = "../util/factory" }
-fs-err = "2.6.0"
+fs-err = { version = "2.6.0", features = ["tokio"] }
 git2 = "0.14"
 minibytes = { version = "0.1.0", path = "../minibytes" }
 storemodel = { version = "0.1.0", path = "../storemodel" }

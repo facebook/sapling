@@ -12,7 +12,7 @@ commits-trait = { version = "0.1.0", path = "trait" }
 dag = { version = "0.1.0", path = "../dag", features = ["indexedlog-backend"] }
 edenapi = { version = "0.1.0", path = "../edenapi" }
 factory = { version = "0.1.0", path = "../util/factory" }
-fs-err = "2.6.0"
+fs-err = { version = "2.6.0", features = ["tokio"] }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 minibytes = { version = "0.1.0", path = "../minibytes", features = ["frombytes"] }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
