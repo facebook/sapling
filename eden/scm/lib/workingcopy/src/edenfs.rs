@@ -11,6 +11,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use std::time::SystemTime;
 
+use anyhow::Context;
 use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
@@ -23,6 +24,7 @@ use parking_lot::RwLock;
 use pathmatcher::DynMatcher;
 use treestate::treestate::TreeState;
 use types::hgid::NULL_ID;
+use types::HgId;
 
 use crate::filesystem::FileSystem;
 use crate::filesystem::PendingChange;
@@ -104,5 +106,16 @@ impl FileSystem for EdenFileSystem {
     ) -> Result<Option<DynMatcher>> {
         assert!(!manifests.is_empty());
         Ok(None)
+    }
+
+    fn set_parents(
+        &self,
+        p1: HgId,
+        p2: Option<HgId>,
+        parent_tree_hash: Option<HgId>,
+    ) -> Result<()> {
+        let parent_tree_hash =
+            parent_tree_hash.context("parent tree required for setting EdenFS parents")?;
+        self.client.set_parents(p1, p2, parent_tree_hash)
     }
 }

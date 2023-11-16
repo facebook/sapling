@@ -168,8 +168,18 @@ impl WorkingCopy {
         self.treestate.lock().parents().collect()
     }
 
-    pub fn set_parents(&mut self, parents: &mut dyn Iterator<Item = &HgId>) -> Result<()> {
-        self.treestate.lock().set_parents(parents)
+    pub fn set_parents(
+        &mut self,
+        parents: Vec<HgId>,
+        parent_tree_hash: Option<HgId>,
+    ) -> Result<()> {
+        let p1 = parents
+            .get(0)
+            .context("At least one parent is required for setting parents")?
+            .clone();
+        let p2 = parents.get(1).copied();
+        self.treestate.lock().set_parents(&mut parents.iter())?;
+        self.filesystem.lock().set_parents(p1, p2, parent_tree_hash)
     }
 
     pub fn filestore(&self) -> ArcFileStore {

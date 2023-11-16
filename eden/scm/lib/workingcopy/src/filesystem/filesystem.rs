@@ -18,6 +18,7 @@ use manifest_tree::TreeManifest;
 use parking_lot::RwLock;
 use pathmatcher::DynMatcher;
 use serde::Serialize;
+use types::HgId;
 use types::RepoPathBuf;
 
 #[derive(Debug, Serialize)]
@@ -76,4 +77,13 @@ pub trait FileSystem {
         manifests: &[Arc<RwLock<TreeManifest>>],
         dot_dir: &'static str,
     ) -> Result<Option<DynMatcher>>;
+
+    fn set_parents(
+        &self,
+        _p1: HgId,
+        _p2: Option<HgId>,
+        _parent_tree_hash: Option<HgId>,
+    ) -> Result<()> {
+        Ok(())
+    }
 }
