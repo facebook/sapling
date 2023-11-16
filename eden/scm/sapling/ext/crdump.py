@@ -130,6 +130,8 @@ def crdump(ui, repo, *revs, **opts):
                 else:
                     _backedup, notbackedup = commitcloud.backup.backup(repo, revs)
             except Exception:
+                if ui.configbool("crdump", "commitcloudrequired"):
+                    raise
                 # Don't let commit cloud exceptions block crdump
                 pass
             finally:
