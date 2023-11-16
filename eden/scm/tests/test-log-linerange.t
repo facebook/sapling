@@ -1,4 +1,4 @@
-#chg-compatible
+#debugruntest-compatible
 
   $ setconfig diff.git=true
 
@@ -75,7 +75,7 @@ Add some changes with two diff hunks
   +11+
   $ sed 's/3/3+/' foo > foo.new
   $ mv foo.new foo
-  $ sed 's/^11+$/11-/' foo > foo.new
+  $ sed 's/^11[+]$/11-/' foo > foo.new
   $ mv foo.new foo
   $ sed 's/a/a+/' bar > bar.new
   $ mv bar.new bar
