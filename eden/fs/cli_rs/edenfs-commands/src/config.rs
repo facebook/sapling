@@ -92,6 +92,28 @@ pub struct ReloadConfigCmd {
     )]
     local_cfgr_root: Option<PathBuf>,
 
+    #[clap(
+        long,
+        parse(from_str = expand_path),
+        help = "Load configs from the given host instead of reading from remote. The specified host must have ran `arc canary` on itself prior to execution. This is useful for testing changes locally without having to push them to production"
+    )]
+    canary_host: Option<PathBuf>,
+
+    #[clap(
+        long,
+        help = "If the script is ran as root, used to specify user when making requests to Configerator. Defaults to SUDO_USER, $LOGUSER, os.getlogin, or \"unknown\" in that order."
+    )]
+    user: Option<String>,
+
+    #[clap(
+        long,
+        value_parser,
+        // num_args = 1.., TODO(helsel): use num_args instead of value_delimiter once using clap 4
+        value_delimiter = ',',
+        help = "If the script is ran as root, user to use when making requests to Configerator. If given more than one value, defaults to using the first user as the Configerator requestor, but will log all users to Scuba for rollout tracking (defaults to SUDO_USER, $LOGUSER, os.getlogin, or \"unknown\" in that order)"
+    )]
+    users: Option<Vec<String>>,
+
     #[clap(short, long, help = "Enable more verbose console logging")]
     verbose: bool,
 }
@@ -138,6 +160,23 @@ impl crate::Subcommand for ReloadConfigCmd {
 
         if let Some(local_cfgr_root) = &self.local_cfgr_root {
             cmd.arg("--local-cfgr-root").arg(local_cfgr_root);
+        }
+
+        if let Some(canary_host) = &self.canary_host {
+            cmd.arg("--canary-host").arg(canary_host);
+        }
+
+        if let Some(user) = &self.user {
+            cmd.arg("--user").arg(user);
+        }
+
+        if let Some(users) = &self.users {
+            cmd.arg("--users").arg(
+                users
+                    .iter()
+                    .map(|user| user.to_string() + " ")
+                    .collect::<String>(),
+            );
         }
 
         if self.verbose {
