@@ -48,9 +48,7 @@ function shouldSkipField(key: string): boolean {
     key === 'linearizedCommitHistory' ||
     key.startsWith('commitByHash') ||
     // available in allDiffSummaries
-    key.startsWith('diffSummary') ||
-    // edited message fallback is just the default state; we only care about the real edited state
-    /editedCommitMessages__.*__withFallback/.test(key)
+    key.startsWith('diffSummary')
   );
 }
 

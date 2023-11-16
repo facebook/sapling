@@ -13,7 +13,7 @@ import type {ExportStack} from 'shared/types/stack';
 
 import {globalRecoil} from '../../AccessGlobalRecoil';
 import clientToServerAPI from '../../ClientToServerAPI';
-import {editedCommitMessages} from '../../CommitInfoView/CommitInfoState';
+import {latestCommitMessageFieldsWithEdits} from '../../CommitInfoView/CommitInfoState';
 import {
   commitMessageFieldsSchema,
   commitMessageFieldsToString,
@@ -241,9 +241,11 @@ function rewriteCommitMessagesInStack(stack: ExportStack): ExportStack {
   return stack.map(c => {
     let text = c.text;
     if (schema) {
-      const latestMessage = globalRecoil().getLoadable(editedCommitMessages(c.node)).valueMaybe();
-      if (latestMessage != null && latestMessage.type !== 'optimistic') {
-        text = commitMessageFieldsToString(schema, latestMessage.fields);
+      const editedMessage = globalRecoil()
+        .getLoadable(latestCommitMessageFieldsWithEdits(c.node))
+        .valueMaybe();
+      if (editedMessage != null) {
+        text = commitMessageFieldsToString(schema, editedMessage);
       }
     }
     return {...c, text};

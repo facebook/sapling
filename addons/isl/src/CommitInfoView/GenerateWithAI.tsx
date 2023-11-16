@@ -17,7 +17,12 @@ import {useFeatureFlagSync} from '../featureFlags';
 import {T, t} from '../i18n';
 import {uncommittedChangesWithPreviews} from '../previews';
 import {commitByHash} from '../serverAPIState';
-import {commitInfoViewCurrentCommits, commitMode, editedCommitMessages} from './CommitInfoState';
+import {
+  commitInfoViewCurrentCommits,
+  commitMode,
+  editedCommitMessages,
+  latestCommitMessageFieldsWithEdits,
+} from './CommitInfoState';
 import {getInnerTextareaForVSCodeTextArea} from './utils';
 import {VSCodeButton, VSCodeTextArea} from '@vscode/webview-ui-toolkit/react';
 import {
@@ -141,9 +146,8 @@ const generatedCommitMessages = selectorFamily<Result<string>, HashKey>({
       }
 
       const hashOrHead = hashKey.startsWith('commit/') ? 'head' : hashKey;
-      const editedFields = get(editedCommitMessages(hashOrHead));
-      const latestWrittenTitle =
-        editedFields.type === 'optimistic' ? '(none)' : (editedFields.fields.Title as string);
+      const latestFields = get(latestCommitMessageFieldsWithEdits(hashOrHead));
+      const latestWrittenTitle = latestFields.Title as string;
 
       // Note: we don't use the FunnelTracker because this event is not needed for funnel analysis,
       // only for our own duration / error rate tracking.

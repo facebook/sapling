@@ -5,14 +5,24 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {DiffId, DiffSummary, PageVisibility, Result} from '../types';
+import type {CommitMessageFields} from '../CommitInfoView/types';
+import type {DiffId, DiffSummary, Hash, PageVisibility, Result} from '../types';
 import type {UICodeReviewProvider} from './UICodeReviewProvider';
 
 import serverAPI from '../ClientToServerAPI';
+import {commitMessageTemplate} from '../CommitInfoView/CommitInfoState';
+import {
+  applyEditedFields,
+  commitMessageFieldsSchema,
+  commitMessageFieldsToString,
+  emptyCommitMessageFields,
+  parseCommitMessageFields,
+} from '../CommitInfoView/CommitMessageFields';
 import {Internal} from '../Internal';
 import {messageSyncingEnabledState} from '../messageSyncing';
 import {treeWithPreviews} from '../previews';
 import {commitByHash, repositoryInfo} from '../serverAPIState';
+import {firstLine} from '../utils';
 import {GithubUICodeReviewProvider} from './github/github';
 import {atom, DefaultValue, selector, selectorFamily} from 'recoil';
 import {debounce} from 'shared/debounce';
@@ -115,11 +125,26 @@ export const allDiffSummaries = atom<Result<Map<DiffId, DiffSummary> | null>>({
  * be smoother if we use the optimistic one before the remote has gotten the update propagated.
  * This is only necessary if the optimistic message is different than the local message.
  */
-export const latestCommitMessage = selectorFamily<[title: string, description: string], string>({
+export const latestCommitMessage = selectorFamily<
+  [title: string, description: string],
+  Hash | 'head'
+>({
   key: 'latestCommitMessage',
   get:
     (hash: string) =>
     ({get}) => {
+      if (hash === 'head') {
+        const template = get(commitMessageTemplate);
+        if (template) {
+          const schema = get(commitMessageFieldsSchema);
+          const result = applyEditedFields(emptyCommitMessageFields(schema), template.fields);
+          const templateString = commitMessageFieldsToString(schema, result);
+          const title = firstLine(templateString);
+          const description = templateString.slice(title.length);
+          return [title, description];
+        }
+        return ['', ''];
+      }
       const commit = get(commitByHash(hash));
       const preview = get(treeWithPreviews).treeMap.get(hash)?.info;
 
@@ -148,6 +173,17 @@ export const latestCommitMessage = selectorFamily<[title: string, description: s
       }
 
       return [remoteTitle, remoteDescription];
+    },
+});
+
+export const latestCommitMessageFields = selectorFamily<CommitMessageFields, Hash | 'head'>({
+  key: 'latestCommitMessageFields',
+  get:
+    (hash: string) =>
+    ({get}) => {
+      const [title, description] = get(latestCommitMessage(hash));
+      const schema = get(commitMessageFieldsSchema);
+      return parseCommitMessageFields(schema, title, description);
     },
 });
 

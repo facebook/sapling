@@ -7,7 +7,7 @@
 
 import type {Hash} from '../../types';
 
-import {commitFieldsBeingEdited, editedCommitMessages} from '../../CommitInfoView/CommitInfoState';
+import {editedCommitMessages} from '../../CommitInfoView/CommitInfoState';
 import {Tooltip, DOCUMENTATION_DELAY} from '../../Tooltip';
 import {T, t} from '../../i18n';
 import {ImportStackOperation} from '../../operations/ImportStackOperation';
@@ -60,7 +60,6 @@ export function StackEditConfirmButtons(): React.ReactElement {
         for (const hash of commits) {
           reset(editedCommitMessages(hash));
         }
-        reset(commitFieldsBeingEdited);
       },
     [],
   );

@@ -10,11 +10,7 @@ import type {CommitInfo} from '../../types';
 import type {MutableRefObject} from 'react';
 
 import {Commit} from '../../Commit';
-import {
-  commitFieldsBeingEdited,
-  editedCommitMessages,
-  unsavedFieldsBeingEdited,
-} from '../../CommitInfoView/CommitInfoState';
+import {editedCommitMessages, unsavedFieldsBeingEdited} from '../../CommitInfoView/CommitInfoState';
 import {commitMessageFieldsSchema} from '../../CommitInfoView/CommitMessageFields';
 import {FlexSpacer} from '../../ComponentUtils';
 import {T, t} from '../../i18n';
@@ -82,7 +78,6 @@ function PreSplitUnsavedEditsConfirmationModal({
 
   const resetEditedCommitMessage = useRecoilCallback(({reset}) => (commit: CommitInfo) => {
     reset(editedCommitMessages(commit.hash));
-    reset(commitFieldsBeingEdited);
   });
 
   const commitsWithUnsavedEdits = editedCommits.filter(([_, fields]) =>
