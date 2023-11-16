@@ -4,12 +4,7 @@ from __future__ import absolute_import, print_function
 
 import sys
 
-from hghave import require
-
 from sapling import encoding, node, revlog, transaction, vfs
-
-
-require(["py2"])
 
 
 # TESTTMP is optional. This makes it convenient to run without run-tests.py
@@ -65,10 +60,10 @@ revlog.addflagprocessor(
 def newtransaction():
     # A transaction is required to write revlogs
     report = lambda msg: None
-    return transaction.transaction(report, tvfs, {"plain": tvfs}, b"journal")
+    return transaction.transaction(report, tvfs, {"plain": tvfs}, "journal")
 
 
-def newrevlog(name=b"_testrevlog.i", recreate=False):
+def newrevlog(name="_testrevlog.i", recreate=False):
     if recreate:
         tvfs.tryunlink(name)
     rlog = revlog.revlog(tvfs, name)
@@ -99,7 +94,7 @@ def appendrev(rlog, text, tr, isext=False, isdelta=True):
         rlog.storedeltachains = True
 
 
-def addgroupcopy(rlog, tr, destname=b"_destrevlog.i", optimaldelta=True):
+def addgroupcopy(rlog, tr, destname="_destrevlog.i", optimaldelta=True):
     """Copy revlog to destname using revlog.addgroup. Return the copied revlog.
 
     This emulates push or pull. They use changegroup. Changegroup requires
@@ -162,7 +157,7 @@ def addgroupcopy(rlog, tr, destname=b"_destrevlog.i", optimaldelta=True):
     return dlog
 
 
-def lowlevelcopy(rlog, tr, destname=b"_destrevlog.i"):
+def lowlevelcopy(rlog, tr, destname="_destrevlog.i"):
     """Like addgroupcopy, but use the low level revlog._addrevision directly.
 
     It exercises some code paths that are hard to reach easily otherwise.
@@ -329,18 +324,10 @@ def maintest():
         rl2 = addgroupcopy(rl, tr, optimaldelta=False)
         checkrevlog(rl2, expected)
         print("addgroupcopy test passed")
-        # Copy via revlog.clone
-        rl3 = newrevlog(name="_destrevlog3.i", recreate=True)
-        rl.clone(tr, rl3)
-        checkrevlog(rl3, expected)
-        print("clone test passed")
         # Copy via low-level revlog._addrevision
         rl4 = lowlevelcopy(rl, tr)
         checkrevlog(rl4, expected)
         print("lowlevelcopy test passed")
 
 
-try:
-    maintest()
-except Exception as ex:
-    abort("crashed: %s" % ex)
+maintest()
