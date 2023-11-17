@@ -29,6 +29,8 @@ pub use crate::request_info::get_client_request_info_thread_local;
 pub use crate::request_info::set_client_request_info_thread_local;
 pub use crate::request_info::ClientEntryPoint;
 pub use crate::request_info::ClientRequestInfo;
+pub use crate::request_info::ENV_SAPLING_CLIENT_CORRELATOR;
+pub use crate::request_info::ENV_SAPLING_CLIENT_ENTRY_POINT;
 
 #[derive(Default, Clone, Deserialize, Serialize, Debug, PartialEq, Eq)]
 pub struct ClientInfo {
