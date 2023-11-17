@@ -16,6 +16,7 @@ use std::time::Duration;
 use anyhow::bail;
 use anyhow::Result;
 use futures::stream::StreamExt;
+use log::debug;
 use log::error;
 use log::info;
 use parking_lot::Mutex;
@@ -72,8 +73,10 @@ pub struct WorkspaceSubscriberService {
     pub(crate) notification_url: String,
 
     /// Endpoint for real-time polling of Commit Cloud Notifications
-    #[allow(dead_code)]
     pub(crate) polling_update_url: String,
+
+    /// Whether or not to poll for updates via the endpoint above
+    pub(crate) polling_updates_enabled: bool,
 
     /// OAuth token path (optional) for access to Commit Cloud SSE endpoint
     pub(crate) user_token_path: Option<PathBuf>,
@@ -100,6 +103,7 @@ impl WorkspaceSubscriberService {
             polling_update_url: config.polling_update_url.clone().ok_or(
                 ErrorKind::CommitCloudConfigError("undefined 'polling_update_url'"),
             )?,
+            polling_updates_enabled: config.polling_updates_enabled,
             user_token_path: config.user_token_path.clone(),
             connected_subscribers_path: config.connected_subscribers_path.clone().ok_or(
                 ErrorKind::CommitCloudConfigError("undefined 'connected_subscribers_path'"),
@@ -211,19 +215,26 @@ impl WorkspaceSubscriberService {
                         )
                         .await;
 
-                        let access_token = util::read_or_generate_access_token(
-                            &self.user_token_path,
-                            util::CatTokenVerifier::Icebreaker,
-                        );
-                        // start subscription threads
-                        if let Ok(access_token) = access_token {
-                            let subscriptions = self.run_subscriptions(access_token)?;
-                            for child in subscriptions {
-                                let _ = child.await;
+                        if self.polling_updates_enabled {
+                            let subscriptions = self.run_polling_updates()?;
+                            for subscription in subscriptions {
+                                let _ = subscription.await;
                             }
                         } else {
-                            info!("User is not authenticated with Commit Cloud yet");
-                            continue;
+                            let access_token = util::read_or_generate_access_token(
+                                &self.user_token_path,
+                                util::CatTokenVerifier::Icebreaker,
+                            );
+                            // start subscription threads
+                            if let Ok(access_token) = access_token {
+                                let subscriptions = self.run_subscriptions(access_token)?;
+                                for subscription in subscriptions {
+                                    let _ = subscription.await;
+                                }
+                            } else {
+                                info!("User is not authenticated with Commit Cloud yet");
+                                continue;
+                            }
                         }
                     }
                     Err(mpsc::RecvTimeoutError::Timeout) => {
@@ -245,9 +256,9 @@ impl WorkspaceSubscriberService {
 
     fn build_polling_update_url(
         polling_update_url: &str,
-        access_token: util::Token,
+        access_token: &util::Token,
         subscription: &Subscription,
-        polling_cursor: Option<String>,
+        polling_cursor: &Option<String>,
     ) -> Result<Url> {
         let mut polling_update_url = Url::parse(polling_update_url)?;
 
@@ -318,7 +329,7 @@ impl WorkspaceSubscriberService {
 
         match parsed_body.get("payload").and_then(|v| v.as_array()) {
             Some(payloads) if payloads.is_empty() => {
-                info!("{}: Success, received an empty payload", sid);
+                debug!("{}: Success, received an empty payload", sid);
                 Ok((None, cursor))
             }
             Some(payloads) => {
@@ -352,12 +363,17 @@ impl WorkspaceSubscriberService {
     }
 
     /// This helper function to poll a single notification
+    ///
+    /// Cursor represents a position in the underlying pubsub queue.
+    /// Once non empty cursor is returned, subsequent calls will need to provide it as an argument.
+    /// If intermediate polls do not return any updates,
+    /// they will not return a cursor, so we need to keep track of the latest non empty cursor.
 
     async fn poll_single_update(
         subscription: &Subscription,
         polling_update_url: &str,
-        access_token: util::Token,
-        polling_cursor: Option<String>,
+        access_token: &util::Token,
+        polling_cursor: &Option<String>,
     ) -> Result<(Option<Notification>, Option<String>)> {
         let sid = format!(
             "({} @ {}) [Poll Update]",
@@ -403,8 +419,8 @@ impl WorkspaceSubscriberService {
                 match Self::poll_single_update(
                     &subscription,
                     polling_update_url,
-                    access_token,
-                    None,
+                    &access_token,
+                    &None,
                 )
                 .await
                 {
@@ -426,6 +442,136 @@ impl WorkspaceSubscriberService {
                 );
             }
         }
+    }
+
+    /// This helper function reads the list of current connected subscribers
+    /// It starts polling updates for the connected repos/workspaces
+    /// All tasks keep checking the interrupt flag and join gracefully if it is restart or stop
+
+    fn run_polling_updates(&self) -> Result<Vec<tokio::task::JoinHandle<()>>> {
+        util::read_subscriptions(&self.connected_subscribers_path)?
+            .into_iter()
+            .map(|(subscription, repo_roots)| {
+                self.run_polling_updates_for_repo_workspace(subscription, repo_roots)
+            })
+            .collect::<Result<Vec<tokio::task::JoinHandle<()>>>>()
+    }
+
+    /// Helper function to run polling updates for a single repo/workspace
+
+    fn run_polling_updates_for_repo_workspace(
+        &self,
+        subscription: Subscription,
+        repo_roots: Vec<PathBuf>,
+    ) -> Result<tokio::task::JoinHandle<()>> {
+        let sid = format!("({} @ {})", subscription.repo_name, subscription.workspace);
+        let cloudsync_retries = self.cloudsync_retries;
+        let user_token_path = self.user_token_path.clone();
+        let polling_update_url = self.polling_update_url.clone();
+        let interrupt = self.interrupt.clone();
+
+        Ok(tokio::spawn(async move {
+            let sync_me = |reason: &'static str, version: Option<u64>| {
+                for repo_root in repo_roots.iter() {
+                    info!(
+                        "{} Fire CloudSyncTrigger in '{}' {}",
+                        sid,
+                        repo_root.display(),
+                        reason,
+                    );
+                    {
+                        let workspace = subscription.workspace.clone();
+                        let sid = sid.clone();
+                        let repo_root = repo_root.clone();
+                        tokio::spawn(async move {
+                            // log outputs, results and continue even if unsuccessful
+                            let _res = CloudSyncTrigger::fire(
+                                &sid,
+                                repo_root,
+                                cloudsync_retries,
+                                version,
+                                workspace,
+                                format!("scm_daemon: {}", reason),
+                            );
+                        });
+                    }
+                }
+            };
+            sync_me("before starting polling updates", None);
+            if interrupt.load(Ordering::Relaxed) {
+                return;
+            }
+            info!("{} Start polling updates...", sid);
+
+            let mut cursor = None;
+            let mut access_token = None;
+            let mut long_sleep_after_fail = false;
+
+            while !interrupt.load(Ordering::Relaxed) {
+                if access_token.as_ref().is_none() {
+                    match util::read_or_generate_access_token(
+                        &user_token_path,
+                        util::CatTokenVerifier::InternGraph,
+                    ) {
+                        Err(err) => {
+                            error!(
+                                "{} Cancelling this task due to unexpected error with token creation: {}...",
+                                sid, err
+                            );
+                            interrupt.store(true, Ordering::Relaxed);
+                            return;
+                        }
+                        Ok(token) => {
+                            access_token = Some(token);
+                        }
+                    }
+                }
+                match Self::poll_single_update(
+                    &subscription,
+                    &polling_update_url,
+                    access_token.as_ref().unwrap(),
+                    &cursor,
+                )
+                .await
+                {
+                    Ok((maybe_update, maybe_new_cursor)) => {
+                        if maybe_new_cursor.is_some() {
+                            cursor = maybe_new_cursor;
+                        }
+                        match maybe_update {
+                            Some(new_update) => {
+                                sync_me("on new version update", Some(new_update.version));
+                            }
+                            None => {
+                                // sync since we had probably missed updates
+                                if long_sleep_after_fail {
+                                    long_sleep_after_fail = false;
+                                    sync_me("after recovering from errors", None);
+                                }
+                            }
+                        }
+                        tokio::time::sleep(Duration::from_secs(3)).await;
+                    }
+                    Err(err)
+                        if matches!(
+                            err.downcast_ref(),
+                            Some(&ErrorKind::PollingUpdatesUnauthorizedError)
+                        ) =>
+                    {
+                        info!("{} Access token is probably expired, retrying...", sid);
+                        // clean up the token and try again
+                        access_token = None;
+                        continue;
+                    }
+                    Err(err) => {
+                        error!("{} Polling updates failed with {}", sid, err);
+                        long_sleep_after_fail = true;
+                        // sleep longer before trying again
+                        tokio::time::sleep(Duration::from_secs(10)).await;
+                    }
+                }
+            }
+        }))
     }
 
     /// This helper function reads the list of current connected subscribers
