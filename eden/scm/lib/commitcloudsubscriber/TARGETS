@@ -31,6 +31,7 @@ rust_library(
     test_deps = ["fbsource//third-party/rust:tempfile"],
     deps = [
         "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:base64",
         "fbsource//third-party/rust:filetime",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:lazy_static",

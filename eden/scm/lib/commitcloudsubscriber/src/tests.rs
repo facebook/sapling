@@ -11,7 +11,8 @@ use std::path::PathBuf;
 
 use tempfile::tempdir;
 
-use crate::util::read_access_token;
+use crate::util::read_or_generate_access_token;
+use crate::util::CatTokenVerifier;
 use crate::util::TOKEN_FILENAME;
 
 #[test]
@@ -21,7 +22,11 @@ fn test_read_access_token_from_file_should_return_token() {
     let mut tmp = File::create(path).unwrap();
     writeln!(tmp, "[commitcloud]").unwrap();
     writeln!(tmp, "user_token=token").unwrap();
-    let result = read_access_token(&Some(PathBuf::from(dir.path()))).unwrap();
+    let result = read_or_generate_access_token(
+        &Some(PathBuf::from(dir.path())),
+        CatTokenVerifier::Icebreaker,
+    )
+    .unwrap();
     drop(tmp);
     dir.close().unwrap();
     assert_eq!(result.token, "token");
