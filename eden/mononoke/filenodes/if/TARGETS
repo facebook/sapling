@@ -8,6 +8,9 @@ thrift_library(
         "rust",
         "cpp2",
     ],
+    rust_deps = [
+        "fbsource//third-party/rust:smallvec",
+    ],
     thrift_srcs = {
         "filenodes.thrift": [],
     },

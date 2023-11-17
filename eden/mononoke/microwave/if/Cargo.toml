@@ -24,6 +24,7 @@ mercurial_thrift = { version = "0.1.0", path = "../../mercurial/types/if" }
 microwave_if__types = { package = "microwave_if_types", version = "0.1.0", path = "types" }
 mononoke_types_thrift = { version = "0.1.0", path = "../../mononoke_types/if" }
 ref-cast = "1.0.18"
+smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }
 thiserror = "1.0.43"
 tracing = "0.1.40"
 tracing-futures = { version = "0.2.5", features = ["futures-03"] }

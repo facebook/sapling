@@ -7,6 +7,9 @@ thrift_library(
     languages = [
         "rust",
     ],
+    rust_deps = [
+        "fbsource//third-party/rust:smallvec",
+    ],
     thrift_srcs = {
         "microwave.thrift": [],
     },
