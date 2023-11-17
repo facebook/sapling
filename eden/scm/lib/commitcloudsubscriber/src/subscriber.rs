@@ -69,6 +69,10 @@ pub struct WorkspaceSubscriberService {
     /// Server-Sent Events endpoint for Commit Cloud Notifications
     pub(crate) notification_url: String,
 
+    /// Endpoint for real-time polling of Commit Cloud Notifications
+    #[allow(dead_code)]
+    pub(crate) polling_update_url: String,
+
     /// OAuth token path (optional) for access to Commit Cloud SSE endpoint
     pub(crate) user_token_path: Option<PathBuf>,
 
@@ -90,6 +94,9 @@ impl WorkspaceSubscriberService {
         Ok(WorkspaceSubscriberService {
             notification_url: config.notification_url.clone().ok_or(
                 ErrorKind::CommitCloudConfigError("undefined 'notification_url'"),
+            )?,
+            polling_update_url: config.polling_update_url.clone().ok_or(
+                ErrorKind::CommitCloudConfigError("undefined 'polling_update_url'"),
             )?,
             user_token_path: config.user_token_path.clone(),
             connected_subscribers_path: config.connected_subscribers_path.clone().ok_or(
