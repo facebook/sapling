@@ -1042,6 +1042,15 @@ def _checkomissions(repo, lastsyncstate, tr, maxage):
                 repo._remotenames.applychanges({"bookmarks": remotebookmarks})
 
 
+def _get_common_keys(bookmarks_dict, bookmarks_dict_other):
+    return {
+        key
+        for key in bookmarks_dict.keys()
+        if key in bookmarks_dict_other
+        and bookmarks_dict[key] == bookmarks_dict_other[key]
+    }
+
+
 @perftrace.tracefunc("Submit Local Changes")
 def _submitlocalchanges(repo, reponame, workspacename, lastsyncstate, failed, serv, tr):
     localheads = _getheads(repo)
@@ -1141,16 +1150,41 @@ def _submitlocalchanges(repo, reponame, workspacename, lastsyncstate, failed, se
             remotebookmarkschanged = False
 
     backuplock.progress(repo, "finishing synchronizing with '%s'" % workspacename)
+
+    # dedup local bookmarks before sending to the server
+    # since users could have a very large amount of them
+
+    common_bookmarks_keys = _get_common_keys(lastsyncstate.bookmarks, newcloudbookmarks)
+
+    # send only removed local bookmarks
+    to_cloud_removed_bookmarks = {
+        key
+        for key in lastsyncstate.bookmarks.keys()
+        if key not in common_bookmarks_keys
+    }
+
+    # send only newly added or updated local bookmarks
+    to_cloud_updated_bookmarks = {
+        key: value
+        for (key, value) in newcloudbookmarks.items()
+        if key not in common_bookmarks_keys
+    }
+
+    # send remote bookmarks only if there is a change
+    # we could implement full dedup but number of remote bookmarks is small
+    to_cloud_oldremotebookmarks = oldremotebookmarks if remotebookmarkschanged else []
+    to_cloud_newremotebookmarks = newremotebookmarks if remotebookmarkschanged else {}
+
     synced, cloudrefs = serv.updatereferences(
         reponame,
         workspacename,
         lastsyncstate.version,
         lastsyncstate.heads,
         newcloudheads,
-        lastsyncstate.bookmarks.keys(),
-        newcloudbookmarks,
-        oldremotebookmarks if remotebookmarkschanged else [],
-        newremotebookmarks if remotebookmarkschanged else {},
+        to_cloud_removed_bookmarks,
+        to_cloud_updated_bookmarks,
+        to_cloud_oldremotebookmarks,
+        to_cloud_newremotebookmarks,
         clientinfo=service.makeclientinfo(repo, lastsyncstate),
         logopts={"metalogroot": hex(repo.svfs.metalog.root())},
     )
@@ -1162,10 +1196,10 @@ def _submitlocalchanges(repo, reponame, workspacename, lastsyncstate, failed, se
             cloudrefs.version,
             lastsyncstate.heads,
             newcloudheads,
-            lastsyncstate.bookmarks,
-            newcloudbookmarks,
-            oldremotebookmarks if remotebookmarkschanged else [],
-            newremotebookmarks if remotebookmarkschanged else {},
+            to_cloud_removed_bookmarks,
+            to_cloud_updated_bookmarks,
+            to_cloud_oldremotebookmarks,
+            to_cloud_newremotebookmarks,
         )
         lastsyncstate.update(
             tr,
