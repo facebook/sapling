@@ -436,6 +436,13 @@ pub async fn sync_commits_for_initial_import<M: SyncedCommitMapping + Clone + 's
     let maybe_cs_id: Option<ChangesetId> = result?;
 
     // Check that the head commit was synced properly and log something otherwise
+    // clippy: This warning relates to creating `err` as `Err(...)` followed by `unwrap_err()`
+    // below, which would be redundant.
+    // In this instance, it ignores the fact that `err` is used in between by a function that needs
+    // a borrow to a `Result`.
+    // Since the `Result` owns its content, trying to work around it forces a clone which feels
+    // worse than muting clippy for this instance.
+    #[allow(clippy::unnecessary_literal_unwrap)]
     let new_cs_id = maybe_cs_id.ok_or_else(|| {
         let err = Err(anyhow!("Head changeset wasn't synced"));
         log_non_pushrebase_sync_single_changeset_result(
