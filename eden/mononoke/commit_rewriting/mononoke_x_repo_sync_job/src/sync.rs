@@ -24,6 +24,7 @@ use changeset_fetcher::ChangesetFetcherRef;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use cross_repo_sync::find_toposorted_unsynced_ancestors;
+use cross_repo_sync::types::Source;
 use cross_repo_sync::types::Target;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
@@ -80,11 +81,14 @@ pub async fn sync_single_bookmark_update_log<M: SyncedCommitMapping + Clone + 's
     pushrebase_rewrite_dates: PushrebaseRewriteDates,
 ) -> Result<SyncResult, Error> {
     info!(ctx.logger(), "processing log entry #{}", entry.id);
-    let bookmark = commit_syncer.get_bookmark_renamer().await?(&entry.bookmark_name)
-        .ok_or_else(|| format_err!("unexpected empty bookmark rename"))?;
+    let source_bookmark = Source(entry.bookmark_name);
+    let target_bookmark = Target(
+        commit_syncer.get_bookmark_renamer().await?(&source_bookmark)
+            .ok_or_else(|| format_err!("unexpected empty bookmark rename"))?,
+    );
     scuba_sample
-        .add("source_bookmark_name", format!("{}", entry.bookmark_name))
-        .add("target_bookmark_name", format!("{}", bookmark));
+        .add("source_bookmark_name", format!("{}", source_bookmark))
+        .add("target_bookmark_name", format!("{}", target_bookmark));
 
     let to_cs_id = match entry.to_changeset_id {
         Some(to_cs_id) => to_cs_id,
@@ -95,7 +99,8 @@ pub async fn sync_single_bookmark_update_log<M: SyncedCommitMapping + Clone + 's
                 ctx,
                 commit_syncer,
                 scuba_sample,
-                &bookmark,
+                &source_bookmark,
+                &target_bookmark,
                 common_pushrebase_bookmarks,
                 Some(entry.timestamp),
             )
@@ -110,14 +115,13 @@ pub async fn sync_single_bookmark_update_log<M: SyncedCommitMapping + Clone + 's
         commit_syncer,
         entry.from_changeset_id,
         to_cs_id,
-        &Some(Target(bookmark)),
+        &Some(target_bookmark),
         common_pushrebase_bookmarks,
         scuba_sample,
         pushrebase_rewrite_dates,
         Some(entry.timestamp),
     )
     .await
-
     // TODO(stash): test with other movers
     // Note: counter update might fail after a successful sync
 }
@@ -154,6 +158,12 @@ pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static,
     info!(ctx.logger(), "{} unsynced ancestors of {}", len, to_cs_id);
 
     if let Some(target_bookmark) = target_bookmark {
+        // This is forward sync. The direction is small to large, so the source bookmark is the small
+        // bookmark which is the key in the common_pushrebase_bookmarks
+        // Source: small, e.g. `heads/main`
+        // Target: large, e.g. `main`
+        // common_pushrebase_bookmarks: large, e.g. `["main"]`
+
         if common_pushrebase_bookmarks.contains(target_bookmark) {
             // This is a commit that was introduced by common pushrebase bookmark (e.g. "master").
             // Use pushrebase to sync a commit.
@@ -176,7 +186,6 @@ pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static,
             .map(SyncResult::Synced);
         }
     }
-
     // Use a normal sync since a bookmark is not a common pushrebase bookmark
     let mut res = vec![];
     for cs_id in unsynced_ancestors {
@@ -454,7 +463,6 @@ pub async fn sync_commits_for_initial_import<M: SyncedCommitMapping + Clone + 's
             stats.clone(),
             None,
         );
-
         err.unwrap_err()
     })?;
 
@@ -491,21 +499,25 @@ async fn process_bookmark_deletion<M: SyncedCommitMapping + Clone + 'static, R: 
     ctx: &CoreContext,
     commit_syncer: &CommitSyncer<M, R>,
     scuba_sample: MononokeScubaSampleBuilder,
-    bookmark: &BookmarkKey,
+    source_bookmark: &Source<BookmarkKey>,
+    target_bookmark: &Target<BookmarkKey>,
     common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
     bookmark_update_timestamp: Option<Timestamp>,
 ) -> Result<(), Error> {
-    if common_pushrebase_bookmarks.contains(bookmark) {
+    if common_pushrebase_bookmarks.contains(source_bookmark) {
         Err(format_err!(
             "unexpected deletion of a shared bookmark {}",
-            bookmark
+            source_bookmark
         ))
     } else {
-        info!(ctx.logger(), "deleting bookmark {}", bookmark);
-        let (stats, result) =
-            delete_bookmark(ctx.clone(), commit_syncer.get_target_repo(), bookmark)
-                .timed()
-                .await;
+        info!(ctx.logger(), "deleting bookmark {}", target_bookmark);
+        let (stats, result) = delete_bookmark(
+            ctx.clone(),
+            commit_syncer.get_target_repo(),
+            target_bookmark,
+        )
+        .timed()
+        .await;
         log_bookmark_deletion_result(scuba_sample, &result, stats, bookmark_update_timestamp);
         result
     }

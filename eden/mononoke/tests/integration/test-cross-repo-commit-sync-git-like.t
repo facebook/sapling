@@ -100,7 +100,6 @@
   b32ac5e4bcae0f9e8a25327e30674cf4f81ade62b6fb6fdf4e561f5099ec396a common_bookmark
   b32ac5e4bcae0f9e8a25327e30674cf4f81ade62b6fb6fdf4e561f5099ec396a main
   b32ac5e4bcae0f9e8a25327e30674cf4f81ade62b6fb6fdf4e561f5099ec396a small_repo_prefix/heads/common_bookmark
-  b32ac5e4bcae0f9e8a25327e30674cf4f81ade62b6fb6fdf4e561f5099ec396a small_repo_prefix/heads/main
   b32ac5e4bcae0f9e8a25327e30674cf4f81ade62b6fb6fdf4e561f5099ec396a small_repo_prefix/heads/other_bookmark
 
 -- move the bookmarks
@@ -144,17 +143,16 @@
   * queue size is 1 (glob)
   * processing log entry #4 (glob)
   * 2 unsynced ancestors of 9c27228ce4dda0e66c126c4560521707a6fc3e48d79d471bede547a76987d3be (glob)
-  * syncing dd912eedd1899b2403fc507d74bec70bda5f4a035cd9851478847bc2b35dfa3f (glob)
-  * changeset dd912eedd1899b2403fc507d74bec70bda5f4a035cd9851478847bc2b35dfa3f synced as 540414777d82df622b2762dc79dfba2d92f994481105e34d47274c4742dbedb0 * (glob)
-  * syncing 9c27228ce4dda0e66c126c4560521707a6fc3e48d79d471bede547a76987d3be (glob)
-  * changeset 9c27228ce4dda0e66c126c4560521707a6fc3e48d79d471bede547a76987d3be synced as fbdcc859102f75ca8d2d5b66313e6e32f3ec6a0e35e130350053f3ac097eb705 * (glob)
+  * syncing dd912eedd1899b2403fc507d74bec70bda5f4a035cd9851478847bc2b35dfa3f via pushrebase for main (glob)
+  * changeset dd912eedd1899b2403fc507d74bec70bda5f4a035cd9851478847bc2b35dfa3f synced as ccca231a326f5060eebc66ed1f1ad6aaa1490f1d7faa40cc469e59bf5a4e1ee9 * (glob)
+  * syncing 9c27228ce4dda0e66c126c4560521707a6fc3e48d79d471bede547a76987d3be via pushrebase for main (glob)
+  * changeset 9c27228ce4dda0e66c126c4560521707a6fc3e48d79d471bede547a76987d3be synced as e3c1a924a6c56bf0dfbd0173601239a4776b6ed17075617270c27c80456e12fb * (glob)
   * successful sync bookmark update log #4 (glob)
 
   $ mononoke_newadmin bookmarks --repo-name large list
   d52189c4c92bc5d3c99269e794afb72c31caf9ed4eba39abbb3c2739f010096d common_bookmark
-  207c0c64826e67a9fde5993ff2789ed838376b082656f49ce239536193a832bd main
+  e3c1a924a6c56bf0dfbd0173601239a4776b6ed17075617270c27c80456e12fb main
   b32ac5e4bcae0f9e8a25327e30674cf4f81ade62b6fb6fdf4e561f5099ec396a small_repo_prefix/heads/common_bookmark
-  fbdcc859102f75ca8d2d5b66313e6e32f3ec6a0e35e130350053f3ac097eb705 small_repo_prefix/heads/main
   b32ac5e4bcae0f9e8a25327e30674cf4f81ade62b6fb6fdf4e561f5099ec396a small_repo_prefix/heads/other_bookmark
 
 -- move other bookmarks
@@ -201,27 +199,28 @@
 -- check the state of bookmarks in the large repo
   $ mononoke_newadmin bookmarks --repo-name large list
   d52189c4c92bc5d3c99269e794afb72c31caf9ed4eba39abbb3c2739f010096d common_bookmark
-  207c0c64826e67a9fde5993ff2789ed838376b082656f49ce239536193a832bd main
+  e3c1a924a6c56bf0dfbd0173601239a4776b6ed17075617270c27c80456e12fb main
   b149e7a688c2bac6a2f25dc4b846060f774967ae82eeac54cc1a7c148b215b27 small_repo_prefix/heads/common_bookmark
-  fbdcc859102f75ca8d2d5b66313e6e32f3ec6a0e35e130350053f3ac097eb705 small_repo_prefix/heads/main
   f2f336ed26e996561dc4156ce6a5b647a30abe6b0584615c5739caaf8f6d153e small_repo_prefix/heads/other_bookmark
-  540414777d82df622b2762dc79dfba2d92f994481105e34d47274c4742dbedb0 small_repo_prefix/tags/release_b
+  ccca231a326f5060eebc66ed1f1ad6aaa1490f1d7faa40cc469e59bf5a4e1ee9 small_repo_prefix/tags/release_b
 
 -- check the graph after all the syncing
-  $ mononoke_newadmin changelog -R large graph -i d52189c4c92bc5d3c99269e794afb72c31caf9ed4eba39abbb3c2739f010096d,207c0c64826e67a9fde5993ff2789ed838376b082656f49ce239536193a832bd,b149e7a688c2bac6a2f25dc4b846060f774967ae82eeac54cc1a7c148b215b27,fbdcc859102f75ca8d2d5b66313e6e32f3ec6a0e35e130350053f3ac097eb705,f2f336ed26e996561dc4156ce6a5b647a30abe6b0584615c5739caaf8f6d153e,540414777d82df622b2762dc79dfba2d92f994481105e34d47274c4742dbedb0 -M
+  $ mononoke_newadmin changelog -R large graph -i d52189c4c92bc5d3c99269e794afb72c31caf9ed4eba39abbb3c2739f010096d,e3c1a924a6c56bf0dfbd0173601239a4776b6ed17075617270c27c80456e12fb,b149e7a688c2bac6a2f25dc4b846060f774967ae82eeac54cc1a7c148b215b27,ccca231a326f5060eebc66ed1f1ad6aaa1490f1d7faa40cc469e59bf5a4e1ee9,f2f336ed26e996561dc4156ce6a5b647a30abe6b0584615c5739caaf8f6d153e,540414777d82df622b2762dc79dfba2d92f994481105e34d47274c4742dbedb0 -M
   o  message: SC
+  │
+  o  message: SB
   │
   │ o  message: SE
   │ │
-  │ │ o  message: LC
+  o │  message: LC
+  │ │
+  │ │ o  message: LD
   │ │ │
-  │ │ │ o  message: LD
-  │ │ │ │
-  │ │ o │  message: LB
-  │ │ ├─╯
-  │ o │  message: SD
-  │ ├─╯
-  o │  message: SB
+  o │ │  message: LB
+  ├───╯
+  │ o  message: SD
+  ├─╯
+  │ o  message: SB
   ├─╯
   o  message: LA
 
