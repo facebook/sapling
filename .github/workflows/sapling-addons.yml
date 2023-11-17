@@ -1,4 +1,7 @@
 name: Verify addons/ folder
+env:
+  CI: false
+
 on:
   # Run on any branch to support ghstack's synthetic base/head branches.
   pull_request:
