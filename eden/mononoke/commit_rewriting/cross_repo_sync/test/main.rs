@@ -177,7 +177,7 @@ where
         .unsafe_sync_commit_pushrebase(
             &ctx,
             source_bcs,
-            bookmark_name,
+            Target(bookmark_name),
             CommitSyncContext::Tests,
             PushrebaseRewriteDates::No,
         )
@@ -989,7 +989,7 @@ async fn get_multiple_master_mapping_setup(
         .unsafe_sync_commit_pushrebase(
             &ctx,
             small_cs.clone(),
-            BookmarkKey::new("master").unwrap(),
+            Target(BookmarkKey::new("master").unwrap()),
             CommitSyncContext::Tests,
             PushrebaseRewriteDates::No,
         )
@@ -1000,7 +1000,7 @@ async fn get_multiple_master_mapping_setup(
         .unsafe_sync_commit_pushrebase(
             &ctx,
             small_cs.clone(),
-            BookmarkKey::new("other_branch").unwrap(),
+            Target(BookmarkKey::new("other_branch").unwrap()),
             CommitSyncContext::Tests,
             PushrebaseRewriteDates::No,
         )
@@ -1096,7 +1096,7 @@ async fn test_sync_no_op_pushrebase_has_multiple_mappings(fb: FacebookInit) -> R
         .unsafe_sync_commit_pushrebase(
             &ctx,
             to_sync,
-            BookmarkKey::new("master").unwrap(),
+            Target(BookmarkKey::new("master").unwrap()),
             CommitSyncContext::Tests,
             PushrebaseRewriteDates::No,
         )
@@ -1141,7 +1141,7 @@ async fn test_sync_real_pushrebase_has_multiple_mappings(fb: FacebookInit) -> Re
         .unsafe_sync_commit_pushrebase(
             &ctx,
             to_sync,
-            BookmarkKey::new("master").unwrap(),
+            Target(BookmarkKey::new("master").unwrap()),
             CommitSyncContext::Tests,
             PushrebaseRewriteDates::No,
         )
@@ -1509,7 +1509,7 @@ async fn test_disabled_sync_pushrebase(fb: FacebookInit) -> Result<(), Error> {
                 .unsafe_sync_commit_pushrebase(
                     &ctx,
                     small_cs.clone(),
-                    BookmarkKey::new("master").unwrap(),
+                    Target(BookmarkKey::new("master").unwrap()),
                     CommitSyncContext::Tests,
                     PushrebaseRewriteDates::No,
                 )

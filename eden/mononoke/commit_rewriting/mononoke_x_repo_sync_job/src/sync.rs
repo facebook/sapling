@@ -24,6 +24,7 @@ use changeset_fetcher::ChangesetFetcherRef;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use cross_repo_sync::find_toposorted_unsynced_ancestors;
+use cross_repo_sync::types::Target;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncOutcome;
@@ -109,7 +110,7 @@ pub async fn sync_single_bookmark_update_log<M: SyncedCommitMapping + Clone + 's
         commit_syncer,
         entry.from_changeset_id,
         to_cs_id,
-        Some(bookmark),
+        &Some(Target(bookmark)),
         common_pushrebase_bookmarks,
         scuba_sample,
         pushrebase_rewrite_dates,
@@ -126,7 +127,7 @@ pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static,
     commit_syncer: &CommitSyncer<M, R>,
     from_cs_id: Option<ChangesetId>,
     to_cs_id: ChangesetId,
-    maybe_bookmark: Option<BookmarkKey>,
+    target_bookmark: &Option<Target<BookmarkKey>>,
     common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
     scuba_sample: MononokeScubaSampleBuilder,
     pushrebase_rewrite_dates: PushrebaseRewriteDates,
@@ -152,8 +153,8 @@ pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static,
     let len = unsynced_ancestors.len();
     info!(ctx.logger(), "{} unsynced ancestors of {}", len, to_cs_id);
 
-    if let Some(bookmark) = &maybe_bookmark {
-        if common_pushrebase_bookmarks.contains(bookmark) {
+    if let Some(target_bookmark) = target_bookmark {
+        if common_pushrebase_bookmarks.contains(target_bookmark) {
             // This is a commit that was introduced by common pushrebase bookmark (e.g. "master").
             // Use pushrebase to sync a commit.
             if let Some(from_cs_id) = from_cs_id {
@@ -163,7 +164,7 @@ pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static,
             return sync_commits_via_pushrebase(
                 ctx,
                 commit_syncer,
-                bookmark,
+                target_bookmark,
                 common_pushrebase_bookmarks,
                 scuba_sample.clone(),
                 unsynced_ancestors,
@@ -194,11 +195,11 @@ pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static,
     let maybe_remapped_cs_id = find_remapped_cs_id(ctx, commit_syncer, to_cs_id).await?;
     let remapped_cs_id =
         maybe_remapped_cs_id.ok_or_else(|| format_err!("unknown sync outcome for {}", to_cs_id))?;
-    if let Some(bookmark) = maybe_bookmark {
+    if let Some(target_bookmark) = target_bookmark {
         move_or_create_bookmark(
             ctx,
             commit_syncer.get_target_repo(),
-            &bookmark,
+            target_bookmark,
             remapped_cs_id,
         )
         .await?;
@@ -224,7 +225,7 @@ pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static,
 pub async fn sync_commits_via_pushrebase<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
     ctx: &CoreContext,
     commit_syncer: &CommitSyncer<M, R>,
-    bookmark: &BookmarkKey,
+    target_bookmark: &Target<BookmarkKey>,
     common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
     scuba_sample: MononokeScubaSampleBuilder,
     unsynced_ancestors: Vec<ChangesetId>,
@@ -273,12 +274,12 @@ pub async fn sync_commits_via_pushrebase<M: SyncedCommitMapping + Clone + 'stati
         } else {
             info!(
                 ctx.logger(),
-                "syncing {} via pushrebase for {}", cs_id, bookmark
+                "syncing {} via pushrebase for {}", cs_id, &target_bookmark
             );
             let (stats, result) = pushrebase_commit(
                 ctx,
                 commit_syncer,
-                bookmark,
+                target_bookmark,
                 cs_id,
                 pushrebase_rewrite_dates,
             )
@@ -550,7 +551,7 @@ async fn find_remapped_cs_id<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
 async fn pushrebase_commit<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
     ctx: &CoreContext,
     commit_syncer: &CommitSyncer<M, R>,
-    bookmark: &BookmarkKey,
+    target_bookmark: &Target<BookmarkKey>,
     cs_id: ChangesetId,
     pushrebase_rewrite_dates: PushrebaseRewriteDates,
 ) -> Result<Option<ChangesetId>, Error> {
@@ -560,7 +561,7 @@ async fn pushrebase_commit<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
         .unsafe_sync_commit_pushrebase(
             ctx,
             bcs,
-            bookmark.clone(),
+            target_bookmark.clone(),
             CommitSyncContext::XRepoSyncJob,
             pushrebase_rewrite_dates,
         )

@@ -71,6 +71,7 @@ use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use context::SessionContainer;
 use cross_repo_sync::types::Source;
+use cross_repo_sync::types::Target;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::ConcreteRepo as CrossRepo;
 use cross_repo_sync::PushrebaseRewriteDates;
@@ -183,7 +184,7 @@ async fn run_in_single_commit_mode<M: SyncedCommitMapping + Clone + 'static, R: 
         &commit_syncer,
         None, // from_cs_id,
         bcs,
-        maybe_bookmark,
+        &maybe_bookmark.map(Target),
         &common_bookmarks,
         scuba_sample,
         pushrebase_rewrite_dates,

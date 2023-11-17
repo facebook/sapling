@@ -1214,14 +1214,14 @@ where
         &'a self,
         ctx: &'a CoreContext,
         source_cs: BonsaiChangeset,
-        bookmark: BookmarkKey,
+        target_bookmark: Target<BookmarkKey>,
         commit_sync_context: CommitSyncContext,
         rewritedates: PushrebaseRewriteDates,
     ) -> Result<Option<ChangesetId>, Error> {
         let source_cs_id = source_cs.get_changeset_id();
         let before = Instant::now();
         let res = self
-            .unsafe_sync_commit_pushrebase_impl(ctx, source_cs, bookmark, rewritedates)
+            .unsafe_sync_commit_pushrebase_impl(ctx, source_cs, target_bookmark, rewritedates)
             .await;
         let elapsed = before.elapsed();
 
@@ -1247,14 +1247,14 @@ where
         &'a self,
         ctx: &'a CoreContext,
         source_cs: BonsaiChangeset,
-        bookmark: BookmarkKey,
+        target_bookmark: Target<BookmarkKey>,
         rewritedates: PushrebaseRewriteDates,
     ) -> Result<Option<ChangesetId>, Error> {
         let hash = source_cs.get_changeset_id();
         let (source_repo, target_repo) = self.get_source_target();
 
         let parent_selection_hint = CandidateSelectionHint::OnlyOrAncestorOfBookmark(
-            Target(bookmark.clone()),
+            target_bookmark.clone(),
             Target(self.get_target_repo().clone()),
         );
 
@@ -1386,7 +1386,7 @@ where
                     ctx,
                     &target_repo,
                     &pushrebase_flags,
-                    &bookmark,
+                    &target_bookmark,
                     &rewritten_list,
                     &[CrossRepoSyncPushrebaseHook::new(
                         hash,
