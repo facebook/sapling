@@ -21,7 +21,8 @@
   >           {
   >             "repoid": 1,
   >             "default_action": "prepend_prefix",
-  >             "default_prefix": "smallrepofolder"
+  >             "default_prefix": "smallrepofolder",
+  >             "direction": "small_to_large"
   >           }
   >         ],
   >         "version_name": "test_version"
@@ -44,18 +45,20 @@
 
   $ testtool_drawdag -R large << EOF
   > LA-LB-LC
-  >   \LD
+  >   \ 
+  >    LD
   > # bookmark: LA main
   > # bookmark: LA common_bookmark
   > EOF
   LA=b32ac5e4bcae0f9e8a25327e30674cf4f81ade62b6fb6fdf4e561f5099ec396a
   LB=b4534a5a2c4570a7f76b86de82927a8b35da5bc69f7618fe6724f09fa183ad25
   LC=207c0c64826e67a9fde5993ff2789ed838376b082656f49ce239536193a832bd
-  LD=55e6107d94bc705f7d97f90f13ba45aaaf505b36eba1f30c7b9361399725a4a8
+  LD=d52189c4c92bc5d3c99269e794afb72c31caf9ed4eba39abbb3c2739f010096d
 
   $ testtool_drawdag -R small << EOF
   > SA-SB-SC
-  >   \SD-SE
+  >   \ 
+  >    SD-SE
   > # bookmark: SA heads/main
   > # bookmark: SA heads/common_bookmark
   > # bookmark: SA heads/other_bookmark
@@ -63,8 +66,8 @@
   SA=7c5a873e5729acecbe37ac89b3f7cbc4292cd8cbcff60f39126ed74d9f55e05e
   SB=dd912eedd1899b2403fc507d74bec70bda5f4a035cd9851478847bc2b35dfa3f
   SC=9c27228ce4dda0e66c126c4560521707a6fc3e48d79d471bede547a76987d3be
-  SD=dff952c4a2e8b8933ccb668b2d67697de1a68b1f0e1480574bef4ce1240fac29
-  SE=4edb9d3bbdc18205682d544efd6fc19bd92a932a7e087330354e3da341738ec9
+  SD=2e8a00bae279cc78af17418196b1d6e78730b82752d758c7306f3b281038e8a3
+  SE=21fa4d2997f1f2e050b3911639e9643efcb90896b3551b0a9c6affc33c7ea708
 
 -- insert sync mapping entry for SA and DA which are equivalent
   $ add_synced_commit_mapping_entry 1 $SA 0 $LA test_version
@@ -103,7 +106,8 @@
 -- move the bookmarks
   $ testtool_drawdag -R large << EOF
   > LA-LB-LC
-  >   \LD
+  >   \ 
+  >    LD
   > # exists: LC $LC
   > # exists: LD $LD
   > # bookmark: LC main
@@ -112,15 +116,57 @@
   LA=b32ac5e4bcae0f9e8a25327e30674cf4f81ade62b6fb6fdf4e561f5099ec396a
   LB=b4534a5a2c4570a7f76b86de82927a8b35da5bc69f7618fe6724f09fa183ad25
   LC=207c0c64826e67a9fde5993ff2789ed838376b082656f49ce239536193a832bd
-  LD=55e6107d94bc705f7d97f90f13ba45aaaf505b36eba1f30c7b9361399725a4a8
+  LD=d52189c4c92bc5d3c99269e794afb72c31caf9ed4eba39abbb3c2739f010096d
+-- move heads/main in the small repo (the common pushrebase bookmark)
   $ testtool_drawdag -R small << EOF
   > SA-SB-SC
-  >   \SD-SE
+  >   \ 
+  >    SD-SE
+  > # exists: SA $SA
   > # exists: SB $SB
   > # exists: SC $SC
   > # exists: SD $SD
   > # exists: SE $SE
   > # bookmark: SC heads/main
+  > EOF
+  SA=7c5a873e5729acecbe37ac89b3f7cbc4292cd8cbcff60f39126ed74d9f55e05e
+  SB=dd912eedd1899b2403fc507d74bec70bda5f4a035cd9851478847bc2b35dfa3f
+  SC=9c27228ce4dda0e66c126c4560521707a6fc3e48d79d471bede547a76987d3be
+  SD=2e8a00bae279cc78af17418196b1d6e78730b82752d758c7306f3b281038e8a3
+  SE=21fa4d2997f1f2e050b3911639e9643efcb90896b3551b0a9c6affc33c7ea708
+
+-- sync 
+  $ mononoke_x_repo_sync 1 0 tail --catch-up-once
+  * using repo "small" repoid RepositoryId(1) (glob)
+  * using repo "large" repoid RepositoryId(0) (glob)
+  * using repo "small" repoid RepositoryId(1) (glob)
+  * using repo "large" repoid RepositoryId(0) (glob)
+  * queue size is 1 (glob)
+  * processing log entry #4 (glob)
+  * 2 unsynced ancestors of 9c27228ce4dda0e66c126c4560521707a6fc3e48d79d471bede547a76987d3be (glob)
+  * syncing dd912eedd1899b2403fc507d74bec70bda5f4a035cd9851478847bc2b35dfa3f (glob)
+  * changeset dd912eedd1899b2403fc507d74bec70bda5f4a035cd9851478847bc2b35dfa3f synced as 540414777d82df622b2762dc79dfba2d92f994481105e34d47274c4742dbedb0 * (glob)
+  * syncing 9c27228ce4dda0e66c126c4560521707a6fc3e48d79d471bede547a76987d3be (glob)
+  * changeset 9c27228ce4dda0e66c126c4560521707a6fc3e48d79d471bede547a76987d3be synced as fbdcc859102f75ca8d2d5b66313e6e32f3ec6a0e35e130350053f3ac097eb705 * (glob)
+  * successful sync bookmark update log #4 (glob)
+
+  $ mononoke_newadmin bookmarks --repo-name large list
+  d52189c4c92bc5d3c99269e794afb72c31caf9ed4eba39abbb3c2739f010096d common_bookmark
+  207c0c64826e67a9fde5993ff2789ed838376b082656f49ce239536193a832bd main
+  b32ac5e4bcae0f9e8a25327e30674cf4f81ade62b6fb6fdf4e561f5099ec396a small_repo_prefix/heads/common_bookmark
+  fbdcc859102f75ca8d2d5b66313e6e32f3ec6a0e35e130350053f3ac097eb705 small_repo_prefix/heads/main
+  b32ac5e4bcae0f9e8a25327e30674cf4f81ade62b6fb6fdf4e561f5099ec396a small_repo_prefix/heads/other_bookmark
+
+-- move other bookmarks
+  $ testtool_drawdag -R small << EOF
+  > SA-SB-SC
+  >   \ 
+  >    SD-SE
+  > # exists: SA $SA
+  > # exists: SB $SB
+  > # exists: SC $SC
+  > # exists: SD $SD
+  > # exists: SE $SE
   > # bookmark: SB tags/release_b
   > # bookmark: SD heads/common_bookmark
   > # bookmark: SE heads/other_bookmark
@@ -128,8 +174,8 @@
   SA=7c5a873e5729acecbe37ac89b3f7cbc4292cd8cbcff60f39126ed74d9f55e05e
   SB=dd912eedd1899b2403fc507d74bec70bda5f4a035cd9851478847bc2b35dfa3f
   SC=9c27228ce4dda0e66c126c4560521707a6fc3e48d79d471bede547a76987d3be
-  SD=dff952c4a2e8b8933ccb668b2d67697de1a68b1f0e1480574bef4ce1240fac29
-  SE=4edb9d3bbdc18205682d544efd6fc19bd92a932a7e087330354e3da341738ec9
+  SD=2e8a00bae279cc78af17418196b1d6e78730b82752d758c7306f3b281038e8a3
+  SE=21fa4d2997f1f2e050b3911639e9643efcb90896b3551b0a9c6affc33c7ea708
 
 -- sync again
   $ mononoke_x_repo_sync 1 0 tail --catch-up-once
@@ -137,33 +183,47 @@
   * using repo "large" repoid RepositoryId(0) (glob)
   * using repo "small" repoid RepositoryId(1) (glob)
   * using repo "large" repoid RepositoryId(0) (glob)
-  * queue size is 4 (glob)
-  * processing log entry #4 (glob)
-  * 1 unsynced ancestors of dd912eedd1899b2403fc507d74bec70bda5f4a035cd9851478847bc2b35dfa3f (glob)
-  * syncing dd912eedd1899b2403fc507d74bec70bda5f4a035cd9851478847bc2b35dfa3f (glob)
-  * changeset dd912eedd1899b2403fc507d74bec70bda5f4a035cd9851478847bc2b35dfa3f synced as 540414777d82df622b2762dc79dfba2d92f994481105e34d47274c4742dbedb0 * (glob)
-  * successful sync bookmark update log #4 (glob)
+  * queue size is 3 (glob)
   * processing log entry #5 (glob)
-  * Skipped syncing log entry #5 because no mapping version found. Is it a new root commit in the repo? (glob)
+  * 0 unsynced ancestors of dd912eedd1899b2403fc507d74bec70bda5f4a035cd9851478847bc2b35dfa3f (glob)
+  * successful sync bookmark update log #5 (glob)
   * processing log entry #6 (glob)
-  * 1 unsynced ancestors of 9c27228ce4dda0e66c126c4560521707a6fc3e48d79d471bede547a76987d3be (glob)
-  * syncing 9c27228ce4dda0e66c126c4560521707a6fc3e48d79d471bede547a76987d3be (glob)
-  * changeset 9c27228ce4dda0e66c126c4560521707a6fc3e48d79d471bede547a76987d3be synced as fbdcc859102f75ca8d2d5b66313e6e32f3ec6a0e35e130350053f3ac097eb705 * (glob)
+  * 1 unsynced ancestors of 2e8a00bae279cc78af17418196b1d6e78730b82752d758c7306f3b281038e8a3 (glob)
+  * syncing 2e8a00bae279cc78af17418196b1d6e78730b82752d758c7306f3b281038e8a3 (glob)
+  * changeset 2e8a00bae279cc78af17418196b1d6e78730b82752d758c7306f3b281038e8a3 synced as b149e7a688c2bac6a2f25dc4b846060f774967ae82eeac54cc1a7c148b215b27 * (glob)
   * successful sync bookmark update log #6 (glob)
   * processing log entry #7 (glob)
-  * Skipped syncing log entry #7 because no mapping version found. Is it a new root commit in the repo? (glob)
+  * 1 unsynced ancestors of 21fa4d2997f1f2e050b3911639e9643efcb90896b3551b0a9c6affc33c7ea708 (glob)
+  * syncing 21fa4d2997f1f2e050b3911639e9643efcb90896b3551b0a9c6affc33c7ea708 (glob)
+  * changeset 21fa4d2997f1f2e050b3911639e9643efcb90896b3551b0a9c6affc33c7ea708 synced as f2f336ed26e996561dc4156ce6a5b647a30abe6b0584615c5739caaf8f6d153e * (glob)
+  * successful sync bookmark update log #7 (glob)
 
 -- check the state of bookmarks in the large repo
--- Once we support different names for the same bookmark between small and large repo,
---  * main shouldn't be 207c0c6 as that is the same as LC, indicating that it wasn't modified by importing SC
---  * small_repo_prefix/heads/main should not exist as that bookmark should be push-rebased onto main
   $ mononoke_newadmin bookmarks --repo-name large list
-  55e6107d94bc705f7d97f90f13ba45aaaf505b36eba1f30c7b9361399725a4a8 common_bookmark
+  d52189c4c92bc5d3c99269e794afb72c31caf9ed4eba39abbb3c2739f010096d common_bookmark
   207c0c64826e67a9fde5993ff2789ed838376b082656f49ce239536193a832bd main
-  b32ac5e4bcae0f9e8a25327e30674cf4f81ade62b6fb6fdf4e561f5099ec396a small_repo_prefix/heads/common_bookmark
+  b149e7a688c2bac6a2f25dc4b846060f774967ae82eeac54cc1a7c148b215b27 small_repo_prefix/heads/common_bookmark
   fbdcc859102f75ca8d2d5b66313e6e32f3ec6a0e35e130350053f3ac097eb705 small_repo_prefix/heads/main
-  b32ac5e4bcae0f9e8a25327e30674cf4f81ade62b6fb6fdf4e561f5099ec396a small_repo_prefix/heads/other_bookmark
+  f2f336ed26e996561dc4156ce6a5b647a30abe6b0584615c5739caaf8f6d153e small_repo_prefix/heads/other_bookmark
   540414777d82df622b2762dc79dfba2d92f994481105e34d47274c4742dbedb0 small_repo_prefix/tags/release_b
+
+-- check the graph after all the syncing
+  $ mononoke_newadmin changelog -R large graph -i d52189c4c92bc5d3c99269e794afb72c31caf9ed4eba39abbb3c2739f010096d,207c0c64826e67a9fde5993ff2789ed838376b082656f49ce239536193a832bd,b149e7a688c2bac6a2f25dc4b846060f774967ae82eeac54cc1a7c148b215b27,fbdcc859102f75ca8d2d5b66313e6e32f3ec6a0e35e130350053f3ac097eb705,f2f336ed26e996561dc4156ce6a5b647a30abe6b0584615c5739caaf8f6d153e,540414777d82df622b2762dc79dfba2d92f994481105e34d47274c4742dbedb0 -M
+  o  message: SC
+  │
+  │ o  message: SE
+  │ │
+  │ │ o  message: LC
+  │ │ │
+  │ │ │ o  message: LD
+  │ │ │ │
+  │ │ o │  message: LB
+  │ │ ├─╯
+  │ o │  message: SD
+  │ ├─╯
+  o │  message: SB
+  ├─╯
+  o  message: LA
 
 -- check the mutable counters
 $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select * from mutable_counters where name = 'xreposync_from_1'";
