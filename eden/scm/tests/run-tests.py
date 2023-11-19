@@ -2402,7 +2402,7 @@ class IOLockWithProgress:
 iolock = showprogress and IOLockWithProgress() or _iolock
 
 
-class TestResult(unittest._TextTestResult):
+class TestResult(unittest.TextTestResult):
     """Holds results when executing via unittest."""
 
     # Don't worry too much about accessing the non-public _TextTestResult.
@@ -2459,7 +2459,7 @@ class TestResult(unittest._TextTestResult):
 
     def addSuccess(self, test):
         if showprogress and not self.showAll:
-            super(unittest._TextTestResult, self).addSuccess(test)
+            super(unittest.TextTestResult, self).addSuccess(test)
         else:
             with iolock:
                 super(TestResult, self).addSuccess(test)
@@ -2467,7 +2467,7 @@ class TestResult(unittest._TextTestResult):
 
     def addError(self, test, err):
         if showprogress and not self.showAll:
-            super(unittest._TextTestResult, self).addError(test, err)
+            super(unittest.TextTestResult, self).addError(test, err)
         else:
             with iolock:
                 super(TestResult, self).addError(test, err)
