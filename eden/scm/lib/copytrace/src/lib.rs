@@ -19,6 +19,7 @@ pub use crate::git_copy_trace::GitCopyTrace;
 pub use crate::rename_finders::ContentSimilarityRenameFinder;
 pub use crate::rename_finders::MetadataRenameFinder;
 pub use crate::rename_finders::RenameFinder;
+pub use crate::utils::is_content_similar;
 
 #[cfg(test)]
 mod tests;
