@@ -13,6 +13,7 @@ use context::SessionClass;
 use derived_data_utils::derived_data_utils;
 use derived_data_utils::POSSIBLE_DERIVED_TYPES;
 use futures_stats::TimedTryFutureExt;
+use mononoke_api::ChangesetId;
 use mononoke_app::args::ChangesetArgs;
 use slog::trace;
 
@@ -24,18 +25,33 @@ pub(super) struct DeriveArgs {
     changeset_args: ChangesetArgs,
     /// Type of derived data
     #[clap(long, short = 'T', value_parser = PossibleValuesParser::new(POSSIBLE_DERIVED_TYPES))]
-    derived_data_type: String,
+    derived_data_types: Vec<String>,
     /// Whether the changesets need to be rederived or not
     #[clap(long)]
     pub(crate) rederive: bool,
 }
 
 pub(super) async fn derive(ctx: &mut CoreContext, repo: &Repo, args: DeriveArgs) -> Result<()> {
-    let derived_utils = derived_data_utils(ctx.fb, repo, args.derived_data_type)?;
+    let resolved_csids = args.changeset_args.resolve_changesets(ctx, repo).await?;
+    let csids = resolved_csids.as_slice();
 
-    let csids = args.changeset_args.resolve_changesets(ctx, repo).await?;
+    for derived_data_type in args.derived_data_types {
+        derive_data_type(ctx, repo, derived_data_type, csids, args.rederive).await?;
+    }
 
-    if args.rederive {
+    Ok(())
+}
+
+async fn derive_data_type(
+    ctx: &mut CoreContext,
+    repo: &Repo,
+    derived_data_type: String,
+    csids: &[ChangesetId],
+    rederive: bool,
+) -> Result<()> {
+    let derived_utils = derived_data_utils(ctx.fb, repo, derived_data_type)?;
+
+    if rederive {
         trace!(ctx.logger(), "about to rederive {} commits", csids.len());
         derived_utils.regenerate(&csids);
         // Force this binary to write to all blobstores
@@ -48,7 +64,7 @@ pub(super) async fn derive(ctx: &mut CoreContext, repo: &Repo, args: DeriveArgs)
     for csid in csids {
         trace!(ctx.logger(), "deriving {}", csid);
         let (stats, res) = derived_utils
-            .derive(ctx.clone(), repo.repo_derived_data.clone(), csid)
+            .derive(ctx.clone(), repo.repo_derived_data.clone(), *csid)
             .try_timed()
             .await?;
         trace!(

@@ -21,9 +21,9 @@ setup configuration
   D=5a25c0a76794bbcc5180da0949a652750101597f0fbade488e611d5c0917e7be
 
 derived-data derive:
-  $ mononoke_newadmin derived-data -R repo derive -T unodes -B main && echo success || echo failure
+  $ mononoke_newadmin derived-data -R repo derive -T unodes -T blame -B main && echo success || echo failure
   success
-  $ mononoke_newadmin derived-data -R repo derive --rederive -T unodes -B main && echo success || echo failure
+  $ mononoke_newadmin derived-data -R repo derive --rederive -T unodes -T blame -B main && echo success || echo failure
   success
 
 derived-data exists:
