@@ -61,6 +61,12 @@ impl EdenFsClient {
         self.eden_config.root.as_ref()
     }
 
+    /// Get the EdenFS "client" path. This is different from the "root" path.
+    /// The client path contains files like `config.toml`.
+    pub fn client_path(&self) -> &Path {
+        self.eden_config.client.as_ref()
+    }
+
     /// Construct a raw Thrift client from the given repo root.
     pub(crate) async fn get_thrift_client(&self) -> anyhow::Result<Arc<dyn EdenService>> {
         let transport = get_socket_transport(&self.eden_config.socket).await?;
@@ -221,6 +227,7 @@ async fn get_socket_transport(sock_path: &Path) -> Result<SocketTransport<UnixSt
 struct EdenConfig {
     root: String,
     socket: PathBuf,
+    client: PathBuf,
 }
 
 impl EdenConfig {
@@ -257,9 +264,12 @@ impl EdenConfig {
             .into_os_string()
             .into_string()
             .map_err(|path| anyhow!("couldn't stringify path {:?}", path))?;
+        let socket = fs_err::read_link(dot_eden.join("socket"))?;
+        let client = fs_err::read_link(dot_eden.join("client"))?;
         Ok(Self {
             root,
-            socket: fs_err::read_link(dot_eden.join("socket"))?,
+            socket,
+            client,
         })
     }
 }
