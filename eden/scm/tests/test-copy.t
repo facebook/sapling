@@ -137,8 +137,8 @@ moving a missing file
   foo3 does not exist!
   $ hg up -qC .
 
-copy --after to a nonexistent target filename
-  $ hg cp -A foo dummy
+copy --mark to a nonexistent target filename
+  $ hg cp --mark foo dummy
   foo: not recording copy - dummy does not exist
 
 dry-run; should show that foo is clean
@@ -195,10 +195,10 @@ should match
 should show no copies
   $ hg st -C
 
-copy --after on an added file
+copy --mark on an added file
   $ cp bar baz
   $ hg add baz
-  $ hg cp -A bar baz
+  $ hg cp --mark bar baz
   $ hg st -C
   A baz
     bar
@@ -207,16 +207,16 @@ foo was clean:
   $ hg st -AC foo
   C foo
 Trying to copy on top of an existing file fails,
-  $ hg copy -A bar foo
+  $ hg copy --mark bar foo
   foo: not overwriting - file already committed
-  (hg copy --after --force to replace the file by recording a copy)
-same error without the --after, so the user doesn't have to go through
+  (hg copy --mark --force to replace the file by recording a copy)
+same error without the --mark, so the user doesn't have to go through
 two hints:
   $ hg copy bar foo
   foo: not overwriting - file already committed
   (hg copy --force to replace the file by recording a copy)
-but it's considered modified after a copy --after --force
-  $ hg copy -Af bar foo
+but it's considered modified after a copy --mark --force
+  $ hg copy --mark -f bar foo
   $ hg st -AC foo
   M foo
     bar
@@ -225,6 +225,6 @@ mention --force:
   $ touch xyzzy
   $ hg cp bar xyzzy
   xyzzy: not overwriting - file exists
-  (hg copy --after to record the copy)
+  (hg copy --mark to record the copy)
 
   $ cd ..

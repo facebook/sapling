@@ -1220,14 +1220,14 @@ def copy(ui, repo, pats, opts, rename=False):
     # ossep => pathname that uses os.sep to separate directories
     cwd = repo.getcwd()
     targets = {}
-    after = opts.get("after")
+    mark = opts.get("mark") or opts.get("after")
     dryrun = opts.get("dry_run")
     wctx = repo[None]
     auditor = pathutil.pathauditor(repo.root)
 
     def walkpat(pat):
         srcs = []
-        if after:
+        if mark:
             badstates = "?"
         else:
             badstates = "?r"
@@ -1250,7 +1250,7 @@ def copy(ui, repo, pats, opts, rename=False):
             srcs.append((abs, rel, exact))
         return srcs
 
-    # target exists  --after  --force|  action
+    # target exists  --mark   --force|  action
     #       n            n      *    |  copy
     #       n            y      *    |  (1)
     #   untracked        n      n    |  (4) (a)
@@ -1270,8 +1270,8 @@ def copy(ui, repo, pats, opts, rename=False):
     # (2) preserve target contents
     # (3) replace target contents
     # (4) <target>: not overwriting - file {exists,already committed};
-    # (a) with '--after' hint
-    # (b) with '--after --force' hint
+    # (a) with '--mark' hint
+    # (b) with '--mark --force' hint
 
     # abssrc: hgsep
     # relsrc: ossep
@@ -1311,12 +1311,12 @@ def copy(ui, repo, pats, opts, rename=False):
                 exists = False
                 samefile = True
 
-        if not after and exists or after and state in "mn":
+        if not mark and exists or mark and state in "mn":
             if not opts["force"]:
                 if state in "mn":
                     msg = _("%s: not overwriting - file already committed\n")
-                    if after:
-                        flags = "--after --force"
+                    if mark:
+                        flags = "--mark --force"
                     else:
                         flags = "--force"
                     if rename:
@@ -1338,14 +1338,14 @@ def copy(ui, repo, pats, opts, rename=False):
                 else:
                     msg = _("%s: not overwriting - file exists\n")
                     if rename:
-                        hint = _("(@prog@ rename --after to record the rename)\n")
+                        hint = _("(@prog@ rename --mark to record the rename)\n")
                     else:
-                        hint = _("(@prog@ copy --after to record the copy)\n")
+                        hint = _("(@prog@ copy --mark to record the copy)\n")
                 ui.warn(msg % reltarget)
                 ui.warn(hint)
                 return
 
-        if after:
+        if mark:
             if not exists:
                 if rename:
                     ui.warn(
@@ -1394,7 +1394,7 @@ def copy(ui, repo, pats, opts, rename=False):
         # fix up dirstate
         scmutil.dirstatecopy(ui, repo, wctx, abssrc, abstarget, dryrun=dryrun, cwd=cwd)
         if rename and not dryrun:
-            if not after and srcexists and not samefile:
+            if not mark and srcexists and not samefile:
                 repo.wvfs.unlinkpath(abssrc)
             wctx.forget([abssrc])
 
@@ -1478,7 +1478,7 @@ def copy(ui, repo, pats, opts, rename=False):
             raise error.Abort(_("destination %s is not a directory") % dest)
 
     tfn = targetpathfn
-    if after:
+    if mark:
         tfn = targetpathafterfn
     copylist = []
     for pat in pats:
@@ -1496,7 +1496,7 @@ def copy(ui, repo, pats, opts, rename=False):
                 errors += 1
 
     if errors:
-        ui.warn(_("(consider using --after)\n"))
+        ui.warn(_("(consider using --mark)\n"))
 
     return errors != 0
 

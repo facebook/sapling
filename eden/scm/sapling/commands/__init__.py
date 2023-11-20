@@ -1985,7 +1985,8 @@ def continuecmd(ui, repo):
 @command(
     "copy|cp",
     [
-        ("A", "after", None, _("record a copy that has already occurred")),
+        ("", "mark", None, _("mark as a copy without actual copying")),
+        ("A", "after", None, _("alias to --mark (DEPRECATED)")),
         ("f", "force", None, _("forcibly copy over an existing managed file")),
     ]
     + walkopts
@@ -2001,7 +2002,7 @@ def copy(ui, repo, *pats, **opts):
     the source must be a single file.
 
     By default, this command copies the contents of files as they
-    exist in the working directory. If invoked with ``-A/--after``, the
+    exist in the working directory. If invoked with ``--mark``, the
     operation is recorded, but no copying is performed.
 
     This command takes effect with the next commit. To undo a copy
@@ -5191,7 +5192,8 @@ def remove(ui, repo, *pats, **opts):
 @command(
     "rename|move|mv",
     [
-        ("A", "after", None, _("record a rename that has already occurred")),
+        ("", "mark", None, _("mark as a rename without actual renaming")),
+        ("A", "after", None, _("alias to --mark (DEPRECATED)")),
         ("f", "force", None, _("forcibly copy over an existing managed file")),
     ]
     + walkopts
@@ -5207,7 +5209,7 @@ def rename(ui, repo, *pats, **opts):
     file, there can only be one source.
 
     By default, this command copies the contents of files as they
-    exist in the working directory. If invoked with -A/--after, the
+    exist in the working directory. If invoked with --mark, the
     operation is recorded, but no copying is performed.
 
     This command takes effect at the next commit. To undo a rename
