@@ -12,6 +12,7 @@ harness = false
 [dependencies]
 anyhow = "=1.0.72"
 byteorder = "1.3"
+clientinfo = { version = "0.1.0", path = "../clientinfo" }
 indexedlog = { version = "0.1.0", path = "../indexedlog" }
 lazy_static = "1.4"
 libc = "0.2.139"
