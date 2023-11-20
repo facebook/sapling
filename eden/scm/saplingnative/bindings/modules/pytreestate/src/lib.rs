@@ -93,13 +93,9 @@ py_class!(pub class treestate |py| {
         Ok(root_id.0)
     }
 
-    def reset(&self, directory: PyPathBuf) -> PyResult<u64> {
+    def reset(&self) -> PyResult<u64> {
         let mut treestate = self.state(py).lock();
-        let (new_treestate, root_id) = convert_result(py, TreeState::new(
-            directory.as_path(),
-            VFS::new(directory.as_path().to_path_buf()).map_pyerr(py)?.case_sensitive(),
-        ))?;
-        *treestate = new_treestate;
+        let root_id = convert_result(py, treestate.reset())?;
         Ok(root_id.0)
     }
 

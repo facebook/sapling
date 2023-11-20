@@ -145,7 +145,7 @@ class treestatemap:
         self.setparents(node.nullid, node.nullid)
 
         # use a new file
-        self._rootid = self._tree.reset(self._vfs.join("treestate"))
+        self._rootid = self._tree.reset()
 
     def iteritems(self):
         return ((k, self[k]) for k in self.keys())

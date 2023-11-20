@@ -17,6 +17,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 
 use anyhow::anyhow;
+use anyhow::Context;
 use anyhow::Result;
 use types::HgId;
 use util::path::create_dir;
@@ -111,6 +112,17 @@ impl TreeState {
 
         tracing::trace!(target: "treestate::create", "treestate created");
         Ok((treestate, root_id))
+    }
+
+    pub fn reset(&mut self) -> Result<BlockId> {
+        let directory = self
+            .store
+            .path()
+            .and_then(|p| p.parent())
+            .context("when getting the store directory for resetting treestate")?;
+        let (new_treestate, root_id) = Self::new(directory, self.case_sensitive)?;
+        *self = new_treestate;
+        Ok(root_id)
     }
 
     /// Provides the ability to populate a treestate from a legacy eden dirstate.
