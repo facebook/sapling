@@ -112,4 +112,7 @@ function clone_and_log_large_repo {
 
   printf "\n\nRunning mononoke_admin to verify mapping\n\n"
   with_stripped_logs mononoke_admin_source_target "$SMALL_REPO_ID" "$LARGE_REPO_ID" crossrepo map "$HEAD_COMMIT"
+
+  printf "\nDeriving all the enabled derived data types\n"
+  mononoke_newadmin derived-data -R "$LARGE_REPO_NAME" derive --all-types -B "$TARGET_BOOKMARK" && echo success || echo failure
 }

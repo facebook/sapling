@@ -75,3 +75,6 @@ Create commit that modifies git submodule in small repo
   using repo "large_repo" repoid RepositoryId(0)
   changeset resolved as: ChangesetId(Blake2(4ab1f8925a8b6a48eaafb3bb8ce5bfb351bd4301c78d557cd799b721b5a4c6e9))
   RewrittenAs([(ChangesetId(Blake2(30a912050a27826f649bcce7bd1b2fbfe1bf9b2883dcabc17753c2f9f1ab3ad5)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
+  
+  Deriving all the enabled derived data types
+  success

@@ -45,7 +45,8 @@ Create commit that modifies git submodule in small repo
   changeset ab5bf42dd164f61fa2bcb2de20224d8ffb60f12619bb3692f69d7c171dc1c3be synced as f299e57c379932297b130d60f6d86e54c87c8e02507bf0867783e23d7d8f8a50 in * (glob)
   successful sync
 
-
+# NOTE: this command is expected to fail because some types can't be derived 
+# for bonsais with git submodules.
   $ clone_and_log_large_repo "$NEW_BOOKMARK_NAME" "$C"
   streaming all changes
   2 files to transfer, 0 bytes of data
@@ -72,3 +73,7 @@ Create commit that modifies git submodule in small repo
   using repo "large_repo" repoid RepositoryId(0)
   changeset resolved as: ChangesetId(Blake2(ab5bf42dd164f61fa2bcb2de20224d8ffb60f12619bb3692f69d7c171dc1c3be))
   RewrittenAs([(ChangesetId(Blake2(f299e57c379932297b130d60f6d86e54c87c8e02507bf0867783e23d7d8f8a50)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
+  
+  Deriving all the enabled derived data types
+  Error: Git submodules not supported
+  failure

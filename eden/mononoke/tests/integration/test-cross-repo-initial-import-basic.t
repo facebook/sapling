@@ -76,3 +76,6 @@ Create small repo commits
   using repo "large_repo" repoid RepositoryId(0)
   changeset resolved as: ChangesetId(Blake2(738630e43445144e9f5ddbe1869730cfbaf8ff6bf95b25b8410cb35ca92f25c7))
   RewrittenAs([(ChangesetId(Blake2(ca175120dfe7fb7fcb0d872e26ce331cb24c7d9ec457d599a40684527c65d63a)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
+  
+  Deriving all the enabled derived data types
+  success
