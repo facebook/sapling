@@ -40,6 +40,7 @@ from . import (
     formatter,
     git,
     graphmod,
+    hintutil,
     identity,
     json,
     match as matchmod,
@@ -2426,6 +2427,8 @@ def showmarker(fm, marker, index=None):
 def finddate(ui, repo, date):
     """Find the tipmost changeset that matches the given date spec"""
 
+    if not ui.quiet:
+        hintutil.triggershow(ui, "date-option", date, bookmarks.mainbookmark(repo))
     df = util.matchdate(date)
     m = scmutil.matchall(repo)
     results = {}

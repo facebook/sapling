@@ -37,6 +37,10 @@ hinttable = {
         'date("%s") performs a slow scan. Consider bsearch(date(">%s"),%s) instead.'
     )
     % (ds, ds, top),
+    "date-option": lambda ds, top: _(
+        '--date performs a slow scan. Consider using --revset bsearch(date(">%s"),%s) instead.'
+    )
+    % (ds, top),
     "match-full-traversal": lambda pats: _(
         'the patterns "%s" may be slow since they traverse the entire repo (see "@prog@ help patterns")',
     )
