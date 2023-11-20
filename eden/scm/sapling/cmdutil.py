@@ -3583,9 +3583,9 @@ def eden_files(ui, ctx, m, fm, fmt):
     return ret
 
 
-def remove(ui, repo, m, prefix, after, force, warnings=None):
+def remove(ui, repo, m, prefix, mark, force, warnings=None):
     ret = 0
-    clean = force or not after
+    clean = force or not mark
     s = repo.status(match=m, clean=clean)
     modified, added, deleted, clean = s[0], s[1], s[3], s[6]
 
@@ -3619,7 +3619,7 @@ def remove(ui, repo, m, prefix, after, force, warnings=None):
 
     if force:
         list = modified + deleted + clean + added
-    elif after:
+    elif mark:
         list = deleted
         # For performance, "remaining" only lists "exact" matches.
         # In theory it should also list "clean" files but that's too expensive
@@ -3662,7 +3662,7 @@ def remove(ui, repo, m, prefix, after, force, warnings=None):
                 ui.status(_("removing %s\n") % m.rel(f))
 
     with repo.wlock():
-        if not after:
+        if not mark:
             for f in list:
                 if f in added:
                     continue  # we never unlink added files on remove

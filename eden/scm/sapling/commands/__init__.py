@@ -5132,7 +5132,8 @@ def recover(ui, repo):
 @command(
     "remove|rm",
     [
-        ("A", "after", None, _("record delete for missing files")),
+        ("", "mark", None, _("mark as a deletion for already missing files")),
+        ("A", "after", None, _("alias to --mark (DEPRECATED)")),
         ("f", "force", None, _("forget added files, delete modified files")),
     ]
     + walkopts,
@@ -5152,7 +5153,7 @@ def remove(ui, repo, *pats, **opts):
 
     .. container:: verbose
 
-      ``-A/--after`` can be used to remove only files that have already
+      ``--mark`` can be used to remove only files that have already
       been deleted, ``-f/--force`` can be used to force deletion, and ``-Af``
       can be used to remove files from the next revision without
       deleting them from the working directory.
@@ -5181,12 +5182,13 @@ def remove(ui, repo, *pats, **opts):
     Returns 0 on success, 1 if any warnings encountered.
     """
 
-    after, force = opts.get("after"), opts.get("force")
-    if not pats and not after:
+    mark = opts.get("mark") or opts.get("after")
+    force = opts.get("force")
+    if not pats and not mark:
         raise error.Abort(_("no files specified"))
 
     m = scmutil.match(repo[None], pats, opts)
-    return cmdutil.remove(ui, repo, m, "", after, force)
+    return cmdutil.remove(ui, repo, m, "", mark, force)
 
 
 @command(
