@@ -1250,6 +1250,29 @@ def copy(ui, repo, pats, opts, rename=False):
             srcs.append((abs, rel, exact))
         return srcs
 
+    # target exists  --after  --force|  action
+    #       n            n      *    |  copy
+    #       n            y      *    |  (1)
+    #   untracked        n      n    |  (4) (a)
+    #   untracked        n      y    |  (3)
+    #   untracked        y      *    |  (2)
+    #       y            n      n    |  (4) (b)
+    #       y            n      y    |  (3)
+    #       y            y      n    |  (2)
+    #       y            y      y    |  (3)
+    #    deleted         n      n    |  copy
+    #    deleted         n      y    |  (3)
+    #    deleted         y      n    |  (1)
+    #    deleted         y      y    |  (1)
+    #
+    # * = don't care
+    # (1) <src>: not recording move - <target> does not exist
+    # (2) preserve target contents
+    # (3) replace target contents
+    # (4) <target>: not overwriting - file {exists,already committed};
+    # (a) with '--after' hint
+    # (b) with '--after --force' hint
+
     # abssrc: hgsep
     # relsrc: ossep
     # otarget: ossep
