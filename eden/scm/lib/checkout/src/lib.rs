@@ -24,6 +24,7 @@ use anyhow::Error;
 use anyhow::Result;
 use atexit::AtExit;
 use crossbeam::channel;
+#[cfg(windows)]
 use fs_err as fs;
 use io::IO;
 use manifest::FileMetadata;
@@ -1090,6 +1091,8 @@ mod test {
     use anyhow::ensure;
     use anyhow::Context;
     use fs::create_dir;
+    #[cfg(unix)]
+    use fs_err as fs;
     use manifest_tree::testutil::make_tree_manifest_from_meta;
     use manifest_tree::testutil::TestStore;
     use manifest_tree::Diff;

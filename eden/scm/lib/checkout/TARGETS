@@ -18,8 +18,17 @@ rust_library(
         },
     },
     crate_root = "src/lib.rs",
+    os_deps = [
+        (
+            "windows",
+            [
+                "fbsource//third-party/rust:fs-err",
+            ],
+        ),
+    ],
     test_deps = [
         "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:fs-err",
         "fbsource//third-party/rust:quickcheck",
         "fbsource//third-party/rust:tempfile",
         "fbsource//third-party/rust:walkdir",
@@ -30,7 +39,6 @@ rust_library(
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:crossbeam",
         "fbsource//third-party/rust:fail",
-        "fbsource//third-party/rust:fs-err",
         "fbsource//third-party/rust:parking_lot",
         "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:thiserror",

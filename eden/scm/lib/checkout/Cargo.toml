@@ -11,7 +11,6 @@ atexit = { version = "0.1.0", path = "../util/atexit" }
 configmodel = { version = "0.1.0", path = "../config/model" }
 crossbeam = "0.8"
 fail = { version = "0.4", features = ["failpoints"] }
-fs-err = { version = "2.6.0", features = ["tokio"] }
 io = { version = "0.1.0", path = "../io" }
 manifest = { version = "0.1.0", path = "../manifest", features = ["for-tests"] }
 manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
@@ -34,7 +33,11 @@ workingcopy = { version = "0.1.0", path = "../workingcopy" }
 
 [dev-dependencies]
 async-trait = "0.1.71"
+fs-err = { version = "2.6.0", features = ["tokio"] }
 manifest-tree = { version = "0.1.0", path = "../manifest-tree", features = ["for-tests"] }
 quickcheck = "1.0"
 tempfile = "3.8"
 walkdir = "2.3"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+fs-err = { version = "2.6.0", features = ["tokio"] }
