@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
+
 use anyhow::Result;
 use clap::builder::PossibleValuesParser;
 use clap::Args;
@@ -15,6 +17,7 @@ use derived_data_utils::POSSIBLE_DERIVED_TYPES;
 use futures_stats::TimedTryFutureExt;
 use mononoke_api::ChangesetId;
 use mononoke_app::args::ChangesetArgs;
+use repo_derived_data::RepoDerivedDataRef;
 use slog::trace;
 
 use super::Repo;
@@ -24,8 +27,11 @@ pub(super) struct DeriveArgs {
     #[clap(flatten)]
     changeset_args: ChangesetArgs,
     /// Type of derived data
-    #[clap(long, short = 'T', value_parser = PossibleValuesParser::new(POSSIBLE_DERIVED_TYPES))]
+    #[clap(long, short = 'T', required = true,  value_parser = PossibleValuesParser::new(POSSIBLE_DERIVED_TYPES), group="types to derive")]
     derived_data_types: Vec<String>,
+    /// Whether all enabled derived data types should be derived
+    #[clap(long, required = true, group = "types to derive")]
+    all_types: bool,
     /// Whether the changesets need to be rederived or not
     #[clap(long)]
     pub(crate) rederive: bool,
@@ -35,7 +41,16 @@ pub(super) async fn derive(ctx: &mut CoreContext, repo: &Repo, args: DeriveArgs)
     let resolved_csids = args.changeset_args.resolve_changesets(ctx, repo).await?;
     let csids = resolved_csids.as_slice();
 
-    for derived_data_type in args.derived_data_types {
+    let derived_data_types = if args.all_types {
+        // Derive all the types enabled in the config
+        let derived_data_config = repo.repo_derived_data().active_config();
+        derived_data_config.types.clone()
+    } else {
+        // Only derive the types specified by the user
+        args.derived_data_types.into_iter().collect::<HashSet<_>>()
+    };
+
+    for derived_data_type in derived_data_types {
         derive_data_type(ctx, repo, derived_data_type, csids, args.rederive).await?;
     }
 
@@ -49,11 +64,11 @@ async fn derive_data_type(
     csids: &[ChangesetId],
     rederive: bool,
 ) -> Result<()> {
-    let derived_utils = derived_data_utils(ctx.fb, repo, derived_data_type)?;
+    let derived_utils = derived_data_utils(ctx.fb, repo, derived_data_type.clone())?;
 
     if rederive {
         trace!(ctx.logger(), "about to rederive {} commits", csids.len());
-        derived_utils.regenerate(&csids);
+        derived_utils.regenerate(csids);
         // Force this binary to write to all blobstores
         ctx.session_mut()
             .override_session_class(SessionClass::Background);
@@ -69,7 +84,8 @@ async fn derive_data_type(
             .await?;
         trace!(
             ctx.logger(),
-            "derived {} in {}ms, {:?}",
+            "derived {} for {} in {}ms, {:?}",
+            &derived_data_type,
             csid,
             stats.completion_time.as_millis(),
             res,
