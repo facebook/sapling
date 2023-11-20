@@ -175,6 +175,7 @@ pub async fn do_sync_diamond_merge(
                 cs_id,
                 CandidateSelectionHint::Only,
                 CommitSyncContext::SyncDiamondMerge,
+                None,
             )
             .await?;
     }

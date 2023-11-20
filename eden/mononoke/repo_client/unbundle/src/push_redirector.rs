@@ -875,6 +875,7 @@ impl<R: Repo> PushRedirector<R> {
                     *bcs_id,
                     candidate_selection_hint.clone(),
                     CommitSyncContext::PushRedirector,
+                    None,
                 )
                 .await?
                 .ok_or_else(|| {

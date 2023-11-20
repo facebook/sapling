@@ -1204,6 +1204,7 @@ async fn run_sync_commit_and_ancestors<'a>(
                 ancestor,
                 CandidateSelectionHint::Only,
                 CommitSyncContext::AdminChangeMapping,
+                None,
             )
             .await?;
     }

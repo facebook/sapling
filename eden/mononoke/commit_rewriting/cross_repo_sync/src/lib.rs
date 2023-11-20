@@ -1003,35 +1003,10 @@ where
         source_cs_id: ChangesetId,
         parent_mapping_selection_hint: CandidateSelectionHint<R>,
         commit_sync_context: CommitSyncContext,
-    ) -> Result<Option<ChangesetId>, Error> {
-        let before = Instant::now();
-        let res = self
-            .unsafe_sync_commit_impl(ctx, source_cs_id, parent_mapping_selection_hint, None)
-            .await;
-        let elapsed = before.elapsed();
-        log_rewrite(
-            ctx,
-            self.scuba_sample.clone(),
-            source_cs_id,
-            "unsafe_sync_commit",
-            commit_sync_context,
-            elapsed,
-            &res,
-        );
-        res
-    }
-
-    /// Just like unsafe_sync_commit, but sets an expected version i.e.
-    /// for commits that have at least a single parent it checks that these commits
-    /// will be rewritten with this version, and for commits with no parents
-    /// this expected version will be used for rewriting.
-    pub async fn unsafe_sync_commit_with_expected_version(
-        &self,
-        ctx: &CoreContext,
-        source_cs_id: ChangesetId,
-        parent_mapping_selection_hint: CandidateSelectionHint<R>,
-        expected_version: CommitSyncConfigVersion,
-        commit_sync_context: CommitSyncContext,
+        // For commits that have at least a single parent it checks that these commits
+        // will be rewritten with this version, and for commits with no parents
+        // this expected version will be used for rewriting.
+        expected_version: Option<CommitSyncConfigVersion>,
     ) -> Result<Option<ChangesetId>, Error> {
         let before = Instant::now();
         let res = self
@@ -1039,7 +1014,7 @@ where
                 ctx,
                 source_cs_id,
                 parent_mapping_selection_hint,
-                Some(expected_version),
+                expected_version,
             )
             .await;
         let elapsed = before.elapsed();
@@ -1047,7 +1022,7 @@ where
             ctx,
             self.scuba_sample.clone(),
             source_cs_id,
-            "unsafe_sync_commit_with_expected_version",
+            "unsafe_sync_commit",
             commit_sync_context,
             elapsed,
             &res,

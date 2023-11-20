@@ -372,12 +372,12 @@ pub async fn sync_commit_without_pushrebase<M: SyncedCommitMapping + Clone + 'st
             .await
     } else {
         commit_syncer
-            .unsafe_sync_commit_with_expected_version(
+            .unsafe_sync_commit(
                 ctx,
                 cs_id,
                 CandidateSelectionHint::Only,
-                version.clone(),
                 CommitSyncContext::XRepoSyncJob,
+                Some(version.clone()),
             )
             .timed()
             .await
@@ -419,12 +419,12 @@ pub async fn sync_commits_for_initial_import<M: SyncedCommitMapping + Clone + 's
     // Sync all of the ancestors first
     for ancestor_cs_id in unsynced_ancestors {
         let mb_synced = commit_syncer
-            .unsafe_sync_commit_with_expected_version(
+            .unsafe_sync_commit(
                 ctx,
                 ancestor_cs_id,
                 CandidateSelectionHint::Only,
-                config_version.clone(),
                 CommitSyncContext::XRepoSyncJob,
+                Some(config_version.clone()),
             )
             .await?;
         let synced =
@@ -433,12 +433,12 @@ pub async fn sync_commits_for_initial_import<M: SyncedCommitMapping + Clone + 's
     }
 
     let (stats, result) = commit_syncer
-        .unsafe_sync_commit_with_expected_version(
+        .unsafe_sync_commit(
             ctx,
             cs_id,
             CandidateSelectionHint::Only,
-            config_version,
             CommitSyncContext::XRepoSyncJob,
+            Some(config_version),
         )
         .timed()
         .await;

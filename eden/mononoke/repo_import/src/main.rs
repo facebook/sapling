@@ -304,12 +304,12 @@ async fn back_sync_commits_to_small_repo(
             // It is always safe to use `CandidateSelectionHint::Only` in
             // the large-to-small direction
             let maybe_synced_cs_id = large_to_small_syncer
-                .unsafe_sync_commit_with_expected_version(
+                .unsafe_sync_commit(
                     ctx,
                     ancestor,
                     CandidateSelectionHint::Only,
-                    version.clone(),
                     CommitSyncContext::RepoImport,
+                    Some(version.clone()),
                 )
                 .await?;
 
