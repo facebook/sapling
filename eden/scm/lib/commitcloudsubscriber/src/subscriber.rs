@@ -209,15 +209,6 @@ impl WorkspaceSubscriberService {
                         info!("Starting subscriptions...");
                         self.interrupt.store(false, Ordering::Relaxed);
 
-                        // executing a connection test to the InternGraph Endpoint
-                        // this is a prerequisite step for the Icebreaker Deprecation
-                        // and replacing it with InternGraph Endpoint polling
-                        Self::test_polling_update_authentication(
-                            &self.polling_update_url,
-                            &self.user_token_path,
-                        )
-                        .await;
-
                         if self.polling_updates_enabled {
                             let subscriptions = self.run_polling_updates()?;
                             for subscription in subscriptions {
@@ -398,51 +389,6 @@ impl WorkspaceSubscriberService {
             status => {
                 error!("{} Unexpected error: {:?}", &sid, response);
                 Err(ErrorKind::PollingUpdatesHttpError(status).into())
-            }
-        }
-    }
-
-    /// This helper function is to verify that authentication to the notification polling endpoint works
-
-    async fn test_polling_update_authentication(
-        polling_update_url: &str,
-        user_token_path: &Option<PathBuf>,
-    ) {
-        let access_token = util::read_or_generate_access_token(
-            user_token_path,
-            util::CatTokenVerifier::InternGraph,
-        );
-        match access_token {
-            Ok(access_token) => {
-                let subscription = Subscription {
-                    workspace: String::from("user/test/default"),
-                    repo_name: String::from("fbsource"),
-                };
-
-                match Self::poll_single_update(
-                    &subscription,
-                    polling_update_url,
-                    &access_token,
-                    &None,
-                )
-                .await
-                {
-                    Ok(_) => {
-                        info!("The notification polling auth check has passed successfully");
-                    }
-                    Err(err) => {
-                        error!(
-                            "The notification polling auth check has failed with {}",
-                            err
-                        );
-                    }
-                };
-            }
-            Err(err) => {
-                error!(
-                    "We are sorry, but a valid access token can't be fetched or generated. The error is: {}",
-                    err
-                );
             }
         }
     }
