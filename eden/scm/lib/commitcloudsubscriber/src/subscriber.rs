@@ -20,6 +20,8 @@ use log::debug;
 use log::error;
 use log::info;
 use parking_lot::Mutex;
+use reqwest::header::CONNECTION;
+use reqwest::Client;
 use reqwest::Response;
 use reqwest::Url;
 use reqwest_eventsource::Event;
@@ -38,6 +40,7 @@ use crate::util;
 use crate::ActionsMap;
 
 const POLLING_INTERVAL_SEC: u64 = 3;
+const POLLING_CONNECTION_KEEP_ALIVE_SEC: u64 = 5 * 60; // 5 minutes
 const POLLING_ERROR_DELAY_SEC: u64 = 10;
 
 #[derive(Deserialize)]
@@ -364,6 +367,7 @@ impl WorkspaceSubscriberService {
     /// they will not return a cursor, so we need to keep track of the latest non empty cursor.
 
     async fn poll_single_update(
+        client: &Client,
         subscription: &Subscription,
         polling_update_url: &str,
         access_token: &util::Token,
@@ -379,7 +383,11 @@ impl WorkspaceSubscriberService {
             subscription,
             polling_cursor,
         )?;
-        let response = reqwest::get(url).await?;
+        let response = client
+            .get(url)
+            .header(CONNECTION, "Keep-Alive")
+            .send()
+            .await?;
         match response.status() {
             reqwest::StatusCode::OK => Self::parse_polling_update_response(response, &sid).await,
             reqwest::StatusCode::UNAUTHORIZED => {
@@ -452,6 +460,22 @@ impl WorkspaceSubscriberService {
             }
             info!("{} Start polling updates...", sid);
 
+            let client = match Client::builder()
+                .http2_keep_alive_while_idle(true)
+                .http2_keep_alive_interval(Duration::from_secs(POLLING_CONNECTION_KEEP_ALIVE_SEC))
+                .build()
+            {
+                Ok(client) => client,
+                Err(err) => {
+                    error!(
+                        "{} Cancelling this task due to unexpected error with connection builder that should never happen (we just configure few options): {}...",
+                        sid, err
+                    );
+                    interrupt.store(true, Ordering::Relaxed);
+                    return;
+                }
+            };
+
             let mut cursor = None;
             let mut access_token = None;
             let mut long_sleep_after_fail = false;
@@ -476,6 +500,7 @@ impl WorkspaceSubscriberService {
                     }
                 }
                 match Self::poll_single_update(
+                    &client,
                     &subscription,
                     &polling_update_url,
                     access_token.as_ref().unwrap(),
