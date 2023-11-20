@@ -37,6 +37,9 @@ use crate::receiver::CommandName::CommitCloudStartSubscriptions;
 use crate::util;
 use crate::ActionsMap;
 
+const POLLING_INTERVAL_SEC: u64 = 3;
+const POLLING_ERROR_DELAY_SEC: u64 = 10;
+
 #[derive(Deserialize)]
 pub struct Notification {
     pub(crate) version: u64,
@@ -550,7 +553,7 @@ impl WorkspaceSubscriberService {
                                 }
                             }
                         }
-                        tokio::time::sleep(Duration::from_secs(3)).await;
+                        tokio::time::sleep(Duration::from_secs(POLLING_INTERVAL_SEC)).await;
                     }
                     Err(err)
                         if matches!(
@@ -567,7 +570,7 @@ impl WorkspaceSubscriberService {
                         error!("{} Polling updates failed with {}", sid, err);
                         long_sleep_after_fail = true;
                         // sleep longer before trying again
-                        tokio::time::sleep(Duration::from_secs(10)).await;
+                        tokio::time::sleep(Duration::from_secs(POLLING_ERROR_DELAY_SEC)).await;
                     }
                 }
             }
