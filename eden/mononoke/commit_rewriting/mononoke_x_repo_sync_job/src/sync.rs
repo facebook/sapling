@@ -423,7 +423,7 @@ pub async fn sync_commits_for_initial_import<M: SyncedCommitMapping + Clone + 's
                 ctx,
                 ancestor_cs_id,
                 CandidateSelectionHint::Only,
-                CommitSyncContext::XRepoSyncJob,
+                CommitSyncContext::ForwardSyncerInitialImport,
                 Some(config_version.clone()),
             )
             .await?;
@@ -437,7 +437,7 @@ pub async fn sync_commits_for_initial_import<M: SyncedCommitMapping + Clone + 's
             ctx,
             cs_id,
             CandidateSelectionHint::Only,
-            CommitSyncContext::XRepoSyncJob,
+            CommitSyncContext::ForwardSyncerInitialImport,
             Some(config_version),
         )
         .timed()

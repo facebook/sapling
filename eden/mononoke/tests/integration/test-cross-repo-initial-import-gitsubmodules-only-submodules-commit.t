@@ -36,14 +36,37 @@ Create commit that modifies git submodule in small repo
   changeset resolved as: ChangesetId(Blake2(6473a332b6f2c52543365108144f9b1cff6b4874bc3ade72a8268f50226f86f4))
   Checking if 6473a332b6f2c52543365108144f9b1cff6b4874bc3ade72a8268f50226f86f4 is already synced 1->0
   syncing 6473a332b6f2c52543365108144f9b1cff6b4874bc3ade72a8268f50226f86f4
-  Execution error: tried to insert inconsistent small bcs id Some(ChangesetId(Blake2(b51882d566acc1f3979a389e452e2c11ccdd05be65bf777c05924fc412b2cc71))) version Some(CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG")), while db has Some(ChangesetId(Blake2(7e97054c51a17ea2c03cd5184826b6a7556d141d57c5a1641bbd62c0854d1a36))) version Some(CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))
-  Execution failed
-  Error: Execution failed
+  Setting bookmark SYNCED_HEAD to changeset 5cac851d3a164f682613d6901e17a03e18afe8576145d4f5ff9dd0a51a82437f
+  changeset 6473a332b6f2c52543365108144f9b1cff6b4874bc3ade72a8268f50226f86f4 synced as 5cac851d3a164f682613d6901e17a03e18afe8576145d4f5ff9dd0a51a82437f in * (glob)
+  successful sync
 
 
 
   $ clone_and_log_large_repo "$NEW_BOOKMARK_NAME" "$C"
-  abort: unknown revision 'SYNCED_HEAD'!
+  commit:      f9abb21ba833
+  bookmark:    SYNCED_HEAD
+  user:        author
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     C
+  
+   smallrepofolder1/foo/b.txt |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+  
+  commit:      039696fd865f
+  user:        author
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     B
+  
+  
+  commit:      e462fc947f26
+  user:        author
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     A
+  
+   smallrepofolder1/bar/b.txt |  1 +
+   smallrepofolder1/foo/a.txt |  1 +
+   2 files changed, 2 insertions(+), 0 deletions(-)
+  
   
   
   Running mononoke_admin to verify mapping
@@ -51,4 +74,4 @@ Create commit that modifies git submodule in small repo
   using repo "small_repo" repoid RepositoryId(1)
   using repo "large_repo" repoid RepositoryId(0)
   changeset resolved as: ChangesetId(Blake2(6473a332b6f2c52543365108144f9b1cff6b4874bc3ade72a8268f50226f86f4))
-  6473a332b6f2c52543365108144f9b1cff6b4874bc3ade72a8268f50226f86f4 is not remapped
+  RewrittenAs([(ChangesetId(Blake2(5cac851d3a164f682613d6901e17a03e18afe8576145d4f5ff9dd0a51a82437f)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])

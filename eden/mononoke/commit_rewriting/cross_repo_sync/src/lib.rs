@@ -21,6 +21,7 @@ use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
+use anyhow::Result;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
@@ -844,7 +845,13 @@ where
     ) -> Result<Option<ChangesetId>, Error> {
         let before = Instant::now();
         let res = self
-            .sync_commit_impl(ctx, source_cs_id, ancestor_selection_hint, disable_lease)
+            .sync_commit_impl(
+                ctx,
+                source_cs_id,
+                commit_sync_context,
+                ancestor_selection_hint,
+                disable_lease,
+            )
             .await;
         let elapsed = before.elapsed();
         log_rewrite(
@@ -863,6 +870,7 @@ where
         &self,
         ctx: &CoreContext,
         source_cs_id: ChangesetId,
+        commit_sync_context: CommitSyncContext,
         ancestor_selection_hint: CandidateSelectionHint<R>,
         disable_lease: bool,
     ) -> Result<Option<ChangesetId>, Error> {
@@ -928,6 +936,7 @@ where
                         ctx,
                         ancestor,
                         ancestor_selection_hint.clone(),
+                        commit_sync_context,
                         Some(version),
                     )
                     .await?;
@@ -936,6 +945,7 @@ where
                         ctx,
                         ancestor,
                         ancestor_selection_hint.clone(),
+                        commit_sync_context,
                         None,
                     )
                     .await?;
@@ -1014,6 +1024,7 @@ where
                 ctx,
                 source_cs_id,
                 parent_mapping_selection_hint,
+                commit_sync_context,
                 expected_version,
             )
             .await;
@@ -1035,6 +1046,7 @@ where
         ctx: &'a CoreContext,
         source_cs_id: ChangesetId,
         mut parent_mapping_selection_hint: CandidateSelectionHint<R>,
+        commit_sync_context: CommitSyncContext,
         expected_version: Option<CommitSyncConfigVersion>,
     ) -> Result<Option<ChangesetId>, Error> {
         debug!(
@@ -1071,7 +1083,7 @@ where
             provider: &self.commit_sync_data_provider,
             small_to_large: matches!(self.repos, CommitSyncRepos::SmallToLarge { .. }),
         }
-        .unsafe_sync_commit_in_memory(cs, expected_version)
+        .unsafe_sync_commit_in_memory(cs, commit_sync_context, expected_version)
         .await?
         .write(ctx, self)
         .await
@@ -1550,23 +1562,42 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
         Source(self.source_repo.repo_identity().name())
     }
 
-    pub async fn unsafe_sync_commit_in_memory(
-        self,
-        cs: BonsaiChangeset,
-        expected_version: Option<CommitSyncConfigVersion>,
-    ) -> Result<CommitSyncInMemoryResult, Error> {
+    /// Determine what should happen to commits that would be empty when synced
+    /// to the target repo.
+    fn get_empty_rewritten_commit_action(
+        &self,
+        maybe_mapping_change_version: &Option<CommitSyncConfigVersion>,
+        commit_sync_context: CommitSyncContext,
+    ) -> CommitRewrittenToEmpty {
         // If a commit is changing mapping let's always rewrite it to
         // small repo regardless if outcome is empty. This is to ensure
         // that efter changing mapping there's a commit in small repo
         // with new mapping on top.
+        if maybe_mapping_change_version.is_some()
+            ||
+            // Initial imports only happen from small to large and might remove
+            // file changes to git submodules, which would lead to empty commits.
+            // These commits should still be written to the large repo.
+            commit_sync_context == CommitSyncContext::ForwardSyncerInitialImport
+        {
+            return CommitRewrittenToEmpty::Keep;
+        }
+
+        CommitRewrittenToEmpty::Discard
+    }
+
+    pub async fn unsafe_sync_commit_in_memory(
+        self,
+        cs: BonsaiChangeset,
+        commit_sync_context: CommitSyncContext,
+        expected_version: Option<CommitSyncConfigVersion>,
+    ) -> Result<CommitSyncInMemoryResult, Error> {
         let maybe_mapping_change_version = get_mapping_change_version(
             &ChangesetInfo::derive(self.ctx, self.source_repo.0, cs.get_changeset_id()).await?,
         )?;
-        let commit_rewritten_to_empty = if maybe_mapping_change_version.is_some() {
-            CommitRewrittenToEmpty::Keep
-        } else {
-            CommitRewrittenToEmpty::Discard
-        };
+
+        let commit_rewritten_to_empty = self
+            .get_empty_rewritten_commit_action(&maybe_mapping_change_version, commit_sync_context);
 
         // During backsyncing we provide an option to skip emmpty commits but we
         // can only do that when they're not changing the mapping.

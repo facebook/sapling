@@ -40,6 +40,7 @@ pub enum CommitSyncContext {
     Tests,
     Unknown,
     XRepoSyncJob,
+    ForwardSyncerInitialImport,
 }
 
 impl fmt::Display for CommitSyncContext {
@@ -56,6 +57,7 @@ impl fmt::Display for CommitSyncContext {
             Self::Tests => write!(f, "tests"),
             Self::Unknown => write!(f, "unknown"),
             Self::XRepoSyncJob => write!(f, "x-repo-sync-job"),
+            Self::ForwardSyncerInitialImport => write!(f, "forward-syncer-initial-import"),
         }
     }
 }
