@@ -9,7 +9,7 @@ from typing import Optional
 from . import edenapi_upload, error, mutation
 from .bookmarks import readremotenames, saveremotenames
 from .i18n import _
-from .node import bin, hex, short
+from .node import bin, hex, nullhex, short
 
 
 def get_edenapi_for_dest(repo, _dest):
@@ -157,6 +157,12 @@ def delete_remote_bookmark(repo, edenapi, bookmark) -> None:
     node = get_remote_bookmark_node(ui, edenapi, bookmark)
     if node is None:
         raise error.Abort(_("remote bookmark %s does not exist") % bookmark)
+
+    # delete remote bookmark from server
     ui.write(_("deleting remote bookmark %s\n") % bookmark)
     edenapi.setbookmark(bookmark, None, node, pushvars=[])
-    # todo (zhaolong): remove bookmark from local vfs
+
+    # delete remote bookmark from repo
+    remote = repo.ui.config("remotenames", "hoist")
+    remotenamechanges = {bookmark: nullhex}
+    saveremotenames(repo, {remote: remotenamechanges}, override=False)
