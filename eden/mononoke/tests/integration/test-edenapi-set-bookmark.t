@@ -58,7 +58,7 @@ Clone the repo
 
 Test move bookmark
   $ hgedenapi debugapi -e setbookmark -i "'master_bookmark'" -i "'$E'" -i "'$C'"
-  True
+  None
 
 Inspect results
   $ hgedenapi pull -q
@@ -76,7 +76,7 @@ Inspect results
 
 Test delete bookmark
   $ hgedenapi debugapi -e setbookmark -i "'to_delete'" -i "None" -i "'$E'"
-  True
+  None
 
 Inspect results
   $ hgedenapi pull -q
@@ -94,7 +94,7 @@ Inspect results
 
 Test create bookmark
   $ hgedenapi debugapi -e setbookmark -i "'create_bookmark'" -i "'$B'" -i "None"
-  True
+  None
 
 Inspect results
   $ hgedenapi pull -q
@@ -110,14 +110,14 @@ Inspect results
   o  426bada5c67598ca65036d57d9e4b64b0c1ce7a0 A
   
 
-Test bookmark failure (empty from and to): tofix (zhaolong)
+Test bookmark failure (empty from and to)
   $ quiet_grep error.HttpError -- hgedenapi debugapi -e setbookmark -i "'master_bookmark'" -i "None" -i "None"
-  error.HttpError: expected response, but none returned by the server
+  error.HttpError: server error (code 0): invalid SetBookmarkRequest, must specify at least one of 'to' or 'from'
   [1]
 
 Test move bookmark failure (invalid from)
   $ quiet_grep error.HttpError -- hgedenapi debugapi -e setbookmark -i "'master_bookmark'" -i "'$D'" -i "'$C'"
-  error.HttpError: expected response, but none returned by the server
+  error.HttpError: server error (code 0): invalid request: Bookmark transaction failed
   [1]
 
 Inspect results
@@ -137,7 +137,7 @@ Inspect results
 
 Test delete bookmark failure (invalid from)
   $ quiet_grep error.HttpError -- hgedenapi debugapi -e setbookmark -i "'create_bookmark'" -i "None" -i "'$D'"
-  error.HttpError: expected response, but none returned by the server
+  error.HttpError: server error (code 0): invalid request: Bookmark transaction failed
   [1]
 
 Inspect results
@@ -157,7 +157,7 @@ Inspect results
 
 Test create bookmark failure (already exists)
   $ quiet_grep error.HttpError -- hgedenapi debugapi -e setbookmark -i "'create_bookmark'" -i "'$D'" -i "None"
-  error.HttpError: expected response, but none returned by the server
+  error.HttpError: server error (code 0): invalid request: Bookmark transaction failed
   [1]
 
 Inspect results

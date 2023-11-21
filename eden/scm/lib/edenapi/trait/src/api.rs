@@ -41,6 +41,7 @@ use edenapi_types::HgMutationEntryContent;
 use edenapi_types::HistoryEntry;
 use edenapi_types::LandStackResponse;
 use edenapi_types::LookupResponse;
+use edenapi_types::SetBookmarkResponse;
 use edenapi_types::TreeAttributes;
 use edenapi_types::TreeEntry;
 use edenapi_types::UploadHgChangeset;
@@ -217,7 +218,7 @@ pub trait EdenApi: Send + Sync + 'static {
         to: Option<HgId>,
         from: Option<HgId>,
         pushvars: HashMap<String, String>,
-    ) -> Result<(), EdenApiError> {
+    ) -> Result<SetBookmarkResponse, EdenApiError> {
         let _ = (bookmark, to, from, pushvars);
         Err(EdenApiError::NotSupported)
     }

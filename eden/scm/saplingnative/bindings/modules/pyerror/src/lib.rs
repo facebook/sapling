@@ -163,6 +163,8 @@ fn register_error_handlers() {
                 )) => Some(PyErr::new::<TlsError, _>(py, e.to_string())),
                 _ => Some(PyErr::new::<HttpError, _>(py, e.to_string())),
             }
+        } else if let Some(e) = e.downcast_ref::<edenapi::types::ServerError>() {
+            Some(PyErr::new::<HttpError, _>(py, e.to_string()))
         } else if e.is::<auth::MissingCerts>() {
             Some(PyErr::new::<CertificateError, _>(py, format!("{}", e)))
         } else if e.is::<auth::X509Error>() {

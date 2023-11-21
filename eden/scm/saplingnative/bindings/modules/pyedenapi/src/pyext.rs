@@ -19,6 +19,7 @@ use cpython_async::PyFuture;
 use cpython_async::TStream;
 use cpython_ext::convert::Serde;
 use cpython_ext::PyCell;
+use cpython_ext::PyNone;
 use cpython_ext::PyPathBuf;
 use cpython_ext::ResultPyErrExt;
 use dag_types::Location;
@@ -211,18 +212,20 @@ pub trait EdenApiPyExt: EdenApi {
         to: Option<HgId>,
         from: Option<HgId>,
         pushvars: Vec<(String, String)>,
-    ) -> PyResult<bool> {
-        py.allow_threads(|| {
-            block_unless_interrupted(async move {
-                self.set_bookmark(bookmark, to, from, pushvars.into_iter().collect())
-                    .await?;
-                Ok::<(), EdenApiError>(())
+    ) -> PyResult<PyNone> {
+        let response = py
+            .allow_threads(|| {
+                block_unless_interrupted(async move {
+                    let response = self
+                        .set_bookmark(bookmark, to, from, pushvars.into_iter().collect())
+                        .await?;
+                    Ok::<_, EdenApiError>(response)
+                })
             })
-        })
-        .map_pyerr(py)?
-        .map_pyerr(py)?;
-
-        Ok(true)
+            .map_pyerr(py)?
+            .map_pyerr(py)?;
+        response.data.map_pyerr(py)?;
+        Ok(PyNone)
     }
 
     fn land_stack_py(

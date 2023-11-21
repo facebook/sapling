@@ -17,6 +17,7 @@ use cpython_ext::convert::Serde;
 use cpython_ext::ExtractInner;
 use cpython_ext::ExtractInnerRef;
 use cpython_ext::PyCell;
+use cpython_ext::PyNone;
 use cpython_ext::PyPathBuf;
 use cpython_ext::ResultPyErrExt;
 use edenapi::Builder;
@@ -187,7 +188,7 @@ py_class!(pub class client |py| {
         to: Serde<Option<HgId>>,
         from: Serde<Option<HgId>>,
         pushvars: Vec<(String, String)> = Vec::new(),
-    ) -> PyResult<bool> {
+    ) -> PyResult<PyNone> {
         self.inner(py).as_ref().set_bookmark_py(py, bookmark, to.0, from.0, pushvars)
     }
 

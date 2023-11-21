@@ -68,6 +68,7 @@ pub use crate::blame::BlameResult;
 pub use crate::bookmark::BookmarkEntry;
 pub use crate::bookmark::BookmarkRequest;
 pub use crate::bookmark::SetBookmarkRequest;
+pub use crate::bookmark::SetBookmarkResponse;
 pub use crate::commit::make_hash_lookup_request;
 pub use crate::commit::AlterSnapshotRequest;
 pub use crate::commit::AlterSnapshotResponse;
