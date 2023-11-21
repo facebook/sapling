@@ -1029,7 +1029,8 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
             repo.nodes("draft() & only(%n, %s)", node, fullonto)
         )
 
-    if ui.configbool("push", "edenapi"):
+    edenapi = pushmod.get_edenapi_for_dest(repo, dest)
+    if edenapi:
         return pushmod.push(
             repo, dest, node, remote_bookmark=opargs["to"], opargs=opargs
         )
