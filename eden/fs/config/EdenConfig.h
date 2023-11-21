@@ -411,6 +411,15 @@ class EdenConfig : private ConfigSettingManager {
       5,
       this};
 
+  /**
+   * The maximum number blob SHA-1s and sizes to keep in memory per mount. See
+   * the comment on `ObjectStore::metadataCache_` for more details.
+   */
+  ConfigSetting<uint64_t> metadataCacheSize{
+      "store:metadata-cache-size",
+      1'000'000,
+      this};
+
   // [fuse]
 
   /**
