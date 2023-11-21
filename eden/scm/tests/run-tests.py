@@ -286,7 +286,7 @@ def Popen4(cmd, wd, timeout, env=None):
             if p.returncode is None:
                 terminate(p)
 
-        threading.Thread(target=t, name=f"Timeout tracker {cmd=}").start()
+        threading.Thread(target=t, name=f"Timeout tracker {cmd=}", daemon=True).start()
 
     return p
 
