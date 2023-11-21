@@ -193,19 +193,27 @@ impl WorkspaceSubscriberService {
                              Restarting subscriptions..."
                         );
                         self.interrupt.store(false, Ordering::Relaxed);
-                        // start subscription threads
-                        let access_token = util::read_or_generate_access_token(
-                            &self.user_token_path,
-                            util::CatTokenVerifier::Icebreaker,
-                        );
-                        if let Ok(access_token) = access_token {
-                            let subscriptions = self.run_subscriptions(access_token)?;
-                            for child in subscriptions {
-                                let _ = child.await;
+
+                        if self.polling_updates_enabled {
+                            let subscriptions = self.run_polling_updates()?;
+                            for subscription in subscriptions {
+                                let _ = subscription.await;
                             }
                         } else {
-                            info!("User is not authenticated with Commit Cloud yet");
-                            continue;
+                            // start subscription threads
+                            let access_token = util::read_or_generate_access_token(
+                                &self.user_token_path,
+                                util::CatTokenVerifier::Icebreaker,
+                            );
+                            if let Ok(access_token) = access_token {
+                                let subscriptions = self.run_subscriptions(access_token)?;
+                                for child in subscriptions {
+                                    let _ = child.await;
+                                }
+                            } else {
+                                info!("User is not authenticated with Commit Cloud yet");
+                                continue;
+                            }
                         }
                     }
                     Ok(CommitCloudStartSubscriptions) => {
