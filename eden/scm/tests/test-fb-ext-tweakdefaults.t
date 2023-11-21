@@ -25,6 +25,7 @@ Updating to a specific date isn't blocked by our extensions'
 
   $ hg bookmark temp
   $ hg up -d "<today"
+  hint[date-option]: --date performs a slow scan. Consider using --revset bsearch(date("><today"),master) instead.
   found revision ae5108b653e2f2d15099970dec82ee0198e23d98 from Thu Jan 01 00:00:00 1970 +0000
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (leaving bookmark temp)
