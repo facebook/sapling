@@ -788,7 +788,7 @@ impl EdenApi for Client {
     }
 
     async fn bookmarks(&self, bookmarks: Vec<String>) -> Result<Vec<BookmarkEntry>, EdenApiError> {
-        tracing::info!("Requesting '{}' bookmarks", bookmarks.len());
+        tracing::info!("Requesting {} bookmarks", bookmarks.len());
         let url = self.build_url(paths::BOOKMARKS)?;
         let bookmark_req = BookmarkRequest { bookmarks };
         self.log_request(&bookmark_req, "bookmarks");
