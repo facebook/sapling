@@ -6,7 +6,7 @@
 from collections import defaultdict
 from typing import Optional
 
-from . import edenapi_upload, error
+from . import edenapi_upload, error, mutation
 from .bookmarks import readremotenames, saveremotenames
 from .i18n import _
 from .node import bin, hex, short
@@ -63,6 +63,61 @@ def push(repo, dest, head_node, remote_bookmark, opargs=None):
                 % remote_bookmark
             )
 
+    # update the exiting bookmark with push rebase
+    return push_rebase(repo, dest, head_node, remote_bookmark, opargs)
+
+
+def push_rebase(repo, dest, head_node, remote_bookmark, opargs=None):
+    """Update the remote bookmark with server side rebase.
+
+    For updating the existing remote bookmark, push_rebase allows the server to
+    rebase incoming commits as part of the push process. This helps solve the
+    problem of push contention where many clients try to push at once and
+    all but one fail. Instead of failing, it will rebase the incoming commit
+    onto the target bookmark (i.e. @ or master) as long as the commit doesn't touch
+    any files that have been modified in the target bookmark. Put another way,
+    push_rebase will not perform any file content merges. It only performs the
+    rebase when there is no chance of a file merge.
+    """
+    ui, edenapi = repo.ui, repo.edenapi
+    bookmark = remote_bookmark
+    ui.write(_("updating remote bookmark %s\n" % bookmark))
+
+    # todo (zhaolong): handle public head_node case, which should be BookmarkOnlyPushRebase?
+
+    # according to the Mononoke API (D23813368), base is the parent of the bottom of the stack
+    # that is to be landed.
+    draft_nodes = repo.dageval(lambda: roots(ancestors([head_node]) & draft()))
+    if len(draft_nodes) > 1:
+        # todo (zhaolong): handle merge commit
+        raise error.Abort(_("multiple roots found for stack %s") % short(head_node))
+
+    parents = repo[draft_nodes[0]].parents()
+    if len(parents) != 1:
+        raise error.Abort(
+            _("{%d} parents found for commit %s")
+            % (len(parents), short(draft_nodes[0]))
+        )
+    base = parents[0].node()
+
+    # todo (zhaolong): support pushvars
+    land_response = edenapi.landstack(
+        bookmark,
+        head=head_node,
+        base=base,
+        pushvars=[],
+    )
+    new_head = land_response["new_head"]
+    old_to_new_hgids = land_response["old_to_new_hgids"]
+
+    repo.pull(source=dest, headnodes=(new_head,))
+    entries = [
+        mutation.createsyntheticentry(repo, [node], new_node, "pushrebase")
+        for (node, new_node) in old_to_new_hgids.items()
+    ]
+    mutation.recordentries(repo, entries, skipexisting=False)
+    record_remote_bookmark(repo, bookmark, new_head)
+    ui.write(_("updated remote bookmark %s to %s\n") % (bookmark, short(new_head)))
     return 0
 
 
