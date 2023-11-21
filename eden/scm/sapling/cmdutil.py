@@ -1221,10 +1221,22 @@ def copy(ui, repo, pats, opts, rename=False):
     # ossep => pathname that uses os.sep to separate directories
     cwd = repo.getcwd()
     targets = {}
+    amend = opts.get("amend")
     mark = opts.get("mark") or opts.get("after")
     dryrun = opts.get("dry_run")
+    force = opts.get("force")
     wctx = repo[None]
     auditor = pathutil.pathauditor(repo.root)
+
+    if amend and not mark:
+        raise error.Abort(_("--amend without --mark is not supported"))
+
+    if amend:
+        walkctx = repo["."]
+        if rename:
+            walkctx = walkctx.p1()
+    else:
+        walkctx = wctx
 
     def walkpat(pat):
         srcs = []
@@ -1232,11 +1244,14 @@ def copy(ui, repo, pats, opts, rename=False):
             badstates = "?"
         else:
             badstates = "?r"
-        m = scmutil.match(wctx, [pat], opts, globbed=True)
-        for abs in wctx.walk(m):
-            state = repo.dirstate[abs]
+        m = scmutil.match(walkctx, [pat], opts, globbed=True)
+        for abs in walkctx.walk(m):
             rel = m.rel(abs)
             exact = m.exact(abs)
+            if amend:
+                srcs.append((abs, rel, exact))
+                continue
+            state = repo.dirstate[abs]
             if state in badstates:
                 if exact and state == "?":
                     ui.warn(_("%s: not copying - file is not managed\n") % rel)
@@ -1251,6 +1266,7 @@ def copy(ui, repo, pats, opts, rename=False):
             srcs.append((abs, rel, exact))
         return srcs
 
+    # (without --amend)
     # target exists  --mark   --force|  action
     #       n            n      *    |  copy
     #       n            y      *    |  (1)
@@ -1272,7 +1288,10 @@ def copy(ui, repo, pats, opts, rename=False):
     # (3) replace target contents
     # (4) <target>: not overwriting - file {exists,already committed};
     # (a) with '--mark' hint
-    # (b) with '--mark --force' hint
+    # (b) with '--amend --mark' hint
+
+    # [(abssrc, abstarget)]
+    to_amend = []
 
     # abssrc: hgsep
     # relsrc: ossep
@@ -1312,29 +1331,17 @@ def copy(ui, repo, pats, opts, rename=False):
                 exists = False
                 samefile = True
 
-        if not mark and exists or mark and state in "mn":
-            if not opts["force"]:
+        if not mark and exists or (mark and state in "mn" and not amend):
+            if not force:
                 if state in "mn":
                     msg = _("%s: not overwriting - file already committed\n")
-                    if mark:
-                        flags = "--mark --force"
-                    else:
-                        flags = "--force"
                     if rename:
-                        hint = (
-                            _(
-                                "(@prog@ rename %s to replace the file by "
-                                "recording a rename)\n"
-                            )
-                            % flags
+                        hint = _(
+                            "(use '@prog@ rename --amend --mark' to amend the current commit)\n"
                         )
                     else:
-                        hint = (
-                            _(
-                                "(@prog@ copy %s to replace the file by "
-                                "recording a copy)\n"
-                            )
-                            % flags
+                        hint = _(
+                            "(use '@prog@ copy --amend --mark' to amend the current commit)\n"
                         )
                 else:
                     msg = _("%s: not overwriting - file exists\n")
@@ -1359,7 +1366,7 @@ def copy(ui, repo, pats, opts, rename=False):
                         % (relsrc, reltarget)
                     )
                 return
-        elif not dryrun:
+        elif not dryrun and not amend:
             try:
                 if exists:
                     os.unlink(target)
@@ -1392,12 +1399,17 @@ def copy(ui, repo, pats, opts, rename=False):
 
         targets[abstarget] = abssrc
 
-        # fix up dirstate
-        scmutil.dirstatecopy(ui, repo, wctx, abssrc, abstarget, dryrun=dryrun, cwd=cwd)
-        if rename and not dryrun:
-            if not mark and srcexists and not samefile:
-                repo.wvfs.unlinkpath(abssrc)
-            wctx.forget([abssrc])
+        if amend:
+            to_amend.append((abssrc, abstarget))
+        else:
+            # fix up dirstate
+            scmutil.dirstatecopy(
+                ui, repo, wctx, abssrc, abstarget, dryrun=dryrun, cwd=cwd
+            )
+            if rename and not dryrun:
+                if not mark and srcexists and not samefile:
+                    repo.wvfs.unlinkpath(abssrc)
+                wctx.forget([abssrc])
 
     # pat: ossep
     # dest ossep
@@ -1487,7 +1499,7 @@ def copy(ui, repo, pats, opts, rename=False):
         if not srcs:
             continue
         copylist.append((tfn(pat, dest, srcs), srcs))
-    if not copylist:
+    if not copylist and not to_amend:
         raise error.Abort(_("no files to copy"))
 
     errors = 0
@@ -1496,10 +1508,76 @@ def copy(ui, repo, pats, opts, rename=False):
             if copyfile(abssrc, relsrc, targetpath(abssrc), exact):
                 errors += 1
 
-    if errors:
+    if to_amend:
+        amend_copy(repo, to_amend, rename, force)
+
+    if errors and not mark:
         ui.warn(_("(consider using --mark)\n"))
 
     return errors != 0
+
+
+def amend_copy(repo, to_amend, rename, force):
+    with repo.lock():
+        ctx = repo["."]
+        pctx = ctx.p1()
+
+        # Checks
+        for src_path, dst_path in to_amend:
+            if rename:
+                if src_path in ctx or src_path not in pctx:
+                    raise error.Abort(
+                        _("source path '%s' is not deleted by the current commit")
+                        % src_path
+                    )
+            else:
+                if src_path not in ctx:
+                    raise error.Abort(
+                        _("source path '%s' is not present the current commit")
+                        % src_path
+                    )
+            if dst_path not in ctx or dst_path in pctx:
+                raise error.Abort(
+                    _("target path '%s' is not added by the current commit") % dst_path
+                )
+            if not force:
+                # Check already renamed.
+                renamed = ctx[dst_path].renamed()
+                if renamed:
+                    renamed_path = renamed[0]
+                    if renamed_path == src_path:
+                        continue
+                    raise error.Abort(
+                        _("target path '%s' is already marked as copied from '%s'")
+                        % (dst_path, renamed_path),
+                        hint=_("use --force to skip this check"),
+                    )
+                # Check similarity. Can be bypassed by --force.
+                if rename:
+                    src_data = pctx[src_path].data()
+                else:
+                    src_data = ctx[src_path].data()
+                dst_data = ctx[dst_path].data()
+                if not bindings.copytrace.is_content_similar(
+                    src_data, dst_data, repo.ui._rcfg
+                ):
+                    raise error.Abort(
+                        _("'%s' and '%s' does not look similar") % (src_path, dst_path),
+                        hint=_("use --force to skip similarity check"),
+                    )
+
+        # Actual amend
+        from . import context
+
+        mctx = context.memctx.mirror(ctx)
+        for src_path, dst_path in to_amend:
+            mctx[dst_path] = context.overlayfilectx(
+                mctx[dst_path], copied=(src_path, pctx.node())
+            )
+        new_node = mctx.commit()
+        mapping = {ctx.node(): (new_node,)}
+        scmutil.cleanupnodes(repo, mapping, rename and "rename" or "copy")
+        repo.dirstate.rebuild(new_node, allfiles=[], changedfiles=[], exact=True)
 
 
 def uncopy(ui, repo, matcher, opts):

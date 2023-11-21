@@ -1986,6 +1986,7 @@ def continuecmd(ui, repo):
     "copy|cp",
     [
         ("", "mark", None, _("mark as a copy without actual copying")),
+        ("", "amend", None, _("amend the current commit to mark a copy")),
         ("A", "after", None, _("alias to --mark (DEPRECATED)")),
         ("f", "force", None, _("forcibly copy over an existing managed file")),
     ]
@@ -5195,6 +5196,7 @@ def remove(ui, repo, *pats, **opts):
     "rename|move|mv",
     [
         ("", "mark", None, _("mark as a rename without actual renaming")),
+        ("", "amend", None, _("amend the current commit to mark a rename")),
         ("A", "after", None, _("alias to --mark (DEPRECATED)")),
         ("f", "force", None, _("forcibly copy over an existing managed file")),
     ]

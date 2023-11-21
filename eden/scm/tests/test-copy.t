@@ -209,17 +209,20 @@ foo was clean:
 Trying to copy on top of an existing file fails,
   $ hg copy --mark bar foo
   foo: not overwriting - file already committed
-  (hg copy --mark --force to replace the file by recording a copy)
+  (use 'hg copy --amend --mark' to amend the current commit)
 same error without the --mark, so the user doesn't have to go through
 two hints:
   $ hg copy bar foo
   foo: not overwriting - file already committed
-  (hg copy --force to replace the file by recording a copy)
-but it's considered modified after a copy --mark --force
+  (use 'hg copy --amend --mark' to amend the current commit)
+but it's considered modified after a copy --mark --force (legacy behavior)
   $ hg copy --mark -f bar foo
   $ hg st -AC foo
   M foo
     bar
+  $ hg uncopy foo
+  $ hg st -AC foo
+  C foo
 The hint for a file that exists but is not in file history doesn't
 mention --force:
   $ touch xyzzy

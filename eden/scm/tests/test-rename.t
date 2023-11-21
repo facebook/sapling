@@ -267,7 +267,7 @@ overwrite existing files (d2/b)
 
   $ hg rename d1/* d2
   d2/b: not overwriting - file already committed
-  (hg rename --force to replace the file by recording a rename)
+  (use 'hg rename --amend --mark' to amend the current commit)
   moving d1/d11/a1 to d2/d11/a1
   $ hg status -C
   A d2/a
