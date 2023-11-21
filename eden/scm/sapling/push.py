@@ -9,7 +9,7 @@ from typing import Optional
 from . import edenapi_upload, error
 from .bookmarks import readremotenames, saveremotenames
 from .i18n import _
-from .node import bin, hex
+from .node import bin, hex, short
 
 
 def get_edenapi_for_dest(repo, _dest):
@@ -34,6 +34,11 @@ def push(repo, dest, head_node, remote_bookmark, opargs=None):
     """Push via EdenApi (HTTP)"""
     ui = repo.ui
     edenapi = get_edenapi_for_dest(repo, dest)
+
+    ui.status_err(
+        _("pushing rev %s to destination %s bookmark %s\n")
+        % (short(head_node), edenapi.url(), remote_bookmark)
+    )
 
     # push revs via EdenApi
     uploaded, failed = edenapi_upload.uploadhgchangesets(repo, [head_node])

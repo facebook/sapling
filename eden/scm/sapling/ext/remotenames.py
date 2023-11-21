@@ -1006,11 +1006,6 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
 
     # all checks pass, go for it!
     node = repo.lookup(rev)
-    ui.status_err(
-        _("pushing rev %s to destination %s bookmark %s\n")
-        % (short(node), dest, opargs["to"])
-    )
-
     force = opts.get("force")
     bookmark = opargs["to"]
     pattern = ui.config("remotenames", "disallowedto")
@@ -1034,6 +1029,11 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
         return pushmod.push(
             repo, dest, node, remote_bookmark=opargs["to"], opargs=opargs
         )
+
+    ui.status_err(
+        _("pushing rev %s to destination %s bookmark %s\n")
+        % (short(node), dest, opargs["to"])
+    )
 
     # NB: despite the name, 'revs' doesn't work if it's a numeric rev
     pushop = exchange.push(
