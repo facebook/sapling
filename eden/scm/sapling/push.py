@@ -150,3 +150,13 @@ def record_remote_bookmark(repo, bookmark, new_node) -> None:
         remote = repo.ui.config("remotenames", "hoist")
         data.setdefault(remote, {})[bookmark] = hex(new_node)
         saveremotenames(repo, data)
+
+
+def delete_remote_bookmark(repo, edenapi, bookmark) -> None:
+    ui = repo.ui
+    node = get_remote_bookmark_node(ui, edenapi, bookmark)
+    if node is None:
+        raise error.Abort(_("remote bookmark %s does not exist") % bookmark)
+    ui.write(_("deleting remote bookmark %s\n") % bookmark)
+    edenapi.setbookmark(bookmark, None, node, pushvars=[])
+    # todo (zhaolong): remove bookmark from local vfs

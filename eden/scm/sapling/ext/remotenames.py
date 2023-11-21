@@ -892,6 +892,8 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
         or (opts.get("force") and forcecompat),
     }
 
+    edenapi = pushmod.get_edenapi_for_dest(repo, dest)
+
     if opargs["delete"]:
         flag = None
         for f in ("to", "bookmark", "branch", "rev"):
@@ -904,6 +906,10 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
         # we want to skip pushing any changesets while deleting a remote
         # bookmark, so we send the null revision
         opts["rev"] = ["null"]
+        if edenapi:
+            return pushmod.delete_remote_bookmark(
+                repo, edenapi, bookmark=opargs["delete"]
+            )
         return orig(ui, repo, dest, opargs=opargs, **opts)
 
     revs = opts.get("rev")
@@ -1024,7 +1030,6 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
             repo.nodes("draft() & only(%n, %s)", node, fullonto)
         )
 
-    edenapi = pushmod.get_edenapi_for_dest(repo, dest)
     if edenapi:
         return pushmod.push(
             repo, dest, node, remote_bookmark=opargs["to"], opargs=opargs
