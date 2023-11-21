@@ -15,7 +15,7 @@ import subprocess
 import textwrap
 import weakref
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Tuple
 
 import bindings
 from sapling import tracing
@@ -1031,6 +1031,31 @@ def submodule_node_from_ctx_path(ctx, path) -> Optional[bytes]:
         return None
     fctx = ctx[path]
     return submodule_node_from_fctx(fctx)
+
+
+def committer_and_date_from_extras(extra) -> Optional[Tuple[str, int, int]]:
+    """Extract the committer and committer date from commit extras.
+
+    There are two ways that this may have been encoded:
+
+      * Separate 'committer' and 'committer_date' extras.  This is used by
+        Sapling.
+      * A single 'committer' extra, where the two fields are stored separated
+        by a space.  This is used by hg-git and Mononoke.
+    """
+    if "committer" in extra and "committer_date" in extra:
+        try:
+            sec_str, tz_str = extra["committer_date"].split(" ", 1)
+            return extra["committer"], int(sec_str), int(tz_str)
+        except ValueError:
+            pass
+    elif "committer" in extra:
+        try:
+            committer, sec_str, tz_str = extra["committer"].rsplit(" ", 2)
+            return committer, int(sec_str), int(tz_str)
+        except ValueError:
+            pass
+    return None
 
 
 def update_extra_with_git_committer(ui, ctx, extra):

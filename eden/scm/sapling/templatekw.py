@@ -17,6 +17,7 @@ from typing import Dict, Optional, Sized, Tuple, Union
 from . import (
     encoding,
     error,
+    git,
     hbisect,
     i18n,
     mutation,
@@ -346,8 +347,9 @@ def showauthor(repo, ctx, templ, **args):
 @templatekeyword("committer")
 def showcommitter(repo, ctx, templ, **args):
     """String. The committer. Fallback to "author"."""
-    committer = ctx.extra().get("committer")
-    return committer or ctx.user()
+    if committer_info := git.committer_and_date_from_extras(ctx.extra()):
+        return committer_info[0]
+    return ctx.user()
 
 
 @templatekeyword("bisect")
@@ -440,7 +442,9 @@ def showauthordate(repo, ctx, templ, **args):
 @templatekeyword("committerdate")
 def showcommitterdate(repo, ctx, templ, **args):
     """Date information. The "committer" date. Fallback to "date"."""
-    return _date_from_extra(ctx, "committer_date")
+    if committer_info := git.committer_and_date_from_extras(ctx.extra()):
+        return committer_info[1:]
+    return ctx.date()
 
 
 @templatekeyword("date")

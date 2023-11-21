@@ -353,7 +353,8 @@ phab_sl_difflabel="{case(phabstatus,
  'Needs Final Review', 'ssl.finalreview',
  'sl.diff'
  )}"
-sl_date="{label('sl.date', '{smartdate(date, sl_date_threshold, age(date), simpledate(date, sl_date_timezone))}')}"
+sl_date = "{label('sl.date', '{smartdate(sl_date_timestamp, sl_date_threshold, age(sl_date_timestamp), simpledate(sl_date_timestamp, sl_date_timezone))}')}"
+sl_date_timestamp = date
 sl_date_threshold=5400
 sl_diff="{label('sl.diff', sl_difflink)}"
 sl_task="{label('sl.tasks', 'T{task}')}"
