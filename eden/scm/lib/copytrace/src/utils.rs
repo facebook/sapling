@@ -57,6 +57,11 @@ pub fn is_content_similar(a: &[u8], b: &[u8], config: &dyn Config) -> anyhow::Re
     let config_percentage = config
         .get_opt::<f32>("copytrace", "similarity-threshold")?
         .unwrap_or(DEFAULT_SIMILARITY_THRESHOLD);
+
+    if config_percentage <= 0.0 {
+        return Ok(true);
+    }
+
     let config_max_edit_cost = config
         .get_opt::<u64>("copytrace", "max-edit-cost")?
         .unwrap_or(DEFAULT_MAX_EDIT_COST);
