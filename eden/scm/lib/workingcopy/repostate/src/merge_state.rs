@@ -15,10 +15,11 @@ use anyhow::Context;
 use anyhow::Result;
 use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
+use types::hgid::NULL_ID;
 use types::HgId;
 use types::RepoPathBuf;
 
-#[derive(Default, Debug)]
+#[derive(Default)]
 pub struct MergeState {
     // commits being merged
     local: Option<HgId>,
@@ -158,6 +159,113 @@ impl MergeState {
     }
 }
 
+impl std::fmt::Debug for MergeState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Some(local) = &self.local {
+            writeln!(f, "local: {local}")?;
+        }
+
+        if let Some(other) = &self.other {
+            writeln!(f, "other: {other}")?;
+        }
+
+        if let Some((md, mds)) = &self.merge_driver {
+            writeln!(
+                f,
+                r#"merge driver: {} (state "{}")"#,
+                md,
+                mds.to_py_string()
+            )?;
+        }
+
+        if !self.labels.is_empty() {
+            writeln!(f, "labels:")?;
+            for (t, n) in ["local", "other", "base"].iter().zip(&self.labels) {
+                writeln!(f, "  {t}: {n}")?;
+            }
+        }
+
+        fn hash_or_null(h: &str) -> &str {
+            if h == NULL_ID.to_hex() { "null" } else { h }
+        }
+
+        let mut paths: Vec<_> = self.files.keys().collect();
+        paths.sort_by_key(|p| p.as_str());
+        for p in paths {
+            let file = self.files.get(p).unwrap();
+
+            if file.record_type == "P" {
+                if file.data.len() != 3 {
+                    writeln!(
+                        f,
+                        r#"file: {} (record type "{}", unexpected data: {:?})"#,
+                        p, file.record_type, file.data,
+                    )?;
+                } else {
+                    writeln!(
+                        f,
+                        r#"file: {} (record type "{}", state "{}", renamed to {}, origin "{}")"#,
+                        p, file.record_type, file.data[0], file.data[1], file.data[2],
+                    )?;
+                }
+            } else if file.data.len() != 8 {
+                writeln!(
+                    f,
+                    r#"file: {} (record type "{}", unexpected data: {:?})"#,
+                    p, file.record_type, file.data,
+                )?;
+            } else {
+                writeln!(
+                    f,
+                    r#"file: {} (record type "{}", state "{}", hash {})"#,
+                    p,
+                    file.record_type,
+                    file.data[0],
+                    hash_or_null(&file.data[1]),
+                )?;
+
+                writeln!(
+                    f,
+                    r#"  local path: {} (flags "{}")"#,
+                    file.data[2], file.data[7],
+                )?;
+
+                writeln!(
+                    f,
+                    "  ancestor path: {} (node {})",
+                    file.data[3],
+                    hash_or_null(&file.data[4]),
+                )?;
+
+                writeln!(
+                    f,
+                    "  other path: {} (node {})",
+                    file.data[5],
+                    hash_or_null(&file.data[6]),
+                )?;
+
+                if !file.extras.is_empty() {
+                    writeln!(
+                        f,
+                        "  extras: {}",
+                        file.extras
+                            .iter()
+                            .map(|(k, v)| format!("{k}={v}"))
+                            .collect::<Vec<_>>()
+                            .join(" ")
+                    )?;
+                }
+            }
+        }
+
+        for (t, d) in &self.unsupported_records {
+            writeln!(f, r#"unsupported record "{}" (data {:?})"#, t, d)?;
+        }
+
+        Ok(())
+    }
+}
+
 #[derive(Debug)]
 pub struct FileInfo {
     // arbitrary key->value data (seems to only be used for "ancestorlinknode")
@@ -213,7 +321,7 @@ impl ConflictState {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum MergeDriverState {
     Unmarked,
     Marked,
@@ -227,6 +335,14 @@ impl MergeDriverState {
             "s" => MergeDriverState::Success,
             // When in doubt, re-run drivers (they should be idempotent).
             _ => MergeDriverState::Unmarked,
+        }
+    }
+
+    pub fn to_py_string(&self) -> &'static str {
+        match self {
+            MergeDriverState::Unmarked => "u",
+            MergeDriverState::Marked => "m",
+            MergeDriverState::Success => "s",
         }
     }
 }
