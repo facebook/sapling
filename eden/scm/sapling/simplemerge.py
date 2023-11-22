@@ -23,11 +23,38 @@
 
 from __future__ import absolute_import
 
+import hashlib
+from contextlib import contextmanager
 from typing import List, Optional, Tuple
 
 from . import error, mdiff, pycompat, util
 from .i18n import _
 from .pycompat import range
+
+_DEFAULT_CACHE_SIZE = 10000
+_automerge_cache = util.lrucachedict(_DEFAULT_CACHE_SIZE)
+_automerge_prompt_msg = _(
+    "%(conflict)s\n"
+    "Above conflict can be resolved automatically "
+    "(run '@prog@ help automerge' for more information):\n"
+    "<<<<<<< automerge algorithm yields:\n"
+    " %(merged_lines)s"
+    ">>>>>>>\n"
+    "Accept this resolution?\n"
+    "(a)ccept it, (r)eject it, or review it in (f)ile:"
+    "$$ &Accept $$ &Reject $$ &File"
+)
+
+
+@contextmanager
+def managed_merge_cache(ui):
+    global _automerge_cache
+    try:
+        yield
+    finally:
+        # clear cache when exiting
+        size = ui.configint("automerge", "cache-size", _DEFAULT_CACHE_SIZE)
+        _automerge_cache = util.lrucachedict(size)
 
 
 def intersect(ra, rb):
@@ -269,7 +296,7 @@ class Merge3Text:
                     % (name, list(AUTOMERGE_ALGORITHMS.keys()))
                 )
 
-    def merge_groups(self, disable_automerge=False):
+    def merge_groups(self):
         """Yield sequence of line groups.
 
         Each one is a tuple:
@@ -307,17 +334,16 @@ class Merge3Text:
                 base_lines = self.base[t[1] : t[2]]
                 a_lines = self.a[t[3] : t[4]]
                 b_lines = self.b[t[5] : t[6]]
-                merged_lines = None
-                if not disable_automerge:
-                    for _name, fn in self.automerge_fns.items():
-                        merged_lines = fn(base_lines, a_lines, b_lines)
-                        if merged_lines is not None:
-                            yield "automerge", merged_lines
-                            break
-                if merged_lines is None:
-                    yield (what, (base_lines, a_lines, b_lines))
+                yield (what, (base_lines, a_lines, b_lines))
             else:
                 raise ValueError(what)
+
+    def run_automerge(self, base_lines, a_lines, b_lines):
+        for name, fn in self.automerge_fns.items():
+            merged_lines = fn(base_lines, a_lines, b_lines)
+            if merged_lines is not None:
+                return name, merged_lines
+        return None
 
     def merge_regions(self):
         """Return sequences of matching and conflicting regions.
@@ -513,6 +539,79 @@ def _minimize(a_lines, b_lines):
     return lines_before, new_a_lines, new_b_lines, lines_after
 
 
+def try_automerge_conflict(
+    m3, group_lines, name_base, name_a, name_b, render_conflict_fn, newline=b"\n"
+):
+    def automerge_cache_key(conflict_group_lines):
+        m = hashlib.sha256()
+        for lines in conflict_group_lines:
+            for line in lines:
+                m.update(line)
+        return m.digest()
+
+    def render_automerged_lines(merge_algorithm, merged_lines, newline):
+        lines = []
+        lines.append(
+            (b"<<<<<<< '%s' automerge algorithm yields:" % merge_algorithm.encode())
+            + newline
+        )
+        lines.extend(merged_lines)
+        lines.append(b">>>>>>>" + newline)
+        return lines
+
+    automerge_mode = m3.automerge_mode
+    ui = m3.ui
+
+    automerged = True
+    base_lines, a_lines, b_lines = group_lines
+    extra_lines = []
+    if automerge_mode != "reject" and (
+        merged_res := m3.run_automerge(base_lines, a_lines, b_lines)
+    ):
+        merge_algorithm, merged_lines = merged_res
+        if automerge_mode == "accept":
+            return automerged, merged_lines
+        elif automerge_mode == "prompt":
+            cache_key = automerge_cache_key(group_lines)
+            if cache_key not in _automerge_cache:
+                prompt = {
+                    "conflict": b"".join(
+                        _render_diff_conflict(
+                            base_lines,
+                            a_lines,
+                            b_lines,
+                            name_base,
+                            name_a,
+                            name_b,
+                            newline=newline,
+                            one_side=False,
+                        )
+                    ).decode(),
+                    "merged_lines": b" ".join(merged_lines).decode(),
+                    "merge_algorithm": merge_algorithm,
+                }
+                index = ui.promptchoice(_automerge_prompt_msg % prompt, 1)
+                _automerge_cache[cache_key] = index
+            index = _automerge_cache[cache_key]
+            if index == 0:  # accept
+                return automerged, merged_lines
+            elif index == 2:  # review-in-file
+                extra_lines.extend(
+                    render_automerged_lines(merge_algorithm, merged_lines, newline)
+                )
+            else:
+                # 1: reject, fallthrough
+                pass
+        elif automerge_mode == "review-in-file":
+            extra_lines.extend(
+                render_automerged_lines(merge_algorithm, merged_lines, newline)
+            )
+    automerged = False
+    lines = render_conflict_fn(base_lines, a_lines, b_lines)
+    lines.extend(extra_lines)
+    return automerged, lines
+
+
 def render_minimized(
     m3,
     name_a=None,
@@ -522,6 +621,20 @@ def render_minimized(
     end_marker=b">>>>>>>",
 ) -> Tuple[List[bytes], int]:
     """Return merge in cvs-like form."""
+
+    def render_minimized_conflict(base_lines, a_lines, b_lines):
+        lines = []
+        minimized = _minimize(a_lines, b_lines)
+        lines_before, a_lines, b_lines, lines_after = minimized
+        lines.extend(lines_before)
+        lines.append(start_marker + newline)
+        lines.extend(a_lines)
+        lines.append(mid_marker + newline)
+        lines.extend(b_lines)
+        lines.append(end_marker + newline)
+        lines.extend(lines_after)
+        return lines
+
     conflictscount = 0
     newline = _detect_newline(m3)
     if name_a:
@@ -533,17 +646,11 @@ def render_minimized(
     lines = []
     for what, group_lines in merge_groups:
         if what == "conflict":
-            conflictscount += 1
-            base_lines, a_lines, b_lines = group_lines
-            minimized = _minimize(a_lines, b_lines)
-            lines_before, a_lines, b_lines, lines_after = minimized
-            lines.extend(lines_before)
-            lines.append(start_marker + newline)
-            lines.extend(a_lines)
-            lines.append(mid_marker + newline)
-            lines.extend(b_lines)
-            lines.append(end_marker + newline)
-            lines.extend(lines_after)
+            automerged, merged_lines = try_automerge_conflict(
+                m3, group_lines, b"", name_a, name_b, render_minimized_conflict, newline
+            )
+            conflictscount += 1 - automerged
+            lines.extend(merged_lines)
         else:
             lines.extend(group_lines)
 
@@ -707,7 +814,7 @@ def _render_diff_conflict(
 
 def _resolve(m3, sides):
     lines = []
-    for what, group_lines in m3.merge_groups(disable_automerge=True):
+    for what, group_lines in m3.merge_groups():
         if what == "conflict":
             for side in sides:
                 lines.extend(group_lines[side])

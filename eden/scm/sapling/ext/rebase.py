@@ -50,6 +50,7 @@ from sapling import (
     revset,
     revsetlang,
     scmutil,
+    simplemerge,
     smartset,
     templatefilters,
     util,
@@ -1261,7 +1262,7 @@ def rebase(ui, repo, templ=None, **opts):
                 # this).
                 ("experimental", "merge.checkpathconflicts"): True
             }
-            with ui.configoverride(overrides):
+            with ui.configoverride(overrides), simplemerge.managed_merge_cache(ui):
                 return _origrebase(ui, repo, rbsrt, **opts)
         except error.AbortMergeToolError as e:
             ui.status(_("%s\n") % e)
