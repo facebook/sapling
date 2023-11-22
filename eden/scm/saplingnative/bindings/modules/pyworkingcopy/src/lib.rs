@@ -231,18 +231,6 @@ py_class!(pub class mergestate |py| {
         )))
     }
 
-    def state(&self) -> PyResult<HashMap<String, Vec<String>>> {
-        Ok(self.ms(py).borrow().files().iter().map(|(path, info)| {
-            (path.as_str().to_string(), info.data().clone())
-        }).collect())
-    }
-
-    def allextras(&self) -> PyResult<HashMap<String, HashMap<String, String>>> {
-        Ok(self.ms(py).borrow().files().iter().map(|(path, info)| {
-            (path.as_str().to_string(), info.extras().clone())
-        }).collect())
-    }
-
     def local(&self) -> PyResult<Option<PyBytes>> {
         Ok(self.ms(py).borrow().local().map(|l| PyBytes::new(py, l.as_ref())))
     }
@@ -261,7 +249,6 @@ py_class!(pub class mergestate |py| {
         );
         Ok(PyNone)
     }
-
 
     def labels(&self) -> PyResult<Vec<String>> {
         Ok(self.ms(py).borrow().labels().to_vec())

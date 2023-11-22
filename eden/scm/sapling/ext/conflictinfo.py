@@ -176,7 +176,7 @@ def _summarizefileconflicts(self, path, workingctx) -> Optional[Dict[str, Any]]:
     if self[path] in ("d", "r", "pr", "pu"):
         return None
 
-    stateentry = self._state[path]
+    stateentry = self._rust_ms.get(path)
     localnode = bin(stateentry[1])
     ancestorfile = stateentry[3]
     ancestornode = bin(stateentry[4])
@@ -201,7 +201,7 @@ def _summarizepathconflicts(self, path) -> Optional[Dict[str, Any]]:
     if self[path] != "pu":
         return None
 
-    stateentry = self._state[path]
+    stateentry = self._rust_ms.get(path)
     frename = stateentry[1]
     forigin = stateentry[2]
     return {
