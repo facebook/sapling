@@ -54,6 +54,46 @@ impl std::fmt::Display for UnsupportedMergeRecords {
     }
 }
 
+/// MergeState represents the repo state when merging two commits.
+///
+/// Basically, MergeState records which commits are being merged, and the state
+/// of conflicting files (i.e. unresoled/resolved).
+///
+/// MergeState is serialized as a list of records. Each record contains an
+/// arbitrary list of strings and an associated type. This `type` should be a
+/// letter. If `type` is uppercase, the record is mandatory: versions of Sapling
+/// that don't support it should abort. If `type` is lowercase, the record can
+/// be safely ignored.
+///
+/// Currently known records:
+///
+/// L: the node of the "local" part of the merge (hexified version)
+/// O: the node of the "other" part of the merge (hexified version)
+/// F: a file to be merged entry
+/// C: a change/delete or delete/change conflict
+/// D: a file that the external merge driver will merge internally
+///    (experimental)
+/// P: a path conflict (file vs directory)
+/// m: the external merge driver defined for this merge plus its run state
+///    (experimental)
+/// f: a (filename, dictionary) tuple of optional values for a given file
+/// X: unsupported mandatory record type (used in tests)
+/// x: unsupported advisory record type (used in tests)
+/// l: the labels for the parts of the merge.
+///
+/// Merge driver run states (experimental):
+/// u: driver-resolved files unmarked -- needs to be run next time we're about
+///    to resolve or commit
+/// m: driver-resolved files marked -- only needs to be run before commit
+/// s: success/skipped -- does not need to be run any more
+///
+/// Merge record states (stored in self._state, indexed by filename):
+/// u: unresolved conflict
+/// r: resolved conflict
+/// pu: unresolved path conflict (file conflicts with directory)
+/// pr: resolved path conflict
+/// d: driver-resolved conflict
+
 impl MergeState {
     pub fn new(local: Option<HgId>, other: Option<HgId>, labels: Vec<String>) -> Self {
         Self {

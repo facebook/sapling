@@ -52,28 +52,8 @@ from .pycompat import encodeutf8
 class mergestate:
     """track 3-way merge state of individual files
 
-    The merge state is stored on disk when needed.
-
-    Each record can contain arbitrary content, and has an associated type. This
-    `type` should be a letter. If `type` is uppercase, the record is mandatory:
-    versions of Mercurial that don't support it should abort. If `type` is
-    lowercase, the record can be safely ignored.
-
-    Currently known records:
-
-    L: the node of the "local" part of the merge (hexified version)
-    O: the node of the "other" part of the merge (hexified version)
-    F: a file to be merged entry
-    C: a change/delete or delete/change conflict
-    D: a file that the external merge driver will merge internally
-       (experimental)
-    P: a path conflict (file vs directory)
-    m: the external merge driver defined for this merge plus its run state
-       (experimental)
-    f: a (filename, dictionary) tuple of optional values for a given file
-    X: unsupported mandatory record type (used in tests)
-    x: unsupported advisory record type (used in tests)
-    l: the labels for the parts of the merge.
+    The merge state is stored on disk when needed. See the
+    repostate::merge_state module for details on the format.
 
     Merge driver run states (experimental):
     u: driver-resolved files unmarked -- needs to be run next time we're about
@@ -308,7 +288,7 @@ class mergestate:
         if self[dfile] in "rd":
             return True, 0
         stateentry = self._rust_ms.get(dfile)
-        state, hexdnode, lfile, afile, hexanode, ofile, hexonode, flags = stateentry
+        _state, hexdnode, lfile, afile, hexanode, ofile, hexonode, flags = stateentry
         dnode = bin(hexdnode)
         onode = bin(hexonode)
         anode = bin(hexanode)
