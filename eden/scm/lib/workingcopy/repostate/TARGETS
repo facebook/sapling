@@ -7,6 +7,9 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     crate_root = "src/lib.rs",
     deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:byteorder",
         "//eden/scm/lib/types:types",
+        "//eden/scm/lib/util:util",
     ],
 )
