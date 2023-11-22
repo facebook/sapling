@@ -617,6 +617,7 @@ def render_minimized(
     m3,
     name_a=None,
     name_b=None,
+    name_base=None,
     start_marker=b"<<<<<<<",
     mid_marker=b"=======",
     end_marker=b">>>>>>>",
@@ -648,7 +649,13 @@ def render_minimized(
     for what, group_lines in merge_groups:
         if what == "conflict":
             automerged, merged_lines = try_automerge_conflict(
-                m3, group_lines, b"", name_a, name_b, render_minimized_conflict, newline
+                m3,
+                group_lines,
+                name_base,
+                name_a,
+                name_b,
+                render_minimized_conflict,
+                newline,
             )
             conflictscount += 1 - automerged
             lines.extend(merged_lines)
@@ -887,7 +894,7 @@ def simplemerge(ui, localctx, basectx, otherctx, **opts):
     elif mode == "merge3":
         lines, conflictscount = render_merge3(m3, name_a, name_b, name_base)
     else:
-        lines, conflictscount = render_minimized(m3, name_a, name_b)
+        lines, conflictscount = render_minimized(m3, name_a, name_b, name_base)
 
     mergedtext = b"".join(lines)
     if opts.get("print"):

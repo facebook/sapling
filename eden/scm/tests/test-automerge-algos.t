@@ -36,7 +36,7 @@ adjacent-changes merge - prompt:
   +b'
    c
    d
-  ======= 
+  ======= base:   98e058757f9d - test: A
    b
   -c
   -d
