@@ -8,7 +8,10 @@ thrift_library(
         "rust",
         "cpp2",
     ],
-    rust_deps = ["fbsource//third-party/rust:smallvec"],
+    rust_deps = [
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:smallvec",
+    ],
     thrift_rust_options = ["deprecated_default_enum_min_i32"],
     thrift_srcs = {"git_types_thrift.thrift": []},
     deps = ["//eden/mononoke/mononoke_types/if:mononoke_types-thrift"],
