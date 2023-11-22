@@ -330,6 +330,7 @@ mod test {
                     "/root".as_ref(),
                     "/root".as_ref(),
                     false,
+                    Some(&mut std::io::empty()),
                 )?
                 .0,
             ),

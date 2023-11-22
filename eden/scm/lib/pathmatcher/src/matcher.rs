@@ -29,7 +29,7 @@ use crate::TreeMatcher;
 use crate::UnionMatcher;
 
 /// Create top level matcher from non-normalized CLI input.
-pub fn cli_matcher(
+pub fn cli_matcher<R>(
     patterns: &[String],
     include: &[String],
     exclude: &[String],
@@ -37,7 +37,11 @@ pub fn cli_matcher(
     case_sensitive: bool,
     root: &Path,
     cwd: &Path,
-) -> Result<HintedMatcher> {
+    stdin: &mut R,
+) -> Result<HintedMatcher>
+where
+    R: std::io::Read,
+{
     // This expands relpath patterns as globs on Windows to emulate shell expansion.
     let patterns = expand_globs(patterns, default_pattern_type)?;
     let patterns = &patterns;
@@ -53,6 +57,7 @@ pub fn cli_matcher(
         case_sensitive,
         root,
         cwd,
+        stdin,
     )
 }
 
@@ -60,7 +65,7 @@ pub fn cli_matcher(
 /// expanded filesets. The only intended external caller of this is
 /// Python, where some processing has already happende (e.g. glob
 /// expansion).
-pub fn cli_matcher_with_filesets(
+pub fn cli_matcher_with_filesets<R>(
     patterns: &[String],
     patterns_filesets: Option<&[RepoPathBuf]>,
     include: &[String],
@@ -71,7 +76,11 @@ pub fn cli_matcher_with_filesets(
     case_sensitive: bool,
     root: &Path,
     cwd: &Path,
-) -> Result<HintedMatcher> {
+    stdin: &mut R,
+) -> Result<HintedMatcher>
+where
+    R: std::io::Read,
+{
     let mut all_warnings = Vec::new();
 
     let mut normalize = |pats: &[_], default, force_recursive| -> Result<Option<Vec<Pattern>>> {
@@ -79,7 +88,7 @@ pub fn cli_matcher_with_filesets(
             Ok(None)
         } else {
             let (normalized, warnings) =
-                normalize_patterns(pats, default, root, cwd, force_recursive)?;
+                normalize_patterns(pats, default, root, cwd, force_recursive, Some(stdin))?;
 
             all_warnings.extend(warnings);
 
@@ -364,6 +373,7 @@ mod tests {
             true,
             "/root".as_ref(),
             "/root/cwd".as_ref(),
+            &mut std::io::empty(),
         )?;
 
         assert!(m.matches_file(RepoPath::from_str("foo")?)?);
@@ -379,13 +389,14 @@ mod tests {
         fs_err::write(&listfile, "")?;
 
         let m = cli_matcher(
-            &vec![format!("listfile:{}", listfile.to_str().unwrap())],
+            &[format!("listfile:{}", listfile.to_str().unwrap())],
             &[],
             &[],
             PatternKind::Glob,
             true,
             "/root".as_ref(),
             "/root/cwd".as_ref(),
+            &mut std::io::empty(),
         )?;
 
         assert!(!m.matches_file(RepoPath::from_str("foo")?)?);
@@ -401,7 +412,7 @@ mod tests {
         fs_err::write(&listfile, "")?;
 
         let m = cli_matcher_with_filesets(
-            &vec![
+            &[
                 format!("listfile:{}", listfile.to_str().unwrap()),
                 "foo*".to_string(),
             ],
@@ -414,6 +425,7 @@ mod tests {
             true,
             "/root".as_ref(),
             "/root/cwd".as_ref(),
+            &mut std::io::empty(),
         )?;
 
         assert_eq!(
@@ -441,6 +453,7 @@ mod tests {
             true,
             "/root".as_ref(),
             "/root/cwd".as_ref(),
+            &mut std::io::empty(),
         )?;
 
         assert!(m.matches_file(path!("bar"))?);

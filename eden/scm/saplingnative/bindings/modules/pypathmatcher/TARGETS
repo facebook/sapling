@@ -24,6 +24,7 @@ rust_python_library(
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:tracing",
         "//eden/scm/lib/cpython-ext:cpython-ext",
+        "//eden/scm/lib/io:io",
         "//eden/scm/lib/pathmatcher:pathmatcher",
         "//eden/scm/lib/types:types",
     ],

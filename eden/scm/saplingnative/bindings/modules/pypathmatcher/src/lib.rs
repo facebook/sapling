@@ -142,6 +142,7 @@ py_class!(pub class hintedmatcher |py| {
             case_sensitive,
             root.as_path(),
             cwd.as_path(),
+            &mut io::IO::main().map_pyerr(py)?.input(),
         ).map_pyerr(py)?;
         Self::create_instance(py, matcher)
     }

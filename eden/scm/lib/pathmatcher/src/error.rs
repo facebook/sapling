@@ -15,4 +15,7 @@ pub enum Error {
 
     #[error("non-utf8 path '{0}' when building pattern")]
     NonUtf8(String),
+
+    #[error("listfile:- may only be used once as a direct CLI argument")]
+    StdinUnavailable,
 }

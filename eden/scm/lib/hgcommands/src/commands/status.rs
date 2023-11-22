@@ -134,6 +134,7 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
         wc.vfs().case_sensitive(),
         wc.vfs().root(),
         &cwd,
+        &mut ctx.io().input(),
     ) {
         Ok(matcher) => {
             for warning in matcher.warnings() {

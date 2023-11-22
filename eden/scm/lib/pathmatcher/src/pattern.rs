@@ -184,17 +184,21 @@ pub fn explicit_pattern_kind<'a>(pat: &'a str) -> Option<(PatternKind, &'a str)>
 // Normalize input patterns, also returning warnings for the user.
 // All pattern kinds expand to globs except for regexes, which stay regexes.
 // A pattern can expand to empty (e.g. empty "listfile").
-#[tracing::instrument(level = "debug", ret)]
-pub(crate) fn normalize_patterns<I>(
+#[tracing::instrument(level = "debug", skip(stdin), ret)]
+pub(crate) fn normalize_patterns<I, R>(
     patterns: I,
     default_kind: PatternKind,
     root: &Path,
     cwd: &Path,
     force_recursive_glob: bool,
+    // stdin should always be set at the root level, recursive calls
+    // will recieve `None` as we only allow `listfile:-` at the root
+    mut stdin: Option<&mut R>,
 ) -> Result<(Vec<Pattern>, Vec<String>)>
 where
     I: IntoIterator + std::fmt::Debug,
     I::Item: AsRef<str> + std::fmt::Debug,
+    R: std::io::Read,
 {
     let mut result = Vec::new();
     let mut warnings = Vec::new();
@@ -305,12 +309,41 @@ where
             if kind.is_glob() || kind.is_path() || kind.is_regex() {
                 result.push(Pattern::new(kind, pat).with_exact_file(exact_file));
             } else if matches!(kind, PatternKind::ListFile | PatternKind::ListFile0) {
-                let contents = fs_err::read_to_string(&pat)?;
+                let stream: Box<dyn std::io::Read> = if pat == "-" {
+                    let Some(stdin_unwrapped) = stdin else {
+                        return Err(Error::StdinUnavailable.into());
+                    };
+
+                    let result = Box::new(&mut *stdin_unwrapped);
+                    // Ban subsequent usage of `listfile:-`
+                    stdin = None;
+
+                    result
+                } else {
+                    Box::new(fs_err::File::open(&pat)?)
+                };
+                let contents = std::io::read_to_string(stream)?;
 
                 let (patterns, listfile_warnings) = if kind == PatternKind::ListFile {
-                    normalize_patterns(contents.lines(), default_kind, root, cwd, false)?
+                    normalize_patterns(
+                        contents.lines(),
+                        default_kind,
+                        root,
+                        cwd,
+                        false,
+                        // listfile:- is only allowed at the top-level:
+                        None::<&mut R>,
+                    )?
                 } else {
-                    normalize_patterns(contents.split('\0'), default_kind, root, cwd, false)?
+                    normalize_patterns(
+                        contents.split('\0'),
+                        default_kind,
+                        root,
+                        cwd,
+                        false,
+                        // listfile:- is only allowed at the top-level:
+                        None::<&mut R>,
+                    )?
                 };
 
                 warnings.extend(listfile_warnings);
@@ -417,22 +450,42 @@ mod tests {
     }
 
     #[track_caller]
-    fn normalize(
+    fn normalize<R>(
         pat: &str,
         root: &str,
         cwd: &str,
         recursive: bool,
-    ) -> Result<(Vec<Pattern>, Vec<String>)> {
+        stdin: &mut R,
+    ) -> Result<(Vec<Pattern>, Vec<String>)>
+    where
+        R: std::io::Read,
+    {
         // Caller must specify kind.
         assert!(pat.contains(':'));
 
-        normalize_patterns(vec![pat], Glob, root.as_ref(), cwd.as_ref(), recursive)
+        normalize_patterns(
+            vec![pat],
+            Glob,
+            root.as_ref(),
+            cwd.as_ref(),
+            recursive,
+            Some(stdin),
+        )
     }
 
     #[track_caller]
-    fn assert_normalize(pat: &str, expected: &[&str], root: &str, cwd: &str, recursive: bool) {
+    fn assert_normalize<R>(
+        pat: &str,
+        expected: &[&str],
+        root: &str,
+        cwd: &str,
+        recursive: bool,
+        stdin: &mut R,
+    ) where
+        R: std::io::Read,
+    {
         let kind = pat.split_once(':').unwrap().0;
-        let got: Vec<String> = normalize(pat, root, cwd, recursive)
+        let got: Vec<String> = normalize(pat, root, cwd, recursive, stdin)
             .unwrap()
             .0
             .into_iter()
@@ -449,7 +502,14 @@ mod tests {
     fn test_normalize_patterns() {
         #[track_caller]
         fn check(pat: &str, expected: &[&str]) {
-            assert_normalize(pat, expected, "/root", "/root/cwd", false);
+            assert_normalize(
+                pat,
+                expected,
+                "/root",
+                "/root/cwd",
+                false,
+                &mut std::io::empty(),
+            );
         }
 
         check("glob:", &["cwd"]);
@@ -484,6 +544,93 @@ mod tests {
     }
 
     #[test]
+    fn test_normalize_stdin() {
+        #[track_caller]
+        fn check(pat: &str, expected: &[&str]) {
+            let got: Vec<String> = normalize(
+                "listfile:-",
+                "/root",
+                "/root/cwd",
+                false,
+                &mut pat.as_bytes(),
+            )
+            .unwrap()
+            .0
+            .into_iter()
+            .map(|p| p.pattern)
+            .collect();
+
+            assert_eq!(got, expected);
+        }
+
+        check("glob:", &["cwd"]);
+        check("glob:.", &["cwd"]);
+        check("glob:..", &[""]);
+        check("glob:a", &["cwd/a"]);
+        check("glob:../a{b,c}d", &["abd", "acd"]);
+        check("glob:/root/foo/*.c", &["foo/*.c"]);
+
+        check("relglob:", &[""]);
+        check("relglob:.", &[""]);
+        check("relglob:*.c", &["**/*.c"]);
+
+        check("path:", &["**"]);
+        check("path:.", &["**"]);
+        check("path:foo", &["foo/**"]);
+        check("path:foo*", &[r"foo\*/**"]);
+
+        check("relpath:", &["cwd/**"]);
+        check("relpath:.", &["cwd/**"]);
+        check("relpath:foo", &["cwd/foo/**"]);
+        check("relpath:../foo*", &[r"foo\*/**"]);
+
+        check(r"re:a.*\.py", &[r"a.*\.py"]);
+
+        check(r"relre:a.*\.py", &[r".*?a.*\.py"]);
+        check(r"relre:^foo(bar|baz)", &[r"foo(bar|baz)"]);
+
+        check("rootfilesin:", &["*"]);
+        check("rootfilesin:.", &["*"]);
+        check("rootfilesin:foo*", &[r"foo\*/*"]);
+    }
+
+    #[test]
+    fn test_recursive_stdin() {
+        let got: anyhow::Error = normalize_patterns(
+            vec!["listfile:-"],
+            Glob,
+            "/root".as_ref(),
+            "/root/cwd".as_ref(),
+            false,
+            Some(&mut "listfile:-".as_bytes()),
+        )
+        .unwrap_err();
+
+        assert_eq!(
+            got.to_string(),
+            anyhow::Error::from(Error::StdinUnavailable).to_string()
+        );
+    }
+
+    #[test]
+    fn test_duplicate_stdin() {
+        let got: anyhow::Error = normalize_patterns(
+            vec!["listfile:-", "listfile:-"],
+            Glob,
+            "/root".as_ref(),
+            "/root/cwd".as_ref(),
+            false,
+            Some(&mut std::io::empty()),
+        )
+        .unwrap_err();
+
+        assert_eq!(
+            got.to_string(),
+            anyhow::Error::from(Error::StdinUnavailable).to_string()
+        );
+    }
+
+    #[test]
     fn test_normalize_multiple() {
         let got: Vec<(PatternKind, String)> = normalize_patterns(
             vec!["naked", "relpath:foo/b{a}r", "glob:a{b,c}"],
@@ -491,6 +638,7 @@ mod tests {
             "/root".as_ref(),
             "/root/cwd".as_ref(),
             false,
+            Some(&mut std::io::empty()),
         )
         .unwrap()
         .0
@@ -513,7 +661,14 @@ mod tests {
     fn test_recursive_normalize() {
         #[track_caller]
         fn check(pat: &str, expected: &[&str]) {
-            assert_normalize(pat, expected, "/root", "/root/cwd", true);
+            assert_normalize(
+                pat,
+                expected,
+                "/root",
+                "/root/cwd",
+                true,
+                &mut std::io::empty(),
+            );
         }
 
         check("glob:", &["cwd/**"]);
@@ -523,8 +678,15 @@ mod tests {
     #[test]
     fn test_normalize_patterns_unsupported_kind() {
         assert!(
-            normalize_patterns(vec!["set:added()"], Glob, "/".as_ref(), "/".as_ref(), false)
-                .is_err()
+            normalize_patterns(
+                vec!["set:added()"],
+                Glob,
+                "/".as_ref(),
+                "/".as_ref(),
+                false,
+                Some(&mut std::io::empty()),
+            )
+            .is_err()
         );
     }
 
@@ -553,7 +715,7 @@ mod tests {
     }
 
     fn test_normalize_patterns_listfile_helper(sep: &str) {
-        let inner_patterns = vec!["glob:/a/*", r"re:a.*\.py"];
+        let inner_patterns = ["glob:/a/*", r"re:a.*\.py"];
         let dir = TempDir::new().unwrap();
         let path = dir.path().join("patterns.txt");
         let path_str = path.to_string_lossy();
@@ -565,9 +727,16 @@ mod tests {
             if sep == "\0" { "0" } else { "" },
             path_str
         )];
-        let result = normalize_patterns(outer_patterns, Glob, "/".as_ref(), "/".as_ref(), false)
-            .unwrap()
-            .0;
+        let result = normalize_patterns(
+            outer_patterns,
+            Glob,
+            "/".as_ref(),
+            "/".as_ref(),
+            false,
+            Some(&mut std::io::empty()),
+        )
+        .unwrap()
+        .0;
 
         assert_eq!(
             result,
@@ -584,12 +753,13 @@ mod tests {
     fn test_exact_file() {
         #[track_caller]
         fn check(pat: &str, expected: &[&str]) {
-            let got: Vec<String> = normalize(pat, "/root", "/root/cwd", false)
-                .unwrap()
-                .0
-                .into_iter()
-                .filter_map(|p| p.exact_file.map(|p| p.to_string()))
-                .collect();
+            let got: Vec<String> =
+                normalize(pat, "/root", "/root/cwd", false, &mut std::io::empty())
+                    .unwrap()
+                    .0
+                    .into_iter()
+                    .filter_map(|p| p.exact_file.map(|p| p.to_string()))
+                    .collect();
 
             assert_eq!(got, expected);
         }
