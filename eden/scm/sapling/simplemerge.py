@@ -23,6 +23,7 @@
 
 from __future__ import absolute_import
 
+import functools
 import hashlib
 from contextlib import contextmanager
 from typing import List, Optional, Tuple
@@ -659,6 +660,18 @@ def render_minimized(
 
 def render_merge3(m3, name_a, name_b, name_base) -> Tuple[List[bytes], int]:
     """Return merge in cvs-like form."""
+
+    def render_merge3_conflict(base_lines, a_lines, b_lines):
+        lines = []
+        lines.append(b"<<<<<<< " + name_a + newline)
+        lines.extend(a_lines)
+        lines.append(b"||||||| " + name_base + newline)
+        lines.extend(base_lines)
+        lines.append(b"=======" + newline)
+        lines.extend(b_lines)
+        lines.append(b">>>>>>> " + name_b + newline)
+        return lines
+
     conflictscount = 0
     newline = _detect_newline(m3)
     merge_groups = m3.merge_groups()
@@ -666,15 +679,17 @@ def render_merge3(m3, name_a, name_b, name_base) -> Tuple[List[bytes], int]:
 
     for what, group_lines in merge_groups:
         if what == "conflict":
-            conflictscount += 1
-            base_lines, a_lines, b_lines = group_lines
-            lines.append(b"<<<<<<< " + name_a + newline)
-            lines.extend(a_lines)
-            lines.append(b"||||||| " + name_base + newline)
-            lines.extend(base_lines)
-            lines.append(b"=======" + newline)
-            lines.extend(b_lines)
-            lines.append(b">>>>>>> " + name_b + newline)
+            automerged, merged_lines = try_automerge_conflict(
+                m3,
+                group_lines,
+                name_base,
+                name_a,
+                name_b,
+                render_merge3_conflict,
+                newline,
+            )
+            conflictscount += 1 - automerged
+            lines.extend(merged_lines)
         else:
             lines.extend(group_lines)
 
@@ -720,26 +735,31 @@ def render_mergediff2(m3, name_a, name_b, name_base):
     return _render_mergediff_ext(m3, name_a, name_b, name_base, one_side=False)
 
 
-def _render_mergediff_ext(m3, name_a, name_b, name_base, one_side=True):
+def _render_mergediff_ext(m3, name_a, name_b, name_base, one_side):
     newline = _detect_newline(m3)
     lines = []
     conflictscount = 0
     for what, group_lines in m3.merge_groups():
         if what == "conflict":
-            base_lines, a_lines, b_lines = group_lines
-            lines.extend(
-                _render_diff_conflict(
-                    base_lines,
-                    a_lines,
-                    b_lines,
-                    name_base,
-                    name_a,
-                    name_b,
-                    newline,
-                    one_side=one_side,
-                )
+            render_conflict_fn = functools.partial(
+                _render_diff_conflict,
+                name_base=name_base,
+                name_a=name_a,
+                name_b=name_b,
+                newline=newline,
+                one_side=one_side,
             )
-            conflictscount += 1
+            automerged, merged_lines = try_automerge_conflict(
+                m3,
+                group_lines,
+                name_base,
+                name_a,
+                name_b,
+                render_conflict_fn,
+                newline,
+            )
+            conflictscount += 1 - automerged
+            lines.extend(merged_lines)
         else:
             lines.extend(group_lines)
     return lines, conflictscount

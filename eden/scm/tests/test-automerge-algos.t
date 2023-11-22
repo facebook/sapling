@@ -139,3 +139,72 @@ Successful subset-changes merge:
   b
   c
   d
+
+adjacent-changes merge - (keep-in-file & merge3):
+
+  $ newrepo
+  $ setconfig automerge.mode=review-in-file
+  $ drawdag <<'EOS'
+  > B C # C/A=a\nb\nc'\nd'\ne\n
+  > |/  # B/A=a\nb'\nc\nd\ne\n
+  > A   # A/A=a\nb\nc\nd\ne\n
+  > EOS
+  $ hg rebase -r $C -d $B -q -t internal:merge3
+  warning: 1 conflicts while merging A! (edit, then use 'hg resolve --mark')
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
+  $ cat A
+  a
+  <<<<<<< dest:   6d1bb9f58190 - test: B
+  b'
+  c
+  d
+  ||||||| base:   98e058757f9d - test: A
+  b
+  c
+  d
+  =======
+  b
+  c'
+  d'
+  >>>>>>> source: 929db2f4565d - test: C
+  <<<<<<< 'adjacent-changes' automerge algorithm yields:
+  b'
+  c'
+  d'
+  >>>>>>>
+  e
+
+adjacent-changes merge - (keep-in-file & mergediff):
+
+  $ newrepo
+  $ setconfig automerge.mode=review-in-file
+  $ drawdag <<'EOS'
+  > B C # C/A=a\nb\nc'\nd'\ne\n
+  > |/  # B/A=a\nb'\nc\nd\ne\n
+  > A   # A/A=a\nb\nc\nd\ne\n
+  > EOS
+  $ hg rebase -r $C -d $B -q -t internal:mergediff
+  warning: conflicts while merging A! (edit, then use 'hg resolve --mark')
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
+  $ cat A
+  a
+  <<<<<<<
+  ------- base:   98e058757f9d - test: A
+  +++++++ dest:   6d1bb9f58190 - test: B
+  -b
+  +b'
+   c
+   d
+  ======= source: 929db2f4565d - test: C
+  b
+  c'
+  d'
+  >>>>>>>
+  <<<<<<< 'adjacent-changes' automerge algorithm yields:
+  b'
+  c'
+  d'
+  >>>>>>>
+  e
