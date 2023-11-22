@@ -146,6 +146,7 @@ members = [
   "lib/vlqencoding",
   "lib/webview-app",
   "lib/workingcopy",
+  "lib/workingcopy/repostate",
   "lib/xdiff",
   "lib/xdiff-sys",
   "lib/zstdelta",
