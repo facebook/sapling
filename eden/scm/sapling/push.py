@@ -54,7 +54,7 @@ def push(repo, dest, head_node, remote_bookmark, opargs=None):
     if bookmark_node is None:
         if opargs.get("create"):
             create_remote_bookmark(ui, edenapi, remote_bookmark, head_node)
-            ui.debug(_("remote bookmark %s created\n") % remote_bookmark)
+            ui.debug("remote bookmark %s created\n" % remote_bookmark)
             record_remote_bookmark(repo, remote_bookmark, head_node)
             return 0
         else:
@@ -81,7 +81,7 @@ def push_rebase(repo, dest, head_node, remote_bookmark, opargs=None):
     """
     ui, edenapi = repo.ui, repo.edenapi
     bookmark = remote_bookmark
-    ui.write(_("updating remote bookmark %s\n" % bookmark))
+    ui.write(_("updating remote bookmark %s\n") % bookmark)
 
     # todo (zhaolong): handle public head_node case, which should be BookmarkOnlyPushRebase?
 
@@ -122,7 +122,7 @@ def push_rebase(repo, dest, head_node, remote_bookmark, opargs=None):
 
 
 def get_remote_bookmark_node(ui, edenapi, bookmark) -> Optional[bytes]:
-    ui.debug(_("getting remote bookmark %s\n") % bookmark)
+    ui.debug("getting remote bookmark %s\n" % bookmark)
     response = edenapi.bookmarks([bookmark])
     hexnode = response.get(bookmark)
     return bin(hexnode) if hexnode else None
