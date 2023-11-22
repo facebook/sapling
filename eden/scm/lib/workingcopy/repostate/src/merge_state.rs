@@ -8,6 +8,7 @@
 use std::collections::HashMap;
 use std::io::ErrorKind;
 use std::io::Read;
+use std::io::Write;
 
 use anyhow::anyhow;
 use anyhow::bail;
@@ -15,6 +16,7 @@ use anyhow::Context;
 use anyhow::Result;
 use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
+use byteorder::WriteBytesExt;
 use types::hgid::NULL_ID;
 use types::HgId;
 use types::RepoPathBuf;
@@ -131,7 +133,6 @@ impl MergeState {
                             )?,
                             data: rest,
                             extras: HashMap::new(),
-                            record_type: util::utf8::escape_non_utf8(&[record_type]),
                         },
                     );
                 }
@@ -181,6 +182,67 @@ impl MergeState {
 
         Ok(ms)
     }
+
+    pub fn serialize(&self, w: &mut dyn Write) -> Result<()> {
+        let w = &mut std::io::BufWriter::new(w);
+
+        fn write_record(
+            w: &mut dyn Write,
+            record_type: u8,
+            first: &str,
+            rest: &[impl AsRef<str>],
+        ) -> Result<()> {
+            w.write_u8(record_type)?;
+            w.write_u32::<BigEndian>(
+                (first.len() + rest.iter().fold(0, |a, v| a + v.as_ref().len()) + rest.len())
+                    as u32,
+            )?;
+
+            w.write_all(first.as_bytes())?;
+
+            for data in rest.iter() {
+                w.write_u8(0)?;
+                w.write_all(data.as_ref().as_bytes())?;
+            }
+
+            Ok(())
+        }
+
+        if let Some(local) = &self.local {
+            write_record(w, b'L', &local.to_hex(), &Vec::<&str>::new())?;
+        }
+
+        if let Some(other) = &self.other {
+            write_record(w, b'O', &other.to_hex(), &Vec::<&str>::new())?;
+        }
+
+        if let Some((md, mds)) = &self.merge_driver {
+            write_record(w, b'm', md, &[mds.to_py_string()])?;
+        }
+
+        for (path, info) in self.files.iter() {
+            write_record(w, info.record_type(), path.as_str(), &info.data)?;
+
+            if !info.extras.is_empty() {
+                write_record(
+                    w,
+                    b'f',
+                    path.as_str(),
+                    &info
+                        .extras
+                        .iter()
+                        .map(|(k, v)| format!("{k}\x00{v}"))
+                        .collect::<Vec<_>>(),
+                )?;
+            }
+        }
+
+        if !self.labels.is_empty() {
+            write_record(w, b'l', &self.labels[0], &self.labels[1..])?;
+        }
+
+        Ok(())
+    }
 }
 
 impl std::fmt::Debug for MergeState {
@@ -217,33 +279,34 @@ impl std::fmt::Debug for MergeState {
         paths.sort_by_key(|p| p.as_str());
         for p in paths {
             let file = self.files.get(p).unwrap();
+            let record_type = util::utf8::escape_non_utf8(&[file.record_type()]);
 
-            if file.record_type == "P" {
+            if record_type == "P" {
                 if file.data.len() != 3 {
                     writeln!(
                         f,
                         r#"file: {} (record type "{}", unexpected data: {:?})"#,
-                        p, file.record_type, file.data,
+                        p, record_type, file.data,
                     )?;
                 } else {
                     writeln!(
                         f,
                         r#"file: {} (record type "{}", state "{}", renamed to {}, origin "{}")"#,
-                        p, file.record_type, file.data[0], file.data[1], file.data[2],
+                        p, record_type, file.data[0], file.data[1], file.data[2],
                     )?;
                 }
             } else if file.data.len() != 8 {
                 writeln!(
                     f,
                     r#"file: {} (record type "{}", unexpected data: {:?})"#,
-                    p, file.record_type, file.data,
+                    p, record_type, file.data,
                 )?;
             } else {
                 writeln!(
                     f,
                     r#"file: {} (record type "{}", state "{}", hash {})"#,
                     p,
-                    file.record_type,
+                    record_type,
                     file.data[0],
                     hash_or_null(&file.data[1]),
                 )?;
@@ -318,9 +381,6 @@ pub struct FileInfo {
     //      <local file flags>,
     //    ]
     data: Vec<String>,
-
-    // Single byte record type as String, for convenience.
-    record_type: String,
 }
 
 impl FileInfo {
@@ -330,6 +390,26 @@ impl FileInfo {
 
     pub fn data(&self) -> &Vec<String> {
         &self.data
+    }
+
+    pub fn record_type(&self) -> u8 {
+        match self.state {
+            ConflictState::Unresolved | ConflictState::Resolved => {
+                if self.data.get(1).is_some_and(|h| *h == NULL_ID.to_hex())
+                    || self.data.get(6).is_some_and(|h| *h == NULL_ID.to_hex())
+                {
+                    // Infer 'C'hange/delete conflict if one of the file nodes is null.
+                    b'C'
+                } else {
+                    // Normal conflicts are stored in "F" records.
+                    b'F'
+                }
+            }
+            // Path conflicts are stored in "P" records.
+            ConflictState::UnresolvedPath | ConflictState::ResolvedPath => b'P',
+            // Driver resolved are stored in "D" records.
+            ConflictState::DriverResolved => b'D',
+        }
     }
 }
 
