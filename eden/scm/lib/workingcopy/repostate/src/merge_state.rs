@@ -19,6 +19,7 @@ use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
 use types::hgid::NULL_ID;
 use types::HgId;
+use types::RepoPath;
 use types::RepoPathBuf;
 
 #[derive(Default)]
@@ -51,6 +52,15 @@ impl std::fmt::Display for UnsupportedMergeRecords {
 }
 
 impl MergeState {
+    pub fn new(local: Option<HgId>, other: Option<HgId>, labels: Vec<String>) -> Self {
+        Self {
+            local,
+            other,
+            labels,
+            ..Default::default()
+        }
+    }
+
     pub fn files(&self) -> &HashMap<RepoPathBuf, FileInfo> {
         &self.files
     }
@@ -67,12 +77,59 @@ impl MergeState {
         self.merge_driver.as_ref()
     }
 
+    pub fn set_merge_driver(&mut self, md: Option<(String, MergeDriverState)>) {
+        self.merge_driver = md;
+    }
+
     pub fn unsupported_records(&self) -> &[(String, Vec<String>)] {
         &self.unsupported_records
     }
 
     pub fn labels(&self) -> &[String] {
         &self.labels
+    }
+
+    pub fn insert(&mut self, path: RepoPathBuf, data: Vec<String>) -> Result<()> {
+        if data.is_empty() {
+            bail!("invalid empty merge data for {}", path);
+        }
+
+        self.files.insert(
+            path,
+            FileInfo {
+                state: ConflictState::from_record(&data[0])?,
+                data,
+                extras: HashMap::new(),
+            },
+        );
+
+        Ok(())
+    }
+
+    pub fn remove(&mut self, path: &RepoPath) {
+        self.files.remove(path);
+    }
+
+    pub fn set_extra(&mut self, path: &RepoPath, key: String, value: String) -> Result<()> {
+        if let Some(info) = self.files.get_mut(path) {
+            info.extras.insert(key, value);
+            Ok(())
+        } else {
+            bail!("no such file {path} to set extra");
+        }
+    }
+
+    pub fn set_state(&mut self, path: &RepoPath, state: String) -> Result<()> {
+        if let Some(info) = self.files.get_mut(path) {
+            if info.data.is_empty() {
+                bail!("invalid empty merge data when setting state for {path}");
+            }
+            info.state = ConflictState::from_record(&state)?;
+            info.data[0] = state;
+            Ok(())
+        } else {
+            bail!("no such file {path} to set state");
+        }
     }
 
     pub fn deserialize(data: &mut dyn Read) -> Result<Self> {

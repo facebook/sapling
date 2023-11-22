@@ -11,6 +11,7 @@ extern crate workingcopy as rsworkingcopy;
 
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Duration;
 use std::time::SystemTime;
@@ -20,6 +21,7 @@ use anyhow::Error;
 use cpython::*;
 use cpython_ext::convert::Serde;
 use cpython_ext::error::ResultPyErrExt;
+use cpython_ext::ExtractInnerRef;
 use cpython_ext::PyPathBuf;
 use io::IO;
 use parking_lot::RwLock;
@@ -205,10 +207,29 @@ py_class!(pub class workingcopy |py| {
 
         }
     }
+
+    def writemergestate(&self, ms: mergestate) -> PyResult<PyNone> {
+        let ms = ms.extract_inner_ref(py);
+        self.inner(py).read().write_merge_state(&*ms.borrow()).map_pyerr(py)?;
+        Ok(PyNone)
+    }
 });
 
 py_class!(pub class mergestate |py| {
     data ms: RefCell<repostate::MergeState>;
+
+    def __new__(
+        _cls,
+        local: Option<PyBytes>,
+        other: Option<PyBytes>,
+        labels: Option<Vec<String>>,
+    ) -> PyResult<Self> {
+        Self::create_instance(py, RefCell::new(repostate::MergeState::new(
+            local.map(|b| HgId::from_slice(b.data(py))).transpose().map_pyerr(py)?,
+            other.map(|b| HgId::from_slice(b.data(py))).transpose().map_pyerr(py)?,
+            labels.unwrap_or_default(),
+        )))
+    }
 
     def state(&self) -> PyResult<HashMap<String, Vec<String>>> {
         Ok(self.ms(py).borrow().files().iter().map(|(path, info)| {
@@ -216,7 +237,7 @@ py_class!(pub class mergestate |py| {
         }).collect())
     }
 
-    def extras(&self) -> PyResult<HashMap<String, HashMap<String, String>>> {
+    def allextras(&self) -> PyResult<HashMap<String, HashMap<String, String>>> {
         Ok(self.ms(py).borrow().files().iter().map(|(path, info)| {
             (path.as_str().to_string(), info.extras().clone())
         }).collect())
@@ -234,10 +255,75 @@ py_class!(pub class mergestate |py| {
         Ok(self.ms(py).borrow().merge_driver().map(|(md, mds)| (md.to_string(), mds.to_py_string().to_string())))
     }
 
+    def setmergedriver(&self, md: Option<(String, String)>) -> PyResult<PyNone> {
+        self.ms(py).borrow_mut().set_merge_driver(
+            md.map(|(md, mds)| (md, repostate::MergeDriverState::from_py_string(&mds))),
+        );
+        Ok(PyNone)
+    }
+
+
     def labels(&self) -> PyResult<Vec<String>> {
         Ok(self.ms(py).borrow().labels().to_vec())
     }
+
+    def insert(&self, path: PyPathBuf, data: Vec<String>) -> PyResult<PyNone> {
+        let mut ms = self.ms(py).borrow_mut();
+        ms.insert(path.to_repo_path_buf().map_pyerr(py)?, data).map_pyerr(py)?;
+        Ok(PyNone)
+    }
+
+    def get(&self, path: PyPathBuf) -> PyResult<Option<Vec<String>>> {
+        Ok(self.ms(py).borrow().files().get(path.to_repo_path().map_pyerr(py)?).map(|f| f.data().clone()))
+    }
+
+    def remove(&self, path: PyPathBuf) -> PyResult<PyNone> {
+        self.ms(py).borrow_mut().remove(path.to_repo_path().map_pyerr(py)?);
+        Ok(PyNone)
+    }
+
+    def setstate(&self, path: PyPathBuf, state: String) -> PyResult<PyNone> {
+        self.ms(py).borrow_mut().set_state(path.to_repo_path().map_pyerr(py)?, state).map_pyerr(py)?;
+        Ok(PyNone)
+    }
+
+    def files(&self, states: Option<Vec<String>> = None) -> PyResult<Vec<PyPathBuf>> {
+        let filter: HashSet<_> = states.unwrap_or_default().into_iter().collect();
+        Ok(self.ms(py)
+           .borrow()
+           .files()
+           .iter()
+           .filter_map(|(p,f)| if filter.is_empty() || filter.contains(&f.data()[0]) { Some(p) } else { None })
+           .cloned()
+           .map(Into::into)
+           .collect())
+    }
+
+    def contains(&self, path: PyPathBuf) -> PyResult<bool> {
+        Ok(self.ms(py).borrow().files().contains_key(path.to_repo_path().map_pyerr(py)?))
+    }
+
+    def extras(&self, path: PyPathBuf) -> PyResult<HashMap<String, String>> {
+        Ok(self.ms(py).borrow().files().get(path.to_repo_path().map_pyerr(py)?).map(|f| f.extras().clone()).unwrap_or_default())
+    }
+
+    def setextra(&self, path: PyPathBuf, key: String, value: String) -> PyResult<PyNone> {
+        self.ms(py).borrow_mut().set_extra(path.to_repo_path().map_pyerr(py)?, key, value).map_pyerr(py)?;
+        Ok(PyNone)
+    }
+
+    def isempty(&self) -> PyResult<bool> {
+        Ok(self.ms(py).borrow().files().is_empty())
+    }
 });
+
+impl ExtractInnerRef for mergestate {
+    type Inner = RefCell<repostate::MergeState>;
+
+    fn extract_inner_ref<'a>(&'a self, py: Python<'a>) -> &'a Self::Inner {
+        self.ms(py)
+    }
+}
 
 fn parse_git_submodules(py: Python, data: &PyBytes) -> PyResult<Vec<(String, String, String)>> {
     Ok(rsworkingcopy::git::parse_submodules(data.data(py))

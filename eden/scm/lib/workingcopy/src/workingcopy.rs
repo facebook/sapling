@@ -510,4 +510,13 @@ impl WorkingCopy {
             MergeState::deserialize(&mut ms_file).context("deserializing merge state")?,
         ))
     }
+
+    pub fn write_merge_state(&self, ms: &MergeState) -> Result<()> {
+        let dir = self.dot_hg_path().join("merge");
+        util::path::create_shared_dir_all(&dir)?;
+        let mut f = util::file::atomic_open(&dir.join("state2"))?;
+        ms.serialize(f.as_file())?;
+        f.save()?;
+        Ok(())
+    }
 }

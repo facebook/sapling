@@ -152,7 +152,7 @@ class mergestate:
         rust_ms = self._repo._rsrepo.workingcopy().mergestate()
 
         self._state = rust_ms.state()
-        self._stateextras = rust_ms.extras()
+        self._stateextras = rust_ms.allextras()
         self._local = rust_ms.local()
         self._other = rust_ms.other()
 
