@@ -40,23 +40,20 @@ from . import (
     progress,
     pycompat,
     scmutil,
-    treestate,
     util,
     worker,
 )
 from .i18n import _
 from .node import addednodeid, bin, hex, nullhex, nullid, wdirhex
-from .pycompat import decodeutf8, encodeutf8
+from .pycompat import encodeutf8
 
 _pack = struct.pack
-_unpack = struct.unpack
 
 
 class mergestate:
     """track 3-way merge state of individual files
 
-    The merge state is stored on disk when needed. For more about the format,
-    see the documentation for `_readrecords`.
+    The merge state is stored on disk when needed.
 
     Each record can contain arbitrary content, and has an associated type. This
     `type` should be a letter. If `type` is uppercase, the record is mandatory:
@@ -152,10 +149,24 @@ class mergestate:
         This function process "record" entry produced by the de-serialization
         of on disk file.
         """
-        self._state = {}
-        self._stateextras = {}
-        self._local = None
-        self._other = None
+        rust_ms = self._repo._rsrepo.workingcopy().mergestate()
+
+        self._state = rust_ms.state()
+        self._stateextras = rust_ms.extras()
+        self._local = rust_ms.local()
+        self._other = rust_ms.other()
+
+        if md := rust_ms.mergedriver():
+            self._readmergedriver = md[0]
+            self._mdstate = md[1]
+        else:
+            self._readmergedriver = None
+            self._mdstate = "s"
+
+        self._labels = rust_ms.labels() or None
+
+        self._results = {}
+        self._dirty = False
 
         # Note: _ancestors isn't written into the state file since the current
         # state file predates it.
@@ -166,87 +177,6 @@ class mergestate:
         for var in ("localctx", "otherctx", "ancestorctxs"):
             if var in vars(self):
                 delattr(self, var)
-        self._readmergedriver = None
-        self._mdstate = "s"
-        unsupported = set()
-        records = self._readrecords()
-        for rtype, record in records:
-            if rtype == "L":
-                self._local = bin(record)
-            elif rtype == "O":
-                self._other = bin(record)
-            elif rtype == "m":
-                bits = record.split("\0", 1)
-                mdstate = bits[1]
-                if len(mdstate) != 1 or mdstate not in "ums":
-                    # the merge driver should be idempotent, so just rerun it
-                    mdstate = "u"
-
-                self._readmergedriver = bits[0]
-                self._mdstate = mdstate
-            elif rtype in "FDCP":
-                bits = record.split("\0")
-                self._state[bits[0]] = bits[1:]
-            elif rtype == "f":
-                filename, rawextras = record.split("\0", 1)
-                extraparts = rawextras.split("\0")
-                extras = {}
-                i = 0
-                while i < len(extraparts):
-                    extras[extraparts[i]] = extraparts[i + 1]
-                    i += 2
-
-                self._stateextras[filename] = extras
-            elif rtype == "l":
-                labels = record.split("\0", 2)
-                self._labels = [l for l in labels if len(l) > 0]
-            elif not rtype.islower():
-                unsupported.add(rtype)
-        self._results = {}
-        self._dirty = False
-
-        if unsupported:
-            raise error.UnsupportedMergeRecords(unsupported)
-
-    def _readrecords(self):
-        """Read on disk merge state for version 2 file
-
-        This format is a list of arbitrary records of the form:
-
-          [type][length][content]
-
-        `type` is a single character, `length` is a 4 byte integer, and
-        `content` is an arbitrary byte sequence of length `length`.
-
-        Returns list of records [(TYPE, data), ...]."""
-        records = []
-        try:
-            f = self._repo.localvfs(self.statepath)
-            data = f.read()
-            off = 0
-            end = len(data)
-            while off < end:
-                rtype = data[off : off + 1]
-                off += 1
-                length = _unpack(">I", data[off : (off + 4)])[0]
-                off += 4
-                record = data[off : (off + length)]
-                off += length
-
-                # This "t" was a measure to fix compatibility with old versions
-                # of Mercurial. I removed the "t" writer in D46075828, but I'm
-                # leaving the reader since merge states could still contain the
-                # "t". This can be deleted once we aren't worried about old
-                # merge state files.
-                if rtype == b"t":
-                    rtype, record = record[0:1], record[1:]
-
-                records.append((decodeutf8(rtype), decodeutf8(record)))
-            f.close()
-        except IOError as err:
-            if err.errno != errno.ENOENT:
-                raise
-        return records
 
     @util.propertycache
     def mergedriver(self):
