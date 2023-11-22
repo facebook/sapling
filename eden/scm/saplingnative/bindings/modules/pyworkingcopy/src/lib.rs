@@ -10,6 +10,7 @@
 extern crate workingcopy as rsworkingcopy;
 
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 use std::time::SystemTime;
@@ -43,6 +44,7 @@ py_class!(pub class PyEdenClient |py| {
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "workingcopy"].join(".");
     let m = PyModule::new(py, &name)?;
+    m.add_class::<mergestate>(py)?;
     m.add_class::<walker>(py)?;
     m.add_class::<workingcopy>(py)?;
 
@@ -178,6 +180,62 @@ py_class!(pub class workingcopy |py| {
     def edenclient(&self) -> PyResult<PyEdenClient> {
         let wc = self.inner(py).read();
         PyEdenClient::create_instance(py, wc.eden_client().map_pyerr(py)?)
+    }
+
+    def mergestate(&self) -> PyResult<mergestate> {
+        match self.inner(py).read().read_merge_state() {
+            Ok(None) => mergestate::create_instance(py, RefCell::new(repostate::MergeState::default())),
+            Ok(Some(ms)) => mergestate::create_instance(py, RefCell::new(ms)),
+            Err(err) => match err.downcast::<repostate::UnsupportedMergeRecords>() {
+                Ok(bad) => {
+                    let bad_types: Vec<String> = bad.0.unsupported_records()
+                        .iter()
+                        .filter_map(|(t, _)| if t.len() == 1 && t.as_bytes()[0].is_ascii_lowercase() {
+                            None
+                        } else {
+                            Some(t.to_string())
+                        })
+                        .collect();
+                    Err(PyErr::from_instance(py, py.import("sapling.error")?
+                                                    .get(py, "UnsupportedMergeRecords")?
+                                                    .call(py, (bad_types.into_py_object(py),), None)?))
+                }
+                Err(err) => Err(err).map_pyerr(py),
+            },
+
+        }
+    }
+});
+
+py_class!(pub class mergestate |py| {
+    data ms: RefCell<repostate::MergeState>;
+
+    def state(&self) -> PyResult<HashMap<String, Vec<String>>> {
+        Ok(self.ms(py).borrow().files().iter().map(|(path, info)| {
+            (path.as_str().to_string(), info.data().clone())
+        }).collect())
+    }
+
+    def extras(&self) -> PyResult<HashMap<String, HashMap<String, String>>> {
+        Ok(self.ms(py).borrow().files().iter().map(|(path, info)| {
+            (path.as_str().to_string(), info.extras().clone())
+        }).collect())
+    }
+
+    def local(&self) -> PyResult<Option<PyBytes>> {
+        Ok(self.ms(py).borrow().local().map(|l| PyBytes::new(py, l.as_ref())))
+    }
+
+    def other(&self) -> PyResult<Option<PyBytes>> {
+        Ok(self.ms(py).borrow().other().map(|l| PyBytes::new(py, l.as_ref())))
+    }
+
+    def mergedriver(&self) -> PyResult<Option<(String, String)>> {
+        Ok(self.ms(py).borrow().merge_driver().map(|(md, mds)| (md.to_string(), mds.to_py_string().to_string())))
+    }
+
+    def labels(&self) -> PyResult<Vec<String>> {
+        Ok(self.ms(py).borrow().labels().to_vec())
     }
 });
 

@@ -37,6 +37,7 @@ rust_python_library(
         "//eden/scm/lib/sparse:sparse",
         "//eden/scm/lib/types:types",
         "//eden/scm/lib/workingcopy:workingcopy",
+        "//eden/scm/lib/workingcopy/repostate:repostate",
         "//eden/scm/saplingnative/bindings/modules/pyconfigloader:pyconfigloader",
         "//eden/scm/saplingnative/bindings/modules/pyedenclient:pyedenclient",
         "//eden/scm/saplingnative/bindings/modules/pypathmatcher:pypathmatcher",

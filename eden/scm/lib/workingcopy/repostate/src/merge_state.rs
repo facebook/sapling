@@ -49,6 +49,30 @@ impl std::fmt::Display for UnsupportedMergeRecords {
 }
 
 impl MergeState {
+    pub fn files(&self) -> &HashMap<RepoPathBuf, FileInfo> {
+        &self.files
+    }
+
+    pub fn local(&self) -> Option<&HgId> {
+        self.local.as_ref()
+    }
+
+    pub fn other(&self) -> Option<&HgId> {
+        self.other.as_ref()
+    }
+
+    pub fn merge_driver(&self) -> Option<&(String, MergeDriverState)> {
+        self.merge_driver.as_ref()
+    }
+
+    pub fn unsupported_records(&self) -> &[(String, Vec<String>)] {
+        &self.unsupported_records
+    }
+
+    pub fn labels(&self) -> &[String] {
+        &self.labels
+    }
+
     pub fn deserialize(data: &mut dyn Read) -> Result<Self> {
         let mut data = std::io::BufReader::new(data);
 
@@ -299,7 +323,17 @@ pub struct FileInfo {
     record_type: String,
 }
 
-#[derive(Debug)]
+impl FileInfo {
+    pub fn extras(&self) -> &HashMap<String, String> {
+        &self.extras
+    }
+
+    pub fn data(&self) -> &Vec<String> {
+        &self.data
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
 pub enum ConflictState {
     Unresolved,
     Resolved,
