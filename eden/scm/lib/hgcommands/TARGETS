@@ -130,6 +130,7 @@ rust_python_library(
         "//eden/scm/lib/util/nodeipc:nodeipc",
         "//eden/scm/lib/version:rust_version",
         "//eden/scm/lib/workingcopy:workingcopy",
+        "//eden/scm/lib/workingcopy/repostate:repostate",
         "//eden/scm/saplingnative/bindings:bindings",
         "//eden/scm/saplingnative/bindings/modules/pyconfigloader:pyconfigloader",
         "//eden/scm/saplingnative/bindings/modules/pyio:pyio",

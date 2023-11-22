@@ -21,6 +21,7 @@ commands! {
     mod refreshconfig;
     mod fsync;
     mod http;
+    mod mergestate;
     mod metrics;
     mod networkdoctor;
     mod structuredprogress;

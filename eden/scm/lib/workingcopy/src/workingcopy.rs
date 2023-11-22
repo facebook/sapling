@@ -33,6 +33,7 @@ use pathmatcher::Matcher;
 use pathmatcher::NegateMatcher;
 use pathmatcher::UnionMatcher;
 use repolock::RepoLocker;
+use repostate::MergeState;
 use status::FileStatus;
 use status::Status;
 use status::StatusBuilder;
@@ -495,5 +496,18 @@ impl WorkingCopy {
         self.eden_client
             .clone()
             .context("EdenFS client not available in current working copy")
+    }
+
+    pub fn read_merge_state(&self) -> Result<Option<MergeState>> {
+        let mut ms_file = match fs_err::File::open(self.dot_hg_path().join("merge/state2")) {
+            Ok(f) => f,
+            Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+                return Ok(None);
+            }
+            Err(err) => return Err(err).context("opening merge state"),
+        };
+        Ok(Some(
+            MergeState::deserialize(&mut ms_file).context("deserializing merge state")?,
+        ))
     }
 }

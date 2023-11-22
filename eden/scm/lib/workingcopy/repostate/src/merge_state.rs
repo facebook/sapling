@@ -49,7 +49,7 @@ impl std::fmt::Display for UnsupportedMergeRecords {
 }
 
 impl MergeState {
-    fn deserialize(data: &mut dyn Read) -> Result<Self> {
+    pub fn deserialize(data: &mut dyn Read) -> Result<Self> {
         let mut data = std::io::BufReader::new(data);
 
         let mut ms = Self::default();

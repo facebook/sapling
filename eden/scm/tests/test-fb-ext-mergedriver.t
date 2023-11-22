@@ -55,7 +55,7 @@ merge driver that always takes other versions
 (rc = 0, unresolved = n, driver-resolved = n)
 
   $ cat > ../mergedriver-other.py << EOF
-  > from sapling import debugcommands
+  > import bindings
   > def preprocess(ui, repo, hooktype, mergestate, wctx, labels):
   >     overrides = {('ui', 'forcemerge'): ':other'}
   >     with ui.configoverride(overrides, 'mergedriver'):
@@ -65,8 +65,7 @@ merge driver that always takes other versions
   >         mergestate.preresolve('bar.txt', wctx)
   >         mergestate.resolve('bar.txt', wctx)
   >         mergestate.commit()
-  > 
-  >     return debugcommands.debugmergestate(ui, repo)
+  >     bindings.commands.run(["hg", "debugmergestate"])
   > def conclude(ui, repo, hooktype, mergestate, wctx, labels):
   >     pass
   > EOF
@@ -84,16 +83,16 @@ merge driver that always takes other versions
   labels:
     local: working copy
     other: merge rev
-  file extras: bar.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
   file: bar.txt (record type "F", state "r", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
     local path: bar.txt (flags "")
     ancestor path: bar.txt (node 4f30a68d92d62ca460d2c484d3fe4584c0521ae1)
     other path: bar.txt (node 18db82bb5e3b439444a63baf35364169e848cfd2)
-  file extras: foo.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
+    extras: ancestorlinknode=b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92
   file: foo.txt (record type "F", state "r", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
     local path: foo.txt (flags "")
     ancestor path: foo.txt (node ad59c7ac23656632da079904d4d40d0bab4aeb80)
     other path: foo.txt (node 0b0743b512ba9b7c5db411597cf374a73b9f00ac)
+    extras: ancestorlinknode=b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92
   0 files updated, 2 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
@@ -140,16 +139,16 @@ mark a file driver-resolved, and leave others unresolved
   labels:
     local: working copy
     other: merge rev
-  file extras: bar.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
   file: bar.txt (record type "F", state "u", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
     local path: bar.txt (flags "")
     ancestor path: bar.txt (node 4f30a68d92d62ca460d2c484d3fe4584c0521ae1)
     other path: bar.txt (node 18db82bb5e3b439444a63baf35364169e848cfd2)
-  file extras: foo.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
+    extras: ancestorlinknode=b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92
   file: foo.txt (record type "D", state "d", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
     local path: foo.txt (flags "")
     ancestor path: foo.txt (node ad59c7ac23656632da079904d4d40d0bab4aeb80)
     other path: foo.txt (node 0b0743b512ba9b7c5db411597cf374a73b9f00ac)
+    extras: ancestorlinknode=b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92
   $ hg resolve bar.txt --tool internal:local
   (no more unresolved files -- run "hg resolve --all" to conclude)
   $ hg resolve --list
@@ -162,16 +161,16 @@ mark a file driver-resolved, and leave others unresolved
   labels:
     local: working copy
     other: merge rev
-  file extras: bar.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
   file: bar.txt (record type "F", state "r", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
     local path: bar.txt (flags "")
     ancestor path: bar.txt (node 4f30a68d92d62ca460d2c484d3fe4584c0521ae1)
     other path: bar.txt (node 18db82bb5e3b439444a63baf35364169e848cfd2)
-  file extras: foo.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
+    extras: ancestorlinknode=b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92
   file: foo.txt (record type "D", state "d", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
     local path: foo.txt (flags "")
     ancestor path: foo.txt (node ad59c7ac23656632da079904d4d40d0bab4aeb80)
     other path: foo.txt (node 0b0743b512ba9b7c5db411597cf374a73b9f00ac)
+    extras: ancestorlinknode=b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92
 
   $ hg resolve --all
   * conclude called
@@ -222,14 +221,14 @@ leave no files unresolved, but files driver-resolved
 for the conclude step, also test that leaving files as driver-resolved
 implicitly makes them resolved
   $ cat > ../mergedriver-driveronly.py << EOF
-  > from sapling import debugcommands
+  > import bindings
   > def preprocess(ui, repo, hooktype, mergestate, wctx, labels):
   >     repo.ui.status('* preprocess called\n')
   >     mergestate.mark('foo.txt', 'd')
   >     mergestate.mark('bar.txt', 'd')
   > def conclude(ui, repo, hooktype, mergestate, wctx, labels):
   >     repo.ui.status('* conclude called\n')
-  >     debugcommands.debugmergestate(ui, repo)
+  >     bindings.commands.run(["hg", "debugmergestate"])
   >     mergestate.mark('foo.txt', 'r')
   > EOF
   $ cat >> $HGRCPATH << EOF
@@ -247,16 +246,16 @@ implicitly makes them resolved
   labels:
     local: working copy
     other: merge rev
-  file extras: bar.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
   file: bar.txt (record type "D", state "d", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
     local path: bar.txt (flags "")
     ancestor path: bar.txt (node 4f30a68d92d62ca460d2c484d3fe4584c0521ae1)
     other path: bar.txt (node 18db82bb5e3b439444a63baf35364169e848cfd2)
-  file extras: foo.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
+    extras: ancestorlinknode=b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92
   file: foo.txt (record type "D", state "d", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
     local path: foo.txt (flags "")
     ancestor path: foo.txt (node ad59c7ac23656632da079904d4d40d0bab4aeb80)
     other path: foo.txt (node 0b0743b512ba9b7c5db411597cf374a73b9f00ac)
+    extras: ancestorlinknode=b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg debugmergestate | grep 'merge driver:'
@@ -302,16 +301,16 @@ XXX shouldn't output a warning
   labels:
     local: working copy
     other: merge rev
-  file extras: bar.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
   file: bar.txt (record type "F", state "r", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
     local path: bar.txt (flags "")
     ancestor path: bar.txt (node 4f30a68d92d62ca460d2c484d3fe4584c0521ae1)
     other path: bar.txt (node 18db82bb5e3b439444a63baf35364169e848cfd2)
-  file extras: foo.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
+    extras: ancestorlinknode=b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92
   file: foo.txt (record type "F", state "r", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
     local path: foo.txt (flags "")
     ancestor path: foo.txt (node ad59c7ac23656632da079904d4d40d0bab4aeb80)
     other path: foo.txt (node 0b0743b512ba9b7c5db411597cf374a73b9f00ac)
+    extras: ancestorlinknode=b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92
   $ hg commit -m 'merged'
 
 make sure this works sensibly when files are unresolved
@@ -349,16 +348,16 @@ XXX shouldn't output a warning
   labels:
     local: working copy
     other: merge rev
-  file extras: bar.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
   file: bar.txt (record type "F", state "u", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
     local path: bar.txt (flags "")
     ancestor path: bar.txt (node 4f30a68d92d62ca460d2c484d3fe4584c0521ae1)
     other path: bar.txt (node 18db82bb5e3b439444a63baf35364169e848cfd2)
-  file extras: foo.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
+    extras: ancestorlinknode=b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92
   file: foo.txt (record type "F", state "u", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
     local path: foo.txt (flags "")
     ancestor path: foo.txt (node ad59c7ac23656632da079904d4d40d0bab4aeb80)
     other path: foo.txt (node 0b0743b512ba9b7c5db411597cf374a73b9f00ac)
+    extras: ancestorlinknode=b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92
   $ hg commit -m 'merged'
   abort: unresolved merge conflicts (see 'hg help resolve')
   [255]
@@ -405,16 +404,16 @@ raise an error
   labels:
     local: working copy
     other: merge rev
-  file extras: bar.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
   file: bar.txt (record type "F", state "r", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
     local path: bar.txt (flags "")
     ancestor path: bar.txt (node 4f30a68d92d62ca460d2c484d3fe4584c0521ae1)
     other path: bar.txt (node 18db82bb5e3b439444a63baf35364169e848cfd2)
-  file extras: foo.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
+    extras: ancestorlinknode=b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92
   file: foo.txt (record type "F", state "r", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
     local path: foo.txt (flags "")
     ancestor path: foo.txt (node ad59c7ac23656632da079904d4d40d0bab4aeb80)
     other path: foo.txt (node 0b0743b512ba9b7c5db411597cf374a73b9f00ac)
+    extras: ancestorlinknode=b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92
   $ hg commit -m 'merged'
   abort: driver-resolved merge conflicts
   (run "hg resolve --all" to resolve)
@@ -559,16 +558,16 @@ verify behavior with different merge driver
   labels:
     local: working copy
     other: merge rev
-  file extras: bar.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
   file: bar.txt (record type "F", state "u", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
     local path: bar.txt (flags "")
     ancestor path: bar.txt (node 4f30a68d92d62ca460d2c484d3fe4584c0521ae1)
     other path: bar.txt (node 18db82bb5e3b439444a63baf35364169e848cfd2)
-  file extras: foo.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
+    extras: ancestorlinknode=b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92
   file: foo.txt (record type "F", state "u", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
     local path: foo.txt (flags "")
     ancestor path: foo.txt (node ad59c7ac23656632da079904d4d40d0bab4aeb80)
     other path: foo.txt (node 0b0743b512ba9b7c5db411597cf374a73b9f00ac)
+    extras: ancestorlinknode=b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92
   $ hg -R repo1 resolve --mark --all --config experimental.mergedriver=
   (no more unresolved files)
   $ hg -R repo1 debugmergestate
@@ -577,16 +576,16 @@ verify behavior with different merge driver
   labels:
     local: working copy
     other: merge rev
-  file extras: bar.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
   file: bar.txt (record type "F", state "r", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
     local path: bar.txt (flags "")
     ancestor path: bar.txt (node 4f30a68d92d62ca460d2c484d3fe4584c0521ae1)
     other path: bar.txt (node 18db82bb5e3b439444a63baf35364169e848cfd2)
-  file extras: foo.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
+    extras: ancestorlinknode=b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92
   file: foo.txt (record type "F", state "r", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
     local path: foo.txt (flags "")
     ancestor path: foo.txt (node ad59c7ac23656632da079904d4d40d0bab4aeb80)
     other path: foo.txt (node 0b0743b512ba9b7c5db411597cf374a73b9f00ac)
+    extras: ancestorlinknode=b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92
   $ hg -R repo1 commit -m merged
 
 this should invoke the merge driver
@@ -625,11 +624,11 @@ this should invoke the merge driver
   labels:
     local: working copy
     other: destination
-  file extras: foo.txt (ancestorlinknode = ede3d67b8d0fb0052854c85fb16823c825d21060)
   file: foo.txt (record type "F", state "u", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
     local path: foo.txt (flags "")
     ancestor path: foo.txt (node 802224e80e899817a159d494c123fb421ac3efee)
     other path: foo.txt (node ad59c7ac23656632da079904d4d40d0bab4aeb80)
+    extras: ancestorlinknode=ede3d67b8d0fb0052854c85fb16823c825d21060
   $ hg resolve --list
   U foo.txt
 XXX this is really confused
@@ -668,16 +667,16 @@ test merge with automatic commit afterwards -- e.g. graft
   labels:
     local: local
     other: graft
-  file extras: bar.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
   file: bar.txt (record type "F", state "r", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
     local path: bar.txt (flags "")
     ancestor path: bar.txt (node 4f30a68d92d62ca460d2c484d3fe4584c0521ae1)
     other path: bar.txt (node 18db82bb5e3b439444a63baf35364169e848cfd2)
-  file extras: foo.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
+    extras: ancestorlinknode=b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92
   file: foo.txt (record type "F", state "r", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
     local path: foo.txt (flags "")
     ancestor path: foo.txt (node ad59c7ac23656632da079904d4d40d0bab4aeb80)
     other path: foo.txt (node 0b0743b512ba9b7c5db411597cf374a73b9f00ac)
+    extras: ancestorlinknode=b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92
   $ hg export
   # HG changeset patch
   # User test

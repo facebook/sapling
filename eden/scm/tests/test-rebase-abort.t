@@ -66,13 +66,13 @@ Insert unsupported advisory merge record:
   labels:
     local: dest
     other: source
-    base:  base
-  unrecognized entry: x	advisory record
-  file extras: common (ancestorlinknode = 3163e20567cc93074fbb7a53c8b93312e59dbf2c)
+    base: base
   file: common (record type "F", state "u", hash 94c8c21d08740f5da9eaa38d1f175c592692f0d1)
     local path: common (flags "")
     ancestor path: common (node de0a666fdd9c1a0b0698b90d85064d8bd34f74b6)
     other path: common (node 2f6411de53677f6f1048fef5bf888d67a342e0a5)
+    extras: ancestorlinknode=3163e20567cc93074fbb7a53c8b93312e59dbf2c
+  unsupported record "x" (data ["advisory record"])
   $ hg resolve -l
   U common
 
@@ -85,13 +85,13 @@ Insert unsupported mandatory merge record:
   labels:
     local: dest
     other: source
-    base:  base
-  file extras: common (ancestorlinknode = 3163e20567cc93074fbb7a53c8b93312e59dbf2c)
+    base: base
   file: common (record type "F", state "u", hash 94c8c21d08740f5da9eaa38d1f175c592692f0d1)
     local path: common (flags "")
     ancestor path: common (node de0a666fdd9c1a0b0698b90d85064d8bd34f74b6)
     other path: common (node 2f6411de53677f6f1048fef5bf888d67a342e0a5)
-  unrecognized entry: X	mandatory record
+    extras: ancestorlinknode=3163e20567cc93074fbb7a53c8b93312e59dbf2c
+  unsupported record "X" (data ["mandatory record"])
   $ hg resolve -l
   abort: unsupported merge state records: X
   (see https://mercurial-scm.org/wiki/MergeStateRecords for more information)

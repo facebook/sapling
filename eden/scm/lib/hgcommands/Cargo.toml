@@ -65,6 +65,7 @@ pyworkingcopy = { version = "0.1.0", path = "../../saplingnative/bindings/module
 rand = { version = "0.8", features = ["small_rng"] }
 repo = { version = "0.1.0", path = "../repo", features = ["wdir"] }
 repo_name = { version = "0.1.0", path = "../repo_name" }
+repostate = { version = "0.1.0", path = "../workingcopy/repostate" }
 revisionstore = { version = "0.1.0", path = "../revisionstore" }
 runlog = { version = "0.1.0", path = "../runlog" }
 sampling = { version = "0.1.0", path = "../sampling" }

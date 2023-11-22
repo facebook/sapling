@@ -309,17 +309,17 @@ insert unsupported advisory merge record
   labels:
     local: working copy
     other: merge rev
-  unrecognized entry: x	advisory record
-  file extras: file1 (ancestorlinknode = 99726c03216e233810a2564cbc0adfe395007eac)
   file: file1 (record type "F", state "r", hash 60b27f004e454aca81b0480209cce5081ec52390)
     local path: file1 (flags "")
     ancestor path: file1 (node 2ed2a3912a0b24502043eae84ee4b279c18b90dd)
     other path: file1 (node 6f4310b00b9a147241b071a60c28a650827fb03d)
-  file extras: file2 (ancestorlinknode = 99726c03216e233810a2564cbc0adfe395007eac)
+    extras: ancestorlinknode=99726c03216e233810a2564cbc0adfe395007eac
   file: file2 (record type "F", state "u", hash cb99b709a1978bd205ab9dfd4c5aaa1fc91c7523)
     local path: file2 (flags "")
     ancestor path: file2 (node 2ed2a3912a0b24502043eae84ee4b279c18b90dd)
     other path: file2 (node 6f4310b00b9a147241b071a60c28a650827fb03d)
+    extras: ancestorlinknode=99726c03216e233810a2564cbc0adfe395007eac
+  unsupported record "x" (data ["advisory record"])
   $ hg resolve -l
   R file1
   U file2
@@ -333,17 +333,17 @@ insert unsupported mandatory merge record
   labels:
     local: working copy
     other: merge rev
-  file extras: file1 (ancestorlinknode = 99726c03216e233810a2564cbc0adfe395007eac)
   file: file1 (record type "F", state "r", hash 60b27f004e454aca81b0480209cce5081ec52390)
     local path: file1 (flags "")
     ancestor path: file1 (node 2ed2a3912a0b24502043eae84ee4b279c18b90dd)
     other path: file1 (node 6f4310b00b9a147241b071a60c28a650827fb03d)
-  file extras: file2 (ancestorlinknode = 99726c03216e233810a2564cbc0adfe395007eac)
+    extras: ancestorlinknode=99726c03216e233810a2564cbc0adfe395007eac
   file: file2 (record type "F", state "u", hash cb99b709a1978bd205ab9dfd4c5aaa1fc91c7523)
     local path: file2 (flags "")
     ancestor path: file2 (node 2ed2a3912a0b24502043eae84ee4b279c18b90dd)
     other path: file2 (node 6f4310b00b9a147241b071a60c28a650827fb03d)
-  unrecognized entry: X	mandatory record
+    extras: ancestorlinknode=99726c03216e233810a2564cbc0adfe395007eac
+  unsupported record "X" (data ["mandatory record"])
   $ hg resolve -l
   abort: unsupported merge state records: X
   (see https://mercurial-scm.org/wiki/MergeStateRecords for more information)
