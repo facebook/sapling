@@ -74,7 +74,7 @@ edit the history
   (hg histedit --continue to resume)
 
 insert unsupported advisory merge record
-  $ hg --config extensions.fakemergerecord=$TESTDIR/fakemergerecord.py fakemergerecord -x
+  $ hg debugmergestate --add-unsupported-advisory-record
   $ hg debugmergestate
   local: 8f7551c7e4a2f2efe0bc8c741baf7f227d65d758
   other: e860deea161a2f77de56603b340ebbb4536308ae
@@ -91,7 +91,7 @@ insert unsupported advisory merge record
   U e
 
 insert unsupported mandatory merge record
-  $ hg --config extensions.fakemergerecord=$TESTDIR/fakemergerecord.py fakemergerecord -X
+  $ hg debugmergestate --add-unsupported-mandatory-record
   $ hg debugmergestate
   local: 8f7551c7e4a2f2efe0bc8c741baf7f227d65d758
   other: e860deea161a2f77de56603b340ebbb4536308ae

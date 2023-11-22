@@ -40,6 +40,9 @@ pub struct MergeState {
 
     // list of unsupported record types and accompanying record data, if any
     unsupported_records: Vec<(String, Vec<String>)>,
+
+    // allows writing arbitrary records for testing purposes
+    raw_records: Vec<(u8, Vec<String>)>,
 }
 
 #[derive(Debug)]
@@ -104,6 +107,10 @@ impl MergeState {
         );
 
         Ok(())
+    }
+
+    pub fn add_raw_record(&mut self, record_type: u8, data: Vec<String>) {
+        self.raw_records.push((record_type, data));
     }
 
     pub fn remove(&mut self, path: &RepoPath) {
@@ -296,6 +303,10 @@ impl MergeState {
 
         if !self.labels.is_empty() {
             write_record(w, b'l', &self.labels[0], &self.labels[1..])?;
+        }
+
+        for (rt, data) in &self.raw_records {
+            write_record(w, *rt, &data[0], &data[1..])?;
         }
 
         Ok(())

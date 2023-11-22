@@ -59,7 +59,7 @@ Conflicting rebase:
 
 Insert unsupported advisory merge record:
 
-  $ hg --config extensions.fakemergerecord=$TESTDIR/fakemergerecord.py fakemergerecord -x
+  $ hg debugmergestate --add-unsupported-advisory-record
   $ hg debugmergestate
   local: 3e046f2ecedb793b97ed32108086edd1a162f8bc
   other: 46f0b057b5c061d276b91491c22151f78698abd2
@@ -78,7 +78,7 @@ Insert unsupported advisory merge record:
 
 Insert unsupported mandatory merge record:
 
-  $ hg --config extensions.fakemergerecord=$TESTDIR/fakemergerecord.py fakemergerecord -X
+  $ hg debugmergestate --add-unsupported-mandatory-record
   $ hg debugmergestate
   local: 3e046f2ecedb793b97ed32108086edd1a162f8bc
   other: 46f0b057b5c061d276b91491c22151f78698abd2

@@ -302,7 +302,7 @@ resolve <file> should do nothing if 'file' was marked resolved
 
 insert unsupported advisory merge record
 
-  $ hg --config extensions.fakemergerecord=$TESTDIR/fakemergerecord.py fakemergerecord -x
+  $ hg debugmergestate --add-unsupported-advisory-record
   $ hg debugmergestate
   local: 57653b9f834a4493f7240b0681efcb9ae7cab745
   other: dc77451844e37f03f5c559e3b8529b2b48d381d1
@@ -326,7 +326,7 @@ insert unsupported advisory merge record
 
 insert unsupported mandatory merge record
 
-  $ hg --config extensions.fakemergerecord=$TESTDIR/fakemergerecord.py fakemergerecord -X
+  $ hg debugmergestate --add-unsupported-mandatory-record
   $ hg debugmergestate
   local: 57653b9f834a4493f7240b0681efcb9ae7cab745
   other: dc77451844e37f03f5c559e3b8529b2b48d381d1
