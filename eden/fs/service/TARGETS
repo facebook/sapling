@@ -155,6 +155,12 @@ cpp_binary(
     srcs = [
         "oss/main.cpp",
     ],
+    linker_flags = select({
+        "DEFAULT": [],
+        "ovr_config//os:windows": [
+            "/STACK:2097152",  # This was picked arbitrarily as 2 MB
+        ],
+    }),
     deps = [
         ":main",
         ":server",
