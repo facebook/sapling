@@ -46,7 +46,7 @@ impl ConfigArgs {
         if let Some(config_path) = &self.config_path {
             config_path.clone()
         } else if self.prod {
-            configerator_config_path("prod")
+            configerator_config_path("prod.materialized_JSON")
         } else if let Some(tier) = &self.config_tier {
             configerator_config_path(tier)
         } else {

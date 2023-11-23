@@ -23,7 +23,7 @@ pub struct TunablesArgs {
     pub disable_tunables: bool,
 }
 
-const DEFAULT_TUNABLES_CONFIG: &str = "scm/mononoke/tunables/default";
+const DEFAULT_TUNABLES_CONFIG: &str = "scm/mononoke/tunables/default.materialized_JSON";
 
 impl TunablesArgs {
     pub fn tunables_config_or_default(&self) -> String {
