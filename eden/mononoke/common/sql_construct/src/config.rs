@@ -160,7 +160,7 @@ pub trait SqlConstructFromMetadataDatabaseConfig: FbSqlConstruct + SqlConstruct 
 pub trait SqlShardableConstructFromMetadataDatabaseConfig:
     FbSqlConstruct + FbSqlShardedConstruct + SqlConstruct
 {
-    fn with_metadata_database_config(
+    async fn with_metadata_database_config(
         fb: FacebookInit,
         metadata_database_config: &MetadataDatabaseConfig,
         mysql_options: &MysqlOptions,
@@ -173,8 +173,8 @@ pub trait SqlShardableConstructFromMetadataDatabaseConfig:
             MetadataDatabaseConfig::Remote(remote) => {
                 Self::with_remote_metadata_database_config(fb, remote, mysql_options, readonly)
             }
-            MetadataDatabaseConfig::OssRemote(_) => {
-                Err(anyhow!("OssRemote databases don't support sharding",))
+            MetadataDatabaseConfig::OssRemote(remote) => {
+                Self::with_oss_remote_metadata_database_config(fb, remote, readonly).await
             }
         }
     }
@@ -201,8 +201,34 @@ pub trait SqlShardableConstructFromMetadataDatabaseConfig:
         }
     }
 
+    async fn with_oss_remote_metadata_database_config(
+        fb: FacebookInit,
+        remote: &OssRemoteMetadataDatabaseConfig,
+        readonly: bool,
+    ) -> Result<Self> {
+        let config = Self::oss_remote_database_config(remote)
+            .ok_or_else(|| anyhow!("no configuration available"))?;
+
+        Self::with_oss_mysql(
+            fb,
+            config.host.clone(),
+            config.port,
+            config.user.clone(),
+            config.secret_name.clone(),
+            config.database.clone(),
+            readonly,
+        )
+        .await
+    }
+
     /// Get the remote database config for this type.
     fn remote_database_config(
         remote: &RemoteMetadataDatabaseConfig,
     ) -> Option<&ShardableRemoteDatabaseConfig>;
+
+    fn oss_remote_database_config(
+        remote: &OssRemoteMetadataDatabaseConfig,
+    ) -> Option<&OssRemoteDatabaseConfig> {
+        Some(&remote.primary)
+    }
 }

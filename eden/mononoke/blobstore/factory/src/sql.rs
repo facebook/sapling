@@ -165,8 +165,9 @@ impl MetadataSqlFactory {
                 })
                 .await?
             }
-            MetadataSqlConnectionsFactory::OssRemote { .. } => {
-                bail!("Oss remotes don't support sharding yet")
+            MetadataSqlConnectionsFactory::OssRemote { remote_config } => {
+                T::with_oss_remote_metadata_database_config(self.fb, remote_config, self.readonly.0)
+                    .await
             }
         }
     }
@@ -195,9 +196,10 @@ impl MetadataSqlFactory {
                     ),
                 }
             }
-            MetadataSqlConnectionsFactory::OssRemote { .. } => {
-                bail!("Oss remotes don't support sharding yet")
-            }
+            MetadataSqlConnectionsFactory::OssRemote { .. } => SqlTierInfo {
+                tier_name: "oss_mysql".to_string(),
+                shard_num: None,
+            },
         })
     }
 }
