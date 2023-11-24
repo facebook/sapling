@@ -80,9 +80,12 @@ Set location of binary, resources and options (e.g. output path, directories)
   $ END_DATE="2023-02-01"
 
 Test the unhappy path: what happens if we provide a bookmark that does not exist?
-Oh no! A panic!
-  $ gitexport -R "repo" -p $EXPORT_DIR --git-output $GIT_BUNDLE_OUTPUT -B i_made_this_up_would_you_believe_it 2>&1 | grep PANIC
-  PANIC: called `Option::unwrap()` on a `None` value
+We fail with a helpful error message.
+  $ gitexport -R "repo" -p $EXPORT_DIR --git-output $GIT_BUNDLE_OUTPUT -B i_made_this_up_would_you_believe_it
+  * Starting session with id * (glob)
+  * Execution error: Expected the repo to contain the bookmark: i_made_this_up_would_you_believe_it. It didn't (glob)
+  Error: Execution failed
+  [1]
 
 Run the tool
   $ test_gitexport --log-level ERROR $(printf -- '-p %s ' "${EXPORT_PATHS[@]}")

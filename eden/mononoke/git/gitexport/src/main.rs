@@ -448,12 +448,12 @@ async fn get_changeset_context_from_head_arg(
         HeadChangesetArg::Bookmark(bookmark_name) => {
             let bookmark_key = BookmarkKey::from_str(bookmark_name.as_str())?;
 
-            let cs_ctx = repo_ctx
+            repo_ctx
                 .resolve_bookmark(&bookmark_key, BookmarkFreshness::MostRecent)
                 .await?
-                .unwrap();
-
-            Ok(cs_ctx)
+                .ok_or(anyhow!(
+                    "Expected the repo to contain the bookmark: {bookmark_key}. It didn't"
+                ))
         }
     }
 }
