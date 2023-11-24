@@ -417,8 +417,7 @@ def pickversion():
     # Some tools parse this number to figure out if they support this version of
     # Mercurial, so prepend with 4.4.2.
     # ex. 4.4.2_20180105_214829_58fda95a0202
-    return "_".join(["4.4.2"] + out.split())
-
+    return "4.4.2+" + "_".join(out.split())
 
 if not os.path.isdir(builddir):
     # Create the "build" directory
