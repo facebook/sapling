@@ -234,7 +234,7 @@ impl CommitGraph {
             Common,
         }
 
-        let mut frontier: BTreeMap<Generation, HashMap<ChangesetId, Origin>> = Default::default();
+        let mut frontier: BTreeMap<Generation, BTreeMap<ChangesetId, Origin>> = Default::default();
         let mut segments = vec![];
 
         loop {
