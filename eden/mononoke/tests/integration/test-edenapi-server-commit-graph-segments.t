@@ -86,8 +86,8 @@ Ensure we can clone the repo
                  "location": {"distance": 0,
                               "descendant": bin("74dbcd84493ad579ee26bb326c4272983098f69c")}},
                 {"hgid": bin("d6e9a5359dcbb3b00616ebba901199b45d039851"),
-                 "location": {"distance": 0,
-                              "descendant": bin("d6e9a5359dcbb3b00616ebba901199b45d039851")}}]},
+                 "location": {"distance": 2,
+                              "descendant": bin("6a93301afe75bbd33ccccc884a669f74c27e6d9f")}}]},
    {"base": bin("26641f81ab7fd36bffbab851fc5ec16c3c2ec909"),
     "head": bin("abdf5b2a1b925a020e3271d37ec1a6d04d7f0130"),
     "length": 3,
@@ -104,8 +104,6 @@ Ensure we can clone the repo
     "head": bin("6a93301afe75bbd33ccccc884a669f74c27e6d9f"),
     "length": 6,
     "parents": []}]
-
-BUG! Server has returned F (d6e9a535) as a parent, but it is not known to the client.
 
   $ hgedenapi debugapi -e commitgraphsegments -i "[\"$Q\"]" -i "[\"$G\"]"
   [{"base": bin("705906cc9558bdb08dc5847424b6125c00a01c0f"),

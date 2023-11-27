@@ -20,6 +20,7 @@ use commit_graph_types::segments::ChangesetSegmentParent;
 use commit_graph_types::storage::CommitGraphStorage;
 use commit_graph_types::storage::Prefetch;
 use context::CoreContext;
+use futures::pin_mut;
 use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
@@ -27,6 +28,7 @@ use futures_stats::TimedTryFutureExt;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 use slog::debug;
+use smallvec::smallvec;
 use smallvec::SmallVec;
 
 use crate::CommitGraph;
@@ -201,20 +203,24 @@ impl CommitGraph {
 
     /// Given a list of changesets heads and another list of changesets common, all having
     /// their merge_ancestor pointing to base, returns a list of segments representing all
-    /// ancestors of heads, excluding all ancestors of common.
+    /// ancestors of heads, excluding all ancestors of common, and a map of locations of
+    /// parents within those segments.
     async fn disjoint_segments(
         &self,
         ctx: &CoreContext,
         base: ChangesetId,
         heads: Vec<ChangesetId>,
         common: Vec<ChangesetId>,
-    ) -> Result<Vec<ChangesetSegment>> {
+    ) -> Result<(
+        Vec<ChangesetSegment>,
+        HashMap<ChangesetId, ChangesetSegmentLocation>,
+    )> {
         let base_edges = self.storage.fetch_edges(ctx, base).await?;
 
         let mut heads_skew_ancestors_set: SkewAncestorsSet = Default::default();
         let mut common_skew_ancestors_set: SkewAncestorsSet = Default::default();
 
-        for cs_id in heads {
+        for cs_id in heads.iter().copied() {
             heads_skew_ancestors_set
                 .add(ctx, &self.storage, cs_id, base_edges.node.generation)
                 .await?;
@@ -224,6 +230,15 @@ impl CommitGraph {
                 .add(ctx, &self.storage, cs_id, base_edges.node.generation)
                 .await?;
         }
+
+        let mut locations = heads
+            .into_iter()
+            .filter_map(|head| {
+                // Exclude head locations that are also ancestors of common.
+                let include_location = !common_skew_ancestors_set.contains_ancestor(head);
+                include_location.then_some((head, ChangesetSegmentLocation { head, distance: 0 }))
+            })
+            .collect::<HashMap<_, _>>();
 
         #[derive(Copy, Clone, Debug)]
         enum Origin {
@@ -383,10 +398,7 @@ impl CommitGraph {
                                     .iter()
                                     .map(|parent| ChangesetSegmentParent {
                                         cs_id: parent.cs_id,
-                                        location: Some(ChangesetSegmentLocation {
-                                            head: parent.cs_id,
-                                            distance: 0,
-                                        }),
+                                        location: None,
                                     })
                                     .collect(),
                             });
@@ -397,19 +409,16 @@ impl CommitGraph {
                             match (
                                 frontier
                                     .get(&parent.generation)
-                                    .and_then(|segments| segments.get_key_value(&parent.cs_id)),
+                                    .and_then(|segments| segments.get(&parent.cs_id)),
                                 common_skew_ancestors_set.contains_ancestor(parent.cs_id),
                             ) {
                                 // Parent is contained in another segment that originates from one of the heads.
                                 // Stop extending segment.
                                 (
-                                    Some((
-                                        _,
-                                        Origin::Head {
-                                            cs_id: parent_segment_origin,
-                                            generation: parent_segment_origin_generation,
-                                        },
-                                    )),
+                                    Some(Origin::Head {
+                                        cs_id: parent_segment_origin,
+                                        generation: parent_segment_origin_generation,
+                                    }),
                                     _,
                                 ) => segments.push(ChangesetSegment {
                                     head: origin_cs_id,
@@ -417,31 +426,44 @@ impl CommitGraph {
                                     length: origin_generation.value()
                                         - edges.node.generation.value()
                                         + 1,
-                                    parents: SmallVec::from(vec![ChangesetSegmentParent {
+                                    parents: smallvec![ChangesetSegmentParent {
                                         cs_id: parent.cs_id,
                                         location: Some(ChangesetSegmentLocation {
                                             head: *parent_segment_origin,
                                             distance: parent_segment_origin_generation.value()
                                                 - parent.generation.value(),
                                         }),
-                                    }]),
+                                    }],
                                 }),
                                 // Parent is an ancestor of common.
                                 // Stop extending segment.
-                                (Some(_), _) | (_, true) => segments.push(ChangesetSegment {
-                                    head: origin_cs_id,
-                                    base: cs_id,
-                                    length: origin_generation.value()
-                                        - edges.node.generation.value()
-                                        + 1,
-                                    parents: SmallVec::from(vec![ChangesetSegmentParent {
-                                        cs_id: parent.cs_id,
-                                        location: None,
-                                    }]),
-                                }),
+                                (Some(Origin::Common), _) | (_, true) => {
+                                    segments.push(ChangesetSegment {
+                                        head: origin_cs_id,
+                                        base: cs_id,
+                                        length: origin_generation.value()
+                                            - edges.node.generation.value()
+                                            + 1,
+                                        parents: smallvec![ChangesetSegmentParent {
+                                            cs_id: parent.cs_id,
+                                            location: None,
+                                        }],
+                                    })
+                                }
                                 // Parent isn't contained in any other segment, and isn't an ancestor of common.
                                 // Continue extending segment.
                                 (None, false) => {
+                                    if let Some(location) = locations.get_mut(&parent.cs_id) {
+                                        // Parent is a head that is being merged into this segment.
+                                        // We need to update its location to be within this segment
+                                        // so that it can be resolved later on.
+                                        *location = ChangesetSegmentLocation {
+                                            head: origin_cs_id,
+                                            distance: origin_generation.value()
+                                                - edges.node.generation.value()
+                                                + 1,
+                                        };
+                                    }
                                     frontier.entry(parent.generation).or_default().insert(
                                         parent.cs_id,
                                         Origin::Head {
@@ -458,7 +480,7 @@ impl CommitGraph {
             }
         }
 
-        Ok(segments)
+        Ok((segments, locations))
     }
 
     /// Returns a list of segments representing all ancestors of heads, excluding
@@ -534,12 +556,27 @@ impl CommitGraph {
             }
         }
 
-        stream::iter(difference_segments_futures)
-            .buffered(100)
-            .map_ok(|segments| stream::iter(segments).map(Ok))
-            .try_flatten()
-            .try_collect()
-            .await
+        let s = stream::iter(difference_segments_futures).buffered(100);
+        pin_mut!(s);
+        let mut all_segments = Vec::new();
+        let mut parent_locations = HashMap::new();
+        while let Some((mut segments, locations)) = s.try_next().await? {
+            all_segments.append(&mut segments);
+            parent_locations.extend(locations);
+        }
+
+        // Fix up parents whose locations were determined later on.
+        if !parent_locations.is_empty() {
+            for segment in all_segments.iter_mut() {
+                for parent in segment.parents.iter_mut() {
+                    if let Some(location) = parent_locations.get(&parent.cs_id) {
+                        parent.location = Some(location.clone());
+                    }
+                }
+            }
+        }
+
+        Ok(all_segments)
     }
 
     /// Returns all changesets in a segment in reverse topological order, verifying
