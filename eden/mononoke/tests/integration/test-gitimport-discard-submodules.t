@@ -104,23 +104,23 @@
 
 # Import it into Mononoke
   $ cd "$TESTTMP"
-  $ gitimport --record-head-symref "$GIT_REPO" --generate-bookmarks --discard-submodules full-repo
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  * GitRepo:$TESTTMP/repo-git commit 1 of 3 - Oid:8ce3eae4 => Bid:032cd4dc (glob)
-  * GitRepo:$TESTTMP/repo-git commit 2 of 3 - Oid:e8615d6f => Bid:da93dc81 (glob)
-  * GitRepo:$TESTTMP/repo-git commit 3 of 3 - Oid:fbae2e73 => Bid:4cd77220 (glob)
-  * Ref: "refs/heads/master": Some(ChangesetId(Blake2(4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e))) (glob)
-  * Ref: "refs/remotes/origin/HEAD": Some(ChangesetId(Blake2(4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e))) (glob)
-  * Ref: "refs/remotes/origin/master": Some(ChangesetId(Blake2(4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e))) (glob)
-  * Ref: "refs/tags/empty_tag": Some(ChangesetId(Blake2(4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e))) (glob)
-  * Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044))) (glob)
-  * Initializing repo: repo (glob)
-  * Initialized repo: repo (glob)
-  * All repos initialized. It took: 0 seconds (glob)
-  * Bookmark: "heads/master": ChangesetId(Blake2(4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e)) (created) (glob)
-  * Bookmark: "heads/master": ChangesetId(Blake2(4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e)) (already up-to-date) (glob)
-  * Bookmark: "tags/empty_tag": ChangesetId(Blake2(4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e)) (created) (glob)
-  * Bookmark: "tags/first_tag": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (created) (glob)
+  $ with_stripped_logs gitimport --record-head-symref "$GIT_REPO" --generate-bookmarks --discard-submodules full-repo
+  using repo "repo" repoid RepositoryId(0)
+  GitRepo:$TESTTMP/repo-git commit 1 of 3 - Oid:8ce3eae4 => Bid:032cd4dc
+  GitRepo:$TESTTMP/repo-git commit 2 of 3 - Oid:e8615d6f => Bid:da93dc81
+  GitRepo:$TESTTMP/repo-git commit 3 of 3 - Oid:fbae2e73 => Bid:4cd77220
+  Ref: "refs/heads/master": Some(ChangesetId(Blake2(4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e)))
+  Ref: "refs/remotes/origin/HEAD": Some(ChangesetId(Blake2(4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e)))
+  Ref: "refs/remotes/origin/master": Some(ChangesetId(Blake2(4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e)))
+  Ref: "refs/tags/empty_tag": Some(ChangesetId(Blake2(4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e)))
+  Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
+  Initializing repo: repo
+  Initialized repo: repo
+  All repos initialized. It took: 0 seconds
+  Bookmark: "heads/master": ChangesetId(Blake2(4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e)) (created)
+  Bookmark: "heads/master": ChangesetId(Blake2(4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e)) (already up-to-date)
+  Bookmark: "tags/empty_tag": ChangesetId(Blake2(4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e)) (created)
+  Bookmark: "tags/first_tag": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (created)
 
 # We can see that the bonsai changesets graph we created looks correct
   $ mononoke_newadmin changelog -R repo graph -i 4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e -M -I
