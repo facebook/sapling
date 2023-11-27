@@ -130,12 +130,7 @@ def get_remote_bookmark_node(ui, edenapi, bookmark) -> Optional[bytes]:
 
 def create_remote_bookmark(ui, edenapi, bookmark, node) -> None:
     ui.write(_("creating remote bookmark %s\n") % bookmark)
-    succeed = edenapi.setbookmark(bookmark, node, None, pushvars=[])
-    if not succeed:
-        # todo (zhaolong): add more details about why create bookmark failed.
-        # In order to do that, we need to make `setbookmark` API return the
-        # server error.
-        raise error.Abort(_("could not create remote bookmark %s") % bookmark)
+    edenapi.setbookmark(bookmark, node, None, pushvars=[])
 
 
 def record_remote_bookmark(repo, bookmark, new_node) -> None:
