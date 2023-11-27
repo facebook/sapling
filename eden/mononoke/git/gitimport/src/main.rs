@@ -137,6 +137,14 @@ struct GitimportArgs {
     subcommand: GitimportSubcommand,
     #[clap(flatten)]
     repo_args: RepoArgs,
+    /// Discard any git submodule during import.
+    /// **WARNING**: This will make the repo import lossy: round trip between Mononoke and git won't be
+    /// possible anymore.
+    /// In particular, this is not suitable as a precursor step to setting up live sync with
+    /// Mononoke.
+    /// Only use if you are sure that's what you want.
+    #[clap(long)]
+    discard_submodules: bool,
 }
 
 #[derive(Subcommand)]
@@ -177,6 +185,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     let args: GitimportArgs = app.args()?;
     let mut prefs = GitimportPreferences {
         concurrency: args.concurrency,
+        submodules: !args.discard_submodules,
         ..Default::default()
     };
     // if we are readonly, then we'll set up some overrides to still be able to do meaningful
