@@ -30,7 +30,6 @@ use context::CoreContext;
 use cross_repo_sync::rewrite_commit;
 use cross_repo_sync::update_mapping_with_version;
 use cross_repo_sync::CommitSyncContext;
-use cross_repo_sync::CommitSyncDataProvider;
 use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::Repo;
@@ -241,13 +240,13 @@ pub async fn init_small_large_repo(
         large_repo_id: RepositoryId::new(1),
     });
 
-    let commit_sync_data_provider = CommitSyncDataProvider::Live(Arc::new(sync_config.clone()));
+    let live_commit_sync_config = Arc::new(sync_config.clone());
 
-    let small_to_large_commit_syncer = CommitSyncer::new_with_provider(
+    let small_to_large_commit_syncer = CommitSyncer::new_with_live_commit_sync_config(
         ctx,
         mapping.clone(),
         repos.clone(),
-        commit_sync_data_provider.clone(),
+        live_commit_sync_config.clone(),
     );
 
     let repos = CommitSyncRepos::LargeToSmall {
@@ -255,11 +254,11 @@ pub async fn init_small_large_repo(
         large_repo: megarepo.clone(),
     };
 
-    let large_to_small_commit_syncer = CommitSyncer::new_with_provider(
+    let large_to_small_commit_syncer = CommitSyncer::new_with_live_commit_sync_config(
         ctx,
         mapping.clone(),
         repos.clone(),
-        commit_sync_data_provider,
+        live_commit_sync_config,
     );
 
     let first_bcs_id = CreateCommitContext::new_root(ctx, &smallrepo)

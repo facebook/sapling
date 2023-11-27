@@ -29,7 +29,6 @@ use cross_repo_sync::update_mapping_with_version;
 use cross_repo_sync::validation::verify_working_copy;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
-use cross_repo_sync::CommitSyncDataProvider;
 use cross_repo_sync::CommitSyncOutcome;
 use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
@@ -711,8 +710,7 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
         large_repo: megarepo.clone(),
     };
     let version = version_name_with_small_repo();
-    let commit_sync_data_provider = CommitSyncDataProvider::Live(live_commit_sync_config);
-    commit_syncer.commit_sync_data_provider = commit_sync_data_provider;
+    commit_syncer.live_commit_sync_config = live_commit_sync_config;
     commit_syncer.repos = commit_sync_repos;
 
     let megarepo_initial_bcs_id = create_initial_commit(ctx.clone(), &megarepo).await;
@@ -1770,13 +1768,10 @@ async fn merge_test_setup(
             small_repo: small_repo.clone(),
             large_repo: large_repo.clone(),
         };
-        let live_commit_sync_config = get_merge_sync_live_commit_sync_config(
+        lts_syncer.live_commit_sync_config = get_merge_sync_live_commit_sync_config(
             large_repo.repo_identity().id(),
             small_repo.repo_identity().id(),
         )?;
-        lts_syncer.live_commit_sync_config = Arc::clone(&live_commit_sync_config);
-        lts_syncer.commit_sync_data_provider =
-            CommitSyncDataProvider::Live(live_commit_sync_config);
         lts_syncer
     };
 
@@ -2045,8 +2040,7 @@ async fn test_no_accidental_preserved_roots(
 
         let live_commit_sync_config = Arc::new(sync_config);
 
-        let commit_sync_data_provider = CommitSyncDataProvider::Live(live_commit_sync_config);
-        commit_syncer.commit_sync_data_provider = commit_sync_data_provider;
+        commit_syncer.live_commit_sync_config = live_commit_sync_config;
         commit_syncer.repos = commit_sync_repos.clone();
 
         commit_syncer
@@ -2143,16 +2137,17 @@ async fn test_not_sync_candidate_if_mapping_does_not_have_small_repo(
 
     // Now create commit in large repo and sync it to the first small repo with the config
     // created above.
-    let commit_sync_data_provider = CommitSyncDataProvider::Live(Arc::new(sync_config));
+    let live_commit_sync_config = Arc::new(sync_config);
+
     let repos = CommitSyncRepos::LargeToSmall {
         small_repo: first_smallrepo.clone(),
         large_repo: large_repo.clone(),
     };
-    let large_to_first_small_commit_syncer = CommitSyncer::new_with_provider(
+    let large_to_first_small_commit_syncer = CommitSyncer::new_with_live_commit_sync_config(
         &ctx,
         mapping.clone(),
         repos.clone(),
-        commit_sync_data_provider.clone(),
+        live_commit_sync_config.clone(),
     );
 
     let first_bcs_id = CreateCommitContext::new_root(&ctx, &large_repo)
@@ -2174,11 +2169,11 @@ async fn test_not_sync_candidate_if_mapping_does_not_have_small_repo(
         small_repo: second_smallrepo.clone(),
         large_repo: large_repo.clone(),
     };
-    let large_to_second_small_commit_syncer = CommitSyncer::new_with_provider(
+    let large_to_second_small_commit_syncer = CommitSyncer::new_with_live_commit_sync_config(
         &ctx,
         mapping.clone(),
         repos.clone(),
-        commit_sync_data_provider.clone(),
+        live_commit_sync_config.clone(),
     );
     large_to_second_small_commit_syncer
         .sync_commit(

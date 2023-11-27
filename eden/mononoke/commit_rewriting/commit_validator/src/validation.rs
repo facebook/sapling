@@ -31,7 +31,6 @@ use cross_repo_sync::types::Small;
 use cross_repo_sync::types::Source;
 use cross_repo_sync::types::Target;
 use cross_repo_sync::validation::report_different;
-use cross_repo_sync::CommitSyncDataProvider;
 use cross_repo_sync::CommitSyncOutcome;
 use futures::future;
 use futures::future::try_join_all;
@@ -241,8 +240,6 @@ impl ValidationHelper {
         let large_repo_id = self.large_repo.0.repo_identity().id();
         let small_repo_id = self.small_repo.0.repo_identity().id();
 
-        let commit_sync_data_provider =
-            CommitSyncDataProvider::Live(Arc::new(self.live_commit_sync_config.clone()));
         let maybe_commit_sync_outcome: Option<CommitSyncOutcome> = get_commit_sync_outcome(
             ctx,
             Source(large_repo_id),
@@ -250,7 +247,7 @@ impl ValidationHelper {
             Source(hash.0),
             mapping,
             CommitSyncDirection::LargeToSmall,
-            &commit_sync_data_provider,
+            Arc::new(self.live_commit_sync_config.clone()),
         )
         .await?;
 
@@ -989,7 +986,7 @@ async fn validate_topological_order<
     small_repo: &'a Small<R>,
     small_cs_id: Small<ChangesetId>,
     mapping: &'a SqlSyncedCommitMapping,
-    commit_sync_data_provider: &'a CommitSyncDataProvider,
+    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<(), Error> {
     debug!(
         ctx.logger(),
@@ -1006,7 +1003,7 @@ async fn validate_topological_order<
 
     let remapped_small_parents: Vec<(ChangesetId, ChangesetId)> =
         try_join_all(small_parents.into_iter().map(|small_parent| {
-            cloned!(ctx, commit_sync_data_provider);
+            cloned!(ctx, live_commit_sync_config);
             async move {
                 let maybe_commit_sync_outcome = get_commit_sync_outcome(
                     &ctx,
@@ -1015,7 +1012,7 @@ async fn validate_topological_order<
                     Source(small_parent),
                     mapping,
                     CommitSyncDirection::SmallToLarge,
-                    &commit_sync_data_provider,
+                    live_commit_sync_config,
                 )
                 .await?;
 
@@ -1395,7 +1392,7 @@ async fn validate_in_a_single_repo(
         &validation_helper.small_repo,
         small_cs_id,
         &mapping,
-        &CommitSyncDataProvider::Live(Arc::new(validation_helper.live_commit_sync_config.clone())),
+        Arc::new(validation_helper.live_commit_sync_config.clone()),
     )
     .await
 }
@@ -1675,7 +1672,7 @@ mod tests {
             &small_repo,
             Small(small_commits[small_index_to_test].clone()),
             &small_to_large_commit_syncer.mapping,
-            small_to_large_commit_syncer.get_commit_sync_data_provider(),
+            small_to_large_commit_syncer.live_commit_sync_config,
         )
         .await?;
 

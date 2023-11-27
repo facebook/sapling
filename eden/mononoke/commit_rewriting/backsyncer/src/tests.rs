@@ -35,7 +35,6 @@ use cross_repo_sync::get_strip_git_submodules_by_version;
 use cross_repo_sync::rewrite_commit;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
-use cross_repo_sync::CommitSyncDataProvider;
 use cross_repo_sync::CommitSyncOutcome;
 use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
@@ -756,10 +755,14 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
     );
     lv_cfg_src.add_common_config(common);
 
-    let commit_sync_data_provider = CommitSyncDataProvider::Live(Arc::new(lv_cfg));
+    let live_commit_sync_config = Arc::new(lv_cfg);
 
-    let commit_syncer =
-        CommitSyncer::new_with_provider(&ctx, mapping.clone(), repos, commit_sync_data_provider);
+    let commit_syncer = CommitSyncer::new_with_live_commit_sync_config(
+        &ctx,
+        mapping.clone(),
+        repos,
+        live_commit_sync_config,
+    );
 
     // Rewrite root commit with current version
     let root_cs_id = CreateCommitContext::new_root(&ctx, &source_repo)
@@ -1347,14 +1350,21 @@ async fn init_repos(
     );
     lv_cfg_src.add_common_config(common);
 
-    let commit_sync_data_provider = CommitSyncDataProvider::Live(Arc::new(lv_cfg));
-    let live_commit_sync_config = commit_sync_data_provider.live_commit_sync_config();
+    let live_commit_sync_config = Arc::new(lv_cfg);
 
-    let git_submodules_action =
-        get_strip_git_submodules_by_version(live_commit_sync_config, &version, source_repo_id)
-            .await?;
-    let commit_syncer =
-        CommitSyncer::new_with_provider(&ctx, mapping.clone(), repos, commit_sync_data_provider);
+    let git_submodules_action = get_strip_git_submodules_by_version(
+        live_commit_sync_config.clone(),
+        &version,
+        source_repo_id,
+    )
+    .await?;
+
+    let commit_syncer = CommitSyncer::new_with_live_commit_sync_config(
+        &ctx,
+        mapping.clone(),
+        repos,
+        live_commit_sync_config,
+    );
 
     // Sync first commit manually
     let initial_bcs_id = source_repo
@@ -1663,17 +1673,18 @@ async fn init_merged_repos(
         );
         lv_cfg_src.add_common_config(common);
 
-        let commit_sync_data_provider = CommitSyncDataProvider::Live(Arc::new(lv_cfg));
+        let live_commit_sync_config = Arc::new(lv_cfg);
+
         let repos = CommitSyncRepos::LargeToSmall {
             large_repo: large_repo.clone(),
             small_repo: small_repo.clone(),
         };
 
-        let commit_syncer = CommitSyncer::new_with_provider(
+        let commit_syncer = CommitSyncer::new_with_live_commit_sync_config(
             &ctx,
             mapping.clone(),
             repos,
-            commit_sync_data_provider,
+            live_commit_sync_config,
         );
         output.push((commit_syncer, small_repo_dbs));
 
@@ -1945,8 +1956,13 @@ async fn preserve_premerge_commit(
         );
         lv_cfg_src.add_common_config(common);
 
-        let commit_sync_data_provider = CommitSyncDataProvider::Live(Arc::new(lv_cfg));
-        CommitSyncer::new_with_provider(&ctx, mapping.clone(), repos, commit_sync_data_provider)
+        let live_commit_sync_config = Arc::new(lv_cfg);
+        CommitSyncer::new_with_live_commit_sync_config(
+            &ctx,
+            mapping.clone(),
+            repos,
+            live_commit_sync_config,
+        )
     };
 
     small_to_large_sync_config

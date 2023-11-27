@@ -25,23 +25,7 @@ use movers::get_movers;
 use movers::Mover;
 use movers::Movers;
 
-// TODO(T169306120): Delete CommitSyncDataProvider
-#[derive(Clone)]
-pub enum CommitSyncDataProvider {
-    Live(Arc<dyn LiveCommitSyncConfig>),
-}
-
-impl CommitSyncDataProvider {
-    // Temporary function to speed up refactoring
-    // TODO(T169306120): delete this afterwards
-    pub fn live_commit_sync_config(&self) -> Arc<dyn LiveCommitSyncConfig> {
-        use CommitSyncDataProvider::*;
-
-        match self {
-            Live(live_commit_sync_config) => Arc::clone(live_commit_sync_config),
-        }
-    }
-}
+// TODO(T169306120): rename this module
 
 pub async fn get_strip_git_submodules_by_version(
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,

@@ -136,7 +136,6 @@ pub use commit_sync_data_provider::get_reverse_mover;
 pub use commit_sync_data_provider::get_small_repos_for_version;
 pub use commit_sync_data_provider::get_strip_git_submodules_by_version;
 pub use commit_sync_data_provider::version_exists;
-pub use commit_sync_data_provider::CommitSyncDataProvider;
 
 pub use crate::commit_sync_outcome::commit_sync_outcome_exists;
 pub use crate::commit_sync_outcome::get_commit_sync_outcome;
@@ -589,7 +588,6 @@ pub struct CommitSyncer<M, R> {
     // TODO: Finish refactor and remove pub
     pub mapping: M,
     pub repos: CommitSyncRepos<R>,
-    pub commit_sync_data_provider: CommitSyncDataProvider,
     pub live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     pub scuba_sample: MononokeScubaSampleBuilder,
     pub x_repo_sync_lease: Arc<dyn LeaseOps>,
@@ -619,30 +617,35 @@ where
         live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
         lease: Arc<dyn LeaseOps>,
     ) -> Self {
-        let commit_sync_data_provider = CommitSyncDataProvider::Live(live_commit_sync_config);
-        Self::new_with_provider_impl(ctx, mapping, repos, commit_sync_data_provider, lease)
-    }
-
-    pub fn new_with_provider(
-        ctx: &CoreContext,
-        mapping: M,
-        repos: CommitSyncRepos<R>,
-        commit_sync_data_provider: CommitSyncDataProvider,
-    ) -> Self {
-        Self::new_with_provider_impl(
+        Self::new_with_live_commit_sync_config_impl(
             ctx,
             mapping,
             repos,
-            commit_sync_data_provider,
+            live_commit_sync_config,
+            lease,
+        )
+    }
+
+    pub fn new_with_live_commit_sync_config(
+        ctx: &CoreContext,
+        mapping: M,
+        repos: CommitSyncRepos<R>,
+        live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
+    ) -> Self {
+        Self::new_with_live_commit_sync_config_impl(
+            ctx,
+            mapping,
+            repos,
+            live_commit_sync_config,
             Arc::new(InProcessLease::new()),
         )
     }
 
-    fn new_with_provider_impl(
+    fn new_with_live_commit_sync_config_impl(
         ctx: &CoreContext,
         mapping: M,
         repos: CommitSyncRepos<R>,
-        commit_sync_data_provider: CommitSyncDataProvider,
+        live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
         x_repo_sync_lease: Arc<dyn LeaseOps>,
     ) -> Self {
         let scuba_sample = reporting::get_scuba_sample(
@@ -651,12 +654,9 @@ where
             repos.get_target_repo().repo_identity().name(),
         );
 
-        let live_commit_sync_config = commit_sync_data_provider.live_commit_sync_config();
-
         Self {
             mapping,
             repos,
-            commit_sync_data_provider,
             live_commit_sync_config,
             scuba_sample,
             x_repo_sync_lease,
@@ -703,10 +703,6 @@ where
         &self.mapping
     }
 
-    pub fn get_commit_sync_data_provider(&self) -> &CommitSyncDataProvider {
-        &self.commit_sync_data_provider
-    }
-
     pub async fn version_exists(&self, version: &CommitSyncConfigVersion) -> Result<bool, Error> {
         version_exists(
             Arc::clone(&self.live_commit_sync_config),
@@ -722,7 +718,7 @@ where
     ) -> Result<Mover, Error> {
         get_mover_by_version(
             version,
-            &self.commit_sync_data_provider,
+            Arc::clone(&self.live_commit_sync_config),
             Source(self.repos.get_source_repo().repo_identity().id()),
             Target(self.repos.get_target_repo().repo_identity().id()),
         )
@@ -784,7 +780,7 @@ where
             Source(source_cs_id),
             &self.mapping,
             self.repos.get_direction(),
-            &self.commit_sync_data_provider,
+            Arc::clone(&self.live_commit_sync_config),
         )
         .await
     }
@@ -801,7 +797,7 @@ where
             Source(source_cs_id),
             &self.mapping,
             self.repos.get_direction(),
-            &self.commit_sync_data_provider,
+            Arc::clone(&self.live_commit_sync_config),
         )
         .await
     }
@@ -818,7 +814,7 @@ where
             source_cs_id,
             &self.mapping,
             self.repos.get_direction(),
-            &self.commit_sync_data_provider,
+            Arc::clone(&self.live_commit_sync_config),
         )
         .await
     }
@@ -837,7 +833,7 @@ where
             &self.mapping,
             hint,
             self.repos.get_direction(),
-            &self.commit_sync_data_provider,
+            Arc::clone(&self.live_commit_sync_config),
         )
         .await
     }
@@ -1096,8 +1092,7 @@ where
             source_repo: Source(self.get_source_repo()),
             mapped_parents: &mapped_parents,
             target_repo_id: Target(self.get_target_repo_id()),
-            provider: &self.commit_sync_data_provider,
-            live_commit_sync_config: self.commit_sync_data_provider.live_commit_sync_config(),
+            live_commit_sync_config: Arc::clone(&self.live_commit_sync_config),
             small_to_large: matches!(self.repos, CommitSyncRepos::SmallToLarge { .. }),
         }
         .unsafe_sync_commit_in_memory(cs, commit_sync_context, expected_version)
@@ -1567,8 +1562,6 @@ pub struct CommitInMemorySyncer<'a, R: Repo> {
     pub ctx: &'a CoreContext,
     pub source_repo: Source<&'a R>,
     pub target_repo_id: Target<RepositoryId>,
-    // TODO(T169306120): delete provider field
-    pub provider: &'a CommitSyncDataProvider,
     pub live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     pub mapped_parents: &'a HashMap<ChangesetId, CommitSyncOutcome>,
     pub small_to_large: bool,
@@ -1681,7 +1674,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
 
         let mover = get_mover_by_version(
             &expected_version,
-            self.provider,
+            Arc::clone(&self.live_commit_sync_config),
             self.source_repo_id(),
             self.target_repo_id,
         )
@@ -1764,7 +1757,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
 
                 let rewrite_paths = get_mover_by_version(
                     &version,
-                    self.provider,
+                    Arc::clone(&self.live_commit_sync_config),
                     self.source_repo_id(),
                     self.target_repo_id,
                 )
@@ -1829,7 +1822,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
 
         let mover = get_mover_by_version(
             &version,
-            self.provider,
+            Arc::clone(&self.live_commit_sync_config),
             self.source_repo_id(),
             self.target_repo_id,
         )
@@ -2025,13 +2018,12 @@ fn strip_removed_parents(
 
 async fn get_mover_by_version(
     version: &CommitSyncConfigVersion,
-    // TODO(T169306120): change provider to live_commit_sync_config
-    provider: &CommitSyncDataProvider,
+    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     source_id: Source<RepositoryId>,
     target_repo_id: Target<RepositoryId>,
 ) -> Result<Mover, Error> {
     get_mover(
-        provider.live_commit_sync_config(),
+        live_commit_sync_config,
         version,
         source_id.0,
         target_repo_id.0,

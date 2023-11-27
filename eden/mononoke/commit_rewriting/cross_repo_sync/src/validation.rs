@@ -1337,7 +1337,6 @@ mod test {
     use tests_utils::CreateCommitContext;
 
     use super::*;
-    use crate::CommitSyncDataProvider;
     use crate::CommitSyncRepos;
 
     #[fbinit::test]
@@ -1541,10 +1540,13 @@ mod test {
         };
 
         let live_commit_sync_config = get_live_commit_sync_config();
-        let commit_sync_data_provider =
-            CommitSyncDataProvider::Live(live_commit_sync_config.clone());
-        let commit_syncer =
-            CommitSyncer::new_with_provider(&ctx, mapping, repos, commit_sync_data_provider);
+
+        let commit_syncer = CommitSyncer::new_with_live_commit_sync_config(
+            &ctx,
+            mapping,
+            repos,
+            live_commit_sync_config.clone(),
+        );
 
         println!("checking root commit");
         for version in &["first_version", "second_version"] {
@@ -1708,13 +1710,13 @@ mod test {
         lv_cfg_src.add_common_config(common_config);
         lv_cfg_src.add_config(current_version_config);
 
-        let commit_sync_data_provider = CommitSyncDataProvider::Live(Arc::new(lv_cfg));
+        let live_commit_sync_config = Arc::new(lv_cfg);
 
-        Ok(CommitSyncer::new_with_provider(
+        Ok(CommitSyncer::new_with_live_commit_sync_config(
             &ctx,
             mapping,
             repos,
-            commit_sync_data_provider,
+            live_commit_sync_config,
         ))
     }
 }
