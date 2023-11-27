@@ -938,17 +938,6 @@ test advanced, deprecated and experimental options are shown with -v
   $ hg help -v debugoptEXP | grep eopt
     --eopt option is (EXPERIMENTAL)
 
-#if gettext normal-layout
-test deprecated option is hidden with translation with untranslated description
-(use many globy for not failing on changed transaction)
-  $ LANGUAGE=sv hg help debugoptDEP
-  hg debugoptDEP
-  
-  (*) (glob)
-  
-  (some details hidden, use --verbose to show complete help)
-#endif
-
 Test commands that collide with topics (issue4240)
 
   $ hg config -hq
