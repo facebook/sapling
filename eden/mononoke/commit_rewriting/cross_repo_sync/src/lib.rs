@@ -120,7 +120,7 @@ use types::Target;
 
 use crate::pushrebase_hook::CrossRepoSyncPushrebaseHook;
 
-mod commit_sync_data_provider;
+mod commit_sync_config_utils;
 pub mod commit_sync_outcome;
 mod pushrebase_hook;
 mod reporting;
@@ -128,14 +128,14 @@ mod sync_config_version_utils;
 pub mod types;
 pub mod validation;
 
-pub use commit_sync_data_provider::get_bookmark_renamer;
-pub use commit_sync_data_provider::get_common_pushrebase_bookmarks;
-pub use commit_sync_data_provider::get_mover;
-pub use commit_sync_data_provider::get_reverse_bookmark_renamer;
-pub use commit_sync_data_provider::get_reverse_mover;
-pub use commit_sync_data_provider::get_small_repos_for_version;
-pub use commit_sync_data_provider::get_strip_git_submodules_by_version;
-pub use commit_sync_data_provider::version_exists;
+pub use commit_sync_config_utils::get_bookmark_renamer;
+pub use commit_sync_config_utils::get_common_pushrebase_bookmarks;
+pub use commit_sync_config_utils::get_mover;
+pub use commit_sync_config_utils::get_reverse_bookmark_renamer;
+pub use commit_sync_config_utils::get_reverse_mover;
+pub use commit_sync_config_utils::get_small_repos_for_version;
+pub use commit_sync_config_utils::get_strip_git_submodules_by_version;
+pub use commit_sync_config_utils::version_exists;
 
 pub use crate::commit_sync_outcome::commit_sync_outcome_exists;
 pub use crate::commit_sync_outcome::get_commit_sync_outcome;
