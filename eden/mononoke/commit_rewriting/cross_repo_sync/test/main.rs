@@ -44,6 +44,7 @@ use fixtures::ManyFilesDirs;
 use fixtures::TestRepoFixture;
 use futures::FutureExt;
 use futures::TryStreamExt;
+use live_commit_sync_config::LiveCommitSyncConfig;
 use live_commit_sync_config::TestLiveCommitSyncConfig;
 use live_commit_sync_config::TestLiveCommitSyncConfigSource;
 use manifest::ManifestOps;
@@ -1677,12 +1678,11 @@ async fn prepare_commit_syncer_with_mapping_change(
     Ok((old_version, new_version, large_to_small_syncer))
 }
 
-/// Build a test CommitSyncDataProvider for merge
-/// testing purposes.
-fn get_merge_sync_data_provider(
+/// Build a test LiveCommitSyncConfig for merge testing purposes.
+fn get_merge_sync_live_commit_sync_config(
     large_repo_id: RepositoryId,
     small_repo_id: RepositoryId,
-) -> Result<CommitSyncDataProvider, Error> {
+) -> Result<Arc<dyn LiveCommitSyncConfig>, Error> {
     let v1 = CommitSyncConfigVersion("v1".to_string());
     let v2 = CommitSyncConfigVersion("v2".to_string());
 
@@ -1726,7 +1726,7 @@ fn get_merge_sync_data_provider(
 
     let live_commit_sync_config = Arc::new(sync_config);
 
-    Ok(CommitSyncDataProvider::Live(live_commit_sync_config))
+    Ok(live_commit_sync_config)
 }
 
 /// This function sets up scene for syncing merges
@@ -1770,10 +1770,13 @@ async fn merge_test_setup(
             small_repo: small_repo.clone(),
             large_repo: large_repo.clone(),
         };
-        lts_syncer.commit_sync_data_provider = get_merge_sync_data_provider(
+        let live_commit_sync_config = get_merge_sync_live_commit_sync_config(
             large_repo.repo_identity().id(),
             small_repo.repo_identity().id(),
         )?;
+        lts_syncer.live_commit_sync_config = Arc::clone(&live_commit_sync_config);
+        lts_syncer.commit_sync_data_provider =
+            CommitSyncDataProvider::Live(live_commit_sync_config);
         lts_syncer
     };
 

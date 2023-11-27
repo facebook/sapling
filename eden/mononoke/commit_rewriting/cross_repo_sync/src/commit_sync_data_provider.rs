@@ -32,175 +32,129 @@ pub enum CommitSyncDataProvider {
 }
 
 impl CommitSyncDataProvider {
-    pub async fn get_strip_git_submodules_by_version(
-        &self,
-        version: &CommitSyncConfigVersion,
-        source_repo_id: RepositoryId, // Treat this as small_repo for now
-    ) -> Result<GitSubmodulesChangesAction, Error> {
+    // Temporary function to speed up refactoring
+    // TODO(T169306120): delete this afterwards
+    pub fn live_commit_sync_config(&self) -> Arc<dyn LiveCommitSyncConfig> {
         use CommitSyncDataProvider::*;
 
         match self {
-            Live(live_commit_sync_config) => {
-                let commit_sync_config = live_commit_sync_config
-                    .get_commit_sync_config_by_version(source_repo_id, version)
-                    .await?;
-                let small_repo_configs = commit_sync_config.small_repos;
-                if let Some(small_repo_config) = small_repo_configs.get(&source_repo_id) {
-                    return Ok(small_repo_config.git_submodules_action.clone());
-                };
-
-                Ok(GitSubmodulesChangesAction::default())
-            }
+            Live(live_commit_sync_config) => Arc::clone(live_commit_sync_config),
         }
     }
+}
 
-    pub async fn get_mover(
-        &self,
-        version: &CommitSyncConfigVersion,
-        source_repo_id: RepositoryId,
-        target_repo_id: RepositoryId,
-    ) -> Result<Mover, Error> {
-        use CommitSyncDataProvider::*;
+pub async fn get_strip_git_submodules_by_version(
+    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
+    version: &CommitSyncConfigVersion,
+    source_repo_id: RepositoryId, // Treat this as small_repo for now
+) -> Result<GitSubmodulesChangesAction, Error> {
+    let commit_sync_config = live_commit_sync_config
+        .get_commit_sync_config_by_version(source_repo_id, version)
+        .await?;
+    let small_repo_configs = commit_sync_config.small_repos;
+    if let Some(small_repo_config) = small_repo_configs.get(&source_repo_id) {
+        return Ok(small_repo_config.git_submodules_action.clone());
+    };
 
-        match self {
-            Live(live_commit_sync_config) => {
-                let commit_sync_config = live_commit_sync_config
-                    .get_commit_sync_config_by_version(source_repo_id, version)
-                    .await?;
-                let common_config = live_commit_sync_config.get_common_config(source_repo_id)?;
+    Ok(GitSubmodulesChangesAction::default())
+}
 
-                let Movers { mover, .. } = get_movers_from_config(
-                    &common_config,
-                    &commit_sync_config,
-                    source_repo_id,
-                    target_repo_id,
-                )?;
-                Ok(mover)
-            }
-        }
-    }
+pub async fn get_mover(
+    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
+    version: &CommitSyncConfigVersion,
+    source_repo_id: RepositoryId,
+    target_repo_id: RepositoryId,
+) -> Result<Mover, Error> {
+    let commit_sync_config = live_commit_sync_config
+        .get_commit_sync_config_by_version(source_repo_id, version)
+        .await?;
+    let common_config = live_commit_sync_config.get_common_config(source_repo_id)?;
 
-    pub async fn get_reverse_mover(
-        &self,
-        version: &CommitSyncConfigVersion,
-        source_repo_id: RepositoryId,
-        target_repo_id: RepositoryId,
-    ) -> Result<Mover, Error> {
-        use CommitSyncDataProvider::*;
+    let Movers { mover, .. } = get_movers_from_config(
+        &common_config,
+        &commit_sync_config,
+        source_repo_id,
+        target_repo_id,
+    )?;
+    Ok(mover)
+}
 
-        match self {
-            Live(live_commit_sync_config) => {
-                let commit_sync_config = live_commit_sync_config
-                    .get_commit_sync_config_by_version(source_repo_id, version)
-                    .await?;
-                let common_config = live_commit_sync_config.get_common_config(source_repo_id)?;
+pub async fn get_reverse_mover(
+    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
+    version: &CommitSyncConfigVersion,
+    source_repo_id: RepositoryId,
+    target_repo_id: RepositoryId,
+) -> Result<Mover, Error> {
+    let commit_sync_config = live_commit_sync_config
+        .get_commit_sync_config_by_version(source_repo_id, version)
+        .await?;
+    let common_config = live_commit_sync_config.get_common_config(source_repo_id)?;
 
-                let Movers { reverse_mover, .. } = get_movers_from_config(
-                    &common_config,
-                    &commit_sync_config,
-                    source_repo_id,
-                    target_repo_id,
-                )?;
-                Ok(reverse_mover)
-            }
-        }
-    }
+    let Movers { reverse_mover, .. } = get_movers_from_config(
+        &common_config,
+        &commit_sync_config,
+        source_repo_id,
+        target_repo_id,
+    )?;
+    Ok(reverse_mover)
+}
 
-    pub async fn get_bookmark_renamer(
-        &self,
-        source_repo_id: RepositoryId,
-        target_repo_id: RepositoryId,
-    ) -> Result<BookmarkRenamer, Error> {
-        use CommitSyncDataProvider::*;
+pub async fn get_bookmark_renamer(
+    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
+    source_repo_id: RepositoryId,
+    target_repo_id: RepositoryId,
+) -> Result<BookmarkRenamer, Error> {
+    let commit_sync_config = live_commit_sync_config.get_common_config(source_repo_id)?;
 
-        match self {
-            Live(live_commit_sync_config) => {
-                let commit_sync_config =
-                    live_commit_sync_config.get_common_config(source_repo_id)?;
+    let BookmarkRenamers {
+        bookmark_renamer, ..
+    } = get_bookmark_renamers_from_config(&commit_sync_config, source_repo_id, target_repo_id)?;
+    Ok(bookmark_renamer)
+}
 
-                let BookmarkRenamers {
-                    bookmark_renamer, ..
-                } = get_bookmark_renamers_from_config(
-                    &commit_sync_config,
-                    source_repo_id,
-                    target_repo_id,
-                )?;
-                Ok(bookmark_renamer)
-            }
-        }
-    }
+pub async fn get_reverse_bookmark_renamer(
+    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
+    source_repo_id: RepositoryId,
+    target_repo_id: RepositoryId,
+) -> Result<BookmarkRenamer, Error> {
+    let commit_sync_config = live_commit_sync_config.get_common_config(source_repo_id)?;
 
-    pub async fn get_reverse_bookmark_renamer(
-        &self,
-        source_repo_id: RepositoryId,
-        target_repo_id: RepositoryId,
-    ) -> Result<BookmarkRenamer, Error> {
-        use CommitSyncDataProvider::*;
+    let BookmarkRenamers {
+        reverse_bookmark_renamer,
+        ..
+    } = get_bookmark_renamers_from_config(&commit_sync_config, source_repo_id, target_repo_id)?;
+    Ok(reverse_bookmark_renamer)
+}
 
-        match self {
-            Live(live_commit_sync_config) => {
-                let commit_sync_config =
-                    live_commit_sync_config.get_common_config(source_repo_id)?;
+pub async fn get_small_repos_for_version(
+    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
+    repo_id: RepositoryId,
+    version: &CommitSyncConfigVersion,
+) -> Result<HashSet<RepositoryId>, Error> {
+    let commit_sync_config = live_commit_sync_config
+        .get_commit_sync_config_by_version(repo_id, version)
+        .await?;
 
-                let BookmarkRenamers {
-                    reverse_bookmark_renamer,
-                    ..
-                } = get_bookmark_renamers_from_config(
-                    &commit_sync_config,
-                    source_repo_id,
-                    target_repo_id,
-                )?;
-                Ok(reverse_bookmark_renamer)
-            }
-        }
-    }
+    Ok(commit_sync_config.small_repos.keys().cloned().collect())
+}
 
-    pub async fn get_small_repos_for_version(
-        &self,
-        repo_id: RepositoryId,
-        version: &CommitSyncConfigVersion,
-    ) -> Result<HashSet<RepositoryId>, Error> {
-        use CommitSyncDataProvider::*;
+pub async fn version_exists(
+    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
+    repo_id: RepositoryId,
+    version: &CommitSyncConfigVersion,
+) -> Result<bool, Error> {
+    let maybe_version = live_commit_sync_config
+        .get_commit_sync_config_by_version_if_exists(repo_id, version)
+        .await?;
+    Ok(maybe_version.is_some())
+}
 
-        match self {
-            Live(live_commit_sync_config) => {
-                let commit_sync_config = live_commit_sync_config
-                    .get_commit_sync_config_by_version(repo_id, version)
-                    .await?;
-
-                Ok(commit_sync_config.small_repos.keys().cloned().collect())
-            }
-        }
-    }
-
-    pub async fn version_exists(
-        &self,
-        repo_id: RepositoryId,
-        version: &CommitSyncConfigVersion,
-    ) -> Result<bool, Error> {
-        match self {
-            Self::Live(live_commit_sync_config) => {
-                let maybe_version = live_commit_sync_config
-                    .get_commit_sync_config_by_version_if_exists(repo_id, version)
-                    .await?;
-                Ok(maybe_version.is_some())
-            }
-        }
-    }
-
-    pub async fn get_common_pushrebase_bookmarks(
-        &self,
-        repo_id: RepositoryId,
-    ) -> Result<Vec<BookmarkKey>, Error> {
-        use CommitSyncDataProvider::*;
-
-        match self {
-            Live(live_commit_sync_config) => {
-                let common_sync_config = live_commit_sync_config.get_common_config(repo_id)?;
-                Ok(common_sync_config.common_pushrebase_bookmarks)
-            }
-        }
-    }
+pub async fn get_common_pushrebase_bookmarks(
+    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
+    repo_id: RepositoryId,
+) -> Result<Vec<BookmarkKey>, Error> {
+    let common_sync_config = live_commit_sync_config.get_common_config(repo_id)?;
+    Ok(common_sync_config.common_pushrebase_bookmarks)
 }
 
 fn get_movers_from_config(

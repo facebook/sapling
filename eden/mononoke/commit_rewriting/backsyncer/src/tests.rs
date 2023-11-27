@@ -31,6 +31,7 @@ use cloned::cloned;
 use commit_graph::CommitGraphRef;
 use commit_transformation::upload_commits;
 use context::CoreContext;
+use cross_repo_sync::get_strip_git_submodules_by_version;
 use cross_repo_sync::rewrite_commit;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
@@ -1347,9 +1348,11 @@ async fn init_repos(
     lv_cfg_src.add_common_config(common);
 
     let commit_sync_data_provider = CommitSyncDataProvider::Live(Arc::new(lv_cfg));
-    let git_submodules_action = commit_sync_data_provider
-        .get_strip_git_submodules_by_version(&version, source_repo_id)
-        .await?;
+    let live_commit_sync_config = commit_sync_data_provider.live_commit_sync_config();
+
+    let git_submodules_action =
+        get_strip_git_submodules_by_version(live_commit_sync_config, &version, source_repo_id)
+            .await?;
     let commit_syncer =
         CommitSyncer::new_with_provider(&ctx, mapping.clone(), repos, commit_sync_data_provider);
 

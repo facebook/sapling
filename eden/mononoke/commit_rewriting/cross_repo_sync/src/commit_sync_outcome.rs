@@ -23,6 +23,7 @@ use synced_commit_mapping::SyncedCommitMapping;
 use synced_commit_mapping::WorkingCopyEquivalence;
 
 use crate::commit_sync_data_provider::CommitSyncDataProvider;
+use crate::get_small_repos_for_version;
 use crate::types::Source;
 use crate::types::Target;
 use crate::Repo;
@@ -223,9 +224,14 @@ pub async fn get_plural_commit_sync_outcome<'a, M: SyncedCommitMapping>(
                     .await?;
 
                 if let Some(version) = maybe_version {
-                    let small_repos = commit_sync_data_provider
-                        .get_small_repos_for_version(source_repo_id.0, &version)
-                        .await?;
+                    let live_commit_sync_config =
+                        commit_sync_data_provider.live_commit_sync_config();
+                    let small_repos = get_small_repos_for_version(
+                        live_commit_sync_config,
+                        source_repo_id.0,
+                        &version,
+                    )
+                    .await?;
                     if !small_repos.contains(&target_repo_id.0) {
                         return Ok(Some(PluralCommitSyncOutcome::NotSyncCandidate(version)));
                     }

@@ -128,6 +128,14 @@ mod sync_config_version_utils;
 pub mod types;
 pub mod validation;
 
+pub use commit_sync_data_provider::get_bookmark_renamer;
+pub use commit_sync_data_provider::get_common_pushrebase_bookmarks;
+pub use commit_sync_data_provider::get_mover;
+pub use commit_sync_data_provider::get_reverse_bookmark_renamer;
+pub use commit_sync_data_provider::get_reverse_mover;
+pub use commit_sync_data_provider::get_small_repos_for_version;
+pub use commit_sync_data_provider::get_strip_git_submodules_by_version;
+pub use commit_sync_data_provider::version_exists;
 pub use commit_sync_data_provider::CommitSyncDataProvider;
 
 pub use crate::commit_sync_outcome::commit_sync_outcome_exists;
@@ -582,6 +590,7 @@ pub struct CommitSyncer<M, R> {
     pub mapping: M,
     pub repos: CommitSyncRepos<R>,
     pub commit_sync_data_provider: CommitSyncDataProvider,
+    pub live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     pub scuba_sample: MononokeScubaSampleBuilder,
     pub x_repo_sync_lease: Arc<dyn LeaseOps>,
 }
@@ -641,10 +650,14 @@ where
             repos.get_source_repo().repo_identity().name(),
             repos.get_target_repo().repo_identity().name(),
         );
+
+        let live_commit_sync_config = commit_sync_data_provider.live_commit_sync_config();
+
         Self {
             mapping,
             repos,
             commit_sync_data_provider,
+            live_commit_sync_config,
             scuba_sample,
             x_repo_sync_lease,
         }
@@ -695,9 +708,12 @@ where
     }
 
     pub async fn version_exists(&self, version: &CommitSyncConfigVersion) -> Result<bool, Error> {
-        self.commit_sync_data_provider
-            .version_exists(self.get_target_repo_id(), version)
-            .await
+        version_exists(
+            Arc::clone(&self.live_commit_sync_config),
+            self.get_target_repo_id(),
+            version,
+        )
+        .await
     }
 
     pub async fn get_mover_by_version(
@@ -718,35 +734,35 @@ where
         version: &CommitSyncConfigVersion,
     ) -> Result<Mover, Error> {
         let (source_repo, target_repo) = self.get_source_target();
-        self.commit_sync_data_provider
-            .get_reverse_mover(
-                version,
-                source_repo.repo_identity().id(),
-                target_repo.repo_identity().id(),
-            )
-            .await
+        get_reverse_mover(
+            Arc::clone(&self.live_commit_sync_config),
+            version,
+            source_repo.repo_identity().id(),
+            target_repo.repo_identity().id(),
+        )
+        .await
     }
 
     pub async fn get_bookmark_renamer(&self) -> Result<BookmarkRenamer, Error> {
         let (source_repo, target_repo) = self.get_source_target();
 
-        self.commit_sync_data_provider
-            .get_bookmark_renamer(
-                source_repo.repo_identity().id(),
-                target_repo.repo_identity().id(),
-            )
-            .await
+        get_bookmark_renamer(
+            Arc::clone(&self.live_commit_sync_config),
+            source_repo.repo_identity().id(),
+            target_repo.repo_identity().id(),
+        )
+        .await
     }
 
     pub async fn get_reverse_bookmark_renamer(&self) -> Result<BookmarkRenamer, Error> {
         let (source_repo, target_repo) = self.get_source_target();
 
-        self.commit_sync_data_provider
-            .get_reverse_bookmark_renamer(
-                source_repo.repo_identity().id(),
-                target_repo.repo_identity().id(),
-            )
-            .await
+        get_reverse_bookmark_renamer(
+            Arc::clone(&self.live_commit_sync_config),
+            source_repo.repo_identity().id(),
+            target_repo.repo_identity().id(),
+        )
+        .await
     }
 
     pub async fn rename_bookmark(
@@ -1081,6 +1097,7 @@ where
             mapped_parents: &mapped_parents,
             target_repo_id: Target(self.get_target_repo_id()),
             provider: &self.commit_sync_data_provider,
+            live_commit_sync_config: self.commit_sync_data_provider.live_commit_sync_config(),
             small_to_large: matches!(self.repos, CommitSyncRepos::SmallToLarge { .. }),
         }
         .unsafe_sync_commit_in_memory(cs, commit_sync_context, expected_version)
@@ -1145,13 +1162,13 @@ where
     ) -> Result<Option<ChangesetId>, Error> {
         let (source_repo, target_repo) = self.get_source_target();
         let mover = self.get_mover_by_version(sync_config_version).await?;
-        let git_submodules_action = self
-            .commit_sync_data_provider
-            .get_strip_git_submodules_by_version(
-                sync_config_version,
-                self.repos.get_source_repo().repo_identity().id(),
-            )
-            .await?;
+
+        let git_submodules_action = get_strip_git_submodules_by_version(
+            Arc::clone(&self.live_commit_sync_config),
+            sync_config_version,
+            self.repos.get_source_repo().repo_identity().id(),
+        )
+        .await?;
         let source_cs = source_cs_id.load(ctx, source_repo.repo_blobstore()).await?;
 
         let source_cs = source_cs.clone().into_mut();
@@ -1225,9 +1242,11 @@ where
     }
 
     pub async fn get_common_pushrebase_bookmarks(&self) -> Result<Vec<BookmarkKey>, Error> {
-        self.commit_sync_data_provider
-            .get_common_pushrebase_bookmarks(self.get_small_repo().repo_identity().id())
-            .await
+        get_common_pushrebase_bookmarks(
+            Arc::clone(&self.live_commit_sync_config),
+            self.get_small_repo().repo_identity().id(),
+        )
+        .await
     }
 
     async fn unsafe_sync_commit_pushrebase_impl<'a>(
@@ -1296,13 +1315,13 @@ where
         };
 
         let mover = self.get_mover_by_version(&version_name).await?;
-        let git_submodules_action = self
-            .commit_sync_data_provider
-            .get_strip_git_submodules_by_version(
-                &version_name,
-                self.repos.get_source_repo().repo_identity().id(),
-            )
-            .await?;
+
+        let git_submodules_action = get_strip_git_submodules_by_version(
+            Arc::clone(&self.live_commit_sync_config),
+            &version_name,
+            self.repos.get_source_repo().repo_identity().id(),
+        )
+        .await?;
         let source_cs_mut = source_cs.clone().into_mut();
         let remapped_parents =
             remap_parents(ctx, &source_cs_mut, self, parent_selection_hint).await?;
@@ -1548,7 +1567,9 @@ pub struct CommitInMemorySyncer<'a, R: Repo> {
     pub ctx: &'a CoreContext,
     pub source_repo: Source<&'a R>,
     pub target_repo_id: Target<RepositoryId>,
+    // TODO(T169306120): delete provider field
     pub provider: &'a CommitSyncDataProvider,
+    pub live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     pub mapped_parents: &'a HashMap<ChangesetId, CommitSyncOutcome>,
     pub small_to_large: bool,
 }
@@ -1665,10 +1686,12 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
             self.target_repo_id,
         )
         .await?;
-        let git_submodules_action = self
-            .provider
-            .get_strip_git_submodules_by_version(&expected_version, self.source_repo_id().0)
-            .await?;
+        let git_submodules_action = get_strip_git_submodules_by_version(
+            Arc::clone(&self.live_commit_sync_config),
+            &expected_version,
+            self.source_repo_id().0,
+        )
+        .await?;
 
         match rewrite_commit(
             self.ctx,
@@ -1750,10 +1773,12 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                 let mut remapped_parents = HashMap::new();
                 remapped_parents.insert(p, remapped_p);
 
-                let git_submodules_action = self
-                    .provider
-                    .get_strip_git_submodules_by_version(&version, self.source_repo_id().0)
-                    .await?;
+                let git_submodules_action = get_strip_git_submodules_by_version(
+                    Arc::clone(&self.live_commit_sync_config),
+                    &version,
+                    self.source_repo_id().0,
+                )
+                .await?;
 
                 let maybe_rewritten = rewrite_commit(
                     self.ctx,
@@ -1904,10 +1929,13 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                     .into());
                 }
             }
-            let git_submodules_action = self
-                .provider
-                .get_strip_git_submodules_by_version(&version, self.source_repo_id().0)
-                .await?;
+
+            let git_submodules_action = get_strip_git_submodules_by_version(
+                Arc::clone(&self.live_commit_sync_config),
+                &version,
+                self.source_repo_id().0,
+            )
+            .await?;
 
             match rewrite_commit(
                 self.ctx,
@@ -1997,13 +2025,18 @@ fn strip_removed_parents(
 
 async fn get_mover_by_version(
     version: &CommitSyncConfigVersion,
+    // TODO(T169306120): change provider to live_commit_sync_config
     provider: &CommitSyncDataProvider,
     source_id: Source<RepositoryId>,
     target_repo_id: Target<RepositoryId>,
 ) -> Result<Mover, Error> {
-    provider
-        .get_mover(version, source_id.0, target_repo_id.0)
-        .await
+    get_mover(
+        provider.live_commit_sync_config(),
+        version,
+        source_id.0,
+        target_repo_id.0,
+    )
+    .await
 }
 
 pub async fn update_mapping_with_version<'a, M: SyncedCommitMapping + Clone + 'static, R: Repo>(
