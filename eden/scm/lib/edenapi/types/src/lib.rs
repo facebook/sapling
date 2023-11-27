@@ -127,6 +127,7 @@ pub use crate::history::HistoryRequest;
 pub use crate::history::HistoryResponse;
 pub use crate::history::HistoryResponseChunk;
 pub use crate::history::WireHistoryEntry;
+pub use crate::land::LandStackData;
 pub use crate::land::LandStackRequest;
 pub use crate::land::LandStackResponse;
 pub use crate::land::PushVar;

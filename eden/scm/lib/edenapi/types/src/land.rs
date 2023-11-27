@@ -14,6 +14,8 @@ use serde_derive::Serialize;
 use type_macros::auto_wire;
 use types::HgId;
 
+use crate::ServerError;
+
 #[auto_wire]
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
@@ -45,10 +47,19 @@ pub struct LandStackRequest {
 #[auto_wire]
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
-pub struct LandStackResponse {
+pub struct LandStackData {
     #[id(0)]
     pub new_head: HgId,
 
     #[id(1)]
     pub old_to_new_hgids: HashMap<HgId, HgId>,
+}
+
+#[auto_wire]
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct LandStackResponse {
+    #[id(0)]
+    #[no_default]
+    pub data: Result<LandStackData, ServerError>,
 }

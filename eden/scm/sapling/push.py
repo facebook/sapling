@@ -100,14 +100,20 @@ def push_rebase(repo, dest, head_node, remote_bookmark, opargs=None):
     base = parents[0].node()
 
     # todo (zhaolong): support pushvars
-    land_response = edenapi.landstack(
+    response = edenapi.landstack(
         bookmark,
         head=head_node,
         base=base,
         pushvars=[],
     )
-    new_head = land_response["new_head"]
-    old_to_new_hgids = land_response["old_to_new_hgids"]
+
+    result = response["data"]
+    if "Err" in result:
+        raise error.Abort(_("Server error: %s") % result["Err"]["message"])
+
+    data = result["Ok"]
+    new_head = data["new_head"]
+    old_to_new_hgids = data["old_to_new_hgids"]
 
     repo.pull(source=dest, headnodes=(new_head,))
     entries = [
