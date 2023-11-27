@@ -95,8 +95,7 @@ def push_rebase(repo, dest, head_node, remote_bookmark, opargs=None):
     parents = repo[draft_nodes[0]].parents()
     if len(parents) != 1:
         raise error.Abort(
-            _("{%d} parents found for commit %s")
-            % (len(parents), short(draft_nodes[0]))
+            _("%d parents found for commit %s") % (len(parents), short(draft_nodes[0]))
         )
     base = parents[0].node()
 
