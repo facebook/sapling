@@ -777,7 +777,7 @@ export default class ServerToClientAPI {
           undefined,
           this.tracker,
         ),
-        Internal.getCustomDefaultCommitTemplate?.(),
+        Internal.getCustomDefaultCommitTemplate?.(repo),
       ]);
 
       let template = result.stdout
