@@ -19,7 +19,6 @@ use cpython_async::PyFuture;
 use cpython_async::TStream;
 use cpython_ext::convert::Serde;
 use cpython_ext::PyCell;
-use cpython_ext::PyNone;
 use cpython_ext::PyPathBuf;
 use cpython_ext::ResultPyErrExt;
 use dag_types::Location;
@@ -52,6 +51,7 @@ use edenapi_types::HistoryEntry;
 use edenapi_types::IndexableId;
 use edenapi_types::LandStackResponse;
 use edenapi_types::LookupResult;
+use edenapi_types::SetBookmarkResponse;
 use edenapi_types::TreeAttributes;
 use edenapi_types::TreeEntry;
 use edenapi_types::UploadHgChangeset;
@@ -212,7 +212,7 @@ pub trait EdenApiPyExt: EdenApi {
         to: Option<HgId>,
         from: Option<HgId>,
         pushvars: Vec<(String, String)>,
-    ) -> PyResult<PyNone> {
+    ) -> PyResult<Serde<SetBookmarkResponse>> {
         let response = py
             .allow_threads(|| {
                 block_unless_interrupted(async move {
@@ -224,8 +224,8 @@ pub trait EdenApiPyExt: EdenApi {
             })
             .map_pyerr(py)?
             .map_pyerr(py)?;
-        response.data.map_pyerr(py)?;
-        Ok(PyNone)
+
+        Ok(Serde(response))
     }
 
     fn land_stack_py(

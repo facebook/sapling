@@ -135,7 +135,12 @@ def get_remote_bookmark_node(ui, edenapi, bookmark) -> Optional[bytes]:
 
 def create_remote_bookmark(ui, edenapi, bookmark, node) -> None:
     ui.write(_("creating remote bookmark %s\n") % bookmark)
-    edenapi.setbookmark(bookmark, node, None, pushvars=[])
+    result = edenapi.setbookmark(bookmark, node, None, pushvars=[])["data"]
+    if "Err" in result:
+        raise error.Abort(
+            _("failed to create remote bookmark:\n  remote server error: %s")
+            % result["Err"]["message"]
+        )
 
 
 def record_remote_bookmark(repo, bookmark, new_node) -> None:
@@ -160,7 +165,12 @@ def delete_remote_bookmark(repo, edenapi, bookmark) -> None:
 
     # delete remote bookmark from server
     ui.write(_("deleting remote bookmark %s\n") % bookmark)
-    edenapi.setbookmark(bookmark, None, node, pushvars=[])
+    result = edenapi.setbookmark(bookmark, None, node, pushvars=[])["data"]
+    if "Err" in result:
+        raise error.Abort(
+            _("failed to delete remote bookmark:\n  remote server error: %s")
+            % result["Err"]["message"]
+        )
 
     # delete remote bookmark from repo
     remote = repo.ui.config("remotenames", "hoist")

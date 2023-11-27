@@ -58,7 +58,7 @@ Clone the repo
 
 Test move bookmark
   $ hgedenapi debugapi -e setbookmark -i "'master_bookmark'" -i "'$E'" -i "'$C'"
-  None
+  {"data": {"Ok": None}}
 
 Inspect results
   $ hgedenapi pull -q
@@ -76,7 +76,7 @@ Inspect results
 
 Test delete bookmark
   $ hgedenapi debugapi -e setbookmark -i "'to_delete'" -i "None" -i "'$E'"
-  None
+  {"data": {"Ok": None}}
 
 Inspect results
   $ hgedenapi pull -q
@@ -94,7 +94,7 @@ Inspect results
 
 Test create bookmark
   $ hgedenapi debugapi -e setbookmark -i "'create_bookmark'" -i "'$B'" -i "None"
-  None
+  {"data": {"Ok": None}}
 
 Inspect results
   $ hgedenapi pull -q
@@ -111,14 +111,14 @@ Inspect results
   
 
 Test bookmark failure (empty from and to)
-  $ quiet_grep error.HttpError -- hgedenapi debugapi -e setbookmark -i "'master_bookmark'" -i "None" -i "None"
-  error.HttpError: server error (code 0): invalid SetBookmarkRequest, must specify at least one of 'to' or 'from'
-  [1]
+  $ hgedenapi debugapi -e setbookmark -i "'master_bookmark'" -i "None" -i "None"
+  {"data": {"Err": {"code": 0,
+                    "message": "invalid SetBookmarkRequest, must specify at least one of 'to' or 'from'"}}}
 
 Test move bookmark failure (invalid from)
-  $ quiet_grep error.HttpError -- hgedenapi debugapi -e setbookmark -i "'master_bookmark'" -i "'$D'" -i "'$C'"
-  error.HttpError: server error (code 0): invalid request: Bookmark transaction failed
-  [1]
+  $ hgedenapi debugapi -e setbookmark -i "'master_bookmark'" -i "'$D'" -i "'$C'"
+  {"data": {"Err": {"code": 0,
+                    "message": "invalid request: Bookmark transaction failed"}}}
 
 Inspect results
   $ hgedenapi pull -q
@@ -136,9 +136,9 @@ Inspect results
 
 
 Test delete bookmark failure (invalid from)
-  $ quiet_grep error.HttpError -- hgedenapi debugapi -e setbookmark -i "'create_bookmark'" -i "None" -i "'$D'"
-  error.HttpError: server error (code 0): invalid request: Bookmark transaction failed
-  [1]
+  $ hgedenapi debugapi -e setbookmark -i "'create_bookmark'" -i "None" -i "'$D'"
+  {"data": {"Err": {"code": 0,
+                    "message": "invalid request: Bookmark transaction failed"}}}
 
 Inspect results
   $ hgedenapi pull -q
@@ -156,9 +156,9 @@ Inspect results
 
 
 Test create bookmark failure (already exists)
-  $ quiet_grep error.HttpError -- hgedenapi debugapi -e setbookmark -i "'create_bookmark'" -i "'$D'" -i "None"
-  error.HttpError: server error (code 0): invalid request: Bookmark transaction failed
-  [1]
+  $ hgedenapi debugapi -e setbookmark -i "'create_bookmark'" -i "'$D'" -i "None"
+  {"data": {"Err": {"code": 0,
+                    "message": "invalid request: Bookmark transaction failed"}}}
 
 Inspect results
   $ hgedenapi pull -q
