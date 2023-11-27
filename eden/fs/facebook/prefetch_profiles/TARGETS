@@ -117,6 +117,7 @@ python_library(
         "ovr_config//os:windows",
     ],
     deps = [
+        ":glob_filenames_main",
         ":prefetch_profile_util",
     ],
 )
