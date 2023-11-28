@@ -147,6 +147,8 @@ struct FileInodeState {
     MaterializedState materializedState;
   };
 
+  class BlobLoadingPromise;
+
   /**
    * Set if 'loading'. Unset when load completes.
    *
@@ -155,8 +157,7 @@ struct FileInodeState {
    * completed and the inode transitions to the materialized state without
    * a blob. Callbacks on this future must handle that case.
    */
-  std::unique_ptr<folly::SharedPromise<std::shared_ptr<const Blob>>>
-      blobLoadingPromise;
+  std::unique_ptr<BlobLoadingPromise> blobLoadingPromise;
 
   /**
    * If the blob has ever been loaded from cache, this handle represents this
@@ -412,6 +413,8 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
 
 #endif // !_WIN32
 
+  class LoadingOngoing;
+
   /**
    * Start loading the file data.
    *
@@ -421,10 +424,18 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    * runWhileMaterialized().  Most other callers should use
    * runWhileDataLoaded() or runWhileMaterialized() instead.
    */
-  FOLLY_NODISCARD ImmediateFuture<std::shared_ptr<const Blob>> startLoadingData(
+  FOLLY_NODISCARD ImmediateFuture<BlobPtr> startLoadingData(
       LockedState state,
       BlobCache::Interest interest,
       const ObjectFetchContextPtr& fetchContext);
+
+  /**
+   * Complete the load of a blob.
+   *
+   * Called internally by startLoadingData when the load completes or the
+   * loading future is dropped.
+   */
+  void completeDataLoad(folly::Try<BlobCache::GetResult> result);
 
 #ifndef _WIN32
   /**
