@@ -188,6 +188,9 @@ ImmediateFuture<T> ImmediateFuture<T>::thenError(Func&& func) && {
 template <typename T>
 template <typename Func>
 ImmediateFuture<T> ImmediateFuture<T>::ensure(Func&& func) && {
+  static_assert(
+      std::is_same_v<std::invoke_result_t<Func>, void>,
+      "ImmediateFuture::ensure should be called with a function/lambda returning void");
   return std::move(*this).thenTry(
       [func = std::forward<Func>(func)](
           folly::Try<T> try_) mutable -> folly::Try<T> {

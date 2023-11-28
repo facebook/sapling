@@ -4247,8 +4247,11 @@ EdenServiceHandler::semifuture_invalidateKernelInodeCache(
                          }
                          return folly::unit;
                        })
-                   .ensure([nfsChannel]() {
-                     return nfsChannel->completeInvalidations();
+                   .thenTry([nfsChannel](folly::Try<folly::Unit> res) {
+                     return nfsChannel->completeInvalidations().thenTry(
+                         [res = std::move(res)](auto&&) mutable {
+                           return res;
+                         });
                    }))
         .semi();
   }
