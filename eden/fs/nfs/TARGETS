@@ -94,8 +94,6 @@ cpp_library(
     deps = [
         ":nfsd3",
         "//eden/fs/nfs/portmap:portmapserver",
-        "//eden/fs/utils:eden_task_queue",
-        "//folly/executors/thread_factory:named_thread_factory",
     ],
     exported_deps = [
         ":mountd",

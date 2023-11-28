@@ -81,6 +81,7 @@
 #include "eden/fs/telemetry/StructuredLoggerFactory.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/EdenError.h"
+#include "eden/fs/utils/EdenTaskQueue.h"
 #include "eden/fs/utils/EnumValue.h"
 #include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/FileUtils.h"
@@ -386,6 +387,12 @@ EdenServer::EdenServer(
           std::move(edenStats),
           std::move(privHelper),
           std::make_shared<EdenCPUThreadPool>(),
+          std::make_shared<folly::CPUThreadPoolExecutor>(
+              edenConfig->numFsChannelThreads.getValue(),
+              std::make_unique<EdenTaskQueue>(
+                  edenConfig->maxFsChannelInflightRequests.getValue()),
+              std::make_unique<folly::NamedThreadFactory>(
+                  "FsChannelThreadPool")),
           std::make_shared<UnixClock>(),
           std::make_shared<ProcessInfoCache>(),
           structuredLogger_,

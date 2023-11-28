@@ -35,6 +35,7 @@ std::shared_ptr<ServerState> createTestServerState() {
       makeRefPtr<EdenStats>(),
       std::make_shared<FakePrivHelper>(),
       std::make_shared<UnboundedQueueExecutor>(executor),
+      executor,
       std::make_shared<FakeClock>(),
       std::make_shared<ProcessInfoCache>(),
       std::make_shared<NullStructuredLogger>(),

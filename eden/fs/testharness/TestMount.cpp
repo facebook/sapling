@@ -169,6 +169,7 @@ TestMount::TestMount(bool enableActivityBuffer, CaseSensitivity caseSensitivity)
       makeRefPtr<EdenStats>(),
       privHelper_,
       make_shared<UnboundedQueueExecutor>(serverExecutor_),
+      serverExecutor_,
       clock_,
       make_shared<ProcessInfoCache>(),
       make_shared<NullStructuredLogger>(),

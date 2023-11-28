@@ -33,9 +33,8 @@ class NfsServer {
    * Create a new NFS server.
    *
    * This will handle the lifetime of the various programs involved in the NFS
-   * protocol including mountd and nfsd. The requests will be serviced by a
-   * blocking thread pool initialized with numServicingThreads and
-   * maxInflightRequests.
+   * protocol including mountd and nfsd. The requests will be serviced by the
+   * passed in threadPool.
    *
    * One mountd program will be created per NfsServer, while one nfsd program
    * will be created per-mount point, this allows nfsd program to be only aware
@@ -44,8 +43,7 @@ class NfsServer {
   NfsServer(
       PrivHelper* privHelper,
       folly::EventBase* evb,
-      uint64_t numServicingThreads,
-      uint64_t maxInflightRequests,
+      std::shared_ptr<folly::Executor> threadPool,
       bool shouldRunOurOwnRpcbindServer,
       const std::shared_ptr<StructuredLogger>& structuredLogger);
 

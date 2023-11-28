@@ -44,6 +44,7 @@ ServerState::ServerState(
     EdenStatsPtr edenStats,
     std::shared_ptr<PrivHelper> privHelper,
     std::shared_ptr<UnboundedQueueExecutor> threadPool,
+    std::shared_ptr<folly::Executor> fsChannelThreadPool,
     std::shared_ptr<Clock> clock,
     std::shared_ptr<ProcessInfoCache> processInfoCache,
     std::shared_ptr<StructuredLogger> structuredLogger,
@@ -57,6 +58,7 @@ ServerState::ServerState(
       edenStats_{std::move(edenStats)},
       privHelper_{std::move(privHelper)},
       threadPool_{std::move(threadPool)},
+      fsChannelThreadPool_{std::move(fsChannelThreadPool)},
       clock_{std::move(clock)},
       processInfoCache_{std::move(processInfoCache)},
       structuredLogger_{std::move(structuredLogger)},
@@ -67,8 +69,7 @@ ServerState::ServerState(
               ? std::make_shared<NfsServer>(
                     privHelper_.get(),
                     mainEventBase,
-                    initialConfig.numNfsThreads.getValue(),
-                    initialConfig.maxNfsInflightRequests.getValue(),
+                    fsChannelThreadPool_,
                     initialConfig.runInternalRpcbind.getValue(),
                     structuredLogger_)
               : nullptr},

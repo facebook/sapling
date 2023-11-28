@@ -397,6 +397,7 @@ cpp_library(
         "//eden/fs/telemetry:task_trace",
         "//eden/fs/utils:clock",
         "//eden/fs/utils:eden_error",
+        "//eden/fs/utils:eden_task_queue",
         "//eden/fs/utils:enum",
         "//eden/fs/utils:file_utils",
         "//eden/fs/utils:fs_channel_types",

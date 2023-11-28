@@ -501,20 +501,6 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<bool> registerMountd{"nfs:register-mountd", false, this};
 
   /**
-   * Number of threads that will service the NFS requests.
-   */
-  ConfigSetting<uint64_t> numNfsThreads{"nfs:num-servicing-threads", 8, this};
-
-  /**
-   * Maximum number of pending NFS requests. If more requests are inflight, the
-   * NFS code will block.
-   */
-  ConfigSetting<uint64_t> maxNfsInflightRequests{
-      "nfs:max-inflight-requests",
-      1000,
-      this};
-
-  /**
    * Buffer size for read and writes requests. Default to 16 KiB.
    *
    * 16KiB was determined to offer the best tradeoff of random write speed to
@@ -644,6 +630,25 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<bool> prjfsFsckDetectRenames{
       "prjfs:fsck-detect-renames",
       true,
+      this};
+
+  // [fschannel]
+
+  /**
+   * Number of threads that will service the background FS channel requests.
+   */
+  ConfigSetting<uint64_t> numFsChannelThreads{
+      "fschannel:num-servicing-threads",
+      std::thread::hardware_concurrency(),
+      this};
+
+  /**
+   * Maximum number of pending FS channel requests. If more requests are
+   * inflight, the FS channel code will block.
+   */
+  ConfigSetting<uint64_t> maxFsChannelInflightRequests{
+      "fschannel:max-inflight-requests",
+      1000,
       this};
 
   // [hg]
