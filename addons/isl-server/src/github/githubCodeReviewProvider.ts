@@ -64,7 +64,7 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
           // This is not very easy with github's graphql API, which doesn't allow more than 5 "OR"s in a search query.
           // But if we used one-query-per-diff we would reach rate limiting too quickly.
           searchQuery: `repo:${this.codeReviewSystem.owner}/${this.codeReviewSystem.repo} is:pr author:@me`,
-          numToFetch: 100,
+          numToFetch: 50,
         });
         if (allSummaries?.search.nodes == null) {
           this.diffSummaries.emit('data', new Map());
