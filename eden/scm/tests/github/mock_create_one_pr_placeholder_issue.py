@@ -13,7 +13,7 @@ from sapling.ext.github.mock_utils import mock_run_git_command, MockGitHubServer
 # function for how wrapper functions are registered.
 
 
-def setup_mock_github_server() -> MockGitHubServer:
+def setup_mock_github_server(ui) -> MockGitHubServer:
     """Setup mock GitHub Server for testing happy case of `sl pr submit` command."""
     github_server = MockGitHubServer()
 
@@ -26,7 +26,7 @@ def setup_mock_github_server() -> MockGitHubServer:
 
     body = "addfile\n"
     github_server.expect_create_pr_using_placeholder_request(
-        body=body, issue=pr_number
+        ui, body=body, issue=pr_number
     ).and_respond()
 
     pr_id = f"PR_id_{pr_number}"
@@ -42,7 +42,7 @@ def setup_mock_github_server() -> MockGitHubServer:
 
 
 def uisetup(ui):
-    mock_github_server = setup_mock_github_server()
+    mock_github_server = setup_mock_github_server(ui)
     extensions.wrapfunction(
         github_gh_cli, "_make_request", mock_github_server.make_request
     )

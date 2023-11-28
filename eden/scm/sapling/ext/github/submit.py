@@ -301,6 +301,11 @@ class SerialStrategyParams:
     repository: Optional[Repository]
 
 
+def branch_name_for_pr(ui, pull_request_number) -> str:
+    # Consider including username in branch_name?
+    branch_prefix = ui.config("github", "pr_branch_prefix", "")
+    return f"{branch_prefix}pr{pull_request_number}"
+
 async def create_serial_strategy_params(
     ui,
     partitions: List[List[CommitData]],
@@ -351,8 +356,8 @@ async def create_serial_strategy_params(
                     next_pull_request_number = result.unwrap()
             else:
                 next_pull_request_number += 1
-            # Consider including username in branch_name?
-            branch_name = f"pr{next_pull_request_number}"
+            branch_name = branch_name_for_pr(ui, next_pull_request_number)
+
             refs_to_update.append(f"{hex(top.node)}:refs/heads/{branch_name}")
             top.head_branch_name = branch_name
             pull_requests_to_create.append((top, branch_name))
@@ -486,8 +491,7 @@ async def create_placeholder_strategy_params(
         for commit_needs_pr, number in zip(
             commits_that_need_pull_requests, issue_numbers
         ):
-            # Consider including username in branch_name?
-            branch_name = f"pr{number}"
+            branch_name = branch_name_for_pr(ui, number)
             commit = commit_needs_pr.commit
             commit.head_branch_name = branch_name
             refs_to_update.append(f"{hex(commit.node)}:refs/heads/{branch_name}")

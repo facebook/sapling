@@ -172,6 +172,7 @@ class MockGitHubServer:
 
     def expect_create_pr_using_placeholder_request(
         self,
+        ui,
         body: str,
         issue: int,
         head: str = "",
@@ -180,9 +181,10 @@ class MockGitHubServer:
         owner: str = OWNER,
         name: str = REPO_NAME,
     ) -> "CreatePrUsingPlaceholderRequest":
+        pr_branch_prefix = ui.config("github", "pr_branch_prefix", "")
         params: ParamsType = {
             "base": base,
-            "head": head or f"pr{issue}",
+            "head": head or f"{pr_branch_prefix}pr{issue}",
             "body": body,
             "issue": issue,
             "draft": is_draft,

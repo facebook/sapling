@@ -28,10 +28,11 @@ def setup_mock_github_server(ui) -> MockGitHubServer:
     ]
 
     single = ui.config("github", "pr-workflow") == "single"
+    pr_branch_prefix = ui.config("github", "pr_branch_prefix", "")
 
     for idx, (num, body) in enumerate(prs):
         title = firstline(body)
-        head = f"pr{num}"
+        head = f"{pr_branch_prefix}pr{num}"
 
         base = "main"
         if single and idx > 0:
