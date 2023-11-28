@@ -990,12 +990,14 @@ pub struct OssRemoteDatabaseConfig {
     pub host: String,
     /// Port to connect to
     pub port: i16,
-    /// User of the database
-    pub user: String,
-    /// Name of the secret where the DB password is stored
-    pub secret_name: String,
     /// Name of the database
     pub database: String,
+    /// Keychain group where user and password are stored
+    pub secret_group: String,
+    /// Name of the user secret
+    pub user_secret: String,
+    /// Name of the password secret
+    pub password_secret: String,
 }
 
 /// Configuration for a sharded remote MySQL database

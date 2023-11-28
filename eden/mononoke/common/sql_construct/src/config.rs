@@ -132,9 +132,10 @@ pub trait SqlConstructFromMetadataDatabaseConfig: FbSqlConstruct + SqlConstruct 
             fb,
             config.host.clone(),
             config.port,
-            config.user.clone(),
-            config.secret_name.clone(),
             config.database.clone(),
+            config.secret_group.clone(),
+            config.user_secret.clone(),
+            config.password_secret.clone(),
             readonly,
         )
         .await
@@ -213,9 +214,10 @@ pub trait SqlShardableConstructFromMetadataDatabaseConfig:
             fb,
             config.host.clone(),
             config.port,
-            config.user.clone(),
-            config.secret_name.clone(),
             config.database.clone(),
+            config.secret_group.clone(),
+            config.user_secret.clone(),
+            config.password_secret.clone(),
             readonly,
         )
         .await

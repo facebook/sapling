@@ -30,9 +30,10 @@ pub trait FbSqlConstruct: SqlConstruct + Sized + Send + Sync + 'static {
         _: FacebookInit,
         _host: String,
         _port: i16,
-        _user: String,
-        _secret_name: String,
         _database: String,
+        _secret_group: String,
+        _use_secret: String,
+        _password_secret: String,
         _readonly: bool,
     ) -> Result<Self> {
         fb_unimplemented!()

@@ -277,9 +277,10 @@ impl Convert for RawOssDbRemote {
         Ok(OssRemoteDatabaseConfig {
             host: self.host,
             port: self.port,
-            user: self.user,
-            secret_name: self.secret_name,
             database: self.database,
+            secret_group: self.secret_group,
+            user_secret: self.user_secret,
+            password_secret: self.password_secret,
         })
     }
 }
