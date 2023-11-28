@@ -16,10 +16,8 @@
 
 export PREFIX=/usr/local
 
-ifeq ($(OS),Windows_NT)
-PYTHON := python
-endif
-PYTHON3 := python3
+PYTHON ?= $(shell python3 contrib/pick_python.py)
+export PYTHON_SYS_EXECUTABLE=$(PYTHON)
 
 ifeq ($(OS),Windows_NT)
   BUCK_DEV_BUILD_MODE := @fbcode//mode/win
@@ -30,7 +28,7 @@ else
   endif
 endif
 
-PYTHON_MINOR_VERSION=$(shell $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) -c "import sys; print(sys.version_info.minor)")
+PYTHON_MINOR_VERSION=$(shell $(PYTHON) -c "import sys; print(sys.version_info.minor)")
 
 ifeq ($(RUST_DEBUG),1)
 RUST_FLAG = --debug
@@ -92,7 +90,7 @@ install-oss: oss
 
 local:
 	SAPLING_OSS_BUILD=$(OSS) HGNAME=$(HGNAME) \
-	  $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup.py $(PURE) \
+	  $(PYTHON) setup.py $(PURE) \
 	  build_interactive_smartlog \
 	  build_clib $(COMPILERFLAG) \
 	  build_rust_ext -i -l $(RUST_FLAG) \
@@ -105,7 +103,7 @@ else
 endif
 
 hg:
-	SAPLING_SKIP_OTHER_RUST_BINARIES=true $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup.py $(PURE) \
+	SAPLING_SKIP_OTHER_RUST_BINARIES=true $(PYTHON) setup.py $(PURE) \
 	  build_clib $(COMPILERFLAG) \
 	  build_rust_ext -i -l $(RUST_FLAG) \
 	  build_mo
@@ -135,13 +133,12 @@ getdepsbuild:
 	mkdir -p $(GETDEPS_BUILD_DIR)/eden_scm
 	ln -sfn $(GETDEPS_BUILD_DIR)/eden_scm build
 	GETDEPS_BUILD=1 \
-		PYTHON_SYS_EXECUTABLE=$(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) \
 		THRIFT="$(GETDEPS_INSTALL_DIR)/fbthrift/bin/thrift1" \
-		$(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup.py \
+		$(PYTHON) setup.py \
 		$(PURE) build $(COMPILERFLAG)
 
 cleanbutpackages:
-	-$(PYTHON3) setup.py clean --all # ignore errors from this command
+	-$(PYTHON) setup.py clean --all # ignore errors from this command
 	find contrib doc i18n sapling tests \
 		\( -name '*.py[cdo]' -o -name '*.so' \) -exec rm -f '{}' ';'
 	rm -f MANIFEST MANIFEST.in sapling/ext/__index__.py tests/*.err
@@ -166,16 +163,15 @@ install-home: build
 	$(PYTHON) setup.py $(PURE) install --home="$(HOME)" --prefix="" --force
 
 install-getdeps: getdepsbuild
-	PYTHON_SYS_EXECUTABLE=$(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) \
-	    GETDEPS_BUILD=1 $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) \
+	    GETDEPS_BUILD=1 $(PYTHON) \
 		setup.py $(PURE) install --root="$(DESTDIR)/" --prefix="$(PREFIX)" --install-lib="$(PREFIX)/bin" --force
 
 check: tests
 
 .PHONY: tests
 tests:
-	cd tests && PYTHON_SYS_EXECUTABLE=$(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) \
-	    $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) run-tests.py
+	cd tests && \
+	    $(PYTHON) run-tests.py
 
 update-pot: i18n/hg.pot
 
