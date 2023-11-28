@@ -131,6 +131,11 @@
   max-height: var(--changed-files-list-height);
 }
 
+.changed-file:focus-visible {
+  outline: var(--focus-border) 1px auto;
+  outline-offset: -1px;
+}
+
 .changed-files-list .collapsable {
   margin: var(--pad) 0;
 }

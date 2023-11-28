@@ -87,7 +87,10 @@
   word-break: break-word;
 }
 
+.commit-info-rendered-field:focus-visible,
+.commit-info-rendered-title:focus-visible,
 .commit-info-rendered-textarea:focus-visible {
+  outline: var(--focus-border) 1px auto;
   outline-offset: -1px;
 }
 

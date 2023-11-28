@@ -182,6 +182,11 @@
   user-select: none;
 }
 
+.commit-details:focus-visible {
+  outline: var(--focus-border) 1px auto;
+  outline-offset: var(--halfpad);
+}
+
 .commit-wide-drag-target {
   position: absolute;
   left: 0;
