@@ -87,8 +87,10 @@ pub fn py_initialize(args: &[String], sapling_home: Option<&String>) {
 
         config.install_signal_handlers = 0;
         config.site_import = 0;
-        config.user_site_directory = 0;
         config.parse_argv = 0;
+
+        // This allows IPython to be installed in user site dir.
+        config.user_site_directory = 1;
 
         // This assumes Python has been pre-initialized, and filesystem encoding
         // is utf-8 (both done above).
