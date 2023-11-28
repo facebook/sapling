@@ -6,6 +6,15 @@ oncall("scm_client_infra")
 python_library(
     name = "edenfs_config_util",
     srcs = ["edenfs_config_util.py"],
+    os_deps = [
+        (
+            "linux",
+            [
+                "//gatekeeper/py:client",
+                "//libfb/py:employee",
+            ],
+        ),
+    ],
     deps = [
         "fbsource//xplat/python/buckutils:buckutils",
     ],
