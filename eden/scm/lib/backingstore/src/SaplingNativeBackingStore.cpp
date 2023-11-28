@@ -6,6 +6,7 @@
  */
 
 #include "eden/scm/lib/backingstore/include/SaplingNativeBackingStore.h"
+#include "eden/scm/lib/backingstore/src/ffi.rs.h" // @manual
 
 #include <folly/Range.h>
 #include <folly/String.h>
@@ -93,7 +94,8 @@ void SaplingNativeBackingStore::getTreeBatch(
     bool local,
     folly::FunctionRef<void(size_t, folly::Try<std::shared_ptr<Tree>>)>
         resolve) {
-  size_t count = requests.size();
+  auto resolver = std::make_shared<GetTreeBatchResolver>(std::move(resolve));
+  auto count = requests.size();
 
   XLOG(DBG7) << "Import batch of trees with size:" << count;
 
@@ -105,41 +107,11 @@ void SaplingNativeBackingStore::getTreeBatch(
     });
   }
 
-  using ResolveResult = folly::Try<std::shared_ptr<Tree>>;
-
-  auto inner_resolve = [&](size_t index, CFallibleBase raw_result) {
-    resolve(
-        index, folly::makeTryWith([&] {
-          CFallible<Tree, sapling_tree_free> result{std::move(raw_result)};
-          if (result.isError()) {
-            XLOGF(
-                DBG6,
-                "Failed to import node={} from EdenAPI (batch tree {}/{}): {}",
-                folly::hexlify(requests[index]),
-                index,
-                count,
-                result.getError());
-            return ResolveResult{SaplingFetchError{result.getError()}};
-          } else {
-            XLOGF(
-                DBG6,
-                "Imported node={} from EdenAPI (batch tree: {}/{})",
-                folly::hexlify(requests[index]),
-                index,
-                count);
-            return ResolveResult{std::shared_ptr<Tree>{result.unwrap()}};
-          }
-        }));
-  };
-
   sapling_backingstore_get_tree_batch(
-      store_.get(),
-      folly::crange(raw_requests),
+      *store_.get(),
+      rust::Slice<const Request>{raw_requests.data(), raw_requests.size()},
       local,
-      &inner_resolve,
-      +[](void* fn, size_t index, CFallibleBase result) {
-        (*static_cast<decltype(inner_resolve)*>(fn))(index, result);
-      });
+      std::move(resolver));
 }
 
 std::unique_ptr<folly::IOBuf> SaplingNativeBackingStore::getBlob(

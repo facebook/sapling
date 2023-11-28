@@ -7,7 +7,7 @@
  * This file is generated with cbindgen. Please run `./tools/cbindgen.sh` to
  * update this file.
  *
- * @generated SignedSource<<acd2733514d3f5e17ff03431ac01b0a3>>
+ * @generated SignedSource<<3b2996b92f3ae83007b1c8ab31ad87b4>>
  *
  */
 
@@ -28,7 +28,7 @@ struct BackingStore;
 
 struct FileAuxData;
 
-struct Tree;
+struct Request;
 
 template<typename T = void>
 struct Vec;
@@ -44,10 +44,6 @@ struct CBytes {
   operator folly::ByteRange() const {
     return asByteRange();
   }
-};
-
-struct Request {
-  const uint8_t *node;
 };
 
 template<typename T>
@@ -77,12 +73,6 @@ void sapling_cbytes_free(CBytes *vec);
 
 void sapling_cfallible_free_error(char *ptr);
 
-void sapling_backingstore_get_tree_batch(BackingStore *store,
-                                         Slice<Request> requests,
-                                         bool local,
-                                         void *data,
-                                         void (*resolve)(void*, uintptr_t, CFallibleBase));
-
 void sapling_backingstore_get_blob_batch(BackingStore *store,
                                          Slice<Request> requests,
                                          bool local,
@@ -106,8 +96,6 @@ void sapling_test_cfallible_ok_free(uint8_t *val);
 CFallibleBase sapling_test_cfallible_err();
 
 CBytes sapling_test_cbytes();
-
-void sapling_tree_free(Tree *tree);
 
 } // extern "C"
 
