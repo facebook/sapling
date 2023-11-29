@@ -136,6 +136,23 @@ void HgDatapackStore::getTreeBatch(const ImportRequestsList& importRequests) {
       [&, filteredPaths](
           size_t index,
           folly::Try<std::shared_ptr<sapling::Tree>> content) mutable {
+        if (content.hasException()) {
+          XLOGF(
+              DBG6,
+              "Failed to import node={} from EdenAPI (batch tree {}/{}): {}",
+              folly::hexlify(requests[index]),
+              index,
+              requests.size(),
+              content.exception().what().toStdString());
+        } else {
+          XLOGF(
+              DBG6,
+              "Imported node={} from EdenAPI (batch tree: {}/{})",
+              folly::hexlify(requests[index]),
+              index,
+              requests.size());
+        }
+
         if (config_->getEdenConfig()->hgTreeFetchFallback.getValue() &&
             content.hasException()) {
           if (logger_) {
