@@ -75,12 +75,20 @@ pub(crate) mod ffi {
         include!("eden/scm/lib/backingstore/include/ffi.h");
 
         type GetTreeBatchResolver;
+        type GetBlobBatchResolver;
 
         unsafe fn sapling_backingstore_get_tree_batch_handler(
             resolve_state: SharedPtr<GetTreeBatchResolver>,
             index: usize,
             error: String,
             tree: SharedPtr<Tree>,
+        );
+
+        unsafe fn sapling_backingstore_get_blob_batch_handler(
+            resolve_state: SharedPtr<GetBlobBatchResolver>,
+            index: usize,
+            error: String,
+            blob: Box<Blob>,
         );
     }
 
@@ -115,6 +123,13 @@ pub(crate) mod ffi {
             node: &[u8],
             local: bool,
         ) -> Result<Box<Blob>>;
+
+        pub fn sapling_backingstore_get_blob_batch(
+            store: &mut BackingStore,
+            requests: &[Request],
+            local: bool,
+            resolver: SharedPtr<GetBlobBatchResolver>,
+        );
 
         pub fn sapling_backingstore_get_file_aux(
             store: &mut BackingStore,
@@ -196,21 +211,24 @@ pub fn sapling_backingstore_get_blob(
     Ok(Box::new(ffi::Blob { bytes }))
 }
 
-#[no_mangle]
-pub extern "C" fn sapling_backingstore_get_blob_batch(
+pub fn sapling_backingstore_get_blob_batch(
     store: &mut BackingStore,
-    requests: Slice<ffi::Request>,
+    requests: &[ffi::Request],
     local: bool,
-    data: *mut c_void,
-    resolve: unsafe extern "C" fn(*mut c_void, usize, CFallibleBase),
+    resolver: SharedPtr<ffi::GetBlobBatchResolver>,
 ) {
-    let keys: Vec<Key> = requests.slice().iter().map(|req| req.key()).collect();
+    let keys: Vec<Key> = requests.iter().map(|req| req.key()).collect();
     store.get_blob_batch(keys, fetch_mode_from_local(local), |idx, result| {
-        let result: CFallible<CBytes> = result
-            .and_then(|opt| opt.ok_or_else(|| Error::msg("no blob found")))
-            .map(CBytes::from_vec)
-            .into();
-        unsafe { resolve(data, idx, result.into()) };
+        let result = result.and_then(|opt| opt.ok_or_else(|| Error::msg("no blob found")));
+        let resolver = resolver.clone();
+        let (error, blob) = match result {
+            Ok(blob) => (String::default(), Box::new(ffi::Blob { bytes: blob })),
+            Err(error) => (
+                format!("{:?}", error),
+                Box::new(ffi::Blob { bytes: vec![] }),
+            ),
+        };
+        unsafe { ffi::sapling_backingstore_get_blob_batch_handler(resolver, idx, error, blob) };
     });
 }
 

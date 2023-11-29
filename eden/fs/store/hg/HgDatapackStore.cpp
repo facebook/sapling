@@ -255,6 +255,23 @@ void HgDatapackStore::getBlobBatch(const ImportRequestsList& importRequests) {
       false,
       // store_.getBlobBatch is blocking, hence we can take these by reference.
       [&](size_t index, folly::Try<std::unique_ptr<folly::IOBuf>> content) {
+        if (content.hasException()) {
+          XLOGF(
+              DBG6,
+              "Failed to import node={} from EdenAPI (batch {}/{}): {}",
+              folly::hexlify(requests[index]),
+              index,
+              requests.size(),
+              content.exception().what().toStdString());
+        } else {
+          XLOGF(
+              DBG6,
+              "Imported node={} from EdenAPI (batch: {}/{})",
+              folly::hexlify(requests[index]),
+              index,
+              requests.size());
+        }
+
         if (config_->getEdenConfig()->hgBlobFetchFallback.getValue() &&
             content.hasException()) {
           if (logger_) {

@@ -7,7 +7,7 @@
  * This file is generated with cbindgen. Please run `./tools/cbindgen.sh` to
  * update this file.
  *
- * @generated SignedSource<<3b2996b92f3ae83007b1c8ab31ad87b4>>
+ * @generated SignedSource<<7638284c226833d5b55ae1f9e64ed0da>>
  *
  */
 
@@ -72,12 +72,6 @@ void sapling_file_aux_free(FileAuxData *aux);
 void sapling_cbytes_free(CBytes *vec);
 
 void sapling_cfallible_free_error(char *ptr);
-
-void sapling_backingstore_get_blob_batch(BackingStore *store,
-                                         Slice<Request> requests,
-                                         bool local,
-                                         void *data,
-                                         void (*resolve)(void*, uintptr_t, CFallibleBase));
 
 void sapling_backingstore_get_file_aux_batch(BackingStore *store,
                                              Slice<Request> requests,
