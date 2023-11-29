@@ -8,6 +8,7 @@
 use std::sync::Arc;
 
 use futures::TryStreamExt;
+use nonblocking::non_blocking_result as nbr;
 
 use super::ProtocolMonitor;
 use super::TestDag;
@@ -19,6 +20,7 @@ use crate::ops::DagPersistent;
 use crate::ops::IdConvert;
 use crate::Group;
 use crate::Id;
+use crate::Set;
 use crate::VertexListWithOptions;
 use crate::VertexName;
 
@@ -209,6 +211,27 @@ async fn test_basic_pull() {
 
     #[cfg(feature = "render")]
     assert_eq!(server.render_graph(), client.render_graph());
+}
+
+#[tokio::test]
+async fn test_pull_from_empty_assign_from_zero() {
+    let server = TestDag::draw("A..D  # master: D");
+    let mut client = server.client().await;
+    let missing = server.dag.only("D".into(), Set::empty()).await.unwrap();
+    let pull_data = server.dag.export_pull_data(&missing).await.unwrap();
+    let heads = VertexListWithOptions::from(&["D".into()][..]).with_highest_group(Group::MASTER);
+    client
+        .dag
+        .import_pull_data(pull_data, &heads)
+        .await
+        .unwrap();
+
+    // FIXME: A should be assigned as 0.
+    let get_id = |s: &'static str| nbr(client.dag.vertex_id(s.into())).unwrap().0;
+    assert_eq!(get_id("A"), 1);
+    assert_eq!(get_id("B"), 2);
+    assert_eq!(get_id("C"), 3);
+    assert_eq!(get_id("D"), 4);
 }
 
 #[tokio::test]
