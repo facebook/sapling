@@ -11,6 +11,8 @@ import re
 import socket
 import time
 
+import bindings
+
 from sapling import (
     blackbox,
     bookmarks,
@@ -474,23 +476,21 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
                 % (main, nodemod.short(oldmainnode), nodemod.short(mainnode))
             )
             try:
-                fastpulldata = repo.edenapi.pullfastforwardmaster(oldmainnode, mainnode)
+                commits, segments = bindings.exchange.fastpull(
+                    repo.ui._rcfg,
+                    repo.edenapi,
+                    repo.changelog.inner,
+                    [oldmainnode],
+                    [mainnode],
+                )
+                repo.ui.status(
+                    _("imported commit graph for %s commit(s) (%s segment(s))\n")
+                    % (commits, segments)
+                )
             except Exception as e:
-                repo.ui.status_err(_("failed to get fast pull data (%s)\n") % (e,))
-            else:
-                vertexopts = {"reserve_size": 0, "highest_group": 0}
-                try:
-                    commits, segments = repo.changelog.inner.importpulldata(
-                        fastpulldata, [(mainnode, vertexopts)]
-                    )
-                    repo.ui.status(
-                        _("imported commit graph for %s commit(s) (%s segment(s))\n")
-                        % (commits, segments)
-                    )
-                except Exception as e:
-                    repo.ui.status_err(
-                        _("failed to apply fast pull data (%s)\n") % (e,)
-                    )
+                repo.ui.status_err(
+                    _("failed to get and apply fast pull data (%s)\n") % (e,)
+                )
 
     # Pull all the new heads and any bookmark hashes we don't have. We need to
     # filter cloudrefs before pull as pull doesn't check if a rev is present

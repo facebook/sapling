@@ -10,6 +10,8 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use async_runtime::block_unless_interrupted as block_on;
+use dag::Group;
+use dag::VertexListWithOptions;
 use dag::VertexName;
 use edenapi::configmodel::Config;
 use edenapi::configmodel::ConfigExt;
@@ -74,4 +76,30 @@ pub fn clone(
     metalog.commit(CommitOptions::default())?;
 
     Ok(bookmarks)
+}
+
+/// Download an update of the main bookmark via fast pull endpoint.  Returns
+/// the number of commits and segments downloaded
+#[instrument(skip_all)]
+pub fn fast_pull(
+    _config: &dyn Config,
+    edenapi: Arc<dyn EdenApi>,
+    commits: &mut Box<dyn DagCommits + Send + 'static>,
+    common: Vec<HgId>,
+    missing: Vec<HgId>,
+) -> Result<(u64, u64)> {
+    let missing_vertexes = missing
+        .iter()
+        .map(|id| VertexName::copy_from(&id.into_byte_array()))
+        .collect::<Vec<_>>();
+    let pull_data = block_on(edenapi.pull_lazy(common, missing))?
+        .map_err(|e| e.tag_network())?
+        .convert_vertex(|n| VertexName::copy_from(&n.into_byte_array()));
+    let commit_count = pull_data.flat_segments.vertex_count();
+    let segment_count = pull_data.flat_segments.segment_count();
+    block_on(commits.import_pull_data(
+        pull_data,
+        &VertexListWithOptions::from(missing_vertexes).with_highest_group(Group::MASTER),
+    ))??;
+    Ok((commit_count, segment_count as u64))
 }

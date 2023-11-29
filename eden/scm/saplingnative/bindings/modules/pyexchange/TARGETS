@@ -24,6 +24,7 @@ rust_python_library(
         "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/cpython-ext:cpython-ext",
         "//eden/scm/lib/exchange:exchange",
+        "//eden/scm/lib/types:types",
         "//eden/scm/saplingnative/bindings/modules/pydag:pydag",
         "//eden/scm/saplingnative/bindings/modules/pyedenapi:pyedenapi",
         "//eden/scm/saplingnative/bindings/modules/pymetalog:pymetalog",

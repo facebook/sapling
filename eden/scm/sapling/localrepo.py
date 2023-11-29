@@ -1178,23 +1178,14 @@ class localrepository:
             fastpathcommits, fastpathsegments, fastpathfallbacks = 0, 0, 0
             for (old, new) in fastpath:
                 try:
-                    fastpulldata = self.edenapi.pullfastforwardmaster(old, new)
-                except Exception as e:
-                    self.ui.status_err(
-                        _("failed to get fast pull data (%s), using fallback path\n")
-                        % (e,)
+                    commits, segments = bindings.exchange.fastpull(
+                        self.ui._rcfg,
+                        self.edenapi,
+                        self.changelog.inner,
+                        [old],
+                        [new],
                     )
-                    fastpathfallbacks += 1
-                    continue
-                vertexopts = {
-                    "reserve_size": 0,
-                    "highest_group": 0,
-                }
-                try:
-                    commits, segments = self.changelog.inner.importpulldata(
-                        fastpulldata,
-                        [(new, vertexopts)],
-                    )
+
                     self.ui.status(
                         _("imported commit graph for %s (%s)\n")
                         % (
@@ -1214,6 +1205,12 @@ class localrepository:
                     tracing.warn(
                         "cannot use pull fast path: %s\n" % e, target="pull::fastpath"
                     )
+                except Exception as e:
+                    self.ui.status_err(
+                        _("failed to get fast pull data (%s), using fallback path\n")
+                        % (e,)
+                    )
+                    fastpathfallbacks += 1
 
             pullheads = heads - fastpathheads
 

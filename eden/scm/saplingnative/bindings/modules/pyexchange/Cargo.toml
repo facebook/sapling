@@ -13,3 +13,4 @@ exchange = { version = "0.1.0", path = "../../../../lib/exchange" }
 pydag = { version = "0.1.0", path = "../pydag" }
 pyedenapi = { version = "0.1.0", path = "../pyedenapi" }
 pymetalog = { version = "0.1.0", path = "../pymetalog" }
+types = { version = "0.1.0", path = "../../../../lib/types" }
