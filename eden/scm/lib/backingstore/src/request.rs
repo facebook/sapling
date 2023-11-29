@@ -11,13 +11,10 @@ use types::Key;
 use types::Node;
 use types::RepoPathBuf;
 
+use crate::ffi::ffi::Request;
+
 // Number of bytes of a node.
 const NODE_LENGTH: usize = 20;
-
-#[repr(C)]
-pub struct Request {
-    node: *const u8,
-}
 
 impl Request {
     pub fn key(&self) -> Key {

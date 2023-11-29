@@ -23,11 +23,6 @@ class IOBuf;
 
 namespace sapling {
 
-class SaplingFetchError : public std::runtime_error {
- public:
-  using std::runtime_error::runtime_error;
-};
-
 /**
  * Reference to a 20-byte hg node ID.
  *

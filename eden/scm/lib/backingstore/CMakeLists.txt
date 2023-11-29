@@ -19,19 +19,20 @@ install_rust_static_library(
   INSTALL_DIR lib
 )
 
-rust_cxx_bridge(rust_backingstore_bridge "src/ffi.rs")
+rust_cxx_bridge(
+  backingstore
+  "src/ffi.rs"
+  LIBS
+  fmt::fmt
+  Folly::folly
+)
 
 file(GLOB C_API_SRCS "src/*.cpp")
-file(
-  GLOB
-  RUST_BACKINGSTORE_SRCS
-  "${CMAKE_CURRENT_BINARY_DIR}/cxxbridge/backingstore/src/*.cc"
-)
 file(GLOB C_API_HDRS "include/*.h")
-add_library(
+target_sources(
   backingstore
+  PRIVATE
   "${C_API_SRCS}"
-  "${RUST_BACKINGSTORE_SRCS}"
 )
 set_target_properties(
   backingstore
@@ -40,7 +41,9 @@ set_target_properties(
   "${C_API_HDRS}"
 )
 
-target_include_directories(backingstore PUBLIC
+target_include_directories(
+  backingstore
+  PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
 )
@@ -48,9 +51,8 @@ target_link_libraries(
   backingstore
   PUBLIC
   rust_backingstore
-  rust_backingstore_bridge
+  fmt::fmt
   Folly::folly
-  edencommon::edencommon_utils
 )
 
 # curl used in the Rust crate has its own copy of curl compiled and it uses

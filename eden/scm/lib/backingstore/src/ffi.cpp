@@ -7,4 +7,22 @@
 
 #include "eden/scm/lib/backingstore/include/ffi.h"
 
-namespace sapling {} // namespace sapling
+namespace sapling {
+
+void sapling_backingstore_get_tree_batch_handler(
+    std::shared_ptr<GetTreeBatchResolver> resolver,
+    size_t index,
+    rust::String error,
+    std::shared_ptr<Tree> tree) {
+  using ResolveResult = folly::Try<std::shared_ptr<Tree>>;
+
+  resolver->resolve(index, folly::makeTryWith([&] {
+                      if (tree) {
+                        return ResolveResult{tree};
+                      } else {
+                        return ResolveResult{SaplingFetchError{error.c_str()}};
+                      }
+                    }));
+}
+
+} // namespace sapling

@@ -97,10 +97,3 @@ impl TryFrom<Box<dyn storemodel::TreeEntry>> for Tree {
         Ok(Tree { entries })
     }
 }
-
-#[no_mangle]
-pub extern "C" fn sapling_tree_free(tree: *mut Tree) {
-    assert!(!tree.is_null());
-    let tree = unsafe { Box::from_raw(tree) };
-    drop(tree);
-}
