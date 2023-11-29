@@ -36,6 +36,7 @@
 
 #ifndef _WIN32
 #include "eden/fs/inodes/lmdbcatalog/BufferedLMDBInodeCatalog.h" // @manual
+#include "eden/fs/inodes/lmdbcatalog/LMDBFileContentStore.h" // @manual
 #include "eden/fs/inodes/lmdbcatalog/LMDBInodeCatalog.h" // @manual
 #endif
 

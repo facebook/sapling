@@ -132,15 +132,17 @@ cpp_library(
         (
             "linux",
             [
-                "//eden/fs/inodes/lmdbcatalog:bufferedlmdbinodecatalog",
-                "//eden/fs/inodes/lmdbcatalog:lmdbinodecatalog",
+                "//eden/fs/inodes/lmdbcatalog:buffered_lmdb_inode_catalog",
+                "//eden/fs/inodes/lmdbcatalog:lmdb_inode_catalog",
+                "//eden/fs/inodes/lmdbcatalog:lmdb_file_content_store",
             ],
         ),
         (
             "macos",
             [
-                "//eden/fs/inodes/lmdbcatalog:bufferedlmdbinodecatalog",
-                "//eden/fs/inodes/lmdbcatalog:lmdbinodecatalog",
+                "//eden/fs/inodes/lmdbcatalog:buffered_lmdb_inode_catalog",
+                "//eden/fs/inodes/lmdbcatalog:lmdb_inode_catalog",
+                "//eden/fs/inodes/lmdbcatalog:lmdb_file_content_store",
             ],
         ),
     ],

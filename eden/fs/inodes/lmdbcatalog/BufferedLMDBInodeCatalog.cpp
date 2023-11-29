@@ -15,6 +15,7 @@
 
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/InodeNumber.h"
+#include "eden/fs/inodes/lmdbcatalog/LMDBFileContentStore.h"
 #include "eden/fs/inodes/lmdbcatalog/LMDBInodeCatalog.h"
 
 namespace facebook::eden {

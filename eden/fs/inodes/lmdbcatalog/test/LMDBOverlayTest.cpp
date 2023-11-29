@@ -5,18 +5,15 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/inodes/lmdbcatalog/LMDBInodeCatalog.h"
 #include "eden/fs/inodes/lmdbcatalog/BufferedLMDBInodeCatalog.h"
+#include "eden/fs/inodes/lmdbcatalog/LMDBInodeCatalog.h"
 #include "eden/fs/inodes/test/OverlayTestUtil.h"
-
-#include <iomanip>
 
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
-#include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
@@ -24,14 +21,11 @@
 #include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TempFile.h"
-#include "eden/fs/testharness/TestChecks.h"
 #include "eden/fs/testharness/TestMount.h"
-#include "eden/fs/utils/DirType.h"
 
 namespace facebook::eden {
 
-class LMDBInodeCatalogTest
-    : public ::testing::TestWithParam<InodeCatalogOptions> {
+class LMDBOverlayTest : public ::testing::TestWithParam<InodeCatalogOptions> {
  protected:
   InodeCatalogOptions overlayOptions() const {
     return GetParam();
@@ -50,7 +44,7 @@ class LMDBInodeCatalogTest
   TestMount mount_;
 };
 
-TEST_P(LMDBInodeCatalogTest, roundTripThroughSaveAndLoad) {
+TEST_P(LMDBOverlayTest, roundTripThroughSaveAndLoad) {
   auto hash = ObjectId::fromHex("0123456789012345678901234567890123456789");
 
   auto overlay = mount_.getEdenMount()->getOverlay();
@@ -78,11 +72,11 @@ TEST_P(LMDBInodeCatalogTest, roundTripThroughSaveAndLoad) {
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    LMDBInodeCatalogTest,
-    LMDBInodeCatalogTest,
+    LMDBOverlayTest,
+    LMDBOverlayTest,
     ::testing::Values(INODE_CATALOG_DEFAULT, INODE_CATALOG_BUFFERED));
 
-TEST(PlainLMDBInodeCatalogTest, new_overlay_is_clean) {
+TEST(PlainLMDBOverlayTest, new_overlay_is_clean) {
   folly::test::TemporaryDirectory testDir;
   auto overlay = Overlay::create(
       canonicalPath(testDir.path().string()),
@@ -97,7 +91,7 @@ TEST(PlainLMDBInodeCatalogTest, new_overlay_is_clean) {
   EXPECT_TRUE(overlay->hadCleanStartup());
 }
 
-TEST(PlainLMDBInodeCatalogTest, new_overlay_is_clean_buffered) {
+TEST(PlainLMDBOverlayTest, new_overlay_is_clean_buffered) {
   folly::test::TemporaryDirectory testDir;
   auto overlay = Overlay::create(
       canonicalPath(testDir.path().string()),
@@ -112,7 +106,7 @@ TEST(PlainLMDBInodeCatalogTest, new_overlay_is_clean_buffered) {
   EXPECT_TRUE(overlay->hadCleanStartup());
 }
 
-TEST(PlainLMDBInodeCatalogTest, reopened_overlay_is_clean) {
+TEST(PlainLMDBOverlayTest, reopened_overlay_is_clean) {
   folly::test::TemporaryDirectory testDir;
   {
     auto overlay = Overlay::create(
@@ -139,7 +133,7 @@ TEST(PlainLMDBInodeCatalogTest, reopened_overlay_is_clean) {
   EXPECT_TRUE(overlay->hadCleanStartup());
 }
 
-TEST(PlainLMDBInodeCatalogTest, reopened_overlay_is_clean_buffered) {
+TEST(PlainLMDBOverlayTest, reopened_overlay_is_clean_buffered) {
   folly::test::TemporaryDirectory testDir;
   {
     auto overlay = Overlay::create(
@@ -166,7 +160,7 @@ TEST(PlainLMDBInodeCatalogTest, reopened_overlay_is_clean_buffered) {
   EXPECT_TRUE(overlay->hadCleanStartup());
 }
 
-TEST(PlainLMDBInodeCatalogTest, close_overlay_with_no_capacity_buffered) {
+TEST(PlainLMDBOverlayTest, close_overlay_with_no_capacity_buffered) {
   auto config = EdenConfig::createTestEdenConfig();
   config->overlayBufferSize.setValue(0, ConfigSourceType::Default, true);
   folly::test::TemporaryDirectory testDir;
@@ -184,9 +178,7 @@ TEST(PlainLMDBInodeCatalogTest, close_overlay_with_no_capacity_buffered) {
   EXPECT_TRUE(overlay->isClosed());
 }
 
-TEST(
-    PlainLMDBInodeCatalogTest,
-    small_capacity_write_multiple_directories_buffered) {
+TEST(PlainLMDBOverlayTest, small_capacity_write_multiple_directories_buffered) {
   auto config = EdenConfig::createTestEdenConfig();
   config->overlayBufferSize.setValue(1, ConfigSourceType::Default, true);
   folly::test::TemporaryDirectory testDir;
@@ -217,10 +209,10 @@ TEST(
   EXPECT_EQ(ino, overlay->getMaxInodeNumber());
 }
 
-class RawLMDBInodeCatalogTest
+class RawLMDBOverlayTest
     : public ::testing::TestWithParam<InodeCatalogOptions> {
  public:
-  RawLMDBInodeCatalogTest() : testDir_{makeTempDir("eden_raw_overlay_test_")} {
+  RawLMDBOverlayTest() : testDir_{makeTempDir("eden_raw_overlay_test_")} {
     loadOverlay();
   }
 
@@ -259,7 +251,7 @@ class RawLMDBInodeCatalogTest
   std::shared_ptr<Overlay> overlay;
 };
 
-TEST_P(RawLMDBInodeCatalogTest, cannot_save_overlay_dir_when_closed) {
+TEST_P(RawLMDBOverlayTest, cannot_save_overlay_dir_when_closed) {
   overlay->close();
   auto ino2 = overlay->allocateInodeNumber();
   EXPECT_EQ(2_ino, ino2);
@@ -271,7 +263,7 @@ TEST_P(RawLMDBInodeCatalogTest, cannot_save_overlay_dir_when_closed) {
       "cannot access overlay after it is closed");
 }
 
-TEST_P(RawLMDBInodeCatalogTest, max_inode_number_is_1_if_overlay_is_empty) {
+TEST_P(RawLMDBOverlayTest, max_inode_number_is_1_if_overlay_is_empty) {
   EXPECT_EQ(kRootNodeId, overlay->getMaxInodeNumber());
   auto ino2 = overlay->allocateInodeNumber();
   EXPECT_EQ(2_ino, ino2);
@@ -290,7 +282,7 @@ TEST_P(RawLMDBInodeCatalogTest, max_inode_number_is_1_if_overlay_is_empty) {
   EXPECT_EQ(2_ino, overlay->getMaxInodeNumber());
 }
 
-TEST_P(RawLMDBInodeCatalogTest, remembers_max_inode_number_of_tree_entries) {
+TEST_P(RawLMDBOverlayTest, remembers_max_inode_number_of_tree_entries) {
   auto ino2 = overlay->allocateInodeNumber();
   EXPECT_EQ(2_ino, ino2);
   auto ino3 = overlay->allocateInodeNumber();
@@ -307,7 +299,7 @@ TEST_P(RawLMDBInodeCatalogTest, remembers_max_inode_number_of_tree_entries) {
   EXPECT_EQ(4_ino, overlay->getMaxInodeNumber());
 }
 
-TEST_P(RawLMDBInodeCatalogTest, inode_numbers_after_takeover) {
+TEST_P(RawLMDBOverlayTest, inode_numbers_after_takeover) {
   auto ino2 = overlay->allocateInodeNumber();
   EXPECT_EQ(2_ino, ino2);
   auto ino3 = overlay->allocateInodeNumber();
@@ -341,7 +333,7 @@ TEST_P(RawLMDBInodeCatalogTest, inode_numbers_after_takeover) {
   EXPECT_EQ(5_ino, overlay->getMaxInodeNumber());
 }
 
-TEST_P(RawLMDBInodeCatalogTest, manual_recursive_delete) {
+TEST_P(RawLMDBOverlayTest, manual_recursive_delete) {
   auto rootIno = kRootNodeId;
   EXPECT_EQ(1_ino, rootIno);
   auto subdirIno = overlay->allocateInodeNumber();
@@ -403,19 +395,19 @@ TEST_P(RawLMDBInodeCatalogTest, manual_recursive_delete) {
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    RawLMDBInodeCatalogTest,
-    RawLMDBInodeCatalogTest,
+    RawLMDBOverlayTest,
+    RawLMDBOverlayTest,
     ::testing::Values(INODE_CATALOG_DEFAULT, INODE_CATALOG_BUFFERED));
 
-class DebugDumpLMDBInodeCatalogInodesTest
+class DebugDumpLMDBOverlayInodesTest
     : public ::testing::TestWithParam<InodeCatalogOptions> {
  public:
   InodeCatalogOptions overlayOptions() const {
     return GetParam();
   }
 
-  DebugDumpLMDBInodeCatalogInodesTest()
-      : testDir_{makeTempDir("eden_DebugDumpLMDBInodeCatalogInodesTest")} {
+  DebugDumpLMDBOverlayInodesTest()
+      : testDir_{makeTempDir("eden_DebugDumpLMDBOverlayInodesTest")} {
     overlay = Overlay::create(
         canonicalPath(testDir_.path().string()),
         kPathMapDefaultCaseSensitive,
@@ -445,7 +437,7 @@ class DebugDumpLMDBInodeCatalogInodesTest
   std::shared_ptr<Overlay> overlay;
 };
 
-TEST_P(DebugDumpLMDBInodeCatalogInodesTest, dump_empty_directory) {
+TEST_P(DebugDumpLMDBOverlayInodesTest, dump_empty_directory) {
   auto ino = kRootNodeId;
   EXPECT_EQ(1_ino, ino);
 
@@ -458,7 +450,7 @@ TEST_P(DebugDumpLMDBInodeCatalogInodesTest, dump_empty_directory) {
 }
 
 TEST_P(
-    DebugDumpLMDBInodeCatalogInodesTest,
+    DebugDumpLMDBOverlayInodesTest,
     dump_directory_with_an_empty_subdirectory) {
   auto rootIno = kRootNodeId;
   EXPECT_EQ(1_ino, rootIno);
@@ -490,7 +482,7 @@ TEST_P(
 }
 
 TEST_P(
-    DebugDumpLMDBInodeCatalogInodesTest,
+    DebugDumpLMDBOverlayInodesTest,
     dump_directory_with_unsaved_subdirectory) {
   auto rootIno = kRootNodeId;
   EXPECT_EQ(1_ino, rootIno);
@@ -521,7 +513,7 @@ TEST_P(
 }
 
 TEST_P(
-    DebugDumpLMDBInodeCatalogInodesTest,
+    DebugDumpLMDBOverlayInodesTest,
     dump_directory_with_unsaved_regular_file) {
   auto rootIno = kRootNodeId;
   EXPECT_EQ(1_ino, rootIno);
@@ -551,8 +543,8 @@ TEST_P(
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    DebugDumpLMDBInodeCatalogInodesTest,
-    DebugDumpLMDBInodeCatalogInodesTest,
+    DebugDumpLMDBOverlayInodesTest,
+    DebugDumpLMDBOverlayInodesTest,
     ::testing::Values(INODE_CATALOG_DEFAULT, INODE_CATALOG_BUFFERED));
 
 } // namespace facebook::eden

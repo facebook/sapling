@@ -12,7 +12,7 @@
 #include <folly/FileUtil.h>
 
 #include "eden/fs/inodes/Overlay.h"
-#include "eden/fs/inodes/lmdbcatalog/LMDBInodeCatalog.h" // @manual
+#include "eden/fs/inodes/lmdbcatalog/LMDBFileContentStore.h" // @manual
 #include "eden/fs/utils/NotImplemented.h"
 
 namespace facebook::eden {

@@ -55,8 +55,8 @@ class BufferedLMDBInodeCatalog : public LMDBInodeCatalog {
   bool hasOverlayDir(InodeNumber inodeNumber) override;
 
  private:
-  FRIEND_TEST(RawLMDBInodeCatalogTest, manual_recursive_delete);
-  friend class DebugDumpLMDBInodeCatalogInodesTest;
+  FRIEND_TEST(RawLMDBOverlayTest, manual_recursive_delete);
+  friend class DebugDumpLMDBOverlayInodesTest;
   enum class OperationType {
     Write,
     Remove,
