@@ -24,7 +24,6 @@ mod ffi;
 mod init;
 mod request;
 mod slice;
-mod tests;
 mod tree;
 
 pub use crate::backingstore::BackingStore;

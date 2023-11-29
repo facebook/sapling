@@ -7,7 +7,7 @@
  * This file is generated with cbindgen. Please run `./tools/cbindgen.sh` to
  * update this file.
  *
- * @generated SignedSource<<f399137612eddb864eeafdd5007279c3>>
+ * @generated SignedSource<<333733f8531f0405236cb8590401bcd8>>
  *
  */
 
@@ -40,30 +40,11 @@ struct CBytes {
   }
 };
 
-/// The monomorphized version of `CFallible` used solely because MSVC
-/// does not allow returning template functions from extern "C" functions.
-struct CFallibleBase {
-  void *value;
-  char *error;
-};
-
 extern "C" {
 
 void sapling_cbytes_free(CBytes *vec);
 
 void sapling_cfallible_free_error(char *ptr);
-
-/// Returns a `CFallible` with success return value 1. This function is intended to be called from
-/// C++ tests.
-CFallibleBase sapling_test_cfallible_ok();
-
-void sapling_test_cfallible_ok_free(uint8_t *val);
-
-/// Returns a `CFallible` with error message "context: failure!". This function is intended to be called
-/// from C++ tests.
-CFallibleBase sapling_test_cfallible_err();
-
-CBytes sapling_test_cbytes();
 
 } // extern "C"
 
@@ -71,6 +52,13 @@ CBytes sapling_test_cbytes();
 
 
 namespace sapling {
+
+/// The monomorphized version of `CFallible` used solely because MSVC
+/// does not allow returning template functions from extern "C" functions.
+struct CFallibleBase {
+  void *value;
+  char *error;
+};
 
 // Some Rust functions will have the return type `CFallibleBase`, and we
 // have this convenient struct to help C++ code to consume the returned
