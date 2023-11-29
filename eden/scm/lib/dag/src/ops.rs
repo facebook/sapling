@@ -348,7 +348,7 @@ pub trait DagExportCloneData {
 #[async_trait::async_trait]
 pub trait DagExportPullData {
     /// Export `CloneData` for vertexes in the given set.
-    /// The set is typcially calculated by `only(heads, common)`.
+    /// The set is typically calculated by `only(heads, common)`.
     async fn export_pull_data(&self, set: &NameSet) -> Result<CloneData<VertexName>>;
 }
 

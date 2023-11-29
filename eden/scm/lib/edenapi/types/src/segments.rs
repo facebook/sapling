@@ -5,17 +5,22 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
+use std::ops::Bound;
 
 use anyhow::bail;
 use anyhow::Result;
 use dag_types::CloneData;
 use dag_types::FlatSegment;
 use dag_types::Id;
+use dag_types::Location;
 use dag_types::PreparedFlatSegments;
 use dag_types::VertexName;
+use types::HgId;
 
+use crate::commit::CommitGraphSegmentParent;
 use crate::commit::CommitGraphSegmentsEntry;
 
 pub struct CommitGraphSegments {
@@ -101,5 +106,71 @@ impl TryFrom<CommitGraphSegments> for CloneData<VertexName> {
                 .map(|(name, id)| (id, VertexName::copy_from(&name.into_byte_array())))
                 .collect(),
         })
+    }
+}
+
+impl TryFrom<CloneData<VertexName>> for CommitGraphSegments {
+    type Error = anyhow::Error;
+
+    fn try_from(clone_data: CloneData<VertexName>) -> Result<Self> {
+        let CloneData {
+            flat_segments,
+            idmap,
+        } = clone_data;
+        let idmap = idmap
+            .into_iter()
+            .map(|(id, name)| anyhow::Ok((id, HgId::from_slice(name.as_ref())?)))
+            .collect::<Result<BTreeMap<_, _>>>()?;
+
+        let mut relidmap: BTreeMap<Id, (HgId, Location<HgId>)> = BTreeMap::new();
+        for flat_segment in flat_segments.segments.iter() {
+            let high_name = &idmap[&flat_segment.high];
+            for (id, name) in idmap.range((
+                Bound::Excluded(&flat_segment.low),
+                Bound::Included(&flat_segment.high),
+            )) {
+                relidmap.insert(
+                    *id,
+                    (
+                        name.clone(),
+                        Location::new(high_name.clone(), flat_segment.high.0 - id.0),
+                    ),
+                );
+            }
+            let low_name = &idmap[&flat_segment.low];
+            relidmap.insert(
+                flat_segment.low,
+                (low_name.clone(), Location::new(low_name.clone(), 0)),
+            );
+        }
+
+        let segments = flat_segments
+            .segments
+            .into_iter()
+            .rev()
+            .map(|flat_segment| CommitGraphSegmentsEntry {
+                head: idmap[&flat_segment.high].clone(),
+                base: idmap[&flat_segment.low].clone(),
+                length: flat_segment.high.0 - flat_segment.low.0 + 1,
+                parents: flat_segment
+                    .parents
+                    .into_iter()
+                    .map(|parent_id| {
+                        relidmap.get(&parent_id).map_or_else(
+                            || CommitGraphSegmentParent {
+                                hgid: idmap[&parent_id].clone(),
+                                location: None,
+                            },
+                            |(parent_name, location)| CommitGraphSegmentParent {
+                                hgid: parent_name.clone(),
+                                location: Some(location.clone()),
+                            },
+                        )
+                    })
+                    .collect(),
+            })
+            .collect();
+
+        Ok(CommitGraphSegments { segments })
     }
 }

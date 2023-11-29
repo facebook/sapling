@@ -26,6 +26,8 @@ use edenapi::types::make_hash_lookup_request;
 use edenapi::types::AnyFileContentId;
 use edenapi::types::BookmarkEntry;
 use edenapi::types::CommitGraphEntry;
+use edenapi::types::CommitGraphSegments;
+use edenapi::types::CommitGraphSegmentsEntry;
 use edenapi::types::CommitHashLookupResponse;
 use edenapi::types::CommitHashToLocationResponse;
 use edenapi::types::CommitKnownResponse;
@@ -384,10 +386,8 @@ impl EdenApi for EagerRepo {
             debug_hgid_list(&heads),
             debug_hgid_list(&common),
         );
-        let heads =
-            dag::Set::from_static_names(heads.iter().map(|v| Vertex::copy_from(v.as_ref())));
-        let common =
-            dag::Set::from_static_names(common.iter().map(|v| Vertex::copy_from(v.as_ref())));
+        let heads = Set::from_static_names(heads.iter().map(|v| Vertex::copy_from(v.as_ref())));
+        let common = Set::from_static_names(common.iter().map(|v| Vertex::copy_from(v.as_ref())));
         let graph = self.dag().only(heads, common).await.map_err(map_dag_err)?;
         let stream = graph.iter_rev().await.map_err(map_dag_err)?;
         let stream: BoxStream<edenapi::Result<CommitGraphEntry>> = stream
@@ -410,6 +410,34 @@ impl EdenApi for EagerRepo {
             .boxed();
         let values: edenapi::Result<Vec<CommitGraphEntry>> = stream.try_collect().await;
         values
+    }
+
+    async fn commit_graph_segments(
+        &self,
+        heads: Vec<HgId>,
+        common: Vec<HgId>,
+    ) -> Result<Vec<CommitGraphSegmentsEntry>, EdenApiError> {
+        ::fail::fail_point!("eagerepo::api::commitgraphsegments", |_| {
+            Err(EdenApiError::NotSupported)
+        });
+
+        debug!(
+            "commit_graph_segments {} {}",
+            debug_hgid_list(&heads),
+            debug_hgid_list(&common),
+        );
+        let heads = Set::from_static_names(heads.iter().map(|v| Vertex::copy_from(v.as_ref())));
+        let common = Set::from_static_names(common.iter().map(|v| Vertex::copy_from(v.as_ref())));
+        let graph = self.dag().only(heads, common).await.map_err(map_dag_err)?;
+
+        let graph_segments: CommitGraphSegments = self
+            .dag()
+            .export_pull_data(&graph)
+            .await
+            .map_err(map_dag_err)?
+            .try_into()?;
+
+        Ok(graph_segments.segments)
     }
 
     async fn bookmarks(&self, bookmarks: Vec<String>) -> edenapi::Result<Vec<BookmarkEntry>> {
