@@ -847,10 +847,19 @@ where
             })
         };
 
-        // Insert segments by visiting the heads.
+        // Insert segments by visiting the heads following the `VertexOptions` order.
         //
-        // Similar to `IdMap::assign_head`, but insert a segment at a time,
-        // not a vertex at a time.
+        // If a segment is not ready to be inserted (ex. its parents are still missing),
+        // their parents will be visited recursively. This has the nice effects
+        // comparing to `import_clone_data` which blindly takes the input as-is:
+        // - De-fragment `clone_data`: gaps or sub-optional segment order won't hurt.
+        // - Respect the local `VertexOptions`: respect the order and reserve_size
+        //   set locally if possible.
+        // - Ignore "bogus" unrelated sub-graph: if the `clone_data` contains more
+        //   segments then needed, they will be simply ignored.
+        //
+        // The implementation (of using a stack) is similar to `IdMap::assign_head`,
+        // but insert a segment at a time, not a vertex at a time.
         //
         // Only the MASTER group supports laziness. So we only care about it.
         for (head, opts) in heads.vertex_options() {
@@ -896,7 +905,7 @@ where
                 let mut missng_parent_server_ids = Vec::new();
 
                 // Calculate `parent_client_ids`, and `missng_parent_server_ids`.
-                // Intentiaonlly using `new.map` not `new` to bypass remote lookups.
+                // Intentionally using `new.map` not `new` to bypass remote lookups.
                 {
                     let client_id_res = new.map.vertex_id_batch(&parent_names).await?;
                     assert_eq!(client_id_res.len(), parent_server_ids.len());
