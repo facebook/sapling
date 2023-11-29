@@ -7,7 +7,6 @@
 
 import type {CommitMessageFields} from './CommitInfoView/types';
 import type {UseUncommittedSelection} from './partialSelection';
-import type {PathTree} from './pathTree';
 import type {ChangedFile, ChangedFileType, MergeConflicts, RepoRelativePath} from './types';
 import type {MutableRefObject, ReactNode} from 'react';
 import type {Comparison} from 'shared/Comparison';
@@ -31,11 +30,13 @@ import {
 } from './CommitInfoView/CommitMessageFields';
 import {OpenComparisonViewButton} from './ComparisonView/OpenComparisonViewButton';
 import {ErrorNotice} from './ErrorNotice';
+import {FileTree, FileTreeFolderHeader} from './FileTree';
 import {
   generatedStatusToLabel,
   generatedStatusDescription,
   useGeneratedFileStatuses,
 } from './GeneratedFile';
+import {Internal} from './Internal';
 import {PartialFileSelectionWithMode} from './PartialFileSelection';
 import {SuspenseBoundary} from './SuspenseBoundary';
 import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
@@ -55,7 +56,6 @@ import {ResolveOperation, ResolveTool} from './operations/ResolveOperation';
 import {RevertOperation} from './operations/RevertOperation';
 import {getShelveOperation} from './operations/ShelveOperation';
 import {useUncommittedSelection} from './partialSelection';
-import {buildPathTree} from './pathTree';
 import platform from './platform';
 import {
   optimisticMergeConflicts,
@@ -119,7 +119,7 @@ const holdingAltAtom = atom<boolean>({
   ],
 });
 
-type UIChangedFile = {
+export type UIChangedFile = {
   path: RepoRelativePath;
   // disambiguated path, or rename with arrow
   label: string;
@@ -198,6 +198,37 @@ const sortKeyForStatus: Record<VisualChangedFileType, number> = {
   Resolved: 8,
 };
 
+type SectionProps = Omit<React.ComponentProps<typeof LinearFileList>, 'files'> & {
+  filesByPrefix: Map<string, Array<UIChangedFile>>;
+};
+
+function SectionedFileList({filesByPrefix, ...rest}: SectionProps) {
+  const [collapsedSections, setCollapsedSections] = useState(new Set<string>());
+  return (
+    <div className="file-tree">
+      {Array.from(filesByPrefix.entries(), ([prefix, files]) => {
+        const isCollapsed = collapsedSections.has(prefix);
+        return (
+          <div className="file-tree-section">
+            <FileTreeFolderHeader
+              isCollapsed={isCollapsed}
+              toggleCollapsed={() =>
+                setCollapsedSections(previous =>
+                  previous.has(prefix)
+                    ? new Set(Array.from(previous).filter(e => e !== prefix))
+                    : new Set(Array.from(previous).concat(prefix)),
+                )
+              }
+              folder={prefix}
+            />
+            {!isCollapsed ? <LinearFileList {...rest} files={files} /> : null}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /**
  * Display a list of changed files.
  *
@@ -248,8 +279,32 @@ export function ChangedFiles(props: {
     return genStatA - genStatB;
   });
   const filesToShow = filesToSort.slice(rangeStart - fetchRangeStart, rangeEnd - fetchRangeStart);
-
   const processedFiles = useDeepMemo(() => processCopiesAndRenames(filesToShow), [filesToShow]);
+
+  const prefixes: {key: string; prefix: string}[] = useMemo(
+    () => Internal.repoPrefixes ?? [{key: 'default', prefix: ''}],
+    [],
+  );
+  const firstNonDefaultPrefix = prefixes.find(
+    p => p.prefix.length > 0 && filesToSort.some(f => f.path.indexOf(p.prefix) === 0),
+  );
+  const shouldShowRepoHeaders =
+    prefixes.length > 1 &&
+    firstNonDefaultPrefix != null &&
+    filesToSort.find(f => f.path.indexOf(firstNonDefaultPrefix?.prefix) === -1) != null;
+
+  const filesByPrefix = new Map<string, Array<UIChangedFile>>();
+  for (const file of processedFiles) {
+    for (const {key, prefix} of prefixes) {
+      if (file.path.indexOf(prefix) === 0) {
+        if (!filesByPrefix.has(key)) {
+          filesByPrefix.set(key, []);
+        }
+        filesByPrefix.get(key)?.push(file);
+        break;
+      }
+    }
+  }
 
   useEffect(() => {
     // If the list of files is updated to have fewer files, we need to reset
@@ -314,6 +369,13 @@ export function ChangedFiles(props: {
       )}
       {displayType === 'tree' ? (
         <FileTree {...rest} files={processedFiles} displayType={displayType} />
+      ) : shouldShowRepoHeaders ? (
+        <SectionedFileList
+          {...rest}
+          filesByPrefix={filesByPrefix}
+          displayType={displayType}
+          generatedStatuses={generatedStatuses}
+        />
       ) : (
         <LinearFileList
           {...rest}
@@ -381,62 +443,7 @@ function LinearFileList(props: {
   );
 }
 
-function FileTree(props: {
-  files: Array<UIChangedFile>;
-  displayType: ChangedFilesDisplayType;
-  comparison: Comparison;
-  selection?: UseUncommittedSelection;
-  place?: Place;
-}) {
-  const {files, ...rest} = props;
-
-  const tree = useDeepMemo(
-    () => buildPathTree(Object.fromEntries(files.map(file => [file.path, file]))),
-    [files],
-  );
-
-  const [collapsed, setCollapsed] = useState(new Set());
-
-  function renderTree(tree: PathTree<UIChangedFile>, accumulatedPath = '') {
-    return (
-      <>
-        {[...tree.entries()].map(([folder, inner]) => {
-          const folderKey = `${accumulatedPath}/${folder}`;
-          const isCollapsed = collapsed.has(folderKey);
-          return (
-            <div className="file-tree-level" key={folderKey}>
-              {inner instanceof Map ? (
-                <>
-                  <span className="file-tree-folder-path">
-                    <VSCodeButton
-                      appearance="icon"
-                      onClick={() => {
-                        setCollapsed(last =>
-                          isCollapsed
-                            ? new Set([...last].filter(v => v !== folderKey))
-                            : new Set([...last, folderKey]),
-                        );
-                      }}>
-                      <Icon icon={isCollapsed ? 'chevron-right' : 'chevron-down'} slot="start" />
-                      {folder}
-                    </VSCodeButton>
-                  </span>
-                  {isCollapsed ? null : renderTree(inner, folderKey)}
-                </>
-              ) : (
-                <File key={inner.path} {...rest} file={inner} />
-              )}
-            </div>
-          );
-        })}
-      </>
-    );
-  }
-
-  return renderTree(tree);
-}
-
-function File({
+export function File({
   file,
   displayType,
   comparison,
@@ -592,7 +599,7 @@ function FileSelectionCheckbox({
   );
 }
 
-type Place = 'main' | 'amend sidebar' | 'commit sidebar';
+export type Place = 'main' | 'amend sidebar' | 'commit sidebar';
 
 export function UncommittedChanges({place}: {place: Place}) {
   const uncommittedChanges = useRecoilValue(uncommittedChangesWithPreviews);

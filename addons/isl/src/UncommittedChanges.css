@@ -49,13 +49,18 @@
   flex-direction: column;
   margin: var(--pad) 0;
 }
-
+.file-tree {
+  margin-top: 4px;
+}
+.file-tree-section {
+  margin-top: 4px;
+}
 .file-tree-level {
   --file-tree-indent: calc(2 * var(--pad));
   margin-left: var(--file-tree-indent);
   position: relative;
 }
-.changed-files > .file-tree-level {
+.file-tree > .file-tree-level {
   margin-left: 0;
 }
 .file-tree-level > .changed-file {
