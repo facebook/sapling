@@ -1235,10 +1235,6 @@ if not ossbuild and not skip_other_binaries:
         RustBinary("scm_daemon", manifest="exec/scm_daemon/Cargo.toml"),
     ]
 
-if havefb and iswindows and not skip_other_binaries:
-    rustextbinaries += [RustBinary("fbclone", manifest="fb/fbclone/Cargo.toml")]
-
-
 if sys.platform == "cygwin":
     print("WARNING: CYGWIN BUILD NO LONGER OFFICIALLY SUPPORTED")
 
