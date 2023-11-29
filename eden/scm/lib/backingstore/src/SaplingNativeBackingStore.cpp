@@ -22,23 +22,6 @@
 
 namespace sapling {
 
-namespace {
-/**
- * Convert a `CBytes` into `folly::IOBuf` without copying the underlying
- * data.
- */
-std::unique_ptr<folly::IOBuf> bytesToIOBuf(CBytes* bytes) {
-  return folly::IOBuf::takeOwnership(
-      reinterpret_cast<void*>(bytes->ptr),
-      bytes->len,
-      [](void* /* buf */, void* userData) {
-        sapling_cbytes_free(reinterpret_cast<CBytes*>(userData));
-      },
-      reinterpret_cast<void*>(bytes));
-}
-
-} // namespace
-
 SaplingNativeBackingStore::SaplingNativeBackingStore(
     std::string_view repository,
     const BackingStoreOptions& options)
@@ -145,7 +128,8 @@ void SaplingNativeBackingStore::getBlobBatch(
     bool local,
     folly::FunctionRef<void(size_t, folly::Try<std::unique_ptr<folly::IOBuf>>)>
         resolve) {
-  size_t count = requests.size();
+  auto resolver = std::make_shared<GetBlobBatchResolver>(std::move(resolve));
+  auto count = requests.size();
 
   XLOG(DBG7) << "Import blobs with size:" << count;
 
@@ -157,43 +141,11 @@ void SaplingNativeBackingStore::getBlobBatch(
     });
   }
 
-  using ResolveResult = folly::Try<std::unique_ptr<folly::IOBuf>>;
-
-  auto inner_resolve = [&](size_t index, CFallibleBase raw_result) {
-    resolve(
-        index, folly::makeTryWith([&] {
-          CFallible<CBytes, sapling_cbytes_free> result{std::move(raw_result)};
-
-          if (result.isError()) {
-            XLOGF(
-                DBG6,
-                "Failed to import node={} from EdenAPI (batch {}/{}): {}",
-                folly::hexlify(requests[index]),
-                index,
-                count,
-                result.getError());
-            return ResolveResult{SaplingFetchError{result.getError()}};
-          } else {
-            auto content = bytesToIOBuf(result.unwrap().release());
-            XLOGF(
-                DBG6,
-                "Imported node={} from EdenAPI (batch: {}/{})",
-                folly::hexlify(requests[index]),
-                index,
-                count);
-            return ResolveResult{std::move(content)};
-          }
-        }));
-  };
-
   sapling_backingstore_get_blob_batch(
-      store_.get(),
-      folly::crange(raw_requests),
+      *store_.get(),
+      rust::Slice<const Request>{raw_requests.data(), raw_requests.size()},
       local,
-      &inner_resolve,
-      +[](void* fn, size_t index, CFallibleBase result) {
-        (*static_cast<decltype(inner_resolve)*>(fn))(index, result);
-      });
+      std::move(resolver));
 }
 
 std::shared_ptr<FileAuxData> SaplingNativeBackingStore::getBlobMetadata(
