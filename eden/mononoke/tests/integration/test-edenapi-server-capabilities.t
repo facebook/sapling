@@ -21,4 +21,4 @@ Enable Segmented Changelog
 
   $ start_and_wait_for_mononoke_server
   $ sslcurlas client0 -s "https://localhost:$MONONOKE_SOCKET/edenapi/repo/capabilities"
-  ["segmented-changelog"] (no-eol)
+  ["segmented-changelog","commit-graph-segments"] (no-eol)
