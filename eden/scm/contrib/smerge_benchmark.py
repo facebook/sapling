@@ -10,6 +10,7 @@ from dataclasses import dataclass
 
 from sapling import error, mdiff, registrar, scmutil, ui
 from sapling.i18n import _
+from sapling.node import short
 from sapling.simplemerge import Merge3Text, render_mergediff2, render_minimized
 
 cmdtable = {}
@@ -99,7 +100,17 @@ def sresolve(ui, repo, *args, **opts):
     else:
         m3 = Merge3Text(basetext, desttext, srctext)
 
-    mergedtext = b"".join(render_mergediff2(m3, b"dest", b"source", b"base")[0])
+    def gen_label(prefix, ctx):
+        s = f"{prefix}: {ctx} - " + ctx.description().split("\n")[0]
+        return s.encode("utf-8")
+
+    label_dest = gen_label("dest", dest)
+    label_source = gen_label("source", src)
+    label_base = gen_label("base", base)
+
+    mergedtext = b"".join(
+        render_mergediff2(m3, label_dest, label_source, label_base)[0]
+    )
 
     if output := opts.get("output"):
         ui.write(f"writing to file: {output}\n")
