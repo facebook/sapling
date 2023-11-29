@@ -41,7 +41,7 @@ def create_pull_request_title_and_body(
     Stack created with [Sapling](https://sapling-scm.com). Best reviewed with [ReviewStack]({reviewstack_url}).
     * #1
     * #2 (2 commits)
-    * __->__ #42
+    * #42 \u21E6
     * #4
 
     Disable reviewstack message:
@@ -53,7 +53,7 @@ def create_pull_request_title_and_body(
     ---
     * #1
     * #2 (2 commits)
-    * __->__ #42
+    * #42 \u21E6
     * #4
 
     Single commit stack:
@@ -81,7 +81,7 @@ def create_pull_request_title_and_body(
     return title, body
 
 
-_STACK_ENTRY = re.compile(r"^\* (__->__ )?#([1-9]\d*).*$")
+_STACK_ENTRY = re.compile(r"^\* (__->__ )?#([1-9]\d*)( \u21E6)?.*$")
 
 # Pair where the first value is True if this entry was noted as the "current"
 # one with the "__->__" marker; otherwise, False.
@@ -101,6 +101,17 @@ def parse_stack_information(body: str) -> List[_StackEntry]:
     ...     '* #1\n' +
     ...     '* #2 (2 commits)\n' +
     ...     '* __->__ #42\n' +
+    ...     '* #4\n')
+    >>> parse_stack_information(body)
+    [(False, 1), (False, 2), (True, 42), (False, 4)]
+    >>> body = (
+    ...     'The original commit message.\n' +
+    ...     'Second line of message.\n' +
+    ...     '---\n' +
+    ...     'Stack created with [Sapling](https://sapling-scm.com). ' +
+    ...     '* #1\n' +
+    ...     '* #2 (2 commits)\n' +
+    ...     '* #42 \u21E6\n' +
     ...     '* #4\n')
     >>> parse_stack_information(body)
     [(False, 1), (False, 2), (True, 42), (False, 4)]
@@ -135,7 +146,7 @@ def _format_stack_entry(
     line = (
         f"* #{pr_number}"
         if current_pr_index != pr_number_index
-        else f"* __->__ #{pr_number}"
+        else f"* #{pr_number} \u21E6"
     )
     if num_commits > 1:
         line += f" ({num_commits} commits)"
