@@ -2782,6 +2782,13 @@ class localrepository:
                     % (extraslen, extraslimit)
                 )
 
+        file_count_limit = self.ui.configint("commit", "file-count-limit")
+        if file_count_limit and file_count_limit < len(ctx.files()):
+            raise errormod.Abort(
+                _("commit file count (%d) exceeds configured limit (%d)")
+                % (len(ctx.files()), file_count_limit)
+            )
+
         isgit = git.isgitformat(self)
         lock = self.lock()
         try:
