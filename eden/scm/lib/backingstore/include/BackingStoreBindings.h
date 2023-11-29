@@ -7,7 +7,7 @@
  * This file is generated with cbindgen. Please run `./tools/cbindgen.sh` to
  * update this file.
  *
- * @generated SignedSource<<333733f8531f0405236cb8590401bcd8>>
+ * @generated SignedSource<<33895541407d96d9fb354f718080a007>>
  *
  */
 
@@ -24,25 +24,7 @@
 
 namespace sapling {
 
-template<typename T = void>
-struct Vec;
-
-struct CBytes {
-  uint8_t *ptr;
-  size_t len;
-  Vec<uint8_t> *vec;
-  folly::ByteRange asByteRange() const {
-    return folly::ByteRange(ptr, len);
-  }
-
-  operator folly::ByteRange() const {
-    return asByteRange();
-  }
-};
-
 extern "C" {
-
-void sapling_cbytes_free(CBytes *vec);
 
 void sapling_cfallible_free_error(char *ptr);
 

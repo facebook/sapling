@@ -94,17 +94,6 @@ exclude = ["CFallible"]
 [export.rename]
 
 [export.body]
-"CBytes" = """
-
-  folly::ByteRange asByteRange() const {
-    return folly::ByteRange(ptr, len);
-  }
-
-  operator folly::ByteRange() const {
-    return asByteRange();
-  }
-"""
-
 "Slice" = """
   template <typename Q = T>
   Slice(std::enable_if_t<std::is_same_v<Q, uint8_t>, std::string_view> sv) noexcept
