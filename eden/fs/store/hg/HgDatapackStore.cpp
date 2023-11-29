@@ -343,6 +343,23 @@ void HgDatapackStore::getBlobMetadataBatch(
       // reference.
       [&](size_t index,
           folly::Try<std::shared_ptr<sapling::FileAuxData>> auxTry) {
+        if (auxTry.hasException()) {
+          XLOGF(
+              DBG6,
+              "Failed to import metadata node={} from EdenAPI (batch {}/{}): {}",
+              folly::hexlify(requests[index]),
+              index,
+              requests.size(),
+              auxTry.exception().what().toStdString());
+        } else {
+          XLOGF(
+              DBG6,
+              "Imported metadata node={} from EdenAPI (batch: {}/{})",
+              folly::hexlify(requests[index]),
+              index,
+              requests.size());
+        }
+
         if (auxTry.hasException() &&
             config_->getEdenConfig()->hgBlobMetaFetchFallback.getValue()) {
           // TODO: log EdenApiMiss for metadata

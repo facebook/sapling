@@ -55,4 +55,20 @@ void sapling_backingstore_get_blob_batch_handler(
                     }));
 }
 
+void sapling_backingstore_get_file_aux_batch_handler(
+    std::shared_ptr<GetFileAuxBatchResolver> resolver,
+    size_t index,
+    rust::String error,
+    std::shared_ptr<FileAuxData> aux) {
+  using ResolveResult = folly::Try<std::shared_ptr<FileAuxData>>;
+
+  resolver->resolve(index, folly::makeTryWith([&] {
+                      if (aux) {
+                        return ResolveResult{aux};
+                      } else {
+                        return ResolveResult{SaplingFetchError{error.c_str()}};
+                      }
+                    }));
+}
+
 } // namespace sapling
