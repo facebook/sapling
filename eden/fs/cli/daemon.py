@@ -312,6 +312,7 @@ def get_edenfs_environment() -> Dict[str, str]:
         "SSH_AUTH_SOCK",
         "SSH_AGENT_PID",
         "KRB5CCNAME",
+        "SANDCASTLE",
         "SANDCASTLE_ALIAS",
         "SANDCASTLE_INSTANCE_ID",
         "SCRATCH_CONFIG_PATH",
