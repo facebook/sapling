@@ -25,7 +25,7 @@ from .. import (
     visibility,
 )
 from ..i18n import _
-from ..node import hex, nullid, short
+from ..node import bin, hex, nullid, short
 from ..revlog import hash as revloghash
 from .cmdtable import command
 
@@ -62,7 +62,10 @@ def debugrebuildchangelog(ui, repo, **opts) -> None:
         tmprepo.close()
     else:
         api = repo.edenapi
-        assert api
+
+        # Figure out the "main" bookmark and its hash.
+        main = bookmod.mainbookmark(repo)
+        main_node = tip = bin(api.bookmarks([main])[main])
 
         # Import segments (lazy changelog) to temporary directories.
         tmpsuffix = "tmp.%s" % ts
@@ -73,42 +76,35 @@ def debugrebuildchangelog(ui, repo, **opts) -> None:
             edenapi=api,
             lazyhash=True,
         )
-        data = api.clonedata()
-        hgcommits.importclonedata(data)
+        vertexopts = {
+            "reserve_size": 0,
+            "highest_group": 0,
+        }
+        data = api.pulllazy([], [main_node])
+        hgcommits.importpulldata(data, [(main_node, vertexopts)])
 
         # The "try" block also protects repo lock.__exit__, etc.
         baksuffix = None
         try:
-            with repo.wlock(), repo.lock(), repo.transaction(
-                "debugrebuildchangelog"
-            ), repo.dirstate.parentchange():
+            with repo.lock(), repo.transaction("debugrebuildchangelog"):
                 # Backup non-master commits
                 commits = _readnonmasterdrafts(repo) + shelved
                 _backupcommits(repo, commits, ts)
 
-                allnodes = hgcommits.dagalgo().all()
-
                 remotenames = {}
-                tip = allnodes.first()
-                main = bookmod.mainbookmark(repo)
-                if tip:
+                if main_node:
                     # Write a "fake" remote bookmark for the imported tip to make
                     # pull discovery cheaper.
                     remotename = ui.config("remotenames", "rename.default") or "default"
-                    remotenames["%s/%s" % (remotename, main)] = tip
-                    ui.write(_("imported clone data with tip %s\n") % hex(tip))
+                    remotenames["%s/%s" % (remotename, main)] = main_node
+                    ui.write(
+                        _("imported public commit graph with %s: %s\n")
+                        % (main, hex(main_node))
+                    )
 
-                # Reset references so they won't complain about unknown nodes
-                # during pull. remotenames and visibleheads will be rebuilt.
-                # bookmarks will be restored to the original state.
-                origvisibleheads = repo.svfs.read("visibleheads")
-                origbookmarks = repo.svfs.read("bookmarks")
-                origdparents = repo.dirstate.parents()
-                repo.svfs.write("tip", tip or b"")
+                # Reset remotenames to minimal state.
                 repo.svfs.write("remotenames", bookmod.encoderemotenames(remotenames))
-                repo.svfs.write("visibleheads", visibility.encodeheads(tip and [tip]))
-                repo.svfs.write("bookmarks", b"")
-                repo.dirstate.setparents(nullid, nullid)
+                repo.svfs.write("tip", tip or b"")
 
                 # This is the *destructive* operation that makes commits "missing".
                 # Before this, hgcommits is the way to access the commit graph.
@@ -116,29 +112,19 @@ def debugrebuildchangelog(ui, repo, **opts) -> None:
                 # commit graph.
                 baksuffix = _replacechangelogsegments(repo, tmpsuffix, ts)
 
-                try:
-                    # Pull. This is a code path that accesses a lot of stuffs and
-                    # can go wrong in various ways. So it's protected by "try".
-                    ui.write(_("pulling latest commits\n"))
-                    util.failpoint("debugrebuildchangelog-before-pull")
-                    repo.pull(bookmarknames=[main])
+                util.failpoint("debugrebuildchangelog-add-draft")
 
-                    # Re-add the commits. Note: In rare cases (ex. server master
-                    # moves back), this might fail.
-                    # Some commits might become "known" after pull. So filter them
-                    # out. Also, prefetch parents of commits.
-                    nodes = [c[0] for c in commits] + [p for c in commits for p in c[1]]
-                    known = set(repo.changelog.filternodes(nodes))
+                # Re-add the commits. Note: In rare cases (ex. server master
+                # moves back), this might fail.
+                # Some commits might become "known" after pull. So filter them
+                # out. Also, prefetch parents of commits.
+                nodes = [c[0] for c in commits] + [p for c in commits for p in c[1]]
+                known = set(repo.changelog.filternodes(nodes))
 
-                    ui.write(_("recreating %s local commits\n") % len(commits))
-                    repo.changelog.inner.addcommits(
-                        [c for c in commits if c[0] not in known]
-                    )
-                finally:
-                    # Restore dirstate parents, bookmarks and visibleheads.
-                    repo.dirstate.setparents(origdparents[0], origdparents[1])
-                    repo.svfs.write("bookmarks", origbookmarks)
-                    repo.svfs.write("visibleheads", origvisibleheads)
+                ui.write(_("recreating %s local commits\n") % len(commits))
+                repo.changelog.inner.addcommits(
+                    [c for c in commits if c[0] not in known]
+                )
         except BaseException:
             if baksuffix:
                 ui.write(_("restoring changelog from previous state\n"))
