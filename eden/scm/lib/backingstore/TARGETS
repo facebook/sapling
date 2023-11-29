@@ -73,7 +73,6 @@ rust_library(
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:cxx",
         "fbsource//third-party/rust:env_logger",
-        "fbsource//third-party/rust:libc",
         "fbsource//third-party/rust:log",
         "fbsource//third-party/rust:parking_lot",
         "fbsource//third-party/rust:tracing",
