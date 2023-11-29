@@ -510,7 +510,7 @@ fn clone_metadata(
 
     let mut repo_needs_reload = false;
 
-    if segmented_changelog {
+    if segmented_changelog || config.get_or_default::<bool>("clone", "use-commit-graph")? {
         repo.add_store_requirement("lazychangelog")?;
 
         let bookmark_names: Vec<String> = get_selective_bookmarks(&repo)?;

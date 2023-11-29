@@ -49,16 +49,56 @@ Enable Segmented Changelog
 
   $ start_and_wait_for_mononoke_server
 
-Ensure we can clone the repo
+Ensure we can clone the repo using the commit graph segments endpoint
   $ cd $TESTTMP
-  $ hgedenapi clone "mononoke://$(mononoke_address)/repo" repo-hg
-  fetching lazy changelog
-  populating main commit graph
-  tip commit: 4e9f8e556b01de1ac058397e86387d37778808d2
-  fetching selected remote bookmarks
-  updating to branch default
-  17 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hgedenapi clone "mononoke://$(mononoke_address)/repo" repo-hg --config clone.use-rust=true --config clone.use-commit-graph=true
+  Cloning repo into $TESTTMP/repo-hg
+  Checking out 'master_bookmark'
+  17 files updated
   $ cd repo-hg
+  $ hgedenapi log -G -T '{node|short} {desc}'
+  @  4e9f8e556b01 Q
+  │
+  o  a050a5556469 P
+  │
+  o    705906cc9558 O
+  ├─╮
+  │ o    0bfd89d079c2 N
+  │ ├─╮
+  │ │ o  1aaa5bb98ca4 M
+  │ │ │
+  │ │ o    d09c6f0ee66a G
+  │ │ ├─╮
+  o │ │ │  abdf5b2a1b92 J
+  │ │ │ │
+  o │ │ │  163d712b1fc1 I
+  │ │ │ │
+  o │ │ │  26641f81ab7f H
+  │ │ │ │
+  │ │ │ o  74dbcd84493a D
+  │ │ │ │
+  │ │ │ o  d3b399ca8757 C
+  │ │ │ │
+  │ o │ │  6a93301afe75 L
+  │ │ │ │
+  │ o │ │  7d1d79d931b8 K
+  │ ├─╯ │
+  │ o   │  d6e9a5359dcb F
+  ├─╯   │
+  o     │  a66a30bed387 E
+  ├─────╯
+  o  80521a640a0c B
+  │
+  o  20ca2a4749a4 A
+  
+  $ hgedenapi log -r tip
+  commit:      4e9f8e556b01
+  bookmark:    remote/master_bookmark
+  hoistedname: master_bookmark
+  user:        author
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     Q
+  
 
   $ hgedenapi debugapi -e commitgraphsegments -i "[\"$Q\"]" -i "[]"
   [{"base": bin("705906cc9558bdb08dc5847424b6125c00a01c0f"),
