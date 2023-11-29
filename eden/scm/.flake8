@@ -76,3 +76,4 @@ builtins =
   sort,
   tonodes,
   parentnames,
+  isancestor,
