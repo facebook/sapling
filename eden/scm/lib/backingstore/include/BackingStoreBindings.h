@@ -7,7 +7,7 @@
  * This file is generated with cbindgen. Please run `./tools/cbindgen.sh` to
  * update this file.
  *
- * @generated SignedSource<<7638284c226833d5b55ae1f9e64ed0da>>
+ * @generated SignedSource<<f399137612eddb864eeafdd5007279c3>>
  *
  */
 
@@ -23,12 +23,6 @@
 #include <folly/Range.h>
 
 namespace sapling {
-
-struct BackingStore;
-
-struct FileAuxData;
-
-struct Request;
 
 template<typename T = void>
 struct Vec;
@@ -46,18 +40,6 @@ struct CBytes {
   }
 };
 
-template<typename T>
-struct Slice {
-  const T *ptr;
-  size_t len;
-  template <typename Q = T>
-  Slice(std::enable_if_t<std::is_same_v<Q, uint8_t>, std::string_view> sv) noexcept
-    : ptr{reinterpret_cast<const uint8_t*>(sv.data())}, len{sv.size()} {}
-
-  Slice(folly::Range<const T*> range) noexcept
-    : ptr{range.data()}, len{range.size()} {}
-};
-
 /// The monomorphized version of `CFallible` used solely because MSVC
 /// does not allow returning template functions from extern "C" functions.
 struct CFallibleBase {
@@ -67,17 +49,9 @@ struct CFallibleBase {
 
 extern "C" {
 
-void sapling_file_aux_free(FileAuxData *aux);
-
 void sapling_cbytes_free(CBytes *vec);
 
 void sapling_cfallible_free_error(char *ptr);
-
-void sapling_backingstore_get_file_aux_batch(BackingStore *store,
-                                             Slice<Request> requests,
-                                             bool local,
-                                             void *data,
-                                             void (*resolve)(void*, uintptr_t, CFallibleBase));
 
 /// Returns a `CFallible` with success return value 1. This function is intended to be called from
 /// C++ tests.

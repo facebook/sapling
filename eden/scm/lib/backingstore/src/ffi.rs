@@ -13,15 +13,10 @@ use std::os::raw::c_char;
 use anyhow::Error;
 use anyhow::Result;
 use cxx::SharedPtr;
-use libc::c_void;
 use storemodel::FileAuxData as ScmStoreFileAuxData;
 use types::Key;
 
 use crate::backingstore::BackingStore;
-use crate::cbytes::CBytes;
-use crate::cfallible::CFallible;
-use crate::cfallible::CFallibleBase;
-use crate::slice::Slice;
 use crate::FetchMode;
 
 #[cxx::bridge(namespace = sapling)]
@@ -76,6 +71,7 @@ pub(crate) mod ffi {
 
         type GetTreeBatchResolver;
         type GetBlobBatchResolver;
+        type GetFileAuxBatchResolver;
 
         unsafe fn sapling_backingstore_get_tree_batch_handler(
             resolve_state: SharedPtr<GetTreeBatchResolver>,
@@ -89,6 +85,13 @@ pub(crate) mod ffi {
             index: usize,
             error: String,
             blob: Box<Blob>,
+        );
+
+        unsafe fn sapling_backingstore_get_file_aux_batch_handler(
+            resolve_state: SharedPtr<GetFileAuxBatchResolver>,
+            index: usize,
+            error: String,
+            blob: SharedPtr<FileAuxData>,
         );
     }
 
@@ -136,6 +139,13 @@ pub(crate) mod ffi {
             node: &[u8],
             local: bool,
         ) -> Result<SharedPtr<FileAuxData>>;
+
+        pub fn sapling_backingstore_get_file_aux_batch(
+            store: &mut BackingStore,
+            requests: &[Request],
+            local: bool,
+            resolver: SharedPtr<GetFileAuxBatchResolver>,
+        );
 
         pub fn sapling_backingstore_flush(store: &mut BackingStore);
     }
@@ -245,21 +255,23 @@ pub fn sapling_backingstore_get_file_aux(
     ))
 }
 
-#[no_mangle]
-pub extern "C" fn sapling_backingstore_get_file_aux_batch(
+pub fn sapling_backingstore_get_file_aux_batch(
     store: &mut BackingStore,
-    requests: Slice<ffi::Request>,
+    requests: &[ffi::Request],
     local: bool,
-    data: *mut c_void,
-    resolve: unsafe extern "C" fn(*mut c_void, usize, CFallibleBase),
+    resolver: SharedPtr<ffi::GetFileAuxBatchResolver>,
 ) {
-    let keys: Vec<Key> = requests.slice().iter().map(|req| req.key()).collect();
+    let keys: Vec<Key> = requests.iter().map(|req| req.key()).collect();
 
     store.get_file_aux_batch(keys, fetch_mode_from_local(local), |idx, result| {
         let result: Result<ScmStoreFileAuxData> =
             result.and_then(|opt| opt.ok_or_else(|| Error::msg("no file aux data found")));
-        let result: CFallible<ffi::FileAuxData> = result.map(|aux| aux.into()).into();
-        unsafe { resolve(data, idx, result.into()) };
+        let resolver = resolver.clone();
+        let (error, aux) = match result {
+            Ok(aux) => (String::default(), SharedPtr::new(aux.into())),
+            Err(error) => (format!("{:?}", error), SharedPtr::null()),
+        };
+        unsafe { ffi::sapling_backingstore_get_file_aux_batch_handler(resolver, idx, error, aux) };
     });
 }
 
