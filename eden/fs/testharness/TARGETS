@@ -15,6 +15,7 @@ cpp_library(
         ":fake_fuse",
         ":fake_privhelper",
         ":temp_file",
+        ":test_config_source",
         ":test_util",
         "//eden/common/utils:process_info_cache",
         "//eden/fs/config:config",
@@ -79,6 +80,19 @@ cpp_library(
         "//eden/fs/service:thrift-cpp2-types",
         "//folly:range",
         "//folly/concurrency:unbounded_queue",
+    ],
+)
+
+cpp_library(
+    name = "test_config_source",
+    srcs = ["TestConfigSource.cpp"],
+    headers = ["TestConfigSource.h"],
+    deps = [
+        "//folly:map_util",
+    ],
+    exported_deps = [
+        "//eden/fs/config:config",
+        "//folly:synchronized",
     ],
 )
 

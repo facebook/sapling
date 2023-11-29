@@ -46,6 +46,7 @@
 #include "eden/fs/testharness/FakePrivHelper.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TempFile.h"
+#include "eden/fs/testharness/TestConfigSource.h"
 #include "eden/fs/testharness/TestUtil.h"
 #include "eden/fs/utils/FileUtils.h"
 #include "eden/fs/utils/Guid.h"
@@ -72,61 +73,6 @@ namespace {
 constexpr size_t kBlobCacheMaximumSize = 1000; // bytes
 constexpr size_t kBlobCacheMinimumEntries = 0;
 } // namespace
-
-class TestConfigSource final : public ConfigSource {
- public:
-  using Values = std::map<std::string, std::map<std::string, std::string>>;
-
-  explicit TestConfigSource(ConfigSourceType sourceType)
-      : sourceType_{sourceType} {}
-
-  void setValues(Values values) {
-    auto state = state_.wlock();
-    state->values = std::move(values);
-    state->shouldReload = true;
-  }
-
-  // ConfigSource methods:
-
-  ConfigSourceType getSourceType() override {
-    return sourceType_;
-  }
-  std::string getSourcePath() override {
-    return "test";
-  }
-  FileChangeReason shouldReload() override {
-    return state_.rlock()->shouldReload ? FileChangeReason::MTIME
-                                        : FileChangeReason::NONE;
-  }
-  void reload(const ConfigVariables& substitutions, ConfigSettingMap& map)
-      override {
-    auto state = state_.rlock();
-    for (const auto& [sectionName, section] : state->values) {
-      auto* configMapEntry = folly::get_ptr(map, sectionName);
-      XCHECK(configMapEntry)
-          << "EdenConfig does not have section named " << sectionName;
-
-      for (const auto& [entryKey, entryValue] : section) {
-        auto* configMapKeyEntry = folly::get_ptr(*configMapEntry, entryKey);
-        XCHECK(configMapKeyEntry) << "EdenConfig does not have setting named "
-                                  << sectionName << ":" << entryKey;
-        auto rslt =
-            (*configMapKeyEntry)
-                ->setStringValue(entryValue, substitutions, sourceType_);
-        XCHECK(rslt) << "invalid config value for " << sectionName << ":"
-                     << entryKey << " = " << entryValue << ", " << rslt.error();
-      }
-    }
-  }
-
- private:
-  ConfigSourceType sourceType_;
-  struct State {
-    bool shouldReload = false;
-    Values values;
-  };
-  folly::Synchronized<State> state_;
-};
 
 bool TestMountFile::operator==(const TestMountFile& other) const {
   return path == other.path && contents == other.contents && rwx == other.rwx &&
@@ -415,29 +361,10 @@ void TestMount::startFuseAndWait(std::shared_ptr<FakeFuse> fuse) {
 }
 #endif
 
-namespace {
-std::pair<std::string_view, std::string_view> splitKey(
-    std::string_view keypair) {
-  auto idx = keypair.find(':');
-  if (idx == std::string_view::npos) {
-    throwf<std::domain_error>("config name {} must have a colon", keypair);
-  }
-  return {keypair.substr(0, idx), keypair.substr(idx + 1)};
-}
-} // namespace
-
 void TestMount::updateEdenConfig(
     const std::map<std::string, std::string>& values) {
-  std::map<std::string, std::map<std::string, std::string>> nested;
-
-  for (auto& [key, value] : values) {
-    auto [sectionName, configName] = splitKey(key);
-    nested[std::string(sectionName)][std::string(configName)] = value;
-  }
-
-  testConfigSource_->setValues(nested);
-  (void)serverState_->getReloadableConfig()->getEdenConfig(
-      ConfigReloadBehavior::ForceReload);
+  updateTestEdenConfig(
+      testConfigSource_, serverState_->getReloadableConfig(), values);
 }
 
 void TestMount::remount() {
