@@ -32,7 +32,8 @@ Prepare Repo:
 Test APIs:
 
   $ hg debugapi -e capabilities
-  ["segmented-changelog"]
+  ["segmented-changelog",
+   "commit-graph-segments"]
 
   $ hg debugapi -e bookmarks -i '["master", "foo"]'
   {"foo": None,

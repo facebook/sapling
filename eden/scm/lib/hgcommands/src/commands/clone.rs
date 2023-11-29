@@ -42,6 +42,7 @@ use super::Result;
 use crate::HgPython;
 
 static SEGMENTED_CHANGELOG_CAPABILITY: &str = "segmented-changelog";
+static COMMIT_GRAPH_SEGMENTS_CAPABILITY: &str = "commit-graph-segments";
 
 define_flags! {
     pub struct CloneOpts {
@@ -507,10 +508,14 @@ fn clone_metadata(
     let segmented_changelog = capabilities
         .iter()
         .any(|cap| cap == SEGMENTED_CHANGELOG_CAPABILITY);
+    let commit_graph_segments = capabilities
+        .iter()
+        .any(|cap| cap == COMMIT_GRAPH_SEGMENTS_CAPABILITY)
+        && config.get_or_default::<bool>("clone", "use-commit-graph")?;
 
     let mut repo_needs_reload = false;
 
-    if segmented_changelog || config.get_or_default::<bool>("clone", "use-commit-graph")? {
+    if segmented_changelog || commit_graph_segments {
         repo.add_store_requirement("lazychangelog")?;
 
         let bookmark_names: Vec<String> = get_selective_bookmarks(&repo)?;

@@ -82,7 +82,10 @@ impl EdenApi for EagerRepo {
     }
 
     async fn capabilities(&self) -> Result<Vec<String>, EdenApiError> {
-        Ok(vec!["segmented-changelog".to_string()])
+        Ok(vec![
+            "segmented-changelog".to_string(),
+            "commit-graph-segments".to_string(),
+        ])
     }
 
     async fn files(&self, keys: Vec<Key>) -> edenapi::Result<Response<FileResponse>> {
