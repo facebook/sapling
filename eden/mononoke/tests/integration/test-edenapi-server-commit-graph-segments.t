@@ -179,3 +179,114 @@ Ensure we can clone the repo using the commit graph segments endpoint
     "length": 3,
     "parents": [{"hgid": bin("a66a30bed387971d9b4505eff1d9599dc16c141a"),
                  "location": None}]}]
+
+Add some new commits, move the master bookmark and do a pull
+
+  $ testtool_drawdag -R repo --derive-all --print-hg-hashes <<'EOF'
+  > Q-R-S-T-W-X
+  >    \   /
+  >     U-V
+  > # exists: Q 2f7f5cd90b7b58f14d6b20b83b95478d5b0ab8c1e5bf429bc317256813516895
+  > EOF
+  Q=4e9f8e556b01de1ac058397e86387d37778808d2
+  R=abaf42d51402beae9b140f8eb367d454f884e7a8
+  S=8036723dc80d2be07ce5da923313fe7c4179b803
+  T=cc84bc524e272bf11d5901ff6fcdbdb3b3dc0e11
+  U=f4c65fda5311a2cea174f2a03f24db5773500996
+  V=f42c7fb75580709fa1bf5f6e75efdb74338747e0
+  W=d728ac072e7662d3ce354b3a13dbd7d3ca853591
+  X=262080717826d7e3df89d22278d80710f78457e6
+
+  $ mononoke_newadmin bookmarks -R repo set master_bookmark "$X"
+  Updating publishing bookmark master_bookmark from 2f7f5cd90b7b58f14d6b20b83b95478d5b0ab8c1e5bf429bc317256813516895 to e4b2425dd7affae8fd14348623eb66fa78e9a7ead9330b203d828dae0ec19f79
+
+Since hash-to-location is still using the server-side segmented changelog, we must make sure it's up-to-date.
+  $ quiet segmented_changelog_tailer_once --repo repo
+
+  $ flush_mononoke_bookmarks
+  $ sleep 1
+
+  $ hgedenapi pull --config pull.use-commit-graph=true
+  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
+  imported commit graph for 7 commits (3 segments)
+
+  $ hgedenapi log -G -T '{node|short} {desc}'
+  o  262080717826 X
+  │
+  o    d728ac072e76 W
+  ├─╮
+  │ o  cc84bc524e27 T
+  │ │
+  │ o  8036723dc80d S
+  │ │
+  o │  f42c7fb75580 V
+  │ │
+  o │  f4c65fda5311 U
+  ├─╯
+  o  abaf42d51402 R
+  │
+  @  4e9f8e556b01 Q
+  │
+  o  a050a5556469 P
+  │
+  o    705906cc9558 O
+  ├─╮
+  │ o    0bfd89d079c2 N
+  │ ├─╮
+  │ │ o  1aaa5bb98ca4 M
+  │ │ │
+  │ │ o    d09c6f0ee66a G
+  │ │ ├─╮
+  o │ │ │  abdf5b2a1b92 J
+  │ │ │ │
+  o │ │ │  163d712b1fc1 I
+  │ │ │ │
+  o │ │ │  26641f81ab7f H
+  │ │ │ │
+  │ │ │ o  74dbcd84493a D
+  │ │ │ │
+  │ │ │ o  d3b399ca8757 C
+  │ │ │ │
+  │ o │ │  6a93301afe75 L
+  │ │ │ │
+  │ o │ │  7d1d79d931b8 K
+  │ ├─╯ │
+  │ o   │  d6e9a5359dcb F
+  ├─╯   │
+  o     │  a66a30bed387 E
+  ├─────╯
+  o  80521a640a0c B
+  │
+  o  20ca2a4749a4 A
+  
+
+  $ hgedenapi log -r tip
+  commit:      4e9f8e556b01
+  user:        author
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     Q
+  
+
+  $ hgedenapi debugapi -e commitgraphsegments -i "[\"$X\"]" -i "[\"$Q\"]"
+  [{"base": bin("d728ac072e7662d3ce354b3a13dbd7d3ca853591"),
+    "head": bin("262080717826d7e3df89d22278d80710f78457e6"),
+    "length": 2,
+    "parents": [{"hgid": bin("cc84bc524e272bf11d5901ff6fcdbdb3b3dc0e11"),
+                 "location": {"distance": 0,
+                              "descendant": bin("cc84bc524e272bf11d5901ff6fcdbdb3b3dc0e11")}},
+                {"hgid": bin("f42c7fb75580709fa1bf5f6e75efdb74338747e0"),
+                 "location": {"distance": 0,
+                              "descendant": bin("f42c7fb75580709fa1bf5f6e75efdb74338747e0")}}]},
+   {"base": bin("8036723dc80d2be07ce5da923313fe7c4179b803"),
+    "head": bin("cc84bc524e272bf11d5901ff6fcdbdb3b3dc0e11"),
+    "length": 2,
+    "parents": [{"hgid": bin("abaf42d51402beae9b140f8eb367d454f884e7a8"),
+                 "location": {"distance": 2,
+                              "descendant": bin("f42c7fb75580709fa1bf5f6e75efdb74338747e0")}}]},
+   {"base": bin("abaf42d51402beae9b140f8eb367d454f884e7a8"),
+    "head": bin("f42c7fb75580709fa1bf5f6e75efdb74338747e0"),
+    "length": 3,
+    "parents": [{"hgid": bin("4e9f8e556b01de1ac058397e86387d37778808d2"),
+                 "location": None}]}]
+
+

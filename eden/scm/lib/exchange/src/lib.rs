@@ -82,7 +82,7 @@ pub fn clone(
 /// the number of commits and segments downloaded
 #[instrument(skip_all)]
 pub fn fast_pull(
-    _config: &dyn Config,
+    config: &dyn Config,
     edenapi: Arc<dyn EdenApi>,
     commits: &mut Box<dyn DagCommits + Send + 'static>,
     common: Vec<HgId>,
@@ -92,9 +92,15 @@ pub fn fast_pull(
         .iter()
         .map(|id| VertexName::copy_from(&id.into_byte_array()))
         .collect::<Vec<_>>();
-    let pull_data = block_on(edenapi.pull_lazy(common, missing))?
-        .map_err(|e| e.tag_network())?
-        .convert_vertex(|n| VertexName::copy_from(&n.into_byte_array()));
+    let pull_data = if config.get_or_default::<bool>("pull", "use-commit-graph")? {
+        let segments = block_on(edenapi.commit_graph_segments(missing, common))?
+            .map_err(|e| e.tag_network())?;
+        CommitGraphSegments { segments }.try_into()?
+    } else {
+        block_on(edenapi.pull_lazy(common, missing))?
+            .map_err(|e| e.tag_network())?
+            .convert_vertex(|n| VertexName::copy_from(&n.into_byte_array()))
+    };
     let commit_count = pull_data.flat_segments.vertex_count();
     let segment_count = pull_data.flat_segments.segment_count();
     block_on(commits.import_pull_data(
