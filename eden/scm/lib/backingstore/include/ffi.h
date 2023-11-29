@@ -9,7 +9,6 @@
 
 #include <folly/futures/Future.h>
 #include <rust/cxx.h>
-#include <memory>
 
 namespace sapling {
 
@@ -19,6 +18,7 @@ class SaplingFetchError : public std::runtime_error {
 };
 
 struct Tree;
+struct Blob;
 
 /**
  * Resolver used in the processing of getTreeBatch requests.
@@ -32,10 +32,29 @@ struct GetTreeBatchResolver {
   folly::FunctionRef<void(size_t, folly::Try<std::shared_ptr<Tree>>)> resolve;
 };
 
+/**
+ * Resolver used in the processing of getBlobBatch requests.
+ */
+struct GetBlobBatchResolver {
+  explicit GetBlobBatchResolver(
+      folly::FunctionRef<
+          void(size_t, folly::Try<std::unique_ptr<folly::IOBuf>>)> resolve)
+      : resolve{std::move(resolve)} {}
+
+  folly::FunctionRef<void(size_t, folly::Try<std::unique_ptr<folly::IOBuf>>)>
+      resolve;
+};
+
 void sapling_backingstore_get_tree_batch_handler(
     std::shared_ptr<GetTreeBatchResolver> resolver,
     size_t index,
     rust::String error,
     std::shared_ptr<Tree> tree);
+
+void sapling_backingstore_get_blob_batch_handler(
+    std::shared_ptr<GetBlobBatchResolver> resolver,
+    size_t index,
+    rust::String error,
+    rust::Box<Blob> blob);
 
 } // namespace sapling
