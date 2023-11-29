@@ -942,12 +942,10 @@ where
 
                 // All parents are present. Time to insert this segment.
                 // Find a suitable low..=high range.
-                let candidate_id = parent_client_ids
-                    .iter()
-                    .max()
-                    .copied()
-                    .unwrap_or(Group::MASTER.min_id())
-                    + 1;
+                let candidate_id = match parent_client_ids.iter().max().copied() {
+                    None => Group::MASTER.min_id(),
+                    Some(id) => id + 1,
+                };
                 let size = server_seg.high.0 - server_seg.low.0 + 1;
                 let span = find_free_span(&taken, candidate_id, size, false);
 

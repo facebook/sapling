@@ -226,12 +226,11 @@ async fn test_pull_from_empty_assign_from_zero() {
         .await
         .unwrap();
 
-    // FIXME: A should be assigned as 0.
     let get_id = |s: &'static str| nbr(client.dag.vertex_id(s.into())).unwrap().0;
-    assert_eq!(get_id("A"), 1);
-    assert_eq!(get_id("B"), 2);
-    assert_eq!(get_id("C"), 3);
-    assert_eq!(get_id("D"), 4);
+    assert_eq!(get_id("A"), 0);
+    assert_eq!(get_id("B"), 1);
+    assert_eq!(get_id("C"), 2);
+    assert_eq!(get_id("D"), 3);
 }
 
 #[tokio::test]
