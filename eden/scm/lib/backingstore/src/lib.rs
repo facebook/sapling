@@ -18,7 +18,6 @@
 
 mod auxdata;
 mod backingstore;
-mod cfallible;
 mod ffi;
 mod init;
 mod request;

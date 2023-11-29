@@ -7,7 +7,7 @@
  * This file is generated with cbindgen. Please run `./tools/cbindgen.sh` to
  * update this file.
  *
- * @generated SignedSource<<33895541407d96d9fb354f718080a007>>
+ * @generated SignedSource<<cc1f28d747862356831c3b85a39ec1c6>>
  *
  */
 
@@ -24,67 +24,4 @@
 
 namespace sapling {
 
-extern "C" {
-
-void sapling_cfallible_free_error(char *ptr);
-
-} // extern "C"
-
 } // namespace sapling
-
-
-namespace sapling {
-
-/// The monomorphized version of `CFallible` used solely because MSVC
-/// does not allow returning template functions from extern "C" functions.
-struct CFallibleBase {
-  void *value;
-  char *error;
-};
-
-// Some Rust functions will have the return type `CFallibleBase`, and we
-// have this convenient struct to help C++ code to consume the returned
-// struct. This is the only way to use the returned `CFallibleBase` from
-// Rust, and the user must provide a `Deleter` to correctly free the pointer
-// returned from Rust.
-template <typename T, void(*dtor)(T*)>
-class CFallible {
-public:
-  struct Deleter {
-    void operator()(T* ptr) {
-      dtor(ptr);
-    }
-  };
-  using Ptr = std::unique_ptr<T, Deleter>;
-
-  explicit CFallible(CFallibleBase&& base)
-    : ptr_{reinterpret_cast<T*>(base.value)}, error_{base.error} {}
-
-  ~CFallible() {
-    if (error_) {
-      sapling_cfallible_free_error(error_);
-    }
-  }
-
-  bool isError() const {
-    return error_ != nullptr;
-  }
-
-  char* getError() {
-    return error_;
-  }
-
-  T* get() {
-    return ptr_.get();
-  }
-
-  Ptr unwrap() {
-    return std::move(ptr_);
-  }
-
-private:
-  Ptr ptr_;
-  char* error_;
-};
-
-}
