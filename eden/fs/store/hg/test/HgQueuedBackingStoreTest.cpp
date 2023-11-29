@@ -18,6 +18,7 @@
 #include "eden/fs/store/hg/HgQueuedBackingStore.h"
 #include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/testharness/HgRepo.h"
+#include "eden/fs/utils/FaultInjector.h"
 
 using namespace facebook::eden;
 using namespace std::chrono_literals;
@@ -57,12 +58,14 @@ struct HgQueuedBackingStoreTest : TestRepo, ::testing::Test {
       std::make_shared<MemoryLocalStore>(stats.copy())};
   HgImporter importer{repo.path(), stats.copy()};
 
+  FaultInjector faultInjector{/*enabled=*/false};
   std::unique_ptr<HgBackingStore> backingStore{std::make_unique<HgBackingStore>(
       repo.path(),
       &importer,
       edenConfig,
       localStore,
-      stats.copy())};
+      stats.copy(),
+      &faultInjector)};
 
   std::unique_ptr<HgQueuedBackingStore> makeQueuedStore() {
     return std::make_unique<HgQueuedBackingStore>(

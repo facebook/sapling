@@ -148,7 +148,8 @@ void EdenMain::registerStandardBackingStores() {
         params.serverState->getThreadPool().get(),
         reloadableConfig,
         params.sharedStats.copy(),
-        params.serverState->getStructuredLogger());
+        params.serverState->getStructuredLogger(),
+        &params.serverState->getFaultInjector());
 
     auto localStoreCaching = reloadableConfig->getEdenConfig()
                                  ->hgEnableBlobMetaLocalStoreCaching.getValue()

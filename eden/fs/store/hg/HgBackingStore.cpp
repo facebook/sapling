@@ -158,7 +158,8 @@ HgBackingStore::HgBackingStore(
     UnboundedQueueExecutor* serverThreadPool,
     std::shared_ptr<ReloadableConfig> config,
     EdenStatsPtr stats,
-    std::shared_ptr<StructuredLogger> logger)
+    std::shared_ptr<StructuredLogger> logger,
+    FaultInjector* FOLLY_NONNULL faultInjector)
     : localStore_(std::move(localStore)),
       stats_(stats.copy()),
       importThreadPool_(make_unique<folly::CPUThreadPoolExecutor>(
@@ -190,6 +191,7 @@ HgBackingStore::HgBackingStore(
           computeOptions(),
           config_,
           logger_,
+          faultInjector,
           repoName_) {}
 
 /**
@@ -202,7 +204,8 @@ HgBackingStore::HgBackingStore(
     HgImporter* importer,
     std::shared_ptr<ReloadableConfig> config,
     std::shared_ptr<LocalStore> localStore,
-    EdenStatsPtr stats)
+    EdenStatsPtr stats,
+    FaultInjector* FOLLY_NONNULL faultInjector)
     : localStore_{std::move(localStore)},
       stats_{std::move(stats)},
       importThreadPool_{std::make_unique<HgImporterTestExecutor>(importer)},
@@ -210,7 +213,13 @@ HgBackingStore::HgBackingStore(
       serverThreadPool_{importThreadPool_.get()},
       logger_(nullptr),
       repoName_(importer->getOptions().repoName),
-      datapackStore_(repository, testOptions(), config_, logger_, repoName_) {}
+      datapackStore_(
+          repository,
+          testOptions(),
+          config_,
+          logger_,
+          faultInjector,
+          repoName_) {}
 
 HgBackingStore::~HgBackingStore() = default;
 

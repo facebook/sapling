@@ -26,6 +26,7 @@
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/testharness/HgRepo.h"
+#include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/ImmediateFuture.h"
 
 using namespace facebook::eden;
@@ -83,6 +84,7 @@ struct HgBackingStoreTest : TestRepo, ::testing::Test {
       std::make_shared<ReloadableConfig>(
           rawEdenConfig,
           ConfigReloadBehavior::NoReload)};
+  FaultInjector faultInjector{/*enabled=*/false};
   std::shared_ptr<HgQueuedBackingStore> backingStore{
       std::make_shared<HgQueuedBackingStore>(
           localStore,
@@ -92,7 +94,8 @@ struct HgBackingStoreTest : TestRepo, ::testing::Test {
               &importer,
               edenConfig,
               localStore,
-              stats.copy()),
+              stats.copy(),
+              &faultInjector),
           edenConfig,
           std::make_shared<NullStructuredLogger>(),
           nullptr)};

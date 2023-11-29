@@ -32,6 +32,7 @@ class UnboundedQueueExecutor;
 class ReloadableConfig;
 class HgProxyHash;
 class StructuredLogger;
+class FaultInjector;
 
 using EdenStatsPtr = RefPtr<EdenStats>;
 
@@ -50,7 +51,8 @@ class HgBackingStore {
       UnboundedQueueExecutor* serverThreadPool,
       std::shared_ptr<ReloadableConfig> config,
       EdenStatsPtr edenStats,
-      std::shared_ptr<StructuredLogger> logger);
+      std::shared_ptr<StructuredLogger> logger,
+      FaultInjector* FOLLY_NONNULL faultInjector);
 
   /**
    * Create an HgBackingStore suitable for use in unit tests. It uses an inline
@@ -62,7 +64,8 @@ class HgBackingStore {
       HgImporter* importer,
       std::shared_ptr<ReloadableConfig> config,
       std::shared_ptr<LocalStore> localStore,
-      EdenStatsPtr);
+      EdenStatsPtr,
+      FaultInjector* FOLLY_NONNULL faultInjector);
 
   ~HgBackingStore();
 

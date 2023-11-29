@@ -27,6 +27,7 @@
 #include "eden/fs/testharness/FakeFilter.h"
 #include "eden/fs/testharness/HgRepo.h"
 #include "eden/fs/testharness/TestUtil.h"
+#include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace {
@@ -117,12 +118,14 @@ struct HgFilteredBackingStoreTest : TestRepo, ::testing::Test {
 
   std::shared_ptr<FilteredBackingStore> filteredStoreFFI_;
 
+  FaultInjector faultInjector{/*enabled=*/false};
   std::unique_ptr<HgBackingStore> backingStore{std::make_unique<HgBackingStore>(
       repo.path(),
       &importer,
       edenConfig,
       localStore,
-      stats.copy())};
+      stats.copy(),
+      &faultInjector)};
 
   std::shared_ptr<HgQueuedBackingStore> wrappedStore_{
       std::make_shared<HgQueuedBackingStore>(

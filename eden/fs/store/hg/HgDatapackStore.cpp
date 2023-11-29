@@ -25,6 +25,7 @@
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/utils/Bug.h"
+#include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/RefPtr.h"
 
 namespace facebook::eden {
@@ -129,6 +130,7 @@ void HgDatapackStore::getTreeBatch(const ImportRequestsList& importRequests) {
   const auto filteredPaths =
       config_->getEdenConfig()->hgFilteredPaths.getValue();
 
+  faultInjector_.check("HgDatapackStore::getTreeBatch", "");
   store_.getTreeBatch(
       folly::range(requests),
       false,

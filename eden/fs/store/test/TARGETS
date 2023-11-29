@@ -42,6 +42,7 @@ cpp_unittest(
         "//eden/fs/testharness:hg_repo",
         "//eden/fs/testharness:test_util",
         "//eden/fs/utils:path",
+        "//eden/fs/utils:utils",
         "//folly:varint",
         "//folly/executors:queued_immediate_executor",
         "//folly/experimental:test_util",
