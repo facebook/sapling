@@ -15,9 +15,6 @@ python_library(
             ],
         ),
     ],
-    deps = [
-        "fbsource//xplat/python/buckutils:buckutils",
-    ],
 )
 
 python_library(
