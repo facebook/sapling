@@ -138,7 +138,11 @@ export const latestCommitMessage = selectorFamily<
         if (template) {
           const schema = get(commitMessageFieldsSchema);
           const result = applyEditedFields(emptyCommitMessageFields(schema), template.fields);
-          const templateString = commitMessageFieldsToString(schema, result);
+          const templateString = commitMessageFieldsToString(
+            schema,
+            result,
+            /* allowEmptyTitle */ true,
+          );
           const title = firstLine(templateString);
           const description = templateString.slice(title.length);
           return [title, description];

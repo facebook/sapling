@@ -96,6 +96,7 @@ function isFieldNonEmpty(field: string | Array<string>) {
 export function commitMessageFieldsToString(
   schema: Array<FieldConfig>,
   fields: CommitMessageFields,
+  allowEmptyTitle?: boolean,
 ): string {
   return schema
     .filter(config => config.key === 'Title' || isFieldNonEmpty(fields[config.key]))
@@ -106,7 +107,7 @@ export function commitMessageFieldsToString(
 
       if (config.key === 'Title') {
         const value = fields[config.key] as string;
-        if (value.trim().length === 0) {
+        if (allowEmptyTitle !== true && value.trim().length === 0) {
           return t('Temporary Commit');
         }
       }
