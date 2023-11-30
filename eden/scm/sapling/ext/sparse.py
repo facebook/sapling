@@ -406,6 +406,12 @@ def _setupcommit(ui) -> None:
             ctx = repo[node]
             profiles = getsparsepatterns(repo, ctx.rev()).allprofiles()
             if profiles & set(ctx.files()):
+                if _isedensparse(repo):
+                    # We just created a new commit that the edenfs_ffi Rust
+                    # repo won't know about until we flush in-memory commit
+                    # data to disk. Flush now to avoid unknown commit id errors
+                    # in EdenFS when checking edensparse contents.
+                    repo.changelog.inner.flushcommitdata()
                 origstatus = repo.status()
                 origsparsematch = repo.sparsematch(
                     *list(p.rev() for p in ctx.parents() if p.rev() != nullrev)

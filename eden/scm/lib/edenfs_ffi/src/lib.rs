@@ -191,6 +191,25 @@ async fn _profile_contents_from_repo(
     let repo = repo_hash
         .get_mut(&abs_repo_path)
         .expect("repo to be loaded");
+
+    // Create the tree manifest for the root tree of the repo
+    let manifest_id = match repo.get_root_tree_id(id.hg_id).await {
+        Ok(manifest_id) => manifest_id,
+        Err(e) => {
+            // It's possible that the commit exists but was only recently
+            // created. Invalidate the in-memory commit graph and force a read
+            // from disk. Note: This can be slow, so only do it on error.
+            repo.invalidate_all()?;
+            repo.get_root_tree_id(id.hg_id).await.with_context(|| {
+                anyhow!(
+                    "Failed to get root tree id for commit {:?}: {:?}",
+                    &id.hg_id,
+                    e
+                )
+            })?
+        }
+    };
+
     let tree_store = repo
         .tree_store()
         .context("failed to get TreeStore from Repo object")?;
@@ -198,11 +217,6 @@ async fn _profile_contents_from_repo(
         .file_store()
         .context("failed to get FileStore from Repo object")?;
 
-    // Create the tree manifest for the root tree of the repo
-    let manifest_id = repo
-        .get_root_tree_id(id.hg_id)
-        .await
-        .with_context(|| anyhow!("Failed to get root tree id for commit {:?}", &id.hg_id))?;
     let tree_manifest = TreeManifest::durable(tree_store, manifest_id);
 
     // Get the metadata of the filter file and verify it's a valid file.
