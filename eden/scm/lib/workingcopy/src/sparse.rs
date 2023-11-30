@@ -19,7 +19,9 @@ use configmodel::ConfigExt;
 use manifest::FileMetadata;
 use manifest::FsNodeMetadata;
 use manifest::Manifest;
+use manifest_tree::TreeManifest;
 use parking_lot::Mutex;
+use parking_lot::RwLock;
 use pathmatcher::DynMatcher;
 use pathmatcher::ExactMatcher;
 use pathmatcher::UnionMatcher;
@@ -181,6 +183,34 @@ pub fn disk_overrides(dot_path: &Path) -> anyhow::Result<HashMap<String, String>
     }
 
     Ok(HashMap::new())
+}
+
+pub fn sparse_matcher(
+    vfs: &VFS,
+    manifests: &[Arc<RwLock<TreeManifest>>],
+    store: Arc<dyn FileStore>,
+    dot_dir: &Path,
+) -> anyhow::Result<Option<DynMatcher>> {
+    assert!(!manifests.is_empty());
+
+    let mut sparse_matchers: Vec<DynMatcher> = Vec::new();
+    for manifest in manifests.iter() {
+        if let Some((matcher, _hash)) = repo_matcher(
+            vfs,
+            &vfs.root().join(dot_dir),
+            manifest.read().clone(),
+            store.clone(),
+        )? {
+            sparse_matchers.push(matcher);
+        }
+    }
+
+    if sparse_matchers.is_empty() {
+        // Indicates we have no .hg/sparse (i.e. sparse is disabled).
+        Ok(None)
+    } else {
+        Ok(Some(Arc::new(UnionMatcher::new(sparse_matchers))))
+    }
 }
 
 #[cfg(test)]

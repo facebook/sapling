@@ -20,7 +20,6 @@ use parking_lot::Mutex;
 use parking_lot::RwLock;
 use pathmatcher::DynMatcher;
 use pathmatcher::Matcher;
-use pathmatcher::UnionMatcher;
 use repolock::RepoLocker;
 use storemodel::FileStore;
 use treestate::filestate::StateFlags;
@@ -126,26 +125,12 @@ impl FileSystem for PhysicalFileSystem {
         manifests: &[Arc<RwLock<TreeManifest>>],
         dot_dir: &'static str,
     ) -> Result<Option<DynMatcher>> {
-        assert!(!manifests.is_empty());
-
-        let mut sparse_matchers: Vec<DynMatcher> = Vec::new();
-        for manifest in manifests.iter() {
-            if let Some((matcher, _hash)) = crate::sparse::repo_matcher(
-                &self.vfs,
-                &self.vfs.root().join(dot_dir),
-                manifest.read().clone(),
-                self.store.clone(),
-            )? {
-                sparse_matchers.push(matcher);
-            }
-        }
-
-        if sparse_matchers.is_empty() {
-            // Indicates we have no .hg/sparse (i.e. sparse is disabled).
-            Ok(None)
-        } else {
-            Ok(Some(Arc::new(UnionMatcher::new(sparse_matchers))))
-        }
+        crate::sparse::sparse_matcher(
+            &self.vfs,
+            manifests,
+            self.store.clone(),
+            &self.vfs.root().join(dot_dir),
+        )
     }
 }
 
