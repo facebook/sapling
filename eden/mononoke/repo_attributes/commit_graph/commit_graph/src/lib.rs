@@ -24,6 +24,7 @@ use futures::stream::BoxStream;
 use futures::Future;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use itertools::Itertools;
 use mononoke_types::ChangesetId;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
@@ -325,7 +326,7 @@ impl CommitGraph {
         heads: Vec<ChangesetId>,
         needs_processing: NeedsProcessing,
         slice_size: u64,
-    ) -> Result<Vec<(u64, Vec<ChangesetId>)>>
+    ) -> Result<Vec<(Generation, Vec<ChangesetId>)>>
     where
         NeedsProcessing: Fn(Vec<ChangesetId>) -> Out,
         Out: Future<Output = Result<HashSet<ChangesetId>>>,
@@ -358,10 +359,14 @@ impl CommitGraph {
             // Only push changesets that are in this slice's range.
             // Any remaining changesets will be pushed in the next iterations.
             slices.push((
-                slice_start,
-                frontier.changesets_in_range(
-                    Generation::new(slice_start)..Generation::new(slice_start + slice_size),
-                ),
+                Generation::new(slice_start),
+                frontier
+                    .changesets_in_range(
+                        Generation::new(slice_start)..Generation::new(slice_start + slice_size),
+                    )
+                    // Sort to make the output deterministic.
+                    .sorted()
+                    .collect(),
             ));
 
             if slice_start > 1 {

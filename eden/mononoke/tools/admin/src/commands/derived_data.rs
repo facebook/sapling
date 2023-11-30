@@ -8,6 +8,7 @@
 mod count_underived;
 mod derive;
 mod exists;
+mod slice;
 mod verify_manifests;
 
 use std::sync::Arc;
@@ -35,6 +36,8 @@ use self::derive::derive;
 use self::derive::DeriveArgs;
 use self::exists::exists;
 use self::exists::ExistsArgs;
+use self::slice::slice;
+use self::slice::SliceArgs;
 use self::verify_manifests::verify_manifests;
 use self::verify_manifests::VerifyManifestsArgs;
 
@@ -80,6 +83,8 @@ enum DerivedDataSubcommand {
     VerifyManifests(VerifyManifestsArgs),
     /// Actually derive data
     Derive(DeriveArgs),
+    /// Slice underived ancestors of given commits
+    Slice(SliceArgs),
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
@@ -88,7 +93,8 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let repo: Repo = match &args.subcommand {
         DerivedDataSubcommand::Exists(_)
         | DerivedDataSubcommand::CountUnderived(_)
-        | DerivedDataSubcommand::VerifyManifests(_) => app
+        | DerivedDataSubcommand::VerifyManifests(_)
+        | DerivedDataSubcommand::Slice(_) => app
             .open_repo(&args.repo)
             .await
             .context("Failed to open repo")?,
@@ -113,6 +119,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         DerivedDataSubcommand::CountUnderived(args) => count_underived(&ctx, &repo, args).await?,
         DerivedDataSubcommand::VerifyManifests(args) => verify_manifests(&ctx, &repo, args).await?,
         DerivedDataSubcommand::Derive(args) => derive(&mut ctx, &repo, args).await?,
+        DerivedDataSubcommand::Slice(args) => slice(&ctx, &repo, args).await?,
     }
 
     Ok(())

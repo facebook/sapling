@@ -10,13 +10,19 @@ use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
+use bookmarks::BookmarkCategory;
 use bookmarks::BookmarkKey;
+use bookmarks::BookmarkKind;
+use bookmarks::BookmarkPagination;
+use bookmarks::BookmarkPrefix;
 use bookmarks::BookmarksRef;
+use bookmarks::Freshness;
 use clap::ArgGroup;
 use clap::Args;
 use context::CoreContext;
 use futures::stream;
-use futures::stream::StreamExt;
+use futures::StreamExt;
+use futures::TryStreamExt;
 use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
 
@@ -25,7 +31,7 @@ use mononoke_types::ChangesetId;
 #[clap(group(
     ArgGroup::new("changeset")
         .required(true)
-        .args(&["changeset_id", "hg_id", "bookmark"]),
+        .args(&["changeset_id", "hg_id", "bookmark", "all_bookmarks"]),
 ))]
 pub struct ChangesetArgs {
     /// Bonsai changeset id
@@ -39,6 +45,10 @@ pub struct ChangesetArgs {
     /// Bookmark name
     #[clap(long, short = 'B')]
     bookmark: Vec<BookmarkKey>,
+
+    /// All bookmarks
+    #[clap(long)]
+    all_bookmarks: bool,
 }
 
 impl ChangesetArgs {
@@ -80,6 +90,22 @@ impl ChangesetArgs {
             .chain(
                 stream::iter(self.changeset_id.iter())
                     .then(|changeset_id| async move { Ok(*changeset_id) }),
+            )
+            .chain(
+                stream::iter(self.all_bookmarks.then(|| {
+                    repo.bookmarks()
+                        .list(
+                            ctx.clone(),
+                            Freshness::MostRecent,
+                            &BookmarkPrefix::empty(),
+                            BookmarkCategory::ALL,
+                            BookmarkKind::ALL,
+                            &BookmarkPagination::FromStart,
+                            std::u64::MAX,
+                        )
+                        .map_ok(|(_name, cs_id)| cs_id)
+                }))
+                .flatten(),
             )
             .collect::<Vec<_>>()
             .await

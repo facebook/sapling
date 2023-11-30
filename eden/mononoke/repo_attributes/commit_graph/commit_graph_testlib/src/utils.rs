@@ -376,7 +376,10 @@ where
             .slice_ancestors(ctx, heads, needs_processing, slice_size)
             .await?
             .into_iter()
-            .map(|(gen_group, cs_ids)| (gen_group, cs_ids.into_iter().collect::<HashSet<_>>()))
+            .map(|(gen_group, cs_ids)| (
+                gen_group.value(),
+                cs_ids.into_iter().collect::<HashSet<_>>()
+            ))
             .collect::<Vec<_>>(),
         slices
             .into_iter()

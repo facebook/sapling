@@ -77,7 +77,11 @@ pub async fn slice_ancestors(
         .await?;
 
     for (gen_group, cs_ids) in slices {
-        print!("slice [{}, {}):", gen_group, gen_group + args.slice_size);
+        print!(
+            "slice [{}, {}):",
+            gen_group.value(),
+            gen_group.value() + args.slice_size
+        );
         for cs_id in cs_ids {
             print!(" {}", cs_id);
         }
