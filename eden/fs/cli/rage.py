@@ -156,10 +156,11 @@ def print_diagnostic_info(
             ),
             processor,
             out,
+            dry_run,
         )
     watchman_log_path = get_watchman_log_path()
 
-    if not dry_run and watchman_log_path:
+    if watchman_log_path:
         section_title("Watchman logs:", out)
         out.write(b"Logs from: %s\n" % str(watchman_log_path).encode())
         paste_output(
@@ -170,10 +171,11 @@ def print_diagnostic_info(
             ),
             processor,
             out,
+            dry_run,
         )
     print_tail_of_log_file(instance.get_log_path(), out)
     print_running_eden_process(out)
-    print_crashed_edenfs_logs(processor, out)
+    print_crashed_edenfs_logs(processor, out, dry_run)
 
     if health_status.is_healthy():
         # assign to variable to make type checker happy :(
@@ -181,7 +183,7 @@ def print_diagnostic_info(
         if edenfs_instance_pid is not None:
             print_edenfs_process_tree(edenfs_instance_pid, out)
             if not dry_run and processor:
-                trace_running_edenfs(processor, edenfs_instance_pid, out)
+                trace_running_edenfs(processor, edenfs_instance_pid, out, dry_run)
 
     print_eden_redirections(instance, out)
     section_title("List of mount points:", out)
@@ -217,12 +219,12 @@ def print_diagnostic_info(
     print_counters(instance, "EdenFS", top_mod.COUNTER_REGEX, out)
 
     if health_status.is_healthy() and not dry_run and processor:
-        print_recent_events(processor, out)
+        print_recent_events(processor, out, dry_run)
 
     if sys.platform == "win32":
         print_counters(instance, "Prjfs", r"prjfs\..*", out)
 
-    print_eden_config(instance, processor, out)
+    print_eden_config(instance, processor, out, dry_run)
 
     print_prefetch_profiles_list(instance, out)
 
@@ -332,8 +334,16 @@ def print_log_file(
 
 
 def paste_output(
-    output_generator: Callable[[IO[bytes]], None], processor: str, out: IO[bytes]
+    output_generator: Callable[[IO[bytes]], None],
+    processor: str,
+    out: IO[bytes],
+    dry_run: bool,
 ) -> int:
+    if dry_run:
+        out.write(
+            b"Skipping generation of external paste output due `--dry-run` mode being used. Re-run without `--dry-run` to generate this section.\n"
+        )
+        return 0
     try:
         proc = subprocess.Popen(
             shlex.split(processor), stdin=subprocess.PIPE, stdout=subprocess.PIPE
@@ -530,7 +540,9 @@ def run_edenfsctl_cmd(cmd: List[str], sink: IO[bytes]) -> None:
     subprocess.run(cmd, check=True, stderr=subprocess.STDOUT, stdout=sink)
 
 
-def print_eden_config(instance: EdenInstance, processor: str, out: IO[bytes]) -> None:
+def print_eden_config(
+    instance: EdenInstance, processor: str, out: IO[bytes], dry_run: bool
+) -> None:
     section_title("EdenFS config:", out)
     fsconfig_cmd = ["edenfsctl", "fsconfig", "--all"]
 
@@ -538,6 +550,7 @@ def print_eden_config(instance: EdenInstance, processor: str, out: IO[bytes]) ->
         lambda sink: run_edenfsctl_cmd(fsconfig_cmd, sink),
         processor,
         out,
+        dry_run,
     )
     if result == 0:
         return
@@ -575,7 +588,7 @@ def print_prefetch_profiles_list(instance: EdenInstance, out: IO[bytes]) -> None
         out.write(f"Error printing Prefetch Profiles list: {e}\n".encode())
 
 
-def print_crashed_edenfs_logs(processor: str, out: IO[bytes]) -> None:
+def print_crashed_edenfs_logs(processor: str, out: IO[bytes], dry_run: bool) -> None:
     if sys.platform == "darwin":
         crashes_paths = [
             Path("/Library/Logs/DiagnosticReports"),
@@ -611,6 +624,7 @@ def print_crashed_edenfs_logs(processor: str, out: IO[bytes]) -> None:
                         lambda sink: print_log_file(crash, sink, whole_file=True),
                         processor,
                         out,
+                        dry_run,
                     )
                 else:
                     out.write(" not uploaded due to age or max num dumps\n".encode())
@@ -618,7 +632,9 @@ def print_crashed_edenfs_logs(processor: str, out: IO[bytes]) -> None:
     out.write("\n".encode())
 
 
-def trace_running_edenfs(processor: str, pid: int, out: IO[bytes]) -> None:
+def trace_running_edenfs(
+    processor: str, pid: int, out: IO[bytes], dry_run: bool
+) -> None:
     if sys.platform == "darwin":
         trace_fn = print_sample_trace
     elif sys.platform == "win32":
@@ -628,17 +644,12 @@ def trace_running_edenfs(processor: str, pid: int, out: IO[bytes]) -> None:
 
     section_title("EdenFS process trace", out)
     try:
-        paste_output(
-            lambda sink: trace_fn(pid, sink),
-            processor,
-            out,
-        )
+        paste_output(lambda sink: trace_fn(pid, sink), processor, out, dry_run)
     except Exception as e:
         out.write(b"Error getting EdenFS trace: %s.\n" % str(e).encode())
 
 
-def print_recent_events(processor: str, out: IO[bytes]) -> None:
-
+def print_recent_events(processor: str, out: IO[bytes], dry_run: bool) -> None:
     section_title("EdenFS recent events", out)
     for opt in ["thrift", "hg", "inode"]:
         trace_cmd = [
@@ -654,6 +665,7 @@ def print_recent_events(processor: str, out: IO[bytes]) -> None:
                 lambda sink: run_edenfsctl_cmd(trace_cmd, sink),
                 processor,
                 out,
+                dry_run,
             )
         except Exception as e:
             out.write(b"Error getting EdenFS trace events: %s.\n" % str(e).encode())
