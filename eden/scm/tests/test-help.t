@@ -274,6 +274,8 @@ Test extension help:
   
        conflictinfo
        debugshell    a python shell with repo, changelog & manifest objects
+       eden          accelerated hg functionality in Eden checkouts (eden !)
+       edensparse    allow sparse EdenFS checkouts
        errorredirect
                      redirect error message
        githelp       try mapping git commands to Sapling commands
@@ -281,7 +283,6 @@ Test extension help:
        progressfile  allows users to have JSON progress bar information written
                      to a path
        rebase        command to move sets of revisions to a different ancestor
-       eden          accelerated hg functionality in Eden checkouts (eden !)
        remotefilelog
                      minimize and speed up large repositories
        sampling      (no help text available)
@@ -309,7 +310,6 @@ Test extension help:
        disablesymlinks
                      disables symlink support when enabled
        drop          drop specified changeset from the stack
-       edensparse    allow sparse EdenFS checkouts
        extdiff       command to allow external programs to compare revisions
        extorder
        extutil       (no help text available)

@@ -107,6 +107,7 @@ DEFAULT_EXTENSIONS = {
     "progressfile",
     "sampling",
     "remotefilelog",
+    "edensparse",
 }
 
 # Similar to DEFAULT_EXTENSIONS. But cannot be disabled.
