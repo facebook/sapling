@@ -1,6 +1,26 @@
 # Changelog
 
+## 0.1.32
+
+### Nov 30 2023
+
+- Added "Combine" button when selecting multiple adjacent commits in a stack, to fold them together.
+  - The combine is previewed before running, so you can adjust the combined commit message.
+- Added Bulk actions dropdown to the top bar to add actions that act on all commits at once
+  - "rebase all draft commits" button to bulk rebase onto suggested locations
+  - "clean up all" button to hide all closed commits
+  - "select all" to select all draft commits, so you can take further actions in the sidebar
+  - Added shortcut to select all commits
+- When multiple commits are selected, allow rebasing them all from the selection sidebar
+- Commit titles are no longer directly focusable, so the UI doesn't show conflicting highlights. Buttons have better Aria labels to compensate.
+- Use more consistent focus colors
+- Fix "Temporary Commit" appearing in commit title by default
+- [#781](https://github.com/facebook/sapling/pull/781): Increase width of split column on large screens
+- [#782](https://github.com/facebook/sapling/pull/782): Reduces number of PRs fetched from GitHub to improve performance
+
 ## 0.1.31
+
+### Nov 16 2023
 
 - Added more keyboard shortcuts and a list of shortcuts openable via Shift-?
 - Add config for amend restacking. This now defaults to "Always" instead of "No Conflict"
