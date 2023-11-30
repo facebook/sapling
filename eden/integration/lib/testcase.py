@@ -430,6 +430,8 @@ class EdenRepoTest(EdenTestCase):
 
     enable_windows_symlinks: bool = False
 
+    backing_store_type: Optional[str] = None
+
     def setup_eden_test(self) -> None:
         super().setup_eden_test()
 
@@ -444,6 +446,7 @@ class EdenRepoTest(EdenTestCase):
             self.mount,
             case_sensitive=self.is_case_sensitive,
             enable_windows_symlinks=self.enable_windows_symlinks,
+            backing_store=self.backing_store_type,
         )
         self.report_time("eden clone done")
         actual_case_sensitive = self.eden.is_case_sensitive(self.mount)
