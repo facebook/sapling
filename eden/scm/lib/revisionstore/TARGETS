@@ -111,6 +111,7 @@ rust_library(
     autocargo = {
         "ignore_rule": True,
     },
+    crate = "revisionstore",
     features = [
         "fb",
         "for-tests",

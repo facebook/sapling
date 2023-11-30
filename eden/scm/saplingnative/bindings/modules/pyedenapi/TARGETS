@@ -17,6 +17,11 @@ rust_python_library(
                     },
                 },
             },
+            "extra_buck_dependencies": {
+                "dependencies": [
+                    "//eden/scm/lib/revisionstore:revisionstore",
+                ],
+            },
         },
     },
     crate_root = "src/lib.rs",
@@ -32,7 +37,7 @@ rust_python_library(
         "//eden/scm/lib/edenapi/types:edenapi_types",
         "//eden/scm/lib/minibytes:minibytes",
         "//eden/scm/lib/progress/model:progress-model",
-        "//eden/scm/lib/revisionstore:revisionstore",
+        "//eden/scm/lib/revisionstore:revisionstore_with_ods",
         "//eden/scm/lib/storemodel/hgstore:hgstore",
         "//eden/scm/lib/types:types",
         "//eden/scm/saplingnative/bindings/modules/pyconfigloader:pyconfigloader",
