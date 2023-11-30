@@ -2784,9 +2784,22 @@ class localrepository:
 
         file_count_limit = self.ui.configint("commit", "file-count-limit")
         if file_count_limit and file_count_limit < len(ctx.files()):
+            support = self.ui.config("ui", "supportcontact")
+            if support:
+                hint = (
+                    _(
+                        "contact %s for help or use '--config commit.file-count-limit=N' cautiously to override"
+                    )
+                    % support
+                )
+            else:
+                hint = _(
+                    "use '--config commit.file-count-limit=N' cautiously to override"
+                )
             raise errormod.Abort(
                 _("commit file count (%d) exceeds configured limit (%d)")
-                % (len(ctx.files()), file_count_limit)
+                % (len(ctx.files()), file_count_limit),
+                hint=hint,
             )
 
         isgit = git.isgitformat(self)
