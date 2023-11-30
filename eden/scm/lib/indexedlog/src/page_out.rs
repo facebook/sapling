@@ -7,16 +7,19 @@
 
 //! "Page out" logic as an attempt to reduce RSS / Working Set usage.
 
+use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicI64;
 use std::sync::atomic::Ordering;
 use std::sync::Mutex;
 
-#[cfg(unix)]
 use minibytes::Bytes;
 use minibytes::WeakBytes;
 
 /// See `crate::config::set_page_out_threshold`.
 pub(crate) static THRESHOLD: AtomicI64 = AtomicI64::new(DEFAULT_THRESHOLD);
+
+/// Track mmap regions in order to support `find_region`.
+pub(crate) static NEED_FIND_REGION: AtomicBool = AtomicBool::new(false);
 
 /// Remaining byte count to read without `page_out()`.
 static AVAILABLE: AtomicI64 = AtomicI64::new(DEFAULT_THRESHOLD);
@@ -42,10 +45,10 @@ pub(crate) fn adjust_available(delta: i64) {
     }
 }
 
-#[cfg(unix)]
+/// Track the mmap buffer as a weak ref.
 pub(crate) fn track_mmap_buffer(bytes: &Bytes) {
     let threshold = THRESHOLD.load(Ordering::Acquire);
-    if threshold > 0 {
+    if threshold > 0 || NEED_FIND_REGION.load(Ordering::Acquire) {
         let mut buffers = BUFFERS.lock().unwrap();
         if let Some(weak) = bytes.downgrade() {
             buffers.push(weak);
@@ -78,6 +81,25 @@ fn page_out(buffers: &mut Vec<WeakBytes>) {
         new_buffers.push(weak);
     }
     *buffers = new_buffers;
+}
+
+/// Find the mmap region that contains the given pointer. Best effort.
+/// Does not block. Returns `None` when unable to take the lock.
+#[cfg(unix)]
+pub(crate) fn find_region(addr: usize) -> Option<(usize, usize)> {
+    let locked = BUFFERS.try_lock().ok()?;
+    for weak in locked.iter() {
+        let bytes = match Bytes::upgrade(weak) {
+            None => continue,
+            Some(bytes) => bytes,
+        };
+        let start = bytes.as_ptr() as usize;
+        let len = bytes.len();
+        if start <= addr && start.wrapping_add(len) > addr {
+            return Some((start, len));
+        }
+    }
+    None
 }
 
 #[cfg(windows)]
