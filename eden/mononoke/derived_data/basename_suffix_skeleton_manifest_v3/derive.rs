@@ -134,7 +134,7 @@ async fn create_bssm_v3_directory(
     Ok(BssmV3Directory { subentries })
 }
 
-async fn inner_derive(
+pub(crate) async fn inner_derive(
     ctx: &CoreContext,
     blobstore: &Arc<dyn Blobstore>,
     parents: Vec<BssmV3Directory>,

@@ -28,6 +28,7 @@ use mononoke_types::ThriftConvert;
 use skeleton_manifest::RootSkeletonManifestId;
 
 use crate::derive::derive_single;
+use crate::derive_from_predecessor::derive_from_predecessor;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct RootBssmV3DirectoryId(pub(crate) BssmV3DirectoryId);
@@ -93,6 +94,18 @@ impl BonsaiDerivable for RootBssmV3DirectoryId {
             parent_skeleton_manifests,
         )
         .await
+    }
+
+    async fn derive_from_predecessor(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        bonsai: BonsaiChangeset,
+    ) -> Result<Self> {
+        let csid = bonsai.get_changeset_id();
+        let skeleton_manifest = derivation_ctx
+            .derive_dependency::<RootSkeletonManifestId>(ctx, csid)
+            .await?;
+        derive_from_predecessor(ctx, derivation_ctx, skeleton_manifest).await
     }
 
     async fn store_mapping(

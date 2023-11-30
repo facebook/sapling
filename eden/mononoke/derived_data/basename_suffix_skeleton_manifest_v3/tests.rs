@@ -32,6 +32,7 @@ use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use skeleton_manifest::RootSkeletonManifestId;
 
+use crate::derive_from_predecessor::inner_derive_from_predecessor;
 use crate::RootBssmV3DirectoryId;
 
 #[async_recursion]
@@ -118,6 +119,12 @@ async fn test_for_fixture<F: TestRepoFixture + Send>(fb: FacebookInit) -> Result
                     .sorted()
                     .collect::<Vec<_>>(),
             );
+
+            let bssm_v3_dir_from_skeleton_manifest =
+                inner_derive_from_predecessor(ctx, &blobstore.boxed(), skeleton_manifest, 3)
+                    .await?;
+
+            assert_eq!(bssm_v3_dir, bssm_v3_dir_from_skeleton_manifest);
 
             Ok(())
         })
