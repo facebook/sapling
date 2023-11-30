@@ -7,6 +7,7 @@
 
 mod count_underived;
 mod derive;
+mod derive_slice;
 mod exists;
 mod slice;
 mod verify_manifests;
@@ -34,6 +35,8 @@ use self::count_underived::count_underived;
 use self::count_underived::CountUnderivedArgs;
 use self::derive::derive;
 use self::derive::DeriveArgs;
+use self::derive_slice::derive_slice;
+use self::derive_slice::DeriveSliceArgs;
 use self::exists::exists;
 use self::exists::ExistsArgs;
 use self::slice::slice;
@@ -85,6 +88,8 @@ enum DerivedDataSubcommand {
     Derive(DeriveArgs),
     /// Slice underived ancestors of given commits
     Slice(SliceArgs),
+    /// Derive data for a slice of commits
+    DeriveSlice(DeriveSliceArgs),
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
@@ -98,7 +103,8 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             .open_repo(&args.repo)
             .await
             .context("Failed to open repo")?,
-        DerivedDataSubcommand::Derive(derive_args) => if derive_args.rederive {
+        DerivedDataSubcommand::Derive(DeriveArgs { rederive, .. })
+        | DerivedDataSubcommand::DeriveSlice(DeriveSliceArgs { rederive, .. }) => if *rederive {
             app.open_repo_with_factory_customization(&args.repo, |repo_factory| {
                 repo_factory
                     .with_lease_override(|_| Arc::new(DummyLease {}))
@@ -120,6 +126,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         DerivedDataSubcommand::VerifyManifests(args) => verify_manifests(&ctx, &repo, args).await?,
         DerivedDataSubcommand::Derive(args) => derive(&mut ctx, &repo, args).await?,
         DerivedDataSubcommand::Slice(args) => slice(&ctx, &repo, args).await?,
+        DerivedDataSubcommand::DeriveSlice(args) => derive_slice(&ctx, &repo, args).await?,
     }
 
     Ok(())
