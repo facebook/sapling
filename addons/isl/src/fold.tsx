@@ -17,7 +17,7 @@ import {
 import {OperationDisabledButton} from './OperationDisabledButton';
 import {Tooltip} from './Tooltip';
 import {T, t} from './i18n';
-import {FoldOperation} from './operations/FoldOperation';
+import {FoldOperation, getFoldRangeCommitHash} from './operations/FoldOperation';
 import {treeWithPreviews} from './previews';
 import {selectedCommits} from './selection';
 import {operationBeingPreviewed} from './serverAPIState';
@@ -155,6 +155,7 @@ export function FoldButton({commit}: {commit: CommitInfo}) {
     );
     const message = commitMessageFieldsToString(schema, messageFields);
     set(operationBeingPreviewed, new FoldOperation(foldable, message));
+    set(selectedCommits, new Set([getFoldRangeCommitHash(foldable)]));
   });
   if (foldable?.[0]?.hash !== commit.hash) {
     return null;
