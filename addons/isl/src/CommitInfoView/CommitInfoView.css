@@ -134,6 +134,14 @@
   margin-left: auto;
 }
 
+.commit-info-actions-bar-row {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  align-items: center;
+  justify-content: flex-end;
+}
+
 .commit-info-view-toolbar-top {
   padding: 0 var(--pad);
   border-bottom: 1px solid var(--panel-view-border);

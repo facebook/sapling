@@ -21,6 +21,7 @@ import {OperationDisabledButton} from '../OperationDisabledButton';
 import {SubmitUpdateMessageInput} from '../SubmitUpdateMessageInput';
 import {Subtle} from '../Subtle';
 import {latestSuccessorUnlessExplicitlyObsolete} from '../SuccessionTracker';
+import {SuggestedRebaseButton} from '../SuggestedRebase';
 import {Tooltip} from '../Tooltip';
 import {UncommittedChanges} from '../UncommittedChanges';
 import {tracker} from '../analytics';
@@ -141,6 +142,11 @@ export function MultiCommitInfo({selectedCommits}: {selectedCommits: Array<Commi
         ))}
       </div>
       <div className="commit-info-actions-bar">
+        <div className="commit-info-actions-bar-row">
+          <SuggestedRebaseButton
+            sources={selectedCommits.map(commit => succeedableRevset(commit.hash))}
+          />
+        </div>
         {commitsWithDiffs.length === 0 ? null : (
           <SubmitUpdateMessageInput commits={selectedCommits} />
         )}

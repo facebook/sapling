@@ -12,6 +12,7 @@ import {Subtle} from './Subtle';
 import {tracker} from './analytics';
 import {findCurrentPublicBase} from './getCommitTree';
 import {T, t} from './i18n';
+import {BulkRebaseOperation} from './operations/BulkRebaseOperation';
 import {RebaseAllDraftCommitsOperation} from './operations/RebaseAllDraftCommitsOperation';
 import {RebaseOperation} from './operations/RebaseOperation';
 import {treeWithPreviews} from './previews';
@@ -90,23 +91,30 @@ export const suggestedRebaseDestinations = selector<Array<[CommitInfo, string]>>
 
 export function SuggestedRebaseButton({
   source,
+  sources,
   afterRun,
-  isBulk,
 }:
   | {
       source: SucceedableRevset | ExactRevset;
-      afterRun?: undefined;
-      isBulk?: undefined;
+      sources?: undefined;
+      afterRun?: () => unknown;
     }
   | {
       source?: undefined;
+      sources: Array<SucceedableRevset>;
       afterRun?: () => unknown;
-      isBulk: true;
+    }
+  | {
+      source?: undefined;
+      sources?: undefined;
+      afterRun?: () => unknown;
     }) {
   const validDestinations = useRecoilCallback(({snapshot}) => () => {
     return snapshot.getLoadable(suggestedRebaseDestinations).valueMaybe();
   });
   const runOperation = useRunOperation();
+  const isBulk = source == null;
+  const isAllDraftCommits = sources == null && source == null;
   const showContextMenu = useContextMenu(() => {
     const destinations = validDestinations();
     return (
@@ -127,12 +135,14 @@ export function SuggestedRebaseButton({
             });
 
             runOperation(
-              isBulk
-                ? new RebaseAllDraftCommitsOperation(
+              source != null
+                ? new RebaseOperation(source, succeedableRevset(destination))
+                : sources != null
+                ? new BulkRebaseOperation(sources, succeedableRevset(destination))
+                : new RebaseAllDraftCommitsOperation(
                     globalRecoil().getLoadable(commitsShownRange).valueMaybe(),
                     succeedableRevset(destination),
-                  )
-                : new RebaseOperation(source, succeedableRevset(destination)),
+                  ),
             );
             afterRun?.();
           },
@@ -143,7 +153,13 @@ export function SuggestedRebaseButton({
   return (
     <VSCodeButton appearance={isBulk ? 'secondary' : 'icon'} onClick={showContextMenu}>
       <Icon icon="git-pull-request" slot="start" />
-      {isBulk ? <T>Rebase All Onto&hellip;</T> : <T>Rebase onto&hellip;</T>}
+      {isAllDraftCommits ? (
+        <T>Rebase all onto&hellip;</T>
+      ) : isBulk ? (
+        <T>Rebase selected commits onto...</T>
+      ) : (
+        <T>Rebase onto&hellip;</T>
+      )}
     </VSCodeButton>
   );
 }

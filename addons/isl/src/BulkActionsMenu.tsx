@@ -38,7 +38,7 @@ function BulkActions({dismiss}: {dismiss: () => void}) {
       className="bulk-actions-dropdown"
       data-testid="bulk-actions-dropdown">
       <SelectAllButton dismiss={dismiss} />
-      <SuggestedRebaseButton afterRun={dismiss} isBulk />
+      <SuggestedRebaseButton afterRun={dismiss} />
       <CleanupAllButton />
     </DropdownFields>
   );

@@ -23,6 +23,7 @@ export type TrackEventName =
   | 'AmendOperation'
   | 'AmendToOperation'
   | 'ArcPullOperation'
+  | 'BulkRebaseOperation'
   | 'CommitOperation'
   | 'ContinueMergeOperation'
   | 'CommitCloudStatusCommand'
