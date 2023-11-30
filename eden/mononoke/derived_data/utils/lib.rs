@@ -73,6 +73,7 @@ use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use skeleton_manifest::RootSkeletonManifestId;
 use test_manifest::RootTestManifestDirectory;
+use test_sharded_manifest::RootTestShardedManifestDirectory;
 use topo_sort::sort_topological;
 use unodes::RootUnodeManifestId;
 
@@ -93,6 +94,7 @@ pub const POSSIBLE_DERIVED_TYPES: &[&str] = &[
     RootBasenameSuffixSkeletonManifest::NAME,
     RootGitDeltaManifestId::NAME,
     RootTestManifestDirectory::NAME,
+    RootTestShardedManifestDirectory::NAME,
 ];
 
 pub const DEFAULT_BACKFILLING_CONFIG_NAME: &str = "backfilling";
@@ -114,6 +116,7 @@ lazy_static! {
         let git_commit = MappedGitCommitId::NAME;
         let git_tree = TreeHandle::NAME;
         let test_mf = RootTestManifestDirectory::NAME;
+        let test_sharded_mf = RootTestShardedManifestDirectory::NAME;
 
         let mut dag = HashMap::new();
 
@@ -131,6 +134,7 @@ lazy_static! {
         dag.insert(git_commit, vec![git_tree]);
         dag.insert(git_delta_manifest, vec![git_tree, git_commit, unodes]);
         dag.insert(test_mf, vec![]);
+        dag.insert(test_sharded_mf, vec![]);
 
         dag
     };
@@ -552,6 +556,11 @@ fn derived_data_utils_impl(
         }
         RootTestManifestDirectory::NAME => Ok(Arc::new(DerivedUtilsFromManager::<
             RootTestManifestDirectory,
+        >::new(
+            repo, config, enabled_config_name
+        ))),
+        RootTestShardedManifestDirectory::NAME => Ok(Arc::new(DerivedUtilsFromManager::<
+            RootTestShardedManifestDirectory,
         >::new(
             repo, config, enabled_config_name
         ))),
@@ -1092,6 +1101,11 @@ pub async fn check_derived(
         }
         DerivableType::TestManifest => {
             ddm.fetch_derived::<RootTestManifestDirectory>(ctx, head_cs_id, None)
+                .map_ok(|res| res.is_some())
+                .await
+        }
+        DerivableType::TestShardedManifest => {
+            ddm.fetch_derived::<RootTestShardedManifestDirectory>(ctx, head_cs_id, None)
                 .map_ok(|res| res.is_some())
                 .await
         }

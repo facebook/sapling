@@ -264,6 +264,7 @@ members = [
   "derived_data/skeleton_manifest",
   "derived_data/test/generation_derivation",
   "derived_data/test_manifest",
+  "derived_data/test_sharded_manifest",
   "derived_data/test_utils",
   "derived_data/unodes",
   "derived_data/utils",

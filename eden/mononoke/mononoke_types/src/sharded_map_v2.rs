@@ -147,6 +147,35 @@ impl<Value: ShardedMapV2Value> LoadableShardedMapV2Node<Value> {
         }
     }
 
+    pub async fn expand(
+        self,
+        ctx: &CoreContext,
+        blobstore: &impl Blobstore,
+    ) -> Result<(Option<Value>, Vec<(u8, Self)>)> {
+        let ShardedMapV2Node {
+            prefix,
+            value,
+            children,
+            ..
+        } = self.load(ctx, blobstore).await?;
+
+        match prefix.split_first() {
+            Some((first_byte, rest)) => Ok((
+                None,
+                vec![(
+                    *first_byte,
+                    LoadableShardedMapV2Node::Inlined(ShardedMapV2Node {
+                        prefix: SmallBinary::from(rest),
+                        value,
+                        children,
+                        ..Default::default()
+                    }),
+                )],
+            )),
+            None => Ok((value, children.into_iter().collect())),
+        }
+    }
+
     /// Returns the weight of the underlying node.
     fn weight(&self) -> usize {
         match self {

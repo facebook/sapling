@@ -27,11 +27,15 @@ use mononoke_types::fsnode::FsnodeEntry;
 use mononoke_types::fsnode::FsnodeFile;
 use mononoke_types::path::MPath;
 use mononoke_types::sharded_map::ShardedTrieMap;
+use mononoke_types::sharded_map_v2::LoadableShardedMapV2Node;
 use mononoke_types::skeleton_manifest::SkeletonManifest;
 use mononoke_types::skeleton_manifest::SkeletonManifestEntry;
 use mononoke_types::test_manifest::TestManifest;
 use mononoke_types::test_manifest::TestManifestDirectory;
 use mononoke_types::test_manifest::TestManifestEntry;
+use mononoke_types::test_sharded_manifest::TestShardedManifest;
+use mononoke_types::test_sharded_manifest::TestShardedManifestDirectory;
+use mononoke_types::test_sharded_manifest::TestShardedManifestEntry;
 use mononoke_types::unode::ManifestUnode;
 use mononoke_types::unode::UnodeEntry;
 use mononoke_types::FileUnodeId;
@@ -76,6 +80,41 @@ impl<Store, V: Send> TrieMapOps<Store, V> for TrieMap<V> {
         _blobstore: &Store,
     ) -> Result<BoxStream<'async_trait, Result<(SmallVec<[u8; 24]>, V)>>> {
         Ok(stream::iter(self).map(Ok).boxed())
+    }
+}
+
+#[async_trait]
+impl<Store: Blobstore> TrieMapOps<Store, Entry<TestShardedManifestDirectory, ()>>
+    for LoadableShardedMapV2Node<TestShardedManifestEntry>
+{
+    async fn expand(
+        self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<(
+        Option<Entry<TestShardedManifestDirectory, ()>>,
+        Vec<(u8, Self)>,
+    )> {
+        let (entry, children) = self.expand(ctx, blobstore).await?;
+        Ok((entry.map(convert_test_sharded_manifest), children))
+    }
+
+    async fn into_stream(
+        self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<
+        BoxStream<
+            'async_trait,
+            Result<(SmallVec<[u8; 24]>, Entry<TestShardedManifestDirectory, ()>)>,
+        >,
+    > {
+        Ok(self
+            .load(ctx, blobstore)
+            .await?
+            .into_entries(ctx, blobstore)
+            .map_ok(|(k, v)| (k, convert_test_sharded_manifest(v)))
+            .boxed())
     }
 }
 
@@ -353,6 +392,71 @@ fn convert_test_manifest(
     match test_manifest_entry {
         TestManifestEntry::File => Entry::Leaf(()),
         TestManifestEntry::Directory(dir) => Entry::Tree(dir.clone()),
+    }
+}
+
+#[async_trait]
+impl<Store: Blobstore> AsyncManifest<Store> for TestShardedManifest {
+    type TreeId = TestShardedManifestDirectory;
+    type LeafId = ();
+    type TrieMapType = LoadableShardedMapV2Node<TestShardedManifestEntry>;
+
+    async fn list(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        anyhow::Ok(
+            self.clone()
+                .into_subentries(ctx, blobstore)
+                .map_ok(|(path, entry)| (path, convert_test_sharded_manifest(entry)))
+                .boxed(),
+        )
+    }
+
+    async fn list_prefix(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+        prefix: &[u8],
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        anyhow::Ok(
+            self.clone()
+                .into_prefix_subentries(ctx, blobstore, prefix)
+                .map_ok(|(path, entry)| (path, convert_test_sharded_manifest(entry)))
+                .boxed(),
+        )
+    }
+
+    async fn lookup(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+        name: &MPathElement,
+    ) -> Result<Option<Entry<Self::TreeId, Self::LeafId>>> {
+        Ok(self
+            .lookup(ctx, blobstore, name)
+            .await?
+            .map(convert_test_sharded_manifest))
+    }
+
+    async fn into_trie_map(
+        self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+    ) -> Result<Self::TrieMapType> {
+        Ok(LoadableShardedMapV2Node::Inlined(self.subentries))
+    }
+}
+
+fn convert_test_sharded_manifest(
+    test_sharded_manifest_entry: TestShardedManifestEntry,
+) -> Entry<TestShardedManifestDirectory, ()> {
+    match test_sharded_manifest_entry {
+        TestShardedManifestEntry::File(_file) => Entry::Leaf(()),
+        TestShardedManifestEntry::Directory(dir) => Entry::Tree(dir),
     }
 }
 

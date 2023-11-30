@@ -11,6 +11,9 @@ use blobstore::Blobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
 use context::CoreContext;
+use futures::stream::BoxStream;
+use futures::StreamExt;
+use futures::TryStreamExt;
 
 use crate::blob::Blob;
 use crate::blob::BlobstoreValue;
@@ -24,6 +27,7 @@ use crate::typed_hash::ShardedMapV2NodeTestShardedManifestContext;
 use crate::typed_hash::ShardedMapV2NodeTestShardedManifestId;
 use crate::typed_hash::TestShardedManifestId;
 use crate::typed_hash::TestShardedManifestIdContext;
+use crate::MPathElement;
 use crate::ThriftConvert;
 
 /// A sharded version of TestManifest intended only to be used in tests.
@@ -108,6 +112,12 @@ impl ShardedMapV2Value for TestShardedManifestEntry {
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct MaxBasenameLength(u64);
+
+impl MaxBasenameLength {
+    pub fn into_inner(self) -> u64 {
+        self.0
+    }
+}
 
 impl ThriftConvert for MaxBasenameLength {
     const NAME: &'static str = "MaxBasenameLength";
@@ -196,5 +206,37 @@ impl TestShardedManifest {
         Self {
             subentries: Default::default(),
         }
+    }
+
+    pub async fn lookup(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &impl Blobstore,
+        name: &MPathElement,
+    ) -> Result<Option<TestShardedManifestEntry>> {
+        self.subentries.lookup(ctx, blobstore, name.as_ref()).await
+    }
+
+    pub fn into_subentries<'a>(
+        self,
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+    ) -> BoxStream<'a, Result<(MPathElement, TestShardedManifestEntry)>> {
+        self.subentries
+            .into_entries(ctx, blobstore)
+            .and_then(|(k, v)| async move { anyhow::Ok((MPathElement::from_smallvec(k)?, v)) })
+            .boxed()
+    }
+
+    pub fn into_prefix_subentries<'a>(
+        self,
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+        prefix: &'a [u8],
+    ) -> BoxStream<'a, Result<(MPathElement, TestShardedManifestEntry)>> {
+        self.subentries
+            .into_prefix_entries(ctx, blobstore, prefix)
+            .map(|res| res.and_then(|(k, v)| anyhow::Ok((MPathElement::from_smallvec(k)?, v))))
+            .boxed()
     }
 }

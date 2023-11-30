@@ -31,8 +31,11 @@ use mononoke_types::deleted_manifest_v2::DeletedManifestV2;
 use mononoke_types::fastlog_batch::FastlogBatch;
 use mononoke_types::fsnode::Fsnode;
 use mononoke_types::sharded_map::ShardedMapNode;
+use mononoke_types::sharded_map_v2::ShardedMapV2Node;
 use mononoke_types::skeleton_manifest::SkeletonManifest;
 use mononoke_types::test_manifest::TestManifest;
+use mononoke_types::test_sharded_manifest::TestShardedManifest;
+use mononoke_types::test_sharded_manifest::TestShardedManifestEntry;
 use mononoke_types::typed_hash::DeletedManifestV2Id;
 use mononoke_types::unode::FileUnode;
 use mononoke_types::unode::ManifestUnode;
@@ -90,6 +93,8 @@ pub enum DecodeAs {
     BasenameSuffixSkeletonManifest,
     ChangesetInfo,
     TestManifest,
+    TestShardedManifest,
+    TestShardedManifestMapNode,
 }
 
 impl DecodeAs {
@@ -125,6 +130,11 @@ impl DecodeAs {
                 ),
                 ("bssm.", DecodeAs::BasenameSuffixSkeletonManifest),
                 ("testmanifest.", DecodeAs::TestManifest),
+                (
+                    "testshardedmanifest.map2node.",
+                    DecodeAs::TestShardedManifestMapNode,
+                ),
+                ("testshardedmanifest.", DecodeAs::TestShardedManifest),
                 ("changeset_info.", DecodeAs::ChangesetInfo),
             ] {
                 if key[index..].starts_with(prefix) {
@@ -222,6 +232,14 @@ fn decode(key: &str, data: BlobstoreGetData, mut decode_as: DecodeAs) -> Decoded
         }
         DecodeAs::TestManifest => {
             Decoded::try_debug(TestManifest::from_bytes(&data.into_raw_bytes()))
+        }
+        DecodeAs::TestShardedManifest => {
+            Decoded::try_debug(TestShardedManifest::from_bytes(&data.into_raw_bytes()))
+        }
+        DecodeAs::TestShardedManifestMapNode => {
+            Decoded::try_debug(ShardedMapV2Node::<TestShardedManifestEntry>::from_bytes(
+                &data.into_raw_bytes(),
+            ))
         }
     }
 }

@@ -515,6 +515,22 @@ rust_library(
 )
 
 rust_library(
+    name = "test_sharded_manifest",
+    srcs = glob(["test_sharded_manifest/*.rs"]),
+    autocargo = {"cargo_toml_dir": "test_sharded_manifest"},
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "//eden/mononoke/blobstore:blobstore",
+        "//eden/mononoke/derived_data:derived_data",
+        "//eden/mononoke/derived_data:derived_data_manager",
+        "//eden/mononoke/derived_data/remote/if:derived_data_service_if-rust",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/server/context:context",
+    ],
+)
+
+rust_library(
     name = "derived_data_utils",
     srcs = glob(["utils/*.rs"]),
     autocargo = {"cargo_toml_dir": "utils"},
@@ -564,6 +580,7 @@ rust_library(
         "//eden/mononoke/derived_data:fsnodes",
         "//eden/mononoke/derived_data:skeleton_manifest",
         "//eden/mononoke/derived_data:test_manifest",
+        "//eden/mononoke/derived_data:test_sharded_manifest",
         "//eden/mononoke/derived_data:unodes",
         "//eden/mononoke/derived_data/filenodes_derivation:filenodes_derivation",
         "//eden/mononoke/derived_data/mercurial_derivation:mercurial_derivation",
