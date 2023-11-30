@@ -36,13 +36,30 @@ description: Minimal filter for testing purposes
 """
 
     def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
+        # Directories that may contain filtered files
+        repo.mkdir("dir2")
+
+        # Files touched by no filters
         repo.write_file("hello", "hola\n")
         repo.write_file("adir/file", "foo!\n")
         repo.write_file("bdir/test.sh", "#!/bin/bash\necho test\n", mode=0o755)
         repo.write_file("bdir/noexec.sh", "#!/bin/bash\necho test\n")
+        repo.write_file("dir2/not_filtered", "I shouldn't be filtered")
         repo.symlink("slink", os.path.join("adir", "file"))
 
-        # Create some filter files
+        # Files/directories that are filtered out by testFilter1
+        repo.write_file("foo", "bar\n")
+        repo.write_file("dir2/README", "Please README!")
+        repo.mkdir("filtered_out")
+        repo.mkdir("filtered_out/a/truly/deeply/nested/directory")
+        repo.write_file(
+            "filtered_out/a/truly/deeply/nested/directory/file", "test_contents"
+        )
+        repo.write_file(
+            "filtered_out/file", "I should be filtered if testFilter1 is active"
+        )
+
+        # Filter files that determine what is filtered
         repo.write_file("top_level_filter", self.testFilter1)
         repo.write_file("a/nested_filter_file", self.testFilter1)
         repo.write_file("filters/null_filter", self.testFilterNull)
@@ -64,6 +81,24 @@ description: Minimal filter for testing purposes
         with open(filename, "r") as f:
             return f.read()
 
+    def _path_exists_in_repo(self, path: str) -> bool:
+        return os.path.exists(self.repo.get_path(path))
+
+    def ensure_filtered_and_unfiltered(
+        self, filtered: set[str], unfiltered: set[str]
+    ) -> None:
+        for f in filtered:
+            self.assertFalse(
+                self._path_exists_in_repo(f),
+                f"{f} is expected to be filtered but it is in the repo",
+            )
+
+        for u in unfiltered:
+            self.assertTrue(
+                self._path_exists_in_repo(u),
+                f"{u} is expected to be unfiltered but it is not in the repo",
+            )
+
     def get_active_filter_path(self) -> str:
         # The filter file should always exist when FilteredFS is enabled, so
         # any failure to read the filter file is a legit error.
@@ -84,14 +119,23 @@ description: Minimal filter for testing purposes
         self.assertEqual(self.get_active_filter_path(), "top_level_filter")
         self.assertEqual(self.read_active_filter(), self.testFilter1)
 
+        # double activation does nothing
+        self.set_active_filter("top_level_filter")
+        self.set_active_filter("top_level_filter")
+        self.assertEqual(self.get_active_filter_path(), "top_level_filter")
+        self.assertEqual(self.read_active_filter(), self.testFilter1)
+
+        # activating a different filter replaces the previous one
         self.set_active_filter("a/nested_filter_file")
         self.assertEqual(self.get_active_filter_path(), "a/nested_filter_file")
         self.assertEqual(self.read_active_filter(), self.testFilter1)
 
+        # A filter that's empty is still valid
         self.set_active_filter("filters/null_filter")
         self.assertEqual(self.get_active_filter_path(), "filters/null_filter")
         self.assertEqual(self.read_active_filter(), self.testFilterNull)
 
+        # Filters with only metadata are also valid
         self.set_active_filter("filters/metadata_only")
         self.assertEqual(self.get_active_filter_path(), "filters/metadata_only")
         self.assertEqual(self.read_active_filter(), self.testFilterOnlyMetadata)
@@ -103,10 +147,70 @@ description: Minimal filter for testing purposes
         self.remove_active_filter()
         self.assertEqual(self.get_active_filter_path(), "")
 
+        # A second `disable` does nothing
+        self.remove_active_filter()
+        self.assertEqual(self.get_active_filter_path(), "")
+
     def test_filter_enable_invalid_path(self) -> None:
         # Filters shouldn't have ":" in them
         with self.assertRaises(hgrepo.HgError):
             self.set_active_filter("top:level:filter")
+
+    def test_filtered_file_is_omitted(self) -> None:
+        initial_files = {"foo"}
+        filtered_files = initial_files.copy()
+
+        # File exists initially
+        self.ensure_filtered_and_unfiltered(set(), initial_files)
+
+        # File is omitted after enabling filter
+        self.set_active_filter("a/nested_filter_file")
+        self.ensure_filtered_and_unfiltered(
+            filtered_files, initial_files.difference(filtered_files)
+        )
+
+        # File reappears after disabling filter
+        self.remove_active_filter()
+        self.ensure_filtered_and_unfiltered(set(), initial_files)
+
+    def test_entire_directory_is_omitted(self) -> None:
+        initial_files = {
+            "filtered_out",
+            "filtered_out/file",
+            "filtered_out/a/truly/deeply/nested/directory",
+            "filtered_out/a/truly/deeply/nested/directory/file",
+        }
+        filtered_files = initial_files.copy()
+
+        # Directory and children initially exist
+        self.ensure_filtered_and_unfiltered(set(), initial_files)
+
+        # Directory and children are omitted after enabling filter
+        self.set_active_filter("a/nested_filter_file")
+        self.ensure_filtered_and_unfiltered(
+            filtered_files, initial_files.difference(filtered_files)
+        )
+
+        # Directory and children reappear after disabling filter
+        self.remove_active_filter()
+        self.ensure_filtered_and_unfiltered(set(), initial_files)
+
+    def test_some_children_filtered(self) -> None:
+        initial_files = {"dir2", "dir2/README", "dir2/not_filtered"}
+        filtered_files = {"dir2/README"}
+
+        # Directory and children exist initially
+        self.ensure_filtered_and_unfiltered(set(), initial_files)
+
+        # Only one child is omitted after enabling filter
+        self.set_active_filter("a/nested_filter_file")
+        self.ensure_filtered_and_unfiltered(
+            filtered_files, initial_files.difference(filtered_files)
+        )
+
+        # All children reappear after disabling filter
+        self.remove_active_filter()
+        self.ensure_filtered_and_unfiltered(set(), initial_files)
 
     def test_filter_shows_correct_include_exclude(self) -> None:
         with self.assertRaises(hgrepo.HgError):
@@ -114,8 +218,5 @@ description: Minimal filter for testing purposes
         # I will actually write the logic once `hg filter show` is implemented
 
     # Future test cases:
-    # - Enable multiple filters at once just enables the second filter
-    # - Disabling a filter that isn't enabled does nothing
-    # - Enabling a filter that is already enabled does nothing
     # - Reading a filtered file fails
     # - All sorts of filter edgecases
