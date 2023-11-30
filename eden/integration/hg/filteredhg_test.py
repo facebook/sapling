@@ -35,6 +35,8 @@ description: Minimal filter for testing purposes
 [exclude]
 """
 
+    initial_commit: str
+
     def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         # Directories that may contain filtered files
         repo.mkdir("dir2")
@@ -65,7 +67,7 @@ description: Minimal filter for testing purposes
         repo.write_file("filters/null_filter", self.testFilterNull)
         repo.write_file("filters/metadata_only", self.testFilterOnlyMetadata)
 
-        repo.commit("Initial commit.")
+        self.initial_commit = repo.commit("Initial commit.")
 
     def set_active_filter(self, path: str):
         self.hg("filteredfs", "enable", path)
@@ -213,9 +215,56 @@ description: Minimal filter for testing purposes
         self.ensure_filtered_and_unfiltered(set(), initial_files)
 
     def test_filter_shows_correct_include_exclude(self) -> None:
-        with self.assertRaises(hgrepo.HgError):
-            self.show_active_filter()
-        # I will actually write the logic once `hg filter show` is implemented
+        self.assertEqual(self.show_active_filter(), "")
+
+        self.set_active_filter("top_level_filter")
+        self.assertIn("~ top_level_filter", self.show_active_filter())
+
+    def test_filtered_file_not_in_status(self):
+        self.assert_status_empty()
+
+        # write to a filtered file
+        self.set_active_filter("top_level_filter")
+        self.write_file("foo", "a change")
+
+        # Ensure the filtered file isn't reflected in status
+        self.assert_status_empty()
+
+    def test_filtered_merge(self):
+        # Set up two commits that will conflict when rebased
+        self.write_file("foo", "a separate change\n")
+        new1 = self.repo.commit("Change contents of foo")
+        self.repo.update(self.initial_commit)
+        self.write_file("foo", "completely different change\n")
+        new2 = self.repo.commit("Change contents of foo again")
+
+        # enable the active filter so "foo" is filtered and attempt rebase
+        self.set_active_filter("top_level_filter")
+        with self.assertRaises(hgrepo.HgError) as context:
+            self.hg("rebase", "-s", new1, "-d", new2)
+
+        self.assertIn(
+            b"conflicts while merging foo!",
+            context.exception.stderr,
+        )
+        self.assert_unresolved(unresolved=["foo"])
+        self.assert_status({"foo": "M"}, op="rebase")
+        print(self.read_file("foo"))
+        self.assert_file_regex(
+            "foo",
+            """\
+            <<<<<<< .*
+            completely different change
+            =======
+            a separate change
+            >>>>>>> .*
+            """,
+        )
+
+        self.write_file("foo", "completely different change\na separate change")
+        self.hg("resolve", "--mark", "foo")
+        self.hg("rebase", "--continue")
+        self.assertEqual(len(self.repo.log(revset="all()")), 3)
 
     # Future test cases:
     # - Reading a filtered file fails
