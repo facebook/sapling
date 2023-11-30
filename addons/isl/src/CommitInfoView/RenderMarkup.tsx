@@ -9,6 +9,8 @@ import clientToServerAPI from '../ClientToServerAPI';
 import {codeReviewProvider} from '../codeReview/CodeReviewInfo';
 import {selectorFamily, useRecoilValueLoadable} from 'recoil';
 
+import './RenderedMarkup.css';
+
 let requestId = 0;
 const renderedMarkup = selectorFamily<string, string>({
   key: 'renderedMarkup',
@@ -33,7 +35,7 @@ export function RenderMarkup({children}: {children: string}) {
   // TODO: We could consider using DOM purify to sanitize this HTML,
   // though this html is coming directly from a trusted server.
   return renderedHtml != null ? (
-    <div dangerouslySetInnerHTML={{__html: renderedHtml}} />
+    <div className="rendered-markup" dangerouslySetInnerHTML={{__html: renderedHtml}} />
   ) : (
     <div>{children}</div>
   );
