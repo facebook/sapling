@@ -8,7 +8,7 @@
 #include "eden/fs/testharness/FakeBackingStore.h"
 
 #include <folly/Varint.h>
-#include <folly/executors/QueuedImmediateExecutor.h>
+#include <folly/executors/ManualExecutor.h>
 #include <folly/experimental/TestUtil.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
@@ -185,42 +185,56 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, getBlob) {
   auto* storedBlob = wrappedStore_->putBlob(hash, "foobar");
   EXPECT_EQ("foobar", blobContents(storedBlob->get()));
 
+  auto executor = folly::ManualExecutor();
+
   // The blob is not ready yet, so calling getBlob() should yield not-ready
   // Future objects.
-  auto future1 = filteredStore_->getBlob(
-      filteredHash, ObjectFetchContext::getNullContext());
+  auto future1 =
+      filteredStore_
+          ->getBlob(filteredHash, ObjectFetchContext::getNullContext())
+          .via(&executor);
   EXPECT_FALSE(future1.isReady());
-  auto future2 = filteredStore_->getBlob(
-      filteredHash, ObjectFetchContext::getNullContext());
+  auto future2 =
+      filteredStore_
+          ->getBlob(filteredHash, ObjectFetchContext::getNullContext())
+          .via(&executor);
   EXPECT_FALSE(future2.isReady());
 
   // Calling trigger() should make the pending futures ready.
   storedBlob->trigger();
+  executor.drain();
   ASSERT_TRUE(future1.isReady());
   ASSERT_TRUE(future2.isReady());
   EXPECT_EQ("foobar", blobContents(*std::move(future1).get(0ms).blob));
   EXPECT_EQ("foobar", blobContents(*std::move(future2).get(0ms).blob));
 
   // But subsequent calls to getBlob() should still yield unready futures.
-  auto future3 = filteredStore_->getBlob(
-      filteredHash, ObjectFetchContext::getNullContext());
+  auto future3 =
+      filteredStore_
+          ->getBlob(filteredHash, ObjectFetchContext::getNullContext())
+          .via(&executor);
   EXPECT_FALSE(future3.isReady());
-  auto future4 = filteredStore_->getBlob(
-      filteredHash, ObjectFetchContext::getNullContext());
+  auto future4 =
+      filteredStore_
+          ->getBlob(filteredHash, ObjectFetchContext::getNullContext())
+          .via(&executor);
   EXPECT_FALSE(future4.isReady());
   bool future4Failed = false;
   folly::exception_wrapper future4Error;
 
   std::move(future4)
-      .via(&folly::QueuedImmediateExecutor::instance())
+      .via(&executor)
       .thenValue([](auto&&) { FAIL() << "future4 should not succeed\n"; })
       .thenError([&](const folly::exception_wrapper& ew) {
         future4Failed = true;
         future4Error = ew;
       });
 
+  executor.drain();
   // Calling triggerError() should fail pending futures
   storedBlob->triggerError(std::logic_error("does not compute"));
+  executor.drain();
+
   ASSERT_TRUE(future3.isReady());
   EXPECT_THROW_RE(
       std::move(future3).get(0ms), std::logic_error, "does not compute");
@@ -230,18 +244,24 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, getBlob) {
 
   // Calling setReady() should make the pending futures ready, as well
   // as all subsequent Futures returned by getBlob()
-  auto future5 = filteredStore_->getBlob(
-      filteredHash, ObjectFetchContext::getNullContext());
+  auto future5 =
+      filteredStore_
+          ->getBlob(filteredHash, ObjectFetchContext::getNullContext())
+          .via(&executor);
   EXPECT_FALSE(future5.isReady());
 
   storedBlob->setReady();
+  executor.drain();
   ASSERT_TRUE(future5.isReady());
   EXPECT_EQ("foobar", blobContents(*std::move(future5).get(0ms).blob));
 
   // Subsequent calls to getBlob() should return Futures that are immediately
   // ready since we called setReady() above.
-  auto future6 = filteredStore_->getBlob(
-      filteredHash, ObjectFetchContext::getNullContext());
+  auto future6 =
+      filteredStore_
+          ->getBlob(filteredHash, ObjectFetchContext::getNullContext())
+          .via(&executor);
+  executor.drain();
   ASSERT_TRUE(future6.isReady());
   EXPECT_EQ("foobar", blobContents(*std::move(future6).get(0ms).blob));
 }
@@ -388,54 +408,85 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, getRootTree) {
   // one
   auto* commit2 = wrappedStore_->putCommit(RootId{"2"}, makeTestHash("3"));
 
-  auto future1 = filteredStore_->getRootTree(
-      RootId{FilteredBackingStore::createFilteredRootId("1", kTestFilter1)},
-      ObjectFetchContext::getNullContext());
+  auto executor = folly::ManualExecutor();
+
+  auto future1 = filteredStore_
+                     ->getRootTree(
+                         RootId{FilteredBackingStore::createFilteredRootId(
+                             "1", kTestFilter1)},
+                         ObjectFetchContext::getNullContext())
+                     .semi()
+                     .via(&executor);
   EXPECT_FALSE(future1.isReady());
-  auto future2 = filteredStore_->getRootTree(
-      RootId{FilteredBackingStore::createFilteredRootId("2", kTestFilter1)},
-      ObjectFetchContext::getNullContext());
+  auto future2 = filteredStore_
+                     ->getRootTree(
+                         RootId{FilteredBackingStore::createFilteredRootId(
+                             "2", kTestFilter1)},
+                         ObjectFetchContext::getNullContext())
+                     .semi()
+                     .via(&executor);
   EXPECT_FALSE(future2.isReady());
 
   // Trigger commit1, then dir1 to make future1 ready.
   commit1->trigger();
+  executor.drain();
   EXPECT_FALSE(future1.isReady());
   dir1->trigger();
+  executor.drain();
   EXPECT_EQ(ObjectId{dir1FOID.getValue()}, std::move(future1).get(0ms).treeId);
 
   // future2 should still be pending
   EXPECT_FALSE(future2.isReady());
 
   // Get another future for commit1
-  auto future3 = filteredStore_->getRootTree(
-      RootId{FilteredBackingStore::createFilteredRootId("1", kTestFilter1)},
-      ObjectFetchContext::getNullContext());
+  auto future3 = filteredStore_
+                     ->getRootTree(
+                         RootId{FilteredBackingStore::createFilteredRootId(
+                             "1", kTestFilter1)},
+                         ObjectFetchContext::getNullContext())
+                     .semi()
+                     .via(&executor);
   EXPECT_FALSE(future3.isReady());
 
   // Triggering the directory now should have no effect,
   // since there should be no futures for it yet.
   dir1->trigger();
+  executor.drain();
   EXPECT_FALSE(future3.isReady());
   commit1->trigger();
+  executor.drain();
   EXPECT_FALSE(future3.isReady());
   dir1->trigger();
+  executor.drain();
   EXPECT_EQ(ObjectId{dir1FOID.getValue()}, std::move(future3).get().treeId);
 
   // Try triggering errors
-  auto future4 = filteredStore_->getRootTree(
-      RootId{FilteredBackingStore::createFilteredRootId("1", kTestFilter1)},
-      ObjectFetchContext::getNullContext());
+  auto future4 = filteredStore_
+                     ->getRootTree(
+                         RootId{FilteredBackingStore::createFilteredRootId(
+                             "1", kTestFilter1)},
+                         ObjectFetchContext::getNullContext())
+                     .semi()
+                     .via(&executor);
+  executor.drain();
   EXPECT_FALSE(future4.isReady());
   commit1->triggerError(std::runtime_error("bad luck"));
+  executor.drain();
   EXPECT_THROW_RE(std::move(future4).get(0ms), std::runtime_error, "bad luck");
 
-  auto future5 = filteredStore_->getRootTree(
-      RootId{FilteredBackingStore::createFilteredRootId("1", kTestFilter1)},
-      ObjectFetchContext::getNullContext());
+  auto future5 = filteredStore_
+                     ->getRootTree(
+                         RootId{FilteredBackingStore::createFilteredRootId(
+                             "1", kTestFilter1)},
+                         ObjectFetchContext::getNullContext())
+                     .semi()
+                     .via(&executor);
   EXPECT_FALSE(future5.isReady());
   commit1->trigger();
+  executor.drain();
   EXPECT_FALSE(future5.isReady());
   dir1->triggerError(std::runtime_error("PC Load Letter"));
+  executor.drain();
   EXPECT_THROW_RE(
       std::move(future5).get(0ms), std::runtime_error, "PC Load Letter");
 
@@ -443,6 +494,7 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, getRootTree) {
   // This should trigger future2 to fail since the tree does not actually
   // exist.
   commit2->trigger();
+  executor.drain();
   EXPECT_THROW_RE(
       std::move(future2).get(0ms),
       std::domain_error,
@@ -487,17 +539,29 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, testCompareBlobObjectsById) {
   // Set up a second commit with an additional file
   auto* commit2 = wrappedStore_->putCommit(RootId{"2"}, fooDirExtendedTree);
 
-  auto future1 = filteredStore_->getRootTree(
-      RootId{FilteredBackingStore::createFilteredRootId("1", kTestFilter2)},
-      ObjectFetchContext::getNullContext());
-  auto future2 = filteredStore_->getRootTree(
-      RootId{FilteredBackingStore::createFilteredRootId("2", kTestFilter3)},
-      ObjectFetchContext::getNullContext());
+  auto executor = folly::ManualExecutor();
+
+  auto future1 = filteredStore_
+                     ->getRootTree(
+                         RootId{FilteredBackingStore::createFilteredRootId(
+                             "1", kTestFilter2)},
+                         ObjectFetchContext::getNullContext())
+                     .semi()
+                     .via(&executor);
+  auto future2 = filteredStore_
+                     ->getRootTree(
+                         RootId{FilteredBackingStore::createFilteredRootId(
+                             "2", kTestFilter3)},
+                         ObjectFetchContext::getNullContext())
+                     .semi()
+                     .via(&executor);
 
   // Trigger commit1, then rootDirTree to make future1 ready.
   commit1->trigger();
+  executor.drain();
   EXPECT_FALSE(future1.isReady());
   rootDirTree->trigger();
+  executor.drain();
   auto fooDirRes = std::move(future1).get(0ms);
 
   // Get the object IDs of all the blobs from commit 1.
@@ -530,7 +594,9 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, testCompareBlobObjectsById) {
 
   // Trigger commit2, then rootDirTreeExtended to make future2 ready.
   commit2->trigger();
+  executor.drain();
   fooDirExtendedTree->trigger();
+  executor.drain();
   auto fooDirExtRes = std::move(future2).get(0ms);
 
   // Get the object IDs of all the blobs from commit 1.
@@ -628,17 +694,29 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, testCompareTreeObjectsById) {
   // Set up a second commit with an additional file
   auto* commit2 = wrappedStore_->putCommit(RootId{"2"}, modifiedRootDirTree);
 
-  auto rootFuture1 = filteredStore_->getRootTree(
-      RootId{FilteredBackingStore::createFilteredRootId("1", kTestFilter4)},
-      ObjectFetchContext::getNullContext());
-  auto rootFuture2 = filteredStore_->getRootTree(
-      RootId{FilteredBackingStore::createFilteredRootId("2", kTestFilter5)},
-      ObjectFetchContext::getNullContext());
+  auto executor = folly::ManualExecutor();
+
+  auto rootFuture1 = filteredStore_
+                         ->getRootTree(
+                             RootId{FilteredBackingStore::createFilteredRootId(
+                                 "1", kTestFilter4)},
+                             ObjectFetchContext::getNullContext())
+                         .semi()
+                         .via(&executor);
+  auto rootFuture2 = filteredStore_
+                         ->getRootTree(
+                             RootId{FilteredBackingStore::createFilteredRootId(
+                                 "2", kTestFilter5)},
+                             ObjectFetchContext::getNullContext())
+                         .semi()
+                         .via(&executor);
 
   // Trigger commit1, then rootDirTree to make rootFuture1 ready.
   commit1->trigger();
+  executor.drain();
   EXPECT_FALSE(rootFuture1.isReady());
   rootDirTree->trigger();
+  executor.drain();
   auto rootDirRes1 = std::move(rootFuture1).get(0ms);
 
   // Get the object IDs of all the trees from commit 1.
@@ -653,7 +731,9 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, testCompareTreeObjectsById) {
 
   // Trigger commit2, then rootDirTreeExtended to make rootFuture2 ready.
   commit2->trigger();
+  executor.drain();
   modifiedRootDirTree->trigger();
+  executor.drain();
   auto rootDirCommit2Res = std::move(rootFuture2).get(0ms);
 
   // Get the object IDs of all the blobs from commit 1.

@@ -11,7 +11,7 @@ cpp_unittest(
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
         "//eden/fs/testharness:test_util",
         "//eden/fs/utils:path",
-        "//folly/executors:queued_immediate_executor",
+        "//folly/executors:manual_executor",
         "//folly/experimental:test_util",
         "//folly/io:iobuf",
         "//folly/portability:gtest",

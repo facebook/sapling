@@ -136,6 +136,7 @@ cpp_unittest(
     supports_static_listing = False,
     deps = [
         "//eden/fs/utils:immediate_future",
+        "//folly/executors:manual_executor",
         "//folly/portability:gtest",
         "//folly/test:test_utils",
     ],

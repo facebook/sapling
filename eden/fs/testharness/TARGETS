@@ -181,7 +181,7 @@ cpp_library(
     name = "stored_object",
     headers = ["StoredObject.h"],
     exported_deps = [
-        "//folly/futures:core",
+        "//eden/fs/utils:immediate_future",
     ],
 )
 

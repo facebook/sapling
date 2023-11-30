@@ -12,7 +12,6 @@ cpp_unittest(
         "//eden/fs/nfs/rpc:server",
         "//eden/fs/nfs/testharness:xdr_test_utils",
         "//eden/fs/telemetry:structured_logger",
-        "//folly/executors:queued_immediate_executor",
         "//folly/portability:gtest",
     ],
 )

@@ -7,7 +7,7 @@
 
 #include "eden/fs/store/Diff.h"
 
-#include <folly/executors/QueuedImmediateExecutor.h>
+#include <folly/executors/ManualExecutor.h>
 #include <folly/portability/GMock.h>
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
@@ -26,13 +26,11 @@
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestUtil.h"
-#include "eden/fs/utils/Future.h"
 #include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 using namespace facebook::eden;
 using namespace std::chrono_literals;
-using folly::Future;
 using folly::StringPiece;
 using std::make_shared;
 using ::testing::Pair;
@@ -104,7 +102,7 @@ class DiffTest : public ::testing::Test {
         std::move(topLevelIgnores));
   }
 
-  Future<ScmStatus> diffCommitsFuture(
+  ImmediateFuture<ScmStatus> diffCommitsFuture(
       ObjectId hash1,
       ObjectId hash2,
       std::string userIgnoreContents = {},
@@ -122,23 +120,19 @@ class DiffTest : public ::testing::Test {
         .thenValue([callback = std::move(callback)](auto&&) {
           return callback->extractStatus();
         })
-        .ensure([context = std::move(diffContext)] {})
-        .semi()
-        .via(&folly::QueuedImmediateExecutor::instance());
+        .ensure([context = std::move(diffContext)] {});
   }
 
-  Future<ScmStatus> diffCommits(
+  ImmediateFuture<ScmStatus> diffCommits(
       folly::StringPiece commit1,
       folly::StringPiece commit2) {
-    return folly::makeFutureWith([=]() {
+    return makeImmediateFutureWith([&]() {
       auto tree1Future = store_->getRootTree(
           RootId{commit1.str()}, ObjectFetchContext::getNullContext());
       auto tree2Future = store_->getRootTree(
           RootId{commit2.str()}, ObjectFetchContext::getNullContext());
 
       return collectAllSafe(std::move(tree1Future), std::move(tree2Future))
-          .semi()
-          .via(&folly::QueuedImmediateExecutor::instance())
           .thenValue([this](std::tuple<
                             ObjectStore::GetRootTreeResult,
                             ObjectStore::GetRootTreeResult>&& tup) {
@@ -403,7 +397,9 @@ TEST_F(DiffTest, blockedFutures) {
   builder2.finalize(backingStore_, /* setReady */ false);
   auto root2 = backingStore_->putCommit("2", builder2);
 
-  auto resultFuture = diffCommits("1", "2");
+  auto executor = folly::ManualExecutor{};
+  auto resultFuture = diffCommits("1", "2").semi().via(&executor);
+  executor.drain();
   EXPECT_FALSE(resultFuture.isReady());
 
   // Now gradually mark the data in each commit ready, so the diff
@@ -412,16 +408,19 @@ TEST_F(DiffTest, blockedFutures) {
   // Make the root commit & tree for commit 1
   root1->setReady();
   builder.setReady("");
+  executor.drain();
   EXPECT_FALSE(resultFuture.isReady());
 
   // Mark everything under src/ ready in both trees
   builder.setAllReadyUnderTree("src");
   builder2.setAllReadyUnderTree("src");
+  executor.drain();
   EXPECT_FALSE(resultFuture.isReady());
 
   // Mark the root commit and tree ready for commit 2.
   root2->setReady();
   builder2.setReady("");
+  executor.drain();
   EXPECT_FALSE(resultFuture.isReady());
 
   // Mark the hierarchy under "a" ready.
@@ -429,21 +428,26 @@ TEST_F(DiffTest, blockedFutures) {
   // only needs to get the tree data.
   builder.setReady("a");
   builder2.setReady("a");
+  executor.drain();
   EXPECT_FALSE(resultFuture.isReady());
   builder.setReady("a/b");
   builder2.setReady("a/b");
+  executor.drain();
   EXPECT_FALSE(resultFuture.isReady());
   builder.setReady("a/b/c");
+  executor.drain();
   EXPECT_FALSE(resultFuture.isReady());
   builder.setReady("a/b/c/d");
+  executor.drain();
   EXPECT_FALSE(resultFuture.isReady());
   // a/b/c/d/e is the last directory that remains not ready yet.
   // Even though we mark it as ready, we still need the files themselves to be
   // ready since we compare blobs in the diff operation
   builder.setReady("a/b/c/d/e");
+  executor.drain();
   EXPECT_TRUE(resultFuture.isReady());
 
-  auto result = std::move(resultFuture).get();
+  auto result = std::move(resultFuture).get(0ms);
   EXPECT_THAT(*result.errors_ref(), UnorderedElementsAre());
 
   // TODO: T66590035
@@ -480,7 +484,10 @@ TEST_F(DiffTest, loadTreeError) {
   builder2.finalize(backingStore_, /* setReady */ false);
   auto root2 = backingStore_->putCommit("2", builder2);
 
-  auto resultFuture = diffCommits("1", "2");
+  auto executor = folly::ManualExecutor{};
+
+  auto resultFuture = diffCommits("1", "2").semi().via(&executor);
+  executor.drain();
   EXPECT_FALSE(resultFuture.isReady());
 
   // Make the root commit & tree for commit 1
@@ -488,6 +495,7 @@ TEST_F(DiffTest, loadTreeError) {
   builder.setReady("");
   root2->setReady();
   builder2.setReady("");
+  executor.drain();
   EXPECT_FALSE(resultFuture.isReady());
 
   builder.setReady("x");
@@ -496,15 +504,20 @@ TEST_F(DiffTest, loadTreeError) {
 
   builder2.setReady("x");
   builder2.setReady("x/y");
+  // A drain is required here to ensure that the x/y/z StoredObject is waited
+  // on when triggerError is called on it.
+  executor.drain();
   // Report an error loading x/y/z on commit2
   builder2.triggerError("x/y/z", std::runtime_error("oh noes"));
+  executor.drain();
   EXPECT_FALSE(resultFuture.isReady());
 
   builder.setAllReadyUnderTree("a");
   builder2.setAllReadyUnderTree("a");
+  executor.drain();
   EXPECT_TRUE(resultFuture.isReady());
 
-  auto result = std::move(resultFuture).get();
+  auto result = std::move(resultFuture).get(0ms);
   EXPECT_THAT(
       *result.errors_ref(),
       UnorderedElementsAre(Pair(
