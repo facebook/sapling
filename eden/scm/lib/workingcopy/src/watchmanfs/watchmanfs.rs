@@ -579,6 +579,7 @@ pub(crate) fn detect_changes(
             ts,
             Arc::new(AlwaysMatcher::new()),
             StateFlags::EXIST_NEXT,
+            StateFlags::empty(),
             StateFlags::NEED_CHECK,
             |path, _state| {
                 if !wm_need_check.contains_key(&path) {
@@ -593,6 +594,7 @@ pub(crate) fn detect_changes(
             ts,
             Arc::new(AlwaysMatcher::new()),
             StateFlags::NEED_CHECK,
+            StateFlags::empty(),
             StateFlags::EXIST_NEXT | StateFlags::EXIST_P1 | StateFlags::EXIST_P2,
             |path, _state| {
                 if !wm_need_check.contains_key(&path) {

@@ -16,7 +16,7 @@ mod metadata;
 pub mod physicalfs;
 pub mod sparse;
 pub mod status;
-mod util;
+pub mod util;
 pub mod wait;
 pub mod walker;
 pub mod watchmanfs;

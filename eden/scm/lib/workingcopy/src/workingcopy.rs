@@ -480,6 +480,7 @@ impl WorkingCopy {
             matcher,
             StateFlags::COPIED,
             StateFlags::empty(),
+            StateFlags::empty(),
             |path, state| {
                 let copied_path = state
                     .copied

@@ -10,14 +10,41 @@ use std::fs::read_to_string;
 #[cfg(unix)]
 use std::os::unix::prelude::MetadataExt;
 use std::process::Command;
+use std::sync::Arc;
 
 use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use io::IO;
+use pathmatcher::AlwaysMatcher;
 use spawn_ext::CommandExt;
+use treestate::filestate::StateFlags;
 use types::RepoPath;
+use workingcopy::util::walk_treestate;
 use workingcopy::workingcopy::WorkingCopy;
+
+pub fn clear_edenfs_dirstate(wc: &mut WorkingCopy) -> Result<()> {
+    let tbind = wc.treestate();
+    let mut treestate = tbind.lock();
+    let matcher = Arc::new(AlwaysMatcher::new());
+    let mask = StateFlags::EXIST_P1 | StateFlags::EXIST_P2 | StateFlags::EXIST_NEXT;
+    let mut tracked = Vec::new();
+    walk_treestate(
+        &mut treestate,
+        matcher,
+        StateFlags::empty(),
+        mask,
+        StateFlags::empty(),
+        |path, _state| {
+            tracked.push(path);
+            Ok(())
+        },
+    )?;
+    for path in tracked {
+        treestate.remove(path.as_byte_slice())?;
+    }
+    Ok(())
+}
 
 /// run `edenfsctl redirect fixup`, potentially in background.
 ///

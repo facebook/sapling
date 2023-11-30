@@ -199,6 +199,7 @@ pub fn compute_status(
         &mut treestate,
         matcher.clone(),
         StateFlags::EXIST_NEXT,
+        StateFlags::empty(),
         StateFlags::EXIST_P1 | StateFlags::EXIST_P2,
         |path, state| {
             trace!(%path, "deleted (added file not in pending changes)");
@@ -213,6 +214,7 @@ pub fn compute_status(
         &mut treestate,
         matcher.clone(),
         StateFlags::EXIST_P2,
+        StateFlags::empty(),
         StateFlags::empty(),
         |path, state| {
             // If it's in P1 but we didn't see it earlier, that means it didn't change with
@@ -246,6 +248,7 @@ pub fn compute_status(
         &mut treestate,
         matcher.clone(),
         StateFlags::EXIST_P1,
+        StateFlags::empty(),
         StateFlags::EXIST_NEXT,
         |path, state| {
             trace!(%path, "removed (in p1, not in next, not in pending changes)");
@@ -260,6 +263,7 @@ pub fn compute_status(
         &mut treestate,
         matcher.clone(),
         StateFlags::COPIED | StateFlags::EXIST_NEXT,
+        StateFlags::empty(),
         StateFlags::empty(),
         |path, state| {
             trace!(%path, "modified (marked copy, not in pending changes)");
