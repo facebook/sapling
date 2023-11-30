@@ -606,7 +606,7 @@ def _premerge(repo, fcd, fco, fca, toolconf, files, labels):
             mode = "merge3"
 
         r = simplemerge.simplemerge(
-            ui, fcd, fca, fco, quiet=True, label=labels, mode=mode
+            ui, fcd, fca, fco, quiet=True, label=labels, mode=mode, premerge=True
         )
         if not r:
             ui.debug(" premerge successful\n")

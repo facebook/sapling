@@ -37,7 +37,7 @@ _automerge_cache = util.lrucachedict(_DEFAULT_CACHE_SIZE)
 _automerge_prompt_msg = _(
     "%(conflict)s\n"
     "Above conflict can be resolved automatically "
-    "(run '@prog@ help automerge' for more information):\n"
+    "(see '@prog@ help automerge' for details):\n"
     "<<<<<<< automerge algorithm yields:\n"
     " %(merged_lines)s"
     ">>>>>>>\n"
@@ -45,6 +45,29 @@ _automerge_prompt_msg = _(
     "(a)ccept it, (r)eject it, or review it in (f)ile:"
     "$$ &Accept $$ &Reject $$ &File"
 )
+
+
+class AutomergeSummary:
+    def __init__(self):
+        self.spans = []
+
+    def add(self, start, length):
+        self.spans.append((start, start + length))
+
+    def summary(self) -> Optional[str]:
+        def span_str(span):
+            s, e = span
+            return str(e) if s + 1 == e else f"{s+1}-{e}"
+
+        if not self.spans:
+            return None
+
+        lines = ",".join(span_str(s) for s in self.spans)
+        if "-" in lines:
+            msg = _(" lines %s have been resolved by automerge algorithms\n") % (lines)
+        else:
+            msg = _(" line %s has been resolved by automerge algorithms\n") % (lines)
+        return msg
 
 
 @contextmanager
@@ -257,7 +280,9 @@ class Merge3Text:
     Given strings BASE, OTHER, THIS, tries to produce a combined text
     incorporating the changes from both BASE->OTHER and BASE->THIS."""
 
-    def __init__(self, basetext, atext, btext, ui=None, in_wordmerge=False):
+    def __init__(
+        self, basetext, atext, btext, ui=None, in_wordmerge=False, premerge=False
+    ):
         self.in_wordmerge = in_wordmerge
 
         # ui is used for (1) getting automerge configs; (2) prompt choices
@@ -265,6 +290,7 @@ class Merge3Text:
         self.automerge_fns = {}
         self.automerge_mode = ""
         self.init_automerge_fields(ui)
+        self.premerge = premerge
 
         if in_wordmerge and self.automerge_fns:
             raise error.Abort(
@@ -572,7 +598,6 @@ def try_automerge_conflict(
     automerge_mode = m3.automerge_mode
     ui = m3.ui
 
-    automerged = True
     base_lines, a_lines, b_lines = group_lines
     extra_lines = []
     if automerge_enabled(ui, automerge_mode) and (
@@ -580,7 +605,7 @@ def try_automerge_conflict(
     ):
         merge_algorithm, merged_lines = merged_res
         if automerge_mode == "accept":
-            return automerged, merged_lines
+            return merge_algorithm, merged_lines
         elif automerge_mode == "prompt":
             cache_key = automerge_cache_key(group_lines)
             if cache_key not in _automerge_cache:
@@ -604,7 +629,7 @@ def try_automerge_conflict(
                 _automerge_cache[cache_key] = index
             index = _automerge_cache[cache_key]
             if index == 0:  # accept
-                return automerged, merged_lines
+                return merge_algorithm, merged_lines
             elif index == 2:  # review-in-file
                 extra_lines.extend(
                     render_automerged_lines(merge_algorithm, merged_lines, newline)
@@ -616,10 +641,9 @@ def try_automerge_conflict(
             extra_lines.extend(
                 render_automerged_lines(merge_algorithm, merged_lines, newline)
             )
-    automerged = False
     lines = render_conflict_fn(base_lines, a_lines, b_lines)
     lines.extend(extra_lines)
-    return automerged, lines
+    return None, lines
 
 
 def render_minimized(
@@ -679,12 +703,12 @@ def render_merge3(m3, name_a, name_b, name_base) -> Tuple[List[bytes], int]:
 
 def _apply_conflict_render(m3, name_a, name_b, name_base, render_fn, newline):
     conflictscount = 0
-    merge_groups = m3.merge_groups()
     lines = []
+    automerge_summary = AutomergeSummary()
 
-    for what, group_lines in merge_groups:
+    for what, group_lines in m3.merge_groups():
         if what == "conflict":
-            automerged, merged_lines = try_automerge_conflict(
+            automerge_algo, merged_lines = try_automerge_conflict(
                 m3,
                 group_lines,
                 name_base,
@@ -693,10 +717,21 @@ def _apply_conflict_render(m3, name_a, name_b, name_base, render_fn, newline):
                 render_fn,
                 newline,
             )
-            conflictscount += 1 - automerged
+            if automerge_algo:
+                automerge_summary.add(len(lines), len(merged_lines))
+            else:
+                conflictscount += 1
             lines.extend(merged_lines)
         else:
             lines.extend(group_lines)
+
+    # to avoid printing duplicate messages in both `premerge` and `merge``, we skip
+    # the logic when it's in `premerge`` and there are conflicts, as it will
+    # call `merge` later
+    if not (m3.premerge and conflictscount) and (
+        automerge_msg := automerge_summary.summary()
+    ):
+        m3.ui.status(automerge_msg)
 
     return lines, conflictscount
 
@@ -863,7 +898,8 @@ def simplemerge(ui, localctx, basectx, otherctx, **opts):
     except error.Abort:
         return 1
 
-    m3 = Merge3Text(basetext, localtext, othertext, ui=ui)
+    premerge = opts.get("premerge", False)
+    m3 = Merge3Text(basetext, localtext, othertext, ui=ui, premerge=premerge)
 
     conflictscount = 0
     if mode == "union":
