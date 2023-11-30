@@ -2802,7 +2802,9 @@ def _config(
             oldprofiles = set()
 
         try:
-            if reset:
+            # edensparse only supports a single profile being active at time.
+            # Start from scratch for every update.
+            if reset or _isedensparse(repo):
                 newinclude = set()
                 newexclude = set()
                 newprofiles = set()
@@ -2815,26 +2817,28 @@ def _config(
                 err = _("paths cannot be absolute")
                 raise error.Abort(err)
 
-            adjustpats = False
-            if include or exclude or delete or uninclude or unexclude:
-                if not ui.configbool("sparse", "includereporootpaths", False):
-                    adjustpats = True
-            if enableprofile or disableprofile:
-                if not ui.configbool("sparse", "enablereporootpaths", True):
-                    adjustpats = True
-            if adjustpats:
-                # supplied file patterns should be treated as relative
-                # to current working dir, so we need to convert them first
-                root, cwd = repo.root, repo.getcwd()
-                abspats = []
-                for kindpat in pats:
-                    kind, pat = matchmod._patsplit(kindpat, None)
-                    if kind in cwdrealtivepatkinds or kind is None:
-                        kindpat = (kind + ":" if kind else "") + pathutil.canonpath(
-                            root, cwd, pat
-                        )
-                    abspats.append(kindpat)
-                pats = abspats
+            # Edensparse doesn't support config-based adjustments
+            if not _isedensparse(repo):
+                adjustpats = False
+                if include or exclude or delete or uninclude or unexclude:
+                    if not ui.configbool("sparse", "includereporootpaths", False):
+                        adjustpats = True
+                if enableprofile or disableprofile:
+                    if not ui.configbool("sparse", "enablereporootpaths", True):
+                        adjustpats = True
+                if adjustpats:
+                    # supplied file patterns should be treated as relative
+                    # to current working dir, so we need to convert them first
+                    root, cwd = repo.root, repo.getcwd()
+                    abspats = []
+                    for kindpat in pats:
+                        kind, pat = matchmod._patsplit(kindpat, None)
+                        if kind in cwdrealtivepatkinds or kind is None:
+                            kindpat = (kind + ":" if kind else "") + pathutil.canonpath(
+                                root, cwd, pat
+                            )
+                        abspats.append(kindpat)
+                    pats = abspats
 
             oldstatus = repo.status()
             if include:
@@ -2857,18 +2861,25 @@ def _config(
 
             repo.writesparseconfig(newinclude, newexclude, newprofiles)
 
-            fcounts = list(
-                map(len, repo._refreshsparse(ui, oldstatus, oldsparsematch, force))
-            )
+            if _isedensparse(repo):
+                repo._refreshsparse(ui, oldstatus, oldsparsematch, force)
+            else:
+                fcounts = list(
+                    map(len, repo._refreshsparse(ui, oldstatus, oldsparsematch, force))
+                )
 
-            profilecount = len(newprofiles - oldprofiles) - len(
-                oldprofiles - newprofiles
-            )
-            includecount = len(newinclude - oldinclude) - len(oldinclude - newinclude)
-            excludecount = len(newexclude - oldexclude) - len(oldexclude - newexclude)
-            _verbose_output(
-                ui, opts, profilecount, includecount, excludecount, *fcounts
-            )
+                profilecount = len(newprofiles - oldprofiles) - len(
+                    oldprofiles - newprofiles
+                )
+                includecount = len(newinclude - oldinclude) - len(
+                    oldinclude - newinclude
+                )
+                excludecount = len(newexclude - oldexclude) - len(
+                    oldexclude - newexclude
+                )
+                _verbose_output(
+                    ui, opts, profilecount, includecount, excludecount, *fcounts
+                )
         except Exception:
             repo.writesparseconfig(oldinclude, oldexclude, oldprofiles)
             raise

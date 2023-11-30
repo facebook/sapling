@@ -67,7 +67,9 @@ description: Minimal filter for testing purposes
     def get_active_filter_path(self) -> str:
         # The filter file should always exist when FilteredFS is enabled, so
         # any failure to read the filter file is a legit error.
-        return self._read_file_from_repo(self._get_relative_filter_config_path())
+        return self._read_file_from_repo(
+            self._get_relative_filter_config_path()
+        ).removeprefix("%include ")
 
     def read_active_filter(self) -> Optional[str]:
         active_filter = self.get_active_filter_path()
@@ -78,30 +80,25 @@ description: Minimal filter for testing purposes
         return self.hg("filteredfs", "show")
 
     def test_filter_enable(self) -> None:
-        with self.assertRaises(hgrepo.HgError):
-            self.set_active_filter("top_level_filter")
-            # self.assertEqual(self.get_active_filter_path(), "top_level_filter")
-            # self.assertEqual(self.read_active_filter(), self.testFilter1)
+        self.set_active_filter("top_level_filter")
+        self.assertEqual(self.get_active_filter_path(), "top_level_filter")
+        self.assertEqual(self.read_active_filter(), self.testFilter1)
 
-        with self.assertRaises(hgrepo.HgError):
-            self.set_active_filter("a/nested_filter_file")
-            # self.assertEqual(self.get_active_filter_path(), "a/nested_filter_file")
-            # self.assertEqual(self.read_active_filter(), self.testFilter1)
+        self.set_active_filter("a/nested_filter_file")
+        self.assertEqual(self.get_active_filter_path(), "a/nested_filter_file")
+        self.assertEqual(self.read_active_filter(), self.testFilter1)
 
-        with self.assertRaises(hgrepo.HgError):
-            self.set_active_filter("filters/null_filter")
-            # self.assertEqual(self.get_active_filter_path(), "filters/null_filter")
-            # self.assertEqual(self.read_active_filter(), self.testFilterNull)
+        self.set_active_filter("filters/null_filter")
+        self.assertEqual(self.get_active_filter_path(), "filters/null_filter")
+        self.assertEqual(self.read_active_filter(), self.testFilterNull)
 
-        with self.assertRaises(hgrepo.HgError):
-            self.set_active_filter("filters/metadata_only")
-            # self.assertEqual(self.get_active_filter_path(), "filters/metadata_only")
-            # self.assertEqual(self.read_active_filter(), self.testFilterOnlyMetadata)
+        self.set_active_filter("filters/metadata_only")
+        self.assertEqual(self.get_active_filter_path(), "filters/metadata_only")
+        self.assertEqual(self.read_active_filter(), self.testFilterOnlyMetadata)
 
     def test_filter_disable(self) -> None:
-        with self.assertRaises(hgrepo.HgError):
-            self.set_active_filter("top_level_filter")
-            # self.assertEqual(self.get_active_filter_path(), "top_level_filter")
+        self.set_active_filter("top_level_filter")
+        self.assertEqual(self.get_active_filter_path(), "top_level_filter")
 
         with self.assertRaises(hgrepo.HgError):
             self.remove_active_filter()

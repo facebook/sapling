@@ -67,10 +67,17 @@ Example
 from __future__ import division
 
 from sapling import error, match as matchmod, merge as mergemod, registrar
-
 from sapling.i18n import _
 
-from .sparse import _common_config_opts, SparseMixin
+from .sparse import (
+    _checknonexistingprofiles,
+    _common_config_opts,
+    _config,
+    getcommonopts,
+    normalizeprofile,
+    readsparseconfig,
+    SparseMixin,
+)
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -180,7 +187,13 @@ def disablefiltersubcmd(ui, repo, **opts) -> None:
 @subcmd("enable|enableprofile|enablefilter", _common_config_opts, "[FILTER]...")
 def enablefiltersubcmd(ui, repo, pat, **opts) -> None:
     """enable a filter"""
-    unimpl()
+    # Filters must not contain colons in their path
+    if ":" in pat:
+        raise error.Abort(_("filter file paths must not contain ':'"))
+    pat = [normalizeprofile(repo, pat)]
+    _checknonexistingprofiles(ui, repo, pat)
+    commonopts = getcommonopts(opts)
+    _config(ui, repo, pat, opts, enableprofile=True, **commonopts)
 
 
 @subcmd("switch|switchprofile", _common_config_opts, "[FILTER]...")
