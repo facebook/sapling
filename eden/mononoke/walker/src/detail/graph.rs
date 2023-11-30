@@ -1226,6 +1226,7 @@ mod tests {
             "git_delta_manifests",
             "testmanifest",
             "testshardedmanifest",
+            "bssm_v3",
         ]);
         let mut missing = HashSet::new();
         for t in a {

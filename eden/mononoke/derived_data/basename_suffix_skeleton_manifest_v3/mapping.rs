@@ -17,11 +17,17 @@ use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivableType;
 use derived_data_manager::DerivationContext;
 use derived_data_service_if::types as thrift;
+use futures::stream;
+use futures::StreamExt;
+use futures::TryStreamExt;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::BssmV3DirectoryId;
 use mononoke_types::ChangesetId;
 use mononoke_types::ThriftConvert;
+use skeleton_manifest::RootSkeletonManifestId;
+
+use crate::derive::derive_single;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct RootBssmV3DirectoryId(pub(crate) BssmV3DirectoryId);
@@ -68,12 +74,25 @@ impl BonsaiDerivable for RootBssmV3DirectoryId {
     type Dependencies = dependencies![];
 
     async fn derive_single(
-        _ctx: &CoreContext,
-        _derivation_ctx: &DerivationContext,
-        _bonsai: BonsaiChangeset,
-        _parents: Vec<Self>,
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        bonsai: BonsaiChangeset,
+        parents: Vec<Self>,
     ) -> Result<Self> {
-        unimplemented!("BssmV3Directory derivation is not implemented")
+        let parent_skeleton_manifests = stream::iter(bonsai.parents())
+            .map(|parent| derivation_ctx.derive_dependency::<RootSkeletonManifestId>(ctx, parent))
+            .buffered(100)
+            .try_collect::<Vec<_>>()
+            .await?;
+
+        derive_single(
+            ctx,
+            derivation_ctx,
+            bonsai,
+            parents,
+            parent_skeleton_manifests,
+        )
+        .await
     }
 
     async fn store_mapping(

@@ -14,6 +14,7 @@ use acl_regions::build_acl_regions;
 use acl_regions::ArcAclRegions;
 use anyhow::Result;
 use basename_suffix_skeleton_manifest::RootBasenameSuffixSkeletonManifest;
+use basename_suffix_skeleton_manifest_v3::RootBssmV3DirectoryId;
 use blame::RootBlameV2;
 use blobstore::Blobstore;
 use bonsai_git_mapping::ArcBonsaiGitMapping;
@@ -188,6 +189,7 @@ pub fn default_test_repo_config() -> RepoConfig {
             RootBasenameSuffixSkeletonManifest::NAME.to_string(),
             RootTestManifestDirectory::NAME.to_string(),
             RootTestShardedManifestDirectory::NAME.to_string(),
+            RootBssmV3DirectoryId::NAME.to_string(),
         },
         unode_version: UnodeVersion::V2,
         blame_version: BlameVersion::V2,
