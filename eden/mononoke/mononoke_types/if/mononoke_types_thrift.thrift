@@ -45,6 +45,7 @@ typedef IdType FsnodeId (rust.newtype)
 typedef IdType SkeletonManifestId (rust.newtype)
 typedef IdType MPathHash (rust.newtype)
 typedef IdType BasenameSuffixSkeletonManifestId (rust.newtype)
+typedef IdType TestManifestId (rust.newtype)
 
 typedef IdType ContentMetadataV2Id (rust.newtype)
 typedef IdType FastlogBatchId (rust.newtype)
@@ -488,6 +489,25 @@ union BssmEntry {
 struct BasenameSuffixSkeletonManifest {
   // Map of MPathElement -> BssmEntry
   1: ShardedMapNode subentries;
+} (rust.exhaustive)
+
+// TestManifest is a manifest type intended only to be used in tests. It contains
+// only the file names and the maximum basename length of all files in each directory.
+struct TestManifestFile {} (rust.exhaustive)
+struct TestManifestDirectory {
+  1: TestManifestId id;
+  2: i64 max_basename_length;
+} (rust.exhaustive)
+
+union TestManifestEntry {
+  1: TestManifestFile file;
+  2: TestManifestDirectory directory;
+} (rust.exhaustive)
+
+struct TestManifest {
+  1: map<MPathElement, TestManifestEntry> (
+    rust.type = "sorted_vector_map::SortedVectorMap",
+  ) subentries;
 } (rust.exhaustive)
 
 struct FsnodeFile {

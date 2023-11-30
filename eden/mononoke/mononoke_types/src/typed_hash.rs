@@ -42,6 +42,7 @@ use crate::rawbundle2::RawBundle2;
 use crate::redaction_key_list::RedactionKeyList;
 use crate::sharded_map::ShardedMapNode;
 use crate::skeleton_manifest::SkeletonManifest;
+use crate::test_manifest::TestManifest;
 use crate::thrift;
 use crate::unode::FileUnode;
 use crate::unode::ManifestUnode;
@@ -177,6 +178,9 @@ pub struct BlameId(Blake2);
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 pub struct RedactionKeyListId(Blake2);
+
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
+pub struct TestManifestId(Blake2);
 
 pub struct Blake2HexVisitor;
 
@@ -633,6 +637,14 @@ impl_typed_hash! {
     context_key => "fastlogbatch",
 }
 
+impl_typed_hash! {
+    hash_type => TestManifestId,
+    thrift_hash_type => thrift::TestManifestId,
+    value_type => TestManifest,
+    context_type => TestManifestIdContext,
+    context_key => "testmanifest",
+}
+
 impl From<ContentId> for ContentMetadataV2Id {
     fn from(content_id: ContentId) -> Self {
         Self(content_id.0)
@@ -778,6 +790,9 @@ mod test {
         let id = BasenameSuffixSkeletonManifestId::from_byte_array([1; 32]);
         assert_eq!(id.blobstore_key(), format!("bssm.blake2.{}", id),);
 
+        let id = TestManifestId::from_byte_array([1; 32]);
+        assert_eq!(id.blobstore_key(), format!("testmanifest.blake2.{}", id),);
+
         let id = FsnodeId::from_byte_array([1; 32]);
         assert_eq!(id.blobstore_key(), format!("fsnode.blake2.{}", id));
 
@@ -851,6 +866,11 @@ mod test {
         assert_eq!(id, deserialized);
 
         let id = BasenameSuffixSkeletonManifestId::from_byte_array([1; 32]);
+        let serialized = serde_json::to_string(&id).unwrap();
+        let deserialized = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(id, deserialized);
+
+        let id = TestManifestId::from_byte_array([1; 32]);
         let serialized = serde_json::to_string(&id).unwrap();
         let deserialized = serde_json::from_str(&serialized).unwrap();
         assert_eq!(id, deserialized);
