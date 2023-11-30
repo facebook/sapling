@@ -7,6 +7,7 @@
 
 use std::path::PathBuf;
 
+use tracing::warn;
 use types::HgId;
 
 pub(crate) struct FilterGenerator {
@@ -39,6 +40,14 @@ impl FilterGenerator {
         if filter_path.is_empty() {
             return Ok(None);
         }
+
+        let filter_path = match filter_path.strip_prefix("%include ") {
+            Some(p) => p,
+            None => {
+                warn!("Unexpected edensparse config format: {}", filter_path);
+                return Ok(None);
+            }
+        };
 
         // Eden's ObjectIDs must be durable (once they exist, Eden must always be able to derive
         // the underlying object from them). FilteredObjectIDs contain FilterIDs, and therefore we
