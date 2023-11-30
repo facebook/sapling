@@ -46,9 +46,11 @@ def update(
             # we committed the changes, checked out the other branch then tried
             # to graft the changes here.
 
-            if p1ctx == destctx:
-                # No update to perform.
-                # Just invoke the hooks and return.
+            if p1ctx == destctx and "edensparse" not in repo.requirements:
+                # If edensparse is active, we need to support in-place checkout
+                # operations to allow filter updates.
+                # If edensparse is disabled, we just invoke the hooks and
+                # return early.
                 repo.hook("preupdate", throw=True, parent1=deststr, parent2="")
                 repo.hook("update", parent1=deststr, parent2="", error=0)
                 return 0, 0, 0, 0
