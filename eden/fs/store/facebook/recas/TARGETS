@@ -13,6 +13,7 @@ cpp_library(
         "fbsource//third-party/fmt:fmt",
         ":recas-digest-util",
         "//eden/fs/model:model",
+        "//eden/fs/store:store",
         "//folly:range",
         "//folly/experimental/coro:future_util",
         "//folly/experimental/coro:task",
@@ -22,7 +23,7 @@ cpp_library(
         "//remote_execution/lib/if:common-cpp2-types",
     ],
     exported_deps = [
-        "//eden/fs/store:store",
+        "//eden/fs/store:backing_store_interface",
         "//eden/fs/utils:path",
         "//remote_execution/lib/cpp:cas_daemon_client_builder",
         "//remote_execution/lib/cpp:prod_config_init",
