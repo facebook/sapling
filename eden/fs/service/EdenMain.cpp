@@ -135,6 +135,32 @@ void EdenMain::runServer(const EdenServer& server) {
       kServiceName, server.getHandler().get(), [&] { server.serve(); });
 }
 
+namespace {
+std::shared_ptr<HgQueuedBackingStore> createHgQueuedBackingStore(
+    const BackingStoreFactory::CreateParams& params,
+    const AbsolutePath& repoPath,
+    std::shared_ptr<ReloadableConfig> reloadableConfig) {
+  auto underlyingStore = std::make_unique<HgBackingStore>(
+      repoPath,
+      params.localStore,
+      params.serverState->getThreadPool().get(),
+      reloadableConfig,
+      params.sharedStats.copy(),
+      params.serverState->getStructuredLogger(),
+      &params.serverState->getFaultInjector());
+
+  return std::make_shared<HgQueuedBackingStore>(
+      params.localStore,
+      params.sharedStats.copy(),
+      std::move(underlyingStore),
+      reloadableConfig,
+      params.serverState->getStructuredLogger(),
+      std::make_unique<BackingStoreLogger>(
+          params.serverState->getStructuredLogger(),
+          params.serverState->getProcessInfoCache()));
+}
+} // namespace
+
 void EdenMain::registerStandardBackingStores() {
   using CreateParams = BackingStoreFactory::CreateParams;
 
@@ -145,29 +171,16 @@ void EdenMain::registerStandardBackingStores() {
   registerBackingStore(BackingStoreType::HG, [](const CreateParams& params) {
     const auto repoPath = realpath(params.name);
     auto reloadableConfig = params.serverState->getReloadableConfig();
-    auto store = std::make_unique<HgBackingStore>(
-        repoPath,
-        params.localStore,
-        params.serverState->getThreadPool().get(),
-        reloadableConfig,
-        params.sharedStats.copy(),
-        params.serverState->getStructuredLogger(),
-        &params.serverState->getFaultInjector());
+
+    auto hgQueuedBackingStore =
+        createHgQueuedBackingStore(params, repoPath, reloadableConfig);
 
     auto localStoreCaching = reloadableConfig->getEdenConfig()
                                  ->hgEnableBlobMetaLocalStoreCaching.getValue()
         ? LocalStoreCachedBackingStore::CachingPolicy::TreesAndBlobMetadata
         : LocalStoreCachedBackingStore::CachingPolicy::Trees;
     return std::make_shared<LocalStoreCachedBackingStore>(
-        std::make_shared<HgQueuedBackingStore>(
-            params.localStore,
-            params.sharedStats.copy(),
-            std::move(store),
-            reloadableConfig,
-            params.serverState->getStructuredLogger(),
-            std::make_unique<BackingStoreLogger>(
-                params.serverState->getStructuredLogger(),
-                params.serverState->getProcessInfoCache())),
+        std::move(hgQueuedBackingStore),
         params.localStore,
         params.sharedStats.copy(),
         localStoreCaching);
@@ -178,34 +191,19 @@ void EdenMain::registerStandardBackingStores() {
       [](const BackingStoreFactory::CreateParams& params) {
         const auto repoPath = realpath(params.name);
         auto reloadableConfig = params.serverState->getReloadableConfig();
-        auto underlyingStore = std::make_unique<HgBackingStore>(
-            repoPath,
-            params.localStore,
-            params.serverState->getThreadPool().get(),
-            reloadableConfig,
-            params.sharedStats.copy(),
-            params.serverState->getStructuredLogger(),
-            &params.serverState->getFaultInjector());
-
-        auto hgQueuedBackingStore = std::make_shared<HgQueuedBackingStore>(
-            params.localStore,
-            params.sharedStats.copy(),
-            std::move(underlyingStore),
-            reloadableConfig,
-            params.serverState->getStructuredLogger(),
-            std::make_unique<BackingStoreLogger>(
-                params.serverState->getStructuredLogger(),
-                params.serverState->getProcessInfoCache()));
         auto localStoreCaching =
             reloadableConfig->getEdenConfig()
                 ->hgEnableBlobMetaLocalStoreCaching.getValue()
             ? LocalStoreCachedBackingStore::CachingPolicy::TreesAndBlobMetadata
             : LocalStoreCachedBackingStore::CachingPolicy::Trees;
         auto hgSparseFilter = std::make_unique<HgSparseFilter>(repoPath);
+
+        auto hgQueuedBackingStore =
+            createHgQueuedBackingStore(params, repoPath, reloadableConfig);
         auto wrappedStore = std::make_shared<FilteredBackingStore>(
             std::move(hgQueuedBackingStore), std::move(hgSparseFilter));
         return std::make_shared<LocalStoreCachedBackingStore>(
-            wrappedStore,
+            std::move(wrappedStore),
             params.localStore,
             params.sharedStats.copy(),
             localStoreCaching);
