@@ -43,6 +43,13 @@ pub trait ShardedMapV2Value: ThriftConvert + Debug + Clone + Send + Sync + 'stat
     type NodeId: MononokeId<Thrift = thrift::ShardedMapV2NodeId, Value = ShardedMapV2Node<Self>>;
     type Context: IdContext<Id = Self::NodeId>;
     type RollupData: Rollup<Self>;
+
+    /// The weight of a ShardedMapV2 value. In most cases this should always 1 so this is
+    /// the default implementation. Only cases that have high variance between the sizes
+    /// of values should override this.
+    fn weight(&self) -> usize {
+        1
+    }
 }
 
 pub trait Rollup<Value: ShardedMapV2Value>:
@@ -233,7 +240,7 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
 
     fn weight(&self) -> usize {
         *self.weight.get_or_init(|| {
-            self.value.iter().len()
+            self.value.as_ref().map_or(0, |v| v.weight())
                 + self
                     .children
                     .iter()
@@ -336,7 +343,7 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
 
         // Assume that all children are not going to be inlined, then the weight of the
         // node will be the number of children plus one if the current node has a value.
-        let weight = &mut (current_value.iter().len() + children.len());
+        let weight = &mut (current_value.as_ref().map_or(0, |v| v.weight()) + children.len());
 
         let children_pre_inlining_futures = children
             .into_iter()
@@ -856,7 +863,8 @@ mod test {
 
             // The minimum weight that this node could have is the number of its children
             // plus one if it has a value.
-            let min_possible_weight = map.value.iter().len() + map.children.len();
+            let min_possible_weight =
+                map.value.as_ref().map_or(0, |v| v.weight()) + map.children.len();
 
             let weight_limit = ShardedMapV2Node::<TestValue>::weight_limit()?;
 
@@ -867,7 +875,7 @@ mod test {
                 bail!("weight of sharded map node exceeds the limit");
             }
 
-            let mut calculated_weight = map.value.iter().len();
+            let mut calculated_weight = map.value.as_ref().map_or(0, |v| v.weight());
             let mut calculated_size = map.value.iter().len();
             let mut calculated_rollup_data = map
                 .value
