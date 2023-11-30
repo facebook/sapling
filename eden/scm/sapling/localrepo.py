@@ -367,6 +367,8 @@ class localrepository:
         "lfs",
         # enable symlinks on Windows
         "windowssymlinks",
+        # allows sparse eden (filteredfs) checkouts
+        "edensparse",
     }
     _basestoresupported = {
         "visibleheads",
