@@ -959,7 +959,8 @@ def _wraprepo(ui, repo) -> None:
             return super(SparseRepo, self).invalidatecaches()
 
         def invalidatesparsecache(self):
-            self._sparsecache.clear()
+            if not _isedensparse(self):
+                self._sparsecache.clear()
 
         def sparsematch(self, *revs, **kwargs):
             """Returns the sparse match function for the given revs
@@ -1043,11 +1044,20 @@ def _wraprepo(ui, repo) -> None:
             return activeprofiles
 
         def writesparseconfig(self, include, exclude, profiles):
-            raw = "%s[include]\n%s\n[exclude]\n%s\n" % (
-                "".join(["%%include %s\n" % p for p in sorted(profiles)]),
-                "\n".join(sorted(include)),
-                "\n".join(sorted(exclude)),
-            )
+            raw = ""
+            if _isedensparse(self):
+                profiles = list(profiles)
+                if len(profiles) > 1 or len(include) != 0 or len(exclude) != 0:
+                    raise error.ProgrammingError(
+                        "the edensparse extension only supports 1 active profile (and no additional includes/excludes) at a time"
+                    )
+                raw = f"%include {profiles[0]}"
+            else:
+                raw = "%s[include]\n%s\n[exclude]\n%s\n" % (
+                    "".join(["%%include %s\n" % p for p in sorted(profiles)]),
+                    "\n".join(sorted(include)),
+                    "\n".join(sorted(exclude)),
+                )
             self.localvfs.writeutf8("sparse", raw)
             self.invalidatesparsecache()
 
@@ -1333,9 +1343,22 @@ def readsparseconfig(
                 _("unknown sparse config line: '%s' section: '%s'\n") % (line, current)
             )
 
+    # Edensparse only supports v2 profiles
+    if _isedensparse(repo):
+        metadata["version"] = []
+        metadata["version"] = ["2"]
+
     metadata = {key: "\n".join(value).strip() for key, value in metadata.items()}
     # pyre-fixme[19]: Expected 0 positional arguments.
-    return RawSparseConfig(raw, filename, lines, profiles, metadata)
+    rawconfig = RawSparseConfig(raw, filename, lines, profiles, metadata)
+    if _isedensparse(repo):
+        include, exclude = rawconfig.toincludeexclude()
+        if len(profiles) > 1 or len(include) != 0 or len(exclude) != 0:
+            raise error.ProgrammingError(
+                "the edensparse extension only supports 1 active profile (and no additional includes/excludes) at a time"
+            )
+
+    return rawconfig
 
 
 def readsparseprofile(
@@ -2469,24 +2492,24 @@ def disableprofilesubcmd(ui, repo, *pats, **opts) -> None:
     _config(ui, repo, pats, opts, disableprofile=True, **commonopts)
 
 
+def normalizeprofile(repo, p):
+    # We want a canonical path from root of repo. Check if given path is already
+    # canonical or is relative from cwd. This also normalizes path separators.
+    for maybebase in (repo.root, repo.getcwd()):
+        try:
+            norm = pathutil.canonpath(repo.root, maybebase, p)
+        except Exception:
+            continue
+        if repo.wvfs.exists(norm):
+            return norm
+
+    return p
+
+
 @subcmd("enable|enableprofile", _common_config_opts, "[PROFILE]...")
 def enableprofilesubcmd(ui, repo, *pats, **opts) -> None:
     """enable a sparse profile"""
-
-    def normalizeprofile(p):
-        # We want a canonical path from root of repo. Check if given path is already
-        # canonical or is relative from cwd. This also normalizes path separators.
-        for maybebase in (repo.root, repo.getcwd()):
-            try:
-                norm = pathutil.canonpath(repo.root, maybebase, p)
-            except Exception:
-                continue
-            if repo.wvfs.exists(norm):
-                return norm
-
-        return p
-
-    pats = [normalizeprofile(p) for p in pats]
+    pats = [normalizeprofile(repo, p) for p in pats]
     _checknonexistingprofiles(ui, repo, pats)
     commonopts = getcommonopts(opts)
     _config(ui, repo, pats, opts, enableprofile=True, **commonopts)
