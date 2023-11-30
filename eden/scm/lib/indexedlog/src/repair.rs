@@ -85,7 +85,9 @@ impl RepairMessage {
         let mut additional_outputs = Vec::new();
 
         // Truncate the file if it's too large (ex. when repair is run
-        // in a loop).
+        // in a loop). This check and the actual truncation is racy.
+        // However, this is only for diagnostics. It does not affect
+        // the main data correctness.
         let path = dir.join("repair.log");
         let mut need_truncate = false;
         if let Ok(meta) = fs::metadata(&path) {
@@ -97,7 +99,9 @@ impl RepairMessage {
 
         let mut opts = fs::OpenOptions::new();
         opts.write(true).create(true);
-        if !need_truncate {
+        if need_truncate {
+            opts.truncate(true);
+        } else {
             opts.append(true);
         }
 
