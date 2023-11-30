@@ -10,7 +10,6 @@
 #include <folly/ExceptionWrapper.h>
 #include <folly/Expected.h>
 #include <folly/String.h>
-#include <folly/futures/Future.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <folly/lang/Bits.h>
@@ -102,10 +101,10 @@ ImmediateFuture<StoreResult> LocalStore::getImmediateFuture(
   return makeImmediateFutureWith([&] { return get(keySpace, id); });
 }
 
-folly::Future<std::vector<StoreResult>> LocalStore::getBatch(
+ImmediateFuture<std::vector<StoreResult>> LocalStore::getBatch(
     KeySpace keySpace,
     const std::vector<folly::ByteRange>& keys) const {
-  return folly::makeFutureWith([keySpace, keys, this] {
+  return makeImmediateFutureWith([keySpace, keys, this] {
     std::vector<StoreResult> results;
     for (auto& key : keys) {
       results.emplace_back(get(keySpace, key));

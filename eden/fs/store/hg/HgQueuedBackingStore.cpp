@@ -682,7 +682,8 @@ folly::SemiFuture<folly::Unit> HgQueuedBackingStore::prefetchBlobs(
             t.throwUnlessValue();
           }
         });
-      });
+      })
+      .semi();
 }
 
 void HgQueuedBackingStore::logMissingProxyHash() {

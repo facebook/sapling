@@ -14,11 +14,6 @@
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/utils/PathFuncs.h"
 
-namespace folly {
-template <typename T>
-class Future;
-} // namespace folly
-
 namespace facebook::eden {
 
 class EdenStats;
@@ -108,7 +103,7 @@ class HgProxyHash {
    * The caller is responsible for keeping the ObjectIdRange alive for the
    * duration of the future.
    */
-  static folly::Future<std::vector<HgProxyHash>>
+  static ImmediateFuture<std::vector<HgProxyHash>>
   getBatch(LocalStore* store, ObjectIdRange blobHashes, EdenStats& stats);
 
   /**

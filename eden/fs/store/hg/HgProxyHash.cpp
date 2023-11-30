@@ -8,7 +8,6 @@
 #include "eden/fs/store/hg/HgProxyHash.h"
 
 #include <fmt/core.h>
-#include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
 
 #include "eden/fs/store/LocalStore.h"
@@ -65,7 +64,7 @@ std::optional<HgProxyHash> HgProxyHash::tryParseEmbeddedProxyHash(
       "Unknown proxy hash type: size {}, type {}", edenObjectId.size(), type);
 }
 
-folly::Future<std::vector<HgProxyHash>> HgProxyHash::getBatch(
+ImmediateFuture<std::vector<HgProxyHash>> HgProxyHash::getBatch(
     LocalStore* store,
     ObjectIdRange blobHashes,
     EdenStats& edenStats) {
@@ -83,7 +82,7 @@ folly::Future<std::vector<HgProxyHash>> HgProxyHash::getBatch(
 
   // If all hashes are embedded, we can just return them
   if (byteRangesIndexes.empty()) {
-    return folly::Future<std::vector<HgProxyHash>>{std::move(results)};
+    return std::move(results);
   }
 
   // Otherwise, we have some non-embedded hashes.
