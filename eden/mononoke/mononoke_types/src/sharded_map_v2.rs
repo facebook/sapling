@@ -74,8 +74,11 @@ pub struct ShardedMapV2Node<Value: ShardedMapV2Value> {
     size: OnceLock<usize>,
 }
 
+#[derive(Derivative)]
+#[derivative(Default(bound = ""))]
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum LoadableShardedMapV2Node<Value: ShardedMapV2Value> {
+    #[derivative(Default)]
     Inlined(ShardedMapV2Node<Value>),
     Stored(ShardedMapV2StoredNode<Value>),
 }

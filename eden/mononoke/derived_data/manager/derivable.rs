@@ -38,6 +38,7 @@ use crate::context::DerivationContext;
 pub enum DerivableType {
     BlameV2,
     Bssm,
+    BssmV3,
     ChangesetInfo,
     DeletedManifests,
     Fastlog,
@@ -58,6 +59,7 @@ impl DerivableType {
         match self {
             DerivableType::BlameV2 => "blame",
             DerivableType::Bssm => "bssm",
+            DerivableType::BssmV3 => "bssm_v3",
             DerivableType::ChangesetInfo => "changeset_info",
             DerivableType::DeletedManifests => "deleted_manifest",
             DerivableType::Fastlog => "fastlog",

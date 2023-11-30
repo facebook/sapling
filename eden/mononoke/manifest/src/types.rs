@@ -22,6 +22,8 @@ use futures::stream::TryStreamExt;
 use mononoke_types::basename_suffix_skeleton_manifest::BasenameSuffixSkeletonManifest;
 use mononoke_types::basename_suffix_skeleton_manifest::BssmDirectory;
 use mononoke_types::basename_suffix_skeleton_manifest::BssmEntry;
+use mononoke_types::basename_suffix_skeleton_manifest_v3::BssmV3Directory;
+use mononoke_types::basename_suffix_skeleton_manifest_v3::BssmV3Entry;
 use mononoke_types::fsnode::Fsnode;
 use mononoke_types::fsnode::FsnodeEntry;
 use mononoke_types::fsnode::FsnodeFile;
@@ -114,6 +116,34 @@ impl<Store: Blobstore> TrieMapOps<Store, Entry<TestShardedManifestDirectory, ()>
             .await?
             .into_entries(ctx, blobstore)
             .map_ok(|(k, v)| (k, convert_test_sharded_manifest(v)))
+            .boxed())
+    }
+}
+
+#[async_trait]
+impl<Store: Blobstore> TrieMapOps<Store, Entry<BssmV3Directory, ()>>
+    for LoadableShardedMapV2Node<BssmV3Entry>
+{
+    async fn expand(
+        self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<(Option<Entry<BssmV3Directory, ()>>, Vec<(u8, Self)>)> {
+        let (entry, children) = self.expand(ctx, blobstore).await?;
+        Ok((entry.map(bssm_v3_to_mf_entry), children))
+    }
+
+    async fn into_stream(
+        self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<BoxStream<'async_trait, Result<(SmallVec<[u8; 24]>, Entry<BssmV3Directory, ()>)>>>
+    {
+        Ok(self
+            .load(ctx, blobstore)
+            .await?
+            .into_entries(ctx, blobstore)
+            .map_ok(|(k, v)| (k, bssm_v3_to_mf_entry(v)))
             .boxed())
     }
 }
@@ -265,6 +295,69 @@ impl<Store: Blobstore> AsyncManifest<Store> for BasenameSuffixSkeletonManifest {
         _blobstore: &Store,
     ) -> Result<Self::TrieMapType> {
         Ok(ShardedTrieMap::new(self.subentries))
+    }
+}
+
+fn bssm_v3_to_mf_entry(entry: BssmV3Entry) -> Entry<BssmV3Directory, ()> {
+    match entry {
+        BssmV3Entry::Directory(dir) => Entry::Tree(dir),
+        BssmV3Entry::File => Entry::Leaf(()),
+    }
+}
+
+#[async_trait]
+impl<Store: Blobstore> AsyncManifest<Store> for BssmV3Directory {
+    type TreeId = BssmV3Directory;
+    type LeafId = ();
+    type TrieMapType = LoadableShardedMapV2Node<BssmV3Entry>;
+
+    async fn list(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        anyhow::Ok(
+            self.clone()
+                .into_subentries(ctx, blobstore)
+                .map_ok(|(path, entry)| (path, bssm_v3_to_mf_entry(entry)))
+                .boxed(),
+        )
+    }
+
+    async fn list_prefix(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+        prefix: &[u8],
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        anyhow::Ok(
+            self.clone()
+                .into_prefix_subentries(ctx, blobstore, prefix)
+                .map_ok(|(path, entry)| (path, bssm_v3_to_mf_entry(entry)))
+                .boxed(),
+        )
+    }
+
+    async fn lookup(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+        name: &MPathElement,
+    ) -> Result<Option<Entry<Self::TreeId, Self::LeafId>>> {
+        Ok(self
+            .lookup(ctx, blobstore, name)
+            .await?
+            .map(bssm_v3_to_mf_entry))
+    }
+
+    async fn into_trie_map(
+        self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+    ) -> Result<Self::TrieMapType> {
+        Ok(LoadableShardedMapV2Node::Inlined(self.subentries))
     }
 }
 

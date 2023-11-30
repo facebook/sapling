@@ -8,10 +8,10 @@
 use mononoke_types::NonRootMPath;
 
 /// Put reversed basename in beginning
-pub(crate) struct BssmPath(NonRootMPath);
+pub struct BssmPath(NonRootMPath);
 
 impl BssmPath {
-    pub(crate) fn transform(path: NonRootMPath) -> Self {
+    pub fn transform(path: NonRootMPath) -> Self {
         let mut rev_basename = path.split_dirname().1.clone();
         rev_basename.reverse();
         // Let's add the basename in the end of the path as well
@@ -28,7 +28,7 @@ impl BssmPath {
         Self(path)
     }
 
-    pub(crate) fn into_raw(self) -> NonRootMPath {
+    pub fn into_raw(self) -> NonRootMPath {
         self.0
     }
 

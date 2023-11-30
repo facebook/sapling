@@ -5,13 +5,7 @@
  * GNU General Public License version 2.
  */
 
-mod derive;
 mod mapping;
-mod ops;
-mod path;
-#[cfg(test)]
-mod tests;
 
 pub use mapping::format_key;
-pub use mapping::RootBasenameSuffixSkeletonManifest;
-pub use path::BssmPath;
+pub use mapping::RootBssmV3DirectoryId;

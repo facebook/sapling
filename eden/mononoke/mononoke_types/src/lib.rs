@@ -94,6 +94,7 @@ pub use thrift_convert::ThriftConvert;
 pub use trie_map::TrieMap;
 pub use typed_hash::BasenameSuffixSkeletonManifestId;
 pub use typed_hash::BlobstoreKey;
+pub use typed_hash::BssmV3DirectoryId;
 pub use typed_hash::ChangesetId;
 pub use typed_hash::ChangesetIdPrefix;
 pub use typed_hash::ChangesetIdsResolvedFromPrefix;
