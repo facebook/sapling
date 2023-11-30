@@ -15,6 +15,7 @@ export enum BannerKind {
   default = 'default',
   warning = 'warning',
   error = 'error',
+  green = 'green',
 }
 
 export function Banner({

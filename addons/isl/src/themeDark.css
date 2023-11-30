@@ -48,6 +48,7 @@ html .vscode-dark {
   --banner-warning-bg: #deb94066;
   --banner-error-bg: #fa7e7c55;
   --banner-default-bg: #45454577;
+  --banner-green-bg: #73a280;
 
   /* Signal colors */
   --signal-good-bg: #2da44e;

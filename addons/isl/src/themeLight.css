@@ -48,6 +48,7 @@ html .vscode-light {
   --banner-warning-bg: #f9ec5666;
   --banner-error-bg: #fa7e7c66;
   --banner-default-bg: var(--tooltip-background);
+  --banner-green-bg: #b0ddbd;
 
   --signal-good-bg: #2da44e;
   --signal-medium-bg: #d5b14e;

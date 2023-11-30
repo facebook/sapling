@@ -36,6 +36,9 @@
 .banner-warning {
   background-color: var(--banner-warning-bg);
 }
+.banner-green {
+  background-color: var(--banner-green-bg);
+}
 .banner-error {
   background-color: var(--banner-error-bg);
 }
