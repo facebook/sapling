@@ -277,11 +277,7 @@ export const Commit = memo(
             onClick={() => handlePreviewedOperation(/* cancel */ true)}>
             <T>Cancel</T>
           </VSCodeButton>
-          <VSCodeButton
-            appearance="primary"
-            onClick={() => handlePreviewedOperation(/* cancel */ false)}>
-            <T>Run Combine</T>
-          </VSCodeButton>
+          <ConfirmCombineButton onClick={() => handlePreviewedOperation(/* cancel */ false)} />
         </React.Fragment>,
       );
     }
@@ -441,6 +437,15 @@ function ConfirmHideButton({onClick}: {onClick: () => unknown}) {
   return (
     <VSCodeButton ref={ref} appearance="primary" onClick={onClick}>
       <T>Hide</T>
+    </VSCodeButton>
+  );
+}
+
+function ConfirmCombineButton({onClick}: {onClick: () => unknown}) {
+  const ref = useAutofocusRef() as React.MutableRefObject<null>;
+  return (
+    <VSCodeButton ref={ref} appearance="primary" onClick={onClick}>
+      <T>Run Combine</T>
     </VSCodeButton>
   );
 }
