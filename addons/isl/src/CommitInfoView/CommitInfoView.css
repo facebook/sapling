@@ -125,6 +125,14 @@
   gap: var(--pad);
   margin-left: auto;
 }
+.commit-info-actions-bar-row {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+  flex-direction: row;
+  gap: var(--pad);
+  margin-left: auto;
+}
 
 .commit-info-view-toolbar-top {
   padding: 0 var(--pad);

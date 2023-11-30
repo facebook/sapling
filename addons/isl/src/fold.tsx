@@ -144,7 +144,7 @@ function bottomMostOfSelection(
   return baseHash;
 }
 
-export function FoldButton({commit}: {commit: CommitInfo}) {
+export function FoldButton({commit}: {commit?: CommitInfo}) {
   const foldable = useRecoilValue(foldableSelection);
   const onClick = useRecoilCallback(({set, snapshot}) => () => {
     if (foldable == null) {
@@ -162,7 +162,7 @@ export function FoldButton({commit}: {commit: CommitInfo}) {
     set(operationBeingPreviewed, new FoldOperation(foldable, message));
     set(selectedCommits, new Set([getFoldRangeCommitHash(foldable, /* isPreview */ true)]));
   });
-  if (foldable?.[0]?.hash !== commit.hash) {
+  if (foldable == null || (commit != null && foldable?.[0]?.hash !== commit.hash)) {
     return null;
   }
   return (

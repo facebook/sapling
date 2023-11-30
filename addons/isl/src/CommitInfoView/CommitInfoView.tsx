@@ -30,7 +30,7 @@ import {
   latestCommitMessageFields,
 } from '../codeReview/CodeReviewInfo';
 import {submitAsDraft, SubmitAsDraftCheckbox} from '../codeReview/DraftCheckbox';
-import {useRunFoldPreview} from '../fold';
+import {FoldButton, useRunFoldPreview} from '../fold';
 import {t, T} from '../i18n';
 import {messageSyncingEnabledState, updateRemoteMessage} from '../messageSyncing';
 import {AmendMessageOperation} from '../operations/AmendMessageOperation';
@@ -144,6 +144,9 @@ export function MultiCommitInfo({selectedCommits}: {selectedCommits: Array<Commi
         {commitsWithDiffs.length === 0 ? null : (
           <SubmitUpdateMessageInput commits={selectedCommits} />
         )}
+        <div className="commit-info-actions-bar-row">
+          <FoldButton />
+        </div>
         <div className="commit-info-actions-bar-left">
           <SubmitAsDraftCheckbox commitsToBeSubmit={selectedCommits} />
         </div>
