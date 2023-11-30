@@ -43,6 +43,8 @@ py_class!(pub class PyEdenClient |py| {
     data inner: Arc<rsworkingcopy::workingcopy::EdenFsClient>;
 });
 
+mod impl_into;
+
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "workingcopy"].join(".");
     let m = PyModule::new(py, &name)?;
@@ -55,6 +57,8 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
         "parsegitsubmodules",
         py_fn!(py, parse_git_submodules(data: &PyBytes)),
     )?;
+
+    impl_into::register(py);
 
     Ok(m)
 }
@@ -309,6 +313,12 @@ impl ExtractInnerRef for mergestate {
 
     fn extract_inner_ref<'a>(&'a self, py: Python<'a>) -> &'a Self::Inner {
         self.ms(py)
+    }
+}
+
+impl workingcopy {
+    pub fn get_wc(&self, py: Python) -> Arc<RwLock<WorkingCopy>> {
+        self.inner(py).clone()
     }
 }
 

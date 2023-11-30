@@ -11,7 +11,9 @@ checkout = { version = "0.1.0", path = "../../../../lib/checkout" }
 configmodel = { version = "0.1.0", path = "../../../../lib/config/model" }
 cpython = { version = "0.7.1", default-features = false }
 cpython_ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
+io = { version = "0.1.0", path = "../../../../lib/io", optional = true }
 manifest-tree = { version = "0.1.0", path = "../../../../lib/manifest-tree" }
+parking_lot = { version = "0.12.1", features = ["send_guard"] }
 pathmatcher = { version = "0.1.0", path = "../../../../lib/pathmatcher" }
 progress-model = { version = "0.1.0", path = "../../../../lib/progress/model" }
 pymanifest = { version = "0.1.0", path = "../pymanifest" }
@@ -20,3 +22,8 @@ pystatus = { version = "0.1.0", path = "../pystatus" }
 pytreestate = { version = "0.1.0", path = "../pytreestate" }
 storemodel = { version = "0.1.0", path = "../../../../lib/storemodel" }
 vfs = { version = "0.1.0", path = "../../../../lib/vfs" }
+workingcopy = { version = "0.1.0", path = "../../../../lib/workingcopy", optional = true }
+
+[features]
+default = []
+eden = ["checkout/eden", "io", "workingcopy"]

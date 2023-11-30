@@ -65,6 +65,8 @@ mod actions;
 pub mod clone;
 #[allow(dead_code)]
 mod conflict;
+#[cfg(feature = "eden")]
+pub mod edenfs;
 #[allow(dead_code)]
 mod merge;
 

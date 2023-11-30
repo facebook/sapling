@@ -39,6 +39,9 @@ use vfs::VFS;
 
 type ArcFileStore = Arc<dyn FileStore>;
 
+#[cfg(feature = "eden")]
+pub mod feature_eden;
+
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "checkout"].join(".");
     let m = PyModule::new(py, &name)?;
@@ -50,6 +53,8 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
         "fixsymlinks",
         py_fn!(py, fix_symlinks(paths: Vec<String>, root: PyPathBuf)),
     )?;
+    #[cfg(feature = "eden")]
+    feature_eden::populate_module(py, &m)?;
     Ok(m)
 }
 

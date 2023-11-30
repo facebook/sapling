@@ -21,9 +21,11 @@ progress-model = { version = "0.1.0", path = "../progress/model" }
 repo = { version = "0.1.0", path = "../repo" }
 repolock = { version = "0.1.0", path = "../repolock" }
 serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
+spawn-ext = { version = "0.1.0", path = "../spawn-ext" }
 status = { version = "0.1.0", path = "../status" }
 storemodel = { version = "0.1.0", path = "../storemodel" }
 thiserror = "1.0.43"
+toml = { version = "0.8.4", optional = true }
 tracing = "0.1.40"
 treestate = { version = "0.1.0", path = "../treestate" }
 types = { version = "0.1.0", path = "../types" }
@@ -41,3 +43,6 @@ walkdir = "2.3"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 fs-err = { version = "2.6.0", features = ["tokio"] }
+
+[features]
+eden = ["toml"]
