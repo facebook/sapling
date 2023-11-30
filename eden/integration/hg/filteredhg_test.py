@@ -100,9 +100,8 @@ description: Minimal filter for testing purposes
         self.set_active_filter("top_level_filter")
         self.assertEqual(self.get_active_filter_path(), "top_level_filter")
 
-        with self.assertRaises(hgrepo.HgError):
-            self.remove_active_filter()
-            # self.assertNotEqual(self.get_active_filter_path(), "top_level_filter")
+        self.remove_active_filter()
+        self.assertEqual(self.get_active_filter_path(), "")
 
     def test_filter_enable_invalid_path(self) -> None:
         # Filters shouldn't have ":" in them

@@ -2852,7 +2852,12 @@ def _config(
             elif enableprofile:
                 newprofiles.update(pats)
             elif disableprofile:
-                newprofiles.difference_update(pats)
+                if _isedensparse(repo):
+                    # There's only 1 profile active at a time for edensparse
+                    # checkouts, so we can simply disable it
+                    newprofiles = set()
+                else:
+                    newprofiles.difference_update(pats)
             elif uninclude:
                 newinclude.difference_update(pats)
             elif unexclude:

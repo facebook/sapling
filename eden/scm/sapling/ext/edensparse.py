@@ -166,7 +166,8 @@ def resetsubcmd(ui, repo, **opts) -> None:
 @subcmd("disable|disableprofile", _common_config_opts)
 def disablefiltersubcmd(ui, repo, **opts) -> None:
     """disable the current active filter"""
-    unimpl()
+    commonopts = getcommonopts(opts)
+    _config(ui, repo, [], opts, disableprofile=True, **commonopts)
 
 
 @subcmd("enable|enableprofile|enablefilter", _common_config_opts, "[FILTER]...")
