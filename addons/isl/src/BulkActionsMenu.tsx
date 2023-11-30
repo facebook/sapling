@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {CleanupAllButton} from './Cleanup';
 import {DropdownFields} from './DropdownFields';
 import {SuggestedRebaseButton} from './SuggestedRebase';
 import {Tooltip} from './Tooltip';
@@ -36,6 +37,7 @@ function BulkActions({dismiss}: {dismiss: () => void}) {
       className="bulk-actions-dropdown"
       data-testid="bulk-actions-dropdown">
       <SuggestedRebaseButton afterRun={dismiss} isBulk />
+      <CleanupAllButton />
     </DropdownFields>
   );
 }

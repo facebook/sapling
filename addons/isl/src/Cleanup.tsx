@@ -9,12 +9,16 @@ import type {UICodeReviewProvider} from './codeReview/UICodeReviewProvider';
 import type {CommitTreeWithPreviews} from './getCommitTree';
 import type {DiffSummary, CommitInfo} from './types';
 
+import {OperationDisabledButton} from './OperationDisabledButton';
 import {latestSuccessorUnlessExplicitlyObsolete} from './SuccessionTracker';
 import {Tooltip} from './Tooltip';
+import {codeReviewProvider, allDiffSummaries} from './codeReview/CodeReviewInfo';
 import {t, T} from './i18n';
 import {HideOperation} from './operations/HideOperation';
+import {treeWithPreviews} from './previews';
 import {useRunOperation} from './serverAPIState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
+import {useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 import {unwrap} from 'shared/utils';
 
@@ -60,6 +64,43 @@ export function CleanupButton({commit, hasChildren}: {commit: CommitInfo; hasChi
         <Icon icon="eye-closed" slot="start" />
         {hasChildren ? <T>Clean up stack</T> : <T>Clean up</T>}
       </VSCodeButton>
+    </Tooltip>
+  );
+}
+
+export function CleanupAllButton() {
+  const trees = useRecoilValue(treeWithPreviews);
+  const reviewProvider = useRecoilValue(codeReviewProvider);
+  const diffMap = useRecoilValue(allDiffSummaries)?.value;
+  if (diffMap == null || reviewProvider == null) {
+    return null;
+  }
+
+  const stackBases = trees.trees.map(tree => tree.children).flat();
+  const cleanableStacks = stackBases.filter(tree =>
+    isStackEligibleForCleanup(tree, diffMap, reviewProvider),
+  );
+
+  const disabled = cleanableStacks.length === 0;
+  return (
+    <Tooltip
+      title={
+        disabled
+          ? t('No landed or closed commits to hide')
+          : t('Hide all commits for landed or closed Diffs')
+      }>
+      <OperationDisabledButton
+        contextKey="cleanup-all"
+        runOperation={() => {
+          return cleanableStacks.map(
+            tree => new HideOperation(latestSuccessorUnlessExplicitlyObsolete(tree.info)),
+          );
+        }}
+        icon={<Icon icon="eye-closed" slot="start" />}
+        appearance="secondary"
+        disabled={disabled}>
+        <T>Clean up all</T>
+      </OperationDisabledButton>
     </Tooltip>
   );
 }
