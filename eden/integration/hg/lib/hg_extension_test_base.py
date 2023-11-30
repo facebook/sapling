@@ -78,6 +78,7 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
     backing_repo: hgrepo.HgRepository
     enable_windows_symlinks: bool = False
     inode_catalog_type: Optional[str] = None
+    backing_store_type: Optional[str] = None
 
     def setup_eden_test(self) -> None:
         super().setup_eden_test()
@@ -92,6 +93,7 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
             self.mount,
             allow_empty=True,
             enable_windows_symlinks=self.enable_windows_symlinks,
+            backing_store=self.backing_store_type,
         )
 
         # Now create the repository object that refers to the eden client
@@ -396,6 +398,14 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
         self.assertEqual([], self.repo.journal())
 
 
+# Intended for use with any test that doesn't make sense to run on an
+# unfiltered Hg repo. Examples are any test that applies filters to the repo.
+class FilteredHgTestCase(EdenHgTestCase, metaclass=abc.ABCMeta):
+    def setup_eden_test(self) -> None:
+        self.backing_store_type = "filteredhg"
+        super().setup_eden_test()
+
+
 class JournalEntry:
     """
     JournalEntry describes an expected journal entry.
@@ -495,6 +505,24 @@ def _replicate_hg_test(
                 f"{tree_label}{overlay_label}",
                 typing.cast(Type[EdenHgTestCase], VariantHgRepoTest),
             )
+
+
+def _replicate_filteredhg_test(
+    test_class: Type[FilteredHgTestCase],
+) -> Iterable[Tuple[str, Type[FilteredHgTestCase]]]:
+    tree_variants: MixinList = [("TreeOnly", [])]
+    if eden.config.HAVE_NFS:
+        tree_variants.append(("TreeOnlyNFS", [testcase.NFSTestMixin]))
+
+    for tree_label, tree_mixins in tree_variants:
+
+        class VariantHgRepoTest(*tree_mixins, test_class):
+            pass
+
+        yield (
+            f"{tree_label}",
+            typing.cast(Type[FilteredHgTestCase], VariantHgRepoTest),
+        )
 
 
 class InMemoryOverlayTestMixin:

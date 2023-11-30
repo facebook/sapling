@@ -144,6 +144,18 @@ python_unittest(
 )
 
 python_unittest(
+    name = "filteredhg",
+    srcs = ["filteredhg_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
     name = "filter",
     srcs = ["filter_test.py"],
     env = artifacts["env"],
