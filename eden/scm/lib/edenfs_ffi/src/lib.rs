@@ -109,7 +109,7 @@ mod ffi {
     }
 
     unsafe extern "C++" {
-        include!("eden/scm/lib/edenfs_ffi/src/ffi.h");
+        include!("eden/scm/lib/edenfs_ffi/include/ffi.h");
 
         #[namespace = "facebook::eden"]
         type MatcherPromise;

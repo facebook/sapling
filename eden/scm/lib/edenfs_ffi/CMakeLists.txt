@@ -6,19 +6,35 @@
 # Due to some tools changing '-' to '_' when building,
 # this library/crate is named using an '_' so that it can link successfully.
 rust_static_library(rust_edenfs_ffi CRATE edenfs_ffi USE_CXX_INCLUDE)
+
 install_rust_static_library(
   rust_edenfs_ffi
   INSTALL_DIR lib
 )
 
-file(GLOB edenfs_ffi_srcs "src/ffi.cpp")
-add_library(edenfs_ffi "${edenfs_ffi_srcs}")
+rust_cxx_bridge(
+  edenfs_ffi
+  "src/lib.rs"
+  LIBS
+  fmt::fmt
+  Folly::folly
+)
+
+file(GLOB C_API_SRCS "src/*.cpp")
+file(GLOB C_API_HDRS "include/*.h")
+target_sources(
+  edenfs_ffi
+  PRIVATE
+  "${C_API_SRCS}"
+)
+
 set_target_properties(
   edenfs_ffi
   PROPERTIES
   PUBLIC_HEADER
-  "src/ffi.h"
+  "${C_API_HDRS}"
 )
+
 target_include_directories(
   edenfs_ffi
   PUBLIC
@@ -27,33 +43,36 @@ target_include_directories(
 )
 target_link_libraries(
   edenfs_ffi
-  PRIVATE
+  PUBLIC
   rust_edenfs_ffi
   Folly::folly
-  eden_model
-  eden_utils
-  ${RE2_LIBRARY}
+  edencommon::edencommon_utils
+  fmt::fmt
 )
 
-# Windows-only configuration
-if(WIN32)
+# curl used in the Rust crate has its own copy of curl compiled and it uses
+# Crypt32 and Secur32 on Windows. We need to declare the link dependencies here
+# to avoid linker errors.
+if (WIN32)
   target_link_libraries(
     edenfs_ffi
-    userenv
-    ws2_32
-    bcrypt
+    PRIVATE
+    ntdll
+    Crypt32
+    Secur32
+    Ncrypt
+    winhttp
   )
-  set_target_properties(
+else()
+  target_link_libraries(
     edenfs_ffi
-    PROPERTIES
-    MSVC_RUNTIME_LIBRARY "MultiThreadedDLL"
-    RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}
-    RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}
+    PRIVATE
+      CURL::libcurl
   )
 endif()
 
 install(
   TARGETS edenfs_ffi
-  LIBRARY DESTINATION ${LIB_INSTALL_DIR}
-  PUBLIC_HEADER DESTINATION "include/eden/scm/lib/edenfs_ffi/src"
+  LIBRARY DESTINATION lib
+  PUBLIC_HEADER DESTINATION eden/scm/lib/edenfs_ffi/include
 )

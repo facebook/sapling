@@ -45,7 +45,7 @@ rust_library(
 cpp_library(
     name = "edenfs_ffi-wrapper",
     srcs = ["src/ffi.cpp"],
-    headers = ["src/ffi.h"],
+    headers = ["include/ffi.h"],
     preferred_linkage = "static",
     undefined_symbols = True,
     exported_deps = [

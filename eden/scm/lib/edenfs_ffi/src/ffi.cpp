@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/scm/lib/edenfs_ffi/src/ffi.h"
+#include "eden/scm/lib/edenfs_ffi/include/ffi.h"
 #include <memory>
 #include <utility>
 
