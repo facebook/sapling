@@ -97,6 +97,8 @@ function previewPreventsActions(preview?: CommitPreview): boolean {
     case CommitPreview.REBASE_ROOT:
     case CommitPreview.HIDDEN_ROOT:
     case CommitPreview.HIDDEN_DESCENDANT:
+    case CommitPreview.FOLD:
+    case CommitPreview.FOLD_PREVIEW:
     case CommitPreview.NON_ACTIONABLE_COMMIT:
       return true;
   }
@@ -265,6 +267,21 @@ export const Commit = memo(
             <T>Cancel</T>
           </VSCodeButton>
           <ConfirmHideButton onClick={() => handlePreviewedOperation(/* cancel */ false)} />
+        </React.Fragment>,
+      );
+    } else if (previewType === CommitPreview.FOLD_PREVIEW) {
+      commitActions.push(
+        <React.Fragment key="fold">
+          <VSCodeButton
+            appearance="secondary"
+            onClick={() => handlePreviewedOperation(/* cancel */ true)}>
+            <T>Cancel</T>
+          </VSCodeButton>
+          <VSCodeButton
+            appearance="primary"
+            onClick={() => handlePreviewedOperation(/* cancel */ false)}>
+            <T>Run Combine</T>
+          </VSCodeButton>
         </React.Fragment>,
       );
     }

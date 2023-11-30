@@ -41,6 +41,8 @@ export enum CommitPreview {
   HIDDEN_DESCENDANT = 'hidden-descendant',
   STACK_EDIT_ROOT = 'stack-edit-root',
   STACK_EDIT_DESCENDANT = 'stack-edit-descendant',
+  FOLD_PREVIEW = 'fold-preview',
+  FOLD = 'fold',
   // Commit being rendered in some other context than the commit tree,
   // such as the commit info sidebar
   NON_ACTIONABLE_COMMIT = 'non-actionable-commit',

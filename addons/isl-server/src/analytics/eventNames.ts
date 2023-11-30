@@ -35,6 +35,7 @@ export type TrackEventName =
   | 'ClickSuggestedRebase'
   | 'DiscardOperation'
   | 'ForgetOperation'
+  | 'FoldOperation'
   | 'GettingStartedInteraction'
   | 'GetSuggestedReviewers'
   | 'AcceptSuggestedReviewer'

@@ -8,13 +8,22 @@
 import type {CommitTree} from './getCommitTree';
 import type {CommitInfo, Hash} from './types';
 
+import {
+  commitMessageFieldsSchema,
+  commitMessageFieldsToString,
+  mergeManyCommitMessageFields,
+  parseCommitMessageFields,
+} from './CommitInfoView/CommitMessageFields';
+import {OperationDisabledButton} from './OperationDisabledButton';
 import {Tooltip} from './Tooltip';
 import {T, t} from './i18n';
+import {FoldOperation} from './operations/FoldOperation';
 import {treeWithPreviews} from './previews';
 import {selectedCommits} from './selection';
+import {operationBeingPreviewed} from './serverAPIState';
 import {firstOfIterable} from './utils';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
-import {selector, useRecoilValue} from 'recoil';
+import {selector, useRecoilCallback, useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 
 /**
@@ -132,12 +141,27 @@ function bottomMostOfSelection(
 
 export function FoldButton({commit}: {commit: CommitInfo}) {
   const foldable = useRecoilValue(foldableSelection);
+  const onClick = useRecoilCallback(({set, snapshot}) => () => {
+    if (foldable == null) {
+      return;
+    }
+    const schema = snapshot.getLoadable(commitMessageFieldsSchema).valueMaybe();
+    if (schema == null) {
+      return;
+    }
+    const messageFields = mergeManyCommitMessageFields(
+      schema,
+      foldable.map(commit => parseCommitMessageFields(schema, commit.title, commit.description)),
+    );
+    const message = commitMessageFieldsToString(schema, messageFields);
+    set(operationBeingPreviewed, new FoldOperation(foldable, message));
+  });
   if (foldable?.[0]?.hash !== commit.hash) {
     return null;
   }
   return (
     <Tooltip title={t('Combine selected commits into one commit')}>
-      <VSCodeButton appearance="secondary">
+      <VSCodeButton appearance="secondary" onClick={onClick}>
         <Icon icon="fold" slot="start" />
         <T replace={{$count: foldable.length}}>Combine $count commits</T>
       </VSCodeButton>
