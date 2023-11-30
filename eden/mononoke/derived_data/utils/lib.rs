@@ -229,6 +229,15 @@ pub trait DerivedUtils: Send + Sync + 'static {
         gap_size: Option<usize>,
     ) -> BoxFuture<'static, Result<BatchDeriveStats>>;
 
+    /// Derive data for a changeset using other derived data types without
+    /// required data to be derived for the parents of the changeset.
+    async fn derive_from_predecessor(
+        &self,
+        ctx: CoreContext,
+        repo: Arc<RepoDerivedData>,
+        csid: ChangesetId,
+    ) -> Result<String>;
+
     /// Find pending changeset (changesets for which data have not been derived)
     async fn pending(
         &self,
@@ -366,6 +375,19 @@ where
             Ok(stats)
         }
         .boxed()
+    }
+
+    async fn derive_from_predecessor(
+        &self,
+        ctx: CoreContext,
+        _repo: Arc<RepoDerivedData>,
+        csid: ChangesetId,
+    ) -> Result<String> {
+        let derived = self
+            .manager
+            .derive_from_predecessor::<Derivable>(&ctx, csid, Some(Arc::new(self.clone())))
+            .await?;
+        Ok(format!("{:?}", derived))
     }
 
     async fn pending(
@@ -1326,6 +1348,15 @@ mod tests {
         ) -> BoxFuture<'static, Result<BatchDeriveStats>> {
             self.deriver
                 .derive_exactly_batch(ctx, repo, csids, parallel, gap_size)
+        }
+
+        async fn derive_from_predecessor(
+            &self,
+            ctx: CoreContext,
+            repo: Arc<RepoDerivedData>,
+            csid: ChangesetId,
+        ) -> Result<String> {
+            self.deriver.derive_from_predecessor(ctx, repo, csid).await
         }
 
         async fn pending(
