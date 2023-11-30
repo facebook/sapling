@@ -131,7 +131,7 @@ export function CommitInfoField({
                     tokens={Array.isArray(content) ? content : extractTokens(content)[0]}
                   />
                 </div>
-              ) : Array.isArray(content) ? (
+              ) : Array.isArray(content) || !field.isRenderableMarkup ? (
                 content
               ) : (
                 <RenderMarkup>{content}</RenderMarkup>
