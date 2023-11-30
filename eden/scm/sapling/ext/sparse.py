@@ -1308,7 +1308,9 @@ def getsparsepatterns(
             return SparseConfig(None, [], [])
 
         raw = repo.localvfs.readutf8("sparse")
-        rawconfig = readsparseconfig(repo, raw, filename=repo.localvfs.join("sparse"))
+        rawconfig = readsparseconfig(
+            repo, raw, filename=repo.localvfs.join("sparse"), depth=0
+        )
     elif not isinstance(rawconfig, RawSparseConfig):
         raise error.ProgrammingError(
             "getsparsepatterns.rawconfig must "
@@ -1326,7 +1328,7 @@ def getsparsepatterns(
     onlyv1 = True
     for kind, value in rawconfig.lines:
         if kind == "profile":
-            profile = readsparseprofile(repo, rev, value, profileconfigs)
+            profile = readsparseprofile(repo, rev, value, profileconfigs, depth=1)
             if profile is not None:
                 profiles.append(profile)
                 # v1 config's put all includes before all excludes, so
@@ -1388,7 +1390,7 @@ def getsparsepatterns(
 
 
 def readsparseconfig(
-    repo, raw, filename: Optional[str] = None, warn: bool = True
+    repo, raw, filename: Optional[str] = None, warn: bool = True, depth: int = 0
 ) -> RawSparseConfig:
     """Takes a string sparse config and returns a SparseConfig
 
@@ -1494,16 +1496,20 @@ def readsparseconfig(
     rawconfig = RawSparseConfig(raw, filename, lines, profiles, metadata)
     if _isedensparse(repo):
         include, exclude = rawconfig.toincludeexclude()
-        if len(profiles) > 1 or len(include) != 0 or len(exclude) != 0:
+        if depth == 0 and (len(profiles) > 1 or len(include) != 0 or len(exclude) != 0):
             raise error.ProgrammingError(
                 "the edensparse extension only supports 1 active profile (and no additional includes/excludes) at a time"
+            )
+        elif depth > 0 and len(profiles) > 0:
+            raise error.ProgrammingError(
+                "the edensparse extension does not support nested profiles (%include rules)"
             )
 
     return rawconfig
 
 
 def readsparseprofile(
-    repo, rev, name: Optional[str], profileconfigs
+    repo, rev, name: Optional[str], profileconfigs, depth: int
 ) -> Optional[SparseProfile]:
     ctx = repo[rev]
     try:
@@ -1520,15 +1526,20 @@ def readsparseprofile(
             repo.ui.debug(msg)
         return None
 
-    rawconfig = readsparseconfig(repo, raw, filename=name)
+    rawconfig = readsparseconfig(repo, raw, filename=name, depth=depth)
 
     rules = []
     ruleorigins = []
     profiles = set()
     for kind, value in rawconfig.lines:
         if kind == "profile":
+            if _isedensparse(repo) and depth > 1:
+                raise error.Abort(
+                    "the edensparse extension does not support nested filter "
+                    "profiles (i.e. `%include` rules)"
+                )
             profiles.add(value)
-            profile = readsparseprofile(repo, rev, value, profileconfigs)
+            profile = readsparseprofile(repo, rev, value, profileconfigs, depth + 1)
             if profile is not None:
                 for (i, rule) in enumerate(profile.rules):
                     rules.append(rule)
@@ -2001,13 +2012,12 @@ subcmd = sparse.subcommand(
 )
 
 
-@subcmd("show", commands.templateopts)
-def show(ui, repo, **opts) -> None:
-    """show the currently enabled sparse profile"""
+def _showsubcmdlogic(ui, repo, opts) -> None:
     _checksparse(repo)
+    flavortext = _getsparseflavor(repo)
     if not repo.localvfs.exists("sparse"):
         if not ui.plain():
-            ui.status(_("No sparse profile enabled\n"))
+            ui.status(_(f"No {flavortext} profile enabled\n"))
         return
 
     raw = repo.localvfs.readutf8("sparse")
@@ -2024,32 +2034,35 @@ def show(ui, repo, **opts) -> None:
             raw = getrawprofile(repo, profile, ".")
         except KeyError:
             return [(depth, profile, LOOKUP_NOT_FOUND, "")]
-        sc = readsparseconfig(repo, raw)
+        sc = readsparseconfig(repo, raw, depth=depth)
 
         profileinfo = [(depth, profile, LOOKUP_SUCCESS, sc.metadata.get("title"))]
         for profile in sorted(sc.profiles):
             profileinfo.extend(getprofileinfo(profile, depth + 1))
         return profileinfo
 
-    ui.pager("sparse show")
-    with ui.formatter("sparse", opts) as fm:
+    ui.pager(f"{flavortext} show")
+    with ui.formatter(f"{flavortext}", opts) as fm:
         if profiles:
             profileinfo = []
             fm.plain(_("Enabled Profiles:\n\n"))
-            profileinfo = sum((getprofileinfo(p, 0) for p in sorted(profiles)), [])
+            startingdepth = 1 if _isedensparse(repo) else 0
+            profileinfo = sum(
+                (getprofileinfo(p, startingdepth) for p in sorted(profiles)), []
+            )
             maxwidth = max(len(name) for depth, name, lookup, title in profileinfo)
             maxdepth = max(depth for depth, name, lookup, title in profileinfo)
 
             for depth, name, lookup, title in profileinfo:
                 if lookup == LOOKUP_SUCCESS:
                     if depth > 0:
-                        label = "sparse.profile.included"
+                        label = f"{flavortext}.profile.included"
                         status = "~"
                     else:
-                        label = "sparse.profile.active"
+                        label = f"{flavortext}.profile.active"
                         status = "*"
                 else:
-                    label = "sparse.profile.notfound"
+                    label = f"{flavortext}.profile.notfound"
                     status = "!"
 
                 fm.startitem()
@@ -2082,6 +2095,12 @@ def show(ui, repo, **opts) -> None:
                 fm.startitem()
                 fm.data(type="exclude")
                 fm.write("name", "  %s\n", fname, label="sparse.exclude")
+
+
+@subcmd("show", commands.templateopts)
+def show(ui, repo, **opts) -> None:
+    """show the currently enabled sparse profile"""
+    _showsubcmdlogic(ui, repo, opts)
 
 
 @command(
