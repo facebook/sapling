@@ -13,8 +13,16 @@ import {Icon} from 'shared/Icon';
 
 import './Copyable.css';
 
-/** Click to copy text and show a confirmation tooltip */
-export function Copyable({children, className}: {children: string; className?: string}) {
+/** Click to copy text and show a confirmation tooltip. If content is provided, use that instead of  */
+export function Copyable({
+  children,
+  className,
+  iconOnly,
+}: {
+  children: string;
+  className?: string;
+  iconOnly?: boolean;
+}) {
   const [showingSuccess, setShowingSuccess] = useState(false);
   useEffect(() => {
     if (showingSuccess) {
@@ -29,13 +37,17 @@ export function Copyable({children, className}: {children: string; className?: s
       shouldShow={showingSuccess}
       component={CopiedSuccessTooltipContent(children)}>
       <div
-        className={'copyable' + (className ? ` ${className}` : '')}
+        className={
+          'copyable' + (className ? ` ${className}` : '') + (iconOnly === true ? ' icon-only' : '')
+        }
         tabIndex={0}
-        onClick={() => {
+        onClick={e => {
           platform.clipboardCopy(children);
           setShowingSuccess(true);
+          e.preventDefault();
+          e.stopPropagation();
         }}>
-        {children}
+        {iconOnly !== true && children}
         <Icon icon="copy" />
       </div>
     </Tooltip>
