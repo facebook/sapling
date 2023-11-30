@@ -10,6 +10,7 @@ import type {CommitInfo, Hash} from './types';
 import type React from 'react';
 
 import {useCommand} from './ISLShortcuts';
+import {useSelectAllCommitsShortcut} from './SelectAllCommits';
 import {latestSuccessorUnlessExplicitlyObsolete, successionTracker} from './SuccessionTracker';
 import {islDrawerState} from './drawerState';
 import {HideOperation} from './operations/HideOperation';
@@ -281,6 +282,7 @@ export function useArrowKeysToChangeSelection() {
   useCommand('SelectDownwards', () => cb('SelectDownwards'));
   useCommand('ContinueSelectionUpwards', () => cb('ContinueSelectionUpwards'));
   useCommand('ContinueSelectionDownwards', () => cb('ContinueSelectionDownwards'));
+  useSelectAllCommitsShortcut();
 }
 
 export function useBackspaceToHideSelected(): void {
