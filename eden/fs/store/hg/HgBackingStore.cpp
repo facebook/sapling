@@ -335,7 +335,11 @@ folly::Future<TreePtr> HgBackingStore::fetchTreeFromImporter(
                // HgBackingStoreStats::importTreeFailure counters as we will no
                // longer increment either.
 
-               // Retry using datapackStore (backingstore).
+               // Flush (and refresh) backingstore to ensure all data is written
+               // and to rescan pack files or local indexes
+               datapackStore_.flush();
+
+               // Retry using datapackStore (backingstore)
                auto tree = datapackStore_.getTree(
                    path, manifestNode, edenTreeID, /*context*/ nullptr);
 
@@ -613,6 +617,10 @@ SemiFuture<BlobPtr> HgBackingStore::fetchBlobFromHgImporter(
                // HgBackingStoreStats::importBlobSuccess and
                // HgBackingStoreStats::importBlobFailure counters as we will no
                // longer increment either.
+
+               // Flush (and refresh) backingstore to ensure all data is written
+               // and to rescan pack files or local indexes
+               datapackStore_.flush();
 
                // Retry using datapackStore (backingstore).
                auto blob = datapackStore_.getBlob(hgInfo, /*localOnly=*/false);
