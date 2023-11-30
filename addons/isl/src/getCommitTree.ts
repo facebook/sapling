@@ -6,7 +6,7 @@
  */
 
 import type {CommitPreview, TreeWithPreviews} from './previews';
-import type {CommitInfo} from './types';
+import type {CommitInfo, Hash} from './types';
 
 export type CommitTree = {
   info: CommitInfo;
@@ -109,4 +109,12 @@ export function findCurrentPublicBase(commitTree?: TreeWithPreviews): CommitInfo
     commit = commitTree?.treeMap.get(commit.parents[0])?.info;
   }
   return undefined;
+}
+
+export function makeTreeMap(trees: Array<CommitTree>): Map<Hash, CommitTree> {
+  const map = new Map();
+  for (const tree of walkTreePostorder(trees)) {
+    map.set(tree.info.hash, tree);
+  }
+  return map;
 }

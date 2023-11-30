@@ -27,7 +27,7 @@ import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 import serverAPI from './ClientToServerAPI';
 import messageBus from './MessageBus';
 import {successionTracker} from './SuccessionTracker';
-import {getCommitTree, walkTreePostorder} from './getCommitTree';
+import {makeTreeMap, getCommitTree, walkTreePostorder} from './getCommitTree';
 import {persistAtomToConfigEffect} from './persistAtomToConfigEffect';
 import {clearOnCwdChange} from './recoilUtils';
 import {initialParams} from './urlParams';
@@ -410,12 +410,7 @@ export const latestCommitTreeMap = selector<Map<Hash, CommitTree>>({
   key: 'latestCommitTreeMap',
   get: ({get}) => {
     const trees = get(latestCommitTree);
-    const map = new Map();
-    for (const tree of walkTreePostorder(trees)) {
-      map.set(tree.info.hash, tree);
-    }
-
-    return map;
+    return makeTreeMap(trees);
   },
 });
 
