@@ -1008,6 +1008,54 @@ class SparseMixin:
             existingtemp.update(raw.split("\n"))
         return existingtemp
 
+    def addtemporaryincludes(self, files):
+        includes = self.gettemporaryincludes()
+        for file in files:
+            includes.add(file)
+        self._writetemporaryincludes(includes)
+
+    def _writetemporaryincludes(self, includes):
+        raw = "\n".join(sorted(includes))
+        self.localvfs.writeutf8("tempsparse", raw)
+        self.invalidatesparsecache()
+
+    def prunetemporaryincludes(self):
+        if self.localvfs.exists("tempsparse"):
+            if not _isedensparse(self):
+                origstatus = self.status()
+                modified, added, removed, deleted, a, b, c = origstatus
+                if modified or added or removed or deleted:
+                    # Still have pending changes. Don't bother trying to prune.
+                    return
+
+            flavortext = _getsparseflavor(self)
+            sparsematch = self.sparsematch(includetemp=False)
+            dirstate = self.dirstate
+            actions = []
+            dropped = []
+            tempincludes = self.gettemporaryincludes()
+            for file in tempincludes:
+                if file in dirstate and not sparsematch(file):
+                    message = f"dropping temporarily included {flavortext} files"
+                    actions.append((file, None, message))
+                    dropped.append(file)
+
+            typeactions = collections.defaultdict(list)
+            typeactions["r"] = actions
+            mergemod.applyupdates(self, typeactions, self[None], self["."], False)
+
+            # Fix dirstate
+            for file in dropped:
+                dirstate.untrack(file)
+
+            self.localvfs.unlink("tempsparse")
+            self.invalidatesparsecache()
+            msg = _(
+                "cleaned up %d temporarily added file(s) from the "
+                f"{flavortext} checkout\n"
+            )
+            self.ui.status(msg % len(tempincludes))
+
 
 def _wraprepo(ui, repo) -> None:
     class SparseRepo(repo.__class__, SparseMixin):
@@ -1107,52 +1155,6 @@ def _wraprepo(ui, repo) -> None:
                 activeprofiles.update(profiles)
 
             return activeprofiles
-
-        def addtemporaryincludes(self, files):
-            includes = self.gettemporaryincludes()
-            for file in files:
-                includes.add(file)
-            self._writetemporaryincludes(includes)
-
-        def _writetemporaryincludes(self, includes):
-            raw = "\n".join(sorted(includes))
-            self.localvfs.writeutf8("tempsparse", raw)
-            self.invalidatesparsecache()
-
-        def prunetemporaryincludes(self):
-            if self.localvfs.exists("tempsparse"):
-                origstatus = self.status()
-                modified, added, removed, deleted, a, b, c = origstatus
-                if modified or added or removed or deleted:
-                    # Still have pending changes. Don't bother trying to prune.
-                    return
-
-                sparsematch = self.sparsematch(includetemp=False)
-                dirstate = self.dirstate
-                actions = []
-                dropped = []
-                tempincludes = self.gettemporaryincludes()
-                for file in tempincludes:
-                    if file in dirstate and not sparsematch(file):
-                        message = "dropping temporarily included sparse files"
-                        actions.append((file, None, message))
-                        dropped.append(file)
-
-                typeactions = collections.defaultdict(list)
-                typeactions["r"] = actions
-                mergemod.applyupdates(self, typeactions, self[None], self["."], False)
-
-                # Fix dirstate
-                for file in dropped:
-                    dirstate.untrack(file)
-
-                self.localvfs.unlink("tempsparse")
-                self.invalidatesparsecache()
-                msg = _(
-                    "cleaned up %d temporarily added file(s) from the "
-                    "sparse checkout\n"
-                )
-                self.ui.status(msg % len(tempincludes))
 
         def _applysparsetoworkingcopy(
             self, force, origsparsematch, sparsematch, pending
