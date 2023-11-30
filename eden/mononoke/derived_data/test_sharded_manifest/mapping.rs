@@ -22,8 +22,10 @@ use mononoke_types::BlobstoreBytes;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::ThriftConvert;
+use test_manifest::RootTestManifestDirectory;
 
 use crate::derive::derive_single;
+use crate::derive_from_predecessor::derive_from_predecessor;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct RootTestShardedManifestDirectory(pub(crate) TestShardedManifestDirectory);
@@ -74,6 +76,18 @@ impl BonsaiDerivable for RootTestShardedManifestDirectory {
         parents: Vec<Self>,
     ) -> Result<Self> {
         derive_single(ctx, derivation_ctx, bonsai, parents).await
+    }
+
+    async fn derive_from_predecessor(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        bonsai: BonsaiChangeset,
+    ) -> Result<Self> {
+        let csid = bonsai.get_changeset_id();
+        let test_manifest = derivation_ctx
+            .derive_dependency::<RootTestManifestDirectory>(ctx, csid)
+            .await?;
+        derive_from_predecessor(ctx, derivation_ctx, test_manifest).await
     }
 
     async fn store_mapping(

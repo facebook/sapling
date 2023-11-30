@@ -13,6 +13,7 @@ use blobstore::Blobstore;
 use blobstore::Storable;
 use cloned::cloned;
 use context::CoreContext;
+use derived_data_manager::DerivationContext;
 use itertools::Either;
 use manifest::derive_manifest_from_predecessor;
 use manifest::Entry;
@@ -26,6 +27,9 @@ use mononoke_types::BlobstoreValue;
 use mononoke_types::MPathElement;
 use mononoke_types::TrieMap;
 use sorted_vector_map::SortedVectorMap;
+use test_manifest::RootTestManifestDirectory;
+
+use crate::RootTestShardedManifestDirectory;
 
 fn mf_entry_to_test_sharded_mf_entry(
     entry: Entry<TestShardedManifestDirectory, ()>,
@@ -95,4 +99,17 @@ pub(crate) async fn inner_derive_from_predecessor(
         { move |_leaf_info| async move { Ok(((), ())) } },
     )
     .await
+}
+
+pub(crate) async fn derive_from_predecessor(
+    ctx: &CoreContext,
+    derivation_ctx: &DerivationContext,
+    predecessor: RootTestManifestDirectory,
+) -> Result<RootTestShardedManifestDirectory> {
+    let predecessor = predecessor.into_inner();
+    let blobstore = derivation_ctx.blobstore();
+
+    Ok(RootTestShardedManifestDirectory(
+        inner_derive_from_predecessor(ctx, blobstore, predecessor).await?,
+    ))
 }
