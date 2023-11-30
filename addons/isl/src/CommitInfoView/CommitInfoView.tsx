@@ -30,6 +30,7 @@ import {
   latestCommitMessageFields,
 } from '../codeReview/CodeReviewInfo';
 import {submitAsDraft, SubmitAsDraftCheckbox} from '../codeReview/DraftCheckbox';
+import {useRunFoldPreview} from '../fold';
 import {t, T} from '../i18n';
 import {messageSyncingEnabledState, updateRemoteMessage} from '../messageSyncing';
 import {AmendMessageOperation} from '../operations/AmendMessageOperation';
@@ -43,13 +44,7 @@ import {useUncommittedSelection} from '../partialSelection';
 import platform from '../platform';
 import {CommitPreview, uncommittedChangesWithPreviews} from '../previews';
 import {selectedCommits} from '../selection';
-import {
-  commitByHash,
-  latestHeadCommit,
-  repositoryInfo,
-  useRunOperation,
-  useRunPreviewedOperation,
-} from '../serverAPIState';
+import {commitByHash, latestHeadCommit, repositoryInfo, useRunOperation} from '../serverAPIState';
 import {succeedableRevset} from '../types';
 import {useModal} from '../useModal';
 import {assert, firstLine, firstOfIterable} from '../utils';
@@ -515,22 +510,14 @@ function ShowingRemoteMessageBanner({
 }
 
 function FoldPreviewActions() {
-  const handlePreviewedOperation = useRunPreviewedOperation();
+  const [cancel, run] = useRunFoldPreview();
   return (
     <div className="commit-info-actions-bar" data-testid="commit-info-actions-bar">
       <div className="commit-info-actions-bar-right">
-        <VSCodeButton
-          appearance="secondary"
-          onClick={() => {
-            handlePreviewedOperation(/* isCancel */ true);
-          }}>
+        <VSCodeButton appearance="secondary" onClick={cancel}>
           <T>Cancel</T>
         </VSCodeButton>
-        <VSCodeButton
-          appearance="primary"
-          onClick={() => {
-            handlePreviewedOperation(/* isCancel */ false);
-          }}>
+        <VSCodeButton appearance="primary" onClick={run}>
           <T>Run Combine</T>
         </VSCodeButton>
       </div>

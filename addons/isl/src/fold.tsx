@@ -8,22 +8,23 @@
 import type {CommitTree} from './getCommitTree';
 import type {CommitInfo, Hash} from './types';
 
+import {editedCommitMessages} from './CommitInfoView/CommitInfoState';
 import {
+  applyEditedFields,
   commitMessageFieldsSchema,
   commitMessageFieldsToString,
   mergeManyCommitMessageFields,
   parseCommitMessageFields,
 } from './CommitInfoView/CommitMessageFields';
-import {OperationDisabledButton} from './OperationDisabledButton';
 import {Tooltip} from './Tooltip';
 import {T, t} from './i18n';
 import {FoldOperation, getFoldRangeCommitHash} from './operations/FoldOperation';
 import {treeWithPreviews} from './previews';
 import {selectedCommits} from './selection';
-import {operationBeingPreviewed} from './serverAPIState';
+import {operationBeingPreviewed, useRunPreviewedOperation} from './serverAPIState';
 import {firstOfIterable} from './utils';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
-import {selector, useRecoilCallback, useRecoilValue} from 'recoil';
+import {type Snapshot, selector, useRecoilCallback, useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 
 /**
@@ -168,4 +169,52 @@ export function FoldButton({commit}: {commit: CommitInfo}) {
       </VSCodeButton>
     </Tooltip>
   );
+}
+
+/**
+ * Make a new copy of the FoldOperation with the latest edited message for the combined preview.
+ * This allows running the fold operation to use the newly typed message.
+ */
+export function updateFoldedMessageWithEditedMessage(
+  snapshot: Snapshot,
+): FoldOperation | undefined {
+  const beingPreviewed = snapshot.getLoadable(operationBeingPreviewed).valueMaybe();
+  if (beingPreviewed != null && beingPreviewed instanceof FoldOperation) {
+    const range = beingPreviewed.getFoldRange();
+    const combinedHash = getFoldRangeCommitHash(range);
+    const [existingTitle, existingMessage] = beingPreviewed.getFoldedMessage();
+    const editedMessage = snapshot.getLoadable(editedCommitMessages(combinedHash)).valueMaybe();
+
+    const schema = snapshot.getLoadable(commitMessageFieldsSchema).valueMaybe();
+    if (schema == null) {
+      return undefined;
+    }
+
+    const old = parseCommitMessageFields(schema, existingTitle, existingMessage);
+    const message =
+      editedMessage == null || editedMessage.type === 'optimistic'
+        ? old
+        : applyEditedFields(old, editedMessage.fields);
+
+    const newMessage = commitMessageFieldsToString(schema, message);
+
+    return new FoldOperation(range, newMessage);
+  }
+}
+
+export function useRunFoldPreview(): [cancel: () => unknown, run: () => unknown] {
+  const handlePreviewedOperation = useRunPreviewedOperation();
+  const run = useRecoilCallback(({snapshot}) => () => {
+    const foldOperation = updateFoldedMessageWithEditedMessage(snapshot);
+    if (foldOperation == null) {
+      return;
+    }
+    handlePreviewedOperation(/* isCancel */ false, foldOperation);
+  });
+  return [
+    () => {
+      handlePreviewedOperation(/* isCancel */ true);
+    },
+    run,
+  ];
 }

@@ -26,11 +26,12 @@ import {codeReviewProvider, latestCommitMessage} from './codeReview/CodeReviewIn
 import {DiffInfo} from './codeReview/DiffBadge';
 import {SyncStatus, syncStatusAtom} from './codeReview/syncStatus';
 import {islDrawerState} from './drawerState';
-import {FoldButton} from './fold';
+import {FoldButton, useRunFoldPreview} from './fold';
 import {isDescendant} from './getCommitTree';
 import {t, T} from './i18n';
 import {IconStack} from './icons/IconStack';
 import {getAmendToOperation, isAmendToAllowedForCommit} from './operationUtils';
+import {FoldOperation} from './operations/FoldOperation';
 import {GotoOperation} from './operations/GotoOperation';
 import {HideOperation} from './operations/HideOperation';
 import {RebaseOperation} from './operations/RebaseOperation';
@@ -270,16 +271,7 @@ export const Commit = memo(
         </React.Fragment>,
       );
     } else if (previewType === CommitPreview.FOLD_PREVIEW) {
-      commitActions.push(
-        <React.Fragment key="fold">
-          <VSCodeButton
-            appearance="secondary"
-            onClick={() => handlePreviewedOperation(/* cancel */ true)}>
-            <T>Cancel</T>
-          </VSCodeButton>
-          <ConfirmCombineButton onClick={() => handlePreviewedOperation(/* cancel */ false)} />
-        </React.Fragment>,
-      );
+      commitActions.push(<ConfirmCombineButtons key="fold" />);
     }
 
     if (!isPublic && !actionsPrevented && isSelected) {
@@ -441,12 +433,19 @@ function ConfirmHideButton({onClick}: {onClick: () => unknown}) {
   );
 }
 
-function ConfirmCombineButton({onClick}: {onClick: () => unknown}) {
+function ConfirmCombineButtons() {
   const ref = useAutofocusRef() as React.MutableRefObject<null>;
+  const [cancel, run] = useRunFoldPreview();
+
   return (
-    <VSCodeButton ref={ref} appearance="primary" onClick={onClick}>
-      <T>Run Combine</T>
-    </VSCodeButton>
+    <>
+      <VSCodeButton appearance="secondary" onClick={cancel}>
+        <T>Cancel</T>
+      </VSCodeButton>
+      <VSCodeButton ref={ref} appearance="primary" onClick={run}>
+        <T>Run Combine</T>
+      </VSCodeButton>
+    </>
   );
 }
 

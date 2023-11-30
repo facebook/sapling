@@ -777,13 +777,14 @@ export function useAbortRunningOperation() {
 export function useRunPreviewedOperation() {
   return useRecoilCallback(
     ({snapshot, set}) =>
-      (isCancel: boolean) => {
+      (isCancel: boolean, operation?: Operation) => {
         if (isCancel) {
           set(operationBeingPreviewed, undefined);
           return;
         }
 
-        const operationToRun = snapshot.getLoadable(operationBeingPreviewed).valueMaybe();
+        const operationToRun =
+          operation ?? snapshot.getLoadable(operationBeingPreviewed).valueMaybe();
         set(operationBeingPreviewed, undefined);
         if (operationToRun) {
           runOperationImpl(snapshot, set, operationToRun);

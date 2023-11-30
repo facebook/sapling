@@ -43,6 +43,13 @@ export class FoldOperation extends Operation {
     ];
   }
 
+  public getFoldRange(): Array<CommitInfo> {
+    return this.foldRange;
+  }
+  public getFoldedMessage(): [string, string] {
+    return [this.newTitle, this.newDescription];
+  }
+
   makePreviewApplier(context: PreviewContext): ApplyPreviewsFuncType | undefined {
     const {treeMap} = context;
 
