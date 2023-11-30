@@ -6,6 +6,7 @@
  */
 
 import {BugButton} from './BugButton';
+import {BulkActionsMenu} from './BulkActionsMenu';
 import serverAPI from './ClientToServerAPI';
 import {CwdSelector} from './CwdSelector';
 import {DownloadCommitsTooltipButton} from './DownloadCommitsMenu';
@@ -41,6 +42,7 @@ export function TopBar() {
         <CwdSelector />
         <DownloadCommitsTooltipButton />
         <ShelvedChangesMenu />
+        <BulkActionsMenu />
         <FetchingDataIndicator />
       </span>
       <span className="button-group">
