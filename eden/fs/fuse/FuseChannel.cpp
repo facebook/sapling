@@ -10,7 +10,6 @@
 #include "eden/fs/fuse/FuseChannel.h"
 #include <boost/cast.hpp>
 #include <fmt/core.h>
-#include <folly/executors/QueuedImmediateExecutor.h>
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
 #include <folly/system/ThreadName.h>
@@ -783,6 +782,7 @@ FuseChannel::FuseChannel(
     PrivHelper* privHelper,
     folly::File fuseDevice,
     AbsolutePathPiece mountPath,
+    std::shared_ptr<folly::Executor> threadPool,
     size_t numThreads,
     std::unique_ptr<FuseDispatcher> dispatcher,
     const folly::Logger* straceLogger,
@@ -797,6 +797,7 @@ FuseChannel::FuseChannel(
     size_t fuseTraceBusCapacity)
     : privHelper_{privHelper},
       bufferSize_(std::max(size_t(getpagesize()) + 0x1000, MIN_BUFSIZE)),
+      threadPool_{std::move(threadPool)},
       numThreads_(numThreads),
       dispatcher_(std::move(dispatcher)),
       straceLogger_(straceLogger),
@@ -1785,10 +1786,17 @@ void FuseChannel::processSession() {
                         dispatcher_->getStats().copy(),
                         handlerEntry->stat,
                         *(liveRequestWatches_.get()));
-                    return (this->*handlerEntry->handler)(
-                               *request, request->getReq(), arg)
-                        .semi()
-                        .via(&folly::QueuedImmediateExecutor::instance());
+                    auto fut = (this->*handlerEntry->handler)(
+                        *request, request->getReq(), arg);
+                    if (fut.isReady()) {
+                      // In the case where the handler executed immediately,
+                      // let's avoid an expensive context switch by simply
+                      // extracting the value from the future.
+                      return folly::makeFuture<folly::Unit>(
+                          std::move(fut).get());
+                    } else {
+                      return std::move(fut).semi().via(threadPool_.get());
+                    }
                   }).ensure([request] {
                     }).within(requestTimeout_),
                   notifier_.get())

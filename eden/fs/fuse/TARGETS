@@ -18,7 +18,6 @@ cpp_library(
         "//eden/fs/utils:thread",
         "//folly:exception",
         "//folly/executors:global_executor",
-        "//folly/executors:queued_immediate_executor",
         "//folly/logging:logging",
         "//folly/system:thread_name",
     ],

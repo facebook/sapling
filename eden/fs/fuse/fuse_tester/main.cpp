@@ -133,6 +133,7 @@ int main(int argc, char** argv) {
       privHelper.get(),
       std::move(fuseDevice),
       mountPath,
+      folly::getUnsafeMutableGlobalCPUExecutor(),
       FLAGS_numFuseThreads,
       std::move(dispatcher),
       &straceLogger,

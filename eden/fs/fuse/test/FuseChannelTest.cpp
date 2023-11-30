@@ -8,6 +8,7 @@
 #include "eden/fs/fuse/FuseChannel.h"
 
 #include <folly/Random.h>
+#include <folly/executors/GlobalExecutor.h>
 #include <folly/logging/xlog.h>
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
@@ -73,6 +74,7 @@ class FuseChannelTest : public ::testing::Test {
         nullptr,
         fuse_.start(),
         mountPath_,
+        folly::getUnsafeMutableGlobalCPUExecutor(),
         numThreads,
         std::move(testDispatcher),
         &straceLogger,

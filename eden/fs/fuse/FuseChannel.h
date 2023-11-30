@@ -239,6 +239,7 @@ class FuseChannel final : public FsChannel {
       PrivHelper* privHelper,
       folly::File fuseDevice,
       AbsolutePathPiece mountPath,
+      std::shared_ptr<folly::Executor> threadPool,
       size_t numThreads,
       std::unique_ptr<FuseDispatcher> dispatcher,
       const folly::Logger* straceLogger,
@@ -779,6 +780,7 @@ class FuseChannel final : public FsChannel {
    * Constant state that does not change for the lifetime of the FuseChannel
    */
   const size_t bufferSize_{0};
+  std::shared_ptr<folly::Executor> threadPool_;
   const size_t numThreads_;
   std::unique_ptr<FuseDispatcher> dispatcher_;
   const folly::Logger* const straceLogger_;

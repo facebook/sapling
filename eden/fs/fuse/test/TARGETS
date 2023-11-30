@@ -19,6 +19,7 @@ cpp_unittest(
         "//eden/fs/utils:case_sensitivity",
         "//eden/fs/utils:enum",
         "//folly:random",
+        "//folly/executors:global_executor",
         "//folly/logging:logging",
         "//folly/portability:gtest",
         "//folly/test:test_utils",

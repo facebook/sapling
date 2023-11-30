@@ -1913,6 +1913,7 @@ std::unique_ptr<FuseChannel, FsChannelDeleter> makeFuseChannel(
       mount->getServerState()->getPrivHelper(),
       std::move(fuseFd),
       mount->getPath(),
+      mount->getServerState()->getFsChannelThreadPool(),
       FLAGS_fuseNumThreads,
       EdenDispatcherFactory::makeFuseDispatcher(mount),
       &mount->getStraceLogger(),
