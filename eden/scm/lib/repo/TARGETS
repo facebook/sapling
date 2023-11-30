@@ -13,9 +13,17 @@ rust_library(
                     "constructors": {"default-features": False},
                 },
             },
+            "extra_buck_dependencies": {
+                "dependencies": [
+                    "//eden/scm/lib/revisionstore:revisionstore",
+                ],
+            },
             "features": {
                 "default": [],
-                "fb": ["configloader/fb"],
+                "fb": [
+                    "configloader/fb",
+                    "revisionstore/ods",
+                ],
                 "wdir": [
                     "workingcopy",
                 ],
@@ -50,7 +58,7 @@ rust_library(
         "//eden/scm/lib/metalog:metalog",
         "//eden/scm/lib/refencode:refencode",
         "//eden/scm/lib/repolock:repolock",
-        "//eden/scm/lib/revisionstore:revisionstore",
+        "//eden/scm/lib/revisionstore:revisionstore_with_ods",
         "//eden/scm/lib/revsets:revsets",
         "//eden/scm/lib/storemodel:storemodel",
         "//eden/scm/lib/treestate:treestate",

@@ -40,5 +40,5 @@ tempfile = "3.8"
 
 [features]
 default = []
-fb = ["configloader/fb"]
+fb = ["configloader/fb", "revisionstore/ods"]
 wdir = ["workingcopy"]
