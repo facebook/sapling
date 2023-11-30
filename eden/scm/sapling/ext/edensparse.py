@@ -73,6 +73,7 @@ from .sparse import (
     _checknonexistingprofiles,
     _common_config_opts,
     _config,
+    _showsubcmdlogic,
     getcommonopts,
     normalizeprofile,
     readsparseconfig,
@@ -154,7 +155,7 @@ subcmd = filteredfs.subcommand(
 @subcmd("show", _common_config_opts)
 def show(ui, repo, **opts) -> None:
     """show the currently enabled filter profile"""
-    unimpl()
+    _showsubcmdlogic(ui, repo, opts)
 
 
 @subcmd("disable|disableprofile|disablefilter|reset", _common_config_opts)
