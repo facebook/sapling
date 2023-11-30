@@ -22,9 +22,11 @@ use manifest_tree::TreeManifest;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
 use pathmatcher::DynMatcher;
+use storemodel::FileStore;
 use treestate::treestate::TreeState;
 use types::hgid::NULL_ID;
 use types::HgId;
+use vfs::VFS;
 
 use crate::filesystem::FileSystem;
 use crate::filesystem::PendingChange;
@@ -32,17 +34,26 @@ use crate::filesystem::PendingChange;
 pub struct EdenFileSystem {
     treestate: Arc<Mutex<TreeState>>,
     client: Arc<EdenFsClient>,
+    _vfs: VFS,
+    _store: Arc<dyn FileStore>,
 
     // For wait_for_potential_change
     journal_position: Cell<(i64, i64)>,
 }
 
 impl EdenFileSystem {
-    pub fn new(treestate: Arc<Mutex<TreeState>>, client: Arc<EdenFsClient>) -> Result<Self> {
+    pub fn new(
+        treestate: Arc<Mutex<TreeState>>,
+        client: Arc<EdenFsClient>,
+        vfs: VFS,
+        store: Arc<dyn FileStore>,
+    ) -> Result<Self> {
         let journal_position = Cell::new(client.get_journal_position()?);
         Ok(EdenFileSystem {
             treestate,
             client,
+            _vfs: vfs,
+            _store: store,
             journal_position,
         })
     }

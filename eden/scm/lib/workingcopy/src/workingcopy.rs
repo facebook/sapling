@@ -258,7 +258,12 @@ impl WorkingCopy {
                 {
                     let client = Arc::new(EdenFsClient::from_wdir(vfs.root())?);
                     (
-                        Box::new(EdenFileSystem::new(treestate, client.clone())?),
+                        Box::new(EdenFileSystem::new(
+                            treestate,
+                            client.clone(),
+                            vfs.clone(),
+                            store.clone(),
+                        )?),
                         Some(client),
                     )
                 }
