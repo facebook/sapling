@@ -96,9 +96,12 @@ SNAPSHOT_MAGIC_4 = b"eden\x00\x00\x00\x04"
 DEFAULT_REVISION = {  # supported repo name -> default bookmark
     "git": "refs/heads/master",
     "hg": "first(present(master) + .)",
+    "filteredhg": "first(present(master) + .)",
     "recas": "",
     "http": "",
 }
+
+HG_REPO_TYPES = ["hg", "filteredhg"]
 
 SUPPORTED_REPOS: KeysView[str] = DEFAULT_REVISION.keys()
 
@@ -162,7 +165,7 @@ class CheckoutConfig(typing.NamedTuple):
 
     - backing_repo: The path where the true repo resides on disk.  For mercurial backing
         repositories this does not include the final ".hg" directory component.
-    - scm_type: "hg" or "git"
+    - scm_type: "hg", "filteredhg", or "git"
     - mount_protocol: "fuse", "nfs" or "prjfs"
     - case_sensitive: whether the mount point is case sensitive. Default to
       false on Windows and macOS.
@@ -614,7 +617,11 @@ Do you want to run `eden mount %s` instead?"""
         # Store snapshot ID
         checkout = EdenCheckout(self, Path(path), Path(client_dir))
         if snapshot_id:
-            checkout.save_snapshot(snapshot_id)
+            if checkout_config.scm_type == "filteredhg":
+                filtered_root_id = util.create_filtered_rootid(snapshot_id)
+                checkout.save_snapshot(filtered_root_id)
+            else:
+                checkout.save_snapshot(snapshot_id.encode())
         else:
             raise Exception("snapshot id not provided")
 
@@ -728,14 +735,14 @@ Do you want to run `eden mount %s` instead?"""
         # before.
         clone_success_path = checkout.state_dir / CLONE_SUCCEEDED
         is_initial_mount = not clone_success_path.is_file()
-        if is_initial_mount and checkout.get_config().scm_type == "hg":
+        if is_initial_mount and checkout.get_config().scm_type in HG_REPO_TYPES:
             from . import hg_util
 
             hg_util.setup_hg_dir(checkout, commit_id)
 
         clone_success_path.touch()
 
-        if checkout.get_config().scm_type == "hg":
+        if checkout.get_config().scm_type in HG_REPO_TYPES:
             env = os.environ.copy()
             # These are set by the par machinery and interfere with Mercurial's
             # own dynamic library loading.
@@ -1510,12 +1517,12 @@ class EdenCheckout:
             else:
                 raise RuntimeError("SNAPSHOT file has invalid header")
 
-    def save_snapshot(self, commit_id: str) -> None:
+    def save_snapshot(self, commit_id: bytes) -> None:
         """Write a new parent commit ID into the SNAPSHOT file."""
         snapshot_path = self.state_dir / SNAPSHOT
-        encoded = commit_id.encode()
         write_file_atomically(
-            snapshot_path, SNAPSHOT_MAGIC_2 + struct.pack(">L", len(encoded)) + encoded
+            snapshot_path,
+            SNAPSHOT_MAGIC_2 + struct.pack(">L", len(commit_id)) + commit_id,
         )
 
     def get_backing_repo(self) -> util.HgRepo:

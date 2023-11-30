@@ -151,7 +151,7 @@ class FakeEdenInstance(AbstractEdenInstance):
             typing.cast(EdenInstance, self), Path(full_path), state_dir
         )
         eden_checkout.save_config(config)
-        eden_checkout.save_snapshot(snapshot)
+        eden_checkout.save_snapshot(snapshot.encode())
 
         if active and self._status == fb303_status.ALIVE:
             # Report the mount in /proc/mounts

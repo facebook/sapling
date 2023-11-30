@@ -1553,10 +1553,11 @@ ImmediateFuture<std::shared_ptr<EdenMount>> EdenServer::mount(
     optional<TakeoverData::MountInfo>&& optionalTakeover) {
   folly::stop_watch<> mountStopWatch;
 
-  auto backingStore = getBackingStore(
-      toBackingStoreType(initialConfig->getRepoType()),
-      initialConfig->getRepoSource(),
-      *initialConfig);
+  auto bsType = toBackingStoreType(initialConfig->getRepoType());
+  XLOGF(
+      DBG4, "Creating backing store of type: {}", toBackingStoreString(bsType));
+  auto backingStore =
+      getBackingStore(bsType, initialConfig->getRepoSource(), *initialConfig);
 
   auto objectStore = ObjectStore::create(
       backingStore,

@@ -36,7 +36,7 @@ FilterCoverage determineFilterCoverage(
     default:
       throwf<std::invalid_argument>(
           "Rust returned an invalid filter FilterDirectoryMatch result: {}",
-          res);
+          static_cast<uint8_t>(res));
   }
 }
 } // namespace

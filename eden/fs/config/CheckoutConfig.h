@@ -102,7 +102,8 @@ class CheckoutConfig {
   /**
    * Get the repository type.
    *
-   * Currently supported types include "git", "hg", and "recas".
+   * Currently supported types include "git", "hg", "filteredhg", "empty", and
+   * "recas".
    */
   const std::string& getRepoType() const {
     return repoType_;

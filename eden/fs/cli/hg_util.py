@@ -67,6 +67,11 @@ def setup_hg_dir(checkout: EdenCheckout, commit_id: str) -> None:
         copymap: Dict[str, str] = {}
         eden.dirstate.write(f, parents, tuples_dict, copymap)
 
+    # If the checkout is using FilteredFS, we need to write an initial
+    # .hg/sparse file that indicates no filter is active.
+    if checkout.get_config().scm_type == "filteredhg":
+        (checkout_hg_dir / "sparse").write_text("")
+
 
 def get_backing_hg_dir(checkout: EdenCheckout) -> Path:
     """Given an EdenCheckout object, return the path to the actual .hg/ directory that
@@ -118,6 +123,9 @@ def get_requires_data(checkout: EdenCheckout) -> str:
 
     if checkout.get_config().enable_windows_symlinks:
         requires.add("windowssymlinks")
+
+    if checkout.get_config().scm_type == "filteredhg":
+        requires.add("edensparse")
 
     return "\n".join(sorted(requires)) + "\n"
 

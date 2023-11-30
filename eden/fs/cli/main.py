@@ -30,6 +30,7 @@ import thrift.transport
 
 from cli.py import par_telemetry
 from eden.fs.cli.buck import get_buck_command, run_buck_command
+from eden.fs.cli.config import HG_REPO_TYPES
 from eden.fs.cli.telemetry import TelemetrySample
 from eden.fs.cli.util import (
     check_health_using_lockfile,
@@ -755,7 +756,11 @@ class CloneCmd(Subcmd):
 
         parser.add_argument(
             "--backing-store",
-            help="Clone path as backing store instead of a source control repository. Currently only support 'recas' and 'http' (Linux only)",
+            help=(
+                "Clone the path with a specified Backing Store implementation. "
+                "Currently only supports 'filteredhg' (all), 'recas' (Linux), "
+                "and 'http' (Linux)."
+            ),
         )
 
         parser.add_argument(
@@ -873,7 +878,7 @@ is case-sensitive. This is not recommended and is intended only for testing."""
             return 1
 
         # If it's source control respository
-        if not args.backing_store:
+        if not args.backing_store or args.backing_store in HG_REPO_TYPES:
             # Find the commit to check out
             if args.rev is not None:
                 try:

@@ -342,9 +342,16 @@ class Repo(abc.ABC):
 class HgRepo(Repo):
     HEAD = "."
 
-    def __init__(self, source: str, working_dir: Optional[str] = None) -> None:
+    def __init__(
+        self,
+        source: str,
+        working_dir: Optional[str] = None,
+        backing_type: Optional[str] = None,
+    ) -> None:
         super(HgRepo, self).__init__(
-            "hg", source, source if working_dir is None else working_dir
+            backing_type if backing_type is not None else "hg",
+            source,
+            source if working_dir is None else working_dir,
         )
         self._env = os.environ.copy()
         self._env["HGPLAIN"] = "1"
@@ -460,7 +467,7 @@ def _get_git_repo(path: str) -> Optional[GitRepo]:
     return None
 
 
-def get_hg_repo(path: str) -> Optional[HgRepo]:
+def get_hg_repo(path: str, backing_type: Optional[str] = None) -> Optional[HgRepo]:
     """
     If path points to a mercurial repository, return a HgRepo object.
     Otherwise, if path is not a mercurial repository, return None.
@@ -487,7 +494,7 @@ def get_hg_repo(path: str) -> Optional[HgRepo]:
     if not os.path.isdir(os.path.join(hg_dir, "store")):
         return None
 
-    return HgRepo(repo_path, working_dir)
+    return HgRepo(repo_path, working_dir, backing_type)
 
 
 def get_recas_repo(path: str) -> Optional[ReCasRepo]:
@@ -524,7 +531,7 @@ def get_repo(path: str, backing_store_type: Optional[str] = None) -> Optional[Re
         return None
 
     while True:
-        hg_repo = get_hg_repo(path)
+        hg_repo = get_hg_repo(path, backing_store_type)
         if hg_repo is not None:
             return hg_repo
         git_repo = _get_git_repo(path)
@@ -792,3 +799,38 @@ if sys.platform == "win32":
         if re.match(r"\\\\\?\\[A-Za-z]:\\", parts[0]):
             parts[0] = parts[0][-3:].upper()
         return Path(*parts)
+
+
+def _varint_byte(b: int):
+    return bytes((b,))
+
+
+def encode_varint(number: int) -> bytes:
+    """Pack `number` into varint bytes"""
+    buf = b""
+    while True:
+        towrite = number & 0x7F
+        number >>= 7
+        if number:
+            buf += _varint_byte(towrite | 0x80)
+        else:
+            buf += _varint_byte(towrite)
+            break
+    return buf
+
+
+def create_filtered_rootid(root_id: str, filter: Optional[str] = None) -> bytes:
+    """Create a FilteredRootId from a RootId and FilterId pair.
+
+    The FilteredRootId is in the form:
+
+    <Varint><OriginalRootId><FilterId>
+
+    Where the Varint represents the length of the OriginalRootId and the
+    FilterId represents which filter should be applied to the checkout. If no
+    filter is provided, the "null" filter is used.
+    """
+    original_len = len(root_id)
+    filter_id = filter if filter is not None else "null"
+    varint = encode_varint(original_len)
+    return varint + root_id.encode() + filter_id.encode()
