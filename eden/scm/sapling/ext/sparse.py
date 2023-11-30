@@ -229,8 +229,16 @@ def replacefilecache(cls, propname: str, replacement: Callable[..., object]) -> 
         raise AttributeError(_("type '%s' has no property '%s'") % (origcls, propname))
 
 
+def _getsparseflavor(repo):
+    return "filteredfs" if "eden" in repo.requirements else "sparse"
+
+
+def _isedensparse(repo):
+    return "edensparse" in repo.requirements
+
+
 def _checksparse(repo) -> None:
-    if "eden" in repo.requirements:
+    if "eden" in repo.requirements and "edensparse" not in repo.requirements:
         raise error.Abort(
             _(
                 "You're using an Eden repo and thus don't need sparse profiles.  "
@@ -239,7 +247,7 @@ def _checksparse(repo) -> None:
         )
 
     if not hasattr(repo, "sparsematch"):
-        raise error.Abort(_("this is not a sparse repository"))
+        raise error.Abort(_(f"this is not a {_getsparseflavor(repo)} repository"))
 
 
 def _hassparse(repo):
@@ -2717,7 +2725,7 @@ def _checknonexistingprofiles(ui, repo, profiles) -> None:
                     "current commit, it will only take effect "
                     "when you check out a commit containing a "
                     "profile with that name\n"
-                    "(if the path is a typo, use '@prog@ sparse disableprofile' to remove it)\n"
+                    f"(if the path is a typo, use '@prog@ {_getsparseflavor(repo)} disableprofile' to remove it)\n"
                 )
                 % p
             )
