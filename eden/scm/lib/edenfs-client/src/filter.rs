@@ -23,11 +23,11 @@ impl FilterGenerator {
         // The filter file may be in 3 different states:
         //
         // 1) It may not exist, which indicates FilteredFS is not active
-        // 2) It may contain "null" which indicates that FFS is in use, but no filter is active.
+        // 2) It may contain nothing which indicates that FFS is in use, but no filter is active.
         // 3) It may contain the path to the active filter.
         //
         // We error out if the path exists but we can't read the file.
-        let config_contents = std::fs::read_to_string(self.dot_hg_path.join("filter"));
+        let config_contents = std::fs::read_to_string(self.dot_hg_path.join("sparse"));
         let filter_path = match config_contents {
             Ok(c) => c,
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
@@ -36,7 +36,7 @@ impl FilterGenerator {
 
         let filter_path = filter_path.trim();
 
-        if filter_path == "null" {
+        if filter_path.is_empty() {
             return Ok(None);
         }
 
