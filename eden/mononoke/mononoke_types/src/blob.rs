@@ -30,6 +30,7 @@ use crate::typed_hash::RawBundle2Id;
 use crate::typed_hash::RedactionKeyListId;
 use crate::typed_hash::SkeletonManifestId;
 use crate::typed_hash::TestManifestId;
+use crate::typed_hash::TestShardedManifestId;
 
 /// A serialized blob in memory.
 #[derive(Clone)]
@@ -92,6 +93,7 @@ pub type FastlogBatchBlob = Blob<FastlogBatchId>;
 pub type RedactionKeyListBlob = Blob<RedactionKeyListId>;
 pub type BasenameSuffixSkeletonManifestBlob = Blob<BasenameSuffixSkeletonManifestId>;
 pub type TestManifestBlob = Blob<TestManifestId>;
+pub type TestShardedManifestBlob = Blob<TestShardedManifestId>;
 
 impl<Id: BlobstoreKey> From<Blob<Id>> for BlobstoreBytes {
     #[inline]

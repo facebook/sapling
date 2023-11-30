@@ -46,6 +46,7 @@ typedef IdType SkeletonManifestId (rust.newtype)
 typedef IdType MPathHash (rust.newtype)
 typedef IdType BasenameSuffixSkeletonManifestId (rust.newtype)
 typedef IdType TestManifestId (rust.newtype)
+typedef IdType TestShardedManifestId (rust.newtype)
 
 typedef IdType ContentMetadataV2Id (rust.newtype)
 typedef IdType FastlogBatchId (rust.newtype)
@@ -508,6 +509,26 @@ struct TestManifest {
   1: map<MPathElement, TestManifestEntry> (
     rust.type = "sorted_vector_map::SortedVectorMap",
   ) subentries;
+} (rust.exhaustive)
+
+// TestShardedManifest is a sharded version of TestManifest (uses ShardedMapV2 in place of SortedVectorMap).
+struct TestShardedManifestFile {
+  // Storing the basename length of the file instead of calculating it from the edges from its parent
+  // simplifies the derivation logic.
+  1: i64 basename_length;
+} (rust.exhaustive)
+struct TestShardedManifestDirectory {
+  1: TestShardedManifestId id;
+  2: i64 max_basename_length;
+} (rust.exhaustive)
+
+union TestShardedManifestEntry {
+  1: TestShardedManifestFile file;
+  2: TestShardedManifestDirectory directory;
+} (rust.exhaustive)
+
+struct TestShardedManifest {
+  1: ShardedMapV2Node subentries;
 } (rust.exhaustive)
 
 struct FsnodeFile {

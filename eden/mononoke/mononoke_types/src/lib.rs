@@ -36,6 +36,7 @@ pub mod skeleton_manifest;
 pub mod sql_types;
 pub mod svnrev;
 pub mod test_manifest;
+pub mod test_sharded_manifest;
 pub mod thrift_convert;
 pub mod trie_map;
 pub mod typed_hash;
@@ -107,6 +108,7 @@ pub use typed_hash::MononokeId;
 pub use typed_hash::RawBundle2Id;
 pub use typed_hash::SkeletonManifestId;
 pub use typed_hash::TestManifestId;
+pub use typed_hash::TestShardedManifestId;
 
 mod macros;
 
