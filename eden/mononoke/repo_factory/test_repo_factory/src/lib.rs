@@ -136,6 +136,7 @@ use streaming_clone::StreamingCloneBuilder;
 use synced_commit_mapping::ArcSyncedCommitMapping;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 use test_manifest::RootTestManifestDirectory;
+use test_sharded_manifest::RootTestShardedManifestDirectory;
 use unodes::RootUnodeManifestId;
 use warm_bookmarks_cache::WarmBookmarksCacheBuilder;
 use wireproto_handler::ArcRepoHandlerBase;
@@ -186,6 +187,7 @@ pub fn default_test_repo_config() -> RepoConfig {
             RootSkeletonManifestId::NAME.to_string(),
             RootBasenameSuffixSkeletonManifest::NAME.to_string(),
             RootTestManifestDirectory::NAME.to_string(),
+            RootTestShardedManifestDirectory::NAME.to_string(),
         },
         unode_version: UnodeVersion::V2,
         blame_version: BlameVersion::V2,
