@@ -70,7 +70,7 @@ from sapling import error, match as matchmod, merge as mergemod, registrar
 
 from sapling.i18n import _
 
-from .sparse import _common_config_opts
+from .sparse import _common_config_opts, SparseMixin
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -88,7 +88,7 @@ def reposetup(ui, repo) -> None:
 
 
 def _wraprepo(ui, repo) -> None:
-    class EdenSparseRepo(repo.__class__):
+    class EdenSparseRepo(repo.__class__, SparseMixin):
         def sparsematch(self, *revs, **kwargs):
             """Returns the sparse match function for the given revs
 
@@ -105,37 +105,6 @@ def _wraprepo(ui, repo) -> None:
         ):
             self.ui.note(_("applying EdenFS filter to current commit"))
             mergemod.goto(self, self["."], force=force)
-
-        def _refreshsparse(self, ui, origstatus, origsparsematch, force):
-            """Refreshes which files are on disk by comparing the old status and
-            sparsematch with the new sparsematch.
-
-            Will raise an exception if a file with pending changes is being excluded
-            or included (unless force=True).
-            """
-            modified, added, removed, deleted, unknown, ignored, clean = origstatus
-
-            # Verify there are no pending changes
-            pending = set()
-            pending.update(modified)
-            pending.update(added)
-            pending.update(removed)
-            sparsematch = self.sparsematch()
-            abort = False
-            if len(pending) > 0:
-                ui.note(_("verifying pending changes for refresh\n"))
-            for file in pending:
-                if not sparsematch(file):
-                    ui.warn(_("pending changes to '%s'\n") % file)
-                    abort = not force
-            if abort:
-                raise error.Abort(
-                    _("could not update sparseness due to pending changes")
-                )
-
-            return self._applysparsetoworkingcopy(
-                force, origsparsematch, sparsematch, pending
-            )
 
     if "dirstate" in repo._filecache:
         repo.dirstate.repo = repo

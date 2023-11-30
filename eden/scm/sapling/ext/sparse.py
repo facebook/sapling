@@ -875,8 +875,68 @@ class SparseProfile:
 metadata_key_value: Pattern[str] = re.compile(r"(?P<key>.*)\s*[:=]\s*(?P<value>.*)")
 
 
+class SparseMixin:
+    def writesparseconfig(self, include, exclude, profiles):
+        raw = ""
+        if _isedensparse(self):
+            profiles = list(profiles)
+            if len(profiles) > 1 or len(include) != 0 or len(exclude) != 0:
+                raise error.ProgrammingError(
+                    "the edensparse extension only supports 1 active profile (and no additional includes/excludes) at a time"
+                )
+            raw = f"%include {profiles[0]}" if len(profiles) == 1 else ""
+        else:
+            raw = "%s[include]\n%s\n[exclude]\n%s\n" % (
+                "".join(["%%include %s\n" % p for p in sorted(profiles)]),
+                "\n".join(sorted(include)),
+                "\n".join(sorted(exclude)),
+            )
+        self.localvfs.writeutf8("sparse", raw)
+        self.invalidatesparsecache()
+
+    def invalidatesparsecache(self):
+        if not _isedensparse(self):
+            self._sparsecache.clear()
+
+    def _refreshsparse(self, ui, origstatus, origsparsematch, force):
+        """Refreshes which files are on disk by comparing the old status and
+        sparsematch with the new sparsematch.
+
+        Will raise an exception if a file with pending changes is being excluded
+        or included (unless force=True).
+        """
+        modified, added, removed, deleted, unknown, ignored, clean = origstatus
+
+        # Verify there are no pending changes
+        pending = set()
+        pending.update(modified)
+        pending.update(added)
+        pending.update(removed)
+        sparsematch = self.sparsematch()
+        abort = False
+        if len(pending) > 0:
+            ui.note(_("verifying pending changes for refresh\n"))
+        for file in pending:
+            if not sparsematch(file):
+                ui.warn(_("pending changes to '%s'\n") % file)
+                abort = not force
+        if abort:
+            raise error.Abort(_("could not update sparseness due to pending changes"))
+
+        return self._applysparsetoworkingcopy(
+            force, origsparsematch, sparsematch, pending
+        )
+
+    def _applysparsetoworkingcopy(force, origsparsematch, sparsematch, pending):
+        raise error.ProgrammingError(
+            _(
+                "SparseMixin users must implement their own logic for applying sparse updates to the working copy."
+            )
+        )
+
+
 def _wraprepo(ui, repo) -> None:
-    class SparseRepo(repo.__class__):
+    class SparseRepo(repo.__class__, SparseMixin):
         def _getlatestprofileconfigs(self):
             includes = collections.defaultdict(list)
             excludes = collections.defaultdict(list)
@@ -958,10 +1018,6 @@ def _wraprepo(ui, repo) -> None:
             self.invalidatesparsecache()
             return super(SparseRepo, self).invalidatecaches()
 
-        def invalidatesparsecache(self):
-            if not _isedensparse(self):
-                self._sparsecache.clear()
-
         def sparsematch(self, *revs, **kwargs):
             """Returns the sparse match function for the given revs
 
@@ -1042,24 +1098,6 @@ def _wraprepo(ui, repo) -> None:
                 activeprofiles.update(profiles)
 
             return activeprofiles
-
-        def writesparseconfig(self, include, exclude, profiles):
-            raw = ""
-            if _isedensparse(self):
-                profiles = list(profiles)
-                if len(profiles) > 1 or len(include) != 0 or len(exclude) != 0:
-                    raise error.ProgrammingError(
-                        "the edensparse extension only supports 1 active profile (and no additional includes/excludes) at a time"
-                    )
-                raw = f"%include {profiles[0]}"
-            else:
-                raw = "%s[include]\n%s\n[exclude]\n%s\n" % (
-                    "".join(["%%include %s\n" % p for p in sorted(profiles)]),
-                    "\n".join(sorted(include)),
-                    "\n".join(sorted(exclude)),
-                )
-            self.localvfs.writeutf8("sparse", raw)
-            self.invalidatesparsecache()
 
         def addtemporaryincludes(self, files):
             includes = self.gettemporaryincludes()
@@ -1214,37 +1252,6 @@ def _wraprepo(ui, repo) -> None:
                     dirstate.normallookup(file)
 
             return added, dropped, lookup
-
-        def _refreshsparse(self, ui, origstatus, origsparsematch, force):
-            """Refreshes which files are on disk by comparing the old status and
-            sparsematch with the new sparsematch.
-
-            Will raise an exception if a file with pending changes is being excluded
-            or included (unless force=True).
-            """
-            modified, added, removed, deleted, unknown, ignored, clean = origstatus
-
-            # Verify there are no pending changes
-            pending = set()
-            pending.update(modified)
-            pending.update(added)
-            pending.update(removed)
-            sparsematch = self.sparsematch()
-            abort = False
-            if len(pending) > 0:
-                ui.note(_("verifying pending changes for refresh\n"))
-            for file in pending:
-                if not sparsematch(file):
-                    ui.warn(_("pending changes to '%s'\n") % file)
-                    abort = not force
-            if abort:
-                raise error.Abort(
-                    _("could not update sparseness due to pending changes")
-                )
-
-            return self._applysparsetoworkingcopy(
-                force, origsparsematch, sparsematch, pending
-            )
 
     if "dirstate" in repo._filecache:
         repo.dirstate.repo = repo
