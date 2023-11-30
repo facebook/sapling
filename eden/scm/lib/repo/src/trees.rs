@@ -33,6 +33,14 @@ impl TreeManifestResolver {
 
 impl ReadTreeManifest for TreeManifestResolver {
     fn get(&self, commit_id: &HgId) -> Result<Arc<RwLock<TreeManifest>>> {
+        if commit_id.is_null() {
+            // Null commit represents a working copy with no parents. Avoid
+            // querying the backend since this is not a real commit.
+            return Ok(Arc::new(RwLock::new(TreeManifest::ephemeral(
+                self.tree_store.clone(),
+            ))));
+        }
+
         let commit_store = self.dag_commits.read().to_dyn_read_root_tree_ids();
         let tree_ids =
             async_runtime::block_on(commit_store.read_root_tree_ids(vec![commit_id.clone()]))?;
