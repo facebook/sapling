@@ -157,6 +157,35 @@ export function mergeCommitMessageFields(
   );
 }
 
+export function mergeManyCommitMessageFields(
+  schema: Array<FieldConfig>,
+  fields: Array<CommitMessageFields>,
+): CommitMessageFields {
+  return Object.fromEntries(
+    schema
+      .map(config => {
+        if (Array.isArray(fields[0][config.key])) {
+          return [
+            config.key,
+            [...new Set(fields.flatMap(field => field[config.key]))].slice(
+              0,
+              (config.type === 'field' ? config.maxTokens : undefined) ?? Infinity,
+            ),
+          ];
+        } else {
+          const result = fields
+            .map(field => field[config.key])
+            .filter(value => ((value as string | undefined)?.trim().length ?? 0) > 0);
+          if (result.length === 0) {
+            return undefined;
+          }
+          return [config.key, result.join(config.type === 'title' ? ', ' : '\n')];
+        }
+      })
+      .filter(notEmpty),
+  );
+}
+
 function joinWithComma(tokens: Array<string>): string {
   return tokens.join(', ');
 }

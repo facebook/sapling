@@ -8,6 +8,7 @@
 import {
   commitMessageFieldsToString,
   mergeCommitMessageFields,
+  mergeManyCommitMessageFields,
   OSSDefaultFieldSchema,
   parseCommitMessageFields,
 } from '../CommitMessageFields';
@@ -120,6 +121,48 @@ line 2`,
         ),
       ).toEqual({
         Title: 'Commit A, Commit B',
+      });
+    });
+  });
+
+  describe('mergeManyCommitMessageFields', () => {
+    it('can merge fields', () => {
+      expect(
+        mergeManyCommitMessageFields(OSSDefaultFieldSchema, [
+          {
+            Title: 'Commit A',
+            Description: 'Description A',
+          },
+          {
+            Title: 'Commit B',
+            Description: 'Description B',
+          },
+          {
+            Title: 'Commit C',
+            Description: 'Description C',
+          },
+        ]),
+      ).toEqual({
+        Title: 'Commit A, Commit B, Commit C',
+        Description: 'Description A\nDescription B\nDescription C',
+      });
+    });
+
+    it('ignores empty fields', () => {
+      expect(
+        mergeManyCommitMessageFields(OSSDefaultFieldSchema, [
+          {
+            Title: 'Commit A',
+          },
+          {
+            Title: 'Commit B',
+          },
+          {
+            Title: 'Commit C',
+          },
+        ]),
+      ).toEqual({
+        Title: 'Commit A, Commit B, Commit C',
       });
     });
   });
