@@ -45,6 +45,7 @@ typedef IdType FsnodeId (rust.newtype)
 typedef IdType SkeletonManifestId (rust.newtype)
 typedef IdType MPathHash (rust.newtype)
 typedef IdType BasenameSuffixSkeletonManifestId (rust.newtype)
+typedef IdType BssmV3DirectoryId (rust.newtype)
 typedef IdType TestManifestId (rust.newtype)
 typedef IdType TestShardedManifestId (rust.newtype)
 
@@ -490,6 +491,25 @@ union BssmEntry {
 struct BasenameSuffixSkeletonManifest {
   // Map of MPathElement -> BssmEntry
   1: ShardedMapNode subentries;
+} (rust.exhaustive)
+
+// BssmV3 is an optimized version of Bssm that differs from it in two ways:
+//
+// 1) It uses ShardedMapV2 instead of ShardedMap which avoids creating un-cachable blobs,
+// instead dividing the manifest into closely sized blobs.
+//
+// 2) Stores the sharded map inlined without a layer of indirection, and relies only
+// on the sharded map to decide which parts of the manifest should be inlined and
+// which should be stored in a separate blob. This avoids the large number of tiny
+// blobs that Bssm creates due to how unique basenames tend to be.
+struct BssmV3File {} (rust.exhaustive)
+struct BssmV3Directory {
+  1: ShardedMapV2Node subentries;
+} (rust.exhaustive)
+
+union BssmV3Entry {
+  1: BssmV3File file;
+  2: BssmV3Directory directory;
 } (rust.exhaustive)
 
 // TestManifest is a manifest type intended only to be used in tests. It contains

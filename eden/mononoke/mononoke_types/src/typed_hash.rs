@@ -27,6 +27,8 @@ use sql::mysql;
 
 use crate::basename_suffix_skeleton_manifest::BasenameSuffixSkeletonManifest;
 use crate::basename_suffix_skeleton_manifest::BssmEntry;
+use crate::basename_suffix_skeleton_manifest_v3::BssmV3Directory;
+use crate::basename_suffix_skeleton_manifest_v3::BssmV3Entry;
 use crate::blob::Blob;
 use crate::blob::BlobstoreValue;
 use crate::bonsai_changeset::BonsaiChangeset;
@@ -164,6 +166,14 @@ pub struct ShardedMapNodeBSSMId(Blake2);
 /// An identifier for basename suffix manifest
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 pub struct BasenameSuffixSkeletonManifestId(Blake2);
+
+/// An identifier for basename suffix manifest v3 directory
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
+pub struct BssmV3DirectoryId(Blake2);
+
+/// An identifier for a sharded map node used in basename suffix manifest v3
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
+pub struct ShardedMapV2NodeBssmV3Id(Blake2);
 
 /// An identifier for an fsnode
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
@@ -594,11 +604,27 @@ impl_typed_hash! {
 }
 
 impl_typed_hash! {
+    hash_type => BssmV3DirectoryId,
+    thrift_hash_type => thrift::BssmV3DirectoryId,
+    value_type => BssmV3Directory,
+    context_type => BssmV3DirectoryContext,
+    context_key => "bssm3",
+}
+
+impl_typed_hash! {
     hash_type => ShardedMapNodeBSSMId,
     thrift_hash_type => thrift::ShardedMapNodeId,
     value_type => ShardedMapNode<BssmEntry>,
     context_type => ShardedMapNodeBSSMContext,
     context_key => "bssm.mapnode",
+}
+
+impl_typed_hash! {
+    hash_type => ShardedMapV2NodeBssmV3Id,
+    thrift_hash_type => thrift::ShardedMapV2NodeId,
+    value_type => ShardedMapV2Node<BssmV3Entry>,
+    context_type => ShardedMapV2NodeBssmV3Context,
+    context_key => "bssm3.map2node",
 }
 
 impl_typed_hash! {
@@ -794,6 +820,9 @@ mod test {
         let id = ShardedMapNodeBSSMId::from_byte_array([1; 32]);
         assert_eq!(id.blobstore_key(), format!("bssm.mapnode.blake2.{}", id));
 
+        let id = ShardedMapV2NodeBssmV3Id::from_byte_array([1; 32]);
+        assert_eq!(id.blobstore_key(), format!("bssm3.map2node.blake2.{}", id));
+
         let id = ShardedMapV2NodeTestShardedManifestId::from_byte_array([1; 32]);
         assert_eq!(
             id.blobstore_key(),
@@ -820,6 +849,9 @@ mod test {
 
         let id = BasenameSuffixSkeletonManifestId::from_byte_array([1; 32]);
         assert_eq!(id.blobstore_key(), format!("bssm.blake2.{}", id),);
+
+        let id = BssmV3DirectoryId::from_byte_array([1; 32]);
+        assert_eq!(id.blobstore_key(), format!("bssm3.blake2.{}", id),);
 
         let id = TestManifestId::from_byte_array([1; 32]);
         assert_eq!(id.blobstore_key(), format!("testmanifest.blake2.{}", id),);
@@ -903,6 +935,11 @@ mod test {
         assert_eq!(id, deserialized);
 
         let id = BasenameSuffixSkeletonManifestId::from_byte_array([1; 32]);
+        let serialized = serde_json::to_string(&id).unwrap();
+        let deserialized = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(id, deserialized);
+
+        let id = BssmV3DirectoryId::from_byte_array([1; 32]);
         let serialized = serde_json::to_string(&id).unwrap();
         let deserialized = serde_json::from_str(&serialized).unwrap();
         assert_eq!(id, deserialized);

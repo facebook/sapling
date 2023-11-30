@@ -9,6 +9,7 @@
 #![feature(round_char_boundary)]
 
 pub mod basename_suffix_skeleton_manifest;
+pub mod basename_suffix_skeleton_manifest_v3;
 pub mod blame_v2;
 pub mod blob;
 pub mod bonsai_changeset;

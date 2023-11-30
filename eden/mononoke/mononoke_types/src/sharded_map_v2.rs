@@ -6,6 +6,7 @@
  */
 
 use std::fmt::Debug;
+use std::hash::Hash;
 use std::num::NonZeroUsize;
 use std::sync::OnceLock;
 
@@ -39,7 +40,7 @@ use crate::TrieMap;
 
 // More detailed documentation about ShardedMapV2 can be found in mononoke_types_thrift.thrift
 
-pub trait ShardedMapV2Value: ThriftConvert + Debug + Clone + Send + Sync + 'static {
+pub trait ShardedMapV2Value: ThriftConvert + Debug + Hash + Clone + Send + Sync + 'static {
     type NodeId: MononokeId<Thrift = thrift::ShardedMapV2NodeId, Value = ShardedMapV2Node<Self>>;
     type Context: IdContext<Id = Self::NodeId>;
     type RollupData: Rollup<Self>;
@@ -53,7 +54,7 @@ pub trait ShardedMapV2Value: ThriftConvert + Debug + Clone + Send + Sync + 'stat
 }
 
 pub trait Rollup<Value: ShardedMapV2Value>:
-    ThriftConvert + Debug + Clone + PartialEq + Eq + Send + Sync + 'static
+    ThriftConvert + Debug + Hash + Clone + PartialEq + Eq + Send + Sync + 'static
 {
     fn rollup(value: Option<&Value>, child_rollup_data: Vec<Self>) -> Self;
 }
@@ -61,25 +62,25 @@ pub trait Rollup<Value: ShardedMapV2Value>:
 type SmallBinary = SmallVec<[u8; 24]>;
 
 #[derive(Derivative)]
-#[derivative(PartialEq, Debug, Default(bound = ""))]
+#[derivative(PartialEq, Debug, Hash, Default(bound = ""))]
 #[derive(Clone, Eq)]
 pub struct ShardedMapV2Node<Value: ShardedMapV2Value> {
     prefix: SmallBinary,
     value: Option<Box<Value>>,
     children: SortedVectorMap<u8, LoadableShardedMapV2Node<Value>>,
-    #[derivative(PartialEq = "ignore", Debug = "ignore")]
+    #[derivative(PartialEq = "ignore", Debug = "ignore", Hash = "ignore")]
     weight: OnceLock<usize>,
-    #[derivative(PartialEq = "ignore", Debug = "ignore")]
+    #[derivative(PartialEq = "ignore", Debug = "ignore", Hash = "ignore")]
     size: OnceLock<usize>,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum LoadableShardedMapV2Node<Value: ShardedMapV2Value> {
     Inlined(ShardedMapV2Node<Value>),
     Stored(ShardedMapV2StoredNode<Value>),
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct ShardedMapV2StoredNode<Value: ShardedMapV2Value> {
     id: Value::NodeId,
     weight: usize,
@@ -238,7 +239,7 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
         }
     }
 
-    fn weight(&self) -> usize {
+    pub fn weight(&self) -> usize {
         *self.weight.get_or_init(|| {
             self.value.as_ref().map_or(0, |v| v.weight())
                 + self
@@ -626,10 +627,10 @@ mod test {
     use crate::private::Blake2;
     use crate::BlobstoreKey;
 
-    #[derive(Debug, Clone, Copy, Eq, PartialEq)]
+    #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
     pub struct TestValue(u32);
 
-    #[derive(Debug, Clone, Copy, Eq, PartialEq)]
+    #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
     pub struct MaxTestValue(u32);
 
     #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
