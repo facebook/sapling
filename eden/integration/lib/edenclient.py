@@ -374,6 +374,7 @@ class EdenFS:
             stderr=subprocess.PIPE,
             universal_newlines=True,
             env=env,
+            errors="surrogateescape",
         )
 
         # TODO(T69605343): Until TPX properly knows how to redirect writes done
