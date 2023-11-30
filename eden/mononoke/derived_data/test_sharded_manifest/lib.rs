@@ -6,6 +6,8 @@
  */
 
 mod derive;
+#[cfg(test)]
+mod derive_from_predecessor;
 mod mapping;
 #[cfg(test)]
 mod tests;

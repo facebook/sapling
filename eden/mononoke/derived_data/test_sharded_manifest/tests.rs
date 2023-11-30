@@ -28,7 +28,9 @@ use mononoke_types::ChangesetIdsResolvedFromPrefix;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use skeleton_manifest::RootSkeletonManifestId;
+use test_manifest::RootTestManifestDirectory;
 
+use crate::derive_from_predecessor::inner_derive_from_predecessor;
 use crate::RootTestShardedManifestDirectory;
 
 /// Validates that the max basename length is calculated correctly for the given directory
@@ -112,6 +114,18 @@ async fn test_for_fixture<F: TestRepoFixture + Send>(fb: FacebookInit) -> Result
             assert_eq!(
                 test_sharded_manifest_leaf_entries,
                 skeleton_manifest_leaf_entries
+            );
+
+            let test_manifest = derived_data
+                .derive::<RootTestManifestDirectory>(ctx, cs_id)
+                .await?
+                .into_inner();
+            let test_sharded_manifest_from_test_manifest =
+                inner_derive_from_predecessor(ctx, &blobstore.boxed(), test_manifest).await?;
+
+            assert_eq!(
+                test_sharded_manifest,
+                test_sharded_manifest_from_test_manifest
             );
 
             Ok(())

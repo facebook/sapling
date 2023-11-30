@@ -28,6 +28,7 @@ rust_library(
         "fbsource//third-party/rust:tokio",
         "//common/rust/shed/borrowed:borrowed",
         "//common/rust/shed/cloned:cloned",
+        "//common/rust/shed/sorted_vector_map:sorted_vector_map",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/common/bounded_traversal:bounded_traversal",
         "//eden/mononoke/mononoke_types:mononoke_types",

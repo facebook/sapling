@@ -33,3 +33,5 @@ fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
+sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+test_manifest = { version = "0.1.0", path = "../test_manifest" }
