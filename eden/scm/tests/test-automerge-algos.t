@@ -3,6 +3,7 @@
   $ configure modern
   $ enable rebase
   $ setconfig automerge.merge-algos=adjacent-changes,subset-changes
+  $ setconfig automerge.disable-for-noninteractive=False
 
 Successful adjacent-changes merge:
 
@@ -98,6 +99,20 @@ adjacent-changes merge - keep-in-file:
   d'
   >>>>>>>
   e
+
+adjacent-changes merge - disable for noninteractive:
+
+  $ newrepo
+  $ setconfig automerge.mode=accept automerge.disable-for-noninteractive=True
+  $ drawdag <<'EOS'
+  > B C # C/A=a\nb\nc'\nd'\ne\n
+  > |/  # B/A=a\nb'\nc\nd\ne\n
+  > A   # A/A=a\nb\nc\nd\ne\n
+  > EOS
+  $ hg rebase -r $C -d $B -q
+  warning: 1 conflicts while merging A! (edit, then use 'hg resolve --mark')
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
 
 Unsuccessful adjacent-changes merge - overlap:
 

@@ -4,6 +4,7 @@
   $ enable rebase
   $ setconfig automerge.mode=accept
   $ setconfig automerge.merge-algos=word-merge
+  $ setconfig automerge.disable-for-noninteractive=False
 
 Successful word merge:
 

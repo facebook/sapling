@@ -560,13 +560,22 @@ def try_automerge_conflict(
         lines.append(b">>>>>>>" + newline)
         return lines
 
+    def automerge_enabled(ui, automerge_mode):
+        if not ui or automerge_mode == "reject":
+            return False
+
+        if ui.configbool("automerge", "disable-for-noninteractive", True):
+            return ui.interactive()
+
+        return True
+
     automerge_mode = m3.automerge_mode
     ui = m3.ui
 
     automerged = True
     base_lines, a_lines, b_lines = group_lines
     extra_lines = []
-    if automerge_mode != "reject" and (
+    if automerge_enabled(ui, automerge_mode) and (
         merged_res := m3.run_automerge(base_lines, a_lines, b_lines)
     ):
         merge_algorithm, merged_lines = merged_res
