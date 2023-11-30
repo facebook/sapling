@@ -304,7 +304,10 @@ def debuglfsdownload(ui, repo, *pats, **opts):
     if not opts.get("sparse"):
         ui.debug("will ignore sparse profile in this repo\n")
     else:
-        if not hasattr(repo, "sparsematch"):
+        shouldsparsematch = hasattr(repo, "sparsematch") and (
+            "eden" not in repo.requirements or "edensparse" in repo.requirements
+        )
+        if not shouldsparsematch:
             raise error.Abort(
                 _("--ignore-sparse makes no sense in a non-sparse" " repository")
             )

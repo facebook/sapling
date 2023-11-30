@@ -145,7 +145,10 @@ def checksparsebisectskip(repo, candidatenode, badnode, goodnode) -> str:
     """
 
     def diffsparsematch(node, diff):
-        if not hasattr(repo, "sparsematch"):
+        shouldsparsematch = hasattr(repo, "sparsematch") and (
+            "eden" not in repo.requirements or "edensparse" in repo.requirements
+        )
+        if not shouldsparsematch:
             return True
         rev = repo.changelog.rev(node)
         sparsematch = repo.sparsematch(rev)

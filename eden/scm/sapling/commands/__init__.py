@@ -2353,7 +2353,10 @@ def files(ui, repo, *pats, **opts):
     fmt = "%s" + end
 
     m = scmutil.match(ctx, pats, opts)
-    if isinstance(ctx, context.workingctx) and hasattr(repo, "sparsematch"):
+    shouldsparsematch = hasattr(repo, "sparsematch") and (
+        "eden" not in repo.requirements or "edensparse" in repo.requirements
+    )
+    if isinstance(ctx, context.workingctx) and shouldsparsematch:
         m = matchmod.intersectmatchers(m, repo.sparsematch())
 
     ui.pager("files")
