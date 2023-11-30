@@ -47,4 +47,6 @@ export interface CodeReviewProvider {
 
   /** Convert usernames/emails to avatar URIs */
   fetchAvatars?(authors: Array<string>): Promise<Map<string, string>>;
+
+  renderMarkup?: (markup: string) => Promise<string>;
 }

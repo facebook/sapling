@@ -642,6 +642,21 @@ export default class ServerToClientAPI {
         });
         break;
       }
+      case 'renderMarkup': {
+        repo.codeReviewProvider
+          ?.renderMarkup?.(data.markup)
+          ?.then(html => {
+            this.postMessage({
+              type: 'renderedMarkup',
+              id: data.id,
+              html,
+            });
+          })
+          ?.catch(err => {
+            this.logger.error('Error rendering markup:', err);
+          });
+        break;
+      }
       case 'getSuggestedReviewers': {
         repo.codeReviewProvider?.getSuggestedReviewers?.(data.context).then(reviewers => {
           this.postMessage({

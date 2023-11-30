@@ -34,6 +34,7 @@ export class GithubUICodeReviewProvider implements UICodeReviewProvider {
     private system: CodeReviewSystem & {type: 'github'},
     private preferredSubmitCommand: PreferredSubmitCommand,
   ) {}
+  cliName?: string | undefined;
 
   DiffBadgeContent({
     diff,
@@ -118,6 +119,8 @@ export class GithubUICodeReviewProvider implements UICodeReviewProvider {
   supportsSuggestedReviewers = false;
 
   supportsComparingSinceLastSubmit = false;
+
+  supportsRenderingMarkup = false;
 }
 
 type BadgeState = PullRequestState | 'ERROR' | 'DRAFT';

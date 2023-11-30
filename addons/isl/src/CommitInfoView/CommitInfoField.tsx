@@ -9,6 +9,7 @@ import type {FieldConfig} from './types';
 import type {ReactNode} from 'react';
 
 import {T} from '../i18n';
+import {RenderMarkup} from './RenderMarkup';
 import {SeeMoreContainer} from './SeeMoreContainer';
 import {CommitInfoTextArea} from './TextArea';
 import {CommitInfoTextField} from './TextField';
@@ -130,8 +131,10 @@ export function CommitInfoField({
                     tokens={Array.isArray(content) ? content : extractTokens(content)[0]}
                   />
                 </div>
+              ) : Array.isArray(content) ? (
+                content
               ) : (
-                <div>{content}</div>
+                <RenderMarkup>{content}</RenderMarkup>
               )
             ) : (
               <span className="empty-description subtle">

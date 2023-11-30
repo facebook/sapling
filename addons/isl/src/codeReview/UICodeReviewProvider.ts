@@ -83,4 +83,6 @@ export interface UICodeReviewProvider {
   supportsSuggestedReviewers: boolean;
 
   supportsComparingSinceLastSubmit: boolean;
+
+  supportsRenderingMarkup: boolean;
 }
