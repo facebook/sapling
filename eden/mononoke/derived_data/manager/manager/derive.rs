@@ -497,6 +497,74 @@ impl DerivedDataManager {
         }
     }
 
+    /// Derive or retrieve derived data for a changeset using other derived data types
+    /// without requiring data to be derived for the parents of the changeset.
+    pub async fn derive_from_predecessor<Derivable>(
+        &self,
+        ctx: &CoreContext,
+        csid: ChangesetId,
+        rederivation: Option<Arc<dyn Rederivation>>,
+    ) -> Result<Derivable, DerivationError>
+    where
+        Derivable: BonsaiDerivable,
+    {
+        if let Some(value) = self.fetch_derived(ctx, csid, rederivation.clone()).await? {
+            return Ok(value);
+        }
+
+        let mut derivation_ctx = self.derivation_context(rederivation.clone());
+        derivation_ctx.enable_write_batching();
+
+        let bonsai = csid
+            .load(ctx, derivation_ctx.blobstore())
+            .await
+            .map_err(Error::from)?;
+
+        let ctx = ctx.clone_and_reset();
+        let ctx = self.set_derivation_session_class(ctx);
+
+        let mut derived_data_scuba = self.derived_data_scuba::<Derivable>();
+        derived_data_scuba.add_changeset(&bonsai);
+        derived_data_scuba.add_metadata(ctx.metadata());
+
+        derived_data_scuba.log_derivation_start(&ctx);
+
+        let (derive_stats, derived) =
+            Derivable::derive_from_predecessor(&ctx, &derivation_ctx, bonsai)
+                .timed()
+                .await;
+        derivation_ctx.flush(&ctx).await?;
+
+        derived_data_scuba.log_derivation_end(&ctx, &derive_stats, derived.as_ref().err());
+
+        let derived = derived?;
+
+        let (persist_stats, persisted) = async {
+            derived
+                .clone()
+                .store_mapping(&ctx, &derivation_ctx, csid)
+                .await?;
+            derivation_ctx.flush(&ctx).await?;
+            if let Some(rederivation) = rederivation {
+                rederivation.mark_derived(Derivable::NAME, csid);
+            }
+            Ok(())
+        }
+        .timed()
+        .await;
+
+        derived_data_scuba.log_mapping_insertion(
+            &ctx,
+            None,
+            &persist_stats,
+            persisted.as_ref().err(),
+        );
+
+        persisted?;
+
+        Ok(derived)
+    }
+
     // Derive remotely if possible.
     //
     // Returns `None` if remote derivation is not enabled, failed or timed out, and
