@@ -1937,19 +1937,18 @@ def editconfig(ui, repo, *values, **opts):
             section, name = section_name.split(".", 1)
         except ValueError:
             # ex. not enough values to unpack
-            raise error.Abort(
-                _("invalid argument: %r") % section_name,
-                hint=("try section.name=value"),
-            )
+            break
         to_edit.append((section, name, value))
         section_name = value = None
 
     if section_name is not None:
         raise error.Abort(
-            _("missing config value for %r") % section_name,
+            _("invalid config edit: %r") % section_name,
+            hint=("try section.name=value"),
         )
 
     for section, name, value in to_edit:
+        ui.note(_("setting %s.%s=%s in %s\n") % (section, name, value, targetpath))
         rcutil.editconfig(ui, targetpath, section, name, value)
 
     ui.status(_("updated config in %s\n") % targetpath)

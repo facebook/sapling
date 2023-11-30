@@ -246,11 +246,12 @@ config editing without an editor
 
  invalid pattern
   $ hg config --edit missing.value
-  abort: missing config value for 'missing.value'
+  abort: invalid config edit: 'missing.value'
+  (try section.name=value)
   [255]
 
   $ hg config --edit missing=name
-  abort: invalid argument: 'missing'
+  abort: invalid config edit: 'missing'
   (try section.name=value)
   [255]
 
