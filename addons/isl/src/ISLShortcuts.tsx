@@ -31,6 +31,7 @@ export const [ISLCommandContext, useCommand, dispatchCommand, allCommands] = mak
   ToggleShelvedChangesDropdown: [Modifier.ALT, KeyCode.S],
   ToggleDownloadCommitsDropdown: [Modifier.ALT, KeyCode.D],
   ToggleCwdDropdown: [Modifier.ALT, KeyCode.C],
+  ToggleBulkActionsDropdown: [Modifier.ALT, KeyCode.B],
 });
 
 export type ISLCommandName = Parameters<typeof useCommand>[0];
@@ -54,6 +55,7 @@ export const ISLShortcutLabels: Partial<Record<ISLCommandName, string>> = {
   ToggleShelvedChangesDropdown: t('Toggle Shelved Changes Dropdown'),
   ToggleDownloadCommitsDropdown: t('Toggle Download Commits Dropdown'),
   ToggleCwdDropdown: t('Toggle CWD Dropdown'),
+  ToggleBulkActionsDropdown: t('Toggle Bulk Actions Dropdown'),
 };
 
 export function useShowKeyboardShortcutsHelp(): () => unknown {

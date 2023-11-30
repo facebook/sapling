@@ -7,22 +7,31 @@
 
 import {CleanupAllButton} from './Cleanup';
 import {DropdownFields} from './DropdownFields';
+import {useCommandEvent} from './ISLShortcuts';
+import {Kbd} from './Kbd';
 import {SelectAllButton} from './SelectAllCommits';
 import {SuggestedRebaseButton} from './SuggestedRebase';
 import {Tooltip} from './Tooltip';
 import {T} from './i18n';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {Icon} from 'shared/Icon';
+import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
 
 import './BulkActionsMenu.css';
 
 export function BulkActionsMenu() {
+  const additionalToggles = useCommandEvent('ToggleBulkActionsDropdown');
   return (
     <Tooltip
       component={dismiss => <BulkActions dismiss={dismiss} />}
       trigger="click"
       placement="bottom"
-      title={<T>Bulk Actions</T>}>
+      title={
+        <T replace={{$shortcut: <Kbd keycode={KeyCode.B} modifiers={[Modifier.ALT]} />}}>
+          Bulk Actions ($shortcut)
+        </T>
+      }
+      additionalToggles={additionalToggles}>
       <VSCodeButton appearance="icon" data-testid="bulk-actions-button">
         <Icon icon="run-all" />
       </VSCodeButton>

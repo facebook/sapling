@@ -32,6 +32,7 @@ export enum KeyCode {
   Four = 52,
   Five = 53,
   A = 65,
+  B = 66,
   C = 67,
   D = 68,
   N = 78,
