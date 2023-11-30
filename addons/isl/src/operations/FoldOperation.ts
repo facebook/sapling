@@ -98,7 +98,8 @@ export class FoldOperation extends Operation {
   }
 }
 
+export const FOLD_COMMIT_PREVIEW_HASH_PREFIX = 'OPTIMISTIC_FOLDED_';
 export function getFoldRangeCommitHash(range: Array<CommitInfo>): string {
   const [bottom, top] = ends(range);
-  return `OPTIMISTIC_FOLDED_${bottom.hash}:${top.hash}`;
+  return `${FOLD_COMMIT_PREVIEW_HASH_PREFIX}${bottom.hash}:${top.hash}`;
 }
