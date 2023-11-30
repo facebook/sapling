@@ -47,6 +47,7 @@ pub enum DerivableType {
     GitCommit,
     GitDeltaManifest,
     SkeletonManifests,
+    TestManifest,
     Unodes,
 }
 
@@ -65,6 +66,7 @@ impl DerivableType {
             DerivableType::GitCommit => "git_commits",
             DerivableType::GitDeltaManifest => "git_delta_manifests",
             DerivableType::SkeletonManifests => "skeleton_manifests",
+            DerivableType::TestManifest => "testmanifest",
             DerivableType::Unodes => "unodes",
         }
     }

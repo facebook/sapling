@@ -70,6 +70,7 @@ union DerivedData {
   12: DerivedDataBasenameSuffixSkeletonManifest basename_suffix_skeleton_manifest;
   13: DerivedDataCommitHandle commit_handle;
   14: DerivedDataGitDeltaManifest git_delta_manifest;
+  15: DerivedDataTestManifest test_manifest;
 }
 
 union DerivedDataFsnode {
@@ -121,6 +122,10 @@ union DerivedDataDeletedManifestV2 {
 
 union DerivedDataBasenameSuffixSkeletonManifest {
   1: mononoke_types_thrift.BssmDirectory root_basename_suffix_skeleton_manifest;
+}
+
+union DerivedDataTestManifest {
+  1: mononoke_types_thrift.TestManifestDirectory root_test_manifest_directory;
 }
 
 union DerivedDataSkeletonManifest {

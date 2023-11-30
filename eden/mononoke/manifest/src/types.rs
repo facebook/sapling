@@ -29,6 +29,9 @@ use mononoke_types::path::MPath;
 use mononoke_types::sharded_map::ShardedTrieMap;
 use mononoke_types::skeleton_manifest::SkeletonManifest;
 use mononoke_types::skeleton_manifest::SkeletonManifestEntry;
+use mononoke_types::test_manifest::TestManifest;
+use mononoke_types::test_manifest::TestManifestDirectory;
+use mononoke_types::test_manifest::TestManifestEntry;
 use mononoke_types::unode::ManifestUnode;
 use mononoke_types::unode::UnodeEntry;
 use mononoke_types::FileUnodeId;
@@ -324,6 +327,32 @@ fn convert_skeleton_manifest(
         SkeletonManifestEntry::Directory(skeleton_directory) => {
             Entry::Tree(skeleton_directory.id().clone())
         }
+    }
+}
+
+impl Manifest for TestManifest {
+    type TreeId = TestManifestDirectory;
+    type LeafId = ();
+
+    fn lookup(&self, name: &MPathElement) -> Option<Entry<Self::TreeId, Self::LeafId>> {
+        self.lookup(name).map(convert_test_manifest)
+    }
+
+    fn list(&self) -> Box<dyn Iterator<Item = (MPathElement, Entry<Self::TreeId, Self::LeafId>)>> {
+        let v: Vec<_> = self
+            .list()
+            .map(|(basename, entry)| (basename.clone(), convert_test_manifest(entry)))
+            .collect();
+        Box::new(v.into_iter())
+    }
+}
+
+fn convert_test_manifest(
+    test_manifest_entry: &TestManifestEntry,
+) -> Entry<TestManifestDirectory, ()> {
+    match test_manifest_entry {
+        TestManifestEntry::File => Entry::Leaf(()),
+        TestManifestEntry::Directory(dir) => Entry::Tree(dir.clone()),
     }
 }
 

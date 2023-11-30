@@ -72,6 +72,7 @@ use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use skeleton_manifest::RootSkeletonManifestId;
+use test_manifest::RootTestManifestDirectory;
 use topo_sort::sort_topological;
 use unodes::RootUnodeManifestId;
 
@@ -91,6 +92,7 @@ pub const POSSIBLE_DERIVED_TYPES: &[&str] = &[
     RootDeletedManifestV2Id::NAME,
     RootBasenameSuffixSkeletonManifest::NAME,
     RootGitDeltaManifestId::NAME,
+    RootTestManifestDirectory::NAME,
 ];
 
 pub const DEFAULT_BACKFILLING_CONFIG_NAME: &str = "backfilling";
@@ -111,6 +113,7 @@ lazy_static! {
         let git_delta_manifest = RootGitDeltaManifestId::NAME;
         let git_commit = MappedGitCommitId::NAME;
         let git_tree = TreeHandle::NAME;
+        let test_mf = RootTestManifestDirectory::NAME;
 
         let mut dag = HashMap::new();
 
@@ -127,6 +130,7 @@ lazy_static! {
         dag.insert(git_tree, vec![]);
         dag.insert(git_commit, vec![git_tree]);
         dag.insert(git_delta_manifest, vec![git_tree, git_commit, unodes]);
+        dag.insert(test_mf, vec![]);
 
         dag
     };
@@ -546,6 +550,11 @@ fn derived_data_utils_impl(
                 repo, config, enabled_config_name
             )))
         }
+        RootTestManifestDirectory::NAME => Ok(Arc::new(DerivedUtilsFromManager::<
+            RootTestManifestDirectory,
+        >::new(
+            repo, config, enabled_config_name
+        ))),
         name => Err(format_err!("Unsupported derived data type: {}", name)),
     }
 }
@@ -1078,6 +1087,11 @@ pub async fn check_derived(
         }
         DerivableType::Bssm => {
             ddm.fetch_derived::<RootBasenameSuffixSkeletonManifest>(ctx, head_cs_id, None)
+                .map_ok(|res| res.is_some())
+                .await
+        }
+        DerivableType::TestManifest => {
+            ddm.fetch_derived::<RootTestManifestDirectory>(ctx, head_cs_id, None)
                 .map_ok(|res| res.is_some())
                 .await
         }

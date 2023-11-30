@@ -149,4 +149,20 @@ impl TestManifest {
             subentries: Default::default(),
         }
     }
+
+    pub fn from_subentries(
+        subentries: impl Iterator<Item = (MPathElement, TestManifestEntry)>,
+    ) -> Self {
+        Self {
+            subentries: subentries.collect(),
+        }
+    }
+
+    pub fn lookup(&self, path_element: &MPathElement) -> Option<&TestManifestEntry> {
+        self.subentries.get(path_element)
+    }
+
+    pub fn list(&self) -> impl Iterator<Item = (&MPathElement, &TestManifestEntry)> {
+        self.subentries.iter()
+    }
 }

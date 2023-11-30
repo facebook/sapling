@@ -32,6 +32,7 @@ use mononoke_types::fastlog_batch::FastlogBatch;
 use mononoke_types::fsnode::Fsnode;
 use mononoke_types::sharded_map::ShardedMapNode;
 use mononoke_types::skeleton_manifest::SkeletonManifest;
+use mononoke_types::test_manifest::TestManifest;
 use mononoke_types::typed_hash::DeletedManifestV2Id;
 use mononoke_types::unode::FileUnode;
 use mononoke_types::unode::ManifestUnode;
@@ -88,6 +89,7 @@ pub enum DecodeAs {
     BasenameSuffixSkeletonManifestMapNode,
     BasenameSuffixSkeletonManifest,
     ChangesetInfo,
+    TestManifest,
 }
 
 impl DecodeAs {
@@ -122,6 +124,7 @@ impl DecodeAs {
                     DecodeAs::BasenameSuffixSkeletonManifestMapNode,
                 ),
                 ("bssm.", DecodeAs::BasenameSuffixSkeletonManifest),
+                ("testmanifest.", DecodeAs::TestManifest),
                 ("changeset_info.", DecodeAs::ChangesetInfo),
             ] {
                 if key[index..].starts_with(prefix) {
@@ -216,6 +219,9 @@ fn decode(key: &str, data: BlobstoreGetData, mut decode_as: DecodeAs) -> Decoded
         }
         DecodeAs::ChangesetInfo => {
             Decoded::try_debug(ChangesetInfo::from_bytes(&data.into_raw_bytes()))
+        }
+        DecodeAs::TestManifest => {
+            Decoded::try_debug(TestManifest::from_bytes(&data.into_raw_bytes()))
         }
     }
 }
