@@ -12,6 +12,8 @@ import {T} from './i18n';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {Icon} from 'shared/Icon';
 
+import './BulkActionsMenu.css';
+
 export function BulkActionsMenu() {
   return (
     <Tooltip
