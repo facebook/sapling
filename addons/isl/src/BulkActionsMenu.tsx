@@ -7,6 +7,7 @@
 
 import {CleanupAllButton} from './Cleanup';
 import {DropdownFields} from './DropdownFields';
+import {SelectAllButton} from './SelectAllCommits';
 import {SuggestedRebaseButton} from './SuggestedRebase';
 import {Tooltip} from './Tooltip';
 import {T} from './i18n';
@@ -36,6 +37,7 @@ function BulkActions({dismiss}: {dismiss: () => void}) {
       icon="run-all"
       className="bulk-actions-dropdown"
       data-testid="bulk-actions-dropdown">
+      <SelectAllButton dismiss={dismiss} />
       <SuggestedRebaseButton afterRun={dismiss} isBulk />
       <CleanupAllButton />
     </DropdownFields>
