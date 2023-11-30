@@ -313,6 +313,8 @@ describe('CommitTreeList', () => {
         'open-commit-info-button',
       );
       expect(openButton).toBeInTheDocument();
+      // screen reader accessible
+      expect(screen.getByLabelText('Open commit "Commit B"')).toBeInTheDocument();
       fireEvent.click(openButton);
       expect(commitInfoIsOpen()).toBeTruthy();
       expect(CommitInfoTestUtils.withinCommitInfo().getByText('Commit B')).toBeInTheDocument();

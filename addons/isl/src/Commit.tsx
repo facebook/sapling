@@ -273,6 +273,7 @@ export const Commit = memo(
           <Tooltip title={t('Move the working copy to this commit')} delayMs={250}>
             <VSCodeButton
               appearance="secondary"
+              aria-label={t('Go to commit "$title"', {replace: {$title: commit.title}})}
               onClick={event => {
                 runOperation(
                   new GotoOperation(
@@ -303,7 +304,11 @@ export const Commit = memo(
 
     if (!isPublic && !actionsPrevented) {
       commitActions.push(
-        <OpenCommitInfoButton key="open-sidebar" revealCommit={onDoubleClickToShowDrawer} />,
+        <OpenCommitInfoButton
+          key="open-sidebar"
+          revealCommit={onDoubleClickToShowDrawer}
+          commit={commit}
+        />,
       );
     }
 
@@ -382,7 +387,13 @@ export const Commit = memo(
   },
 );
 
-function OpenCommitInfoButton({revealCommit}: {revealCommit: () => unknown}) {
+function OpenCommitInfoButton({
+  commit,
+  revealCommit,
+}: {
+  commit: CommitInfo;
+  revealCommit: () => unknown;
+}) {
   return (
     <Tooltip title={t("Open commit's details in sidebar")} delayMs={250}>
       <VSCodeButton
@@ -393,6 +404,7 @@ function OpenCommitInfoButton({revealCommit}: {revealCommit: () => unknown}) {
           e.preventDefault();
         }}
         className="open-commit-info-button"
+        aria-label={t('Open commit "$title"', {replace: {$title: commit.title}})}
         data-testid="open-commit-info-button">
         <Icon icon="chevron-right" />
       </VSCodeButton>
@@ -628,7 +640,6 @@ function DraggableCommit({
         }
       }}
       onContextMenu={onContextMenu}
-      tabIndex={0}
       data-testid={'draggable-commit'}>
       <div className="commit-wide-drag-target" onDragEnter={handleDragEnter} />
       {dragDisabledMessage != null ? (

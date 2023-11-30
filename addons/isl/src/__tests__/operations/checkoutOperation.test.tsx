@@ -51,6 +51,12 @@ describe('GotoOperation', () => {
     fireEvent.click(gotoButton as Element);
   };
 
+  it('goto button is accessible', () => {
+    expect(screen.getByLabelText('Go to commit "Commit A"')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Go to commit "Commit B"')).not.toBeInTheDocument(); // already head, no goto button
+    expect(screen.getByLabelText('Go to commit "Commit C"')).toBeInTheDocument();
+  });
+
   it('runs goto', () => {
     clickGoto('a');
 
