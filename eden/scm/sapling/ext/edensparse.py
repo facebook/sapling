@@ -73,6 +73,8 @@ from .sparse import (
     _checknonexistingprofiles,
     _common_config_opts,
     _config,
+    _setupcommit,
+    _setupupdates,
     _showsubcmdlogic,
     getcommonopts,
     normalizeprofile,
@@ -85,7 +87,8 @@ command = registrar.command(cmdtable)
 
 
 def uisetup(ui) -> None:
-    pass
+    _setupupdates(ui)
+    _setupcommit(ui)
 
 
 def reposetup(ui, repo) -> None:
