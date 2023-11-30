@@ -251,7 +251,9 @@ def _checksparse(repo) -> None:
 
 
 def _hassparse(repo):
-    return "eden" not in repo.requirements and hasattr(repo, "sparsematch")
+    return (
+        "eden" not in repo.requirements and hasattr(repo, "sparsematch")
+    ) or "edensparse" in repo.requirements
 
 
 def _setupupdates(_ui) -> None:
@@ -272,12 +274,22 @@ def _setupupdates(_ui) -> None:
 
         files = set()
         prunedactions = {}
-        oldrevs = [pctx.rev() for pctx in wctx.parents()]
-        oldsparsematch = repo.sparsematch(*oldrevs)
 
-        repo._clearpendingprofileconfig(all=True)
-        oldprofileconfigs = _getcachedprofileconfigs(repo)
-        newprofileconfigs = repo._creatependingprofileconfigs()
+        # Skip calculations for edensparse repos. We can't simply move these
+        # definitions to the if statement below because they must be calculated
+        # prior to any temporary files being added
+        oldrevs, oldsparsematch, oldprofileconfigs, newprofileconfigs = (
+            None,
+            None,
+            None,
+            None,
+        )
+        if not _isedensparse(repo):
+            oldrevs = [pctx.rev() for pctx in wctx.parents()]
+            oldsparsematch = repo.sparsematch(*oldrevs)
+            repo._clearpendingprofileconfig(all=True)
+            oldprofileconfigs = _getcachedprofileconfigs(repo)
+            newprofileconfigs = repo._creatependingprofileconfigs()
 
         if branchmerge:
             # If we're merging, use the wctx filter, since we're merging into
@@ -333,44 +345,50 @@ def _setupupdates(_ui) -> None:
             for file, flags, msg in actions:
                 dirstate.normal(file)
 
-        profiles = repo.getactiveprofiles()
-        changedprofiles = (profiles & files) or (oldprofileconfigs != newprofileconfigs)
-        # If an active profile changed during the update, refresh the checkout.
-        # Don't do this during a branch merge, since all incoming changes should
-        # have been handled by the temporary includes above.
-        if changedprofiles and not branchmerge:
-            scopename = "Calculating additional actions for sparse profile update"
-            with util.traced(scopename), progress.spinner(ui, "sparse config"):
-                mf = mctx.manifest()
-                fullprefetchonsparseprofilechange = ui.configbool(
-                    "sparse", "force_full_prefetch_on_sparse_profile_change"
-                )
-                fullprefetchonsparseprofilechange |= not hasattr(mf, "walk")
+        # Eden handles refreshing the checkout on its own. This logic is only
+        # needed for non-Eden sparse checkouts where Mercurial must refresh the
+        # checkout when the sparse profile changes.
+        if not _isedensparse(repo):
+            profiles = repo.getactiveprofiles()
+            changedprofiles = (profiles & files) or (
+                oldprofileconfigs != newprofileconfigs
+            )
+            # If an active profile changed during the update, refresh the checkout.
+            # Don't do this during a branch merge, since all incoming changes should
+            # have been handled by the temporary includes above.
+            if changedprofiles and not branchmerge:
+                scopename = "Calculating additional actions for sparse profile update"
+                with util.traced(scopename), progress.spinner(ui, "sparse config"):
+                    mf = mctx.manifest()
+                    fullprefetchonsparseprofilechange = ui.configbool(
+                        "sparse", "force_full_prefetch_on_sparse_profile_change"
+                    )
+                    fullprefetchonsparseprofilechange |= not hasattr(mf, "walk")
 
-                with ui.configoverride(
-                    {("treemanifest", "ondemandfetch"): True}, "sparseprofilechange"
-                ):
-                    if fullprefetchonsparseprofilechange:
-                        # We're going to need a full manifest, so if treemanifest is in
-                        # use, we should prefetch. Since our tree might be incomplete
-                        # (and its root could be unknown to the server if this is a
-                        # local commit), we use BFS prefetching to "complete" our tree.
-                        if hasattr(repo, "forcebfsprefetch"):
-                            repo.forcebfsprefetch([mctx.manifestnode()])
+                    with ui.configoverride(
+                        {("treemanifest", "ondemandfetch"): True}, "sparseprofilechange"
+                    ):
+                        if fullprefetchonsparseprofilechange:
+                            # We're going to need a full manifest, so if treemanifest is in
+                            # use, we should prefetch. Since our tree might be incomplete
+                            # (and its root could be unknown to the server if this is a
+                            # local commit), we use BFS prefetching to "complete" our tree.
+                            if hasattr(repo, "forcebfsprefetch"):
+                                repo.forcebfsprefetch([mctx.manifestnode()])
 
-                        iter = mf
-                    else:
-                        match = matchmod.xormatcher(oldsparsematch, sparsematch)
-                        iter = mf.walk(match)
+                            iter = mf
+                        else:
+                            match = matchmod.xormatcher(oldsparsematch, sparsematch)
+                            iter = mf.walk(match)
 
-                    for file in iter:
-                        old = oldsparsematch(file)
-                        new = sparsematch(file)
-                        if not old and new:
-                            flags = mf.flags(file)
-                            prunedactions[file] = ("g", (flags, False), "")
-                        elif old and not new:
-                            prunedactions[file] = ("r", [], "")
+                        for file in iter:
+                            old = oldsparsematch(file)
+                            new = sparsematch(file)
+                            if not old and new:
+                                flags = mf.flags(file)
+                                prunedactions[file] = ("g", (flags, False), "")
+                            elif old and not new:
+                                prunedactions[file] = ("r", [], "")
 
         return prunedactions, diverge, renamedelete
 
@@ -380,7 +398,7 @@ def _setupupdates(_ui) -> None:
         try:
             results = orig(repo, node, **kwargs)
         except Exception:
-            if _hassparse(repo):
+            if _hassparse(repo) and not _isedensparse(repo):
                 repo._clearpendingprofileconfig()
             raise
 
@@ -403,21 +421,23 @@ def _setupcommit(ui) -> None:
         repo = self._repo
 
         if _hassparse(repo):
-            ctx = repo[node]
-            profiles = getsparsepatterns(repo, ctx.rev()).allprofiles()
-            if profiles & set(ctx.files()):
-                if _isedensparse(repo):
-                    # We just created a new commit that the edenfs_ffi Rust
-                    # repo won't know about until we flush in-memory commit
-                    # data to disk. Flush now to avoid unknown commit id errors
-                    # in EdenFS when checking edensparse contents.
-                    repo.changelog.inner.flushcommitdata()
-                origstatus = repo.status()
-                origsparsematch = repo.sparsematch(
-                    *list(p.rev() for p in ctx.parents() if p.rev() != nullrev)
-                )
-                repo._refreshsparse(ui, origstatus, origsparsematch, True)
-
+            if not _isedensparse(repo):
+                # Eden sparse repos don't need to refresh -- that's handled on
+                # the EdenFS side
+                ctx = repo[node]
+                profiles = getsparsepatterns(repo, ctx.rev()).allprofiles()
+                if profiles & set(ctx.files()):
+                    origstatus = repo.status()
+                    origsparsematch = repo.sparsematch(
+                        *list(p.rev() for p in ctx.parents() if p.rev() != nullrev)
+                    )
+                    repo._refreshsparse(ui, origstatus, origsparsematch, True)
+            else:
+                # We just created a new commit that the edenfs_ffi Rust
+                # repo won't know about until we flush in-memory commit
+                # data to disk. Flush now to avoid unknown commit id errors
+                # in EdenFS when checking edensparse contents.
+                repo.changelog.inner.flushcommitdata()
             repo.prunetemporaryincludes()
 
     extensions.wrapfunction(context.committablectx, "markcommitted", _refreshoncommit)
@@ -492,7 +512,7 @@ def _trackdirstatesizes(lui: "uimod.ui", repo: "localrepo.localrepository") -> N
         if (
             repo.ui.configbool("sparse", "largecheckouthint")
             and dirstatesize >= repo.ui.configint("sparse", "largecheckoutcount")
-            and _hassparse(repo)
+            and (_hassparse(repo) and not _isedensparse(repo))
         ):
             hintutil.trigger("sparse-largecheckout", dirstatesize, repo)
 
@@ -624,7 +644,11 @@ def _setupdirstate(ui) -> None:
             # skips O(working copy) scans, and affect absorb perf.
             return orig(self, parent, allfiles, changedfiles, exact=exact)
 
-        if hasattr(self, "repo") and _hassparse(self.repo):
+        if (
+            hasattr(self, "repo")
+            and _hassparse(self.repo)
+            and not _isedensparse(self.repo)
+        ):
             with progress.spinner(ui, "applying sparse profile"):
                 matcher = self.repo.sparsematch()
                 allfiles = allfiles.matches(matcher)
@@ -767,7 +791,7 @@ def _setupdiff(ui) -> None:
         issparse = False
         # Make sure --sparse option is just ignored when it's not
         # a sparse repo e.g. on eden checkouts.
-        if _hassparse(repo):
+        if _hassparse(repo) and not _isedensparse(repo):
             issparse = bool(opts.get("sparse"))
         if issparse:
             extensions.wrapfunction(patch, "trydiff", trydiff)
