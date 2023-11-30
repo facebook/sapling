@@ -26,6 +26,7 @@ import {codeReviewProvider, latestCommitMessage} from './codeReview/CodeReviewIn
 import {DiffInfo} from './codeReview/DiffBadge';
 import {SyncStatus, syncStatusAtom} from './codeReview/syncStatus';
 import {islDrawerState} from './drawerState';
+import {FoldButton} from './fold';
 import {isDescendant} from './getCommitTree';
 import {t, T} from './i18n';
 import {IconStack} from './icons/IconStack';
@@ -267,6 +268,11 @@ export const Commit = memo(
         </React.Fragment>,
       );
     }
+
+    if (!isPublic && !actionsPrevented && isSelected) {
+      commitActions.push(<FoldButton key="fold-button" commit={commit} />);
+    }
+
     if (!actionsPrevented && !commit.isHead) {
       commitActions.push(
         <span className="goto-button" key="goto-button">
@@ -295,6 +301,7 @@ export const Commit = memo(
         </span>,
       );
     }
+
     if (!isPublic && !actionsPrevented && commit.isHead) {
       commitActions.push(<UncommitButton key="uncommit" />);
     }

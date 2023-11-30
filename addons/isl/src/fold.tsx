@@ -8,7 +8,32 @@
 import type {CommitTree} from './getCommitTree';
 import type {CommitInfo, Hash} from './types';
 
+import {Tooltip} from './Tooltip';
+import {T, t} from './i18n';
+import {treeWithPreviews} from './previews';
+import {selectedCommits} from './selection';
 import {firstOfIterable} from './utils';
+import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
+import {selector, useRecoilValue} from 'recoil';
+import {Icon} from 'shared/Icon';
+
+/**
+ * If the selected commits are linear, contiguous, and non-branching, they may be folded together.
+ * This selector gives the range of commits that can be folded, if any,
+ * so a button may be shown to do the fold.
+ */
+export const foldableSelection = selector<Array<CommitInfo> | undefined>({
+  key: 'foldableSelection',
+  get: ({get}) => {
+    const selection = get(selectedCommits);
+    if (selection.size < 2) {
+      return undefined;
+    }
+    const treeMap = get(treeWithPreviews);
+    const foldable = getFoldableRange(selection, treeMap.treeMap);
+    return foldable;
+  },
+});
 
 /**
  * Given a set of selected commits, order them into an array from bottom to top.
@@ -103,4 +128,19 @@ function bottomMostOfSelection(
   }
 
   return baseHash;
+}
+
+export function FoldButton({commit}: {commit: CommitInfo}) {
+  const foldable = useRecoilValue(foldableSelection);
+  if (foldable?.[0]?.hash !== commit.hash) {
+    return null;
+  }
+  return (
+    <Tooltip title={t('Combine selected commits into one commit')}>
+      <VSCodeButton appearance="secondary">
+        <Icon icon="fold" slot="start" />
+        <T replace={{$count: foldable.length}}>Combine $count commits</T>
+      </VSCodeButton>
+    </Tooltip>
+  );
 }
