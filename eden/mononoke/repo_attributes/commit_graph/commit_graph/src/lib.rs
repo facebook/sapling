@@ -9,9 +9,11 @@
 //!
 //! The graph of all commits in the repository.
 
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
 
+use anyhow::anyhow;
 use anyhow::Result;
 use borrowed::borrowed;
 use commit_graph_types::edges::ChangesetNode;
@@ -21,8 +23,11 @@ use commit_graph_types::storage::Prefetch;
 use context::CoreContext;
 use futures::stream;
 use futures::stream::BoxStream;
+use futures::stream::FuturesUnordered;
 use futures::Future;
+use futures::FutureExt;
 use futures::StreamExt;
+use futures::TryFutureExt;
 use futures::TryStreamExt;
 use itertools::Itertools;
 use mononoke_types::ChangesetId;
@@ -380,6 +385,78 @@ impl CommitGraph {
         }
 
         Ok(slices.into_iter().rev().collect())
+    }
+
+    /// Runs the given `process` closure on all of the given changesets in local topological
+    /// order, running as many of them concurrently as possible.
+    ///
+    /// Note: local topological order here means that all parents of a changeset that are
+    /// contained in the input `cs_ids` are processed before itself, but if two changesets
+    /// are ancestors of each other and some of the changesets in the path betwen them are
+    /// not given in `cs_ids`, they are not guaranteed to be processed in topological order.
+    pub async fn process_topologically<Process, Fut>(
+        &self,
+        ctx: &CoreContext,
+        cs_ids: Vec<ChangesetId>,
+        process: Process,
+    ) -> Result<()>
+    where
+        Process: Fn(ChangesetId) -> Fut,
+        Fut: Future<Output = Result<()>> + Send,
+    {
+        // For each changeset in `cs_ids` this stores all other changesets that are in
+        // `cs_ids` that are immediate children of it.
+        let mut rdeps: HashMap<ChangesetId, HashSet<ChangesetId>> = Default::default();
+
+        // For each changeset in `cs_ids` this stores the number of other changesets in
+        // `cs_ids` that are immediate parents of it.
+        let mut deps_count: HashMap<ChangesetId, usize> = Default::default();
+
+        let all_edges = self
+            .storage
+            .fetch_many_edges(ctx, &cs_ids, Prefetch::None)
+            .await?;
+
+        let cs_ids = cs_ids.into_iter().collect::<HashSet<_>>();
+
+        for (cs_id, edges) in all_edges.iter() {
+            for parent in edges.parents.iter() {
+                if cs_ids.contains(&parent.cs_id) {
+                    rdeps.entry(parent.cs_id).or_default().insert(*cs_id);
+                    *deps_count.entry(*cs_id).or_default() += 1;
+                }
+            }
+        }
+
+        // futs contain a future produced by `process` for all changesets that have
+        // no dependencies left. All executing concurrently.
+        let mut futs: FuturesUnordered<_> = Default::default();
+
+        for cs_id in cs_ids {
+            if !deps_count.contains_key(&cs_id) {
+                futs.push(process(cs_id).map_ok(move |()| cs_id).boxed());
+            }
+        }
+
+        while let Some(result) = futs.next().await {
+            let cs_id = result?;
+
+            // After we finish process a changeset, we go through it's reverse dependencies
+            // and subtract one from their dependency count. If the count reaches zero, we
+            // add a new future to futs to begin processing it.
+            let children = rdeps.get(&cs_id).into_iter().flatten();
+            for child in children {
+                let entry = deps_count.get_mut(child).ok_or_else(|| {
+                    anyhow!("deps_count for a child can't be 0 (in process_topologically)")
+                })?;
+                *entry -= 1;
+                if *entry == 0 {
+                    futs.push(process(*child).map_ok(move |()| *child).boxed());
+                }
+            }
+        }
+
+        Ok(())
     }
 
     /// Returns the children of a single changeset.

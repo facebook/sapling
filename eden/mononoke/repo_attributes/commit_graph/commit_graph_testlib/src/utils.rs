@@ -8,8 +8,10 @@
 use std::collections::BTreeMap;
 use std::collections::HashSet;
 use std::sync::Arc;
+use std::sync::RwLock;
 
 use anyhow::Result;
+use cloned::cloned;
 use commit_graph::AncestorsStreamBuilder;
 use commit_graph::CommitGraph;
 use commit_graph_types::edges::ChangesetNode;
@@ -426,6 +428,41 @@ pub async fn assert_ancestors_difference_segments(
             .len(),
         segments_count
     );
+
+    Ok(())
+}
+
+pub async fn assert_process_topologically(
+    ctx: &CoreContext,
+    graph: &CommitGraph,
+    cs_ids: Vec<&str>,
+) -> Result<()> {
+    let cs_ids: Vec<_> = cs_ids.into_iter().map(name_cs_id).collect();
+
+    let processed_order = Arc::new(RwLock::new(vec![]));
+    graph
+        .process_topologically(ctx, cs_ids.clone(), |cs_id| {
+            cloned!(processed_order);
+            async move {
+                processed_order.write().unwrap().push(cs_id);
+                Ok(())
+            }
+        })
+        .await?;
+
+    let mut remaining_cs_ids = cs_ids.into_iter().collect::<HashSet<_>>();
+
+    // Verify that all changesets in `cs_ids` were processed, and that they
+    // were processed after all of their parents that are also in `cs_ids`.
+    let processed_ordered = Arc::into_inner(processed_order).unwrap().into_inner()?;
+    for cs_id in processed_ordered.into_iter() {
+        let parents = graph.changeset_parents(ctx, cs_id).await?;
+        for parent in parents {
+            assert!(!remaining_cs_ids.contains(&parent));
+        }
+        remaining_cs_ids.remove(&cs_id);
+    }
+    assert!(remaining_cs_ids.is_empty());
 
     Ok(())
 }

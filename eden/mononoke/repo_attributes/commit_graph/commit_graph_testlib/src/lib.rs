@@ -56,6 +56,7 @@ macro_rules! impl_commit_graph_tests {
             test_children,
             test_ancestors_difference_segments_1,
             test_ancestors_difference_segments_2,
+            test_process_topologically,
         );
     };
 }
@@ -1100,6 +1101,40 @@ pub async fn test_ancestors_difference_segments_2(
         7,
     )
     .await?;
+
+    Ok(())
+}
+
+pub async fn test_process_topologically(
+    ctx: CoreContext,
+    storage: Arc<dyn CommitGraphStorageTest>,
+) -> Result<()> {
+    let graph = from_dag(
+        &ctx,
+        r"
+        A--B--C--D--E--F
+         \
+          G--H---I--J--K
+           \    /
+            L--M
+        ",
+        storage.clone(),
+    )
+    .await?;
+    storage.flush();
+
+    assert_process_topologically(
+        &ctx,
+        &graph,
+        vec![
+            "I", "J", "K", "F", "B", "C", "G", "H", "L", "D", "E", "M", "A",
+        ],
+    )
+    .await?;
+    assert_process_topologically(&ctx, &graph, vec!["F", "C", "A", "B", "E", "D"]).await?;
+    assert_process_topologically(&ctx, &graph, vec!["H", "C", "L"]).await?;
+    assert_process_topologically(&ctx, &graph, vec!["B", "C", "J", "I"]).await?;
+    assert_process_topologically(&ctx, &graph, vec![]).await?;
 
     Ok(())
 }
