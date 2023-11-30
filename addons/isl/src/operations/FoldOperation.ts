@@ -63,7 +63,7 @@ export class FoldOperation extends Operation {
           info: {
             ...bottom,
             date: new Date(),
-            hash: getFoldRangeCommitHash(this.foldRange),
+            hash: getFoldRangeCommitHash(this.foldRange, /* isPreview */ true),
             title: this.newTitle,
             description: this.newDescription,
           },
@@ -90,7 +90,7 @@ export class FoldOperation extends Operation {
           info: {
             ...bottom,
             date: new Date(),
-            hash: getFoldRangeCommitHash(this.foldRange),
+            hash: getFoldRangeCommitHash(this.foldRange, /* isPreview */ false),
             title: this.newTitle,
             description: this.newDescription,
           },
@@ -105,8 +105,12 @@ export class FoldOperation extends Operation {
   }
 }
 
-export const FOLD_COMMIT_PREVIEW_HASH_PREFIX = 'OPTIMISTIC_FOLDED_';
-export function getFoldRangeCommitHash(range: Array<CommitInfo>): string {
+export const FOLD_COMMIT_PREVIEW_HASH_PREFIX = 'OPTIMISTIC_FOLDED_PREVIEW_';
+export const FOLD_COMMIT_OPTIMISTIC_HASH_PREFIX = 'OPTIMISTIC_FOLDED_';
+export function getFoldRangeCommitHash(range: Array<CommitInfo>, isPreview: boolean): string {
   const [bottom, top] = ends(range);
-  return `${FOLD_COMMIT_PREVIEW_HASH_PREFIX}${bottom.hash}:${top.hash}`;
+  return (
+    (isPreview ? FOLD_COMMIT_PREVIEW_HASH_PREFIX : FOLD_COMMIT_OPTIMISTIC_HASH_PREFIX) +
+    `${bottom.hash}:${top.hash}`
+  );
 }

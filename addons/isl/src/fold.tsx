@@ -18,7 +18,11 @@ import {
 } from './CommitInfoView/CommitMessageFields';
 import {Tooltip} from './Tooltip';
 import {T, t} from './i18n';
-import {FoldOperation, getFoldRangeCommitHash} from './operations/FoldOperation';
+import {
+  FOLD_COMMIT_PREVIEW_HASH_PREFIX,
+  FoldOperation,
+  getFoldRangeCommitHash,
+} from './operations/FoldOperation';
 import {treeWithPreviews} from './previews';
 import {selectedCommits} from './selection';
 import {operationBeingPreviewed, useRunPreviewedOperation} from './serverAPIState';
@@ -156,7 +160,7 @@ export function FoldButton({commit}: {commit: CommitInfo}) {
     );
     const message = commitMessageFieldsToString(schema, messageFields);
     set(operationBeingPreviewed, new FoldOperation(foldable, message));
-    set(selectedCommits, new Set([getFoldRangeCommitHash(foldable)]));
+    set(selectedCommits, new Set([getFoldRangeCommitHash(foldable, /* isPreview */ true)]));
   });
   if (foldable?.[0]?.hash !== commit.hash) {
     return null;
@@ -181,7 +185,7 @@ export function updateFoldedMessageWithEditedMessage(
   const beingPreviewed = snapshot.getLoadable(operationBeingPreviewed).valueMaybe();
   if (beingPreviewed != null && beingPreviewed instanceof FoldOperation) {
     const range = beingPreviewed.getFoldRange();
-    const combinedHash = getFoldRangeCommitHash(range);
+    const combinedHash = getFoldRangeCommitHash(range, /* isPreview */ true);
     const [existingTitle, existingMessage] = beingPreviewed.getFoldedMessage();
     const editedMessage = snapshot.getLoadable(editedCommitMessages(combinedHash)).valueMaybe();
 
@@ -204,12 +208,18 @@ export function updateFoldedMessageWithEditedMessage(
 
 export function useRunFoldPreview(): [cancel: () => unknown, run: () => unknown] {
   const handlePreviewedOperation = useRunPreviewedOperation();
-  const run = useRecoilCallback(({snapshot}) => () => {
+  const run = useRecoilCallback(({snapshot, set}) => () => {
     const foldOperation = updateFoldedMessageWithEditedMessage(snapshot);
     if (foldOperation == null) {
       return;
     }
     handlePreviewedOperation(/* isCancel */ false, foldOperation);
+    // select the optimistic commit instead of the preview commit
+    set(selectedCommits, last =>
+      last.size === 1 && firstOfIterable(last.values())?.startsWith(FOLD_COMMIT_PREVIEW_HASH_PREFIX)
+        ? new Set([getFoldRangeCommitHash(foldOperation.getFoldRange(), /* isPreview */ false)])
+        : last,
+    );
   });
   return [
     () => {
