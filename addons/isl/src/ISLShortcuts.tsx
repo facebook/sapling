@@ -23,6 +23,7 @@ export const [ISLCommandContext, useCommand, dispatchCommand, allCommands] = mak
   Escape: [Modifier.NONE, KeyCode.Escape],
   SelectUpwards: [Modifier.NONE, KeyCode.UpArrow],
   SelectDownwards: [Modifier.NONE, KeyCode.DownArrow],
+  OpenDetails: [Modifier.NONE, KeyCode.RightArrow],
   ContinueSelectionUpwards: [Modifier.SHIFT, KeyCode.UpArrow],
   ContinueSelectionDownwards: [Modifier.SHIFT, KeyCode.DownArrow],
   HideSelectedCommits: [Modifier.NONE, KeyCode.Backspace],

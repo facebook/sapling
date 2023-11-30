@@ -199,6 +199,16 @@ export const linearizedCommitHistory = selector({
 
 export function useArrowKeysToChangeSelection() {
   const cb = useRecoilCallback(({snapshot, set}) => (which: ISLCommandName) => {
+    if (which === 'OpenDetails') {
+      set(islDrawerState, previous => ({
+        ...previous,
+        right: {
+          ...previous.right,
+          collapsed: false,
+        },
+      }));
+    }
+
     const linearHistory = snapshot.getLoadable(linearizedCommitHistory).valueMaybe();
     if (linearHistory == null || linearHistory.length === 0) {
       return;
@@ -266,6 +276,7 @@ export function useArrowKeysToChangeSelection() {
     set(previouslySelectedCommit, newSelected.hash);
   });
 
+  useCommand('OpenDetails', () => cb('OpenDetails'));
   useCommand('SelectUpwards', () => cb('SelectUpwards'));
   useCommand('SelectDownwards', () => cb('SelectDownwards'));
   useCommand('ContinueSelectionUpwards', () => cb('ContinueSelectionUpwards'));

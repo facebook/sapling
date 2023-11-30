@@ -77,6 +77,10 @@ describe('selection', () => {
     );
   };
 
+  const rightArrow = () => {
+    act(() => userEvent.type(screen.getByTestId('commit-tree-root'), '{arrowright}'));
+  };
+
   it('allows selecting via click', () => {
     act(() => void fireEvent.click(screen.getByText('Commit A')));
 
@@ -346,6 +350,16 @@ describe('selection', () => {
       expect(CommitInfoTestUtils.withinCommitInfo().getByText('Commit C')).toBeInTheDocument();
       expect(CommitInfoTestUtils.withinCommitInfo().getByText('Commit B')).toBeInTheDocument();
       expectNCommitsSelected(2);
+    });
+
+    it('right arrows opens sidebar', () => {
+      click('Commit A');
+      act(() => closeCommitInfoSidebar());
+
+      expect(commitInfoIsOpen()).toEqual(false);
+      rightArrow();
+      expect(CommitInfoTestUtils.withinCommitInfo().getByText('Commit A')).toBeInTheDocument();
+      expect(commitInfoIsOpen()).toEqual(true);
     });
   });
 });
