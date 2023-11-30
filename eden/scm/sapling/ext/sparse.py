@@ -410,7 +410,7 @@ def _setupcommit(ui) -> None:
                 origsparsematch = repo.sparsematch(
                     *list(p.rev() for p in ctx.parents() if p.rev() != nullrev)
                 )
-                _refresh(repo.ui, repo, origstatus, origsparsematch, True)
+                repo._refreshsparse(ui, origstatus, origsparsematch, True)
 
             repo.prunetemporaryincludes()
 
@@ -1113,6 +1113,138 @@ def _wraprepo(ui, repo) -> None:
                     "sparse checkout\n"
                 )
                 self.ui.status(msg % len(tempincludes))
+
+        def _applysparsetoworkingcopy(
+            self, force, origsparsematch, sparsematch, pending
+        ):
+            # Calculate actions
+            ui.note(_("calculating actions for refresh\n"))
+            with progress.spinner(ui, "populating file set"):
+                dirstate = self.dirstate
+                ctx = self["."]
+                added = []
+                lookup = []
+                dropped = []
+                mf = ctx.manifest()
+                # Only care about files covered by the old or the new matcher.
+                unionedmatcher = matchmod.unionmatcher([origsparsematch, sparsematch])
+                files = set(mf.walk(unionedmatcher))
+
+            actions = {}
+
+            with progress.bar(ui, _("calculating"), total=len(files)) as prog:
+                for file in files:
+                    prog.value += 1
+
+                    old = origsparsematch(file)
+                    new = sparsematch(file)
+                    # Add files that are newly included, or that don't exist in
+                    # the dirstate yet.
+                    if (new and not old) or (old and new and not file in dirstate):
+                        fl = mf.flags(file)
+                        if self.wvfs.exists(file):
+                            actions[file] = ("e", (fl,), "")
+                            lookup.append(file)
+                        else:
+                            actions[file] = ("g", (fl, False), "")
+                            added.append(file)
+                    # Drop files that are newly excluded, or that still exist in
+                    # the dirstate.
+                    elif (old and not new) or (not (old or new) and file in dirstate):
+                        dropped.append(file)
+                        if file not in pending:
+                            actions[file] = ("r", [], "")
+
+            # Verify there are no pending changes in newly included files
+            if len(lookup) > 0:
+                ui.note(_("verifying no pending changes in newly included files\n"))
+            abort = False
+            for file in lookup:
+                ui.warn(_("pending changes to '%s'\n") % file)
+                abort = not force
+            if abort:
+                raise error.Abort(
+                    _(
+                        "cannot change sparseness due to "
+                        + "pending changes (delete the files or use --force "
+                        + "to bring them back dirty)"
+                    )
+                )
+
+            # Check for files that were only in the dirstate.
+            for file, state in pycompat.iteritems(dirstate):
+                if not file in files:
+                    old = origsparsematch(file)
+                    new = sparsematch(file)
+                    if old and not new:
+                        dropped.append(file)
+
+            # Apply changes to disk
+            if len(actions) > 0:
+                ui.note(_("applying changes to disk (%d actions)\n") % len(actions))
+            typeactions = dict(
+                (m, []) for m in "a f g am cd dc r rg dm dg m e k p pr".split()
+            )
+
+            with progress.bar(ui, _("applying"), total=len(actions)) as prog:
+                for f, (m, args, msg) in pycompat.iteritems(actions):
+                    prog.value += 1
+                    if m not in typeactions:
+                        typeactions[m] = []
+                    typeactions[m].append((f, args, msg))
+                mergemod.applyupdates(repo, typeactions, repo[None], repo["."], False)
+
+            # Fix dirstate
+            filecount = len(added) + len(dropped) + len(lookup)
+            if filecount > 0:
+                ui.note(_("updating dirstate\n"))
+            with progress.bar(ui, _("recording"), _("files"), filecount) as prog:
+                for file in added:
+                    prog.value += 1
+                    dirstate.normal(file)
+
+                for file in dropped:
+                    prog.value += 1
+                    dirstate.untrack(file)
+
+                for file in lookup:
+                    prog.value += 1
+                    # File exists on disk, and we're bringing it back in an unknown
+                    # state.
+                    dirstate.normallookup(file)
+
+            return added, dropped, lookup
+
+        def _refreshsparse(self, ui, origstatus, origsparsematch, force):
+            """Refreshes which files are on disk by comparing the old status and
+            sparsematch with the new sparsematch.
+
+            Will raise an exception if a file with pending changes is being excluded
+            or included (unless force=True).
+            """
+            modified, added, removed, deleted, unknown, ignored, clean = origstatus
+
+            # Verify there are no pending changes
+            pending = set()
+            pending.update(modified)
+            pending.update(added)
+            pending.update(removed)
+            sparsematch = self.sparsematch()
+            abort = False
+            if len(pending) > 0:
+                ui.note(_("verifying pending changes for refresh\n"))
+            for file in pending:
+                if not sparsematch(file):
+                    ui.warn(_("pending changes to '%s'\n") % file)
+                    abort = not force
+            if abort:
+                raise error.Abort(
+                    _("could not update sparseness due to pending changes")
+                )
+
+            return self._applysparsetoworkingcopy(
+                force, origsparsematch, sparsematch, pending
+            )
 
     if "dirstate" in repo._filecache:
         repo.dirstate.repo = repo
@@ -1836,7 +1968,7 @@ def sparse(ui, repo, *pats, **opts) -> None:
 
     if refresh:
         with repo.wlock():
-            c = _refresh(ui, repo, repo.status(), repo.sparsematch(), force)
+            c = repo._refreshsparse(ui, repo.status(), repo.sparsematch(), force)
             fcounts = list(map(len, c))
             _verbose_output(ui, opts, 0, 0, 0, *fcounts)
 
@@ -2610,7 +2742,7 @@ def _refreshsubcmd(ui, repo, *pats, **opts) -> None:
         # Since we don't know the "original" sparse matcher, use the
         # always matcher so it checks everything.
         origmatcher = matchmod.always(repo.root, "")
-        c = _refresh(ui, repo, repo.status(), origmatcher, force)
+        c = repo._refreshsparse(ui, repo.status(), origmatcher, force)
         fcounts = list(map(len, c))
         _verbose_output(ui, opts, 0, 0, 0, *fcounts)
 
@@ -2719,7 +2851,7 @@ def _config(
             repo.writesparseconfig(newinclude, newexclude, newprofiles)
 
             fcounts = list(
-                map(len, _refresh(ui, repo, oldstatus, oldsparsematch, force))
+                map(len, repo._refreshsparse(ui, oldstatus, oldsparsematch, force))
             )
 
             profilecount = len(newprofiles - oldprofiles) - len(
@@ -2815,7 +2947,7 @@ def _import(ui, repo, files, opts, force: bool = False) -> None:
 
             try:
                 fcounts = list(
-                    map(len, _refresh(ui, repo, oldstatus, oldsparsematch, force))
+                    map(len, repo._refreshsparse(ui, oldstatus, oldsparsematch, force))
                 )
             except Exception:
                 repo.writesparseconfig(oincludes, oexcludes, oprofiles)
@@ -2837,129 +2969,7 @@ def _clear(ui, repo, files, force: bool = False) -> None:
             oldstatus = repo.status()
             oldsparsematch = repo.sparsematch()
             repo.writesparseconfig(set(), set(), rawconfig.profiles)
-            _refresh(ui, repo, oldstatus, oldsparsematch, force)
-
-
-def _refresh(ui, repo, origstatus, origsparsematch, force):
-    """Refreshes which files are on disk by comparing the old status and
-    sparsematch with the new sparsematch.
-
-    Will raise an exception if a file with pending changes is being excluded
-    or included (unless force=True).
-    """
-    modified, added, removed, deleted, unknown, ignored, clean = origstatus
-
-    # Verify there are no pending changes
-    pending = set()
-    pending.update(modified)
-    pending.update(added)
-    pending.update(removed)
-    sparsematch = repo.sparsematch()
-    abort = False
-    if len(pending) > 0:
-        ui.note(_("verifying pending changes for refresh\n"))
-    for file in pending:
-        if not sparsematch(file):
-            ui.warn(_("pending changes to '%s'\n") % file)
-            abort = not force
-    if abort:
-        raise error.Abort(_("could not update sparseness due to pending changes"))
-
-    # Calculate actions
-    ui.note(_("calculating actions for refresh\n"))
-    with progress.spinner(ui, "populating file set"):
-        dirstate = repo.dirstate
-        ctx = repo["."]
-        added = []
-        lookup = []
-        dropped = []
-        mf = ctx.manifest()
-        # Only care about files covered by the old or the new matcher.
-        unionedmatcher = matchmod.unionmatcher([origsparsematch, sparsematch])
-        files = set(mf.walk(unionedmatcher))
-
-    actions = {}
-
-    with progress.bar(ui, _("calculating"), total=len(files)) as prog:
-        for file in files:
-            prog.value += 1
-
-            old = origsparsematch(file)
-            new = sparsematch(file)
-            # Add files that are newly included, or that don't exist in
-            # the dirstate yet.
-            if (new and not old) or (old and new and not file in dirstate):
-                fl = mf.flags(file)
-                if repo.wvfs.exists(file):
-                    actions[file] = ("e", (fl,), "")
-                    lookup.append(file)
-                else:
-                    actions[file] = ("g", (fl, False), "")
-                    added.append(file)
-            # Drop files that are newly excluded, or that still exist in
-            # the dirstate.
-            elif (old and not new) or (not (old or new) and file in dirstate):
-                dropped.append(file)
-                if file not in pending:
-                    actions[file] = ("r", [], "")
-
-    # Verify there are no pending changes in newly included files
-    if len(lookup) > 0:
-        ui.note(_("verifying no pending changes in newly included files\n"))
-    abort = False
-    for file in lookup:
-        ui.warn(_("pending changes to '%s'\n") % file)
-        abort = not force
-    if abort:
-        raise error.Abort(
-            _(
-                "cannot change sparseness due to "
-                + "pending changes (delete the files or use --force "
-                + "to bring them back dirty)"
-            )
-        )
-
-    # Check for files that were only in the dirstate.
-    for file, state in pycompat.iteritems(dirstate):
-        if not file in files:
-            old = origsparsematch(file)
-            new = sparsematch(file)
-            if old and not new:
-                dropped.append(file)
-
-    # Apply changes to disk
-    if len(actions) > 0:
-        ui.note(_("applying changes to disk (%d actions)\n") % len(actions))
-    typeactions = dict((m, []) for m in "a f g am cd dc r rg dm dg m e k p pr".split())
-
-    with progress.bar(ui, _("applying"), total=len(actions)) as prog:
-        for f, (m, args, msg) in pycompat.iteritems(actions):
-            prog.value += 1
-            if m not in typeactions:
-                typeactions[m] = []
-            typeactions[m].append((f, args, msg))
-        mergemod.applyupdates(repo, typeactions, repo[None], repo["."], False)
-
-    # Fix dirstate
-    filecount = len(added) + len(dropped) + len(lookup)
-    if filecount > 0:
-        ui.note(_("updating dirstate\n"))
-    with progress.bar(ui, _("recording"), _("files"), filecount) as prog:
-        for file in added:
-            prog.value += 1
-            dirstate.normal(file)
-
-        for file in dropped:
-            prog.value += 1
-            dirstate.untrack(file)
-
-        for file in lookup:
-            prog.value += 1
-            # File exists on disk, and we're bringing it back in an unknown
-            # state.
-            dirstate.normallookup(file)
-
-    return added, dropped, lookup
+            repo._refreshsparse(ui, oldstatus, oldsparsematch, force)
 
 
 def _verbose_output(
