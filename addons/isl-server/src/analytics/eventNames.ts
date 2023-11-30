@@ -57,6 +57,7 @@ export type TrackEventName =
   | 'PullRevOperation'
   | 'PurgeOperation'
   | 'RebaseKeepOperation'
+  | 'RebaseAllDraftCommitsOperation'
   | 'RebaseOperation'
   | 'ResolveOperation'
   | 'RevertOperation'

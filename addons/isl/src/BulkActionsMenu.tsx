@@ -6,7 +6,7 @@
  */
 
 import {DropdownFields} from './DropdownFields';
-import {OperationDisabledButton} from './OperationDisabledButton';
+import {SuggestedRebaseButton} from './SuggestedRebase';
 import {Tooltip} from './Tooltip';
 import {T} from './i18n';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
@@ -33,15 +33,7 @@ function BulkActions({dismiss}: {dismiss: () => void}) {
       icon="run-all"
       className="bulk-actions-dropdown"
       data-testid="bulk-actions-dropdown">
-      <OperationDisabledButton
-        appearance="secondary"
-        contextKey={`rebase-all`}
-        runOperation={() => {
-          dismiss();
-          return undefined;
-        }}>
-        <T>Rebase All Draft Commits</T>
-      </OperationDisabledButton>
+      <SuggestedRebaseButton afterRun={dismiss} isBulk />
     </DropdownFields>
   );
 }

@@ -5,16 +5,18 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {CommitInfo, Hash} from './types';
+import type {CommitInfo, ExactRevset, Hash, SucceedableRevset} from './types';
 
+import {globalRecoil} from './AccessGlobalRecoil';
 import {Subtle} from './Subtle';
 import {tracker} from './analytics';
 import {findCurrentPublicBase} from './getCommitTree';
 import {T, t} from './i18n';
+import {RebaseAllDraftCommitsOperation} from './operations/RebaseAllDraftCommitsOperation';
 import {RebaseOperation} from './operations/RebaseOperation';
 import {treeWithPreviews} from './previews';
 import {RelativeDate} from './relativeDate';
-import {latestCommits, useRunOperation} from './serverAPIState';
+import {commitsShownRange, latestCommits, useRunOperation} from './serverAPIState';
 import {succeedableRevset} from './types';
 import {short} from './utils';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
@@ -82,15 +84,25 @@ export const suggestedRebaseDestinations = selector<Array<[CommitInfo, string]>>
     }
     destinations.sort((a, b) => b[0].date.valueOf() - a[0].date.valueOf());
 
-    // TODO: we could make the current stack you're based on an option here,
-    // to allow rebasing other stacks to the same place as your current stack.
-    // Might be unnecessary given we support stableCommitMetadata.
-
     return destinations;
   },
 });
 
-export function SuggestedRebaseButton({stackBaseHash}: {stackBaseHash: Hash}) {
+export function SuggestedRebaseButton({
+  source,
+  afterRun,
+  isBulk,
+}:
+  | {
+      source: SucceedableRevset | ExactRevset;
+      afterRun?: undefined;
+      isBulk?: undefined;
+    }
+  | {
+      source?: undefined;
+      afterRun?: () => unknown;
+      isBulk: true;
+    }) {
   const validDestinations = useRecoilCallback(({snapshot}) => () => {
     return snapshot.getLoadable(suggestedRebaseDestinations).valueMaybe();
   });
@@ -110,19 +122,28 @@ export function SuggestedRebaseButton({stackBaseHash}: {stackBaseHash: Hash}) {
           ),
           onClick: () => {
             const destination = dest.remoteBookmarks?.[0] ?? dest.hash;
-            tracker.track('ClickSuggestedRebase', {extras: {destination}});
+            tracker.track('ClickSuggestedRebase', {
+              extras: {destination, isBulk},
+            });
+
             runOperation(
-              new RebaseOperation(succeedableRevset(stackBaseHash), succeedableRevset(destination)),
+              isBulk
+                ? new RebaseAllDraftCommitsOperation(
+                    globalRecoil().getLoadable(commitsShownRange).valueMaybe(),
+                    succeedableRevset(destination),
+                  )
+                : new RebaseOperation(source, succeedableRevset(destination)),
             );
+            afterRun?.();
           },
         };
       }) ?? []
     );
   });
   return (
-    <VSCodeButton appearance="icon" onClick={showContextMenu}>
+    <VSCodeButton appearance={isBulk ? 'secondary' : 'icon'} onClick={showContextMenu}>
       <Icon icon="git-pull-request" slot="start" />
-      <T>Rebase onto&hellip;</T>
+      {isBulk ? <T>Rebase All Onto&hellip;</T> : <T>Rebase onto&hellip;</T>}
     </VSCodeButton>
   );
 }

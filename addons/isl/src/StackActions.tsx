@@ -26,6 +26,7 @@ import {useRunOperation, latestUncommittedChangesData} from './serverAPIState';
 import {useConfirmUnsavedEditsBeforeSplit} from './stackEdit/ui/ConfirmUnsavedEditsBeforeSplit';
 import {StackEditIcon} from './stackEdit/ui/StackEditIcon';
 import {editingStackIntentionHashes, loadingStackState} from './stackEdit/ui/stackEditState';
+import {succeedableRevset} from './types';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useRecoilValue, useRecoilState} from 'recoil';
 import {type ContextMenuItem, useContextMenu} from 'shared/ContextMenu';
@@ -224,7 +225,9 @@ export function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.Reac
     );
     // cleanup button implies no need to rebase this stack
   } else if (suggestedRebase) {
-    actions.push(<SuggestedRebaseButton key="suggested-rebase" stackBaseHash={tree.info.hash} />);
+    actions.push(
+      <SuggestedRebaseButton key="suggested-rebase" source={succeedableRevset(tree.info.hash)} />,
+    );
   }
 
   if (actions.length === 0) {
