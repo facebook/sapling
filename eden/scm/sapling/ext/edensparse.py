@@ -96,17 +96,6 @@ def reposetup(ui, repo) -> None:
 
 def _wraprepo(ui, repo) -> None:
     class EdenSparseRepo(repo.__class__, SparseMixin):
-        def sparsematch(self, *revs, **kwargs):
-            """Returns the sparse match function for the given revs
-
-            If multiple revs are specified, the match function is the union
-            of all the revs.
-
-            `includetemp` is used to indicate if the temporarily included file
-            should be part of the matcher.
-            """
-            return computefiltermatcher(self, revs, None)
-
         def _applysparsetoworkingcopy(
             self, force, origsparsematch, sparsematch, pending
         ):
@@ -115,12 +104,8 @@ def _wraprepo(ui, repo) -> None:
 
     if "dirstate" in repo._filecache:
         repo.dirstate.repo = repo
-    repo._filtercache = {}
+    repo._sparsecache = {}
     repo.__class__ = EdenSparseRepo
-
-
-def computefiltermatcher(repo, revs, name):
-    return matchmod.always(repo.root, "")
 
 
 def unimpl():

@@ -934,6 +934,80 @@ class SparseMixin:
             )
         )
 
+    def sparsematch(self, *revs, **kwargs):
+        """Returns the sparse match function for the given revs
+
+        If multiple revs are specified, the match function is the union
+        of all the revs.
+
+        `includetemp` is used to indicate if the temporarily included file
+        should be part of the matcher.
+
+        `config` can be used to specify a different sparse profile
+        from the default .hg/sparse active profile
+
+        """
+        if not revs or revs == (None,):
+            revs = [
+                self.changelog.rev(node)
+                for node in self.dirstate.parents()
+                if node != nullid
+            ]
+        if not revs:
+            # Need a revision to read .hg/sparse
+            revs = [nullrev]
+
+        includetemp = kwargs.get("includetemp", True)
+
+        # Don't allow overrides for edensparse checkouts
+        rawconfig = kwargs.get("config") if not _isedensparse(self) else None
+
+        cachekey = self._cachekey(revs, includetemp=includetemp)
+
+        # The raw config could be anything, which kinda circumvents the
+        # expectation that we could deterministically load a sparse matcher
+        # give some revs. rawconfig is only set during some debug commands,
+        # so let's just not use the cache when it is present.
+        if rawconfig is None:
+            result = self._sparsecache.get(cachekey, None)
+            if result is not None:
+                return result
+
+        result = computesparsematcher(
+            self,
+            revs,
+            rawconfig=rawconfig,
+            nocatchall=kwargs.get("nocatchall", False),
+        )
+
+        if kwargs.get("includetemp", True):
+            tempincludes = self.gettemporaryincludes()
+            if tempincludes:
+                result = forceincludematcher(result, tempincludes)
+
+        if rawconfig is None:
+            self._sparsecache[cachekey] = result
+
+        return result
+
+    def _cachekey(self, revs, includetemp=False):
+        sha1 = hashlib.sha1()
+        for rev in revs:
+            sha1.update(self[rev].hex().encode("utf8"))
+        if includetemp:
+            try:
+                sha1.update(self.localvfs.read("tempsparse"))
+            except (OSError, IOError):
+                pass
+        return sha1.hexdigest()
+
+    def gettemporaryincludes(self):
+        existingtemp = set()
+        if self.localvfs.exists("tempsparse"):
+            raw = self.localvfs.readutf8("tempsparse")
+            existingtemp.update(raw.split("\n"))
+        return existingtemp
+
 
 def _wraprepo(ui, repo) -> None:
     class SparseRepo(repo.__class__, SparseMixin):
@@ -1018,71 +1092,6 @@ def _wraprepo(ui, repo) -> None:
             self.invalidatesparsecache()
             return super(SparseRepo, self).invalidatecaches()
 
-        def sparsematch(self, *revs, **kwargs):
-            """Returns the sparse match function for the given revs
-
-            If multiple revs are specified, the match function is the union
-            of all the revs.
-
-            `includetemp` is used to indicate if the temporarily included file
-            should be part of the matcher.
-
-            `config` can be used to specify a different sparse profile
-            from the default .hg/sparse active profile
-
-            """
-            if not revs or revs == (None,):
-                revs = [
-                    self.changelog.rev(node)
-                    for node in self.dirstate.parents()
-                    if node != nullid
-                ]
-            if not revs:
-                # Need a revision to read .hg/sparse
-                revs = [nullrev]
-
-            includetemp = kwargs.get("includetemp", True)
-            rawconfig = kwargs.get("config")
-
-            cachekey = self._cachekey(revs, includetemp=includetemp)
-
-            # The raw config could be anything, which kinda circumvents the
-            # expectation that we could deterministically load a sparse matcher
-            # give some revs. rawconfig is only set during some debug commands,
-            # so let's just not use the cache when it is present.
-            if rawconfig is None:
-                result = self._sparsecache.get(cachekey, None)
-                if result is not None:
-                    return result
-
-            result = computesparsematcher(
-                self,
-                revs,
-                rawconfig=rawconfig,
-                nocatchall=kwargs.get("nocatchall", False),
-            )
-
-            if kwargs.get("includetemp", True):
-                tempincludes = self.gettemporaryincludes()
-                if tempincludes:
-                    result = forceincludematcher(result, tempincludes)
-
-            if rawconfig is None:
-                self._sparsecache[cachekey] = result
-
-            return result
-
-        def _cachekey(self, revs, includetemp=False):
-            sha1 = hashlib.sha1()
-            for rev in revs:
-                sha1.update(self[rev].hex().encode("utf8"))
-            if includetemp:
-                try:
-                    sha1.update(self.localvfs.read("tempsparse"))
-                except (OSError, IOError):
-                    pass
-            return sha1.hexdigest()
-
         def getactiveprofiles(self):
             # Use unfiltered to avoid computing hidden commits
             repo = self
@@ -1104,13 +1113,6 @@ def _wraprepo(ui, repo) -> None:
             for file in files:
                 includes.add(file)
             self._writetemporaryincludes(includes)
-
-        def gettemporaryincludes(self):
-            existingtemp = set()
-            if self.localvfs.exists("tempsparse"):
-                raw = self.localvfs.readutf8("tempsparse")
-                existingtemp.update(raw.split("\n"))
-            return existingtemp
 
         def _writetemporaryincludes(self, includes):
             raw = "\n".join(sorted(includes))
