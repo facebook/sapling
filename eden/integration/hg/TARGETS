@@ -156,19 +156,6 @@ python_unittest(
 )
 
 python_unittest(
-    name = "filter",
-    srcs = ["filter_test.py"],
-    env = artifacts["env"],
-    supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
-    deps = [
-        "//eden/fs/service:thrift-py",
-        "//eden/integration/hg/lib:testutil",
-        "//eden/integration/lib:lib",
-    ],
-)
-
-python_unittest(
     name = "fold",
     srcs = ["fold_test.py"],
     env = artifacts["env"],
@@ -223,6 +210,19 @@ python_unittest(
     supports_static_listing = False,
     runtime_deps = artifacts["deps"],
     deps = [
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "legacy_filter",
+    srcs = ["legacy_filter_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/fs/service:thrift-py",
         "//eden/integration/hg/lib:testutil",
         "//eden/integration/lib:lib",
     ],
