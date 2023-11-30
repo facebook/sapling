@@ -8,9 +8,12 @@ edition = "2021"
 [dependencies]
 anyhow = "=1.0.72"
 atexit = { version = "0.1.0", path = "../util/atexit" }
+configloader = { optional = true }
 configmodel = { version = "0.1.0", path = "../config/model" }
 crossbeam = "0.8"
+edenfs-client = { version = "0.1.0", path = "../edenfs-client", optional = true }
 fail = { version = "0.4", features = ["failpoints"] }
+hg-metrics = { version = "0.1.0", path = "../hg-metrics", optional = true }
 io = { version = "0.1.0", path = "../io" }
 manifest = { version = "0.1.0", path = "../manifest", features = ["for-tests"] }
 manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
@@ -45,4 +48,4 @@ walkdir = "2.3"
 fs-err = { version = "2.6.0", features = ["tokio"] }
 
 [features]
-eden = ["toml"]
+eden = ["configloader", "edenfs-client", "hg-metrics", "toml"]

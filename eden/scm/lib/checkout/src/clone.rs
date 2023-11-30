@@ -36,6 +36,7 @@ use util::path::remove_file;
 use vfs::VFS;
 use workingcopy::sparse;
 
+use crate::errors::CheckoutError;
 use crate::file_state;
 use crate::ActionMap;
 use crate::Checkout;
@@ -72,14 +73,6 @@ impl std::fmt::Display for CheckoutStats {
         Ok(())
     }
 }
-
-#[derive(Debug, thiserror::Error)]
-#[error("checkout error: {source}")]
-pub struct CheckoutError {
-    pub resumable: bool,
-    pub source: anyhow::Error,
-}
-
 /// A somewhat simplified/specialized checkout suitable for use during a clone.
 #[instrument(skip_all, fields(path=%dot_path.display(), %target), err)]
 pub fn checkout(

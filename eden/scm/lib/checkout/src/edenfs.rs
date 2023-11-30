@@ -15,6 +15,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
+use edenfs_client::CheckoutConflict;
 use io::IO;
 use pathmatcher::AlwaysMatcher;
 use spawn_ext::CommandExt;
@@ -23,7 +24,9 @@ use types::RepoPath;
 use workingcopy::util::walk_treestate;
 use workingcopy::workingcopy::WorkingCopy;
 
-pub fn clear_edenfs_dirstate(wc: &mut WorkingCopy) -> Result<()> {
+use crate::errors::EdenConflictError;
+
+pub fn clear_edenfs_dirstate(wc: &mut WorkingCopy) -> anyhow::Result<()> {
     let tbind = wc.treestate();
     let mut treestate = tbind.lock();
     let matcher = Arc::new(AlwaysMatcher::new());
@@ -57,7 +60,7 @@ pub fn clear_edenfs_dirstate(wc: &mut WorkingCopy) -> Result<()> {
 ///
 /// Otherwise, run in foreground. This is needed for automation that relies
 /// on `checkout HASH` to setup critical repo redirections.
-pub fn edenfs_redirect_fixup(io: &IO, config: &dyn Config, wc: &WorkingCopy) -> Result<()> {
+pub fn edenfs_redirect_fixup(io: &IO, config: &dyn Config, wc: &WorkingCopy) -> anyhow::Result<()> {
     let is_okay = match is_edenfs_redirect_okay(wc).unwrap_or(Some(false)) {
         Some(r) => r,
         None => return Ok(()),
@@ -79,7 +82,7 @@ pub fn edenfs_redirect_fixup(io: &IO, config: &dyn Config, wc: &WorkingCopy) -> 
 }
 
 /// Whether the edenfs redirect directories look okay, or None if redirect is unnecessary.
-fn is_edenfs_redirect_okay(wc: &WorkingCopy) -> Result<Option<bool>> {
+fn is_edenfs_redirect_okay(wc: &WorkingCopy) -> anyhow::Result<Option<bool>> {
     let vfs = wc.vfs();
     let mut redirections = HashMap::new();
 
@@ -134,4 +137,27 @@ fn is_edenfs_redirect_okay(wc: &WorkingCopy) -> Result<Option<bool>> {
     }
 
     Ok(Some(true))
+}
+
+/// abort if there is a ConflictType.ERROR type of conflicts
+pub fn abort_on_eden_conflict_error(
+    config: &dyn Config,
+    conflicts: Vec<CheckoutConflict>,
+) -> Result<(), EdenConflictError> {
+    if !config
+        .get_or_default::<bool>("experimental", "abort-on-eden-conflict-error")
+        .unwrap_or_default()
+    {
+        return Ok(());
+    }
+    for conflict in conflicts {
+        if edenfs_client::ConflictType::Error == conflict.conflict_type {
+            hg_metrics::increment_counter("abort_on_eden_conflict_error", 1);
+            return Err(EdenConflictError {
+                path: conflict.path.into_string(),
+                message: conflict.message,
+            });
+        }
+    }
+    Ok(())
 }

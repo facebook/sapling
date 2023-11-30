@@ -9,7 +9,11 @@ rust_library(
         "cargo_toml_config": {
             "dependencies_override": {
                 "dependencies": {
+                    "configloader": {"optional": True},
+                    "edenfs-client": {"optional": True},
+                    "hg-metrics": {"optional": True},
                     "manifest": {"features": ["for-tests"]},
+                    "toml": {"optional": True},
                 },
                 "dev-dependencies": {
                     "manifest-tree": {"features": ["for-tests"]},
@@ -17,6 +21,9 @@ rust_library(
             },
             "features": {
                 "eden": [
+                    "edenfs-client",
+                    "configloader",
+                    "hg-metrics",
                     "toml",
                 ],
             },
@@ -51,6 +58,8 @@ rust_library(
         "fbsource//third-party/rust:toml",
         "fbsource//third-party/rust:tracing",
         "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/edenfs-client:edenfs-client",
+        "//eden/scm/lib/hg-metrics:hg-metrics",
         "//eden/scm/lib/io:io",
         "//eden/scm/lib/manifest:manifest",
         "//eden/scm/lib/manifest-tree:manifest-tree",
