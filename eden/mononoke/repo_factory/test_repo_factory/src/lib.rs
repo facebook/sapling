@@ -135,6 +135,7 @@ use streaming_clone::ArcStreamingClone;
 use streaming_clone::StreamingCloneBuilder;
 use synced_commit_mapping::ArcSyncedCommitMapping;
 use synced_commit_mapping::SqlSyncedCommitMapping;
+use test_manifest::RootTestManifestDirectory;
 use unodes::RootUnodeManifestId;
 use warm_bookmarks_cache::WarmBookmarksCacheBuilder;
 use wireproto_handler::ArcRepoHandlerBase;
@@ -184,6 +185,7 @@ pub fn default_test_repo_config() -> RepoConfig {
             MappedHgChangesetId::NAME.to_string(),
             RootSkeletonManifestId::NAME.to_string(),
             RootBasenameSuffixSkeletonManifest::NAME.to_string(),
+            RootTestManifestDirectory::NAME.to_string(),
         },
         unode_version: UnodeVersion::V2,
         blame_version: BlameVersion::V2,

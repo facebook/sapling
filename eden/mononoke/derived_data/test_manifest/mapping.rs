@@ -23,6 +23,8 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::ThriftConvert;
 
+use crate::derive::derive_single;
+
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct RootTestManifestDirectory(pub(crate) TestManifestDirectory);
 
@@ -65,12 +67,12 @@ impl BonsaiDerivable for RootTestManifestDirectory {
     type Dependencies = dependencies![];
 
     async fn derive_single(
-        _ctx: &CoreContext,
-        _derivation_ctx: &DerivationContext,
-        _bonsai: BonsaiChangeset,
-        _parents: Vec<Self>,
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        bonsai: BonsaiChangeset,
+        parents: Vec<Self>,
     ) -> Result<Self> {
-        unimplemented!("TestManifest derivation is not implemented")
+        derive_single(ctx, derivation_ctx, bonsai, parents).await
     }
 
     async fn store_mapping(
