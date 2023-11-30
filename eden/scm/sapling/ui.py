@@ -191,6 +191,7 @@ class ui:
             self.fout = src.fout
             self.ferr = src.ferr
             self.fin = src.fin
+            self.io = src.io
             self.pageractive = src.pageractive
             self._disablepager = src._disablepager
             self._tweaked = src._tweaked
@@ -219,10 +220,11 @@ class ui:
         else:
             self._uiconfig = uiconfig.uiconfig(rcfg=rcfg)
 
-            main_io = util.get_main_io()
-            self.fout = util.refcell(main_io.output())
-            self.ferr = util.refcell(main_io.error())
-            self.fin = util.refcell(main_io.input())
+            io = util.get_main_io()
+            self.fout = util.refcell(io.output())
+            self.ferr = util.refcell(io.error())
+            self.fin = util.refcell(io.input())
+            self.io = io
             self.pageractive = False
             self._disablepager = False
             self._tweaked = False

@@ -133,6 +133,8 @@ else:
 
 
 # The main Rust IO. It handles progress and streampager.
+# This is for low-level operations where the `ui` object is not present.
+# If you have `ui`, use` ui.io` instead.
 get_main_io = bindings.io.IO.main
 
 # Define a fail point.
