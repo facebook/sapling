@@ -2448,8 +2448,7 @@ fn find_free_span(covered: &IdSet, low: Id, reserve_size: u64, shrink_to_fit: bo
         if let Some(span) = intersected.iter_span_asc().next() {
             // Overlap with existing covered spans. Decrease `high` so it
             // no longer overlap.
-            let last_free = span.low - 1;
-            if last_free >= low && shrink_to_fit {
+            if span.low > low && shrink_to_fit {
                 // Use the remaining part of the previous reservation.
                 //   [----------reserved--------------]
                 //             [--intersected--]
@@ -2460,6 +2459,7 @@ fn find_free_span(covered: &IdSet, low: Id, reserve_size: u64, shrink_to_fit: bo
                 //   [reserved] <- remaining of the previous reservation
                 //            ^
                 //            high
+                let last_free = span.low - 1;
                 high = last_free;
             } else {
                 // No space on the left side. Try the right side.
@@ -2597,5 +2597,20 @@ impl fmt::Debug for DebugId {
         }
         write!(f, "{:?}", self.id)?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_find_free_span_overflow() {
+        let covered = IdSet::from(0..=6);
+        let reserve_size = 2;
+        for shrink_to_fit in [true, false] {
+            let span = find_free_span(&covered, Id(0), reserve_size, shrink_to_fit);
+            assert_eq!(span, IdSpan::from(7..=8));
+        }
     }
 }
