@@ -65,7 +65,7 @@ type SmallBinary = SmallVec<[u8; 24]>;
 #[derive(Clone, Eq)]
 pub struct ShardedMapV2Node<Value: ShardedMapV2Value> {
     prefix: SmallBinary,
-    value: Option<Value>,
+    value: Option<Box<Value>>,
     children: SortedVectorMap<u8, LoadableShardedMapV2Node<Value>>,
     #[derivative(PartialEq = "ignore", Debug = "ignore")]
     weight: OnceLock<usize>,
@@ -179,7 +179,7 @@ impl<Value: ShardedMapV2Value> LoadableShardedMapV2Node<Value> {
                     }),
                 )],
             )),
-            None => Ok((value, children.into_iter().collect())),
+            None => Ok((value.map(|v| *v), children.into_iter().collect())),
         }
     }
 
@@ -264,7 +264,7 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
 
     pub fn rollup_data(&self) -> Value::RollupData {
         Value::RollupData::rollup(
-            self.value.as_ref(),
+            self.value.as_ref().map(|v| v.as_ref()),
             self.children
                 .iter()
                 .map(|(_byte, child)| child.rollup_data())
@@ -383,7 +383,7 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
 
         Ok(LoadableShardedMapV2Node::Inlined(Self {
             prefix: lcp,
-            value: current_value,
+            value: current_value.map(|v| Box::new(v)),
             children,
             weight: OnceLock::from(*weight),
             size: OnceLock::new(),
@@ -413,7 +413,7 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
         // of the key to find out which child node to recurse onto.
         let (first, rest) = match key.split_first() {
             None => {
-                return Ok(self.value.clone());
+                return Ok(self.value.clone().map(|v| *v));
             }
             Some((first, rest)) => (first, rest),
         };
@@ -499,7 +499,7 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
                         Ok(value
                             .into_iter()
                             .map(|value| {
-                                OrderedTraversal::Output((accumulated_prefix.clone(), value))
+                                OrderedTraversal::Output((accumulated_prefix.clone(), *value))
                             })
                             .chain(children.into_iter().map(|(byte, child)| {
                                 let mut accumulated_prefix = accumulated_prefix.clone();
@@ -559,7 +559,7 @@ impl<Value: ShardedMapV2Value> ThriftConvert for ShardedMapV2Node<Value> {
             value: t
                 .value
                 .as_ref()
-                .map(ThriftConvert::from_bytes)
+                .map(|v| anyhow::Ok(Box::new(ThriftConvert::from_bytes(v)?)))
                 .transpose()?,
             children: t
                 .children
@@ -574,7 +574,7 @@ impl<Value: ShardedMapV2Value> ThriftConvert for ShardedMapV2Node<Value> {
     fn into_thrift(self) -> thrift::ShardedMapV2Node {
         thrift::ShardedMapV2Node {
             prefix: thrift::small_binary(self.prefix),
-            value: self.value.map(ThriftConvert::into_bytes),
+            value: self.value.map(|v| ThriftConvert::into_bytes(*v)),
             children: self
                 .children
                 .into_iter()
@@ -879,6 +879,7 @@ mod test {
             let mut calculated_size = map.value.iter().len();
             let mut calculated_rollup_data = map
                 .value
+                .clone()
                 .map_or(MaxTestValue(0), |value| MaxTestValue(value.0));
 
             for (_next_byte, child) in map.children.iter() {
@@ -968,7 +969,7 @@ mod test {
     ) -> ShardedMapV2Node<TestValue> {
         ShardedMapV2Node {
             prefix: SmallBinary::from(prefix.as_bytes()),
-            value: value.map(TestValue),
+            value: value.map(|v| Box::new(TestValue(v))),
             children: children.into_iter().collect(),
             weight: Default::default(),
             size: Default::default(),
