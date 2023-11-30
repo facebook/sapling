@@ -259,7 +259,7 @@ def _setupupdates(_ui) -> None:
         # If the working context is in memory (virtual), there's no need to
         # apply the user's sparse rules at all (and in fact doing so would
         # cause unexpected behavior in the real working copy).
-        if not hasattr(repo, "sparsematch") or wctx.isinmemory():
+        if not _hassparse(repo) or wctx.isinmemory():
             return actions, diverge, renamedelete
 
         files = set()
@@ -378,7 +378,7 @@ def _setupupdates(_ui) -> None:
 
         # If we're updating to a location, clean up any stale temporary includes
         # (ex: this happens during hg rebase --abort).
-        if hasattr(repo, "sparsematch"):
+        if _hassparse(repo):
             repo.prunetemporaryincludes()
 
         return results
@@ -394,7 +394,7 @@ def _setupcommit(ui) -> None:
         # Use unfiltered to avoid computing hidden commits
         repo = self._repo
 
-        if hasattr(repo, "sparsematch"):
+        if _hassparse(repo):
             ctx = repo[node]
             profiles = getsparsepatterns(repo, ctx.rev()).allprofiles()
             if profiles & set(ctx.files()):
@@ -584,7 +584,7 @@ def _setupdirstate(ui) -> None:
         def __get__(self, obj, type=None):
             repo = obj.repo if hasattr(obj, "repo") else None
             origignore = self.orig.__get__(obj)
-            if repo is None or not hasattr(repo, "sparsematch"):
+            if repo is None or not _hassparse(repo):
                 return origignore
 
             sparsematch = repo.sparsematch()
@@ -610,7 +610,7 @@ def _setupdirstate(ui) -> None:
             # skips O(working copy) scans, and affect absorb perf.
             return orig(self, parent, allfiles, changedfiles, exact=exact)
 
-        if hasattr(self, "repo") and hasattr(self.repo, "sparsematch"):
+        if hasattr(self, "repo") and _hassparse(self.repo):
             with progress.spinner(ui, "applying sparse profile"):
                 matcher = self.repo.sparsematch()
                 allfiles = allfiles.matches(matcher)
@@ -639,7 +639,7 @@ def _setupdirstate(ui) -> None:
         def _wrapper(orig, self, *args):
             if hasattr(self, "repo"):
                 repo = self.repo
-                if hasattr(repo, "sparsematch"):
+                if _hassparse(repo):
                     dirstate = repo.dirstate
                     sparsematch = repo.sparsematch()
                     for f in args:
@@ -665,7 +665,7 @@ def _setupdirstate(ui) -> None:
         st = orig(self, match, ignored, clean, unknown)
         if hasattr(self, "repo"):
             repo = self.repo
-            if hasattr(repo, "sparsematch"):
+            if _hassparse(repo):
                 sparsematch = repo.sparsematch()
                 st = scmutil.status(
                     *([f for f in files if sparsematch(f)] for files in st)
