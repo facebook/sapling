@@ -128,6 +128,24 @@ py_class!(class IO |py| {
         let interval = io.time_interval().scoped_blocked_interval(name.into());
         ScopedBlockedInterval::create_instance(py, RefCell::new(Some(interval)))
     }
+
+    /// blocked_ms(tag: Optional[str] = None) -> u64
+    ///
+    /// Get the blocked time in milliseconds. If `tag` is `None`, return the
+    /// total blocked time for all tags, otherwise, return the blocked time for
+    /// the given tag.
+    ///
+    /// Since the start of the blocked time is implicit, callsites probably want
+    /// to obtain 2 blocked_ms() values and then calculate their difference.
+    def blocked_ms(&self, tag: Option<&str> = None) -> PyResult<u64> {
+        let io = RustIO::main().map_pyerr(py)?;
+        let interval = io.time_interval();
+        let milliseconds = match tag {
+            None => interval.total_blocked_ms(),
+            Some(tag) => interval.tagged_blocked_ms(tag),
+        };
+        Ok(milliseconds)
+    }
 });
 
 py_class!(class ScopedBlockedInterval |py| {
