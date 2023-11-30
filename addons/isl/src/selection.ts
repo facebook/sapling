@@ -11,6 +11,7 @@ import type React from 'react';
 
 import {useCommand} from './ISLShortcuts';
 import {latestSuccessorUnlessExplicitlyObsolete, successionTracker} from './SuccessionTracker';
+import {islDrawerState} from './drawerState';
 import {HideOperation} from './operations/HideOperation';
 import {treeWithPreviews} from './previews';
 import {latestCommitTreeMap, operationBeingPreviewed} from './serverAPIState';
@@ -198,13 +199,29 @@ export const linearizedCommitHistory = selector({
 
 export function useArrowKeysToChangeSelection() {
   const cb = useRecoilCallback(({snapshot, set}) => (which: ISLCommandName) => {
-    const lastSelected = snapshot.getLoadable(previouslySelectedCommit).valueMaybe();
     const linearHistory = snapshot.getLoadable(linearizedCommitHistory).valueMaybe();
-    if (lastSelected == null || linearHistory == null) {
+    if (linearHistory == null || linearHistory.length === 0) {
       return;
     }
 
     const linearNonPublicHistory = linearHistory.filter(commit => commit.phase !== 'public');
+
+    const existingSelection = snapshot.getLoadable(selectedCommits).valueMaybe();
+    if (existingSelection == null || existingSelection.size === 0) {
+      if (which === 'SelectDownwards' || which === 'ContinueSelectionDownwards') {
+        const top = linearNonPublicHistory.at(-1)?.hash;
+        if (top != null) {
+          set(selectedCommits, new Set([top]));
+          set(previouslySelectedCommit, top);
+        }
+      }
+      return;
+    }
+
+    const lastSelected = snapshot.getLoadable(previouslySelectedCommit).valueMaybe();
+    if (lastSelected == null) {
+      return;
+    }
 
     let currentIndex = linearNonPublicHistory.findIndex(commit => commit.hash === lastSelected);
     if (currentIndex === -1) {

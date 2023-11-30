@@ -15,6 +15,8 @@ import {
   simulateRepoConnected,
   TEST_COMMIT_HISTORY,
   COMMIT,
+  closeCommitInfoSidebar,
+  commitInfoIsOpen,
 } from '../testUtils';
 import {fireEvent, render, screen} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -42,6 +44,11 @@ describe('selection', () => {
       () => void fireEvent.click(CommitTreeListTestUtils.withinCommitTree().getByText(name), opts),
     );
   };
+
+  const expectNoRealSelection = () =>
+    expect(CommitInfoTestUtils.withinCommitInfo().queryAllByTestId('selected-commit')).toHaveLength(
+      0,
+    );
 
   const expectOnlyOneCommitSelected = () =>
     expect(
@@ -270,12 +277,17 @@ describe('selection', () => {
   });
 
   describe('up/down arrows to select', () => {
-    it('noop if nothing selected', () => {
-      upArrow();
+    it('down arrow with no selection starts you at the top', () => {
+      expectNoRealSelection();
       downArrow();
-      upArrow(true);
-      downArrow(true);
       expectOnlyOneCommitSelected();
+      expect(CommitInfoTestUtils.withinCommitInfo().getByText('Commit Z')).toBeInTheDocument();
+    });
+
+    it('up arrow noop if nothing selected', () => {
+      upArrow();
+      upArrow(true);
+      expectNoRealSelection();
     });
 
     it('up arrow modifies selection', () => {
