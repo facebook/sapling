@@ -146,7 +146,7 @@ subcmd = filteredfs.subcommand(
             "Show information about filter profiles",
             ["show"],
         ),
-        ("Change which profiles are active", ["switch", "enable", "disable", "reset"]),
+        ("Change which profiles are active", ["enable", "disable"]),
     ]
 )
 
@@ -157,22 +157,20 @@ def show(ui, repo, **opts) -> None:
     unimpl()
 
 
-@subcmd("reset", _common_config_opts)
-def resetsubcmd(ui, repo, **opts) -> None:
-    """disable filters and convert to a regular Eden checkout"""
-    unimpl()
-
-
-@subcmd("disable|disableprofile", _common_config_opts)
+@subcmd("disable|disableprofile|disablefilter|reset", _common_config_opts)
 def disablefiltersubcmd(ui, repo, **opts) -> None:
     """disable the current active filter"""
     commonopts = getcommonopts(opts)
     _config(ui, repo, [], opts, disableprofile=True, **commonopts)
 
 
-@subcmd("enable|enableprofile|enablefilter", _common_config_opts, "[FILTER]...")
+@subcmd(
+    "enable|enableprofile|enablefilter|switch|switchprofile|switchfilter",
+    _common_config_opts,
+    "[FILTER]...",
+)
 def enablefiltersubcmd(ui, repo, pat, **opts) -> None:
-    """enable a filter"""
+    """enable a filter (disables the previously active filter, if any)"""
     # Filters must not contain colons in their path
     if ":" in pat:
         raise error.Abort(_("filter file paths must not contain ':'"))
@@ -180,12 +178,3 @@ def enablefiltersubcmd(ui, repo, pat, **opts) -> None:
     _checknonexistingprofiles(ui, repo, pat)
     commonopts = getcommonopts(opts)
     _config(ui, repo, pat, opts, enableprofile=True, **commonopts)
-
-
-@subcmd("switch|switchprofile", _common_config_opts, "[FILTER]...")
-def switchprofilesubcmd(ui, repo, pat, **opts) -> None:
-    """switch to another filter
-
-    Disables any other active filter
-    """
-    unimpl()
