@@ -4522,12 +4522,26 @@ The following config sections control the behavior of automerge::
 
   [automerge]
 
-  # Decision mode for the automerged result. `reject` means disable automerge feature.
-  mode = prompt|accept|reject|review-in-file
+  # Decision mode for the automerged result. Choose one from the list below:
+  #   - prompt
+  #   - accept
+  #   - reject
+  #   - review-in-file
+  # See the `Automerge Mode` section for more information.
+  mode = accept
 
-  # A list of automerge algorithms separated by comma.
-  merge-algos = adjacent-changes,subset-changes,word-merge
+  # A list of automerge algorithms separated by comma. Currently, we support
+  # the following algorithms:
+  #   - adjacent-changes
+  #   - subset-changes
+  #   - word-merge (advanced)
+  # See the `Merge Algorithms` section for more information.
+  merge-algos = adjacent-changes,subset-changes
 
+  # Disable automerge for noninteractive use cases (including ISL (VS Code), CI/CD jobs).
+  # The automerge algorithms won't always give the desired result, so we disable
+  # it for noninteractive cases by default.
+  disable-for-noninteractive = True
 
 Automerge Mode
 ==============
@@ -4554,9 +4568,63 @@ subset-changes
     If the changes of one side is the subset of the other side, then the conflict will
     be resolved and the other side changes are kept.
 
-adjacent-changes
-    Merge adjacent, non-overlapping modifications on both sides.
+    Here is an example of the conflict::
 
-word-merge
-    Run traditional 3-way file merge on word level.
+        merging a.txt
+        <<<<<<< dest
+        - ? t('Cannot edit penging changes')
+        + ? t('Cannot edit pending changes')
+        =======
+        - ? t('Cannot edit penging changes')
+        + ? t('Cannot edit pending changes')
+        + : hasPublic
+        + ? t('Cannot edit public commits')
+        >>>>>>> source
+
+    It will be resolved to::
+
+          ? t('Cannot edit pending changes')
+          : hasPublic
+          ? t('Cannot edit public commits')
+
+adjacent-changes
+    Merge adjacent, non-overlapping modifications on both sides. The idea comes from
+    BitKeeper's smerge.
+
+    Here is an example of the conflict::
+
+        <<<<<<< dest
+          import {List} from 'immutable';
+        - import {cacheMethod} from 'shared/LRU';
+        + import {cached, LRU} from 'shared/LRU';
+        =======
+        - import {List} from 'immutable';
+        + import {List, Record} from 'immutable';
+          import {cacheMethod} from 'shared/LRU';
+        >>>>>>> source
+
+    It will be resolved to::
+
+          import {List, Record} from 'immutable';
+          import {cached, LRU} from 'shared/LRU';
+
+word-merge (advanced)
+    Run traditional 3-way merge on word level. This is more powerful since it's operating on
+    word level instead of line level. If you want to use this algorithm, we recommend using
+    it with 'prompt' mode first.
+
+    Here is an example of the conflict::
+
+        <<<<<<< dest
+        - This is the first line.
+        + That is the first line.
+        =======
+        - This is the first line.
+        + This is a first line.
+        >>>>>>> source
+
+    It will be resolved to::
+
+          That is a first line.
+
 """
