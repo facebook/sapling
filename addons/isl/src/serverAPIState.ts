@@ -27,7 +27,7 @@ import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 import serverAPI from './ClientToServerAPI';
 import messageBus from './MessageBus';
 import {successionTracker} from './SuccessionTracker';
-import {makeTreeMap, getCommitTree, walkTreePostorder} from './getCommitTree';
+import {makeTreeMap, getCommitTree} from './getCommitTree';
 import {persistAtomToConfigEffect} from './persistAtomToConfigEffect';
 import {clearOnCwdChange} from './recoilUtils';
 import {initialParams} from './urlParams';
