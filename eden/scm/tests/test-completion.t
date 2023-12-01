@@ -153,7 +153,6 @@ Show aliases with -v
   doctor
   export
   files
-  filteredfs
   forget
   fs
   gc

@@ -759,6 +759,24 @@ Do you want to run `eden mount %s` instead?"""
                 env=env,
             )
 
+            configs = {
+                "extensions.sparse": "!",
+            }
+            if checkout.get_config().scm_type == "filteredhg":
+                configs["extensions.edensparse"] = ""
+            for k, v in configs.items():
+                subprocess.check_call(
+                    [
+                        os.environ.get("EDEN_HG_BINARY", "hg"),
+                        "config",
+                        "--local",
+                        f"{k}={v}",
+                        "-R",
+                        str(checkout.path),
+                    ],
+                    env=env,
+                )
+
     def mount(self, path: Union[Path, str], read_only: bool) -> int:
         # Load the config info for this client, to make sure we
         # know about the client.

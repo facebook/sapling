@@ -187,8 +187,6 @@ profilecachefile = "sparseprofileconfigs"
 
 
 def uisetup(ui) -> None:
-    if extensions.isloaded("edensparse"):
-        return
     _setupupdates(ui)
     _setupcommit(ui)
 
