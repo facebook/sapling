@@ -59,6 +59,7 @@
   border: var(--pre-border);
   padding: var(--halfpad);
   font-size: 110%;
+  white-space: pre-wrap;
 }
 
 .rendered-markup a {
