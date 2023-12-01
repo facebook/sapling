@@ -211,19 +211,18 @@ class UpdateTest(EdenHgTestCase):
         with self.assertRaises(hgrepo.HgError) as context:
             self.hg("update", ".^", "--merge")
         self.assertIn(
-            b"1 conflicts while merging foo/bar.txt! "
-            b"(edit, then use 'hg resolve --mark')",
+            b"1 conflicts while merging foo/bar.txt!",
             context.exception.stderr,
         )
         self.assert_status({"foo/bar.txt": "M"}, op="updatemerge")
         self.assert_file_regex(
             "foo/bar.txt",
             """\
-            <<<<<<< working copy.*
+            <<<<<<< .*
             changing yet again
             =======
             test
-            >>>>>>> destination.*
+            >>>>>>> .*
             """,
         )
 
@@ -373,8 +372,7 @@ class UpdateTest(EdenHgTestCase):
         with self.assertRaises(hgrepo.HgError) as context:
             self.repo.update(commit, merge=True)
         self.assertIn(
-            b"warning: 1 conflicts while merging some_new_file.txt! "
-            b"(edit, then use 'hg resolve --mark')",
+            b"warning: 1 conflicts while merging some_new_file.txt!",
             context.exception.stderr,
         )
         self.assertEqual(
@@ -387,11 +385,11 @@ class UpdateTest(EdenHgTestCase):
         self.assert_status({"some_new_file.txt": "M"}, op="updatemerge")
         merge_contents = dedent(
             """\
-        <<<<<<< working copy.*
+        <<<<<<< .*
         Re-create the file with different contents.
         =======
         Original contents.
-        >>>>>>> destination.*
+        >>>>>>> .*
         """
         )
         self.assertRegex(self.read_file("some_new_file.txt"), merge_contents)
