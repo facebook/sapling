@@ -66,7 +66,7 @@ Example
 
 from __future__ import division
 
-from sapling import error, extensions, match as matchmod, merge as mergemod, registrar
+from sapling import error, extensions, merge as mergemod, registrar
 from sapling.i18n import _
 
 from .sparse import (
@@ -78,7 +78,6 @@ from .sparse import (
     _showsubcmdlogic,
     getcommonopts,
     normalizeprofile,
-    readsparseconfig,
     SparseMixin,
 )
 
