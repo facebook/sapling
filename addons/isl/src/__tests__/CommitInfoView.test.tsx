@@ -266,7 +266,7 @@ describe('CommitInfoView', () => {
         expect(amendButton?.disabled).toBe(true);
       });
 
-      it('shows optimistic uncommitted changes', () => {
+      it('shows optimistic uncommitted changes', async () => {
         act(() => {
           simulateUncommittedChangedFiles({
             value: [],
@@ -275,12 +275,15 @@ describe('CommitInfoView', () => {
 
         expect(screen.queryByText('Amend and Submit')).not.toBeInTheDocument();
 
+        jest.spyOn(platform, 'confirm').mockImplementation(() => Promise.resolve(true));
         act(() => {
           fireEvent.click(screen.getByText('Uncommit'));
         });
 
-        expect(withinCommitInfo().queryByText(ignoreRTL('cb.js'))).toBeInTheDocument();
-        expect(screen.queryByText('Amend and Submit')).toBeInTheDocument();
+        await waitFor(() => {
+          expect(withinCommitInfo().queryByText(ignoreRTL('cb.js'))).toBeInTheDocument();
+          expect(screen.queryByText('Amend and Submit')).toBeInTheDocument();
+        });
       });
     });
 
