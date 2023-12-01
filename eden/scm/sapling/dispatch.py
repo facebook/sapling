@@ -358,7 +358,7 @@ def dispatch(req):
                     ui.flush()
                     ui.write_err(msg, label="hgmetrics")
 
-                # Write to blackbox, and sampling
+                # Write to blackbox
                 ui.log("metrics", pformat({"metrics": metrics}, width=1024))
         blackbox.sync()
 
