@@ -152,7 +152,7 @@ If importing results in no new rules being added, no refresh should take place!
   >         if not loaded:
   >             return
   >         sparse = extensions.find('sparse')
-  >         sparse._refresh = abort_refresh
+  >         sparse.SparseMixin._refreshsparse = abort_refresh
   >     extensions.afterloaded('sparse', sparseloaded)
   > EOF
   $ cat >> $HGRCPATH <<EOF
