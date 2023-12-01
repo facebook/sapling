@@ -569,7 +569,7 @@ def _top(repo, subset, x):
 
 @revsetpredicate("bottom()")
 def _bottom(repo, subset, x):
-    """``top()``
+    """``bottom()``
     Bottom of the draft stack.
     """
     revsetlang.getargs(x, 0, 0, _("bottom takes no arguments"))
