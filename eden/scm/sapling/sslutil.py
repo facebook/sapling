@@ -387,6 +387,9 @@ def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
     # choice.
     sslcontext = SSLContext(ssl.PROTOCOL_TLS_CLIENT)
 
+    if settings["verifymode"] == ssl.CERT_NONE:
+        sslcontext.check_hostname = False
+
     # This still works on our fake SSLContext.
     sslcontext.verify_mode = settings["verifymode"]
 

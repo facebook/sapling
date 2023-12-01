@@ -8,7 +8,7 @@
   $ cd test
 
   $ echo foo > foo
-  $ hg commit -Am 1
+  $ hg commit -Aqm 1
 
   $ cert="${HGTEST_CERTDIR}/localhost.crt"
   $ cert_key="${HGTEST_CERTDIR}/localhost.key"
