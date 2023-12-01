@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "=1.0.72"
+async-runtime = { version = "0.1.0", path = "../async-runtime", optional = true }
 atexit = { version = "0.1.0", path = "../util/atexit" }
 configloader = { optional = true }
 configmodel = { version = "0.1.0", path = "../config/model" }
@@ -48,4 +49,4 @@ walkdir = "2.3"
 fs-err = { version = "2.6.0", features = ["tokio"] }
 
 [features]
-eden = ["configloader", "edenfs-client", "hg-metrics", "toml"]
+eden = ["async-runtime", "configloader", "edenfs-client", "hg-metrics", "toml"]

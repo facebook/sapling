@@ -839,6 +839,27 @@ pub fn checkout(
     repo: &mut Repo,
     wc: &mut WorkingCopy,
     target_commit: HgId,
+) -> Result<Option<(usize, usize)>> {
+    #[cfg(feature = "eden")]
+    if repo.requirements.contains("eden") {
+        edenfs::edenfs_checkout(
+            io,
+            repo,
+            wc,
+            target_commit,
+            edenfs_client::CheckoutMode::Force,
+        )?;
+        return Ok(None);
+    }
+
+    Ok(Some(sparse_checkout(io, repo, wc, target_commit)?))
+}
+
+pub fn sparse_checkout(
+    io: &IO,
+    repo: &mut Repo,
+    wc: &mut WorkingCopy,
+    target_commit: HgId,
 ) -> Result<(usize, usize)> {
     wc.ensure_locked()?;
 

@@ -7,26 +7,55 @@
 
 use std::collections::HashMap;
 use std::fs::read_to_string;
+use std::fs::remove_dir_all;
 #[cfg(unix)]
 use std::os::unix::prelude::MetadataExt;
 use std::process::Command;
 use std::sync::Arc;
 
 use anyhow::Result;
+use async_runtime::try_block_unless_interrupted as block_on;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use edenfs_client::CheckoutConflict;
 use io::IO;
 use pathmatcher::AlwaysMatcher;
+use repo::repo::Repo;
 use spawn_ext::CommandExt;
 use treestate::filestate::StateFlags;
+use types::HgId;
 use types::RepoPath;
 use workingcopy::util::walk_treestate;
 use workingcopy::workingcopy::WorkingCopy;
 
 use crate::errors::EdenConflictError;
 
-pub fn clear_edenfs_dirstate(wc: &mut WorkingCopy) -> anyhow::Result<()> {
+pub fn edenfs_checkout(
+    io: &IO,
+    repo: &mut Repo,
+    wc: &mut WorkingCopy,
+    target_commit: HgId,
+    checkout_mode: edenfs_client::CheckoutMode,
+) -> anyhow::Result<()> {
+    // For now this just supports Force
+    assert_eq!(checkout_mode, edenfs_client::CheckoutMode::Force);
+    let target_commit_tree_hash = block_on(repo.get_root_tree_id(target_commit.clone()))?;
+    let conflicts =
+        wc.eden_client()?
+            .checkout(target_commit, target_commit_tree_hash, checkout_mode)?;
+    abort_on_eden_conflict_error(repo.config(), conflicts)?;
+    let mergepath = wc.dot_hg_path().join("merge");
+    remove_dir_all(mergepath.as_path()).ok();
+    clear_edenfs_dirstate(wc)?;
+    wc.set_parents(vec![target_commit], Some(target_commit_tree_hash))?;
+    wc.treestate().lock().flush()?;
+    let updatestate_path = wc.dot_hg_path().join("updatestate");
+    util::file::unlink_if_exists(updatestate_path)?;
+    edenfs_redirect_fixup(io, repo.config(), wc)?;
+    Ok(())
+}
+
+fn clear_edenfs_dirstate(wc: &mut WorkingCopy) -> anyhow::Result<()> {
     let tbind = wc.treestate();
     let mut treestate = tbind.lock();
     let matcher = Arc::new(AlwaysMatcher::new());

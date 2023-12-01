@@ -241,6 +241,10 @@ class HgRepository(repobase.Repository):
         hgrc.setdefault("workingcopy", {})
         hgrc["workingcopy"]["rust-status"] = "true"
 
+        # Use (native) Rust checkout whenever possible
+        hgrc.setdefault("checkout", {})
+        hgrc["checkout"]["use-rust"] = "true"
+
         self.write_hgrc(hgrc)
 
         storerequirespath = os.path.join(self.path, ".hg", "store", "requires")

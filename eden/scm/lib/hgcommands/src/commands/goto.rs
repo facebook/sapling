@@ -114,8 +114,10 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
     }
 
     let dest = dest.remove(0);
+    let is_eden = repo.requirements.contains("eden");
 
-    if ctx.opts.clean || ctx.opts.check || ctx.opts.merge || !ctx.opts.date.is_empty() {
+    if (ctx.opts.clean != is_eden) || ctx.opts.check || ctx.opts.merge || !ctx.opts.date.is_empty()
+    {
         tracing::debug!(target: "checkout_info", checkout_detail="unsupported_args");
         fallback!("one or more unsupported options in Rust checkout");
     }
@@ -131,13 +133,17 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
     tracing::debug!(target: "checkout_info", checkout_mode="rust");
 
     let _lock = repo.lock();
-    let (updated, removed) = checkout::checkout(ctx.io(), repo, wc, target)?;
+    let update_result = checkout::checkout(ctx.io(), repo, wc, target)?;
 
     if !ctx.global_opts().quiet {
-        ctx.io().write(format!(
-            "{} files updated, 0 files merged, {} files removed, 0 files unresolved\n",
-            updated, removed
-        ))?;
+        if let Some((updated, removed)) = update_result {
+            ctx.io().write(format!(
+                "{} files updated, 0 files merged, {} files removed, 0 files unresolved\n",
+                updated, removed
+            ))?;
+        } else {
+            ctx.io().write("update complete\n")?;
+        }
     }
 
     Ok(0)
