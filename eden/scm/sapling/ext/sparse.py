@@ -431,7 +431,7 @@ def _setupcommit(ui) -> None:
                     origsparsematch = repo.sparsematch(
                         *list(p.rev() for p in ctx.parents() if p.rev() != nullrev)
                     )
-                    repo._refreshsparse(ui, origstatus, origsparsematch, True)
+                    repo._refreshsparse(repo.ui, origstatus, origsparsematch, True)
             else:
                 # We just created a new commit that the edenfs_ffi Rust
                 # repo won't know about until we flush in-memory commit

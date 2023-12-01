@@ -66,7 +66,7 @@ Example
 
 from __future__ import division
 
-from sapling import error, match as matchmod, merge as mergemod, registrar
+from sapling import error, extensions, match as matchmod, merge as mergemod, registrar
 from sapling.i18n import _
 
 from .sparse import (
@@ -87,6 +87,8 @@ command = registrar.command(cmdtable)
 
 
 def uisetup(ui) -> None:
+    if extensions.isenabled(ui, "sparse"):
+        return
     _setupupdates(ui)
     _setupcommit(ui)
 
