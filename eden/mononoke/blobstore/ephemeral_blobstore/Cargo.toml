@@ -10,7 +10,7 @@ license = "GPLv2+"
 [dependencies]
 abomonation = { version = "0.7", features = ["smallvec"] }
 abomonation_derive = "0.5"
-anyhow = "=1.0.72"
+anyhow = "1.0.75"
 async-stream = "0.3"
 async-trait = "0.1.71"
 blobstore = { version = "0.1.0", path = ".." }
@@ -34,7 +34,7 @@ sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-s
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 sql_query_config = { version = "0.1.0", path = "../../repo_attributes/sql_query_config" }
-thiserror = "1.0.43"
+thiserror = "1.0.49"
 vec1 = { version = "1", features = ["serde"] }
 
 [dev-dependencies]

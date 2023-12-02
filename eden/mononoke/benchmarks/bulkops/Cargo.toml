@@ -12,7 +12,7 @@ name = "benchmark_bulkops"
 path = "benchmark_bulkops.rs"
 
 [dependencies]
-anyhow = "=1.0.72"
+anyhow = "1.0.75"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 bulkops = { version = "0.1.0", path = "../../bulkops" }
 changesets = { version = "0.1.0", path = "../../changesets" }

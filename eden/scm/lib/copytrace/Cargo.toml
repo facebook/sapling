@@ -6,7 +6,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "=1.0.72"
+anyhow = "1.0.75"
 async-runtime = { version = "0.1.0", path = "../async-runtime" }
 async-trait = "0.1.71"
 configmodel = { version = "0.1.0", path = "../config/model" }
@@ -21,7 +21,7 @@ pathhistory = { version = "0.1.0", path = "../pathhistory" }
 pathmatcher = { version = "0.1.0", path = "../pathmatcher" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 storemodel = { version = "0.1.0", path = "../storemodel" }
-thiserror = "1.0.43"
+thiserror = "1.0.49"
 tracing = "0.1.40"
 types = { version = "0.1.0", path = "../types" }
 xdiff = { version = "0.1.0", path = "../xdiff" }

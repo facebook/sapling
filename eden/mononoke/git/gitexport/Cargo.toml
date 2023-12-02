@@ -19,7 +19,7 @@ name = "tests"
 path = "tests/gitexport_tools/lib.rs"
 
 [dependencies]
-anyhow = "=1.0.72"
+anyhow = "1.0.75"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bookmarks_types = { version = "0.1.0", path = "../../bookmarks/bookmarks_types" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

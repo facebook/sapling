@@ -63,8 +63,8 @@ impl StdError for InternalError {
     }
 
     #[cfg(fbcode_build)]
-    fn provide<'a>(&'a self, demand: &mut ::std::any::Demand<'a>) {
-        demand.provide_ref::<Backtrace>(self.backtrace());
+    fn provide<'a>(&'a self, request: &mut ::std::error::Request<'a>) {
+        request.provide_ref::<Backtrace>(self.backtrace());
     }
 }
 

@@ -7,7 +7,7 @@ authors = ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
 edition = "2021"
 
 [dependencies]
-anyhow = "=1.0.72"
+anyhow = "1.0.75"
 filedescriptor = "0.7"
 libc = "0.2.139"
 nodeipc_derive = { version = "0.1.0", path = "derive" }

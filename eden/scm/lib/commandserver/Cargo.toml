@@ -6,7 +6,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "=1.0.72"
+anyhow = "1.0.75"
 configmodel = { version = "0.1.0", path = "../config/model" }
 dirs = "2.0"
 fn-error-context = "0.2"

@@ -6,7 +6,6 @@
  */
 
 #![feature(error_generic_member_access)]
-#![cfg_attr(fbcode_build, feature(provide_any))]
 
 use std::backtrace::BacktraceStatus;
 use std::convert::Infallible;
@@ -61,8 +60,8 @@ macro_rules! cloneable_error {
             }
 
             #[cfg(fbcode_build)]
-            fn provide<'a>(&'a self, demand: &mut ::std::any::Demand<'a>) {
-                demand.provide_ref::<::std::backtrace::Backtrace>(self.backtrace());
+            fn provide<'a>(&'a self, request: &mut ::std::error::Request<'a>) {
+                request.provide_ref::<::std::backtrace::Backtrace>(self.backtrace());
             }
         }
     };

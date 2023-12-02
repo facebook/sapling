@@ -8,7 +8,7 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "=1.0.72"
+anyhow = "1.0.75"
 ascii = "1.0"
 bookmarks_types = { version = "0.1.0", path = "../../bookmarks/bookmarks_types" }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
@@ -24,7 +24,7 @@ rusoto_core = "0.46.0"
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_ignored = "0.1.8"
 serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
-thiserror = "1.0.43"
+thiserror = "1.0.49"
 toml = "0.8.4"
 
 [dev-dependencies]

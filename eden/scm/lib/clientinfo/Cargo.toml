@@ -6,7 +6,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "=1.0.72"
+anyhow = "1.0.75"
 hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 lazy_static = "1.4"
 rand = { version = "0.8", features = ["small_rng"] }

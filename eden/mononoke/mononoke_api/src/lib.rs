@@ -6,7 +6,6 @@
  */
 
 #![feature(error_generic_member_access)]
-#![cfg_attr(fbcode_build, feature(provide_any))]
 #![feature(trait_alias)]
 
 use std::sync::Arc;

@@ -7,13 +7,13 @@ authors = ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
 edition = "2021"
 
 [dependencies]
-anyhow = "=1.0.72"
+anyhow = "1.0.75"
 async-runtime = { version = "0.1.0", path = "../async-runtime" }
 configmodel = { version = "0.1.0", path = "../config/model" }
 dag = { version = "0.1.0", path = "../dag" }
 edenapi = { version = "0.1.0", path = "../edenapi" }
 metalog = { version = "0.1.0", path = "../metalog" }
 refencode = { version = "0.1.0", path = "../refencode" }
-thiserror = "1.0.43"
+thiserror = "1.0.49"
 treestate = { version = "0.1.0", path = "../treestate" }
 types = { version = "0.1.0", path = "../types" }

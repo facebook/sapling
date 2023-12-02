@@ -6,7 +6,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "=1.0.72"
+anyhow = "1.0.75"
 async-trait = "0.1.71"
 commits-trait = { version = "0.1.0", path = "../trait" }
 dag = { version = "0.1.0", path = "../../dag" }

@@ -12,7 +12,7 @@ name = "git_symbolic_refs_test"
 path = "test/main.rs"
 
 [dependencies]
-anyhow = "=1.0.72"
+anyhow = "1.0.75"
 async-trait = "0.1.71"
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }

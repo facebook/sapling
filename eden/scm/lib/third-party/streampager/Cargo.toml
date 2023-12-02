@@ -25,7 +25,7 @@ smallvec = { version = "1.6.1", default-features = false }
 tempfile = "3.8"
 terminfo = "0.7"
 termwiz = { version = "0.18", features = ["widgets"] }
-thiserror = "1.0.43"
+thiserror = "1.0.49"
 toml = "0.8.4"
 unicode-segmentation = "1.6.0"
 unicode-width = "0.1"

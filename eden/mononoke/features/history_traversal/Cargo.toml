@@ -8,7 +8,7 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "=1.0.72"
+anyhow = "1.0.75"
 async-recursion = "1.0.2"
 async-trait = "0.1.71"
 blame = { version = "0.1.0", path = "../../derived_data/blame" }
@@ -34,7 +34,7 @@ repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-thiserror = "1.0.43"
+thiserror = "1.0.49"
 time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tunables = { version = "0.1.0", path = "../../tunables" }
 unodes = { version = "0.1.0", path = "../../derived_data/unodes" }

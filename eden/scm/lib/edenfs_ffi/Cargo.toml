@@ -9,7 +9,7 @@ edition = "2021"
 crate-type = ["lib", "staticlib"]
 
 [dependencies]
-anyhow = "=1.0.72"
+anyhow = "1.0.75"
 async-runtime = { version = "0.1.0", path = "../async-runtime" }
 cxx = "1.0.100"
 identity = { version = "0.1.0", path = "../identity" }

@@ -12,7 +12,7 @@ name = "cross_repo_sync_test"
 path = "test/main.rs"
 
 [dependencies]
-anyhow = "=1.0.72"
+anyhow = "1.0.75"
 async-trait = "0.1.71"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
@@ -56,7 +56,7 @@ slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 static_assertions = "1.1.0"
 synced_commit_mapping = { version = "0.1.0", path = "../synced_commit_mapping" }
-thiserror = "1.0.43"
+thiserror = "1.0.49"
 tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
 topo_sort = { version = "0.1.0", path = "../../common/topo_sort" }
 tunables = { version = "0.1.0", path = "../../tunables" }

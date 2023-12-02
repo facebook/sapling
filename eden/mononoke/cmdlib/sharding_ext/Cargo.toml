@@ -8,4 +8,4 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "=1.0.72"
+anyhow = "1.0.75"

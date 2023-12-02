@@ -9,7 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 ahash = "0.8"
-anyhow = "=1.0.72"
+anyhow = "1.0.75"
 array-init = "0.1"
 async-trait = "0.1.71"
 async_compression = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
@@ -79,7 +79,7 @@ sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 strum = { version = "0.24", features = ["derive"] }
-thiserror = "1.0.43"
+thiserror = "1.0.49"
 tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
 unodes = { version = "0.1.0", path = "../derived_data/unodes" }
 yield_stream = { version = "0.1.0", path = "../common/yield_stream" }

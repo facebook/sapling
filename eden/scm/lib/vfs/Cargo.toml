@@ -6,14 +6,14 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "=1.0.72"
+anyhow = "1.0.75"
 crossbeam = "0.8"
 dashmap = { version = "5.4", features = ["rayon", "serde"] }
 fsinfo = { version = "0.1.0", path = "../fsinfo" }
 identity = { version = "0.1.0", path = "../identity" }
 minibytes = { version = "0.1.0", path = "../minibytes" }
 once_cell = "1.12"
-thiserror = "1.0.43"
+thiserror = "1.0.49"
 tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
 tracing = "0.1.40"
 types = { version = "0.1.0", path = "../types" }

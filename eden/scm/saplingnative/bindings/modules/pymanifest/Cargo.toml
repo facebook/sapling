@@ -6,7 +6,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "=1.0.72"
+anyhow = "1.0.75"
 cpython = { version = "0.7.1", default-features = false }
 cpython_ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
 manifest = { version = "0.1.0", path = "../../../../lib/manifest" }

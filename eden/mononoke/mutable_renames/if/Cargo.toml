@@ -14,7 +14,7 @@ test = false
 doctest = false
 
 [dependencies]
-anyhow = "=1.0.72"
+anyhow = "1.0.75"
 async-trait = "0.1.71"
 codegen_includer_proc_macro = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 const-cstr = "0.3.0"
@@ -24,7 +24,7 @@ mononoke_types_thrift = { version = "0.1.0", path = "../../mononoke_types/if" }
 mutable_rename_thrift__types = { package = "mutable_rename_thrift_types", version = "0.1.0", path = "types" }
 ref-cast = "1.0.18"
 smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }
-thiserror = "1.0.43"
+thiserror = "1.0.49"
 tracing = "0.1.40"
 tracing-futures = { version = "0.2.5", features = ["futures-03"] }
 

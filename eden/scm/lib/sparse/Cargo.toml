@@ -6,14 +6,14 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "=1.0.72"
+anyhow = "1.0.75"
 futures = { version = "0.3.28", features = ["async-await", "compat"], optional = true }
 globset = { version = "0.4.13", features = ["serde1"] }
 once_cell = "1.12"
 pathmatcher = { version = "0.1.0", path = "../pathmatcher" }
 regex = "1.9.2"
 syncify = { version = "0.1.0", path = "../util/syncify" }
-thiserror = "1.0.43"
+thiserror = "1.0.49"
 tracing = "0.1.40"
 types = { version = "0.1.0", path = "../types" }
 

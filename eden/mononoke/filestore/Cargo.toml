@@ -8,7 +8,7 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "=1.0.72"
+anyhow = "1.0.75"
 async-trait = "0.1.71"
 blake3 = { version = "=1.5.0", features = ["traits-preview"] }
 blobstore = { version = "0.1.0", path = "../blobstore" }
@@ -26,7 +26,7 @@ sha1 = "0.10.5"
 sha2 = "0.10.6"
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 strum = { version = "0.24", features = ["derive"] }
-thiserror = "1.0.43"
+thiserror = "1.0.49"
 tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]
