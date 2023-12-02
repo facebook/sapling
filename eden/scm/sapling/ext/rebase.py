@@ -1276,7 +1276,7 @@ def rebase(ui, repo, templ=None, **opts):
 
 @perftrace.tracefunc("Rebase")
 def _origrebase(ui, repo, rbsrt, **opts):
-    with repo.wlock(), repo.lock(), simplemerge.managed_merge_cache(ui):
+    with repo.wlock(), repo.lock(), simplemerge.managed_merge_cache(ui, repo.name):
         # Validate input and define rebasing points
         destf = opts.get("dest", None)
         srcf = opts.get("source", None)

@@ -136,15 +136,32 @@ class AutomergeMetrics:
         self.base_filepath = basectx.path()
 
 
+_automerge_metrics = AutomergeMetrics()
+
+
 @contextmanager
-def managed_merge_cache(ui):
+def managed_merge_cache(ui, repo_name):
     global _automerge_cache
+    global _automerge_metrics
+
+    _automerge_metrics = AutomergeMetrics.init_from_ui(ui, repo_name)
+    start_time_ms = int(util.timer() * 1000)
     try:
         yield
+    except Exception:
+        _automerge_metrics.has_exception = 1
+        raise
     finally:
         # clear cache when exiting
         size = ui.configint("automerge", "cache-size", _DEFAULT_CACHE_SIZE)
         _automerge_cache = util.lrucachedict(size)
+
+        # log metrics
+        end_time_ms = int(util.timer() * 1000)
+        _automerge_metrics.duration = end_time_ms - start_time_ms
+
+        metrics = _automerge_metrics.to_dict()
+        ui.log("merge_conflicts", **metrics)
 
 
 def intersect(ra, rb):
@@ -666,11 +683,17 @@ def try_automerge_conflict(
 
     base_lines, a_lines, b_lines = group_lines
     extra_lines = []
-    if automerge_enabled(ui, automerge_mode) and (
-        merged_res := m3.run_automerge(base_lines, a_lines, b_lines)
-    ):
+
+    merged_res = m3.run_automerge(base_lines, a_lines, b_lines)
+    is_enabled = automerge_enabled(ui, automerge_mode)
+
+    _automerge_metrics.enabled = int(is_enabled)
+    _automerge_metrics.total += bool(merged_res)
+
+    if is_enabled and merged_res:
         merge_algorithm, merged_lines = merged_res
         if automerge_mode == "accept":
+            _automerge_metrics.accepted += 1
             return merge_algorithm, merged_lines
         elif automerge_mode == "prompt":
             cache_key = automerge_cache_key(group_lines)
@@ -695,18 +718,23 @@ def try_automerge_conflict(
                 _automerge_cache[cache_key] = index
             index = _automerge_cache[cache_key]
             if index == 0:  # accept
+                _automerge_metrics.accepted += 1
                 return merge_algorithm, merged_lines
             elif index == 2:  # review-in-file
+                _automerge_metrics.review_in_file += 1
                 extra_lines.extend(
                     render_automerged_lines(merge_algorithm, merged_lines, newline)
                 )
             else:
-                # 1: reject, fallthrough
-                pass
+                _automerge_metrics.rejected += 1
         elif automerge_mode == "review-in-file":
+            _automerge_metrics.review_in_file += 1
             extra_lines.extend(
                 render_automerged_lines(merge_algorithm, merged_lines, newline)
             )
+        else:
+            _automerge_metrics.rejected += 1
+
     lines = render_conflict_fn(base_lines, a_lines, b_lines)
     lines.extend(extra_lines)
     return None, lines
@@ -963,6 +991,8 @@ def simplemerge(ui, localctx, basectx, otherctx, **opts):
         othertext = readctx(otherctx)
     except error.Abort:
         return 1
+
+    _automerge_metrics.set_commits(localctx, basectx, otherctx)
 
     premerge = opts.get("premerge", False)
     m3 = Merge3Text(basetext, localtext, othertext, ui=ui, premerge=premerge)
