@@ -13,6 +13,7 @@
 from __future__ import absolute_import
 
 import subprocess
+import textwrap
 from typing import Dict, List, Optional, Tuple, Union
 
 from . import encoding, error, gituser, revlog, util
@@ -408,11 +409,15 @@ committer {gituser.normalize(committer)} {gitdatestr(committerdate)}"""
                 "--local-user",
                 gpgkeyid,
             ],
-            stderr=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
             input=text,
         )
-    except subprocess.CalledProcessError:
-        raise error.Abort(_("error when running gpg with gpgkeyid %s") % gpgkeyid)
+    except subprocess.CalledProcessError as ex:
+        indented_stderr = textwrap.indent(ex.stderr.decode(errors="ignore"), "  ")
+        raise error.Abort(
+            _("error when running gpg with gpgkeyid %s:\n%s")
+            % (gpgkeyid, indented_stderr)
+        )
 
     return _signedgitcommittext(sig_bytes, pre_sig_text, normalized_desc, gpgkeyid)
 
