@@ -28,6 +28,8 @@ import hashlib
 from contextlib import contextmanager
 from typing import List, Optional, Tuple
 
+from bindings import clientinfo
+
 from . import error, mdiff, pycompat, util
 from .i18n import _
 from .pycompat import range
@@ -68,6 +70,70 @@ class AutomergeSummary:
         else:
             msg = _(" line %s has been resolved by automerge algorithms\n") % (lines)
         return msg
+
+
+class AutomergeMetrics:
+    def __init__(self):
+        # config
+        self.mode = None
+        self.merge_algos = None
+        self.disable_for_noninteractive = None
+        self.interactive = None
+        self.repo = None
+
+        # derived metrics from config
+        self.enabled = 0
+
+        # conflicts can be automerged
+        self.total = 0
+        self.accepted = 0
+        self.rejected = 0
+        self.review_in_file = 0
+
+        # rebase metrics
+        self.duration = 0
+        self.has_exception = 0
+        self.local_commit = None
+        self.base_commit = None
+        self.other_commit = None
+        self.base_filepath = None
+
+        # command metrics
+        self.command = None
+        self.client_correlator = None
+
+    @classmethod
+    def init_from_ui(cls, ui, repo_name):
+        obj = cls()
+        obj.mode = ui.config("automerge", "mode")
+        obj.merge_algos = ui.config("automerge", "merge-algos")
+        obj.disable_for_noninteractive = ui.config(
+            "automerge", "disable-for-noninteractive"
+        )
+        obj.interactive = ui.interactive()
+        obj.repo = repo_name
+
+        obj.command = ui.cmdname
+        obj.client_correlator = clientinfo.get_client_request_info()["correlator"]
+        return obj
+
+    def to_dict(self):
+        metrics = {}
+        for key, value in self.__dict__.items():
+            if value is not None:
+                key = f"automerge_{key}"
+                metrics[key] = value
+        return metrics
+
+    def set_commits(self, localctx, basectx, otherctx):
+        def get_hex(fctx):
+            ctx = fctx.changectx()
+            return ctx.hex() if ctx.node() else ctx.p1().hex()
+
+        self.local_commit = get_hex(localctx)
+        self.base_commit = get_hex(basectx)
+        self.other_commit = get_hex(otherctx)
+        self.base_filepath = basectx.path()
 
 
 @contextmanager
