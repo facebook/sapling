@@ -58,9 +58,15 @@ def editconfig(ui, path, section, name, value):
         if value is None:
             # "start" is the start of value, but we need to remove the
             # "name =" part as well, so back up to beginning of line.
-            linestart = bcontent[:start].rfind(os.linesep.encode())
+            linestart = bcontent[:start].rfind("\n".encode())
             if linestart == -1:
                 linestart = 0
+
+            # On Windows we may or may not have carriage returns. If \r is
+            # present, we want to snip it as well.
+            if linestart > 0 and bcontent[linestart - 1] == ord("\r"):
+                linestart -= 1
+
             bcontent = bcontent[:linestart] + bcontent[end:]
         else:
             # in-place edit

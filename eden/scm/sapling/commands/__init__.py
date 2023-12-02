@@ -1819,6 +1819,12 @@ def _docommit(ui, repo, *pats, **opts):
             False,
             _("edit system config, opening in editor if no args given (DEPRECATED)"),
         ),
+        (
+            "d",
+            "delete",
+            False,
+            _("delete specified config items"),
+        ),
     ]
     + formatteropts,
     optionalrepo=True,
@@ -1829,6 +1835,9 @@ def config(ui, repo, *values, **opts):
     if any(opts.get(flag) for flag in {"edit", "user", "local", "system", "global"}):
         editconfig(ui, repo, *values, **opts)
         return
+
+    if opts.get("delete"):
+        raise error.Abort(_("--delete requires one of --user, --local or --system"))
 
     ui.pager("config")
     fm = ui.formatter("config", opts)
@@ -1921,34 +1930,59 @@ def editconfig(ui, repo, *values, **opts):
         return
 
     section_name = value = None
+    invalid_arg = None
     to_edit = []
+    is_delete = opts.get("delete")
 
     for arg in values:
         if section_name is None:
             if "=" in arg:
+                if is_delete:
+                    invalid_arg = arg
+                    break
+
                 section_name, value = arg.split("=", 1)
             else:
                 section_name = arg
         else:
             value = arg
-        if value is None:
+
+        # For whitespace separated pairs like "sl config --local foo.bar baz",
+        # we skip to the next iteration to get config value "baz".
+        if value is None and not is_delete:
             continue
+
         try:
             section, name = section_name.split(".", 1)
         except ValueError:
             # ex. not enough values to unpack
             break
+
         to_edit.append((section, name, value))
         section_name = value = None
 
-    if section_name is not None:
-        raise error.Abort(
-            _("invalid config edit: %r") % section_name,
-            hint=("try section.name=value"),
-        )
+    if invalid_arg is None:
+        # If we are left with a live section_name, user failed to specify final
+        # (whitespace separated) value.
+        invalid_arg = section_name
+
+    if invalid_arg is not None:
+        if is_delete:
+            raise error.Abort(
+                _("invalid config deletion: %r") % invalid_arg,
+                hint=("try section.name"),
+            )
+        else:
+            raise error.Abort(
+                _("invalid config edit: %r") % invalid_arg,
+                hint=("try section.name=value"),
+            )
 
     for section, name, value in to_edit:
-        ui.note(_("setting %s.%s=%s in %s\n") % (section, name, value, targetpath))
+        if value is None:
+            ui.note(_("deleting %s.%s from %s\n") % (section, name, targetpath))
+        else:
+            ui.note(_("setting %s.%s=%s in %s\n") % (section, name, value, targetpath))
         rcutil.editconfig(ui, targetpath, section, name, value)
 
     ui.status(_("updated config in %s\n") % targetpath)
