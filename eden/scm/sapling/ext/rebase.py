@@ -1262,7 +1262,7 @@ def rebase(ui, repo, templ=None, **opts):
                 # this).
                 ("experimental", "merge.checkpathconflicts"): True
             }
-            with ui.configoverride(overrides), simplemerge.managed_merge_cache(ui):
+            with ui.configoverride(overrides):
                 return _origrebase(ui, repo, rbsrt, **opts)
         except error.AbortMergeToolError as e:
             ui.status(_("%s\n") % e)
@@ -1276,7 +1276,7 @@ def rebase(ui, repo, templ=None, **opts):
 
 @perftrace.tracefunc("Rebase")
 def _origrebase(ui, repo, rbsrt, **opts):
-    with repo.wlock(), repo.lock():
+    with repo.wlock(), repo.lock(), simplemerge.managed_merge_cache(ui):
         # Validate input and define rebasing points
         destf = opts.get("dest", None)
         srcf = opts.get("source", None)
