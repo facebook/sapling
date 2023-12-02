@@ -1135,7 +1135,7 @@ async fn compare_contents(
         "source content: {:?}, target content {:?}",
         source_content, target_content
     );
-    let filtered_source_content = source_content
+    let filtered_source_content: HashMap<_, _> = source_content
         .into_iter()
         .filter_map(|(key, value)| {
             mover(&NonRootMPath::new(key).unwrap())

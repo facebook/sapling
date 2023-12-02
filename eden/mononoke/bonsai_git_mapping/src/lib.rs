@@ -202,7 +202,7 @@ where
         }
     }
 
-    if hggit_source_extra == Some(b"git") {
+    if hggit_source_extra == Some("git".as_bytes()) {
         if let Some(convert_revision_extra) = convert_revision_extra {
             let git_sha1 = AsciiStr::from_ascii(convert_revision_extra)?;
             let git_sha1 = GitSha1::from_ascii_str(git_sha1)?;

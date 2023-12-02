@@ -343,7 +343,11 @@ async fn generations(fb: FacebookInit) -> Result<(), Error> {
                     value_len
                 );
             } else {
-                assert_eq!(generations, vec![], "No generations expected");
+                assert_eq!(
+                    generations,
+                    [] as [Option<u64>; 0],
+                    "No generations expected",
+                );
             }
 
             let mark_gen = set_test_generations(test_source.as_ref(), 4, 3, 0, INITIAL_VERSION + 1);
@@ -357,7 +361,11 @@ async fn generations(fb: FacebookInit) -> Result<(), Error> {
                 assert_eq!(generations, vec![Some(3)], "Generation set to 3");
             } else {
                 // We should now have no generations as the set_generation(key, true) should have inlined
-                assert_eq!(generations, vec![], "No generations expected");
+                assert_eq!(
+                    generations,
+                    [] as [Option<u64>; 0],
+                    "No generations expected",
+                );
             }
 
             // don't need to run these with variety of key lengths

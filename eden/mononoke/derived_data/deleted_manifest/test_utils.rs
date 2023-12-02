@@ -658,7 +658,7 @@ pub(crate) async fn test_find_entries<Root: RootDeletedManifestIdCommon>(
                 .unwrap();
 
             entries.sort();
-            let expected_entries = vec![path("dir/f-2").into(), path("dir/sub/f-1").into()];
+            let expected_entries = [Some(path("dir/f-2")), Some(path("dir/sub/f-1"))];
             assert_eq!(entries, expected_entries);
         }
 
