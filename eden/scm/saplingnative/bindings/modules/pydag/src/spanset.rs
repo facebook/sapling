@@ -12,6 +12,8 @@ use dag::Id;
 use dag::IdSet;
 use dag::IdSetIter;
 
+use crate::idmap::WDIR_REV;
+
 /// A wrapper around [`IdSet`] with Python integration.
 ///
 /// Differences from the `py_class` version:
@@ -161,8 +163,12 @@ impl<'a> FromPyObject<'a> for Spans {
                 // Skip "None" (wdir?) automatically.
                 Ok(None) => None,
                 Ok(Some(i)) => {
-                    // Skip "nullrev" automatically.
-                    if i >= 0 { Some(Ok(Id(i as u64))) } else { None }
+                    // Skip "nullrev" and "wdirrev" automatically.
+                    if i >= 0 && i != WDIR_REV {
+                        Some(Ok(Id(i as u64)))
+                    } else {
+                        None
+                    }
                 }
                 Err(e) => Some(Err(e)),
             })

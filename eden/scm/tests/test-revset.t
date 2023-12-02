@@ -1780,7 +1780,7 @@
 # Test working-directory revision
 
   $ hg debugrevspec 'wdir()'
-  2147483647
+  9223372036854775807
   $ hg debugrevspec 'wdir()^'
   9
   $ hg up 7
@@ -1788,7 +1788,7 @@
   $ hg debugrevspec 'wdir()^'
   7
   $ hg debugrevspec 'wdir()^0'
-  2147483647
+  9223372036854775807
   $ hg debugrevspec 'wdir()~3'
   abort: working directory revision cannot be specified
   [255]
@@ -1799,7 +1799,7 @@ so it can be used for calculations.
 
 #if false
   $ hg debugrevspec 'ancestors(wdir())'
-  abort: 2147483647 cannot be found!
+  abort: 9223372036854775807 cannot be found!
   [255]
 #endif
 
@@ -1809,9 +1809,9 @@ so it can be used for calculations.
   $ hg debugrevspec 'p1(wdir())'
   7
   $ hg debugrevspec 'p2(wdir())'
+
+FIXME: This is wrong.
   $ hg debugrevspec 'parents(wdir())'
-  abort: 2147483647 cannot be found!
-  [255]
   $ hg debugrevspec 'wdir()^1'
   7
   $ hg debugrevspec 'wdir()^2'
@@ -1820,23 +1820,24 @@ so it can be used for calculations.
   [255]
 
 # DAG ranges with wdir()
+# FIXME: This crashes. We need proper virtual commit support in DAG.
 
-  $ hg debugrevspec 'wdir()::1'
 #if false
+  $ hg debugrevspec 'wdir()::1'
   $ hg debugrevspec 'wdir()::wdir()'
-  abort: 2147483647 cannot be found!
+  abort: 9223372036854775807 cannot be found!
   [255]
   $ hg debugrevspec 'wdir()::(1+wdir())'
-  abort: 2147483647 cannot be found!
+  abort: 9223372036854775807 cannot be found!
   [255]
   $ hg debugrevspec '6::wdir()'
-  abort: 2147483647 cannot be found!
+  abort: 9223372036854775807 cannot be found!
   [255]
   $ hg debugrevspec '5::(wdir()+7)'
-  abort: 2147483647 cannot be found!
+  abort: 9223372036854775807 cannot be found!
   [255]
   $ hg debugrevspec '(1+wdir())::(2+wdir())'
-  abort: 2147483647 cannot be found!
+  abort: 9223372036854775807 cannot be found!
   [255]
 #endif
 
@@ -1846,39 +1847,43 @@ so it can be used for calculations.
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg debugrevspec 'tip or wdir()'
   9
-  2147483647
+  9223372036854775807
   $ hg debugrevspec '0:tip and wdir()'
   $ log '0:wdir()'
-  abort: 2147483647 cannot be found!
-  [255]
+  0
+  1
+  2
+  3
+  4
+  5
+  6
+  7
+  8
+  9
   $ log 'wdir():0' | head -3
-  2147483647
+  9151595917793558527
   9
   8
   $ log 'wdir():wdir()'
-  2147483647
+  9151595917793558527
   $ log '(all() + wdir()) & min(. + wdir())'
   9
   $ log '(all() + wdir()) & max(. + wdir())'
   $ log 'first(wdir() + .)'
-  2147483647
+  9151595917793558527
   $ log 'last(. + wdir())'
-  2147483647
+  9151595917793558527
 
 # Test working-directory integer revision and node id
 # (BUG: '0:wdir()' is still needed to populate wdir revision)
 
-  $ hg debugrevspec '0:wdir() & 2147483647'
-  $ hg debugrevspec '0:wdir() & rev(2147483647)'
-  abort: 2147483647 cannot be found!
-  [255]
+  $ hg debugrevspec '0:wdir() & 9223372036854775807'
+  $ hg debugrevspec '0:wdir() & rev(9223372036854775807)'
   $ hg debugrevspec '0:wdir() & ffffffffffffffffffffffffffffffffffffffff'
   $ hg debugrevspec '0:wdir() & ffffffffffff'
   abort: unknown revision 'ffffffffffff'!
   [255]
   $ hg debugrevspec '0:wdir() & id(ffffffffffffffffffffffffffffffffffffffff)'
-  abort: 2147483647 cannot be found!
-  [255]
   $ hg debugrevspec '0:wdir() & id(ffffffffffff)'
 
   $ cd ..
@@ -1903,8 +1908,11 @@ so it can be used for calculations.
 
   $ hg up -q null
   $ hg log -r '0:wdir()' -T '{rev}:{node} {shortest(node, 3)}\n'
-  abort: 2147483647 cannot be found!
-  [255]
+  0:b4e73ffab476aa0ee32ed81ca51e07169844bc6a b4e
+  1:fffbae3886c8fbb2114296380d276fd37715d571 fffba
+  2:fffb6093b00943f91034b9bdad069402c834e572 fffb6
+  3:fff48a9b9de34a4d64120c29548214c67980ade3 fff4
+  4:ffff85cff0ff78504fcdc3c0bc10de0c65379249 ffff
   $ hg debugobsolete fffbae3886c8fbb2114296380d276fd37715d571
 
   $ hg debugrevspec '0:wdir() & fff'

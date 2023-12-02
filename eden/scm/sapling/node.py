@@ -41,8 +41,10 @@ modifiednodeid = (b"0" * 12) + b"modified"
 wdirnodes = {newnodeid, addednodeid, modifiednodeid}
 
 # pseudo identifiers for working directory
-# (they are experimental, so don't add too many dependencies on them)
-wdirrev = 0x7FFFFFFF
+# The Rust commit graph uses u64 integer ids. The Rust-Python binding pydag
+# uses i64 to support `-1` as nullrev. So so we use i64::MAX here to avoid
+# accidental conflicts with other things.
+wdirrev = 0x7FFFFFFFFFFFFFFF
 wdirid = b"\xff" * 20
 wdirhex = hex(wdirid)
 

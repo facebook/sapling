@@ -208,7 +208,7 @@
 # experimental:
 
   $ hg log -r 'wdir()' -T '{rev}:{node}\n'
-  2147483647:ffffffffffffffffffffffffffffffffffffffff
+  9151595917793558527:ffffffffffffffffffffffffffffffffffffffff
 
 # Some keywords are invalid for working-directory revision, but they should
 # never cause crash:

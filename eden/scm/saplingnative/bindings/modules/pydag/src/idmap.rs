@@ -16,6 +16,8 @@ use dag::Vertex;
 
 // Mercurial's special case. -1 maps to (b"\0" * 20)
 pub(crate) const NULL_NODE: [u8; 20] = [0u8; 20];
+pub(crate) const WDIR_NODE: [u8; 20] = [0xffu8; 20];
+pub(crate) const WDIR_REV: i64 = i64::MAX;
 
 py_class!(pub class idmap |py| {
     data map: Arc<dyn IdConvert + Send + Sync + 'static>;
@@ -24,6 +26,8 @@ py_class!(pub class idmap |py| {
     def id2node(&self, id: i64) -> PyResult<PyBytes> {
         if id == -1 {
             Ok(PyBytes::new(py, &NULL_NODE))
+        } else if id == WDIR_REV {
+            Ok(PyBytes::new(py, &WDIR_NODE))
         } else {
             let v = block_on(self.map(py).vertex_name(Id(id as u64))).map_pyerr(py)?;
             Ok(PyBytes::new(py, v.as_ref()))
@@ -35,6 +39,8 @@ py_class!(pub class idmap |py| {
         let node = node.data(py);
         if node == &NULL_NODE {
             Ok(-1)
+        } else if node == &WDIR_NODE {
+            Ok(WDIR_REV)
         } else {
             let id = block_on(self.map(py).vertex_id(Vertex::copy_from(node))).map_pyerr(py)?;
             Ok(id.0 as i64)
