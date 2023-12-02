@@ -629,12 +629,12 @@ More sophisticated test for phases
   
   changeset: bf677f20a49dc5ac94946f3d91ad181f8a6fdbab
   author: test
-  date: Thu, 01 Jan 1970 00:00:00 +0000
+  date: Thu, 1 Jan 1970 00:00:00 +0000
   summary: zzz
   
   changeset: b9f080ea95005f3513a22aa15f1f74d7371ce5d4
   author: test
-  date: Thu, 01 Jan 1970 00:00:00 +0000
+  date: Thu, 1 Jan 1970 00:00:00 +0000
   summary: zzzzz
   !
   [255]

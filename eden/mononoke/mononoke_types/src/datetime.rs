@@ -233,7 +233,10 @@ impl Timestamp {
 
 impl From<DateTime> for Timestamp {
     fn from(dt: DateTime) -> Self {
-        Timestamp(dt.0.timestamp_nanos())
+        Timestamp(
+            dt.0.timestamp_nanos_opt()
+                .expect("timestamp cannot be represented with nanosecond precision"),
+        )
     }
 }
 
