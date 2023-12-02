@@ -227,7 +227,7 @@ class TraceBus : public std::enable_shared_from_this<TraceBus<TraceEvent>> {
   subscribeFunction(std::string name, Fn&& fn) {
     return subscribe(std::make_shared<FnTraceEventSubscriber<Fn, TraceEvent>>(
         std::move(name), std::forward<Fn>(fn)));
-  };
+  }
 
   /**
    * A cheap check on if there is any subscription active for this TraceBus.
