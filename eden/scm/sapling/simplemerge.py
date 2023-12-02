@@ -140,7 +140,7 @@ _automerge_metrics = AutomergeMetrics()
 
 
 @contextmanager
-def managed_merge_cache(ui, repo_name):
+def managed_merge_resource(ui, repo_name):
     global _automerge_cache
     global _automerge_metrics
 
