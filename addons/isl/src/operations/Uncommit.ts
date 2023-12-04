@@ -7,7 +7,7 @@
 
 import type {
   ApplyUncommittedChangesPreviewsFuncType,
-  DagWithPreview,
+  Dag,
   UncommittedChangesPreviewContext,
 } from '../previews';
 import type {CommitInfo, UncommittedChanges} from '../types';
@@ -29,7 +29,7 @@ export class UncommitOperation extends Operation {
     return args;
   }
 
-  optimisticDag(dag: DagWithPreview): DagWithPreview {
+  optimisticDag(dag: Dag): Dag {
     const {hash, parents} = this.originalHeadCommit;
     const p1 = parents.at(0);
     // If `hash` disappears and `p1` still exists, then uncommit is completed.

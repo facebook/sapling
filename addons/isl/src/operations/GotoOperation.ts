@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {DagPreviewContext, DagWithPreview} from '../previews';
+import type {DagPreviewContext, Dag} from '../previews';
 import type {ExactRevset, SucceedableRevset} from '../types';
 
 import {latestSuccessor} from '../SuccessionTracker';
@@ -24,7 +24,7 @@ export class GotoOperation extends Operation {
     return args;
   }
 
-  optimisticDag(dag: DagWithPreview, context: DagPreviewContext): DagWithPreview {
+  optimisticDag(dag: Dag, context: DagPreviewContext): Dag {
     const headCommitHash = context.headCommit?.hash;
     if (headCommitHash == null) {
       return dag;

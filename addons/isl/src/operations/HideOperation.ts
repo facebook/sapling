@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ApplyPreviewsFuncType, DagWithPreview, PreviewContext} from '../previews';
+import type {ApplyPreviewsFuncType, Dag, PreviewContext} from '../previews';
 import type {ExactRevset, SucceedableRevset} from '../types';
 
 import {CommitPreview} from '../previews';
@@ -42,7 +42,7 @@ export class HideOperation extends Operation {
     return func;
   }
 
-  optimisticDag(dag: DagWithPreview): DagWithPreview {
+  optimisticDag(dag: Dag): Dag {
     const hash = this.source.revset;
     const toHide = dag.descendants(hash);
     // If the head is being hidden, we need to move the head to the parent.

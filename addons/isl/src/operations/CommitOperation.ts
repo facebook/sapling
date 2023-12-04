@@ -9,7 +9,7 @@ import type {PartialSelection} from '../partialSelection';
 import type {
   ApplyUncommittedChangesPreviewsFuncType,
   DagPreviewContext,
-  DagWithPreview,
+  Dag,
   UncommittedChangesPreviewContext,
 } from '../previews';
 import type {
@@ -101,7 +101,7 @@ export class CommitOperation extends Operation {
     return func;
   }
 
-  optimisticDag(dag: DagWithPreview, _context: DagPreviewContext): DagWithPreview {
+  optimisticDag(dag: Dag, _context: DagPreviewContext): Dag {
     const base = this.originalHeadHash;
     const baseInfo = dag.get(base);
     if (!baseInfo) {

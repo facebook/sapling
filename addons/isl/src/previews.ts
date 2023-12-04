@@ -268,7 +268,7 @@ export type WithPreviewType = {
   previewType?: CommitPreview;
 };
 
-export type DagWithPreview = Dag;
+export type {Dag};
 
 export const dagWithPreviews = selector<Dag>({
   key: 'dagWithPreviews',

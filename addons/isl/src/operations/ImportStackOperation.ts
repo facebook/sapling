@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {DagWithPreview, WithPreviewType} from '../previews';
+import type {Dag, WithPreviewType} from '../previews';
 import type {CommitInfo} from '../types';
 import type {Hash} from 'shared/types/common';
 import type {ExportStack, ImportCommit, ImportStack, Mark} from 'shared/types/stack';
@@ -73,7 +73,7 @@ export class ImportStackOperation extends Operation {
     };
   }
 
-  optimisticDag(dag: DagWithPreview): DagWithPreview {
+  optimisticDag(dag: Dag): Dag {
     const originalHashes = this.originalStack.map(c => c.node);
     // Replace the old stack with the new stack, followed by a rebase.
     // Note the rebase is actually not what the operation does, but we always
@@ -96,7 +96,7 @@ export class ImportStackOperation extends Operation {
     return newDag;
   }
 
-  private previewStack(dag: DagWithPreview): Array<CommitInfo & WithPreviewType> {
+  private previewStack(dag: Dag): Array<CommitInfo & WithPreviewType> {
     let parents = this.firstParent ? [this.firstParent] : [];
     const usedHashes = new Set<Hash>();
     return this.commits.map(commit => {

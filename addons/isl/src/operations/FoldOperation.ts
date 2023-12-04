@@ -8,7 +8,7 @@
 import type {
   ApplyPreviewsFuncType,
   DagPreviewContext,
-  DagWithPreview,
+  Dag,
   PreviewContext,
   WithPreviewType,
 } from '../previews';
@@ -83,7 +83,7 @@ export class FoldOperation extends Operation {
     return func;
   }
 
-  optimisticDag(dag: DagWithPreview, context: DagPreviewContext): DagWithPreview {
+  optimisticDag(dag: Dag, context: DagPreviewContext): Dag {
     const hashes = this.foldRange.map(info => latestSuccessor(context, exactRevset(info.hash)));
     const top = hashes.at(-1);
     const parents = dag.get(hashes.at(0))?.parents;

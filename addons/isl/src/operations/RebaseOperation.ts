@@ -5,12 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {
-  ApplyPreviewsFuncType,
-  DagPreviewContext,
-  DagWithPreview,
-  PreviewContext,
-} from '../previews';
+import type {ApplyPreviewsFuncType, DagPreviewContext, Dag, PreviewContext} from '../previews';
 import type {ExactRevset, Hash, SucceedableRevset} from '../types';
 
 import {latestSuccessor} from '../SuccessionTracker';
@@ -92,7 +87,7 @@ export class RebaseOperation extends Operation {
     return func;
   }
 
-  optimisticDag(dag: DagWithPreview, context: DagPreviewContext): DagWithPreview {
+  optimisticDag(dag: Dag, context: DagPreviewContext): Dag {
     const src = dag.resolve(latestSuccessor(context, this.source));
     const dest = dag.resolve(latestSuccessor(context, this.destination));
     return dag.rebase(dag.descendants(src?.hash), dest?.hash);

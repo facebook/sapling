@@ -9,7 +9,7 @@ import type {PartialSelection} from '../partialSelection';
 import type {
   ApplyUncommittedChangesPreviewsFuncType,
   DagPreviewContext,
-  DagWithPreview,
+  Dag,
   UncommittedChangesPreviewContext,
 } from '../previews';
 import type {CommandArg, Hash, RepoRelativePath, UncommittedChanges} from '../types';
@@ -82,7 +82,7 @@ export class AmendOperation extends Operation {
   }
 
   // Bump the timestamp and update the commit message.
-  optimisticDag(dag: DagWithPreview, context: DagPreviewContext): DagWithPreview {
+  optimisticDag(dag: Dag, context: DagPreviewContext): Dag {
     const head = context.headCommit;
     if (head?.hash == null) {
       return dag;
