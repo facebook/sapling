@@ -23,7 +23,8 @@ export class AmendMessageOperation extends Operation {
   }
 
   optimisticDag(dag: DagWithPreview, _context: DagPreviewContext): DagWithPreview {
-    return dag.replaceWith([this.revset.revset], (_h, c) => {
+    const hash = this.revset.revset;
+    return dag.touch(hash).replaceWith(hash, (_h, c) => {
       if (c === undefined) {
         // metaedit succeeds when we no longer see original commit
         // Note: this assumes we always restack children and never render old commit as obsolete.
