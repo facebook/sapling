@@ -303,6 +303,18 @@ export class Dag<C extends HashWithParents> extends SelfUpdate<DagRecord<C>> {
     });
   }
 
+  // Query APIs that are less generic, require `C` to be `CommitInfo`.
+
+  /// All successors recursively.
+  successors(set: SetLike): HashSet {
+    const getSuccessors = (h: Hash) => {
+      const info: Partial<CommitInfo> | undefined = this.get(h);
+      const succ = info?.successorInfo?.hash;
+      return succ == null ? [] : [succ];
+    };
+    return unionFlatMap(set, getSuccessors);
+  }
+
   /** Attempt to resolve a name by `name`. The `name` can be a hash, a bookmark name, etc. */
   resolve(name: string): Readonly<C> | undefined {
     // Full commit hash?
