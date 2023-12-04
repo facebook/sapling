@@ -316,6 +316,37 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
     }).cleanup(toCleanup);
   }
 
+  /**
+   * Force the disconnected public commits to be connected to each other
+   * in chronological order.
+   *
+   * This is "incorrect" but we don't get the info from `sl log` yet.
+   *
+   * Useful to reason about ancestory relations. For example, to filter
+   * out rebase destinations (ex. remote/stable) that are backwards,
+   * we want ancestors(rebase_src) to include public commits like
+   * remote/stable.
+   */
+  forceConnectPublic(): Dag {
+    // Not all public commits need this "fix". Only consider the "roots".
+    const toFix = this.roots(this.public_());
+    const sorted = toFix
+      .toList()
+      .sortBy(h => this.get(h)?.date.valueOf() ?? 0)
+      .toArray();
+    const parentPairs: Array<[Hash, Hash]> = sorted.flatMap((h, i) =>
+      i === 0 ? [] : [[h, sorted[i - 1]]],
+    );
+    const parentMap = new Map<Hash, Hash>(parentPairs);
+    return this.replaceWith(toFix, (h, c) => {
+      const newParent = parentMap.get(h);
+      if (c == null || newParent == null) {
+        return c;
+      }
+      return {...c, parents: [...c.parents, newParent], ancestors: [newParent]};
+    });
+  }
+
   // Query APIs that are less generic, require `C` to be `CommitInfo`.
 
   /** All visible successors recursively, including `set`. */
@@ -478,7 +509,12 @@ function shouldPrefixMatch(hash: Hash): boolean {
   return /^[0-9a-f]+$/.test(hash);
 }
 
-type Info = CommitInfo & WithPreviewType;
+/** Distance ancestors that are treated as direct parents. */
+type DagExt = {
+  ancestors?: Hash[];
+};
+
+type Info = CommitInfo & WithPreviewType & DagExt;
 type NameMap = ImMap<string, ImSet<HashPriRecord>>;
 
 type CommitDagProps = {

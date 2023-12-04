@@ -475,4 +475,23 @@ describe('Dag', () => {
       expect(['b', 'c', 'd', 'e'].filter(h => dag.has(h))).toEqual(['b']);
     });
   });
+
+  it('forceConnectPublic()', () => {
+    // z-w x y => z-x-y
+    //             \
+    //              w
+    const dag = new Dag()
+      .add([
+        {...info, hash: 'z', phase: 'public', date: new Date(1)},
+        {...info, hash: 'x', phase: 'public', date: new Date(2)},
+        {...info, hash: 'y', phase: 'public', date: new Date(3)},
+        {...info, hash: 'w', phase: 'public', date: new Date(3), parents: ['z']},
+      ])
+      .forceConnectPublic();
+    expect(dag.children('z').toSortedArray()).toEqual(['w', 'x']);
+    expect(dag.children('x').toSortedArray()).toEqual(['y']);
+    expect(dag.children('y').toSortedArray()).toEqual([]);
+    // w is not a root so it does not need fix.
+    expect(dag.children('w').toSortedArray()).toEqual([]);
+  });
 });
