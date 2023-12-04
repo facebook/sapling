@@ -119,6 +119,8 @@ python_library(
     deps = [
         ":glob_filenames_main",
         ":prefetch_profile_util",
+        "//configerator/distribution/api/py:configerator_config",
+        "//configerator/structs/scm/eden:prefetch_profiles_gen_config-py3-types",
     ],
 )
 
