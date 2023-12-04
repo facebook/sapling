@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Hash} from '../types';
+import type {CommitInfo, Hash} from '../types';
 import type {SetLike} from './set';
 import type {RecordOf} from 'immutable';
 
@@ -200,6 +200,24 @@ export class Dag<C extends HashWithParents> extends SelfUpdate<DagRecord<C>> {
 
   get childMap(): ImMap<Hash, List<Hash>> {
     return this.inner.childMap;
+  }
+
+  // Filters. Some of them are less generic, require `C` to be `CommitInfo`.
+
+  obsolete(set?: SetLike): HashSet {
+    return this.filter(c => (c as Partial<CommitInfo>).successorInfo != null, set);
+  }
+
+  public_(set?: SetLike): HashSet {
+    return this.filter(c => (c as Partial<CommitInfo>).phase === 'public', set);
+  }
+
+  draft(set?: SetLike): HashSet {
+    return this.filter(c => ((c as Partial<CommitInfo>).phase ?? 'draft') === 'draft', set);
+  }
+
+  merge(set?: SetLike): HashSet {
+    return this.filter(c => c.parents.length > 1, set);
   }
 }
 
