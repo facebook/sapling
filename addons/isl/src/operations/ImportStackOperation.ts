@@ -5,12 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {CommitTree} from '../getCommitTree';
-import type {ApplyPreviewsFuncType, PreviewContext} from '../previews';
+import type {DagWithPreview, WithPreviewType} from '../previews';
 import type {CommitInfo} from '../types';
 import type {Hash} from 'shared/types/common';
 import type {ExportStack, ImportCommit, ImportStack, Mark} from 'shared/types/stack';
 
+import {HashSet} from '../dag/set';
 import {t} from '../i18n';
 import {CommitPreview} from '../previews';
 import {Operation} from './Operation';
@@ -22,12 +22,6 @@ export class ImportStackOperation extends Operation {
 
   /** Commits sorted from the stack bottom to top. */
   private commits: Readonly<ImportCommit>[];
-
-  /** Original commits that will be predecessors (being replaced). */
-  private origHashes: Set<Hash>;
-
-  /** Original commits that will be hidden. */
-  private hideHashes: Set<Hash>;
 
   /** Parent of the first commit. */
   private firstParent: Hash | null;
@@ -43,9 +37,6 @@ export class ImportStackOperation extends Operation {
 
     let firstParent: Hash | null = null;
     const origHashes = new Set<Hash>();
-    const hideHashes = importStack.flatMap(([op, value]) =>
-      op === 'hide' ? [...value.nodes] : [],
-    );
     const gotoMark = importStack
       .flatMap(([op, value]) => (op === 'goto' || op === 'reset' ? value.mark : []))
       .at(-1);
@@ -61,8 +52,6 @@ export class ImportStackOperation extends Operation {
 
     this.commits = commits;
     this.firstParent = firstParent;
-    this.origHashes = origHashes;
-    this.hideHashes = new Set(hideHashes);
     this.gotoMark = gotoMark;
   }
 
@@ -84,88 +73,64 @@ export class ImportStackOperation extends Operation {
     };
   }
 
-  makeOptimisticApplier(context: PreviewContext): ApplyPreviewsFuncType | undefined {
-    // If parent is missing, then the stack is probably hidden.
-    if (!this.firstParent || !context.treeMap.has(this.firstParent)) {
-      return undefined;
+  optimisticDag(dag: DagWithPreview): DagWithPreview {
+    const originalHashes = this.originalStack.map(c => c.node);
+    // Replace the old stack with the new stack, followed by a rebase.
+    // Note the rebase is actually not what the operation does, but we always
+    // follow up with a rebase opeation if needed.
+    const toRebase = dag.descendants(dag.children(originalHashes.at(-1)));
+    let toRemove = HashSet.fromHashes(originalHashes).subtract(dag.ancestors(this.firstParent));
+    // If the "toRemove" part of the original stack is gone, consider as completed.
+    // Note: We no longer do a rebase in this case, and requires the rebase preview
+    // to be handled separately.
+    if (dag.present(toRemove).size === 0) {
+      return dag;
     }
+    // It's possible that the new stack was actually created but the head commit
+    // keeps the old stack from disappearing (so the above check returns false).
+    // In this case, we hide the new stack (by using successors) temporarily.
+    // Otherwise we need to figure out the "new head", which is not trivial.
+    toRemove = toRemove.union(dag.successors(toRemove));
+    const newStack = this.previewStack(dag);
+    const newDag = dag.remove(toRemove).add(newStack).rebase(toRebase, newStack.at(-1)?.hash);
+    return newDag;
+  }
 
-    const maybeRewriteTree = (tree: CommitTree): ReturnType<ApplyPreviewsFuncType> => {
-      // `debugimportstack` runs in one transaction, new commits are all or nothing.
-      // So any new commit indicates the new stack is available.
-      // Note: working copy parent change is not transactional. We might
-      // observe new commits before old commits disappear because the `.`
-      // commit might be at the old place and keep the old commits visible.
-      const haveNewStack =
-        tree.children.length > 1 &&
-        tree.children.some(c => c.info.closestPredecessors?.some(p => this.origHashes.has(p)));
-
-      // Filter out the old (being edited) stack (and also YouAreHere on the old stack).
-      const children = tree.children.filter(
-        c => !this.origHashes.has(c.info.hash) && !this.hideHashes.has(c.info.hash),
-      );
-
-      // If the new stack is not yet ready, provide a preview tree (stack).
-      if (!haveNewStack) {
-        // ImportCommit[] -> CommitInfo[]
-        let parents = this.firstParent ? [this.firstParent] : [];
-        const previewStack: CommitInfo[] = this.commits.map(commit => {
-          const pred = commit.predecessors?.at(-1);
-          const existingInfo = pred ? context.treeMap.get(pred)?.info : undefined;
-          // Use existing CommitInfo as the "base" to build a new CommitInfo.
-          const info: CommitInfo = {
-            // "Default". Might be replaced by existingInfo.
-            bookmarks: [],
-            remoteBookmarks: [],
-            filesSample: [],
-            phase: 'draft',
-            hash: `fake:${commit.mark}`,
-            // Note: using `existingInfo` here might be not accurate.
-            ...(existingInfo || {}),
-            // Replace existingInfo.
-            parents,
-            title: commit.text.trimStart().split('\n', 1).at(0) || '',
-            author: commit.author ?? '',
-            date: commit.date == null ? new Date() : new Date(commit.date[0] * 1000),
-            description: commit.text,
-            isHead: this.gotoMark ? commit.mark === this.gotoMark : existingInfo?.isHead ?? false,
-            totalFileCount: Object.keys(commit.files).length,
-          };
-          parents = [info.hash];
-          return info;
-        });
-        // CommitInfo[] -> CommitTree.
-        const previewTree = previewStack
-          .reverse()
-          .reduce((tree: null | CommitTree, info: CommitInfo): CommitTree => {
-            if (tree == null) {
-              return {info, children: []};
-            } else {
-              return {info, children: [tree]};
-            }
-          }, null);
-        if (previewTree != null) {
-          children.push(previewTree);
-        }
+  private previewStack(dag: DagWithPreview): Array<CommitInfo & WithPreviewType> {
+    let parents = this.firstParent ? [this.firstParent] : [];
+    const usedHashes = new Set<Hash>();
+    return this.commits.map(commit => {
+      const pred = commit.predecessors?.at(-1);
+      const existingInfo = pred ? dag.get(pred) : undefined;
+      // Pick a unique hash.
+      let hash = existingInfo?.hash ?? `fake:${commit.mark}`;
+      while (usedHashes.has(hash)) {
+        hash = hash + '_';
       }
-      return {
-        ...tree,
-        children,
-        previewType: CommitPreview.STACK_EDIT_ROOT,
-        childPreviewType: CommitPreview.STACK_EDIT_DESCENDANT,
+      usedHashes.add(hash);
+      // Use existing CommitInfo as the "base" to build a new CommitInfo.
+      const info: CommitInfo & WithPreviewType = {
+        // "Default". Might be replaced by existingInfo.
+        bookmarks: [],
+        remoteBookmarks: [],
+        filesSample: [],
+        phase: 'draft',
+        // Note: using `existingInfo` here might be not accurate.
+        ...(existingInfo || {}),
+        // Replace existingInfo.
+        hash,
+        parents,
+        title: commit.text.trimStart().split('\n', 1).at(0) || '',
+        author: commit.author ?? '',
+        date: commit.date == null ? new Date() : new Date(commit.date[0] * 1000),
+        description: commit.text,
+        isHead: this.gotoMark ? commit.mark === this.gotoMark : existingInfo?.isHead ?? false,
+        totalFileCount: Object.keys(commit.files).length,
+        closestPredecessors: commit.predecessors,
+        previewType: CommitPreview.STACK_EDIT_DESCENDANT,
       };
-    };
-
-    const func: ApplyPreviewsFuncType = (tree, _previewType) => {
-      if (tree.info.hash === this.firstParent) {
-        // This tree is interesting.
-        return maybeRewriteTree(tree);
-      } else {
-        return tree;
-      }
-    };
-
-    // Hide duplicated stack
-    return func;
+      parents = [info.hash];
+      return info;
+    });
   }
 }
