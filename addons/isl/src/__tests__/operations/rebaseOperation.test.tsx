@@ -59,9 +59,9 @@ describe('rebase operation', () => {
     dragAndDropCommits('d', '2');
 
     // original commit AND previewed commit are now in the document
-    expect(screen.queryAllByTestId('commit-d')).toHaveLength(2);
+    expect(screen.getAllByText('Commit D')).toHaveLength(2);
     // also includes descendants
-    expect(screen.queryAllByTestId('commit-e')).toHaveLength(2);
+    expect(screen.getAllByText('Commit E')).toHaveLength(2);
 
     // one of them is a rebase preview
     expect(

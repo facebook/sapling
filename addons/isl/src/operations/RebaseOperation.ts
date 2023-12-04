@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ApplyPreviewsFuncType, Dag, PreviewContext} from '../previews';
-import type {ExactRevset, Hash, SucceedableRevset} from '../types';
+import type {Dag, WithPreviewType} from '../previews';
+import type {CommitInfo, ExactRevset, Hash, SucceedableRevset} from '../types';
 
 import {latestSuccessor} from '../SuccessionTracker';
 import {t} from '../i18n';
@@ -32,59 +32,47 @@ export class RebaseOperation extends Operation {
     return [[this.source.revset, t('rebasing...')]];
   }
 
-  makePreviewApplier(context: PreviewContext): ApplyPreviewsFuncType | undefined {
-    const {treeMap} = context;
-    const originalSourceNode = treeMap.get(latestSuccessor(context, this.source));
-    if (originalSourceNode == null) {
-      return undefined;
+  previewDag(dag: Dag): Dag {
+    const srcHash = dag.resolve(latestSuccessor(dag, this.source))?.hash;
+    const destHash = dag.resolve(latestSuccessor(dag, this.destination))?.hash;
+    if (srcHash == null || destHash == null) {
+      return dag;
     }
-    const newSourceNode = {
-      ...originalSourceNode,
-      info: {...originalSourceNode.info},
-    };
-    let parentHash: Hash;
-
-    const func: ApplyPreviewsFuncType = (tree, previewType) => {
-      if (tree.info.hash === latestSuccessor(context, this.source)) {
-        if (tree.info.parents[0] === parentHash) {
-          // this is the newly added node
-          return {
-            info: tree.info,
-            children: tree.children,
-            previewType: CommitPreview.REBASE_ROOT, // root will show confirmation button
-            childPreviewType: CommitPreview.REBASE_DESCENDANT, // children should also show as previews, but don't all need the confirm button
-          };
-        } else {
-          // this is the original source node
-          return {
-            info: tree.info,
-            children: tree.children,
-            previewType: CommitPreview.REBASE_OLD,
-            childPreviewType: CommitPreview.REBASE_OLD,
-          };
-        }
-      } else if (
-        tree.info.hash === latestSuccessor(context, this.destination) ||
-        tree.info.remoteBookmarks.includes(this.destination.revset)
-      ) {
-        parentHash = tree.info.hash;
-        newSourceNode.info.parents = [parentHash];
-        // we always want the rebase preview to be the lowest child aka last in list
-        return {
-          info: tree.info,
-          children: [...tree.children, newSourceNode],
-        };
-      } else {
-        return {
-          info: tree.info,
-          children: tree.children,
-          previewType,
-          // inherit previews so entire subtree is previewed
-          childPreviewType: previewType,
-        };
+    const src = dag.descendants(srcHash);
+    const srcHashes = src.toHashes().toArray();
+    const prefix = `${REBASE_PREVIEW}:${destHash}:`;
+    const rewriteHash = (h: Hash) => (src.contains(h) ? prefix + h : h);
+    const date = new Date();
+    const newCommits = srcHashes.flatMap(h => {
+      const info = dag.get(h);
+      if (info == null) {
+        return [];
       }
-    };
-    return func;
+      const isRoot = info.hash === srcHash;
+      const newInfo: CommitInfo & WithPreviewType = {
+        ...info,
+        parents: isRoot ? [destHash] : info.parents,
+        date,
+        seqNumber: undefined,
+        previewType: isRoot ? CommitPreview.REBASE_ROOT : CommitPreview.REBASE_DESCENDANT,
+      };
+      return [newInfo];
+    });
+    // Rewrite REBASE_OLD commits to use fake hash so they won't conflict with
+    // the rebased commits. Insert new commits with the original hash so they
+    // can be interacted.
+    return dag
+      .replaceWith(src, (h, c) => {
+        return (
+          c && {
+            ...c,
+            hash: rewriteHash(h),
+            parents: c.parents.map(rewriteHash),
+            previewType: CommitPreview.REBASE_OLD,
+          }
+        );
+      })
+      .add(newCommits);
   }
 
   optimisticDag(dag: Dag): Dag {
@@ -93,3 +81,5 @@ export class RebaseOperation extends Operation {
     return dag.rebase(dag.descendants(src?.hash), dest?.hash);
   }
 }
+
+const REBASE_PREVIEW = 'OPTIMISTIC_REBASE_PREVIEW';
