@@ -9,10 +9,9 @@ import type {CommitInfo} from './types';
 import type {Snapshot} from 'recoil';
 
 import {latestSuccessorUnlessExplicitlyObsolete} from './SuccessionTracker';
-import {walkTreePostorder} from './getCommitTree';
 import {AmendToOperation} from './operations/AmendToOperation';
 import {uncommittedSelectionReadonly} from './partialSelection';
-import {treeWithPreviews, uncommittedChangesWithPreviews} from './previews';
+import {dagWithPreviews, uncommittedChangesWithPreviews} from './previews';
 
 /**
  * Amend --to allows amending to a parent commit other than head.
@@ -20,7 +19,7 @@ import {treeWithPreviews, uncommittedChangesWithPreviews} from './previews';
  * your current selection is not a partial selection.
  */
 export function isAmendToAllowedForCommit(commit: CommitInfo, snapshot: Snapshot): boolean {
-  if (commit.isHead) {
+  if (commit.isHead || commit.phase === 'public') {
     // no point, just amend normally
     return false;
   }
@@ -39,26 +38,13 @@ export function isAmendToAllowedForCommit(commit: CommitInfo, snapshot: Snapshot
     return false;
   }
 
-  const trees = snapshot.getLoadable(treeWithPreviews).valueMaybe();
-  if (trees == null) {
+  const dag = snapshot.getLoadable(dagWithPreviews).valueMaybe();
+  const head = dag?.resolve('.');
+  if (dag == null || head == null || !dag.has(commit.hash)) {
     return false;
   }
 
-  const {treeMap} = trees;
-  const tree = treeMap.get(commit.hash);
-  if (tree == null) {
-    return false;
-  }
-
-  // to amend --to, you must select parent of the head commit
-  for (const child of walkTreePostorder(tree.children)) {
-    if (child.info.isHead) {
-      // found the head commit
-      return true;
-    }
-  }
-
-  return false;
+  return dag.isAncestor(commit.hash, head.hash);
 }
 
 export function getAmendToOperation(commit: CommitInfo, snapshot: Snapshot): AmendToOperation {
