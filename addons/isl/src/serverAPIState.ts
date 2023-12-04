@@ -231,11 +231,11 @@ export const latestCommits = selector<Array<CommitInfo>>({
   },
 });
 
-export const latestDag = selector<Dag<CommitInfo>>({
+export const latestDag = selector<Dag>({
   key: 'latestDag',
   get: ({get}) => {
     const commits = get(latestCommits);
-    const dag = new Dag<CommitInfo>().add(commits);
+    const dag = new Dag().add(commits);
     return dag;
   },
 });

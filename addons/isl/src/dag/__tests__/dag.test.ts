@@ -6,13 +6,30 @@
  */
 
 import type {CommitInfo, Hash, SuccessorInfo} from '../../types';
-import type {HashWithParents} from '../dag';
 
+import {BaseDag} from '../base_dag';
 import {Dag, REBASE_SUCC_PREFIX} from '../dag';
 
 describe('Dag', () => {
+  // Dummy info.
+  const date = new Date(42);
+  const info: CommitInfo = {
+    title: '',
+    hash: '',
+    parents: [],
+    phase: 'draft',
+    isHead: false,
+    author: '',
+    date,
+    description: '',
+    bookmarks: [],
+    remoteBookmarks: [],
+    totalFileCount: 0,
+    filesSample: [],
+  };
+
   describe('basic queries', () => {
-    const dagAbc = new Dag().add([
+    const dagAbc = new BaseDag().add([
       {hash: 'a', parents: ['z']},
       {hash: 'b', parents: ['a']},
       {hash: 'c', parents: ['b', 'a']},
@@ -47,7 +64,17 @@ describe('Dag', () => {
     });
 
     it('supports replaceWith()', () => {
-      const dag = dagAbc.replaceWith(['c', 'd'], (h, _c) => ({hash: h, parents: ['b']}));
+      const dag = new Dag()
+        .add([
+          {...info, hash: 'a', parents: ['z']},
+          {...info, hash: 'b', parents: ['a']},
+          {...info, hash: 'c', parents: ['b', 'a']},
+        ])
+        .replaceWith(['c', 'd'], (h, _c) => ({
+          ...info,
+          hash: h,
+          parents: ['b'],
+        })).commitDag;
       expect(dag.parentHashes('c')).toEqual(['b']);
       expect(dag.parentHashes('d')).toEqual(['b']);
       expect(dag.childHashes('a').toArray()).toEqual(['b']);
@@ -62,13 +89,13 @@ describe('Dag', () => {
      *      D-E--G
      */
     const dag = new Dag().add([
-      {hash: 'a', parents: []},
-      {hash: 'b', parents: ['a']},
-      {hash: 'c', parents: ['b']},
-      {hash: 'd', parents: ['b']},
-      {hash: 'e', parents: ['d']},
-      {hash: 'f', parents: ['c', 'e']},
-      {hash: 'g', parents: ['e']},
+      {...info, hash: 'a', parents: []},
+      {...info, hash: 'b', parents: ['a']},
+      {...info, hash: 'c', parents: ['b']},
+      {...info, hash: 'd', parents: ['b']},
+      {...info, hash: 'e', parents: ['d']},
+      {...info, hash: 'f', parents: ['c', 'e']},
+      {...info, hash: 'g', parents: ['e']},
     ]);
 
     it('parents()', () => {
@@ -140,7 +167,7 @@ describe('Dag', () => {
     });
 
     it('does not infinite loop on cyclic graphs', () => {
-      const dag = new Dag().add([
+      const dag = new BaseDag().add([
         {hash: 'a', parents: ['b']},
         {hash: 'b', parents: ['c']},
         {hash: 'c', parents: ['a']},
@@ -154,14 +181,13 @@ describe('Dag', () => {
 
   describe('rebase', () => {
     const succ = (h: Hash): Hash => `${REBASE_SUCC_PREFIX}${h}`;
-    const date = new Date(42);
 
     it('can break linear stack', () => {
       // a--b--c   rebase -r c -d a
-      let dag = new Dag<Partial<CommitInfo> & HashWithParents>().add([
-        {hash: 'a', parents: [], phase: 'public', date},
-        {hash: 'b', parents: ['a'], phase: 'draft', date},
-        {hash: 'c', parents: ['b'], phase: 'draft', date},
+      let dag = new Dag().add([
+        {...info, hash: 'a', parents: []},
+        {...info, hash: 'b', parents: ['a']},
+        {...info, hash: 'c', parents: ['b']},
       ]);
       dag = dag.rebase(['c'], 'a');
       expect(dag.parentHashes('c')).toEqual(['a']);
@@ -171,13 +197,13 @@ describe('Dag', () => {
       // a--------b            rebase -r c+d+e+f -d b
       //  \        \           e f should not be touched.
       //   c--d     e--f
-      let dag = new Dag<Partial<CommitInfo> & HashWithParents>().add([
-        {hash: 'a', parents: [], phase: 'public'},
-        {hash: 'b', parents: ['a'], phase: 'public'},
-        {hash: 'c', parents: ['a'], phase: 'draft', date},
-        {hash: 'd', parents: ['c'], phase: 'draft', date},
-        {hash: 'e', parents: ['b'], phase: 'draft', date},
-        {hash: 'f', parents: ['e'], phase: 'draft', date},
+      let dag = new Dag().add([
+        {...info, hash: 'a', parents: [], phase: 'public'},
+        {...info, hash: 'b', parents: ['a'], phase: 'public'},
+        {...info, hash: 'c', parents: ['a'], phase: 'draft'},
+        {...info, hash: 'd', parents: ['c'], phase: 'draft'},
+        {...info, hash: 'e', parents: ['b'], phase: 'draft'},
+        {...info, hash: 'f', parents: ['e'], phase: 'draft'},
       ]);
       dag = dag.rebase(['c', 'd', 'e', 'f'], 'b');
 
@@ -199,10 +225,10 @@ describe('Dag', () => {
     it('handles orphaned commits', () => {
       // a--b  z; rebase -r a -d z; result:
       // a(pred)--b  z--a(succ).
-      let dag = new Dag<Partial<CommitInfo> & HashWithParents>().add([
-        {hash: 'z', parents: [], phase: 'public', date},
-        {hash: 'a', parents: [], phase: 'draft', date},
-        {hash: 'b', parents: ['a'], phase: 'draft', date},
+      let dag = new Dag().add([
+        {...info, hash: 'z', parents: [], phase: 'public'},
+        {...info, hash: 'a', parents: [], phase: 'draft'},
+        {...info, hash: 'b', parents: ['a'], phase: 'draft'},
       ]);
       dag = dag.rebase(['a'], 'z');
 
@@ -220,14 +246,14 @@ describe('Dag', () => {
     it('handles non-continous selection', () => {
       // a--b--c--d--e--f  z; rebase b+c+e+f to z; result:
       // a--b(pred)--c(pred)--d; z--b(succ)--c(succ)--e--f
-      let dag = new Dag<Partial<CommitInfo> & HashWithParents>().add([
-        {hash: 'a', parents: [], phase: 'draft'},
-        {hash: 'b', parents: ['a'], phase: 'draft', date},
-        {hash: 'c', parents: ['b'], phase: 'draft', date},
-        {hash: 'd', parents: ['c'], phase: 'draft', date}, // not rebasing
-        {hash: 'e', parents: ['d'], phase: 'draft'},
-        {hash: 'f', parents: ['e'], phase: 'draft'},
-        {hash: 'z', parents: []},
+      let dag = new Dag().add([
+        {...info, hash: 'a', parents: []},
+        {...info, hash: 'b', parents: ['a']},
+        {...info, hash: 'c', parents: ['b']},
+        {...info, hash: 'd', parents: ['c']}, // not rebasing
+        {...info, hash: 'e', parents: ['d']},
+        {...info, hash: 'f', parents: ['e']},
+        {...info, hash: 'z', parents: []},
       ]);
       dag = dag.rebase(['b', 'c', 'e', 'f'], 'z');
 
@@ -260,14 +286,14 @@ describe('Dag', () => {
       //   -d--e-      b is head
       // z             check: c, d, e are removed
       const successorInfo: SuccessorInfo = {hash: 'z', type: 'rewrite'};
-      let dag = new Dag<Partial<CommitInfo> & HashWithParents>().add([
-        {hash: 'z', parents: [], phase: 'public', date},
-        {hash: 'a', parents: [], phase: 'draft', date},
-        {hash: 'b', parents: ['a'], phase: 'draft', date, successorInfo, isHead: true},
-        {hash: 'c', parents: ['b'], phase: 'draft', date, successorInfo},
-        {hash: 'd', parents: ['a'], phase: 'draft', date, successorInfo},
-        {hash: 'e', parents: ['d'], phase: 'draft', date, successorInfo},
-        {hash: 'f', parents: ['c', 'e'], phase: 'draft', date},
+      let dag = new Dag().add([
+        {...info, hash: 'z', parents: [], phase: 'public'},
+        {...info, hash: 'a', parents: [], phase: 'draft'},
+        {...info, hash: 'b', parents: ['a'], phase: 'draft', date, successorInfo, isHead: true},
+        {...info, hash: 'c', parents: ['b'], phase: 'draft', date, successorInfo},
+        {...info, hash: 'd', parents: ['a'], phase: 'draft', date, successorInfo},
+        {...info, hash: 'e', parents: ['d'], phase: 'draft', date, successorInfo},
+        {...info, hash: 'f', parents: ['c', 'e'], phase: 'draft', date},
       ]);
       dag = dag.rebase(['f'], 'z');
       expect(['b', 'c', 'd', 'e'].filter(h => dag.has(h))).toEqual(['b']);

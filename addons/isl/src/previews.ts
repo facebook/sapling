@@ -268,9 +268,9 @@ export type WithPreviewType = {
   previewType?: CommitPreview;
 };
 
-export type DagWithPreview = Dag<CommitInfo & WithPreviewType>;
+export type DagWithPreview = Dag;
 
-export const dagWithPreviews = selector<DagWithPreview>({
+export const dagWithPreviews = selector<Dag>({
   key: 'dagWithPreviews',
   get: ({get}) => {
     const originalDag = get(latestDag);
@@ -278,7 +278,7 @@ export const dagWithPreviews = selector<DagWithPreview>({
     const queued = get(queuedOperations);
     const currentOperation = list.currentOperation;
     const history = list.operationHistory;
-    let dag = originalDag as DagWithPreview;
+    let dag = originalDag;
     let headCommit = get(latestHeadCommit);
     const successorMap = get(latestSuccessorsMap);
     const context = {originalDag, headCommit, successorMap};
@@ -590,7 +590,7 @@ export type PreviewContext = {
 /** Preview context for `optimisticUpdateDag` */
 export type DagPreviewContext = {
   /** Dag without any previews. */
-  originalDag: Dag<CommitInfo>;
+  originalDag: Dag;
   headCommit?: CommitInfo;
   successorMap: Map<string, string>;
 };

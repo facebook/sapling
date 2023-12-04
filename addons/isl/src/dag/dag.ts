@@ -7,240 +7,172 @@
 
 import type {WithPreviewType} from '../previews';
 import type {CommitInfo, Hash} from '../types';
+import type {HashWithParents} from './base_dag';
 import type {SetLike} from './set';
-import type {RecordOf} from 'immutable';
+import type {RecordOf, List} from 'immutable';
 
 import {CommitPreview} from '../previews';
+import {unionFlatMap, BaseDag} from './base_dag';
 import {HashSet} from './set';
-import {Map as ImMap, Record, List} from 'immutable';
-import {cached} from 'shared/LRU';
+import {Record} from 'immutable';
 import {SelfUpdate} from 'shared/immutableExt';
 import {splitOnce, unwrap} from 'shared/utils';
 
 /**
- * Partial commit graph with query and edit operations.
- * Internally maintains a "parent -> child" mapping for efficient queries.
+ * Main commit graph type used for preview calculation and queries.
+ *
+ * See `BaseDag` docstring for differences with a traditional source
+ * control dag.
+ *
+ * A commit is associated with the `Info` type. This enables the class
+ * to provide features not existed in `BaseDag`, like:
+ * - Lookup by name (bookmark, '.', etc) via resolve().
+ * - Phase related queries like public() and draft().
+ * - Mutation related queries like obsolete().
+ * - High-level operations like rebase(), cleanup().
  */
-export class Dag<C extends HashWithParents> extends SelfUpdate<DagRecord<C>> {
-  constructor(record?: DagRecord<C>) {
-    super(record ?? (EMPTY_DAG_RECORD as DagRecord<C>));
+export class Dag extends SelfUpdate<CommitDagRecord> {
+  constructor(record?: CommitDagRecord) {
+    super(record ?? EMPTY_DAG_RECORD);
   }
 
-  // Edit
-
-  /**
-   * Add commits. Parents do not have to be added first.
-   * If a commit with the same hash already exists, it will be replaced.
-   */
-  add(commits: Iterable<C>): Dag<C> {
-    const commitArray = [...commits];
-    const dag = this.remove(commitArray.map(c => c.hash));
-    let {childMap, infoMap} = dag;
-    for (const commit of commitArray) {
-      commit.parents.forEach(p => {
-        const children = childMap.get(p);
-        const child = commit.hash;
-        const newChildren =
-          children == null
-            ? List([child])
-            : children.contains(child)
-            ? children
-            : children.push(child);
-        childMap = childMap.set(p, newChildren);
-      });
-      infoMap = infoMap.set(commit.hash, commit);
-    }
-    const record = dag.inner.merge({infoMap, childMap});
-    return new Dag(record);
+  static fromDag(commitDag: BaseDag<Info>, mutationDag?: BaseDag<HashWithParents>): Dag {
+    return new Dag(CommitDagRecord({commitDag, mutationDag}));
   }
 
-  /** Remove commits by hash. Descendants are not removed automatically. */
-  remove(set: SetLike): Dag<C> {
-    const hashSet = HashSet.fromHashes(set);
-    let {childMap, infoMap} = this;
-    for (const hash of hashSet) {
-      const commit = this.get(hash);
-      if (commit == undefined) {
-        continue;
-      }
-      commit.parents.forEach(p => {
-        const children = childMap.get(p);
-        if (children != null) {
-          const newChildren = children.filter(h => h !== hash);
-          childMap = childMap.set(p, newChildren);
-        }
-      });
-      infoMap = infoMap.remove(hash);
-    }
-    const record = this.inner.merge({infoMap, childMap});
-    return new Dag(record);
+  // Delegates
+
+  get commitDag(): BaseDag<Info> {
+    return this.inner.commitDag;
+  }
+
+  get mutationDag(): BaseDag<HashWithParents> {
+    return this.inner.mutationDag;
+  }
+
+  private withCommitDag(f: (dag: BaseDag<Info>) => BaseDag<Info>): Dag {
+    const newCommitDag = f(this.commitDag);
+    const newRecord = this.inner.set('commitDag', newCommitDag);
+    return new Dag(newRecord);
+  }
+
+  // Basic edit
+
+  add(commits: Iterable<Info>): Dag {
+    return this.withCommitDag(d => d.add(commits));
+  }
+
+  remove(set: SetLike): Dag {
+    return this.withCommitDag(d => d.remove(set));
   }
 
   /** A callback form of remove() and add(). */
-  replaceWith(
-    set: SetLike,
-    replaceFunc: (hash: Hash, commit: C | undefined) => C | undefined,
-  ): Dag<C> {
+  replaceWith(set: SetLike, replaceFunc: (h: Hash, c?: Info) => Info | undefined): Dag {
     const hashSet = HashSet.fromHashes(set);
     const hashes = hashSet.toHashes();
     return this.remove(hashSet).add(
-      hashes.map(h => replaceFunc(h, this.get(h))).filter(c => c != undefined) as Iterable<C>,
+      hashes.map(h => replaceFunc(h, this.get(h))).filter(c => c != undefined) as Iterable<Info>,
     );
   }
 
   // Basic query
 
-  get(hash: Hash | undefined | null): Readonly<C> | undefined {
-    return hash == null ? undefined : this.infoMap.get(hash);
+  get(hash: Hash | undefined | null): Info | undefined {
+    return this.commitDag.get(hash);
   }
 
   has(hash: Hash | undefined | null): boolean {
-    return this.get(hash) !== undefined;
+    return this.commitDag.has(hash);
   }
 
   [Symbol.iterator](): IterableIterator<Hash> {
-    return this.infoMap.keys();
+    return this.commitDag[Symbol.iterator]();
   }
 
-  values(): Iterable<Readonly<C>> {
-    return this.infoMap.values();
+  values(): Iterable<Readonly<Info>> {
+    return this.commitDag.values();
   }
 
-  /** Get parent hashes. Only return hashes present in this.infoMap. */
   parentHashes(hash: Hash): Readonly<Hash[]> {
-    return this.infoMap.get(hash)?.parents?.filter(p => this.infoMap.has(p)) ?? [];
+    return this.commitDag.parentHashes(hash);
   }
 
-  /** Get child hashes. Only return hashes present in this.infoMap. */
   childHashes(hash: Hash): List<Hash> {
-    if (!this.infoMap.has(hash)) {
-      return EMPTY_LIST;
-    }
-    return this.childMap.get(hash) ?? EMPTY_LIST;
+    return this.commitDag.childHashes(hash);
   }
 
   // High-level query
 
   parents(set: SetLike): HashSet {
-    return flatMap(set, h => this.parentHashes(h));
+    return this.commitDag.parents(set);
   }
 
   children(set: SetLike): HashSet {
-    return flatMap(set, h => this.childHashes(h));
+    return this.commitDag.children(set);
   }
 
-  /**
-   * set + parents(set) + parents(parents(set)) + ...
-   * If `within` is set, change `parents` to only return hashes within `within`.
-   */
-  @cached({cacheSize: 500})
   ancestors(set: SetLike, props?: {within?: SetLike}): HashSet {
-    const filter = nullableWithinContains(props?.within);
-    return unionFlatMap(set, h => this.parentHashes(h).filter(filter));
+    return this.commitDag.ancestors(set, props);
   }
 
-  /**
-   * set + children(set) + children(children(set)) + ...
-   * If `within` is set, change `children` to only return hashes within `within`.
-   */
   descendants(set: SetLike, props?: {within?: SetLike}): HashSet {
-    const filter = nullableWithinContains(props?.within);
-    return unionFlatMap(set, h => this.childHashes(h).filter(filter));
+    return this.commitDag.descendants(set, props);
   }
 
-  /** ancestors(heads) & descendants(roots) */
   range(roots: SetLike, heads: SetLike): HashSet {
-    // PERF: This is not the most efficient, but easy to write.
-    return this.ancestors(heads).intersect(this.descendants(roots));
+    return this.commitDag.range(roots, heads);
   }
 
-  /** set - children(set) */
   roots(set: SetLike): HashSet {
-    const children = this.children(set);
-    return HashSet.fromHashes(set).subtract(children);
+    return this.commitDag.roots(set);
   }
 
-  /** set - parents(set) */
   heads(set: SetLike): HashSet {
-    const parents = this.parents(set);
-    return HashSet.fromHashes(set).subtract(parents);
+    return this.commitDag.heads(set);
   }
 
-  /** Greatest common ancestor. heads(ancestors(set1) & ancestors(set2)). */
   gca(set1: SetLike, set2: SetLike): HashSet {
-    return this.heads(this.ancestors(set1).intersect(this.ancestors(set2)));
+    return this.commitDag.gca(set1, set2);
   }
 
-  /** ancestor in ancestors(descendant) */
   isAncestor(ancestor: Hash, descendant: Hash): boolean {
-    // PERF: This is not the most efficient, but easy to write.
-    return this.ancestors(descendant).contains(ancestor);
+    return this.commitDag.isAncestor(ancestor, descendant);
   }
 
-  /**
-   * Return commits that match the given condition.
-   * This can be useful for things like "obsolete()".
-   * `set`, if not undefined, limits the search space.
-   */
-  filter(predicate: (commit: Readonly<C>) => boolean, set?: SetLike): HashSet {
-    let hashes: SetLike;
-    if (set === undefined) {
-      hashes = this.infoMap.filter((commit, _hash) => predicate(commit)).keys();
-    } else {
-      hashes = HashSet.fromHashes(set)
-        .toHashes()
-        .filter(h => {
-          const c = this.get(h);
-          return c != undefined && predicate(c);
-        });
-    }
-    return HashSet.fromHashes(hashes);
+  filter(predicate: (commit: Readonly<Info>) => boolean, set?: SetLike): HashSet {
+    return this.commitDag.filter(predicate, set);
   }
 
-  // Delegates
-
-  get infoMap(): ImMap<Hash, Readonly<C>> {
-    return this.inner.infoMap;
-  }
-
-  get childMap(): ImMap<Hash, List<Hash>> {
-    return this.inner.childMap;
-  }
-
-  // Filters. Some of them are less generic, require `C` to be `CommitInfo`.
+  // Filters
 
   obsolete(set?: SetLike): HashSet {
-    return this.filter(c => (c as Partial<CommitInfo>).successorInfo != null, set);
+    return this.filter(c => c.successorInfo != null, set);
   }
 
   public_(set?: SetLike): HashSet {
-    return this.filter(c => (c as Partial<CommitInfo>).phase === 'public', set);
+    return this.filter(c => c.phase === 'public', set);
   }
 
   draft(set?: SetLike): HashSet {
-    return this.filter(c => ((c as Partial<CommitInfo>).phase ?? 'draft') === 'draft', set);
+    return this.filter(c => (c.phase ?? 'draft') === 'draft', set);
   }
 
   merge(set?: SetLike): HashSet {
-    return this.filter(c => c.parents.length > 1, set);
+    return this.commitDag.merge(set);
   }
 
   // Edit APIs that are less generic, require `C` to be `CommitInfo`.
 
   /** Bump the timestamp of descendants(set) to "now". */
-  touch(set: SetLike, includeDescendants = true): Dag<C> {
+  touch(set: SetLike, includeDescendants = true): Dag {
     const affected = includeDescendants ? this.descendants(set) : set;
     return this.replaceWith(affected, (_h, c) => {
-      if (c && (c as Partial<CommitInfo>).date) {
-        return {...c, date: new Date()};
-      } else {
-        return c;
-      }
+      return c && {...c, date: new Date()};
     });
   }
 
   /// Remove obsoleted commits that no longer have non-obsoleted descendants.
-  cleanup(): Dag<C> {
+  cleanup(): Dag {
     // ancestors(".") are not obsoleted.
     const obsolete = this.obsolete().subtract(this.ancestors(this.resolve('.')?.hash));
     const heads = this.heads(this.draft()).intersect(obsolete);
@@ -255,7 +187,7 @@ export class Dag<C extends HashWithParents> extends SelfUpdate<DagRecord<C>> {
    * - copy 'x amended to y' relation when x and y are both being rebased.
    * - skip rebasing 'x' if 'x amended to y' and 'y in ancestors(dest)'.
    */
-  rebase(srcSet: SetLike, dest: Hash | undefined): Dag<C> {
+  rebase(srcSet: SetLike, dest: Hash | undefined): Dag {
     let src = HashSet.fromHashes(srcSet);
     // x is already rebased, if x's parent is dest or 'already rebased'.
     // dest--a--b--c--d--e: when rebasing a+b+d+e to dest, only a+b are already rebased.
@@ -289,7 +221,7 @@ export class Dag<C extends HashWithParents> extends SelfUpdate<DagRecord<C>> {
       const isPred = !isSucc && duplicated.contains(h);
       const isRoot = srcRoots.contains(pureHash);
       const info = unwrap(isSucc ? this.get(pureHash) : c);
-      const newInfo: Partial<CommitInfo & WithPreviewType> = {};
+      const newInfo: Partial<Info> = {};
       if (isPred) {
         // For "predecessors" (ex. a(obsoleted)), keep hash unchanged
         // so orphaned commits (c) don't move. Update successorInfo.
@@ -317,7 +249,7 @@ export class Dag<C extends HashWithParents> extends SelfUpdate<DagRecord<C>> {
   /// All successors recursively.
   successors(set: SetLike): HashSet {
     const getSuccessors = (h: Hash) => {
-      const info: Partial<CommitInfo> | undefined = this.get(h);
+      const info: Info | undefined = this.get(h);
       const succ = info?.successorInfo?.hash;
       return succ == null ? [] : [succ];
     };
@@ -325,7 +257,7 @@ export class Dag<C extends HashWithParents> extends SelfUpdate<DagRecord<C>> {
   }
 
   /** Attempt to resolve a name by `name`. The `name` can be a hash, a bookmark name, etc. */
-  resolve(name: string): Readonly<C> | undefined {
+  resolve(name: string): Readonly<Info> | undefined {
     // Full commit hash?
     const info = this.get(name);
     if (info) {
@@ -343,10 +275,9 @@ export class Dag<C extends HashWithParents> extends SelfUpdate<DagRecord<C>> {
     //   - 70: phrevset (ex. "Dxxx"), but we skip it here due to lack
     //         of access to the code review abstraction.
     // - partial match (unambigious partial prefix match)
-    type Best = {hash: Hash; priority: number; info: Partial<CommitInfo>};
+    type Best = {hash: Hash; priority: number; info: Info};
     const best: {value?: Best} = {};
-    for (const [hash, commit] of this.infoMap) {
-      const info = commit as Partial<CommitInfo>;
+    for (const [hash, info] of this.commitDag.infoMap) {
       const updateBest = (priority: number) => {
         if (
           best.value == null ||
@@ -373,7 +304,7 @@ export class Dag<C extends HashWithParents> extends SelfUpdate<DagRecord<C>> {
     }
     // Unambigious prefix match.
     let matched: undefined | Hash = undefined;
-    for (const hash of this.infoMap.keys()) {
+    for (const hash of this) {
       if (hash.startsWith(name)) {
         if (matched === undefined) {
           matched = hash;
@@ -387,68 +318,21 @@ export class Dag<C extends HashWithParents> extends SelfUpdate<DagRecord<C>> {
   }
 }
 
-function flatMap(set: SetLike, f: (h: Hash) => List<Hash> | Readonly<Array<Hash>>): HashSet {
-  return new HashSet(
-    HashSet.fromHashes(set)
-      .toHashes()
-      .flatMap(h => f(h)),
-  );
-}
+type Info = CommitInfo & WithPreviewType;
 
-/** set + flatMap(set, f) + flatMap(flatMap(set, f), f) + ... */
-function unionFlatMap(set: SetLike, f: (h: Hash) => List<Hash> | Readonly<Array<Hash>>): HashSet {
-  let result = new HashSet().toHashes();
-  let newHashes = [...HashSet.fromHashes(set)];
-  while (newHashes.length > 0) {
-    result = result.concat(newHashes);
-    const nextNewHashes: Hash[] = [];
-    newHashes.forEach(h => {
-      f(h).forEach(v => {
-        if (!result.contains(v)) {
-          nextNewHashes.push(v);
-        }
-      });
-    });
-    newHashes = nextNewHashes;
-  }
-  return HashSet.fromHashes(result);
-}
-
-/**
- * If `set` is undefined, return a function that always returns true.
- * Otherwise, return a function that checks whether `set` contains `h`.
- */
-function nullableWithinContains(set?: SetLike): (h: Hash) => boolean {
-  if (set === undefined) {
-    return _h => true;
-  } else {
-    const hashSet = HashSet.fromHashes(set);
-    return h => hashSet.contains(h);
-  }
-}
-
-/** Minimal fields needed to be used in commit graph structures. */
-export interface HashWithParents {
-  hash: Hash;
-  parents: Hash[];
-  // TODO: We might want "ancestors" to express distant parent relationships.
-  // However, sl does not yet have a way to expose that information.
-}
-
-type DagProps<C extends HashWithParents> = {
-  infoMap: ImMap<Hash, Readonly<C>>;
-  // childMap is derived from infoMap.
-  childMap: ImMap<Hash, List<Hash>>;
+type CommitDagProps = {
+  commitDag: BaseDag<Info>;
+  mutationDag: BaseDag<HashWithParents>;
 };
 
-const DagRecord = Record<DagProps<HashWithParents>>({
-  infoMap: ImMap(),
-  childMap: ImMap(),
+const CommitDagRecord = Record<CommitDagProps>({
+  commitDag: new BaseDag(),
+  mutationDag: new BaseDag(),
 });
-type DagRecord<C extends HashWithParents> = RecordOf<DagProps<C>>;
 
-const EMPTY_DAG_RECORD = DagRecord();
-const EMPTY_LIST = List<Hash>();
+type CommitDagRecord = RecordOf<CommitDagProps>;
+
+const EMPTY_DAG_RECORD = CommitDagRecord();
 
 /** 'Hash' prefix for rebase successor in preview. */
 export const REBASE_SUCC_PREFIX = 'OPTIMISTIC_REBASE_SUCC:';
