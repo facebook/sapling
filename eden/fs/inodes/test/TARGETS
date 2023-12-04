@@ -148,7 +148,6 @@ cpp_unittest(
     compatible_with = [
         "ovr_config//os:linux",
     ],
-    supports_static_listing = True,
     deps = [
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
         "//eden/fs/testharness:fake_fuse",

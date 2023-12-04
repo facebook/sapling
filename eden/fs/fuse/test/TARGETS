@@ -9,7 +9,6 @@ cpp_unittest(
     compatible_with = [
         "ovr_config//os:linux",
     ],
-    supports_static_listing = True,
     deps = [
         "//eden/common/utils:process_info_cache",
         "//eden/fs/fuse:fuse",

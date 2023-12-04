@@ -10,7 +10,6 @@ cpp_unittest(
         "ovr_config//os:linux",
         "ovr_config//os:macos",
     ],
-    supports_static_listing = True,
     deps = [
         "//eden/fs/monitor:edenfs_monitor_lib",
         "//eden/fs/testharness:fake_clock",

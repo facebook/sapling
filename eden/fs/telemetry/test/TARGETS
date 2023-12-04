@@ -53,7 +53,6 @@ cpp_unittest(
         "ovr_config//os:linux",
         "ovr_config//os:macos",
     ],
-    supports_static_listing = True,
     deps = [
         "//eden/fs/telemetry:scribe_logger",
         "//folly:file_util",
