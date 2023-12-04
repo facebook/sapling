@@ -26,7 +26,7 @@ import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 
 import serverAPI from './ClientToServerAPI';
 import messageBus from './MessageBus';
-import {successionTracker} from './SuccessionTracker';
+import {latestSuccessorsMap, successionTracker} from './SuccessionTracker';
 import {Dag} from './dag/dag';
 import {makeTreeMap, getCommitTree} from './getCommitTree';
 import {persistAtomToConfigEffect} from './persistAtomToConfigEffect';
@@ -231,11 +231,13 @@ export const latestCommits = selector<Array<CommitInfo>>({
   },
 });
 
+/** The dag also includes a mutationDag to answer successor queries. */
 export const latestDag = selector<Dag>({
   key: 'latestDag',
   get: ({get}) => {
     const commits = get(latestCommits);
-    const dag = new Dag().add(commits);
+    const successorMap = get(latestSuccessorsMap);
+    const dag = new Dag().add(commits).addMutations(successorMap.entries());
     return dag;
   },
 });
