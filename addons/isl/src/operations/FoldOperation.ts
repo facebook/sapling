@@ -65,6 +65,7 @@ export class FoldOperation extends Operation {
       return dag;
     }
     const hash = getFoldRangeCommitHash(this.foldRange, isPreview);
+    const bookmarks = hashes.flatMap(h => dag.get(h)?.bookmarks ?? []).sort();
     return dag
       .replaceWith(hashes, (h, c) => {
         if (h !== top && c == null) {
@@ -74,6 +75,7 @@ export class FoldOperation extends Operation {
           ...c,
           date: new Date(),
           hash,
+          bookmarks,
           title: this.newTitle,
           description: this.newDescription,
           previewType: isPreview ? CommitPreview.FOLD_PREVIEW : CommitPreview.FOLD,
