@@ -20,11 +20,12 @@ export type CommitTreeWithPreviews = {
 };
 
 const byTimeDecreasing = (a: CommitInfo & WithPreviewType, b: CommitInfo & WithPreviewType) => {
-  // Put previews after non-previews.
-  const aHasPreview = a.previewType != null;
-  const bhasPreview = b.previewType != null;
-  if (aHasPreview !== bhasPreview) {
-    return aHasPreview ? 1 : -1;
+  // Consider seqNumber (insertion order during preview calculation).
+  if (a.seqNumber != null && b.seqNumber != null) {
+    const seqDelta = a.seqNumber - b.seqNumber;
+    if (seqDelta !== 0) {
+      return seqDelta;
+    }
   }
   // Sort by date.
   const timeDelta = b.date.getTime() - a.date.getTime();

@@ -56,11 +56,19 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
     return new Dag(newRecord);
   }
 
+  private bumpSeqNumber(): Dag {
+    const newRecord = this.inner.set('nextSeqNumber', this.inner.nextSeqNumber + 1);
+    return new Dag(newRecord);
+  }
+
   // Basic edit
 
   add(commits: Iterable<Info>): Dag {
     // When adding commits, also update the mutationDag.
-    const commitArray = [...commits];
+    // Assign `seqNumber` (insertion order) to help sorting commits later.
+    // The seqNumber is the same for all `commits` so the order does not matter.
+    const seqNumber = this.inner.nextSeqNumber;
+    const commitArray = [...commits].map(c => ({...c, seqNumber: c.seqNumber ?? seqNumber}));
     const oldNewPairs = new Array<[Hash, Hash]>();
     for (const info of commitArray) {
       info.closestPredecessors?.forEach(p => oldNewPairs.push([p, info.hash]));
@@ -68,7 +76,9 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
         oldNewPairs.push([info.hash, info.successorInfo.hash]);
       }
     }
-    return this.withCommitDag(d => d.add(commitArray)).addMutations(oldNewPairs);
+    return this.withCommitDag(d => d.add(commitArray))
+      .addMutations(oldNewPairs)
+      .bumpSeqNumber();
   }
 
   addMutations(oldNewPairs: Iterable<[Hash, Hash]>): Dag {
@@ -264,7 +274,8 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
       const isPred = !isSucc && duplicated.contains(h);
       const isRoot = srcRoots.contains(pureHash);
       const info = unwrap(isSucc ? this.get(pureHash) : c);
-      const newInfo: Partial<Info> = {};
+      // Reset the seqNumber so the rebase preview tends to show as right-most branches.
+      const newInfo: Partial<Info> = {seqNumber: undefined};
       if (isPred) {
         // For "predecessors" (ex. a(obsoleted)), keep hash unchanged
         // so orphaned commits (c) don't move. Update successorInfo.
@@ -395,11 +406,13 @@ type Info = CommitInfo & WithPreviewType;
 type CommitDagProps = {
   commitDag: BaseDag<Info>;
   mutationDag: BaseDag<HashWithParents>;
+  nextSeqNumber: number;
 };
 
 const CommitDagRecord = Record<CommitDagProps>({
   commitDag: new BaseDag(),
   mutationDag: new BaseDag(),
+  nextSeqNumber: 0,
 });
 
 type CommitDagRecord = RecordOf<CommitDagProps>;

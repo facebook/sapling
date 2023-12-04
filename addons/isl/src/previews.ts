@@ -266,6 +266,13 @@ export type TreeWithPreviews = {
 
 export type WithPreviewType = {
   previewType?: CommitPreview;
+  /**
+   * Insertion batch. Larger: later inserted.
+   * All 'sl log' commits share a same initial number.
+   * Later previews might have larger numbers.
+   * Used for sorting.
+   */
+  seqNumber?: number;
 };
 
 export type {Dag};
