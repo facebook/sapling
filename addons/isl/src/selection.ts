@@ -15,7 +15,7 @@ import {latestSuccessorUnlessExplicitlyObsolete, successionTracker} from './Succ
 import {islDrawerState} from './drawerState';
 import {HideOperation} from './operations/HideOperation';
 import {dagWithPreviews, treeWithPreviews} from './previews';
-import {latestCommitTreeMap, operationBeingPreviewed} from './serverAPIState';
+import {latestDag, operationBeingPreviewed} from './serverAPIState';
 import {firstOfIterable} from './utils';
 import {atom, selector, useRecoilCallback, useRecoilValue} from 'recoil';
 
@@ -80,8 +80,8 @@ export function useCommitSelection(hash: string): {
       (e: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>) => {
         // previews won't change a commit from draft -> public, so we don't need
         // to use previews here
-        const loadable = snapshot.getLoadable(latestCommitTreeMap);
-        if (loadable.getValue().get(hash)?.info.phase === 'public') {
+        const loadable = snapshot.getLoadable(latestDag);
+        if (loadable.getValue().get(hash)?.phase === 'public') {
           // don't bother selecting public commits
           return;
         }
@@ -142,13 +142,13 @@ export function useCommitSelection(hash: string): {
       (newSelected: Array<Hash>) => {
         // previews won't change a commit from draft -> public, so we don't need
         // to use previews here
-        const loadable = snapshot.getLoadable(latestCommitTreeMap);
-        if (loadable.getValue().get(hash)?.info.phase === 'public') {
+        const loadable = snapshot.getLoadable(latestDag);
+        if (loadable.getValue().get(hash)?.phase === 'public') {
           // don't bother selecting public commits
           return;
         }
         const nonPublicToSelect = newSelected.filter(
-          hash => loadable.getValue().get(hash)?.info.phase !== 'public',
+          hash => loadable.getValue().get(hash)?.phase !== 'public',
         );
         set(selectedCommits, new Set(nonPublicToSelect));
       },
@@ -296,8 +296,8 @@ export function useBackspaceToHideSelected(): void {
       return;
     }
 
-    const loadable = snapshot.getLoadable(latestCommitTreeMap);
-    const commitToHide = loadable.getValue().get(hashToHide)?.info;
+    const loadable = snapshot.getLoadable(latestDag);
+    const commitToHide = loadable.getValue().get(hashToHide);
     if (commitToHide == null) {
       return;
     }
