@@ -99,10 +99,7 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
   remove(set: SetLike): Dag {
     // When removing commits, don't remove them from the mutationDag intentionally.
     const hashSet = HashSet.fromHashes(set);
-    const toDelete = hashSet
-      .toArray()
-      .map(h => this.get(h))
-      .filter(notEmpty);
+    const toDelete = this.getBatch(hashSet.toArray());
     const nameMap = calculateNewNameMap(this.inner.nameMap, toDelete, []);
     const commitDag = this.commitDag.remove(hashSet);
     const record = this.inner.merge({
@@ -125,6 +122,10 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
 
   get(hash: Hash | undefined | null): Info | undefined {
     return this.commitDag.get(hash);
+  }
+
+  getBatch(hashes: Array<Hash>): Array<Info> {
+    return hashes.map(h => this.get(h)).filter(notEmpty);
   }
 
   has(hash: Hash | undefined | null): boolean {
