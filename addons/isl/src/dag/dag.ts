@@ -239,6 +239,15 @@ export class Dag<C extends HashWithParents> extends SelfUpdate<DagRecord<C>> {
     });
   }
 
+  /// Remove obsoleted commits that no longer have non-obsoleted descendants.
+  cleanup(): Dag<C> {
+    // ancestors(".") are not obsoleted.
+    const obsolete = this.obsolete().subtract(this.ancestors(this.resolve('.')?.hash));
+    const heads = this.heads(this.draft()).intersect(obsolete);
+    const toRemove = this.ancestors(heads, {within: obsolete});
+    return this.remove(toRemove);
+  }
+
   /**
    * Attempt to rebase `srcSet` to `dest` for preview use-case.
    * Handles case that produces "orphaned" or "obsoleted" commits.
@@ -300,7 +309,7 @@ export class Dag<C extends HashWithParents> extends SelfUpdate<DagRecord<C>> {
         }
       }
       return {...info, ...newInfo};
-    });
+    }).cleanup();
   }
 
   // Query APIs that are less generic, require `C` to be `CommitInfo`.

@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {CommitInfo, Hash} from '../../types';
+import type {CommitInfo, Hash, SuccessorInfo} from '../../types';
 import type {HashWithParents} from '../dag';
 
 import {Dag, REBASE_SUCC_PREFIX} from '../dag';
@@ -252,6 +252,25 @@ describe('Dag', () => {
       expect(dag.get('b')?.date).toEqual(date);
       expect(dag.get('c')?.date).toEqual(date);
       expect(dag.get('d')?.date).toEqual(date);
+    });
+
+    it('cleans up obsoleted commits', () => {
+      // a--b--c--f    rebase -r f -d z
+      //  \      /     b, c, d, e are obsoleted
+      //   -d--e-      b is head
+      // z             check: c, d, e are removed
+      const successorInfo: SuccessorInfo = {hash: 'z', type: 'rewrite'};
+      let dag = new Dag<Partial<CommitInfo> & HashWithParents>().add([
+        {hash: 'z', parents: [], phase: 'public', date},
+        {hash: 'a', parents: [], phase: 'draft', date},
+        {hash: 'b', parents: ['a'], phase: 'draft', date, successorInfo, isHead: true},
+        {hash: 'c', parents: ['b'], phase: 'draft', date, successorInfo},
+        {hash: 'd', parents: ['a'], phase: 'draft', date, successorInfo},
+        {hash: 'e', parents: ['d'], phase: 'draft', date, successorInfo},
+        {hash: 'f', parents: ['c', 'e'], phase: 'draft', date},
+      ]);
+      dag = dag.rebase(['f'], 'z');
+      expect(['b', 'c', 'd', 'e'].filter(h => dag.has(h))).toEqual(['b']);
     });
   });
 });
