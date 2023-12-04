@@ -151,14 +151,14 @@ def trylock(
     This function is responsible to issue warnings and or debug messages about
     the held lock while trying to acquire it."""
 
-    debugidx = 0 if (warntimeout and timeout) else -1
-    warningidx = 0
+    debugsecs = 0 if (warntimeout and timeout) else -1
+    warnsecs = 0
     if not timeout:
-        warningidx = -1
+        warnsecs = -1
     elif warntimeout is not None:
-        warningidx = warntimeout
+        warnsecs = warntimeout
     else:
-        warningidx = defaultlockwaitwarntimeout
+        warnsecs = defaultlockwaitwarntimeout
 
     l = lock(
         vfs,
@@ -166,14 +166,14 @@ def trylock(
         timeout,
         *args,
         ui=ui,
-        warnattemptidx=warningidx,
-        debugattemptidx=debugidx,
+        warnsecs=warnsecs,
+        debugsecs=debugsecs,
         **kwargs,
     )
 
     if l.delay:
         msg = _("got lock after %s seconds\n") % l.delay
-        if 0 <= warningidx <= l.delay:
+        if 0 <= warnsecs <= l.delay:
             ui.warn(msg)
         else:
             ui.debug(msg)
@@ -202,8 +202,8 @@ class lock:
         ui=None,
         showspinner=False,
         spinnermsg=None,
-        warnattemptidx=None,
-        debugattemptidx=None,
+        warnsecs=-1,
+        debugsecs=-1,
         trylockfn=None,
     ):
         self.vfs = vfs
@@ -218,8 +218,8 @@ class lock:
         self.ui = ui
         self.showspinner = showspinner
         self.spinnermsg = spinnermsg
-        self.warnattemptidx = warnattemptidx
-        self.debugattemptidx = debugattemptidx
+        self.warnsecs = warnsecs
+        self.debugsecs = debugsecs
         self.trylockfn = trylockfn
         self._debugmessagesprinted = set([])
         self._rustlock = None
@@ -272,19 +272,29 @@ class lock:
         else:
             spinner = util.nullcontextmanager()
         with spinner:
-            self._dolock()
+            return self._dolock()
 
     def _dolock(self):
         delay = 0
+        warned = debugged = False
+
         while True:
             try:
                 self._trylock()
                 return delay
             except error.LockHeld as inst:
-                if self.ui and delay == self.debugattemptidx:
+                if self.ui and not debugged and 0 <= self.debugsecs <= delay:
                     self.ui.debug(inst.lockinfo.getwarning(self))
-                if self.ui and delay == self.warnattemptidx:
+                    debugged = True
+
+                if (
+                    self.ui
+                    and not warned
+                    and self.warnsecs != -1
+                    and 0 <= self.warnsecs <= delay
+                ):
                     self.ui.warn(inst.lockinfo.getwarning(self))
+                    warned = True
 
                 if self.timeout >= 0 and delay >= self.timeout:
                     raise error.LockHeld(
@@ -297,8 +307,8 @@ class lock:
                         % self.vfs.join(self.f)
                     )
 
-                time.sleep(1)
-                delay += 1
+                time.sleep(0.1)
+                delay += 0.1
 
     def _trylock(self):
         if self.held:

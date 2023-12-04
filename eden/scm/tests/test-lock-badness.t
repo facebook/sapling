@@ -65,7 +65,7 @@ One process waiting for another for a significant period of time (longer than th
   $ hg -R b ci -A -m b --config hooks.precommit="python:`pwd`/hooks.py:sleeplong" > stdout &
 Wait until bg process has entered critical section.
   $ while [ ! -f sleeping ]; do sleep 0.01; done
-  $ hg -R b up -q --config ui.timeout.warn=1 > preup-stdout 2>preup-stderr
+  $ hg -R b up -q --config ui.timeout.warn=0 > preup-stdout 2>preup-stderr
   $ wait
   $ cat preup-stdout
   $ cat preup-stderr

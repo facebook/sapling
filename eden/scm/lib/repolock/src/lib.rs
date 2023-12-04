@@ -105,7 +105,7 @@ impl LockConfigs {
 
         let backoff = Duration::from_secs_f64(
             config
-                .get_or::<f64>("devel", "lock_backoff", || 1.0)?
+                .get_or::<f64>("devel", "lock_backoff", || 0.1)?
                 .max(0_f64),
         );
         Ok(LockConfigs {
