@@ -9,6 +9,8 @@ import type {
   ApplyMergeConflictsPreviewsFuncType,
   ApplyPreviewsFuncType,
   ApplyUncommittedChangesPreviewsFuncType,
+  DagPreviewContext,
+  DagWithPreview,
   MergeConflictsPreviewContext,
   PreviewContext,
   UncommittedChangesPreviewContext,
@@ -64,6 +66,14 @@ export abstract class Operation {
   makeOptimisticMergeConflictsApplier?(
     context: MergeConflictsPreviewContext,
   ): ApplyMergeConflictsPreviewsFuncType | undefined;
+
+  /**
+   * Make changes to `dag` to demostrate the side effect of this running or future (queued) operation.
+   * This is an alternative way to get the `makeOptimisticApplier` effect.
+   */
+  optimisticDag(dag: DagWithPreview, _context: DagPreviewContext): DagWithPreview {
+    return dag;
+  }
 }
 
 /** Access static opName field of an operation */

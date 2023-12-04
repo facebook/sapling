@@ -13,7 +13,7 @@ import type {ChangedFile, CommitInfo, Hash, MergeConflicts, UncommittedChanges} 
 
 import {latestSuccessorsMap} from './SuccessionTracker';
 import {getTracker} from './analytics/globalTracker';
-import {getCommitTree} from './getCommitTree';
+import {getCommitTree, walkTreePostorder} from './getCommitTree';
 import {getOpName} from './operations/Operation';
 import {
   operationBeingPreviewed,
@@ -268,11 +268,33 @@ export type WithPreviewType = {
   previewType?: CommitPreview;
 };
 
-export const dagWithPreviews = selector<Dag<CommitInfo & WithPreviewType>>({
+export type DagWithPreview = Dag<CommitInfo & WithPreviewType>;
+
+export const dagWithPreviews = selector<DagWithPreview>({
   key: 'dagWithPreviews',
   get: ({get}) => {
-    const dag = get(latestDag);
-    // TODO: Apply optimistic states here.
+    const originalDag = get(latestDag);
+    const list = get(operationList);
+    const queued = get(queuedOperations);
+    const currentOperation = list.currentOperation;
+    const history = list.operationHistory;
+    let dag = originalDag as DagWithPreview;
+    let headCommit = get(latestHeadCommit);
+    const successorMap = get(latestSuccessorsMap);
+    const context = {originalDag, headCommit, successorMap};
+    for (const op of optimisticOperations({history, queued, currentOperation})) {
+      const nextDag = op.optimisticDag(dag, context);
+      if (nextDag !== dag) {
+        // PERF: Maybe we should index 'head' instead of a linear scan.
+        for (const commit of nextDag.values()) {
+          if (commit.isHead) {
+            headCommit = commit;
+            break;
+          }
+        }
+        dag = nextDag;
+      }
+    }
     return dag;
   },
 });
@@ -310,7 +332,15 @@ export const treeWithPreviews = selector({
     }
 
     let headCommit = get(latestHeadCommit);
-    let treeMap = get(latestCommitTreeMap);
+    // The headCommit might be changed by dag previews. Double check.
+    if (headCommit && !dag.get(headCommit.hash)?.isHead) {
+      headCommit = dag.resolve('.');
+    }
+    // Open-code latestCommitTreeMap to pick up tree changes done by `dag`.
+    let treeMap = new Map<Hash, CommitTreeWithPreviews>();
+    for (const tree of walkTreePostorder(trees)) {
+      treeMap.set(tree.info.hash, tree);
+    }
     const successorMap = get(latestSuccessorsMap);
 
     // apply in order
@@ -576,6 +606,14 @@ export type PreviewContext = {
   trees: Array<CommitTree>;
   headCommit?: CommitInfo;
   treeMap: Map<string, CommitTree>;
+  successorMap: Map<string, string>;
+};
+
+/** Preview context for `optimisticUpdateDag` */
+export type DagPreviewContext = {
+  /** Dag without any previews. */
+  originalDag: Dag<CommitInfo>;
+  headCommit?: CommitInfo;
   successorMap: Map<string, string>;
 };
 
