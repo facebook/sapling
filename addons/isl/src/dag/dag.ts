@@ -81,26 +81,16 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
       .bumpSeqNumber();
   }
 
+  /**
+   * Insert old->new mappings to the mutation dag.
+   *
+   * Note about `oldNewPairs`:
+   * - a same 'new' can have multiple 'old's (ex. fold)
+   * - a same 'old' can have multiple 'new's (ex. split)
+   * So the `oldNewPairs` should not be `Map`s with unique keys.
+   */
   addMutations(oldNewPairs: Iterable<[Hash, Hash]>): Dag {
-    const mDag = this.mutationDag;
-    const infoMap: Map<Hash, HashWithParents> = new Map();
-    const insert = (hash: Hash, parents: Hash[]) => {
-      // Insert `hash` to the infoMap on demand.
-      let info = infoMap.get(hash);
-      if (info == null) {
-        info = {hash, parents: mDag.get(hash)?.parents ?? []};
-        infoMap.set(hash, info);
-      }
-      // Append parents.
-      if (parents.length > 0) {
-        info.parents = Array.from(new Set(info.parents.concat(parents)));
-      }
-    };
-    for (const [oldHash, newHash] of oldNewPairs) {
-      insert(newHash, [oldHash]);
-      insert(oldHash, []);
-    }
-    const newMutationDag = this.mutationDag.add(infoMap.values());
+    const newMutationDag = insertMutationDag(this.mutationDag, oldNewPairs);
     const newRecord = this.inner.set('mutationDag', newMutationDag);
     return new Dag(newRecord);
   }
@@ -399,6 +389,30 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
     }
     return matched !== undefined ? this.get(matched) : undefined;
   }
+}
+
+function insertMutationDag(
+  mDag: BaseDag<HashWithParents>,
+  oldNewPairs: Iterable<[Hash, Hash]>,
+): BaseDag<HashWithParents> {
+  const infoMap: Map<Hash, HashWithParents> = new Map();
+  const insert = (hash: Hash, parents: Hash[]) => {
+    // Insert `hash` to the infoMap on demand.
+    let info = infoMap.get(hash);
+    if (info == null) {
+      info = {hash, parents: mDag.get(hash)?.parents ?? []};
+      infoMap.set(hash, info);
+    }
+    // Append parents.
+    if (parents.length > 0) {
+      info.parents = Array.from(new Set(info.parents.concat(parents)));
+    }
+  };
+  for (const [oldHash, newHash] of oldNewPairs) {
+    insert(newHash, [oldHash]);
+    insert(oldHash, []);
+  }
+  return mDag.add(infoMap.values());
 }
 
 type Info = CommitInfo & WithPreviewType;
