@@ -19,7 +19,14 @@ export type CommitTreeWithPreviews = {
   previewType?: CommitPreview;
 };
 
-const byTimeDecreasing = (a: CommitInfo, b: CommitInfo) => {
+const byTimeDecreasing = (a: CommitInfo & WithPreviewType, b: CommitInfo & WithPreviewType) => {
+  // Put previews after non-previews.
+  const aHasPreview = a.previewType != null;
+  const bhasPreview = b.previewType != null;
+  if (aHasPreview !== bhasPreview) {
+    return aHasPreview ? 1 : -1;
+  }
+  // Sort by date.
   const timeDelta = b.date.getTime() - a.date.getTime();
   if (timeDelta !== 0) {
     return timeDelta;
