@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::io::ErrorKind;
 use std::io::Read;
 use std::io::Write;
+use std::path::Path;
 
 use anyhow::anyhow;
 use anyhow::bail;
@@ -101,6 +102,18 @@ impl MergeState {
             other,
             labels,
             ..Default::default()
+        }
+    }
+
+    pub fn read(path: &Path) -> Result<Option<Self>> {
+        match fs_err::File::open(path) {
+            Ok(mut file) => Ok(Some(
+                Self::deserialize(&mut file).context("deserializing merge state")?,
+            )),
+            Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+                return Ok(None);
+            }
+            Err(err) => return Err(err).context("opening merge state"),
         }
     }
 

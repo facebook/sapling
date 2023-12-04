@@ -9,6 +9,7 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:byteorder",
+        "fbsource//third-party/rust:fs-err",
         "//eden/scm/lib/types:types",
         "//eden/scm/lib/util:util",
     ],

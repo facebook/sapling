@@ -512,16 +512,7 @@ impl WorkingCopy {
         // state, but if we read other state files without locking then things
         // can be inconsistent.
 
-        let mut ms_file = match fs_err::File::open(self.dot_hg_path().join("merge/state2")) {
-            Ok(f) => f,
-            Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
-                return Ok(None);
-            }
-            Err(err) => return Err(err).context("opening merge state"),
-        };
-        Ok(Some(
-            MergeState::deserialize(&mut ms_file).context("deserializing merge state")?,
-        ))
+        MergeState::read(&self.dot_hg_path().join("merge/state2"))
     }
 
     pub fn write_merge_state(&self, ms: &MergeState) -> Result<()> {
