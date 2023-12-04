@@ -1411,7 +1411,7 @@ impl TracingData {
                     "0".to_string()
                 } else if tree_span.is_incomplete() {
                     format!(
-                        "+{}?",
+                        "?{}",
                         (ctx.this.now_micros().0 - tree_span.start_time) / 1000,
                     )
                 } else {
@@ -1890,7 +1890,7 @@ Start Dur.ms | Name                         Source
             data.ascii(&Default::default()),
             r#"Process _ Thread _ Start Time _:
 Start Dur.ms | Name               Source
-    2   +34? | foo                a.py line 10
+    2    ?34 | foo                a.py line 10
     4    +14  \ foo               a.py line 10
     6    +10   | foo              a.py line 10
     8     +6   | foo              a.py line 10
@@ -1909,7 +1909,7 @@ Start Dur.ms | Name               Source
             data.ascii(&opts),
             r#"Process _ Thread _ Start Time _:
 Start Dur.ms | Name               Source
-    2   +34? | foo                a.py line 10
+    2    ?34 | foo                a.py line 10
     4    +14  \ foo               a.py line 10
     6    +10   | foo              a.py line 10
     8     +6   | foo              a.py line 10
@@ -2032,15 +2032,15 @@ Start Dur.ms | Name                         Source
             data.ascii(&Default::default()),
             r#"Process _ Thread _ Start Time _:
 Start Dur.ms | Name               Source
-    2   +26? | foo                a.py line 10
+    2    ?26 | foo                a.py line 10
     4     +6  \ foo               a.py line 10
     6     +2   | bar              a.py line 20
-   12   +16?  \ bar               a.py line 20
+   12    ?16  \ bar               a.py line 20
    14     +6   \ foo              a.py line 10
    16     +2    | bar             a.py line 20
-   22    +6?   \ foo              a.py line 10
-   24    +4?    | foo             a.py line 10
-   26    +2?    | foo             a.py line 10
+   22     ?6   \ foo              a.py line 10
+   24     ?4    | foo             a.py line 10
+   26     ?2    | foo             a.py line 10
 
 "#
         );
