@@ -27,6 +27,7 @@ import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 import serverAPI from './ClientToServerAPI';
 import messageBus from './MessageBus';
 import {successionTracker} from './SuccessionTracker';
+import {Dag} from './dag/dag';
 import {makeTreeMap, getCommitTree} from './getCommitTree';
 import {persistAtomToConfigEffect} from './persistAtomToConfigEffect';
 import {clearOnCwdChange} from './recoilUtils';
@@ -227,6 +228,15 @@ export const latestCommits = selector<Array<CommitInfo>>({
   key: 'latestCommits',
   get: ({get}) => {
     return get(latestCommitsData).commits;
+  },
+});
+
+export const latestDag = selector<Dag<CommitInfo>>({
+  key: 'latestDag',
+  get: ({get}) => {
+    const commits = get(latestCommits);
+    const dag = new Dag<CommitInfo>().add(commits);
+    return dag;
   },
 });
 

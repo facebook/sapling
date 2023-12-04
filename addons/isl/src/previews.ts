@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {Dag} from './dag/dag';
 import type {CommitTree, CommitTreeWithPreviews} from './getCommitTree';
 import type {Operation} from './operations/Operation';
 import type {OperationInfo, OperationList} from './serverAPIState';
@@ -12,6 +13,7 @@ import type {ChangedFile, CommitInfo, Hash, MergeConflicts, UncommittedChanges} 
 
 import {latestSuccessorsMap} from './SuccessionTracker';
 import {getTracker} from './analytics/globalTracker';
+import {getCommitTree} from './getCommitTree';
 import {getOpName} from './operations/Operation';
 import {
   operationBeingPreviewed,
@@ -20,6 +22,7 @@ import {
   mergeConflicts,
   latestCommitTree,
   latestCommitTreeMap,
+  latestDag,
   latestHeadCommit,
   latestUncommittedChanges,
   operationList,
@@ -260,10 +263,26 @@ export type TreeWithPreviews = {
   treeMap: Map<Hash, CommitTree>;
   headCommit?: CommitInfo;
 };
+
+export type WithPreviewType = {
+  previewType?: CommitPreview;
+};
+
+export const dagWithPreviews = selector<Dag<CommitInfo & WithPreviewType>>({
+  key: 'dagWithPreviews',
+  get: ({get}) => {
+    const dag = get(latestDag);
+    // TODO: Apply optimistic states here.
+    return dag;
+  },
+});
+
 export const treeWithPreviews = selector({
   key: 'treeWithPreviews',
   get: ({get}): TreeWithPreviews => {
-    const trees = get(latestCommitTree);
+    const dag = get(dagWithPreviews);
+    const commits = [...dag.values()];
+    const trees = getCommitTree(commits);
 
     // gather operations from past, current, and queued commands which could have optimistic state appliers
     type Applier = (context: PreviewContext) => ApplyPreviewsFuncType | undefined;
