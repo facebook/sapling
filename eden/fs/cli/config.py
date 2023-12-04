@@ -759,11 +759,10 @@ Do you want to run `eden mount %s` instead?"""
                 env=env,
             )
 
-            configs = {
-                "extensions.sparse": "!",
-            }
+            configs = dict()
             if checkout.get_config().scm_type == "filteredhg":
                 configs["extensions.edensparse"] = ""
+                configs["extensions.sparse"] = "!"
             for k, v in configs.items():
                 subprocess.check_call(
                     [
