@@ -211,7 +211,7 @@ impl Repo {
         })
     }
 
-    pub fn lock(&self) -> Result<repolock::RepoLockHandle, repolock::LockError> {
+    pub fn lock(&self) -> Result<repolock::LockedPath, repolock::LockError> {
         self.locker.lock_store()
     }
 

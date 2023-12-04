@@ -149,7 +149,7 @@ impl WorkingCopy {
         &self.dot_hg_path
     }
 
-    pub fn lock(&self) -> Result<repolock::RepoLockHandle, repolock::LockError> {
+    pub fn lock(&self) -> Result<repolock::LockedPath, repolock::LockError> {
         self.locker.lock_working_copy(self.dot_hg_path.clone())
     }
 

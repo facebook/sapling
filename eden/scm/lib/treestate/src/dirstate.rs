@@ -16,7 +16,7 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
 use repolock::LockError;
-use repolock::RepoLockHandle;
+use repolock::LockedPath;
 use repolock::RepoLocker;
 use types::hgid::NULL_ID;
 use types::HgId;
@@ -128,7 +128,7 @@ pub fn wait_for_wc_lock(
     wc_dot_hg: PathBuf,
     locker: &RepoLocker,
     timeout_secs: Option<u32>,
-) -> anyhow::Result<RepoLockHandle> {
+) -> anyhow::Result<LockedPath> {
     let mut timeout = match timeout_secs {
         None => return Ok(locker.lock_working_copy(wc_dot_hg)?),
         Some(timeout) => timeout,

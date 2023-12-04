@@ -237,7 +237,7 @@ py_class!(pub class repo |py| {
 });
 
 py_class!(pub class repolock |py| {
-    data lock: Cell<Option<rsrepolock::RepoLockHandle>>;
+    data lock: Cell<Option<rsrepolock::LockedPath>>;
 
     def unlock(&self) -> PyResult<PyNone> {
         if let Some(f) = self.lock(py).replace(None) {
