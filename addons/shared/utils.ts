@@ -181,3 +181,15 @@ export function group<ArrayType, BucketType extends string | number>(
   }
   return result;
 }
+
+/**
+ * Split string `s` with the `sep` once.
+ * If `s` does not contain `sep`, return undefined.
+ */
+export function splitOnce(s: string, sep: string): [string, string] | undefined {
+  const index = s.indexOf(sep);
+  if (index < 0) {
+    return undefined;
+  }
+  return [s.substring(0, index), s.substring(index + sep.length)];
+}
