@@ -7,6 +7,7 @@
 
 import type {CommitInfo, ExactRevset, SmartlogCommits, SucceedableRevset} from './types';
 
+import {Dag} from './dag/dag';
 import {exactRevset, succeedableRevset} from './types';
 import {atom, DefaultValue} from 'recoil';
 import {unwrap} from 'shared/utils';
@@ -122,15 +123,19 @@ export const latestSuccessorsMap = atom<Map<string, string>>({
  * Note: if an ExactRevset is passed, don't look up the successor.
  */
 export function latestSuccessor(
-  ctx: {successorMap: Map<string, string>},
+  ctx: {successorMap: Map<string, string>} | Dag,
   oldRevset: SucceedableRevset | ExactRevset,
 ): string {
   let hash = oldRevset.revset;
   if (oldRevset.type === 'exact-revset') {
     return hash;
   }
-  while (ctx.successorMap.has(hash)) {
-    hash = unwrap(ctx.successorMap.get(hash));
+  if (ctx instanceof Dag) {
+    hash = ctx.followSuccessors(hash).toHashes().first() ?? hash;
+  } else {
+    while (ctx.successorMap.has(hash)) {
+      hash = unwrap(ctx.successorMap.get(hash));
+    }
   }
   return hash;
 }
