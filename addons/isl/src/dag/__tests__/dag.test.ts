@@ -166,6 +166,10 @@ describe('Dag', () => {
       expect(dag.isAncestor('g', 'a')).toBe(false);
     });
 
+    it('supports present()', () => {
+      expect(dag.present(['a', 'x']).toSortedArray()).toEqual(['a']);
+    });
+
     it('does not infinite loop on cyclic graphs', () => {
       const dag = new BaseDag().add([
         {hash: 'a', parents: ['b']},

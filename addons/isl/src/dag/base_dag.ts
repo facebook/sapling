@@ -174,6 +174,14 @@ export class BaseDag<C extends HashWithParents> extends SelfUpdate<BaseDagRecord
     return this.ancestors(descendant).contains(ancestor);
   }
 
+  /** Return hashes present in this dag. */
+  present(set: SetLike): HashSet {
+    const hashes = HashSet.fromHashes(set)
+      .toHashes()
+      .filter(h => this.has(h));
+    return HashSet.fromHashes(hashes);
+  }
+
   /**
    * Return commits that match the given condition.
    * This can be useful for things like "obsolete()".

@@ -138,6 +138,11 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
 
   // High-level query
 
+  /** Return hashes present in this dag. */
+  present(set: SetLike): HashSet {
+    return this.commitDag.present(set);
+  }
+
   parents(set: SetLike): HashSet {
     return this.commitDag.parents(set);
   }
