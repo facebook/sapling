@@ -15,7 +15,7 @@ import {T, t} from './i18n';
 import {BulkRebaseOperation} from './operations/BulkRebaseOperation';
 import {RebaseAllDraftCommitsOperation} from './operations/RebaseAllDraftCommitsOperation';
 import {RebaseOperation} from './operations/RebaseOperation';
-import {dagWithPreviews, treeWithPreviews} from './previews';
+import {dagWithPreviews} from './previews';
 import {RelativeDate} from './relativeDate';
 import {commitsShownRange, latestCommits, useRunOperation} from './serverAPIState';
 import {succeedableRevset} from './types';
@@ -60,7 +60,7 @@ export const suggestedRebaseDestinations = selector<Array<[CommitInfo, string]>>
   key: 'suggestedRebaseDestinations',
   get: ({get}) => {
     const commits = get(latestCommits);
-    const publicBase = findCurrentPublicBase(get(treeWithPreviews));
+    const publicBase = findCurrentPublicBase(get(dagWithPreviews));
     const destinations = commits
       .filter(
         commit =>

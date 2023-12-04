@@ -21,7 +21,7 @@ import {PullRevOperation} from './operations/PullRevOperation';
 import {RebaseKeepOperation} from './operations/RebaseKeepOperation';
 import {RebaseOperation} from './operations/RebaseOperation';
 import {persistAtomToConfigEffect} from './persistAtomToConfigEffect';
-import {treeWithPreviews} from './previews';
+import {dagWithPreviews} from './previews';
 import {forceFetchCommit, useRunOperation} from './serverAPIState';
 import {succeedableRevset, exactRevset} from './types';
 import {VSCodeButton, VSCodeDivider, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
@@ -124,8 +124,7 @@ function DownloadCommitsTooltip({dismiss}: {dismiss: () => unknown}) {
         rebaseType === 'rebase_ontop'
           ? '.'
           : unwrap(
-              findCurrentPublicBase(globalRecoil().getLoadable(treeWithPreviews).valueMaybe())
-                ?.hash,
+              findCurrentPublicBase(globalRecoil().getLoadable(dagWithPreviews).valueMaybe())?.hash,
             );
       // Use exact revsets for sources, so that you can type a specific hash to download and not be surprised by succession.
       // Only use succession for destination, which may be in flux at the moment you start the download.
