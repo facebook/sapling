@@ -6,7 +6,6 @@
  */
 
 import type {MessageBusStatus} from './MessageBus';
-import type {CommitTree} from './getCommitTree';
 import type {Operation} from './operations/Operation';
 import type {
   ApplicationInfo,
@@ -28,7 +27,6 @@ import serverAPI from './ClientToServerAPI';
 import messageBus from './MessageBus';
 import {latestSuccessorsMap, successionTracker} from './SuccessionTracker';
 import {Dag} from './dag/dag';
-import {makeTreeMap, getCommitTree} from './getCommitTree';
 import {persistAtomToConfigEffect} from './persistAtomToConfigEffect';
 import {clearOnCwdChange} from './recoilUtils';
 import {initialParams} from './urlParams';
@@ -386,20 +384,6 @@ export const commitsShownRange = atom<number | undefined>({
 });
 
 /**
- * Latest fetched commit tree from the server, without any previews.
- * Prefer using `treeWithPreviews.trees`, since it includes optimistic state
- * and previews.
- */
-export const latestCommitTree = selector<Array<CommitTree>>({
-  key: 'latestCommitTree',
-  get: ({get}) => {
-    const commits = get(latestCommits);
-    const tree = getCommitTree(commits);
-    return tree;
-  },
-});
-
-/**
  * Latest head commit from original data from the server, without any previews.
  * Prefer using `treeWithPreviews.headCommit`, since it includes optimistic state
  * and previews.
@@ -409,21 +393,6 @@ export const latestHeadCommit = selector<CommitInfo | undefined>({
   get: ({get}) => {
     const commits = get(latestCommits);
     return commits.find(commit => commit.isHead);
-  },
-});
-
-/**
- * Mapping of commit hash -> subtree at that commit
- * Latest mapping of commit hash -> subtree at that commit from original data
- * from the server, without any previews.
- * Prefer using `treeWithPreviews.treeMap`, since it includes
- * optimistic state and previews.
- */
-export const latestCommitTreeMap = selector<Map<Hash, CommitTree>>({
-  key: 'latestCommitTreeMap',
-  get: ({get}) => {
-    const trees = get(latestCommitTree);
-    return makeTreeMap(trees);
   },
 });
 

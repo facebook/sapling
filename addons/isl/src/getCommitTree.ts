@@ -6,7 +6,7 @@
  */
 
 import type {CommitPreview, Dag, WithPreviewType} from './previews';
-import type {CommitInfo, Hash} from './types';
+import type {CommitInfo} from './types';
 
 export type CommitTree = {
   info: CommitInfo;
@@ -129,12 +129,4 @@ export function findCurrentPublicBase(dag?: Dag): CommitInfo | undefined {
     commit = dag?.get(commit.parents.at(0));
   }
   return undefined;
-}
-
-export function makeTreeMap(trees: Array<CommitTree>): Map<Hash, CommitTree> {
-  const map = new Map();
-  for (const tree of walkTreePostorder(trees)) {
-    map.set(tree.info.hash, tree);
-  }
-  return map;
 }
