@@ -568,17 +568,8 @@ export function useMarkOperationsCompleted(): void {
       }
 
       if (operation != null && !operation.hasCompletedOptimisticState) {
-        if (operation.operation.makeOptimisticApplier != null) {
-          const optimisticApplier = operation.operation.makeOptimisticApplier(context);
-          if (operation.exitCode != null) {
-            if (optimisticApplier == null || operation.exitCode !== 0) {
-              commits = true;
-            } else if (fetchedCommits.fetchStartTimestamp > unwrap(operation.endTime).valueOf()) {
-              getTracker()?.track('OptimisticCommitsStateForceResolved', {extras: {}});
-              commits = true;
-            }
-          }
-        } else if (operation.exitCode != null) {
+        const endTime = operation.endTime?.valueOf();
+        if (endTime && fetchedCommits.fetchStartTimestamp >= endTime) {
           commits = true;
         }
       }
