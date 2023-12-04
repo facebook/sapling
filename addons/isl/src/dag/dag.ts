@@ -59,10 +59,44 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
   // Basic edit
 
   add(commits: Iterable<Info>): Dag {
-    return this.withCommitDag(d => d.add(commits));
+    // When adding commits, also update the mutationDag.
+    const commitArray = [...commits];
+    const oldNewPairs = new Array<[Hash, Hash]>();
+    for (const info of commitArray) {
+      info.closestPredecessors?.forEach(p => oldNewPairs.push([p, info.hash]));
+      if (info.successorInfo != null) {
+        oldNewPairs.push([info.hash, info.successorInfo.hash]);
+      }
+    }
+    return this.withCommitDag(d => d.add(commitArray)).addMutations(oldNewPairs);
+  }
+
+  addMutations(oldNewPairs: Iterable<[Hash, Hash]>): Dag {
+    const mDag = this.mutationDag;
+    const infoMap: Map<Hash, HashWithParents> = new Map();
+    const insert = (hash: Hash, parents: Hash[]) => {
+      // Insert `hash` to the infoMap on demand.
+      let info = infoMap.get(hash);
+      if (info == null) {
+        info = {hash, parents: mDag.get(hash)?.parents ?? []};
+        infoMap.set(hash, info);
+      }
+      // Append parents.
+      if (parents.length > 0) {
+        info.parents = Array.from(new Set(info.parents.concat(parents)));
+      }
+    };
+    for (const [oldHash, newHash] of oldNewPairs) {
+      insert(newHash, [oldHash]);
+      insert(oldHash, []);
+    }
+    const newMutationDag = this.mutationDag.add(infoMap.values());
+    const newRecord = this.inner.set('mutationDag', newMutationDag);
+    return new Dag(newRecord);
   }
 
   remove(set: SetLike): Dag {
+    // When removing commits, don't remove them from the mutationDag intentionally.
     return this.withCommitDag(d => d.remove(set));
   }
 
