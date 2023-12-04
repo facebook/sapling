@@ -56,11 +56,6 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
     return new Dag(newRecord);
   }
 
-  private bumpSeqNumber(): Dag {
-    const newRecord = this.inner.set('nextSeqNumber', this.inner.nextSeqNumber + 1);
-    return new Dag(newRecord);
-  }
-
   // Basic edit
 
   add(commits: Iterable<Info>): Dag {
@@ -76,9 +71,15 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
         oldNewPairs.push([info.hash, info.successorInfo.hash]);
       }
     }
-    return this.withCommitDag(d => d.add(commitArray))
-      .addMutations(oldNewPairs)
-      .bumpSeqNumber();
+    const commitDag = this.commitDag.add(commitArray);
+    const mutationDag = insertMutationDag(this.mutationDag, oldNewPairs);
+    const nextSeqNumber = seqNumber + 1;
+    const record = this.inner.merge({
+      commitDag,
+      mutationDag,
+      nextSeqNumber,
+    });
+    return new Dag(record);
   }
 
   /**
