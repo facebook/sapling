@@ -168,6 +168,21 @@ impl BonsaiChangesetMut {
     /// that's external to this changeset. For example, a changeset that deletes a file that
     /// doesn't exist in its parent is invalid. Instead, it only checks for internal consistency.
     pub fn verify(&self) -> Result<()> {
+        // Check that the author and committer do not contain newline
+        // characters.
+        if let Some(offset) = self.author.find('\n') {
+            bail!(MononokeTypeError::InvalidBonsaiChangeset(format!(
+                "commit author contains a newline at offset {}",
+                offset
+            )));
+        }
+        if let Some(offset) = self.committer.as_ref().and_then(|c| c.find('\n')) {
+            bail!(MononokeTypeError::InvalidBonsaiChangeset(format!(
+                "committer contains a newline at offset {}",
+                offset
+            )));
+        }
+
         // Check that the copy info ID refers to a parent in the parent set.
         for (path, fc) in &self.file_changes {
             if let Some((copy_from_path, copy_from_id)) = fc.copy_from() {
@@ -415,12 +430,14 @@ impl Arbitrary for BonsaiChangeset {
             // This is rare but is definitely possible. Retry in this case.
             Self::arbitrary(g)
         } else {
+            // Author and committer cannot contain newline, so remove any that
+            // are generated.
             BonsaiChangesetMut {
                 parents,
                 file_changes: file_changes.into(),
-                author: String::arbitrary(g),
+                author: String::arbitrary(g).replace('\n', ""),
                 author_date: DateTime::arbitrary(g),
-                committer: Option::<String>::arbitrary(g),
+                committer: Option::<String>::arbitrary(g).map(|s| s.replace('\n', "")),
                 committer_date: Option::<DateTime>::arbitrary(g),
                 message: String::arbitrary(g),
                 hg_extra: SortedVectorMap::arbitrary(g),
@@ -636,6 +653,43 @@ mod test {
                 .unwrap()
             )
         );
+    }
+
+    #[test]
+    fn invalid_author_committer() {
+        let invalid_author = BonsaiChangesetMut {
+            parents: vec![],
+            author: "test\nuser".into(),
+            author_date: DateTime::from_timestamp(1, 2).unwrap(),
+            committer: None,
+            committer_date: None,
+            message: "a".into(),
+            hg_extra: SortedVectorMap::new(),
+            git_extra_headers: None,
+            git_tree_hash: None,
+            file_changes: sorted_vector_map![],
+            is_snapshot: false,
+            git_annotated_tag: None,
+        };
+
+        assert!(invalid_author.freeze().is_err());
+
+        let invalid_committer = BonsaiChangesetMut {
+            parents: vec![],
+            author: "test user".into(),
+            author_date: DateTime::from_timestamp(1, 2).unwrap(),
+            committer: Some("test\nuser".into()),
+            committer_date: Some(DateTime::from_timestamp(1, 2).unwrap()),
+            message: "a".into(),
+            hg_extra: SortedVectorMap::new(),
+            git_extra_headers: None,
+            git_tree_hash: None,
+            file_changes: sorted_vector_map![],
+            is_snapshot: false,
+            git_annotated_tag: None,
+        };
+
+        assert!(invalid_committer.freeze().is_err());
     }
 
     #[test]
