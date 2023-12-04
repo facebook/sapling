@@ -27,7 +27,6 @@ import {DiffInfo} from './codeReview/DiffBadge';
 import {SyncStatus, syncStatusAtom} from './codeReview/syncStatus';
 import {islDrawerState} from './drawerState';
 import {FoldButton, useRunFoldPreview} from './fold';
-import {isDescendant} from './getCommitTree';
 import {t, T} from './i18n';
 import {IconStack} from './icons/IconStack';
 import {getAmendToOperation, isAmendToAllowedForCommit} from './operationUtils';
@@ -43,7 +42,7 @@ import {selectedCommits, useCommitSelection} from './selection';
 import {
   inlineProgressByHash,
   isFetchingUncommittedChanges,
-  latestCommitTreeMap,
+  latestDag,
   latestUncommittedChanges,
   operationBeingPreviewed,
   useRunOperation,
@@ -605,19 +604,18 @@ function DraggableCommit({
           if (lastDndId != currentDndId) {
             return;
           }
-          const loadable = snapshot.getLoadable(latestCommitTreeMap);
+          const loadable = snapshot.getLoadable(latestDag);
           if (loadable.state !== 'hasValue') {
             return;
           }
-          const treeMap = loadable.contents;
+          const dag = loadable.contents;
 
           if (currentBeingDragged != null && commit.hash !== currentBeingDragged.hash) {
             const beingDragged = currentBeingDragged;
-            const draggedTree = treeMap.get(beingDragged.hash);
-            if (draggedTree) {
+            if (dag.has(beingDragged.hash)) {
               if (
                 // can't rebase a commit onto its descendants
-                !isDescendant(commit.hash, draggedTree) &&
+                !dag.isAncestor(beingDragged.hash, commit.hash) &&
                 // can't rebase a commit onto its parent... it's already there!
                 !(beingDragged.parents as Array<string>).includes(commit.hash)
               ) {
