@@ -5,10 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ApplyPreviewsFuncType, Dag, PreviewContext, WithPreviewType} from '../previews';
+import type {Dag, WithPreviewType} from '../previews';
 import type {CommitInfo} from '../types';
 
-import {latestSuccessor} from '../SuccessionTracker';
 import {CommitPreview} from '../previews';
 import {exactRevset} from '../types';
 import {firstLine} from '../utils';
@@ -50,41 +49,22 @@ export class FoldOperation extends Operation {
     return [this.newTitle, this.newDescription];
   }
 
-  makePreviewApplier(context: PreviewContext): ApplyPreviewsFuncType | undefined {
-    const {treeMap} = context;
-
-    const [bottom, top] = ends(this.foldRange);
-    const topOfStack = treeMap.get(latestSuccessor(context, exactRevset(top.hash)));
-    const children = topOfStack?.children ?? [];
-
-    const func: ApplyPreviewsFuncType = tree => {
-      if (tree.info.hash === latestSuccessor(context, exactRevset(bottom.hash))) {
-        return {
-          info: {
-            ...bottom,
-            date: new Date(),
-            hash: getFoldRangeCommitHash(this.foldRange, /* isPreview */ true),
-            title: this.newTitle,
-            description: this.newDescription,
-          },
-          children,
-          previewType: CommitPreview.FOLD_PREVIEW,
-        };
-      } else {
-        return tree;
-      }
-    };
-    return func;
+  previewDag(dag: Dag): Dag {
+    return this.calculateDagPreview(dag, true);
   }
 
   optimisticDag(dag: Dag): Dag {
+    return this.calculateDagPreview(dag, false);
+  }
+
+  private calculateDagPreview(dag: Dag, isPreview: boolean): Dag {
     const hashes = this.foldRange.map(info => info.hash);
     const top = hashes.at(-1);
     const parents = dag.get(hashes.at(0))?.parents;
     if (top == null || parents == null) {
       return dag;
     }
-    const hash = getFoldRangeCommitHash(this.foldRange, /* isPreview */ false);
+    const hash = getFoldRangeCommitHash(this.foldRange, isPreview);
     return dag
       .replaceWith(hashes, (h, c) => {
         if (h !== top && c == null) {
@@ -96,7 +76,7 @@ export class FoldOperation extends Operation {
           hash,
           title: this.newTitle,
           description: this.newDescription,
-          previewType: CommitPreview.FOLD,
+          previewType: isPreview ? CommitPreview.FOLD_PREVIEW : CommitPreview.FOLD,
           parents,
         } as CommitInfo & WithPreviewType;
       })
