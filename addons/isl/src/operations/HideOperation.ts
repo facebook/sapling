@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ApplyPreviewsFuncType, PreviewContext} from '../previews';
+import type {ApplyPreviewsFuncType, DagWithPreview, PreviewContext} from '../previews';
 import type {ExactRevset, SucceedableRevset} from '../types';
 
 import {CommitPreview} from '../previews';
@@ -42,26 +42,19 @@ export class HideOperation extends Operation {
     return func;
   }
 
-  makeOptimisticApplier(context: PreviewContext): ApplyPreviewsFuncType | undefined {
-    const {treeMap} = context;
-    const originalSourceNode = treeMap.get(this.source.revset);
-    if (originalSourceNode == null) {
-      return undefined;
-    }
-
-    const func: ApplyPreviewsFuncType = (tree, previewType, childPreviewType) => {
-      if (tree.info.hash === this.source.revset) {
-        return {
-          info: null,
-        };
+  optimisticDag(dag: DagWithPreview): DagWithPreview {
+    const hash = this.source.revset;
+    const toHide = dag.descendants(hash);
+    // If the head is being hidden, we need to move the head to the parent.
+    const newHead = [];
+    if (toHide.toHashes().some(h => dag.get(h)?.isHead == true)) {
+      const parent = dag.get(hash)?.parents?.at(0);
+      if (parent && dag.has(parent)) {
+        newHead.push(parent);
       }
-      return {
-        info: tree.info,
-        children: tree.children,
-        previewType,
-        childPreviewType,
-      };
-    };
-    return func;
+    }
+    return dag.remove(toHide).replaceWith(newHead, (_h, c) => {
+      return c && {...c, isHead: true, previewType: CommitPreview.GOTO_DESTINATION};
+    });
   }
 }

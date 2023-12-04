@@ -6,7 +6,7 @@
  */
 
 import App from '../../App';
-import {CommitInfoTestUtils} from '../../testQueries';
+import {CommitInfoTestUtils, CommitTreeListTestUtils} from '../../testQueries';
 import {
   resetTestMessages,
   expectMessageSentToServer,
@@ -122,6 +122,8 @@ describe('hide operation', () => {
   });
 
   it('does not show uninteresting public base during optimistic hide', () => {
+    // Go to another branch so head is not being hidden.
+    CommitTreeListTestUtils.clickGoto('z');
     rightClickAndChooseFromContextMenu(screen.getByText('Commit A'), 'Hide Commit and Descendants');
 
     const runHideButton = screen.getByText('Hide');
@@ -129,6 +131,16 @@ describe('hide operation', () => {
 
     // the whole subtree is hidden, so the parent commit is not even rendered
     expect(screen.queryByTestId('commit-1')).not.toBeInTheDocument();
+  });
+
+  it('shows public base when its the goto preview destination', () => {
+    rightClickAndChooseFromContextMenu(screen.getByText('Commit A'), 'Hide Commit and Descendants');
+
+    const runHideButton = screen.getByText('Hide');
+    fireEvent.click(runHideButton);
+
+    // the whole subtree and head is hidden, so the parent commit is shown as the goto destination
+    expect(screen.queryByTestId('commit-1')).toBeInTheDocument();
   });
 
   it('does show interesting public base during optimistic hide', () => {
