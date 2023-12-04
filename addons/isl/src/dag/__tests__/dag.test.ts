@@ -183,6 +183,80 @@ describe('Dag', () => {
     });
   });
 
+  describe('resolve', () => {
+    const dag = new Dag().add([
+      {...info, hash: 'abc'},
+      {...info, hash: 'abd', bookmarks: ['foo', 'bar']},
+      {...info, hash: 'acc', remoteBookmarks: ['remote/foo', 'remote/main']},
+      {...info, hash: 'add', isHead: true},
+      {...info, hash: 'aee', remoteBookmarks: ['remote/bar'], bookmarks: ['baz']},
+      {...info, hash: 'aff'},
+    ]);
+
+    it('supports "."', () => {
+      expect(dag.resolve('.')?.hash).toBe('add');
+    });
+
+    it('supports hashes', () => {
+      for (const h of ['abc', 'abd', 'aff']) {
+        expect(dag.resolve(h)?.hash).toBe(h);
+      }
+    });
+
+    it('supports bookmarks', () => {
+      expect(dag.resolve('foo')?.hash).toBe('abd');
+      expect(dag.resolve('bar')?.hash).toBe('abd');
+      expect(dag.resolve('baz')?.hash).toBe('aee');
+    });
+
+    it('supports remotenames', () => {
+      expect(dag.resolve('remote/foo')?.hash).toBe('acc');
+      expect(dag.resolve('remote/main')?.hash).toBe('acc');
+      expect(dag.resolve('remote/bar')?.hash).toBe('aee');
+    });
+
+    it('supports hosited remotenames', () => {
+      expect(dag.resolve('main')?.hash).toBe('acc');
+    });
+
+    it('supports hash prefix', () => {
+      expect(dag.resolve('af')?.hash).toBe('aff');
+      expect(dag.resolve('ac')?.hash).toBe('acc');
+      expect(dag.resolve('ab')?.hash).toBe(undefined); // ambigious
+    });
+
+    it('considers priorities between bookmarks and hashes', () => {
+      const dag = new Dag().add([
+        {...info, hash: 'foo'},
+        {...info, hash: 'bar', bookmarks: ['foo']},
+        {...info, hash: 'baz', bookmarks: ['fo']},
+      ]);
+      // full hash > bookmark
+      expect(dag.resolve('foo')?.hash).toBe('foo');
+      // bookmark > prefix
+      expect(dag.resolve('fo')?.hash).toBe('baz');
+    });
+
+    it('moves "." with edits', () => {
+      const dag1 = dag.replaceWith(['add', 'abc'], (h, c) => {
+        return c && {...c, isHead: h === 'abc'};
+      });
+      expect(dag1.remove('abc').resolve('.')?.hash).toBe(undefined);
+    });
+
+    it('resolves hoisted name when conflicted bookmark is removed', () => {
+      // foo: abd (bookmark); acc (hoisted remote bookmark)
+      // removing 'abc' will make foo resolve to acc.
+      expect(dag.remove('abd').resolve('foo')?.hash).toBe('acc');
+    });
+
+    it('hash prefix works when ambigious hashes are removed', () => {
+      // 'ab' prefix: abc abd
+      // removing 'abc' will make 'ab' resolve to 'abd'.
+      expect(dag.remove('abc').resolve('ab')?.hash).toBe('abd');
+    });
+  });
+
   describe('mutation', () => {
     // mutation: a-->a1-->a2-->a3
     // dag: a1  a2 b.

@@ -14,9 +14,9 @@ import type {RecordOf, List} from 'immutable';
 import {CommitPreview} from '../previews';
 import {BaseDag} from './base_dag';
 import {HashSet} from './set';
-import {Record} from 'immutable';
+import {Record, Map as ImMap, Set as ImSet} from 'immutable';
 import {SelfUpdate} from 'shared/immutableExt';
-import {splitOnce, unwrap} from 'shared/utils';
+import {notEmpty, splitOnce, unwrap} from 'shared/utils';
 
 /**
  * Main commit graph type used for preview calculation and queries.
@@ -71,12 +71,19 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
         oldNewPairs.push([info.hash, info.successorInfo.hash]);
       }
     }
+
+    // Update nameMap.
+    const toDelete = commitArray.map(c => this.get(c.hash)).filter(notEmpty);
+    const nameMap = calculateNewNameMap(this.inner.nameMap, toDelete, commitArray);
+
+    // Update other fields.
     const commitDag = this.commitDag.add(commitArray);
     const mutationDag = insertMutationDag(this.mutationDag, oldNewPairs);
     const nextSeqNumber = seqNumber + 1;
     const record = this.inner.merge({
       commitDag,
       mutationDag,
+      nameMap,
       nextSeqNumber,
     });
     return new Dag(record);
@@ -98,14 +105,25 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
 
   remove(set: SetLike): Dag {
     // When removing commits, don't remove them from the mutationDag intentionally.
-    return this.withCommitDag(d => d.remove(set));
+    const hashSet = HashSet.fromHashes(set);
+    const toDelete = hashSet
+      .toArray()
+      .map(h => this.get(h))
+      .filter(notEmpty);
+    const nameMap = calculateNewNameMap(this.inner.nameMap, toDelete, []);
+    const commitDag = this.commitDag.remove(hashSet);
+    const record = this.inner.merge({
+      commitDag,
+      nameMap,
+    });
+    return new Dag(record);
   }
 
   /** A callback form of remove() and add(). */
   replaceWith(set: SetLike, replaceFunc: (h: Hash, c?: Info) => Info | undefined): Dag {
     const hashSet = HashSet.fromHashes(set);
     const hashes = hashSet.toHashes();
-    return this.remove(hashSet).add(
+    return this.remove(this.present(set)).add(
       hashes.map(h => replaceFunc(h, this.get(h))).filter(c => c != undefined) as Iterable<Info>,
     );
   }
@@ -337,63 +355,50 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
 
   /** Attempt to resolve a name by `name`. The `name` can be a hash, a bookmark name, etc. */
   resolve(name: string): Readonly<Info> | undefined {
+    // See `hg help revision` and context.py (changectx.__init__),
+    // namespaces.py for priorities. Basically (in this order):
+    // - hex full hash (40 bytes); '.' (working parent)
+    // - nameMap (see infoToNameMapEntries)
+    // - partial match (unambigious partial prefix match)
+
     // Full commit hash?
     const info = this.get(name);
     if (info) {
       return info;
     }
-    // Scan through the commits.
-    // See `hg help revision` and context.py (changectx.__init__),
-    // namespaces.py for priorities. Basically (in this order):
-    // - ".", the working parent
-    // - hex full hash (40 bytes) (handled above)
-    // - namespaces.singlenode lookup
-    //   - 10: bookmarks
-    //   - 55: remotebookmarks (ex. "remote/main")
-    //   - 60: hoistednames (ex. "main" without "remote/")
-    //   - 70: phrevset (ex. "Dxxx"), but we skip it here due to lack
-    //         of access to the code review abstraction.
-    // - partial match (unambigious partial prefix match)
-    type Best = {hash: Hash; priority: number; info: Info};
-    const best: {value?: Best} = {};
-    for (const [hash, info] of this.commitDag.infoMap) {
-      const updateBest = (priority: number) => {
-        if (
-          best.value == null ||
-          best.value.priority > priority ||
-          (best.value.info.date ?? 0) < (info.date ?? 0) ||
-          best.value.hash < hash
-        ) {
-          best.value = {hash, priority, info} as Best;
+
+    // Namemap lookup.
+    const entries = this.inner.nameMap.get(name);
+    if (entries) {
+      let best: HashPriRecord | null = null;
+      for (const entry of entries) {
+        if (best == null || best.priority > entry.priority) {
+          best = entry;
         }
-      };
-      if (name === '.' && info.isHead) {
-        updateBest(1);
-      } else if ((info.bookmarks ?? []).includes(name)) {
-        updateBest(10);
-      } else if ((info.remoteBookmarks ?? []).includes(name)) {
-        updateBest(55);
-      } else if ((info.remoteBookmarks ?? []).map(n => splitOnce(n, '/')?.[1]).includes(name)) {
-        updateBest(60);
+      }
+      if (best != null) {
+        return this.get(best.hash);
       }
     }
-    const hash = best.value?.hash;
-    if (hash != null) {
-      return this.get(hash);
-    }
+
     // Unambigious prefix match.
-    let matched: undefined | Hash = undefined;
-    for (const hash of this) {
-      if (hash.startsWith(name)) {
-        if (matched === undefined) {
-          matched = hash;
-        } else {
-          // Ambigious prefix.
-          return undefined;
+    if (shouldPrefixMatch(name)) {
+      let matched: undefined | Hash = undefined;
+      for (const hash of this) {
+        if (hash.startsWith(name)) {
+          if (matched === undefined) {
+            matched = hash;
+          } else {
+            // Ambigious prefix.
+            return undefined;
+          }
         }
       }
+      return matched !== undefined ? this.get(matched) : undefined;
     }
-    return matched !== undefined ? this.get(matched) : undefined;
+
+    // No match.
+    return undefined;
   }
 }
 
@@ -421,21 +426,105 @@ function insertMutationDag(
   return mDag.add(infoMap.values());
 }
 
+type NameMapEntry = [string, HashPriRecord];
+
+/** Extract the (name, hash, pri) infomration for insertion and deletion. */
+function infoToNameMapEntries(info: Info): Array<NameMapEntry> {
+  // Priority, highest to lowest:
+  // - full hash (handled by dag.resolve())
+  // - ".", the working parent
+  // - namespaces.singlenode lookup
+  //   - 10: bookmarks
+  //   - 55: remotebookmarks (ex. "remote/main")
+  //   - 60: hoistednames (ex. "main" without "remote/")
+  //   - 70: phrevset (ex. "Dxxx"), but we skip it here due to lack
+  //         of access to the code review abstraction.
+  // - partial hash (handled by dag.resolve())
+  const result: Array<NameMapEntry> = [];
+  const {hash, isHead, bookmarks, remoteBookmarks} = info;
+  if (isHead) {
+    result.push(['.', HashPriRecord({hash, priority: 1})]);
+  }
+  bookmarks.forEach(b => result.push([b, HashPriRecord({hash, priority: 10})]));
+  remoteBookmarks.forEach(rb => {
+    result.push([rb, HashPriRecord({hash, priority: 55})]);
+    const split = splitOnce(rb, '/')?.[1];
+    if (split) {
+      result.push([split, HashPriRecord({hash, priority: 60})]);
+    }
+  });
+  return result;
+}
+
+/** Return the new NameMap after inserting or deleting `infos`. */
+function calculateNewNameMap(
+  map: NameMap,
+  deleteInfos: Iterable<Readonly<Info>>,
+  insertInfos: Iterable<Readonly<Info>>,
+): NameMap {
+  return map.withMutations(mut => {
+    let map = mut;
+    for (const info of deleteInfos) {
+      const entries = infoToNameMapEntries(info);
+      for (const [name, hashPri] of entries) {
+        map = map.removeIn([name, hashPri]);
+        if (map.get(name)?.isEmpty()) {
+          map = map.remove(name);
+        }
+      }
+    }
+    for (const info of insertInfos) {
+      const entries = infoToNameMapEntries(info);
+      for (const [name, hashPri] of entries) {
+        const set = map.get(name);
+        if (set === undefined) {
+          map = map.set(name, ImSet<HashPriRecord>([hashPri]));
+        } else {
+          map = map.set(name, set.add(hashPri));
+        }
+      }
+    }
+    return map;
+  });
+}
+
+/** Decide whether `hash` looks like a hash prefix. */
+function shouldPrefixMatch(hash: Hash): boolean {
+  // No prefix match for full hashes.
+  if (hash.length >= 40) {
+    return false;
+  }
+  // No prefix match for non-hex hashes.
+  return /^[0-9a-f]+$/.test(hash);
+}
+
 type Info = CommitInfo & WithPreviewType;
+type NameMap = ImMap<string, ImSet<HashPriRecord>>;
 
 type CommitDagProps = {
   commitDag: BaseDag<Info>;
   mutationDag: BaseDag<HashWithParents>;
+  // derived from Info, for fast "resolve" lookup. name -> hashpri
+  nameMap: NameMap;
   nextSeqNumber: number;
 };
 
 const CommitDagRecord = Record<CommitDagProps>({
   commitDag: new BaseDag(),
   mutationDag: new BaseDag(),
+  nameMap: ImMap() as NameMap,
   nextSeqNumber: 0,
 });
 
 type CommitDagRecord = RecordOf<CommitDagProps>;
+
+type HashPriProps = {
+  hash: Hash;
+  // for 'resolve' use-case; lower number = higher priority
+  priority: number;
+};
+const HashPriRecord = Record<HashPriProps>({hash: '', priority: 0});
+type HashPriRecord = RecordOf<HashPriProps>;
 
 const EMPTY_DAG_RECORD = CommitDagRecord();
 
