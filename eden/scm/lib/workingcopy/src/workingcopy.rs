@@ -505,6 +505,13 @@ impl WorkingCopy {
     }
 
     pub fn read_merge_state(&self) -> Result<Option<MergeState>> {
+        // Conceptually it seems like we want to ensure_locked() here, but in
+        // practice light weight operations such as status+morestatus read the
+        // merge state without a lock, so we can't require a lock. The merge
+        // state is written atomically so we won't see an incomplete merge
+        // state, but if we read other state files without locking then things
+        // can be inconsistent.
+
         let mut ms_file = match fs_err::File::open(self.dot_hg_path().join("merge/state2")) {
             Ok(f) => f,
             Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
@@ -518,6 +525,8 @@ impl WorkingCopy {
     }
 
     pub fn write_merge_state(&self, ms: &MergeState) -> Result<()> {
+        self.ensure_locked()?;
+
         let dir = self.dot_hg_path().join("merge");
         util::path::create_shared_dir_all(&dir)?;
         let mut f = util::file::atomic_open(&dir.join("state2"))?;
