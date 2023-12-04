@@ -336,6 +336,7 @@ fn lock_contents() -> Result<String, LockError> {
 /// lock loops until it can acquire the specified lock, subject to
 /// ui.timeout timeout. Errors other than lock contention are
 /// propagated immediately with no retries.
+#[tracing::instrument(skip_all, fields(name))]
 fn lock(
     config: &LockConfigs,
     dir: &Path,

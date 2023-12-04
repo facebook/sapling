@@ -21,7 +21,7 @@ from typing import Optional
 
 from bindings import lock as nativelock
 
-from . import encoding, error, progress, pycompat, util
+from . import encoding, error, perftrace, progress, pycompat, util
 from .i18n import _
 
 
@@ -261,6 +261,7 @@ class lock:
     def _getlockname(self):
         return "%s:%s" % (lockinfo.getcurrentnamespace(), self.pid)
 
+    @perftrace.tracefunc("lock")
     def lock(self):
         # wrapper around locking to show spinner
         if self.showspinner and self.ui:
