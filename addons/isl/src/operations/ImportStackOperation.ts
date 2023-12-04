@@ -9,7 +9,7 @@ import type {CommitTree} from '../getCommitTree';
 import type {ApplyPreviewsFuncType, PreviewContext} from '../previews';
 import type {CommitInfo} from '../types';
 import type {Hash} from 'shared/types/common';
-import type {ImportCommit, ImportStack, Mark} from 'shared/types/stack';
+import type {ExportStack, ImportCommit, ImportStack, Mark} from 'shared/types/stack';
 
 import {t} from '../i18n';
 import {CommitPreview} from '../previews';
@@ -35,7 +35,10 @@ export class ImportStackOperation extends Operation {
   /** Goto command from the importStack. */
   private gotoMark: Mark | undefined;
 
-  constructor(private importStack: Readonly<ImportStack>) {
+  constructor(
+    private importStack: Readonly<ImportStack>,
+    protected originalStack: Readonly<ExportStack>,
+  ) {
     super('ImportStackOperation');
 
     let firstParent: Hash | null = null;

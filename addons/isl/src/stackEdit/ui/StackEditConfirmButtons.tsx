@@ -70,7 +70,7 @@ export function StackEditConfirmButtons(): React.ReactElement {
       goto: originalHash,
       rewriteDate: Date.now() / 1000,
     });
-    const op = new ImportStackOperation(importStack);
+    const op = new ImportStackOperation(importStack, stackEdit.commitStack.originalStack);
     runOperation(op);
     sendStackEditMetrics(true);
 
