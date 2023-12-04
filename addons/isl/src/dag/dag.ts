@@ -7,12 +7,12 @@
 
 import type {WithPreviewType} from '../previews';
 import type {CommitInfo, Hash} from '../types';
-import type {HashWithParents} from './base_dag';
 import type {SetLike} from './set';
 import type {RecordOf, List} from 'immutable';
 
 import {CommitPreview} from '../previews';
 import {BaseDag} from './base_dag';
+import {MutationDag} from './mutation_dag';
 import {HashSet} from './set';
 import {Record, Map as ImMap, Set as ImSet} from 'immutable';
 import {SelfUpdate} from 'shared/immutableExt';
@@ -36,7 +36,7 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
     super(record ?? EMPTY_DAG_RECORD);
   }
 
-  static fromDag(commitDag: BaseDag<Info>, mutationDag?: BaseDag<HashWithParents>): Dag {
+  static fromDag(commitDag?: BaseDag<Info>, mutationDag?: MutationDag): Dag {
     return new Dag(CommitDagRecord({commitDag, mutationDag}));
   }
 
@@ -46,7 +46,7 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
     return this.inner.commitDag;
   }
 
-  get mutationDag(): BaseDag<HashWithParents> {
+  get mutationDag(): MutationDag {
     return this.inner.mutationDag;
   }
 
@@ -78,7 +78,7 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
 
     // Update other fields.
     const commitDag = this.commitDag.add(commitArray);
-    const mutationDag = insertMutationDag(this.mutationDag, oldNewPairs);
+    const mutationDag = this.mutationDag.addMutations(oldNewPairs);
     const nextSeqNumber = seqNumber + 1;
     const record = this.inner.merge({
       commitDag,
@@ -89,16 +89,9 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
     return new Dag(record);
   }
 
-  /**
-   * Insert old->new mappings to the mutation dag.
-   *
-   * Note about `oldNewPairs`:
-   * - a same 'new' can have multiple 'old's (ex. fold)
-   * - a same 'old' can have multiple 'new's (ex. split)
-   * So the `oldNewPairs` should not be `Map`s with unique keys.
-   */
+  /** See MutationDag.addMutations. */
   addMutations(oldNewPairs: Iterable<[Hash, Hash]>): Dag {
-    const newMutationDag = insertMutationDag(this.mutationDag, oldNewPairs);
+    const newMutationDag = this.mutationDag.addMutations(oldNewPairs);
     const newRecord = this.inner.set('mutationDag', newMutationDag);
     return new Dag(newRecord);
   }
@@ -402,30 +395,6 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
   }
 }
 
-function insertMutationDag(
-  mDag: BaseDag<HashWithParents>,
-  oldNewPairs: Iterable<[Hash, Hash]>,
-): BaseDag<HashWithParents> {
-  const infoMap: Map<Hash, HashWithParents> = new Map();
-  const insert = (hash: Hash, parents: Hash[]) => {
-    // Insert `hash` to the infoMap on demand.
-    let info = infoMap.get(hash);
-    if (info == null) {
-      info = {hash, parents: mDag.get(hash)?.parents ?? []};
-      infoMap.set(hash, info);
-    }
-    // Append parents.
-    if (parents.length > 0) {
-      info.parents = Array.from(new Set(info.parents.concat(parents)));
-    }
-  };
-  for (const [oldHash, newHash] of oldNewPairs) {
-    insert(newHash, [oldHash]);
-    insert(oldHash, []);
-  }
-  return mDag.add(infoMap.values());
-}
-
 type NameMapEntry = [string, HashPriRecord];
 
 /** Extract the (name, hash, pri) infomration for insertion and deletion. */
@@ -503,7 +472,7 @@ type NameMap = ImMap<string, ImSet<HashPriRecord>>;
 
 type CommitDagProps = {
   commitDag: BaseDag<Info>;
-  mutationDag: BaseDag<HashWithParents>;
+  mutationDag: MutationDag;
   // derived from Info, for fast "resolve" lookup. name -> hashpri
   nameMap: NameMap;
   nextSeqNumber: number;
@@ -511,7 +480,7 @@ type CommitDagProps = {
 
 const CommitDagRecord = Record<CommitDagProps>({
   commitDag: new BaseDag(),
-  mutationDag: new BaseDag(),
+  mutationDag: new MutationDag(),
   nameMap: ImMap() as NameMap,
   nextSeqNumber: 0,
 });
