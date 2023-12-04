@@ -5,7 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ApplyPreviewsFuncType, PreviewContext} from '../previews';
+import type {
+  ApplyPreviewsFuncType,
+  DagPreviewContext,
+  DagWithPreview,
+  PreviewContext,
+  WithPreviewType,
+} from '../previews';
 import type {CommitInfo} from '../types';
 
 import {latestSuccessor} from '../SuccessionTracker';
@@ -77,31 +83,32 @@ export class FoldOperation extends Operation {
     return func;
   }
 
-  makeOptimisticApplier(context: PreviewContext): ApplyPreviewsFuncType | undefined {
-    const {treeMap} = context;
-
-    const [bottom, top] = ends(this.foldRange);
-    const topOfStack = treeMap.get(latestSuccessor(context, exactRevset(top.hash)));
-    const children = topOfStack?.children ?? [];
-
-    const func: ApplyPreviewsFuncType = tree => {
-      if (tree.info.hash === latestSuccessor(context, exactRevset(bottom.hash))) {
+  optimisticDag(dag: DagWithPreview, context: DagPreviewContext): DagWithPreview {
+    const hashes = this.foldRange.map(info => latestSuccessor(context, exactRevset(info.hash)));
+    const top = hashes.at(-1);
+    const parents = dag.get(hashes.at(0))?.parents;
+    if (top == null || parents == null) {
+      return dag;
+    }
+    const hash = getFoldRangeCommitHash(this.foldRange, /* isPreview */ false);
+    return dag
+      .replaceWith(hashes, (h, c) => {
+        if (h !== top && c == null) {
+          return undefined;
+        }
         return {
-          info: {
-            ...bottom,
-            date: new Date(),
-            hash: getFoldRangeCommitHash(this.foldRange, /* isPreview */ false),
-            title: this.newTitle,
-            description: this.newDescription,
-          },
-          children,
+          ...c,
+          date: new Date(),
+          hash,
+          title: this.newTitle,
+          description: this.newDescription,
           previewType: CommitPreview.FOLD,
-        };
-      } else {
-        return tree;
-      }
-    };
-    return func;
+          parents,
+        } as CommitInfo & WithPreviewType;
+      })
+      .replaceWith(dag.children(top), (_h, c) => {
+        return c && {...c, parents: c.parents.map(p => (p === top ? hash : p))};
+      });
   }
 }
 
