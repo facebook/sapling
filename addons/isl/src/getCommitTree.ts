@@ -19,7 +19,14 @@ export type CommitTreeWithPreviews = {
   previewType?: CommitPreview;
 };
 
-const byTimeDecreasing = (a: CommitInfo, b: CommitInfo) => b.date.getTime() - a.date.getTime();
+const byTimeDecreasing = (a: CommitInfo, b: CommitInfo) => {
+  const timeDelta = b.date.getTime() - a.date.getTime();
+  if (timeDelta !== 0) {
+    return timeDelta;
+  }
+  // Always break ties even if timestamp is the same.
+  return a.hash < b.hash ? 1 : -1;
+};
 
 /**
  * Given a list of commits from disk, produce a tree capturing the
