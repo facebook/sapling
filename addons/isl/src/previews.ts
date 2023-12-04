@@ -295,36 +295,12 @@ export const treeWithPreviews = selector({
     const list = get(operationList);
     const queued = get(queuedOperations);
     const currentOperation = list.currentOperation;
+    const history = list.operationHistory;
 
-    // previous commands
-    for (const op of list.operationHistory) {
-      if (op != null && !op.hasCompletedOptimisticState) {
-        if (op.operation.makeOptimisticApplier != null) {
-          appliersSources.push(op.operation.makeOptimisticApplier.bind(op.operation));
-        }
-      }
-    }
-
-    // currently running/last command
-    if (
-      currentOperation != null &&
-      !currentOperation.hasCompletedOptimisticState &&
-      // don't show optimistic state if we hit an error
-      (currentOperation.exitCode == null || currentOperation.exitCode === 0)
-    ) {
-      if (currentOperation.operation.makeOptimisticApplier != null) {
-        appliersSources.push(
-          currentOperation.operation.makeOptimisticApplier.bind(currentOperation.operation),
-        );
-      }
-    }
-
-    // queued commands
-    for (const op of queued) {
-      if (op != null) {
-        if (op.makeOptimisticApplier != null) {
-          appliersSources.push(op.makeOptimisticApplier.bind(op));
-        }
+    // operation from various sources
+    for (const op of optimisticOperations({history, queued, currentOperation})) {
+      if (op.makeOptimisticApplier != null) {
+        appliersSources.push(op.makeOptimisticApplier.bind(op));
       }
     }
 
@@ -389,6 +365,39 @@ export const treeWithPreviews = selector({
     return {trees, treeMap, headCommit};
   },
 });
+
+/** Yield operations that might need optimistic state. */
+function* optimisticOperations(props: {
+  history: OperationInfo[];
+  queued: Operation[];
+  currentOperation?: OperationInfo;
+}): Generator<Operation> {
+  const {history, queued, currentOperation} = props;
+
+  // previous commands
+  for (const op of history) {
+    if (op != null && !op.hasCompletedOptimisticState) {
+      yield op.operation;
+    }
+  }
+
+  // currently running/last command
+  if (
+    currentOperation != null &&
+    !currentOperation.hasCompletedOptimisticState &&
+    // don't show optimistic state if we hit an error
+    (currentOperation.exitCode == null || currentOperation.exitCode === 0)
+  ) {
+    yield currentOperation.operation;
+  }
+
+  // queued commands
+  for (const op of queued) {
+    if (op != null) {
+      yield op;
+    }
+  }
+}
 
 /**
  * Mark operations as completed when their optimistic applier is no longer needed.
