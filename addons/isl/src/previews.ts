@@ -259,8 +259,8 @@ export const optimisticMergeConflicts = selector<MergeConflicts | undefined>({
 });
 
 export type TreeWithPreviews = {
-  trees: Array<CommitTree>;
-  treeMap: Map<Hash, CommitTree>;
+  trees: Array<CommitTreeWithPreviews>;
+  treeMap: Map<Hash, CommitTreeWithPreviews>;
   headCommit?: CommitInfo;
 };
 

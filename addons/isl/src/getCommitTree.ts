@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {CommitPreview, TreeWithPreviews} from './previews';
+import type {CommitPreview, TreeWithPreviews, WithPreviewType} from './previews';
 import type {CommitInfo, Hash} from './types';
 
 export type CommitTree = {
@@ -40,7 +40,9 @@ const byTimeDecreasing = (a: CommitInfo, b: CommitInfo) => {
  *     - ...unless it has a bookmark
  *  - If a commit has multiple children, they are sorted by date
  */
-export function getCommitTree(commits: Array<CommitInfo>): Array<CommitTree> {
+export function getCommitTree(
+  commits: Array<CommitInfo & WithPreviewType>,
+): Array<CommitTreeWithPreviews> {
   const childNodesByParent = new Map<string, Set<CommitInfo>>();
   commits.forEach(commit => {
     const [parent] = commit.parents;
@@ -55,8 +57,8 @@ export function getCommitTree(commits: Array<CommitInfo>): Array<CommitTree> {
     set.add(commit);
   });
 
-  const makeTree = (revision: CommitInfo): CommitTree => {
-    const {hash} = revision;
+  const makeTree = (revision: CommitInfo & WithPreviewType): CommitTreeWithPreviews => {
+    const {hash, previewType} = revision;
     const childrenSet = childNodesByParent.get(hash) ?? [];
 
     const childrenInfos = [...childrenSet].sort(byTimeDecreasing);
@@ -70,6 +72,7 @@ export function getCommitTree(commits: Array<CommitInfo>): Array<CommitTree> {
     return {
       info: revision,
       children,
+      previewType,
     };
   };
 
@@ -81,7 +84,9 @@ export function getCommitTree(commits: Array<CommitInfo>): Array<CommitTree> {
   return initialCommits.sort(byTimeDecreasing).map(makeTree);
 }
 
-export function* walkTreePostorder(commitTree: Array<CommitTree>): IterableIterator<CommitTree> {
+export function* walkTreePostorder(
+  commitTree: Array<CommitTreeWithPreviews>,
+): IterableIterator<CommitTreeWithPreviews> {
   for (const node of commitTree) {
     if (node.children.length > 0) {
       yield* walkTreePostorder(node.children);
