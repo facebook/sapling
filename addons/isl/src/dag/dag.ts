@@ -197,7 +197,7 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
   // Sort
 
   sortAsc(set: SetLike, props?: SortProps<Info>): Array<Hash> {
-    return this.commitDag.sortAsc(set, props);
+    return this.commitDag.sortAsc(set, {compare: sortAscCompare, ...props});
   }
 
   sortDesc(set: SetLike, props?: SortProps<Info>): Array<Hash> {
@@ -509,3 +509,25 @@ const EMPTY_DAG_RECORD = CommitDagRecord();
 
 /** 'Hash' prefix for rebase successor in preview. */
 export const REBASE_SUCC_PREFIX = 'OPTIMISTIC_REBASE_SUCC:';
+
+/** Default 'compare' function for sortAsc. */
+const sortAscCompare = (a: Info, b: Info) => {
+  // Consider phase. Public first.
+  if (a.phase !== b.phase) {
+    return a.phase === 'public' ? -1 : 1;
+  }
+  // Consider seqNumber (insertion order during preview calculation).
+  if (a.seqNumber != null && b.seqNumber != null) {
+    const seqDelta = a.seqNumber - b.seqNumber;
+    if (seqDelta !== 0) {
+      return seqDelta;
+    }
+  }
+  // Sort by date.
+  const timeDelta = b.date.getTime() - a.date.getTime();
+  if (timeDelta !== 0) {
+    return timeDelta;
+  }
+  // Always break ties even if timestamp is the same.
+  return a.hash < b.hash ? 1 : -1;
+};
