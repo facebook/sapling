@@ -5,15 +5,21 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {CommitTree} from '../getCommitTree';
 import type {PartialSelection} from '../partialSelection';
 import type {
-  ApplyPreviewsFuncType,
   ApplyUncommittedChangesPreviewsFuncType,
-  PreviewContext,
+  DagPreviewContext,
+  DagWithPreview,
   UncommittedChangesPreviewContext,
 } from '../previews';
-import type {ChangedFile, CommandArg, Hash, RepoRelativePath, UncommittedChanges} from '../types';
+import type {
+  ChangedFile,
+  CommandArg,
+  CommitInfo,
+  Hash,
+  RepoRelativePath,
+  UncommittedChanges,
+} from '../types';
 import type {ImportStack} from 'shared/types/stack';
 
 import {globalRecoil} from '../AccessGlobalRecoil';
@@ -22,6 +28,8 @@ import {uncommittedChangesWithPreviews} from '../previews';
 import {Operation} from './Operation';
 
 export class CommitOperation extends Operation {
+  private beforeCommitDate: Date;
+
   /**
    * @param message the commit message. The first line is used as the title.
    * @param originalHeadHash the hash of the current head commit, needed to track when optimistic state is resolved.
@@ -34,9 +42,12 @@ export class CommitOperation extends Operation {
   ) {
     super('CommitOperation');
 
+    // New commit should have a greater date.
+    this.beforeCommitDate = new Date();
+
     // When rendering optimistic state, we need to know the set of files that will be part of this commit.
     // This is not necessarily the same as filePathsToCommit, since it may be undefined to represent "all files".
-    // This is done once at Operation creation time, not on each call to makeOptimisticApplier, since we
+    // This is done once at Operation creation time, not on each call to optimisticDag, since we
     // only care about the list of changed files when the CommitOperation was enqueued.
     this.optimisticChangedFiles = (
       globalRecoil().getLoadable(uncommittedChangesWithPreviews).valueMaybe() ?? []
@@ -67,48 +78,6 @@ export class CommitOperation extends Operation {
     return args;
   }
 
-  makeOptimisticApplier(context: PreviewContext): ApplyPreviewsFuncType | undefined {
-    const OPTIMISTIC_COMMIT_HASH = 'OPTIMISTIC_COMMIT_HASH';
-    const head = context.headCommit;
-    if (head?.hash !== this.originalHeadHash) {
-      // commit succeeded when we no longer see the original head hash
-      return undefined;
-    }
-
-    const [title] = this.message.split(/\n+/, 1);
-    const description = this.message.slice(title.length);
-
-    const optimisticCommit: CommitTree = {
-      children: [],
-      info: {
-        author: head?.author ?? '',
-        description: description ?? '',
-        title,
-        bookmarks: [],
-        remoteBookmarks: [],
-        isHead: true,
-        parents: [head?.hash ?? ''],
-        hash: OPTIMISTIC_COMMIT_HASH,
-        phase: 'draft',
-        filesSample: this.optimisticChangedFiles,
-        totalFileCount: this.optimisticChangedFiles.length,
-        date: new Date(),
-      },
-    };
-    const func: ApplyPreviewsFuncType = (tree, _previewType) => {
-      if (tree.info.hash === this.originalHeadHash) {
-        // insert fake commit as a child of the old head
-        return {
-          info: {...tree.info, isHead: false}, // overwrite previous head as no longer being head
-          children: [...tree.children, optimisticCommit],
-        };
-      } else {
-        return {info: tree.info, children: tree.children};
-      }
-    };
-    return func;
-  }
-
   makeOptimisticUncommittedChangesApplier?(
     context: UncommittedChangesPreviewContext,
   ): ApplyUncommittedChangesPreviewsFuncType | undefined {
@@ -130,6 +99,53 @@ export class CommitOperation extends Operation {
       }
     };
     return func;
+  }
+
+  optimisticDag(dag: DagWithPreview, _context: DagPreviewContext): DagWithPreview {
+    const base = this.originalHeadHash;
+    const baseInfo = dag.get(base);
+    if (!baseInfo) {
+      return dag;
+    }
+
+    const [title] = this.message.split(/\n+/, 1);
+    const children = dag.children(base);
+    const hasWantedChild = children.toHashes().some(h => {
+      const info = dag.get(h);
+      return info?.title === title && info?.date > this.beforeCommitDate;
+    });
+    if (hasWantedChild) {
+      // A new commit was made on `base` with the the expected title.
+      // Consider the commit operation as completed.
+      return dag;
+    }
+
+    // NOTE: We might want to check the "active bookmark" state
+    // and update bookmarks accordingly.
+    const hash = `OPTIMISTIC_COMMIT_${base}`;
+    const description = this.message.slice(title.length);
+    const info: CommitInfo = {
+      author: baseInfo?.author ?? '',
+      description,
+      title,
+      bookmarks: [],
+      remoteBookmarks: [],
+      isHead: true,
+      parents: [base],
+      hash,
+      phase: 'draft',
+      filesSample: this.optimisticChangedFiles,
+      totalFileCount: this.optimisticChangedFiles.length,
+      date: new Date(),
+    };
+
+    return dag.replaceWith([base, hash], (h, _c) => {
+      if (h === base) {
+        return {...baseInfo, isHead: false};
+      } else {
+        return info;
+      }
+    });
   }
 }
 
