@@ -221,6 +221,20 @@ export class Dag<C extends HashWithParents> extends SelfUpdate<DagRecord<C>> {
   merge(set?: SetLike): HashSet {
     return this.filter(c => c.parents.length > 1, set);
   }
+
+  // Edit APIs that are less generic, require `C` to be `CommitInfo`.
+
+  /** Bump the timestamp of descendants(set) to "now". */
+  touch(set: SetLike, includeDescendants = true): Dag<C> {
+    const affected = includeDescendants ? this.descendants(set) : set;
+    return this.replaceWith(affected, (_h, c) => {
+      if (c && (c as Partial<CommitInfo>).date) {
+        return {...c, date: new Date()};
+      } else {
+        return c;
+      }
+    });
+  }
 }
 
 function flatMap(set: SetLike, f: (h: Hash) => List<Hash> | Readonly<Array<Hash>>): HashSet {
