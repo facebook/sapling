@@ -179,6 +179,46 @@ describe('Dag', () => {
     });
   });
 
+  describe('mutation', () => {
+    // mutation: a-->a1-->a2-->a3
+    // dag: a1  a2 b.
+    const dag = new Dag()
+      .add([
+        {...info, hash: 'a', successorInfo: {hash: 'a1', type: ''}},
+        {...info, hash: 'a1'},
+        {...info, hash: 'a2', closestPredecessors: ['a1']},
+        {...info, hash: 'a3', closestPredecessors: ['a2']},
+        {...info, hash: 'b'},
+      ])
+      .remove(['a', 'a3']);
+
+    it('followSuccessors()', () => {
+      expect(dag.followSuccessors(['a', 'b']).toSortedArray()).toEqual(['a2', 'b']);
+      expect(dag.followSuccessors(['a3']).toSortedArray()).toEqual(['a3']);
+      expect(dag.followSuccessors(['a1', 'a2']).toSortedArray()).toEqual(['a2']);
+    });
+
+    it('successors()', () => {
+      expect(dag.successors(['a', 'b']).toSortedArray()).toEqual(['a', 'a1', 'a2', 'b']);
+      expect(dag.successors(['a1', 'a2']).toSortedArray()).toEqual(['a1', 'a2']);
+    });
+
+    it('picks stack top when following a split', () => {
+      // mutation: a->b a->c a->d
+      // dag: a  b--d--c.
+      const dag = new Dag()
+        .add([
+          {...info, hash: 'a'},
+          {...info, hash: 'b', closestPredecessors: ['a']},
+          {...info, hash: 'c', closestPredecessors: ['a'], parents: ['d']},
+          {...info, hash: 'd', closestPredecessors: ['a'], parents: ['b']},
+        ])
+        .remove(['a']);
+      // not ['d'] or ['b', 'c', 'd']
+      expect(dag.followSuccessors('a').toSortedArray()).toEqual(['c']);
+    });
+  });
+
   describe('rebase', () => {
     const succ = (h: Hash): Hash => `${REBASE_SUCC_PREFIX}${h}`;
 

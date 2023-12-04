@@ -12,7 +12,7 @@ import type {SetLike} from './set';
 import type {RecordOf, List} from 'immutable';
 
 import {CommitPreview} from '../previews';
-import {unionFlatMap, BaseDag} from './base_dag';
+import {BaseDag} from './base_dag';
 import {HashSet} from './set';
 import {Record} from 'immutable';
 import {SelfUpdate} from 'shared/immutableExt';
@@ -280,14 +280,43 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
 
   // Query APIs that are less generic, require `C` to be `CommitInfo`.
 
-  /// All successors recursively.
+  /** All visible successors recursively, including `set`. */
   successors(set: SetLike): HashSet {
-    const getSuccessors = (h: Hash) => {
-      const info: Info | undefined = this.get(h);
-      const succ = info?.successorInfo?.hash;
-      return succ == null ? [] : [succ];
-    };
-    return unionFlatMap(set, getSuccessors);
+    return this.mutationDag.range(set, this);
+  }
+
+  /**
+   * Follow successors for the given set.
+   *
+   * - If a hash does not have successors in this `dag`, then this hash
+   *   will be included in the result.
+   * - If a hash has multiple successors, only the "head" successor that
+   *   is also in this `dag` will be returned, the hash itself will be
+   *   excluded from the result.
+   * - If `set` contains a hash that gets split into multiple successors
+   *   that heads(succesors) on the mutation graph still contains multiple
+   *   commits, then heads(ancestors(successors)) on the main graph will
+   *   be attempted to pick the "stack top".
+   *
+   * For example, consider the successor relations:
+   *
+   *    A-->A1-->A2-->A3
+   *
+   * and if the current graph only has 'A1', 'A2' and 'B'.
+   * followSuccessors(['A', 'B']) will return ['A2', 'B'].
+   * successors(['A', 'B']) will return ['A', 'A1', 'A2', 'B'].
+   */
+  followSuccessors(set: SetLike): HashSet {
+    const hashSet = HashSet.fromHashes(set);
+    const mDag = this.mutationDag;
+    let successors = mDag.heads(mDag.range(hashSet, this));
+    // When following a split to multiple successors, consider using
+    // the main dag to pick the stack top.
+    if (hashSet.size === 1 && successors.size > 1) {
+      successors = this.heads(this.ancestors(successors));
+    }
+    const obsoleted = mDag.ancestors(mDag.parents(successors));
+    return hashSet.subtract(obsoleted).union(successors);
   }
 
   /** Attempt to resolve a name by `name`. The `name` can be a hash, a bookmark name, etc. */
