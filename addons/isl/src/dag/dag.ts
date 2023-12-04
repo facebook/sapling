@@ -52,9 +52,10 @@ export class Dag<C extends HashWithParents> extends SelfUpdate<DagRecord<C>> {
   }
 
   /** Remove commits by hash. Descendants are not removed automatically. */
-  remove(hashes: Iterable<Hash>): Dag<C> {
+  remove(set: SetLike): Dag<C> {
+    const hashSet = HashSet.fromHashes(set);
     let {childMap, infoMap} = this;
-    for (const hash of hashes) {
+    for (const hash of hashSet) {
       const commit = this.get(hash);
       if (commit == undefined) {
         continue;
@@ -74,12 +75,13 @@ export class Dag<C extends HashWithParents> extends SelfUpdate<DagRecord<C>> {
 
   /** A callback form of remove() and add(). */
   replaceWith(
-    hashes: Iterable<Hash>,
+    set: SetLike,
     replaceFunc: (hash: Hash, commit: C | undefined) => C | undefined,
   ): Dag<C> {
-    const hashArray = [...hashes];
-    return this.remove(hashArray).add(
-      hashArray.map(h => replaceFunc(h, this.get(h))).filter(c => c != undefined) as C[],
+    const hashSet = HashSet.fromHashes(set);
+    const hashes = hashSet.toHashes();
+    return this.remove(hashSet).add(
+      hashes.map(h => replaceFunc(h, this.get(h))).filter(c => c != undefined) as Iterable<C>,
     );
   }
 
