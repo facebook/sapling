@@ -45,6 +45,7 @@ export class HideOperation extends Operation {
   optimisticDag(dag: Dag): Dag {
     const hash = this.source.revset;
     const toHide = dag.descendants(hash);
+    const toCleanup = dag.parents(hash);
     // If the head is being hidden, we need to move the head to the parent.
     const newHead = [];
     if (toHide.toHashes().some(h => dag.get(h)?.isHead == true)) {
@@ -58,6 +59,6 @@ export class HideOperation extends Operation {
       .replaceWith(newHead, (_h, c) => {
         return c && {...c, isHead: true, previewType: CommitPreview.GOTO_DESTINATION};
       })
-      .cleanup();
+      .cleanup(toCleanup);
   }
 }

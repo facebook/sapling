@@ -205,11 +205,19 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
     });
   }
 
-  /// Remove obsoleted commits that no longer have non-obsoleted descendants.
-  cleanup(): Dag {
+  /**
+   * Remove obsoleted commits that no longer have non-obsoleted descendants.
+   * If `startHeads` is not set, scan all obsoleted draft heads. Otherwise,
+   * limit the scan to the given heads.
+   */
+  cleanup(startHeads?: SetLike): Dag {
     // ancestors(".") are not obsoleted.
     const obsolete = this.obsolete().subtract(this.ancestors(this.resolve('.')?.hash));
-    const heads = this.heads(this.draft()).intersect(obsolete);
+    // Don't trust `startHeads` as obsoleted draft heads, so we calcualte it anyway.
+    let heads = this.heads(this.draft()).intersect(obsolete);
+    if (startHeads !== undefined) {
+      heads = heads.intersect(HashSet.fromHashes(startHeads));
+    }
     const toRemove = this.ancestors(heads, {within: obsolete});
     return this.remove(toRemove);
   }
@@ -249,6 +257,7 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
       }
       return parents.size === 0 ? [dest] : parents.toHashes().map(maybeSuccHash).toArray();
     };
+    const toCleanup = this.parents(srcRoots);
     return this.replaceWith(src.union(duplicated.toHashes().map(maybeSuccHash)), (h, c) => {
       const isSucc = h.startsWith(REBASE_SUCC_PREFIX);
       const pureHash = isSucc ? h.substring(REBASE_SUCC_PREFIX.length) : h;
@@ -275,7 +284,7 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
         }
       }
       return {...info, ...newInfo};
-    }).cleanup();
+    }).cleanup(toCleanup);
   }
 
   // Query APIs that are less generic, require `C` to be `CommitInfo`.
