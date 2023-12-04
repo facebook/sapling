@@ -51,4 +51,101 @@ describe('Dag', () => {
       expect(dag.childHashes('b').toArray()).toEqual(['c', 'd']);
     });
   });
+
+  describe('high-level queries', () => {
+    /**
+     * A--B--C--F
+     *     \   /
+     *      D-E--G
+     */
+    const dag = new Dag().add([
+      {hash: 'a', parents: []},
+      {hash: 'b', parents: ['a']},
+      {hash: 'c', parents: ['b']},
+      {hash: 'd', parents: ['b']},
+      {hash: 'e', parents: ['d']},
+      {hash: 'f', parents: ['c', 'e']},
+      {hash: 'g', parents: ['e']},
+    ]);
+
+    it('parents()', () => {
+      expect(dag.parents('f').toSortedArray()).toEqual(['c', 'e']);
+      expect(dag.parents(['b', 'c', 'f']).toSortedArray()).toEqual(['a', 'b', 'c', 'e']);
+    });
+
+    it('children()', () => {
+      expect(dag.children('b').toSortedArray()).toEqual(['c', 'd']);
+      expect(dag.children(['a', 'b', 'd']).toSortedArray()).toEqual(['b', 'c', 'd', 'e']);
+    });
+
+    it('ancestors()', () => {
+      expect(dag.ancestors('c').toSortedArray()).toEqual(['a', 'b', 'c']);
+      expect(dag.ancestors('f').toSortedArray()).toEqual(['a', 'b', 'c', 'd', 'e', 'f']);
+      expect(dag.ancestors('g').toSortedArray()).toEqual(['a', 'b', 'd', 'e', 'g']);
+      expect(dag.ancestors('f', {within: ['a', 'c', 'd', 'e']}).toSortedArray()).toEqual([
+        'c',
+        'd',
+        'e',
+        'f',
+      ]);
+    });
+
+    it('descendants()', () => {
+      expect(dag.descendants('a').toSortedArray()).toEqual(['a', 'b', 'c', 'd', 'e', 'f', 'g']);
+      expect(dag.descendants('c').toSortedArray()).toEqual(['c', 'f']);
+      expect(dag.descendants('d').toSortedArray()).toEqual(['d', 'e', 'f', 'g']);
+      expect(dag.descendants('b', {within: ['c', 'd', 'g']}).toSortedArray()).toEqual([
+        'b',
+        'c',
+        'd',
+      ]);
+    });
+
+    it('heads()', () => {
+      expect(dag.heads(['a', 'b', 'c']).toSortedArray()).toEqual(['c']);
+      expect(dag.heads(['d', 'e', 'g']).toSortedArray()).toEqual(['g']);
+      expect(dag.heads(['e', 'f', 'g']).toSortedArray()).toEqual(['f', 'g']);
+      expect(dag.heads(['c', 'e', 'f']).toSortedArray()).toEqual(['f']);
+    });
+
+    it('roots()', () => {
+      expect(dag.roots(['a', 'b', 'c']).toSortedArray()).toEqual(['a']);
+      expect(dag.roots(['d', 'e', 'g']).toSortedArray()).toEqual(['d']);
+      expect(dag.roots(['e', 'f', 'g']).toSortedArray()).toEqual(['e']);
+      expect(dag.roots(['c', 'e', 'f']).toSortedArray()).toEqual(['c', 'e']);
+    });
+
+    it('range()', () => {
+      expect(dag.range('a', 'c').toSortedArray()).toEqual(['a', 'b', 'c']);
+      expect(dag.range('a', 'f').toSortedArray()).toEqual(['a', 'b', 'c', 'd', 'e', 'f']);
+      expect(dag.range('b', 'g').toSortedArray()).toEqual(['b', 'd', 'e', 'g']);
+      expect(dag.range(['a', 'b'], ['a', 'b']).toSortedArray()).toEqual(['a', 'b']);
+    });
+
+    it('gca()', () => {
+      expect(dag.gca('f', 'g').toSortedArray()).toEqual(['e']);
+      expect(dag.gca('f', 'e').toSortedArray()).toEqual(['e']);
+      expect(dag.gca('c', 'e').toSortedArray()).toEqual(['b']);
+    });
+
+    it('isAncestor()', () => {
+      expect(dag.isAncestor('a', 'a')).toBe(true);
+      expect(dag.isAncestor('b', 'g')).toBe(true);
+      expect(dag.isAncestor('d', 'f')).toBe(true);
+      expect(dag.isAncestor('c', 'g')).toBe(false);
+      expect(dag.isAncestor('g', 'a')).toBe(false);
+    });
+
+    it('does not infinite loop on cyclic graphs', () => {
+      const dag = new Dag().add([
+        {hash: 'a', parents: ['b']},
+        {hash: 'b', parents: ['c']},
+        {hash: 'c', parents: ['a']},
+      ]);
+      expect(dag.ancestors('b').toSortedArray()).toEqual(['a', 'b', 'c']);
+      expect(dag.descendants('b').toSortedArray()).toEqual(['a', 'b', 'c']);
+      expect(dag.isAncestor('a', 'c')).toBe(true);
+      expect(dag.isAncestor('c', 'a')).toBe(true);
+    });
+  });
 });

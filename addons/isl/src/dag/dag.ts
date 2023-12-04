@@ -6,9 +6,12 @@
  */
 
 import type {Hash} from '../types';
+import type {SetLike} from './set';
 import type {RecordOf} from 'immutable';
 
+import {HashSet} from './set';
 import {Map as ImMap, Record, List} from 'immutable';
+import {cached} from 'shared/LRU';
 import {SelfUpdate} from 'shared/immutableExt';
 
 /**
@@ -111,6 +114,84 @@ export class Dag<C extends HashWithParents> extends SelfUpdate<DagRecord<C>> {
     return this.childMap.get(hash) ?? EMPTY_LIST;
   }
 
+  // High-level query
+
+  parents(set: SetLike): HashSet {
+    return flatMap(set, h => this.parentHashes(h));
+  }
+
+  children(set: SetLike): HashSet {
+    return flatMap(set, h => this.childHashes(h));
+  }
+
+  /**
+   * set + parents(set) + parents(parents(set)) + ...
+   * If `within` is set, change `parents` to only return hashes within `within`.
+   */
+  @cached({cacheSize: 500})
+  ancestors(set: SetLike, props?: {within?: SetLike}): HashSet {
+    const filter = nullableWithinContains(props?.within);
+    return unionFlatMap(set, h => this.parentHashes(h).filter(filter));
+  }
+
+  /**
+   * set + children(set) + children(children(set)) + ...
+   * If `within` is set, change `children` to only return hashes within `within`.
+   */
+  descendants(set: SetLike, props?: {within?: SetLike}): HashSet {
+    const filter = nullableWithinContains(props?.within);
+    return unionFlatMap(set, h => this.childHashes(h).filter(filter));
+  }
+
+  /** ancestors(heads) & descendants(roots) */
+  range(roots: SetLike, heads: SetLike): HashSet {
+    // PERF: This is not the most efficient, but easy to write.
+    return this.ancestors(heads).intersect(this.descendants(roots));
+  }
+
+  /** set - children(set) */
+  roots(set: SetLike): HashSet {
+    const children = this.children(set);
+    return HashSet.fromHashes(set).subtract(children);
+  }
+
+  /** set - parents(set) */
+  heads(set: SetLike): HashSet {
+    const parents = this.parents(set);
+    return HashSet.fromHashes(set).subtract(parents);
+  }
+
+  /** Greatest common ancestor. heads(ancestors(set1) & ancestors(set2)). */
+  gca(set1: SetLike, set2: SetLike): HashSet {
+    return this.heads(this.ancestors(set1).intersect(this.ancestors(set2)));
+  }
+
+  /** ancestor in ancestors(descendant) */
+  isAncestor(ancestor: Hash, descendant: Hash): boolean {
+    // PERF: This is not the most efficient, but easy to write.
+    return this.ancestors(descendant).contains(ancestor);
+  }
+
+  /**
+   * Return commits that match the given condition.
+   * This can be useful for things like "obsolete()".
+   * `set`, if not undefined, limits the search space.
+   */
+  filter(predicate: (commit: Readonly<C>) => boolean, set?: SetLike): HashSet {
+    let hashes: SetLike;
+    if (set === undefined) {
+      hashes = this.infoMap.filter((commit, _hash) => predicate(commit)).keys();
+    } else {
+      hashes = HashSet.fromHashes(set)
+        .toHashes()
+        .filter(h => {
+          const c = this.get(h);
+          return c != undefined && predicate(c);
+        });
+    }
+    return HashSet.fromHashes(hashes);
+  }
+
   // Delegates
 
   get infoMap(): ImMap<Hash, Readonly<C>> {
@@ -119,6 +200,46 @@ export class Dag<C extends HashWithParents> extends SelfUpdate<DagRecord<C>> {
 
   get childMap(): ImMap<Hash, List<Hash>> {
     return this.inner.childMap;
+  }
+}
+
+function flatMap(set: SetLike, f: (h: Hash) => List<Hash> | Readonly<Array<Hash>>): HashSet {
+  return new HashSet(
+    HashSet.fromHashes(set)
+      .toHashes()
+      .flatMap(h => f(h)),
+  );
+}
+
+/** set + flatMap(set, f) + flatMap(flatMap(set, f), f) + ... */
+function unionFlatMap(set: SetLike, f: (h: Hash) => List<Hash> | Readonly<Array<Hash>>): HashSet {
+  let result = new HashSet().toHashes();
+  let newHashes = [...HashSet.fromHashes(set)];
+  while (newHashes.length > 0) {
+    result = result.concat(newHashes);
+    const nextNewHashes: Hash[] = [];
+    newHashes.forEach(h => {
+      f(h).forEach(v => {
+        if (!result.contains(v)) {
+          nextNewHashes.push(v);
+        }
+      });
+    });
+    newHashes = nextNewHashes;
+  }
+  return HashSet.fromHashes(result);
+}
+
+/**
+ * If `set` is undefined, return a function that always returns true.
+ * Otherwise, return a function that checks whether `set` contains `h`.
+ */
+function nullableWithinContains(set?: SetLike): (h: Hash) => boolean {
+  if (set === undefined) {
+    return _h => true;
+  } else {
+    const hashSet = HashSet.fromHashes(set);
+    return h => hashSet.contains(h);
   }
 }
 
