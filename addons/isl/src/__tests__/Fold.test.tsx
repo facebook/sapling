@@ -5,8 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {CommitInfo} from '../types';
+
+import {Dag} from '../dag/dag';
 import {getFoldableRange} from '../fold';
-import {getCommitTree, makeTreeMap} from '../getCommitTree';
 import {COMMIT} from '../testUtils';
 
 describe('fold', () => {
@@ -20,37 +22,28 @@ describe('fold', () => {
     ];
     const [, CC, CB, CA] = COMMITS;
 
+    const makeDag = (commits: CommitInfo[]) => new Dag().add(commits);
+    const DAG = makeDag(COMMITS);
+
     it('get correct selection', () => {
-      expect(
-        getFoldableRange(new Set(['a', 'b', 'c']), makeTreeMap(getCommitTree(COMMITS))),
-      ).toEqual([CA, CB, CC]);
+      expect(getFoldableRange(new Set(['a', 'b', 'c']), DAG)).toMatchObject([CA, CB, CC]);
     });
 
     it('does not care about selection order', () => {
-      expect(
-        getFoldableRange(new Set(['b', 'a', 'c']), makeTreeMap(getCommitTree(COMMITS))),
-      ).toEqual([CA, CB, CC]);
-      expect(
-        getFoldableRange(new Set(['c', 'b', 'a']), makeTreeMap(getCommitTree(COMMITS))),
-      ).toEqual([CA, CB, CC]);
+      expect(getFoldableRange(new Set(['b', 'a', 'c']), DAG)).toMatchObject([CA, CB, CC]);
+      expect(getFoldableRange(new Set(['c', 'b', 'a']), DAG)).toMatchObject([CA, CB, CC]);
     });
 
     it('fails for singular selection', () => {
-      expect(getFoldableRange(new Set(['a']), makeTreeMap(getCommitTree(COMMITS)))).toEqual(
-        undefined,
-      );
+      expect(getFoldableRange(new Set(['a']), DAG)).toEqual(undefined);
     });
 
     it('fails for public commits', () => {
-      expect(
-        getFoldableRange(new Set(['1', 'a', 'b', 'c']), makeTreeMap(getCommitTree(COMMITS))),
-      ).toEqual(undefined);
+      expect(getFoldableRange(new Set(['1', 'a', 'b', 'c']), DAG)).toEqual(undefined);
     });
 
     it('fails for non-contiguous selections', () => {
-      expect(getFoldableRange(new Set(['a', 'c']), makeTreeMap(getCommitTree(COMMITS)))).toEqual(
-        undefined,
-      );
+      expect(getFoldableRange(new Set(['a', 'c']), DAG)).toEqual(undefined);
     });
 
     it('fails if there are branches in the middle of the range', () => {
@@ -62,9 +55,7 @@ describe('fold', () => {
         COMMIT('a', 'Commit A', '1'),
         COMMIT('1', 'base', '2', {phase: 'public'}),
       ];
-      expect(
-        getFoldableRange(new Set(['a', 'b', 'c']), makeTreeMap(getCommitTree(COMMITS))),
-      ).toEqual(undefined);
+      expect(getFoldableRange(new Set(['a', 'b', 'c']), makeDag(COMMITS))).toEqual(undefined);
     });
 
     it('the top of the stack may have multiple children', () => {
@@ -77,9 +68,11 @@ describe('fold', () => {
         COMMIT('1', 'base', '2', {phase: 'public'}),
       ];
       const [, , CC, CB, CA] = COMMITS;
-      expect(
-        getFoldableRange(new Set(['a', 'b', 'c']), makeTreeMap(getCommitTree(COMMITS))),
-      ).toEqual([CA, CB, CC]);
+      expect(getFoldableRange(new Set(['a', 'b', 'c']), makeDag(COMMITS))).toMatchObject([
+        CA,
+        CB,
+        CC,
+      ]);
     });
   });
 });
