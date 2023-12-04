@@ -12,7 +12,7 @@ import {Tooltip, DOCUMENTATION_DELAY} from '../../Tooltip';
 import {T, t} from '../../i18n';
 import {ImportStackOperation} from '../../operations/ImportStackOperation';
 import {RebaseOperation} from '../../operations/RebaseOperation';
-import {latestCommitTreeMap, latestHeadCommit, useRunOperation} from '../../serverAPIState';
+import {latestDag, latestHeadCommit, useRunOperation} from '../../serverAPIState';
 import {exactRevset, succeedableRevset} from '../../types';
 import {UndoDescription} from './StackEditSubTree';
 import {
@@ -28,7 +28,7 @@ import {Icon} from 'shared/Icon';
 export function StackEditConfirmButtons(): React.ReactElement {
   const [[stackIntention], setStackIntentionHashes] = useRecoilState(editingStackIntentionHashes);
   const originalHead = useRecoilValue(latestHeadCommit);
-  const latestTreeMap = useRecoilValue(latestCommitTreeMap);
+  const dag = useRecoilValue(latestDag);
   const runOperation = useRunOperation();
   const stackEdit = useStackEditState();
 
@@ -83,10 +83,10 @@ export function StackEditConfirmButtons(): React.ReactElement {
     // it handle pending changes just fine.
     const stackTop = stackEdit.commitStack.originalStack.at(-1)?.node;
     if (stackIntention === 'split' && stackTop != null) {
-      const children = latestTreeMap.get(stackTop)?.children?.map(c => c.info.hash);
-      if (children != null && children.length > 0) {
+      const children = dag.children(stackTop);
+      if (children.size > 0) {
         const rebaseOp = new RebaseOperation(
-          exactRevset(children.join('|')),
+          exactRevset(children.toArray().join('|')),
           succeedableRevset(stackTop) /* stack top of the new successor */,
         );
         runOperation(rebaseOp);
