@@ -13,6 +13,7 @@ import {HashSet} from './set';
 import {Map as ImMap, Record, List} from 'immutable';
 import {cached} from 'shared/LRU';
 import {SelfUpdate} from 'shared/immutableExt';
+import {unwrap} from 'shared/utils';
 
 /**
  * Hash-map like container with graph related queries.
@@ -202,6 +203,102 @@ export class BaseDag<C extends HashWithParents> extends SelfUpdate<BaseDagRecord
     return HashSet.fromHashes(hashes);
   }
 
+  /**
+   * Topologically sort hashes from roots to heads.
+   *
+   * When there are multiple children (or roots), 'compare' breaks ties.
+   * Attempt to avoid interleved branches by outputting a branch continously
+   * until completing the branch or hitting a merge.
+   *
+   * With `gap` set to `true`, there could be "gap" in `set`. For example,
+   * with the graph x--y--z, the `set` can be ['x', 'z'] and sort will work
+   * as expected, with the downside of being O(dag size). If you run sort
+   * in a tight loop, consider setting `gap` to `false` for performance.
+   */
+  sortAsc(set: SetLike, props?: SortProps<C>): Array<Hash> {
+    const iter = this.sortImpl(
+      set,
+      props?.compare ?? ((a, b) => (a.hash < b.hash ? -1 : 1)),
+      s => this.roots(s),
+      h => this.childHashes(h),
+      h => this.parents(h),
+      props?.gap ?? true,
+    );
+    return [...iter];
+  }
+
+  /**
+   * Topologically sort hashes from heads to roots.
+   *
+   * See `sortAsc` for details.
+   */
+  sortDesc(set: SetLike, props?: SortProps<C>): Array<Hash> {
+    const iter = this.sortImpl(
+      set,
+      props?.compare ?? ((a, b) => (a.hash < b.hash ? 1 : -1)),
+      s => this.heads(s),
+      h => List(this.parentHashes(h)),
+      h => this.children(h),
+      props?.gap ?? true,
+    );
+    return [...iter];
+  }
+
+  // DFS from 'start' to 'next'
+  // not considering branch length.
+  private *sortImpl(
+    set: SetLike,
+    compare: (a: C, b: C) => number,
+    getStart: (set: HashSet) => HashSet,
+    getNext: (hash: Hash) => List<Hash>,
+    getPrev: (hash: Hash) => HashSet,
+    gap: boolean,
+  ): Generator<Hash> {
+    const hashSet = this.present(set);
+    // There might be "gaps" in hashSet. For example, set might be 'x' and 'z'
+    // in a 'x--y--z' graph. We need to fill the gap ('y') to sort properly.
+    // However, range(set, set) is O(dag.size) so we allow the callsite to
+    // disable this feature with an option.
+    const filledSet = gap ? this.range(hashSet, hashSet) : hashSet;
+    const alreadyVisited = new Set<Hash>();
+    // We use concat and pop (not unshift) so the order is reversed.
+    const compareHash = (a: Hash, b: Hash) => -compare(unwrap(this.get(a)), unwrap(this.get(b)));
+    // The number of parents remaining to be visited. This ensures merges are not
+    // outputted until all parents are outputted.
+    const remaining = new Map<Hash, number>(
+      filledSet.toSeq().map(h => [h, getPrev(h).intersect(filledSet).size]),
+    );
+    // List is used as a dequeue.
+    let toVisit = getStart(filledSet).toHashes().toList().sort(compareHash);
+    while (true) {
+      // pop front
+      const next = toVisit.last();
+      if (next == null) {
+        break;
+      }
+      toVisit = toVisit.pop();
+      if (alreadyVisited.has(next)) {
+        continue;
+      }
+      // Need to wait for visiting other parents first?
+      if ((remaining.get(next) ?? 0) > 0) {
+        toVisit = toVisit.unshift(next);
+        continue;
+      }
+      // Output it.
+      if (hashSet.contains(next)) {
+        yield next;
+      }
+      alreadyVisited.add(next);
+      // Visit next.
+      const children = getNext(next).sort(compareHash);
+      for (const c of children) {
+        remaining.set(c, (remaining.get(c) ?? 1) - 1);
+      }
+      toVisit = toVisit.concat(children);
+    }
+  }
+
   // Delegates
 
   get infoMap(): ImMap<Hash, Readonly<C>> {
@@ -248,6 +345,8 @@ export function unionFlatMap(
   }
   return HashSet.fromHashes(result);
 }
+
+export type SortProps<C> = {compare?: (a: C, b: C) => number; gap?: boolean};
 
 /**
  * If `set` is undefined, return a function that always returns true.

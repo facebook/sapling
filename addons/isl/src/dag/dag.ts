@@ -11,7 +11,7 @@ import type {SetLike} from './set';
 import type {RecordOf, List} from 'immutable';
 
 import {CommitPreview} from '../previews';
-import {BaseDag} from './base_dag';
+import {BaseDag, type SortProps} from './base_dag';
 import {MutationDag} from './mutation_dag';
 import {HashSet} from './set';
 import {Record, Map as ImMap, Set as ImSet} from 'immutable';
@@ -192,6 +192,16 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
 
   filter(predicate: (commit: Readonly<Info>) => boolean, set?: SetLike): HashSet {
     return this.commitDag.filter(predicate, set);
+  }
+
+  // Sort
+
+  sortAsc(set: SetLike, props?: SortProps<Info>): Array<Hash> {
+    return this.commitDag.sortAsc(set, props);
+  }
+
+  sortDesc(set: SetLike, props?: SortProps<Info>): Array<Hash> {
+    return this.commitDag.sortDesc(set, props);
   }
 
   // Filters

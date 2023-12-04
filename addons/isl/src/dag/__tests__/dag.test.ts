@@ -6,6 +6,7 @@
  */
 
 import type {CommitInfo, Hash, SuccessorInfo} from '../../types';
+import type {SetLike} from '../set';
 
 import {BaseDag} from '../base_dag';
 import {Dag, REBASE_SUCC_PREFIX} from '../dag';
@@ -180,6 +181,63 @@ describe('Dag', () => {
       expect(dag.descendants('b').toSortedArray()).toEqual(['a', 'b', 'c']);
       expect(dag.isAncestor('a', 'c')).toBe(true);
       expect(dag.isAncestor('c', 'a')).toBe(true);
+    });
+  });
+
+  describe('sort', () => {
+    // a--b--c--d---e--f
+    //     \       /
+    //   y--x--w--v--u
+    const dag = new BaseDag().add(
+      Object.entries({
+        a: '',
+        b: 'a',
+        c: 'b',
+        d: 'c',
+        e: 'd v',
+        f: 'e',
+        y: '',
+        x: 'y b',
+        w: 'x',
+        v: 'w',
+        u: 'v',
+      }).map(([hash, v]) => {
+        return {hash, parents: v.split(' ')};
+      }),
+    );
+
+    it('asc', () => {
+      const sort = (s: SetLike) => dag.sortAsc(s).join(' ');
+      // sort all
+      expect(sort(dag)).toBe('a b c d y x w v e f u');
+      // sort subset
+      expect(sort(['a', 'f', 'b', 'c', 'e', 'd'])).toBe('a b c d e f');
+      expect(sort(['y', 'u', 'w', 'v', 'x'])).toBe('y x w v u');
+      expect(sort(['a', 'f', 'd'])).toBe('a d f');
+      expect(sort(['u', 'y', 'w'])).toBe('y w u');
+      expect(sort(['w', 'f', 'y'])).toBe('y w f');
+      expect(sort(['x', 'y', 'f', 'e'])).toBe('y x e f');
+      // custom sort function
+      expect(dag.sortAsc(['d', 'v'], {compare: a => (a.hash === 'v' ? -1 : 1)})).toEqual([
+        'v',
+        'd',
+      ]);
+    });
+
+    it('desc', () => {
+      const sort = (s: SetLike) => [...dag.sortDesc(s)].join(' ');
+      // sort all
+      expect(sort(dag)).toBe('u f e v w x y d c b a');
+      // sort subset
+      expect(sort(['a', 'f', 'b', 'c', 'e', 'd'])).toBe('f e d c b a');
+      expect(sort(['y', 'u', 'w', 'v', 'x'])).toBe('u v w x y');
+      expect(sort(['w', 'f', 'y'])).toBe('f w y');
+      expect(sort(['x', 'y', 'f', 'e'])).toBe('f e x y');
+      // custom sort function
+      expect(dag.sortDesc(['c', 'x'], {compare: a => (a.hash === 'x' ? -1 : 1)})).toEqual([
+        'x',
+        'c',
+      ]);
     });
   });
 
