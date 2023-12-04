@@ -56,9 +56,6 @@ export abstract class Operation {
   /** Used to preview how this operation would affect the tree, if you ran it. */
   makePreviewApplier?(context: PreviewContext): ApplyPreviewsFuncType | undefined;
 
-  /** Used to show how this operation will affect the tree, after it's finished running and we get new data from hg. */
-  makeOptimisticApplier?(context: PreviewContext): ApplyPreviewsFuncType | undefined;
-
   makeOptimisticUncommittedChangesApplier?(
     context: UncommittedChangesPreviewContext,
   ): ApplyUncommittedChangesPreviewsFuncType | undefined;
@@ -69,7 +66,6 @@ export abstract class Operation {
 
   /**
    * Make changes to `dag` to demostrate the side effect of this running or future (queued) operation.
-   * This is an alternative way to get the `makeOptimisticApplier` effect.
    */
   optimisticDag(dag: DagWithPreview, _context: DagPreviewContext): DagWithPreview {
     return dag;

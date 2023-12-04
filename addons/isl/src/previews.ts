@@ -312,19 +312,6 @@ export const treeWithPreviews = selector({
 
     // preview applier can either come from an operation being previewed...
     const currentPreview = get(operationBeingPreviewed);
-    // ...or from an operation that is being run right now
-    // or ran recently and is still showing optimistic state while waiting for new commits or uncommitted changes
-    const list = get(operationList);
-    const queued = get(queuedOperations);
-    const currentOperation = list.currentOperation;
-    const history = list.operationHistory;
-
-    // operation from various sources
-    for (const op of optimisticOperations({history, queued, currentOperation})) {
-      if (op.makeOptimisticApplier != null) {
-        appliersSources.push(op.makeOptimisticApplier.bind(op));
-      }
-    }
 
     // operation being previewed (would be queued next)
     if (currentPreview?.makePreviewApplier != null) {
