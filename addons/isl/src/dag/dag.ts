@@ -13,6 +13,7 @@ import {HashSet} from './set';
 import {Map as ImMap, Record, List} from 'immutable';
 import {cached} from 'shared/LRU';
 import {SelfUpdate} from 'shared/immutableExt';
+import {splitOnce} from 'shared/utils';
 
 /**
  * Partial commit graph with query and edit operations.
@@ -234,6 +235,68 @@ export class Dag<C extends HashWithParents> extends SelfUpdate<DagRecord<C>> {
         return c;
       }
     });
+  }
+
+  /** Attempt to resolve a name by `name`. The `name` can be a hash, a bookmark name, etc. */
+  resolve(name: string): Readonly<C> | undefined {
+    // Full commit hash?
+    const info = this.get(name);
+    if (info) {
+      return info;
+    }
+    // Scan through the commits.
+    // See `hg help revision` and context.py (changectx.__init__),
+    // namespaces.py for priorities. Basically (in this order):
+    // - ".", the working parent
+    // - hex full hash (40 bytes) (handled above)
+    // - namespaces.singlenode lookup
+    //   - 10: bookmarks
+    //   - 55: remotebookmarks (ex. "remote/main")
+    //   - 60: hoistednames (ex. "main" without "remote/")
+    //   - 70: phrevset (ex. "Dxxx"), but we skip it here due to lack
+    //         of access to the code review abstraction.
+    // - partial match (unambigious partial prefix match)
+    type Best = {hash: Hash; priority: number; info: Partial<CommitInfo>};
+    const best: {value?: Best} = {};
+    for (const [hash, commit] of this.infoMap) {
+      const info = commit as Partial<CommitInfo>;
+      const updateBest = (priority: number) => {
+        if (
+          best.value == null ||
+          best.value.priority > priority ||
+          (best.value.info.date ?? 0) < (info.date ?? 0) ||
+          best.value.hash < hash
+        ) {
+          best.value = {hash, priority, info} as Best;
+        }
+      };
+      if (name === '.' && info.isHead) {
+        updateBest(1);
+      } else if ((info.bookmarks ?? []).includes(name)) {
+        updateBest(10);
+      } else if ((info.remoteBookmarks ?? []).includes(name)) {
+        updateBest(55);
+      } else if ((info.remoteBookmarks ?? []).map(n => splitOnce(n, '/')?.[1]).includes(name)) {
+        updateBest(60);
+      }
+    }
+    const hash = best.value?.hash;
+    if (hash != null) {
+      return this.get(hash);
+    }
+    // Unambigious prefix match.
+    let matched: undefined | Hash = undefined;
+    for (const hash of this.infoMap.keys()) {
+      if (hash.startsWith(name)) {
+        if (matched === undefined) {
+          matched = hash;
+        } else {
+          // Ambigious prefix.
+          return undefined;
+        }
+      }
+    }
+    return matched !== undefined ? this.get(matched) : undefined;
   }
 }
 
