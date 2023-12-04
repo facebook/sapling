@@ -6,7 +6,7 @@
  */
 
 import type {Dag} from './dag/dag';
-import type {CommitTree, CommitTreeWithPreviews} from './getCommitTree';
+import type {CommitTreeWithPreviews} from './getCommitTree';
 import type {Operation} from './operations/Operation';
 import type {OperationInfo, OperationList} from './serverAPIState';
 import type {ChangedFile, CommitInfo, Hash, MergeConflicts, UncommittedChanges} from './types';
@@ -52,40 +52,14 @@ export enum CommitPreview {
 }
 
 /**
- * A preview applier function provides a way of iterating the tree of commits and modify it & mark commits as being in a preview state.
- * Given a commit in the tree, you can overwrite what children to render and what preview type to set.
- * This function is used to walk the entire tree and alter how it would be rendered without needing to make a copy of the entire tree that needs to be mutated.
- * The preview type is used when rendering the commit to de-emphasize it, put it in a green color, add a confirm rebase button, etc.
- * If the preview applier returns null, it means to hide the commit and all of its children.
- *
- * Preview Appliers may also be called on individual commits (as opposed to walking the entire tree)
- * when rendering their details in the Commit Info View. As such, they should not depend on being called in
- * any specific order of commits.
- */
-export type ApplyPreviewsFuncType = (
-  tree: CommitTree,
-  previewType: CommitPreview | undefined,
-  childPreviewType?: CommitPreview | undefined,
-) => (
-  | {
-      info: null;
-      children?: undefined;
-    }
-  | {info: CommitInfo; children: Array<CommitTree>}
-) & {
-  previewType?: CommitPreview;
-  childPreviewType?: CommitPreview;
-};
-
-/**
- * Like ApplyPreviewsFuncType, this provides a way to alter the set of Uncommitted Changes.
+ * Alter the set of Uncommitted Changes.
  */
 export type ApplyUncommittedChangesPreviewsFuncType = (
   changes: UncommittedChanges,
 ) => UncommittedChanges;
 
 /**
- * Like ApplyPreviewsFuncType, this provides a way to alter the set of Merge Conflicts.
+ * Alter the set of Merge Conflicts.
  */
 export type ApplyMergeConflictsPreviewsFuncType = (
   conflicts: MergeConflicts | undefined,
@@ -374,12 +348,6 @@ export function useMarkOperationsCompleted(): void {
   // when ongoingOperation is used elsewhere in the tree
   useEffect(() => {
     const toMarkResolved: Array<ReturnType<typeof shouldMarkOptimisticChangesResolved>> = [];
-    const context = {
-      trees,
-      headCommit,
-      treeMap,
-      successorMap,
-    };
     const uncommittedContext = {
       uncommittedChanges: uncommittedChanges.files ?? [],
     };
@@ -391,12 +359,7 @@ export function useMarkOperationsCompleted(): void {
     for (const operation of [...list.operationHistory, currentOperation]) {
       if (operation) {
         toMarkResolved.push(
-          shouldMarkOptimisticChangesResolved(
-            operation,
-            context,
-            uncommittedContext,
-            mergeConflictsContext,
-          ),
+          shouldMarkOptimisticChangesResolved(operation, uncommittedContext, mergeConflictsContext),
         );
       }
     }
@@ -441,7 +404,6 @@ export function useMarkOperationsCompleted(): void {
 
     function shouldMarkOptimisticChangesResolved(
       operation: OperationInfo,
-      context: PreviewContext,
       uncommittedChangesContext: UncommittedChangesPreviewContext,
       mergeConflictsContext: MergeConflictsPreviewContext,
     ): {commits: boolean; files: boolean; conflicts: boolean} | undefined {
@@ -514,14 +476,6 @@ export function useMarkOperationsCompleted(): void {
     successorMap,
   ]);
 }
-
-/** Set of info about commit tree to generate appropriate previews */
-export type PreviewContext = {
-  trees: Array<CommitTree>;
-  headCommit?: CommitInfo;
-  treeMap: Map<string, CommitTree>;
-  successorMap: Map<string, string>;
-};
 
 export type UncommittedChangesPreviewContext = {
   uncommittedChanges: UncommittedChanges;
