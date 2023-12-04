@@ -17,11 +17,10 @@ import {getCommitTree, walkTreePostorder} from './getCommitTree';
 import {getOpName} from './operations/Operation';
 import {
   operationBeingPreviewed,
+  latestCommits,
   latestCommitsData,
   latestUncommittedChangesData,
   mergeConflicts,
-  latestCommitTree,
-  latestCommitTreeMap,
   latestDag,
   latestHeadCommit,
   latestUncommittedChanges,
@@ -334,9 +333,7 @@ function* optimisticOperations(props: {
  */
 export function useMarkOperationsCompleted(): void {
   const fetchedCommits = useRecoilValue(latestCommitsData);
-  const trees = useRecoilValue(latestCommitTree);
-  const headCommit = useRecoilValue(latestHeadCommit);
-  const treeMap = useRecoilValue(latestCommitTreeMap);
+  const commits = useRecoilValue(latestCommits);
   const uncommittedChanges = useRecoilValue(latestUncommittedChangesData);
   const conflicts = useRecoilValue(mergeConflicts);
   const successorMap = useRecoilValue(latestSuccessorsMap);
@@ -467,9 +464,7 @@ export function useMarkOperationsCompleted(): void {
   }, [
     list,
     setOperationList,
-    headCommit,
-    trees,
-    treeMap,
+    commits,
     uncommittedChanges,
     conflicts,
     fetchedCommits,
