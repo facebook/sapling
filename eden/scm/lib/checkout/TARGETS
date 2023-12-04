@@ -10,7 +10,6 @@ rust_library(
             "dependencies_override": {
                 "dependencies": {
                     "async-runtime": {"optional": True},
-                    "configloader": {"optional": True},
                     "edenfs-client": {"optional": True},
                     "hg-metrics": {"optional": True},
                     "manifest": {"features": ["for-tests"]},
@@ -24,7 +23,6 @@ rust_library(
                 "eden": [
                     "async-runtime",
                     "edenfs-client",
-                    "configloader",
                     "hg-metrics",
                     "toml",
                 ],
