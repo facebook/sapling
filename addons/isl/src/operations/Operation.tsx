@@ -7,11 +7,9 @@
 
 import type {
   ApplyMergeConflictsPreviewsFuncType,
-  ApplyPreviewsFuncType,
   ApplyUncommittedChangesPreviewsFuncType,
   Dag,
   MergeConflictsPreviewContext,
-  PreviewContext,
   UncommittedChangesPreviewContext,
 } from '../previews';
 import type {CommandArg} from '../types';
@@ -51,9 +49,6 @@ export abstract class Operation {
   getInitialInlineProgress?(): Array<[hash: string, message: string]>;
 
   public runner: CommandRunner = CommandRunner.Sapling;
-
-  /** Used to preview how this operation would affect the tree, if you ran it. */
-  makePreviewApplier?(context: PreviewContext): ApplyPreviewsFuncType | undefined;
 
   makeOptimisticUncommittedChangesApplier?(
     context: UncommittedChangesPreviewContext,

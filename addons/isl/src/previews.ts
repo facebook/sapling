@@ -304,77 +304,15 @@ export const treeWithPreviews = selector({
     const commits = [...dag.values()];
     const trees = getCommitTree(commits);
 
-    // gather operations from past, current, and queued commands which could have optimistic state appliers
-    type Applier = (context: PreviewContext) => ApplyPreviewsFuncType | undefined;
-    const appliersSources: Array<Applier> = [];
-
-    // preview applier can either come from an operation being previewed...
-    const currentPreview = get(operationBeingPreviewed);
-
-    // operation being previewed (would be queued next)
-    if (currentPreview?.makePreviewApplier != null) {
-      appliersSources.push(currentPreview.makePreviewApplier.bind(currentPreview));
-    }
-
     let headCommit = get(latestHeadCommit);
     // The headCommit might be changed by dag previews. Double check.
     if (headCommit && !dag.get(headCommit.hash)?.isHead) {
       headCommit = dag.resolve('.');
     }
     // Open-code latestCommitTreeMap to pick up tree changes done by `dag`.
-    let treeMap = new Map<Hash, CommitTreeWithPreviews>();
+    const treeMap = new Map<Hash, CommitTreeWithPreviews>();
     for (const tree of walkTreePostorder(trees)) {
       treeMap.set(tree.info.hash, tree);
-    }
-    const successorMap = get(latestSuccessorsMap);
-
-    // apply in order
-    if (appliersSources.length) {
-      let finalTrees = trees;
-
-      for (const applierSource of appliersSources) {
-        const context: PreviewContext = {
-          trees: finalTrees,
-          headCommit,
-          treeMap,
-          successorMap,
-        };
-        let nextHeadCommit = headCommit;
-        const nextTreeMap = new Map<Hash, CommitTree>();
-
-        const applier = applierSource(context);
-        if (applier == null) {
-          continue;
-        }
-
-        const processTree = (
-          tree: CommitTreeWithPreviews,
-          inheritedPreviewType?: CommitPreview,
-        ): CommitTreeWithPreviews | undefined => {
-          const result = applier(tree, inheritedPreviewType);
-          if (result?.info == null) {
-            return undefined;
-          }
-          if (result.info.isHead) {
-            nextHeadCommit = result.info;
-          }
-          const {info, children, previewType, childPreviewType} = result;
-          const newTree = {
-            info,
-            previewType,
-            children: children
-              .map(child => processTree(child, childPreviewType))
-              .filter((tree): tree is CommitTreeWithPreviews => tree != null),
-          };
-
-          nextTreeMap.set(newTree.info.hash, result);
-          return newTree;
-        };
-        finalTrees = finalTrees.map(tree => processTree(tree)).filter(notEmpty);
-        headCommit = nextHeadCommit;
-        treeMap = nextTreeMap;
-      }
-      return {trees: finalTrees, treeMap, headCommit};
     }
 
     return {trees, treeMap, headCommit};
