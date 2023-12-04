@@ -467,11 +467,11 @@ class EdenConfigParserTest(unittest.TestCase):
 
     def test_unexpected_type_error_messages_are_helpful(self) -> None:
         self.assertEqual(
-            'Expected boolean for service.experimental_systemd, but got string: "true"',
+            'Expected boolean for telemetry.enable-inodetracebus, but got string: "true"',
             str(
                 UnexpectedType(
-                    section="service",
-                    option="experimental_systemd",
+                    section="telemetry",
+                    option="enable-inodetracebus",
                     value="true",
                     expected_type=bool,
                 )
