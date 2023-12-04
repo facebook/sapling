@@ -5,13 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {
-  ApplyPreviewsFuncType,
-  DagPreviewContext,
-  Dag,
-  PreviewContext,
-  WithPreviewType,
-} from '../previews';
+import type {ApplyPreviewsFuncType, Dag, PreviewContext, WithPreviewType} from '../previews';
 import type {CommitInfo} from '../types';
 
 import {latestSuccessor} from '../SuccessionTracker';
@@ -83,8 +77,8 @@ export class FoldOperation extends Operation {
     return func;
   }
 
-  optimisticDag(dag: Dag, context: DagPreviewContext): Dag {
-    const hashes = this.foldRange.map(info => latestSuccessor(context, exactRevset(info.hash)));
+  optimisticDag(dag: Dag): Dag {
+    const hashes = this.foldRange.map(info => info.hash);
     const top = hashes.at(-1);
     const parents = dag.get(hashes.at(0))?.parents;
     if (top == null || parents == null) {

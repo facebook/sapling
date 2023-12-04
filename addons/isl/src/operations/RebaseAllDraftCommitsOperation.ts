@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {DagPreviewContext, Dag} from '../previews';
+import type {Dag} from '../previews';
 import type {ExactRevset, SucceedableRevset} from '../types';
 
 import {latestSuccessor} from '../SuccessionTracker';
@@ -34,8 +34,8 @@ export class RebaseAllDraftCommitsOperation extends Operation {
     ];
   }
 
-  optimisticDag(dag: Dag, context: DagPreviewContext): Dag {
-    const dest = dag.resolve(latestSuccessor(context, this.destination))?.hash;
+  optimisticDag(dag: Dag): Dag {
+    const dest = dag.resolve(latestSuccessor(dag, this.destination))?.hash;
     const draft = dag.draft();
     return dag.rebase(draft, dest);
   }

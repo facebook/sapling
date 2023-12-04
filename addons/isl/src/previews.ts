@@ -280,8 +280,7 @@ export const dagWithPreviews = selector<Dag>({
     const history = list.operationHistory;
     let dag = originalDag;
     let headCommit = get(latestHeadCommit);
-    const successorMap = get(latestSuccessorsMap);
-    const context = {originalDag, headCommit, successorMap};
+    const context = {originalDag, headCommit};
     for (const op of optimisticOperations({history, queued, currentOperation})) {
       const nextDag = op.optimisticDag(dag, context);
       if (nextDag !== dag) {
@@ -592,7 +591,6 @@ export type DagPreviewContext = {
   /** Dag without any previews. */
   originalDag: Dag;
   headCommit?: CommitInfo;
-  successorMap: Map<string, string>;
 };
 
 export type UncommittedChangesPreviewContext = {

@@ -29,7 +29,7 @@ export class GotoOperation extends Operation {
     if (headCommitHash == null) {
       return dag;
     }
-    const dest = dag.resolve(latestSuccessor(context, this.destination));
+    const dest = dag.resolve(latestSuccessor(dag, this.destination));
     const src = dag.get(headCommitHash);
     if (dest == null || src == null || dest.hash === src.hash) {
       return dag;
