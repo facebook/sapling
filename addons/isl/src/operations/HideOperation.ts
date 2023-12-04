@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ApplyPreviewsFuncType, Dag, PreviewContext} from '../previews';
+import type {Dag} from '../previews';
 import type {ExactRevset, SucceedableRevset} from '../types';
 
 import {CommitPreview} from '../previews';
@@ -22,24 +22,13 @@ export class HideOperation extends Operation {
     return ['hide', '--rev', this.source];
   }
 
-  makePreviewApplier(_context: PreviewContext): ApplyPreviewsFuncType | undefined {
-    const func: ApplyPreviewsFuncType = (tree, previewType) => {
-      if (tree.info.hash === this.source.revset) {
-        return {
-          info: tree.info,
-          children: tree.children,
-          previewType: CommitPreview.HIDDEN_ROOT,
-          childPreviewType: CommitPreview.HIDDEN_DESCENDANT,
-        };
-      }
-      return {
-        info: tree.info,
-        children: tree.children,
-        previewType,
-        childPreviewType: previewType,
-      };
-    };
-    return func;
+  previewDag(dag: Dag): Dag {
+    const hash = this.source.revset;
+    const toHide = dag.descendants(hash);
+    return dag.replaceWith(toHide, (h, c) => {
+      const previewType = h === hash ? CommitPreview.HIDDEN_ROOT : CommitPreview.HIDDEN_DESCENDANT;
+      return c && {...c, previewType};
+    });
   }
 
   optimisticDag(dag: Dag): Dag {
