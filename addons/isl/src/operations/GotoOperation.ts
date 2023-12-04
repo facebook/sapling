@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ApplyPreviewsFuncType, PreviewContext} from '../previews';
+import type {DagPreviewContext, DagWithPreview} from '../previews';
 import type {ExactRevset, SucceedableRevset} from '../types';
 
 import {latestSuccessor} from '../SuccessionTracker';
@@ -24,40 +24,22 @@ export class GotoOperation extends Operation {
     return args;
   }
 
-  makeOptimisticApplier(context: PreviewContext): ApplyPreviewsFuncType | undefined {
+  optimisticDag(dag: DagWithPreview, context: DagPreviewContext): DagWithPreview {
     const headCommitHash = context.headCommit?.hash;
-    if (
-      headCommitHash === latestSuccessor(context, this.destination) ||
-      context.headCommit?.remoteBookmarks?.includes(this.destination.revset)
-    ) {
-      // head is destination => the goto completed
-      return undefined;
+    if (headCommitHash == null) {
+      return dag;
     }
-
-    const func: ApplyPreviewsFuncType = (tree, _previewType) => {
-      if (
-        tree.info.hash === latestSuccessor(context, this.destination) ||
-        tree.info.remoteBookmarks?.includes(this.destination.revset)
-      ) {
-        const modifiedInfo = {...tree.info, isHead: true};
-        // this is the commit we're moving to
-        return {
-          info: modifiedInfo,
-          children: tree.children,
-          previewType: CommitPreview.GOTO_DESTINATION,
-        };
-      } else if (tree.info.hash === headCommitHash) {
-        const modifiedInfo = {...tree.info, isHead: false};
-        // this is the previous head commit, where we used to be
-        return {
-          info: modifiedInfo,
-          children: tree.children,
-          previewType: CommitPreview.GOTO_PREVIOUS_LOCATION,
-        };
-      } else {
-        return {info: tree.info, children: tree.children};
-      }
-    };
-    return func;
+    const dest = dag.resolve(latestSuccessor(context, this.destination));
+    const src = dag.get(headCommitHash);
+    if (dest == null || src == null || dest.hash === src.hash) {
+      return dag;
+    }
+    return dag.replaceWith([src.hash, dest.hash], (h, c) => {
+      const isDest = h === dest.hash;
+      const previewType = isDest
+        ? CommitPreview.GOTO_DESTINATION
+        : CommitPreview.GOTO_PREVIOUS_LOCATION;
+      return c && {...c, isHead: isDest, previewType};
+    });
   }
 }
