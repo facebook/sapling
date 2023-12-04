@@ -12,7 +12,7 @@ import {globalRecoil} from '../AccessGlobalRecoil';
 import serverAPI from '../ClientToServerAPI';
 import {successionTracker} from '../SuccessionTracker';
 import {latestCommitMessageFields} from '../codeReview/CodeReviewInfo';
-import {treeWithPreviews} from '../previews';
+import {dagWithPreviews} from '../previews';
 import {selectedCommitInfos} from '../selection';
 import {firstLine} from '../utils';
 import {
@@ -203,11 +203,9 @@ export const commitInfoViewCurrentCommits = selector<Array<CommitInfo> | null>({
   get: ({get}) => {
     const selected = get(selectedCommitInfos);
 
-    const {headCommit} = get(treeWithPreviews);
-
     // show selected commit, if there's exactly 1
     const selectedCommit = selected.length === 1 ? selected[0] : undefined;
-    const commit = selectedCommit ?? headCommit;
+    const commit = selectedCommit ?? get(dagWithPreviews).resolve('.');
 
     if (commit == null) {
       return null;

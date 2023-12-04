@@ -17,7 +17,7 @@ import {T, t} from './i18n';
 import {CommitCloudChangeWorkspaceOperation} from './operations/CommitCloudChangeWorkspaceOperation';
 import {CommitCloudCreateWorkspaceOperation} from './operations/CommitCloudCreateWorkspaceOperation';
 import {CommitCloudSyncOperation} from './operations/CommitCloudSyncOperation';
-import {CommitPreview, treeWithPreviews, useMostRecentPendingOperation} from './previews';
+import {CommitPreview, dagWithPreviews, useMostRecentPendingOperation} from './previews';
 import {RelativeDate} from './relativeDate';
 import {useRunOperation} from './serverAPIState';
 import {CommitCloudBackupStatus} from './types';
@@ -30,6 +30,7 @@ import {
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {atom, useRecoilState, useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
+import {notEmpty} from 'shared/utils';
 
 import './CommitCloud.css';
 
@@ -304,8 +305,8 @@ function CommitCloudSyncStatusBadge({statuses}: {statuses: Map<Hash, CommitCloud
 }
 
 function BackupList({commits}: {commits: Array<Hash>}) {
-  const treeMap = useRecoilValue(treeWithPreviews).treeMap;
-  const infos = commits.map(hash => treeMap.get(hash)?.info ?? hash);
+  const dag = useRecoilValue(dagWithPreviews);
+  const infos = commits.map(hash => dag.get(hash)).filter(notEmpty);
   return (
     <div className="commit-cloud-backup-list">
       {infos.map(commit =>

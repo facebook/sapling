@@ -12,7 +12,7 @@ import type {ExportFile, ImportCommit} from 'shared/types/stack';
 
 import clientToServerAPI from './ClientToServerAPI';
 import {t} from './i18n';
-import {treeWithPreviews, uncommittedChangesWithPreviews} from './previews';
+import {dagWithPreviews, uncommittedChangesWithPreviews} from './previews';
 import {clearOnCwdChange} from './recoilUtils';
 import {latestUncommittedChangesTimestamp} from './serverAPIState';
 import {ChunkSelectState} from './stackEdit/chunkSelectState';
@@ -529,8 +529,8 @@ export function useUncommittedSelection() {
   const [selection, setSelection] = useRecoilState(uncommittedSelection);
   const uncommittedChanges = useRecoilValue(uncommittedChangesWithPreviews);
   const epoch = useRecoilValue(latestUncommittedChangesTimestamp);
-  const tree = useRecoilValue(treeWithPreviews);
-  const wdirHash = tree.headCommit?.hash ?? '';
+  const dag = useRecoilValue(dagWithPreviews);
+  const wdirHash = dag.resolve('.')?.hash ?? '';
   const getPaths = () => uncommittedChanges.map(c => c.path);
 
   return new UseUncommittedSelection(selection, setSelection, wdirHash, getPaths, epoch);

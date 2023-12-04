@@ -20,7 +20,7 @@ import {
 } from '../CommitInfoView/CommitMessageFields';
 import {Internal} from '../Internal';
 import {messageSyncingEnabledState} from '../messageSyncing';
-import {treeWithPreviews} from '../previews';
+import {dagWithPreviews} from '../previews';
 import {commitByHash, repositoryInfo} from '../serverAPIState';
 import {firstLine} from '../utils';
 import {GithubUICodeReviewProvider} from './github/github';
@@ -150,7 +150,7 @@ export const latestCommitMessage = selectorFamily<
         return ['', ''];
       }
       const commit = get(commitByHash(hash));
-      const preview = get(treeWithPreviews).treeMap.get(hash)?.info;
+      const preview = get(dagWithPreviews).get(hash);
 
       if (
         preview != null &&

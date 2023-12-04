@@ -15,7 +15,7 @@ import {T, t} from './i18n';
 import {BulkRebaseOperation} from './operations/BulkRebaseOperation';
 import {RebaseAllDraftCommitsOperation} from './operations/RebaseAllDraftCommitsOperation';
 import {RebaseOperation} from './operations/RebaseOperation';
-import {treeWithPreviews} from './previews';
+import {dagWithPreviews, treeWithPreviews} from './previews';
 import {RelativeDate} from './relativeDate';
 import {commitsShownRange, latestCommits, useRunOperation} from './serverAPIState';
 import {succeedableRevset} from './types';
@@ -36,13 +36,13 @@ export const showSuggestedRebaseForStack = selectorFamily<boolean, Hash>({
   get:
     (hash: Hash) =>
     ({get}) => {
-      const tree = get(treeWithPreviews);
-      const commit = tree.treeMap.get(hash);
+      const dag = get(dagWithPreviews);
+      const commit = dag.get(hash);
       if (commit == null) {
         return false;
       }
-      const parentHash = commit.info.parents[0];
-      const stackBase = tree.treeMap.get(parentHash)?.info;
+      const parentHash = commit.parents.at(0);
+      const stackBase = dag.get(parentHash);
       if (stackBase == null) {
         return false;
       }
