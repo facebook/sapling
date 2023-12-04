@@ -9,7 +9,6 @@ import type {
   ApplyMergeConflictsPreviewsFuncType,
   ApplyPreviewsFuncType,
   ApplyUncommittedChangesPreviewsFuncType,
-  DagPreviewContext,
   Dag,
   MergeConflictsPreviewContext,
   PreviewContext,
@@ -67,7 +66,7 @@ export abstract class Operation {
   /**
    * Make changes to `dag` to demostrate the side effect of this running or future (queued) operation.
    */
-  optimisticDag(dag: Dag, _context: DagPreviewContext): Dag {
+  optimisticDag(dag: Dag): Dag {
     return dag;
   }
 }

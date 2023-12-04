@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {DagPreviewContext, Dag} from '../previews';
+import type {Dag} from '../previews';
 import type {CommandArg, ExactRevset, SucceedableRevset} from '../types';
 
 import {Operation} from './Operation';
@@ -22,7 +22,7 @@ export class AmendMessageOperation extends Operation {
     return args;
   }
 
-  optimisticDag(dag: Dag, _context: DagPreviewContext): Dag {
+  optimisticDag(dag: Dag): Dag {
     const hash = this.revset.revset;
     return dag.touch(hash).replaceWith(hash, (_h, c) => {
       if (c === undefined) {

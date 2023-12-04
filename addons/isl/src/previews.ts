@@ -279,20 +279,8 @@ export const dagWithPreviews = selector<Dag>({
     const currentOperation = list.currentOperation;
     const history = list.operationHistory;
     let dag = originalDag;
-    let headCommit = get(latestHeadCommit);
-    const context = {originalDag, headCommit};
     for (const op of optimisticOperations({history, queued, currentOperation})) {
-      const nextDag = op.optimisticDag(dag, context);
-      if (nextDag !== dag) {
-        // PERF: Maybe we should index 'head' instead of a linear scan.
-        for (const commit of nextDag.values()) {
-          if (commit.isHead) {
-            headCommit = commit;
-            break;
-          }
-        }
-        dag = nextDag;
-      }
+      dag = op.optimisticDag(dag);
     }
     return dag;
   },
@@ -584,13 +572,6 @@ export type PreviewContext = {
   headCommit?: CommitInfo;
   treeMap: Map<string, CommitTree>;
   successorMap: Map<string, string>;
-};
-
-/** Preview context for `optimisticUpdateDag` */
-export type DagPreviewContext = {
-  /** Dag without any previews. */
-  originalDag: Dag;
-  headCommit?: CommitInfo;
 };
 
 export type UncommittedChangesPreviewContext = {
