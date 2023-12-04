@@ -305,7 +305,7 @@ def log(repo, command, tr):
 
 def unfinished(repo):
     """like cmdutil.checkunfinished without raising an Abort"""
-    for f, clearable, allowcommit, msg, hint in cmdutil.unfinishedstates:
+    for f, allowcommit, msg, hint in cmdutil.unfinishedstates:
         if repo.localvfs.exists(f):
             return True
     return False

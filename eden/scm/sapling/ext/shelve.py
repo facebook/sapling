@@ -1247,7 +1247,6 @@ def extsetup(ui) -> None:
         [
             shelvedstate._filename,
             False,
-            False,
             _("unshelve already in progress"),
             _("use '@prog@ unshelve --continue' or '@prog@ unshelve --abort'"),
         ]

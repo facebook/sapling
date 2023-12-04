@@ -1723,7 +1723,6 @@ def extsetup(ui):
     cmdutil.unfinishedstates.append(
         [
             "histedit-state",
-            False,
             True,
             _("histedit in progress"),
             _("use '@prog@ histedit --continue' or '@prog@ histedit --abort'"),

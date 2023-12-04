@@ -4726,13 +4726,11 @@ summaryhooks = util.hooks()
 summaryremotehooks = util.hooks()
 
 # A list of state files kept by multistep operations like graft.
-# Since graft cannot be aborted, it is considered 'clearable' by update.
 # note: bisect is intentionally excluded
-# (state file, clearable, allowcommit, error, hint)
+# (state file, allowcommit, error, hint)
 unfinishedstates = [
     (
         "graftstate",
-        True,
         False,
         _("graft in progress"),
         _("use '@prog@ graft --continue' or '@prog@ graft --abort' to abort"),
@@ -4740,13 +4738,11 @@ unfinishedstates = [
     (
         "updatemergestate",
         True,
-        True,
         _("update --merge in progress"),
         _("use '@prog@ goto --continue' to continue"),
     ),
     (
         "updatestate",
-        True,
         False,
         _("last update was interrupted"),
         _(
@@ -4763,23 +4759,11 @@ def checkunfinished(repo, commit=False):
     if found. It's probably good to check this right before
     bailifchanged().
     """
-    for f, clearable, allowcommit, msg, hint in unfinishedstates:
+    for f, allowcommit, msg, hint in unfinishedstates:
         if commit and allowcommit:
             continue
         if repo.localvfs.exists(f):
             raise error.Abort(msg, hint=hint)
-
-
-def clearunfinished(repo):
-    """Check for unfinished operations (as above), and clear the ones
-    that are clearable.
-    """
-    for f, clearable, allowcommit, msg, hint in unfinishedstates:
-        if not clearable and repo.localvfs.exists(f):
-            raise error.Abort(msg, hint=hint)
-    for f, clearable, allowcommit, msg, hint in unfinishedstates:
-        if clearable and repo.localvfs.exists(f):
-            util.unlink(repo.localvfs.join(f))
 
 
 afterresolvedstates = [

@@ -6408,6 +6408,9 @@ def update(
                 repo.ui.warn(_("continuing checkout to '%s'\n") % rev)
             else:
                 raise error.Abort(_("not in an interrupted update state"))
+    else:
+        # proactively clean this up if we aren't continuing
+        repo.localvfs.tryunlink("updatestate")
 
     if rev is not None and rev != "" and node is not None:
         raise error.Abort(_("please specify just one revision"))
@@ -6458,11 +6461,17 @@ def update(
         updatecheck = "none"
 
     with repo.wlock():
-        if not clean:
-            # Don't delete the "updatemergestate" marker if we have conflicts.
+        # Don't delete the "updatemergestate" marker if we have conflicts.
+        if clean:
+            repo.localvfs.tryunlink("updatemergestate")
+        else:
             abort_on_unresolved_conflicts()
 
-        cmdutil.clearunfinished(repo)
+        # Either we consumed this with "--continue" or we ignoring it with a
+        # different destination.
+        repo.localvfs.tryunlink("updatestate")
+
+        cmdutil.checkunfinished(repo)
 
         if date:
             rev = hex(cmdutil.finddate(ui, repo, date))

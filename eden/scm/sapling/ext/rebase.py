@@ -2457,7 +2457,6 @@ def uisetup(ui) -> None:
         [
             "rebasestate",
             False,
-            False,
             _("rebase in progress"),
             _("use '@prog@ rebase --continue' or '@prog@ rebase --abort'"),
         ]
