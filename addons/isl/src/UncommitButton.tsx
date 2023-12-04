@@ -10,28 +10,22 @@ import {codeReviewProvider, diffSummary} from './codeReview/CodeReviewInfo';
 import {t, T} from './i18n';
 import {UncommitOperation} from './operations/Uncommit';
 import foundPlatform from './platform';
-import {latestCommitTreeMap, latestHeadCommit, useRunOperation} from './serverAPIState';
+import {dagWithPreviews} from './previews';
+import {useRunOperation} from './serverAPIState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 
 export function UncommitButton() {
-  // TODO: use treeWithPreviews instead,
-  // otherwise there's bugs with disabling this button during previews
-  const headCommit = useRecoilValue(latestHeadCommit);
-  const treeMap = useRecoilValue(latestCommitTreeMap);
+  const dag = useRecoilValue(dagWithPreviews);
+  const headCommit = dag.resolve('.');
 
   const provider = useRecoilValue(codeReviewProvider);
   const diff = useRecoilValue(diffSummary(headCommit?.diffId));
   const isClosed = provider != null && diff.value != null && provider?.isDiffClosed(diff.value);
 
   const runOperation = useRunOperation();
-  if (!headCommit) {
-    return null;
-  }
-
-  const headTree = treeMap.get(headCommit.hash);
-  if (!headTree || headTree.children.length) {
+  if (!headCommit || dag.children(headCommit?.hash).size > 0) {
     // if the head commit has children, we can't uncommit
     return null;
   }
