@@ -30,6 +30,7 @@ jest.mock('../../MessageBus');
 
 describe('rebase operation', () => {
   beforeEach(() => {
+    jest.useFakeTimers();
     resetTestMessages();
     render(<App />);
     act(() => {
@@ -43,6 +44,10 @@ describe('rebase operation', () => {
         value: TEST_COMMIT_HISTORY,
       });
     });
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   const getCommitWithPreview = (hash: Hash, preview: CommitPreview): HTMLElement => {

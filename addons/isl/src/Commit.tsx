@@ -557,6 +557,10 @@ export function YouAreHere({
 
 let commitBeingDragged: CommitInfo | undefined = undefined;
 
+// This is a global state outside React because commit DnD is a global
+// concept: there won't be 2 DnD happening at once in the same window.
+let lastDndId = 0;
+
 function preventDefault(e: Event) {
   e.preventDefault();
 }
@@ -591,37 +595,61 @@ function DraggableCommit({
   const handleDragEnter = useRecoilCallback(
     ({snapshot, set}) =>
       () => {
-        const loadable = snapshot.getLoadable(latestCommitTreeMap);
-        if (loadable.state !== 'hasValue') {
-          return;
-        }
-        const treeMap = loadable.contents;
+        // Capture the environment.
+        const currentBeingDragged = commitBeingDragged;
+        const currentDndId = ++lastDndId;
+        const release = snapshot.retain();
 
-        if (commitBeingDragged != null && commit.hash !== commitBeingDragged.hash) {
-          const draggedTree = treeMap.get(commitBeingDragged.hash);
-          if (draggedTree) {
-            if (
-              // can't rebase a commit onto its descendants
-              !isDescendant(commit.hash, draggedTree) &&
-              // can't rebase a commit onto its parent... it's already there!
-              !(commitBeingDragged.parents as Array<string>).includes(commit.hash)
-            ) {
-              // if the dest commit has a remote bookmark, use that instead of the hash.
-              // this is easier to understand in the command history and works better with optimistic state
-              const destination =
-                commit.remoteBookmarks.length > 0
-                  ? succeedableRevset(commit.remoteBookmarks[0])
-                  : latestSuccessorUnlessExplicitlyObsolete(commit);
-              set(
-                operationBeingPreviewed,
-                new RebaseOperation(
-                  latestSuccessorUnlessExplicitlyObsolete(commitBeingDragged),
-                  destination,
-                ),
-              );
+        const handleDnd = () => {
+          // Skip handling if there was a new "DragEnter" event that invalidates this one.
+          if (lastDndId != currentDndId) {
+            return;
+          }
+          const loadable = snapshot.getLoadable(latestCommitTreeMap);
+          if (loadable.state !== 'hasValue') {
+            return;
+          }
+          const treeMap = loadable.contents;
+
+          if (currentBeingDragged != null && commit.hash !== currentBeingDragged.hash) {
+            const beingDragged = currentBeingDragged;
+            const draggedTree = treeMap.get(beingDragged.hash);
+            if (draggedTree) {
+              if (
+                // can't rebase a commit onto its descendants
+                !isDescendant(commit.hash, draggedTree) &&
+                // can't rebase a commit onto its parent... it's already there!
+                !(beingDragged.parents as Array<string>).includes(commit.hash)
+              ) {
+                // if the dest commit has a remote bookmark, use that instead of the hash.
+                // this is easier to understand in the command history and works better with optimistic state
+                const destination =
+                  commit.remoteBookmarks.length > 0
+                    ? succeedableRevset(commit.remoteBookmarks[0])
+                    : latestSuccessorUnlessExplicitlyObsolete(commit);
+                set(operationBeingPreviewed, op => {
+                  const newRebase = new RebaseOperation(
+                    latestSuccessorUnlessExplicitlyObsolete(beingDragged),
+                    destination,
+                  );
+                  const isEqual = newRebase.equals(op);
+                  return isEqual ? op : newRebase;
+                });
+              }
             }
           }
-        }
+        };
+
+        // This allows us to recieve a list of "queued" DragEnter events
+        // before actually handling them. This way we can skip "invalidated"
+        // events and only handle the last (valid) one.
+        window.setTimeout(() => {
+          try {
+            handleDnd();
+          } finally {
+            release();
+          }
+        }, 1);
       },
     [commit],
   );

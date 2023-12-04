@@ -12,6 +12,7 @@ import {latestSuccessor} from '../SuccessionTracker';
 import {t} from '../i18n';
 import {CommitPreview} from '../previews';
 import {Operation} from './Operation';
+import deepEqual from 'fast-deep-equal';
 
 export class RebaseOperation extends Operation {
   constructor(
@@ -22,6 +23,13 @@ export class RebaseOperation extends Operation {
   }
 
   static opName = 'Rebase';
+
+  equals(other?: Operation | null): boolean {
+    return (
+      other instanceof RebaseOperation &&
+      deepEqual([this.source, this.destination], [other.source, other.destination])
+    );
+  }
 
   getArgs() {
     return ['rebase', '-s', this.source, '-d', this.destination];

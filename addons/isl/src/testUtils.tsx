@@ -292,6 +292,7 @@ export function dragAndDropCommits(draggedCommit: Hash | HTMLElement, onto: Hash
 
   act(() => {
     dragAndDrop(draggableCommit as HTMLElement, dragTargetComit as HTMLElement);
+    jest.advanceTimersByTime(2);
   });
 }
 
