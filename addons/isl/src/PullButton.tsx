@@ -15,7 +15,7 @@ import {PullOperation} from './operations/PullOperation';
 import {persistAtomToConfigEffect} from './persistAtomToConfigEffect';
 import {uncommittedChangesWithPreviews, useMostRecentPendingOperation} from './previews';
 import {relativeDate, RelativeDate} from './relativeDate';
-import {latestCommitTree, useRunOperation} from './serverAPIState';
+import {latestCommits, useRunOperation} from './serverAPIState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {atom, useRecoilState, useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
@@ -48,12 +48,10 @@ export type PullButtonOption = {
 export function PullButton() {
   const runOperation = useRunOperation();
   // no need to use previews here, we only need the latest commits to find the last pull timestamp.
-  const latestCommits = useRecoilValue(latestCommitTree);
+  const commits = useRecoilValue(latestCommits);
   // assuming master is getting updated frequently, last pull time should equal the newest commit in the history.
   const lastSync =
-    latestCommits.length === 0
-      ? null
-      : Math.max(...latestCommits.map(commit => commit.info.date.valueOf()));
+    commits.length === 0 ? null : Math.max(...commits.map(info => info.date.valueOf()));
 
   const pullButtonOptions: Array<PullButtonOption> = [];
   pullButtonOptions.push(DEFAULT_PULL_BUTTON, ...(Internal.additionalPullOptions ?? []));
