@@ -226,15 +226,14 @@ def extsetup(ui):
         ui.setconfig("hooks", "post-update.morestatus", cleanupdateargs)
 
 
-def saveupdateargs(repo, args, **kwargs):
+def saveupdateargs(repo, args: str, **kwargs) -> None:
     # args is a string containing all flags and arguments
-    with repo.wlock():
-        repo.localvfs.writeutf8(UPDATEARGS, args)
+    with repo.localvfs(UPDATEARGS, "wb", atomictemp=True) as fp:
+        fp.write(args.encode("utf-8"))
 
 
-def cleanupdateargs(repo, **kwargs):
-    with repo.wlock():
-        repo.localvfs.tryunlink(UPDATEARGS)
+def cleanupdateargs(repo, **kwargs) -> None:
+    repo.localvfs.tryunlink(UPDATEARGS)
 
 
 def statuscmd(orig, ui, repo, *pats, **opts):
