@@ -278,9 +278,13 @@ export const dagWithPreviews = selector<Dag>({
     const queued = get(queuedOperations);
     const currentOperation = list.currentOperation;
     const history = list.operationHistory;
+    const currentPreview = get(operationBeingPreviewed);
     let dag = originalDag;
     for (const op of optimisticOperations({history, queued, currentOperation})) {
       dag = op.optimisticDag(dag);
+    }
+    if (currentPreview) {
+      dag = currentPreview.previewDag(dag);
     }
     return dag;
   },

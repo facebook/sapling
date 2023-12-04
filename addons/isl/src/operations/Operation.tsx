@@ -63,8 +63,14 @@ export abstract class Operation {
     context: MergeConflictsPreviewContext,
   ): ApplyMergeConflictsPreviewsFuncType | undefined;
 
+  /** Effects to `dag` before confirming the operation. */
+  previewDag(dag: Dag): Dag {
+    return dag;
+  }
+
   /**
-   * Make changes to `dag` to demostrate the side effect of this running or future (queued) operation.
+   * Effects to `dag` after confirming the operation.
+   * The operation is running or queued.
    */
   optimisticDag(dag: Dag): Dag {
     return dag;
