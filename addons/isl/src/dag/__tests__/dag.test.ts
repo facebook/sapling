@@ -5,7 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Dag} from '../dag';
+import type {CommitInfo, Hash} from '../../types';
+import type {HashWithParents} from '../dag';
+
+import {Dag, REBASE_SUCC_PREFIX} from '../dag';
 
 describe('Dag', () => {
   describe('basic queries', () => {
@@ -146,6 +149,109 @@ describe('Dag', () => {
       expect(dag.descendants('b').toSortedArray()).toEqual(['a', 'b', 'c']);
       expect(dag.isAncestor('a', 'c')).toBe(true);
       expect(dag.isAncestor('c', 'a')).toBe(true);
+    });
+  });
+
+  describe('rebase', () => {
+    const succ = (h: Hash): Hash => `${REBASE_SUCC_PREFIX}${h}`;
+    const date = new Date(42);
+
+    it('can break linear stack', () => {
+      // a--b--c   rebase -r c -d a
+      let dag = new Dag<Partial<CommitInfo> & HashWithParents>().add([
+        {hash: 'a', parents: [], phase: 'public', date},
+        {hash: 'b', parents: ['a'], phase: 'draft', date},
+        {hash: 'c', parents: ['b'], phase: 'draft', date},
+      ]);
+      dag = dag.rebase(['c'], 'a');
+      expect(dag.parentHashes('c')).toEqual(['a']);
+    });
+
+    it('skips already rebased branches', () => {
+      // a--------b            rebase -r c+d+e+f -d b
+      //  \        \           e f should not be touched.
+      //   c--d     e--f
+      let dag = new Dag<Partial<CommitInfo> & HashWithParents>().add([
+        {hash: 'a', parents: [], phase: 'public'},
+        {hash: 'b', parents: ['a'], phase: 'public'},
+        {hash: 'c', parents: ['a'], phase: 'draft', date},
+        {hash: 'd', parents: ['c'], phase: 'draft', date},
+        {hash: 'e', parents: ['b'], phase: 'draft', date},
+        {hash: 'f', parents: ['e'], phase: 'draft', date},
+      ]);
+      dag = dag.rebase(['c', 'd', 'e', 'f'], 'b');
+
+      // e and f should not be touched
+      expect(dag.get('e')?.date).toEqual(date);
+      expect(dag.get('f')?.date).toEqual(date);
+
+      // c and d are touched
+      expect(dag.get('c')?.date).not.toEqual(date);
+      expect(dag.get('d')?.date).not.toEqual(date);
+
+      // check b--e--f and b--c--d
+      expect(dag.parentHashes('f')).toEqual(['e']);
+      expect(dag.parentHashes('e')).toEqual(['b']);
+      expect(dag.parentHashes('d')).toEqual(['c']);
+      expect(dag.parentHashes('c')).toEqual(['b']);
+    });
+
+    it('handles orphaned commits', () => {
+      // a--b  z; rebase -r a -d z; result:
+      // a(pred)--b  z--a(succ).
+      let dag = new Dag<Partial<CommitInfo> & HashWithParents>().add([
+        {hash: 'z', parents: [], phase: 'public', date},
+        {hash: 'a', parents: [], phase: 'draft', date},
+        {hash: 'b', parents: ['a'], phase: 'draft', date},
+      ]);
+      dag = dag.rebase(['a'], 'z');
+
+      // check z--a(succ)
+      expect(dag.parentHashes(succ('a'))).toEqual(['z']);
+      expect(dag.get(succ('a'))?.date).not.toEqual(date);
+
+      // check a(pred)--b
+      expect(dag.parentHashes('b')).toEqual(['a']);
+      expect(dag.parentHashes('a')).toEqual([]);
+      expect(dag.get('a')?.date).toEqual(date);
+      expect(dag.get('b')?.date).toEqual(date);
+    });
+
+    it('handles non-continous selection', () => {
+      // a--b--c--d--e--f  z; rebase b+c+e+f to z; result:
+      // a--b(pred)--c(pred)--d; z--b(succ)--c(succ)--e--f
+      let dag = new Dag<Partial<CommitInfo> & HashWithParents>().add([
+        {hash: 'a', parents: [], phase: 'draft'},
+        {hash: 'b', parents: ['a'], phase: 'draft', date},
+        {hash: 'c', parents: ['b'], phase: 'draft', date},
+        {hash: 'd', parents: ['c'], phase: 'draft', date}, // not rebasing
+        {hash: 'e', parents: ['d'], phase: 'draft'},
+        {hash: 'f', parents: ['e'], phase: 'draft'},
+        {hash: 'z', parents: []},
+      ]);
+      dag = dag.rebase(['b', 'c', 'e', 'f'], 'z');
+
+      // check z--b(succ)--c(succ)--e--f
+      expect(dag.parentHashes('f')).toEqual(['e']);
+      expect(dag.parentHashes('e')).toEqual([succ('c')]);
+      expect(dag.parentHashes(succ('c'))).toEqual([succ('b')]);
+      expect(dag.parentHashes(succ('b'))).toEqual(['z']);
+
+      // check a--b(pred)--c(pred)--c--d
+      expect(dag.parentHashes('c')).toEqual(['b']);
+      expect(dag.parentHashes('b')).toEqual(['a']);
+      expect(dag.childHashes('d').toArray()).toEqual([]);
+
+      // succ and pred info
+      expect(dag.get('b')?.successorInfo?.hash).toEqual(succ('b'));
+      expect(dag.get('c')?.successorInfo?.hash).toEqual(succ('c'));
+      expect(dag.get(succ('b'))?.closestPredecessors).toEqual(['b']);
+      expect(dag.get(succ('c'))?.closestPredecessors).toEqual(['c']);
+
+      // orphaned and obsoleted b--c--d are not touched
+      expect(dag.get('b')?.date).toEqual(date);
+      expect(dag.get('c')?.date).toEqual(date);
+      expect(dag.get('d')?.date).toEqual(date);
     });
   });
 });

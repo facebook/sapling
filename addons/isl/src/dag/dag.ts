@@ -5,15 +5,17 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {WithPreviewType} from '../previews';
 import type {CommitInfo, Hash} from '../types';
 import type {SetLike} from './set';
 import type {RecordOf} from 'immutable';
 
+import {CommitPreview} from '../previews';
 import {HashSet} from './set';
 import {Map as ImMap, Record, List} from 'immutable';
 import {cached} from 'shared/LRU';
 import {SelfUpdate} from 'shared/immutableExt';
-import {splitOnce} from 'shared/utils';
+import {splitOnce, unwrap} from 'shared/utils';
 
 /**
  * Partial commit graph with query and edit operations.
@@ -237,6 +239,70 @@ export class Dag<C extends HashWithParents> extends SelfUpdate<DagRecord<C>> {
     });
   }
 
+  /**
+   * Attempt to rebase `srcSet` to `dest` for preview use-case.
+   * Handles case that produces "orphaned" or "obsoleted" commits.
+   * Does not handle:
+   * - copy 'x amended to y' relation when x and y are both being rebased.
+   * - skip rebasing 'x' if 'x amended to y' and 'y in ancestors(dest)'.
+   */
+  rebase(srcSet: SetLike, dest: Hash | undefined): Dag<C> {
+    let src = HashSet.fromHashes(srcSet);
+    // x is already rebased, if x's parent is dest or 'already rebased'.
+    // dest--a--b--c--d--e: when rebasing a+b+d+e to dest, only a+b are already rebased.
+    const alreadyRebased = this.descendants(dest, {within: src});
+    // Skip already rebased, and skip non-draft commits.
+    src = this.draft(src.subtract(alreadyRebased));
+    // Nothing to rebase?
+    if (dest == null || src.size === 0) {
+      return this;
+    }
+    // Rebase is not simply moving `roots(src)` to `dest`. Consider graph 'a--b--c--d',
+    // 'rebase -r a+b+d -d dest' produces 'dest--a--b--d' and 'a(obsoleted)--b(obsoleted)--c':
+    // - The new parent of 'd' is 'b', not 'dest'.
+    // - 'a' and 'b' got duplicated.
+    const srcRoots = this.roots(src); // a, d
+    const orphaned = this.range(src, this.draft()).subtract(src); // c
+    const duplicated = this.ancestors(orphaned).intersect(src); // a, b
+    const maybeSuccHash = (h: Hash) => (duplicated.contains(h) ? `${REBASE_SUCC_PREFIX}${h}` : h);
+    const date = new Date();
+    const newParents = (h: Hash): Hash[] => {
+      const directParents = this.parents(h);
+      let parents = directParents.intersect(src);
+      if (parents.size === 0) {
+        parents = this.heads(this.ancestors(directParents).intersect(src));
+      }
+      return parents.size === 0 ? [dest] : parents.toHashes().map(maybeSuccHash).toArray();
+    };
+    return this.replaceWith(src.union(duplicated.toHashes().map(maybeSuccHash)), (h, c) => {
+      const isSucc = h.startsWith(REBASE_SUCC_PREFIX);
+      const pureHash = isSucc ? h.substring(REBASE_SUCC_PREFIX.length) : h;
+      const isPred = !isSucc && duplicated.contains(h);
+      const isRoot = srcRoots.contains(pureHash);
+      const info = unwrap(isSucc ? this.get(pureHash) : c);
+      const newInfo: Partial<CommitInfo & WithPreviewType> = {};
+      if (isPred) {
+        // For "predecessors" (ex. a(obsoleted)), keep hash unchanged
+        // so orphaned commits (c) don't move. Update successorInfo.
+        const succHash = maybeSuccHash(pureHash);
+        newInfo.successorInfo = {hash: succHash, type: 'rebase'};
+      } else {
+        // Set date, parents, previewType.
+        newInfo.date = date;
+        newInfo.parents = newParents(pureHash);
+        newInfo.previewType = isRoot
+          ? CommitPreview.REBASE_OPTIMISTIC_ROOT
+          : CommitPreview.REBASE_OPTIMISTIC_DESCENDANT;
+        // Set predecessor info for successors.
+        if (isSucc) {
+          newInfo.closestPredecessors = [pureHash];
+          newInfo.hash = h;
+        }
+      }
+      return {...info, ...newInfo};
+    });
+  }
+
   /** Attempt to resolve a name by `name`. The `name` can be a hash, a bookmark name, etc. */
   resolve(name: string): Readonly<C> | undefined {
     // Full commit hash?
@@ -362,3 +428,6 @@ type DagRecord<C extends HashWithParents> = RecordOf<DagProps<C>>;
 
 const EMPTY_DAG_RECORD = DagRecord();
 const EMPTY_LIST = List<Hash>();
+
+/** 'Hash' prefix for rebase successor in preview. */
+export const REBASE_SUCC_PREFIX = 'OPTIMISTIC_REBASE_SUCC:';
