@@ -20,6 +20,7 @@ import {SyncStatus, syncStatusAtom} from './codeReview/syncStatus';
 import {type CommitTreeWithPreviews, walkTreePostorder, isTreeLinear} from './getCommitTree';
 import {T, t} from './i18n';
 import {IconStack} from './icons/IconStack';
+import {dagWithPreviews} from './previews';
 import {useRunOperation, latestUncommittedChangesData} from './serverAPIState';
 import {useConfirmUnsavedEditsBeforeSplit} from './stackEdit/ui/ConfirmUnsavedEditsBeforeSplit';
 import {StackEditIcon} from './stackEdit/ui/StackEditIcon';
@@ -43,6 +44,7 @@ export function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.Reac
   const stackHashes = useRecoilValue(editingStackIntentionHashes)[1];
   const loadingState = useRecoilValue(loadingStackState);
   const suggestedRebase = useRecoilValue(showSuggestedRebaseForStack(tree.info.hash));
+  const dag = useRecoilValue(dagWithPreviews);
   const runOperation = useRunOperation();
   const syncStatusMap = useRecoilValue(syncStatusAtom);
 
@@ -60,7 +62,7 @@ export function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.Reac
   const showCleanupButton =
     reviewProvider == null || diffMap?.value == null
       ? false
-      : isStackEligibleForCleanup(tree, diffMap.value, reviewProvider);
+      : isStackEligibleForCleanup(tree.info.hash, dag, diffMap.value, reviewProvider);
 
   const confirmShouldSubmit = useShowConfirmSubmitStack();
   const contextMenu = useContextMenu(() => moreActions);

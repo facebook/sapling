@@ -6,8 +6,7 @@
  */
 
 import type {UICodeReviewProvider} from './codeReview/UICodeReviewProvider';
-import type {CommitTreeWithPreviews} from './getCommitTree';
-import type {DiffSummary, CommitInfo} from './types';
+import type {DiffSummary, CommitInfo, Hash} from './types';
 
 import {OperationDisabledButton} from './OperationDisabledButton';
 import {latestSuccessorUnlessExplicitlyObsolete} from './SuccessionTracker';
@@ -15,7 +14,7 @@ import {Tooltip} from './Tooltip';
 import {codeReviewProvider, allDiffSummaries} from './codeReview/CodeReviewInfo';
 import {t, T} from './i18n';
 import {HideOperation} from './operations/HideOperation';
-import {treeWithPreviews} from './previews';
+import {type Dag, dagWithPreviews} from './previews';
 import {useRunOperation} from './serverAPIState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useRecoilValue} from 'recoil';
@@ -23,27 +22,24 @@ import {Icon} from 'shared/Icon';
 import {unwrap} from 'shared/utils';
 
 export function isStackEligibleForCleanup(
-  tree: CommitTreeWithPreviews,
+  hash: Hash,
+  dag: Dag,
   diffMap: Map<string, DiffSummary>,
   provider: UICodeReviewProvider,
 ): boolean {
-  if (
-    tree.info.diffId == null ||
-    tree.info.isHead || // don't allow hiding a stack you're checked out on
-    diffMap.get(tree.info.diffId) == null ||
-    !provider.isDiffEligibleForCleanup(unwrap(diffMap.get(tree.info.diffId)))
-  ) {
-    return false;
-  }
-
-  // any child not eligible -> don't show
-  for (const subtree of tree.children) {
-    if (!isStackEligibleForCleanup(subtree, diffMap, provider)) {
-      return false;
-    }
-  }
-
-  return true;
+  return dag
+    .descendants(hash)
+    .toSeq()
+    .every(h => {
+      const info = dag.get(h);
+      return !(
+        info == null ||
+        info.diffId == null ||
+        info.isHead || // don't allow hiding a stack you're checked out on
+        diffMap.get(info.diffId) == null ||
+        !provider.isDiffEligibleForCleanup(unwrap(diffMap.get(info.diffId)))
+      );
+    });
 }
 
 export function CleanupButton({commit, hasChildren}: {commit: CommitInfo; hasChildren: boolean}) {
@@ -69,16 +65,16 @@ export function CleanupButton({commit, hasChildren}: {commit: CommitInfo; hasChi
 }
 
 export function CleanupAllButton() {
-  const trees = useRecoilValue(treeWithPreviews);
+  const dag = useRecoilValue(dagWithPreviews);
   const reviewProvider = useRecoilValue(codeReviewProvider);
   const diffMap = useRecoilValue(allDiffSummaries)?.value;
   if (diffMap == null || reviewProvider == null) {
     return null;
   }
 
-  const stackBases = trees.trees.map(tree => tree.children).flat();
-  const cleanableStacks = stackBases.filter(tree =>
-    isStackEligibleForCleanup(tree, diffMap, reviewProvider),
+  const stackBases = dag.roots(dag.draft()).toArray();
+  const cleanableStacks = stackBases.filter(hash =>
+    isStackEligibleForCleanup(hash, dag, diffMap, reviewProvider),
   );
 
   const disabled = cleanableStacks.length === 0;
@@ -92,9 +88,10 @@ export function CleanupAllButton() {
       <OperationDisabledButton
         contextKey="cleanup-all"
         runOperation={() => {
-          return cleanableStacks.map(
-            tree => new HideOperation(latestSuccessorUnlessExplicitlyObsolete(tree.info)),
-          );
+          return cleanableStacks.map(hash => {
+            const info = unwrap(dag.get(hash));
+            return new HideOperation(latestSuccessorUnlessExplicitlyObsolete(info));
+          });
         }}
         icon={<Icon icon="eye-closed" slot="start" />}
         appearance="secondary"
