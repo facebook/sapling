@@ -53,8 +53,11 @@ export class HideOperation extends Operation {
         newHead.push(parent);
       }
     }
-    return dag.remove(toHide).replaceWith(newHead, (_h, c) => {
-      return c && {...c, isHead: true, previewType: CommitPreview.GOTO_DESTINATION};
-    });
+    return dag
+      .remove(toHide)
+      .replaceWith(newHead, (_h, c) => {
+        return c && {...c, isHead: true, previewType: CommitPreview.GOTO_DESTINATION};
+      })
+      .cleanup();
   }
 }
