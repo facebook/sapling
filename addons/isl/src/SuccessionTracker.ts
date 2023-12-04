@@ -8,6 +8,7 @@
 import type {Dag} from './dag/dag';
 import type {CommitInfo, ExactRevset, SmartlogCommits, SucceedableRevset} from './types';
 
+import {MutationDag} from './dag/mutation_dag';
 import {exactRevset, succeedableRevset} from './types';
 import {atom, DefaultValue} from 'recoil';
 
@@ -93,18 +94,15 @@ export class SuccessionTracker {
 
 export const successionTracker = new SuccessionTracker();
 
-export const latestSuccessorsMap = atom<Map<string, string>>({
+export const latestSuccessorsMap = atom<MutationDag>({
   key: 'latestSuccessorsMap',
-  default: new Map(),
+  default: new MutationDag(),
   effects: [
     ({setSelf}) => {
       return successionTracker.onSuccessions(successions => {
         setSelf(existing => {
-          const map = existing instanceof DefaultValue ? new Map() : new Map(existing);
-          for (const [oldHash, newHash] of successions) {
-            map.set(oldHash, newHash);
-          }
-          return map;
+          const dag = existing instanceof DefaultValue ? new MutationDag() : existing;
+          return dag.addMutations(successions);
         });
       });
     },

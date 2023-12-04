@@ -237,7 +237,8 @@ export const latestDag = selector<Dag>({
   get: ({get}) => {
     const commits = get(latestCommits);
     const successorMap = get(latestSuccessorsMap);
-    const dag = new Dag().add(commits).addMutations(successorMap.entries());
+    const commitDag = undefined; // will be populated from `commits`
+    const dag = Dag.fromDag(commitDag, successorMap).add(commits);
     return dag;
   },
 });
