@@ -14,11 +14,10 @@ import {useSelectAllCommitsShortcut} from './SelectAllCommits';
 import {latestSuccessorUnlessExplicitlyObsolete, successionTracker} from './SuccessionTracker';
 import {islDrawerState} from './drawerState';
 import {HideOperation} from './operations/HideOperation';
-import {treeWithPreviews} from './previews';
+import {dagWithPreviews, treeWithPreviews} from './previews';
 import {latestCommitTreeMap, operationBeingPreviewed} from './serverAPIState';
 import {firstOfIterable} from './utils';
 import {atom, selector, useRecoilCallback, useRecoilValue} from 'recoil';
-import {notEmpty} from 'shared/utils';
 
 /**
  * See {@link selectedCommitInfos}
@@ -60,17 +59,11 @@ export const selectedCommitInfos = selector<Array<CommitInfo>>({
   key: 'selectedCommitInfos',
   get: ({get}) => {
     const selected = get(selectedCommits);
-    const {treeMap} = get(treeWithPreviews);
-    const commits = [...selected]
-      .map(hash => {
-        const tree = treeMap.get(hash);
-        if (tree == null) {
-          return null;
-        }
-        return tree.info;
-      })
-      .filter(notEmpty);
-    return commits;
+    const dag = get(dagWithPreviews);
+    return [...selected].flatMap(h => {
+      const info = dag.get(h);
+      return info === undefined ? [] : [info];
+    });
   },
 });
 
