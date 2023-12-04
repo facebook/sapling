@@ -149,7 +149,8 @@ export class BaseDag<C extends HashWithParents> extends SelfUpdate<BaseDagRecord
   /** ancestors(heads) & descendants(roots) */
   range(roots: SetLike, heads: SetLike): HashSet {
     // PERF: This is not the most efficient, but easy to write.
-    return this.ancestors(heads).intersect(this.descendants(roots));
+    const ancestors = this.ancestors(heads);
+    return ancestors.intersect(this.descendants(roots, {within: ancestors}));
   }
 
   /** set - children(set) */
