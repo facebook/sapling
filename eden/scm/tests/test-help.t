@@ -316,8 +316,6 @@ Test extension help:
        fastlog
        fbcodereview  integration with Meta internal code review systems
        fbhistedit    extends the existing histedit functionality
-       generic_bisect
-                     (no help text available)
        gitrevset     map a git hash to a Mercurial hash:
        globalrevs    extension for providing strictly increasing revision
                      numbers
