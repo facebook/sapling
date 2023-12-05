@@ -49,6 +49,7 @@ rust_binary(
         "fbsource//third-party/rust:itertools",
         "fbsource//third-party/rust:prettytable-rs",
         "fbsource//third-party/rust:regex",
+        "fbsource//third-party/rust:serde",
         "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:slog",
         "fbsource//third-party/rust:smallvec",
@@ -131,7 +132,6 @@ rust_binary(
         "//eden/mononoke/server/context:context",
         "//thrift/lib/rust:fbthrift",
     ] + ([] if rust_oss.is_oss_build() else [
-        "fbsource//third-party/rust:serde",
         "//eden/mononoke/blobstore:blobstore_factory",
         "//eden/mononoke/blobstore:fileblob",
         "//eden/mononoke/blobstore:redactedblobstore",
