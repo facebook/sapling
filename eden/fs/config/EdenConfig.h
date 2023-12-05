@@ -1280,6 +1280,23 @@ class EdenConfig : private ConfigSettingManager {
       false,
       this};
 
+  /**
+   * The minimum kernel version required for EdenFS to work correctly.
+   */
+  ConfigSetting<std::string> doctorMinimumKernelVersion{
+      "doctor:minimum-kernel-version",
+      "4.11.3-67",
+      this};
+
+  /**
+   * Known bad kernel versions for which we should print a warning in `edenfsctl
+   * doctor`.
+   */
+  ConfigSetting<std::string> doctorKnownBadKernelVersions{
+      "doctor:known-bad-kernel-versions",
+      "TODO,TEST",
+      this};
+
   // [hash]
   /**
    * The key to use for blake3 hash computation.
