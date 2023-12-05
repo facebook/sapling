@@ -15,6 +15,7 @@
 #include "eden/fs/eden-config.h"
 #include "eden/fs/model/BlobFwd.h"
 #include "eden/fs/telemetry/EdenStats.h"
+#include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/SpawnedProcess.h"
 
@@ -280,7 +281,7 @@ class HgImporterManager : public Importer {
 
  private:
   template <typename Fn>
-  auto retryOnError(Fn&& fn, folly::StringPiece func);
+  auto retryOnError(Fn&& fn, FetchMiss::MissType missType);
 
   HgImporter* getImporter();
   void resetHgImporter(const std::exception& ex);
@@ -288,6 +289,7 @@ class HgImporterManager : public Importer {
   std::unique_ptr<HgImporter> importer_;
 
   const AbsolutePath repoPath_;
+  std::string repoName_;
   EdenStatsPtr const stats_;
   std::shared_ptr<StructuredLogger> logger_;
   const std::optional<AbsolutePath> importHelperScript_;

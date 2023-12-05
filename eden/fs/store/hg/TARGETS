@@ -115,6 +115,7 @@ cpp_library(
     exported_deps = [
         "//eden/fs:config",
         "//eden/fs/model:model-fwd",
+        "//eden/fs/telemetry:log_info",
         "//eden/fs/telemetry:telemetry",
         "//eden/fs/utils:path",
         "//eden/fs/utils:process",

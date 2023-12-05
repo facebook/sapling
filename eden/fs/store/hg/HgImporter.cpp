@@ -532,12 +532,13 @@ HgImporterManager::HgImporterManager(
     std::shared_ptr<StructuredLogger> logger,
     std::optional<AbsolutePath> importHelperScript)
     : repoPath_{repoPath},
+      repoName_(HgImporter(repoPath, stats.copy()).getOptions().repoName),
       stats_{std::move(stats)},
       logger_{std::move(logger)},
       importHelperScript_{importHelperScript} {}
 
 template <typename Fn>
-auto HgImporterManager::retryOnError(Fn&& fn, StringPiece func) {
+auto HgImporterManager::retryOnError(Fn&& fn, FetchMiss::MissType missType) {
   bool retried = false;
 
   auto retryableError = [this, &retried](const std::exception& ex) {
@@ -567,8 +568,12 @@ auto HgImporterManager::retryOnError(Fn&& fn, StringPiece func) {
       }
     }
   } catch (const std::exception& ex) {
-    logger_->logEvent(
-        HgImportFailure{folly::to<string>(func), folly::to<string>(ex.what())});
+    logger_->logEvent(FetchMiss{
+        repoPath_.asString(),
+        FetchMiss::HgImporter,
+        missType,
+        folly::to<string>(ex.what()),
+        true});
     throw;
   }
 }
@@ -580,7 +585,7 @@ BlobPtr HgImporterManager::importFileContents(
       [=](HgImporter* importer) {
         return importer->importFileContents(path, blobHash);
       },
-      __func__);
+      FetchMiss::Blob);
 }
 
 std::unique_ptr<IOBuf> HgImporterManager::fetchTree(
@@ -590,7 +595,7 @@ std::unique_ptr<IOBuf> HgImporterManager::fetchTree(
       [&](HgImporter* importer) {
         return importer->fetchTree(path, pathManifestNode);
       },
-      __func__);
+      FetchMiss::Tree);
 }
 
 HgImporter* HgImporterManager::getImporter() {
