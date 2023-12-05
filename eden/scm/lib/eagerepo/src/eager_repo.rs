@@ -64,7 +64,7 @@ use crate::Result;
 /// for atomic metadata changes.
 pub struct EagerRepo {
     pub(crate) dag: Dag,
-    store: EagerRepoStore,
+    pub(crate) store: EagerRepoStore,
     metalog: MetaLog,
     pub(crate) dir: PathBuf,
 }

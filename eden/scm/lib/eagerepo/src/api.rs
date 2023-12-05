@@ -71,6 +71,16 @@ use tracing::trace;
 
 use crate::EagerRepo;
 
+impl EagerRepo {
+    /// Load file/tree store changes from disk.
+    ///
+    /// This is intended to be used by EdenApi impls so content fetched
+    /// via EdenApi (during testing) is always fresh.
+    pub(crate) fn refresh_for_api(&self) {
+        let _ = self.store.flush();
+    }
+}
+
 #[async_trait::async_trait]
 impl EdenApi for EagerRepo {
     fn url(&self) -> Option<String> {
@@ -90,6 +100,7 @@ impl EdenApi for EagerRepo {
 
     async fn files(&self, keys: Vec<Key>) -> edenapi::Result<Response<FileResponse>> {
         debug!("files {}", debug_key_list(&keys));
+        self.refresh_for_api();
         let mut values = Vec::with_capacity(keys.len());
         for key in keys {
             let id = key.hgid;
@@ -117,6 +128,7 @@ impl EdenApi for EagerRepo {
 
     async fn files_attrs(&self, reqs: Vec<FileSpec>) -> edenapi::Result<Response<FileResponse>> {
         debug!("files {}", debug_spec_list(&reqs));
+        self.refresh_for_api();
         let mut values = Vec::with_capacity(reqs.len());
         for spec in reqs {
             let key = spec.key;
@@ -150,6 +162,7 @@ impl EdenApi for EagerRepo {
         _length: Option<u32>,
     ) -> edenapi::Result<Response<HistoryEntry>> {
         debug!("history {}", debug_key_list(&keys));
+        self.refresh_for_api();
         let mut values = Vec::new();
         let mut visited: HashSet<Key> = Default::default();
         let mut to_visit: Vec<Key> = keys;
@@ -200,6 +213,7 @@ impl EdenApi for EagerRepo {
         attributes: Option<TreeAttributes>,
     ) -> edenapi::Result<Response<Result<TreeEntry, edenapi::types::EdenApiServerError>>> {
         debug!("trees {}", debug_key_list(&keys));
+        self.refresh_for_api();
         let mut values = Vec::new();
         let attributes = attributes.unwrap_or_default();
         if attributes.child_metadata {
@@ -232,6 +246,7 @@ impl EdenApi for EagerRepo {
         hgids: Vec<HgId>,
     ) -> edenapi::Result<Response<CommitRevlogData>> {
         debug!("revlog_data {}", debug_hgid_list(&hgids));
+        self.refresh_for_api();
         let mut values = Vec::new();
         for id in hgids {
             let data = self.get_sha1_blob_for_api(id, "commit_revlog_data")?;
