@@ -144,7 +144,7 @@ Test changes are readable via git:
 
   $ export GIT_DIR="$TESTTMP/gitrepo/.git"
   $ git log foo --pretty='format:%s %an %d'
-  alpha3 test  (refs/visibleheads/57eda5013e068ac543a52ad073cec3d7750113b5, foo)
+  alpha3 test  *foo) (glob)
   beta test  (HEAD -> master)
   alpha test  (no-eol)
   $ git fsck --strict

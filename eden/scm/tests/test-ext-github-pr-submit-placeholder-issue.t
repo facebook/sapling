@@ -1,5 +1,6 @@
 #debugruntest-compatible
 #inprocess-hg-incompatible
+#require git
 
   $ eagerepo
   $ enable github
