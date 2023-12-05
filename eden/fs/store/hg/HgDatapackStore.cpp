@@ -155,8 +155,7 @@ void HgDatapackStore::getTreeBatch(const ImportRequestsList& importRequests) {
               requests.size());
         }
 
-        if (config_->getEdenConfig()->hgTreeFetchFallback.getValue() &&
-            content.hasException()) {
+        if (content.hasException()) {
           if (logger_) {
             logger_->logEvent(EdenApiMiss{
                 repoName_,
@@ -164,10 +163,13 @@ void HgDatapackStore::getTreeBatch(const ImportRequestsList& importRequests) {
                 content.exception().what().toStdString()});
           }
 
-          // If we're falling back, the caller will fulfill this Promise with a
-          // tree from HgImporter.
-          return;
+          if (config_->getEdenConfig()->hgTreeFetchFallback.getValue()) {
+            // If we're falling back, the caller will fulfill this Promise with
+            // a tree from HgImporter.
+            return;
+          }
         }
+
         XLOGF(DBG9, "Imported Tree node={}", folly::hexlify(requests[index]));
         const auto& nodeId = requests[index];
         auto& [importRequestList, watch] = importRequestsMap[nodeId];
@@ -274,8 +276,7 @@ void HgDatapackStore::getBlobBatch(const ImportRequestsList& importRequests) {
               requests.size());
         }
 
-        if (config_->getEdenConfig()->hgBlobFetchFallback.getValue() &&
-            content.hasException()) {
+        if (content.hasException()) {
           if (logger_) {
             logger_->logEvent(EdenApiMiss{
                 repoName_,
@@ -283,9 +284,11 @@ void HgDatapackStore::getBlobBatch(const ImportRequestsList& importRequests) {
                 content.exception().what().toStdString()});
           }
 
-          // If we're falling back, the caller will fulfill this Promise with a
-          // blob from HgImporter.
-          return;
+          if (config_->getEdenConfig()->hgBlobFetchFallback.getValue()) {
+            // If we're falling back, the caller will fulfill this Promise with
+            // a blob from HgImporter.
+            return;
+          }
         }
 
         XLOGF(DBG9, "Imported Blob node={}", folly::hexlify(requests[index]));

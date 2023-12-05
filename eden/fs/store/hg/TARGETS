@@ -213,7 +213,6 @@ cpp_library(
         "//eden/fs/telemetry:telemetry",
         "//eden/fs/utils:throw",
         "//eden/fs/utils:utils",
-        "//folly/futures:core",
         "//folly/logging:logging",
     ],
     exported_deps = [
