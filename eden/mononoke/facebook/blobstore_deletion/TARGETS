@@ -19,3 +19,14 @@ python_binary(
         "//datainfra/presto/py:client_lib",
     ],
 )
+
+python_binary(
+    name = "find_linked_node",
+    srcs = ["find_linked_node.py"],
+    main_function = "eden.mononoke.facebook.blobstore_deletion.find_linked_node.main",
+    deps = [
+        "//dba/asyncio:bulk_dml",
+        "//libfb/py/asyncio:limit_concurrency",
+        "//libfb/py/asyncio:mysql",
+    ],
+)
