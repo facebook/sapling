@@ -81,10 +81,6 @@
 
 -- sync once
   $ mononoke_x_repo_sync 1 0 tail --catch-up-once
-  * using repo "small" repoid RepositoryId(1) (glob)
-  * using repo "large" repoid RepositoryId(0) (glob)
-  * using repo "small" repoid RepositoryId(1) (glob)
-  * using repo "large" repoid RepositoryId(0) (glob)
   * queue size is 3 (glob)
   * processing log entry #1 (glob)
   * 0 unsynced ancestors of 7c5a873e5729acecbe37ac89b3f7cbc4292cd8cbcff60f39126ed74d9f55e05e (glob)
@@ -136,10 +132,6 @@
 
 -- sync 
   $ mononoke_x_repo_sync 1 0 tail --catch-up-once
-  * using repo "small" repoid RepositoryId(1) (glob)
-  * using repo "large" repoid RepositoryId(0) (glob)
-  * using repo "small" repoid RepositoryId(1) (glob)
-  * using repo "large" repoid RepositoryId(0) (glob)
   * queue size is 1 (glob)
   * processing log entry #4 (glob)
   * 2 unsynced ancestors of 9c27228ce4dda0e66c126c4560521707a6fc3e48d79d471bede547a76987d3be (glob)
@@ -177,10 +169,6 @@
 
 -- sync again
   $ mononoke_x_repo_sync 1 0 tail --catch-up-once
-  * using repo "small" repoid RepositoryId(1) (glob)
-  * using repo "large" repoid RepositoryId(0) (glob)
-  * using repo "small" repoid RepositoryId(1) (glob)
-  * using repo "large" repoid RepositoryId(0) (glob)
   * queue size is 3 (glob)
   * processing log entry #5 (glob)
   * 0 unsynced ancestors of dd912eedd1899b2403fc507d74bec70bda5f4a035cd9851478847bc2b35dfa3f (glob)

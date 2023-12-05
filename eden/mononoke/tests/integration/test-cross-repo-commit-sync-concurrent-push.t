@@ -53,10 +53,6 @@
 -- The second bookmark move of master_bookmark to S_D fails with "No common pushrebase root for master_bookmark". This is a bug.
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO mutable_counters (repo_id, name, value) VALUES (0, 'xreposync_from_1', 0)";
   $ mononoke_x_repo_sync 1 0 tail --catch-up-once
-  * using repo "small-mon" repoid RepositoryId(1) (glob)
-  * using repo "large-mon" repoid RepositoryId(0) (glob)
-  * using repo "small-mon" repoid RepositoryId(1) (glob)
-  * using repo "large-mon" repoid RepositoryId(0) (glob)
   * queue size is 3 (glob)
   * processing log entry #1 (glob)
   * 0 unsynced ancestors of 1ba347e63a4bf200944c22ade8dbea038dd271ef97af346ba4ccfaaefb10dd4d (glob)
@@ -73,7 +69,6 @@
   * failed to sync bookmark update log #3, Pushrebase of synced commit failed - check config for overlaps: Error(No common pushrebase root for master_bookmark, all possible roots: {ChangesetId(Blake2(d06c956180c43660142dabd61da09e9c6d2b19a53f43fee62b5f919789e24411))}) (glob)
   * Execution error: Pushrebase of synced commit failed - check config for overlaps: Error(No common pushrebase root for master_bookmark, all possible roots: {ChangesetId(Blake2(d06c956180c43660142dabd61da09e9c6d2b19a53f43fee62b5f919789e24411))}) (glob)
   * Execution failed (glob)
-  Error: Execution failed
   [1]
 
 -- Show the bookmarks after the sync

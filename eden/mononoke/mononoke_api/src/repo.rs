@@ -77,6 +77,7 @@ use ephemeral_blobstore::RepoEphemeralStoreArc;
 use ephemeral_blobstore::RepoEphemeralStoreRef;
 use ephemeral_blobstore::StorageLocation;
 use fbinit::FacebookInit;
+use filenodes::Filenodes;
 use filestore::Alias;
 use filestore::FetchKey;
 use filestore::FilestoreConfig;
@@ -237,6 +238,7 @@ pub struct Repo {
         StreamingClone,
         CommitGraph,
         dyn GitSymbolicRefs,
+        dyn Filenodes,
     )]
     pub inner: InnerRepo,
 

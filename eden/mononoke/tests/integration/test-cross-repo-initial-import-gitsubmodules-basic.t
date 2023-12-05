@@ -32,11 +32,7 @@ Create commit that modifies git submodule in small repo
   B=25e96de5ca32ae6a1c791fda2a352793d43e2c0da23ddf5cd6756b00670b4a00
   C=00b0b4d6130a22ccf3fada118572a85a6bb2d7c253d4285557802b7b8f250821
 
-  $ with_stripped_logs mononoke_x_repo_sync "$SMALL_REPO_ID"  "$LARGE_REPO_ID" initial-import --commit "$C" --version-name "$LATEST_CONFIG_VERSION_NAME" --new-bookmark "$NEW_BOOKMARK_NAME"
-  using repo "small_repo" repoid RepositoryId(1)
-  using repo "large_repo" repoid RepositoryId(0)
-  using repo "small_repo" repoid RepositoryId(1)
-  using repo "large_repo" repoid RepositoryId(0)
+  $ with_stripped_logs mononoke_x_repo_sync "$SMALL_REPO_ID"  "$LARGE_REPO_ID" initial-import -i "$C" --version-name "$LATEST_CONFIG_VERSION_NAME" --new-bookmark "$NEW_BOOKMARK_NAME"
   changeset resolved as: ChangesetId(Blake2(00b0b4d6130a22ccf3fada118572a85a6bb2d7c253d4285557802b7b8f250821))
   Checking if 00b0b4d6130a22ccf3fada118572a85a6bb2d7c253d4285557802b7b8f250821 is already synced 1->0
   syncing 00b0b4d6130a22ccf3fada118572a85a6bb2d7c253d4285557802b7b8f250821

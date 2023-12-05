@@ -361,7 +361,7 @@ function mononoke_x_repo_sync_forever() {
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
-    --scribe-logging-directory "$TESTTMP/scribe_logs" \
+    --scuba-dataset "file://$TESTTMP/x_repo_sync_scuba_logs" \
     --source-repo-id "$source_repo_id" \
     --target-repo-id "$target_repo_id" \
     "$@" \
