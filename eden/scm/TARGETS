@@ -3,6 +3,7 @@
 # fix the mercurial code to use fbcode-relative includes.
 #
 
+load("@fbcode//target_determinator/macros:ci_hint.bzl", "ci_hint")
 load("@fbcode_macros//build_defs:cpp_binary.bzl", "cpp_binary")
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
 load("@fbcode_macros//build_defs:export_files.bzl", "export_file")
@@ -227,6 +228,15 @@ rust_binary(
     ] + ([] if rust_oss.is_oss_build() else [
         "//common/rust/shed/fbinit:fbinit",
     ]),
+)
+
+# Try to override target depth so //eden/scm/tests:hg_run_tests and other
+# important test targets reliably pick up Python code changes despite target
+# depth greater than 5.
+ci_hint(
+    ci_deps = ["fbcode//eden/scm/lib/python-modules:python-modules"],
+    reason = "hg is very close to Python source files despite large target depth",
+    target = "hg",
 )
 
 rust_universal_binary(
