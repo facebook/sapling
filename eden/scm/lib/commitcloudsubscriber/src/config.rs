@@ -43,14 +43,7 @@ mod defaults {
     }
 
     pub fn user_token_path() -> Option<PathBuf> {
-        #[cfg(target_os = "macos")]
-        {
-            None
-        }
-        #[cfg(not(target_os = "macos"))]
-        {
-            home_dir_os()
-        }
+        home_dir_os()
     }
 
     pub fn cloudsync_retries() -> u32 {
