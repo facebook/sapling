@@ -60,7 +60,7 @@ class HgDatapackStore {
 
   void getTreeBatch(const ImportRequestsList& requests);
 
-  TreePtr getTree(
+  folly::Try<TreePtr> getTree(
       const RelativePath& path,
       const Hash20& manifestId,
       const ObjectId& edenTreeId,
@@ -88,20 +88,20 @@ class HgDatapackStore {
    *
    * Returns nullptr if not found.
    */
-  BlobPtr getBlob(const HgProxyHash& hgInfo, bool localOnly);
+  folly::Try<BlobPtr> getBlob(const HgProxyHash& hgInfo, bool localOnly);
 
   /**
    * Imports the blob identified by the given hash from the local store.
    * Returns nullptr if not found.
    */
-  BlobPtr getBlobLocal(const HgProxyHash& hgInfo) {
+  folly::Try<BlobPtr> getBlobLocal(const HgProxyHash& hgInfo) {
     return getBlob(hgInfo, /*localOnly=*/true);
   }
 
   /**
    * Reads blob metadata from hg cache.
    */
-  BlobMetadataPtr getLocalBlobMetadata(const HgProxyHash& id);
+  folly::Try<BlobMetadataPtr> getLocalBlobMetadata(const HgProxyHash& id);
 
   /**
    * Fetch multiple aux data at once.

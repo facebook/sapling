@@ -335,33 +335,34 @@ folly::Future<TreePtr> HgBackingStore::fetchTreeFromImporter(
                // HgBackingStoreStats::importTreeFailure counters as we will no
                // longer increment either.
 
-               // Flush (and refresh) backingstore to ensure all data is written
-               // and to rescan pack files or local indexes
+               // Flush (and refresh) SaplingNativeBackingStore to ensure all
+               // data is written and to rescan pack files or local indexes
                datapackStore_.flush();
 
-               // Retry using datapackStore (backingstore)
+               // Retry using datapackStore (SaplingNativeBackingStore)
                auto tree = datapackStore_.getTree(
                    path, manifestNode, edenTreeID, /*context*/ nullptr);
-
-               if (!tree) {
-                 auto serializedTree = importer.fetchTree(path, manifestNode);
+               if (tree.hasValue()) {
+                 stats_->increment(&HgBackingStoreStats::fetchTreeRetrySuccess);
                  stats_->addDuration(
                      &HgBackingStoreStats::importTreeDuration, watch.elapsed());
-                 if (serializedTree) {
-                   stats_->increment(&HgBackingStoreStats::importTreeSuccess);
-                 } else {
-                   stats_->increment(&HgBackingStoreStats::importTreeFailure);
-                 }
-                 tree = processTree(
-                     std::move(serializedTree),
-                     manifestNode,
-                     edenTreeID,
-                     path,
-                     writeBatch.get());
-               } else {
-                 stats_->increment(&HgBackingStoreStats::fetchTreeRetrySuccess);
+                 return tree.value();
                }
-               return tree;
+
+               auto serializedTree = importer.fetchTree(path, manifestNode);
+               if (serializedTree) {
+                 stats_->increment(&HgBackingStoreStats::importTreeSuccess);
+               } else {
+                 stats_->increment(&HgBackingStoreStats::importTreeFailure);
+               }
+               stats_->addDuration(
+                   &HgBackingStoreStats::importTreeDuration, watch.elapsed());
+               return processTree(
+                   std::move(serializedTree),
+                   manifestNode,
+                   edenTreeID,
+                   path,
+                   writeBatch.get());
              })
       .thenError([this](folly::exception_wrapper&& ew) {
         stats_->increment(&HgBackingStoreStats::importTreeError);
@@ -581,14 +582,15 @@ folly::Future<TreePtr> HgBackingStore::importTreeManifestImpl(
       break;
   }
 
-  // try edenapi + hgcache first
+  // try SaplingNativeBackingStore first
   folly::stop_watch<std::chrono::milliseconds> watch;
-  if (auto tree = datapackStore_.getTree(
-          path.copy(), manifestNode, objectId, context)) {
+  auto tree =
+      datapackStore_.getTree(path.copy(), manifestNode, objectId, context);
+  if (tree.hasValue()) {
     XLOG(DBG4) << "imported tree node=" << manifestNode << " path=" << path
-               << " from Rust hgcache";
+               << " from SaplingNativeBackingStore";
     stats_->addDuration(&HgBackingStoreStats::fetchTree, watch.elapsed());
-    return folly::makeFuture(std::move(tree));
+    return folly::makeFuture(std::move(tree.value()));
   }
 
   return importTreeImpl(manifestNode, objectId, path);
@@ -618,12 +620,18 @@ SemiFuture<BlobPtr> HgBackingStore::fetchBlobFromHgImporter(
                // HgBackingStoreStats::importBlobFailure counters as we will no
                // longer increment either.
 
-               // Flush (and refresh) backingstore to ensure all data is written
-               // and to rescan pack files or local indexes
+               // Flush (and refresh) SaplingNativeBackingStore to ensure all
+               // data is written and to rescan pack files or local indexes
                datapackStore_.flush();
 
-               // Retry using datapackStore (backingstore).
+               // Retry using datapackStore (SaplingNativeBackingStore).
                auto blob = datapackStore_.getBlob(hgInfo, /*localOnly=*/false);
+               if (blob.hasValue()) {
+                 stats_->increment(&HgBackingStoreStats::fetchBlobRetrySuccess);
+                 stats_->addDuration(
+                     &HgBackingStoreStats::importBlobDuration, watch.elapsed());
+                 return blob.value();
+               }
 
                // NOTE: We will remove HgImporter soon. By continuing to use it
                // as a secondary fallback for retries we can track the number of
@@ -633,25 +641,19 @@ SemiFuture<BlobPtr> HgBackingStore::fetchBlobFromHgImporter(
                // any successful imports via HgImporter and all failures are not
                // retriable.
 
-               if (!blob) {
-                 // Retry using HgImporter.
-                 Importer& importer = getThreadLocalImporter();
-                 blob = importer.importFileContents(
-                     hgInfo.path(), hgInfo.revHash());
+               // Retry using HgImporter.
+               Importer& importer = getThreadLocalImporter();
+               auto importBlob =
+                   importer.importFileContents(hgInfo.path(), hgInfo.revHash());
 
-                 if (blob) {
-                   stats_->increment(&HgBackingStoreStats::importBlobSuccess);
-                 } else {
-                   stats_->increment(&HgBackingStoreStats::importBlobFailure);
-                 }
+               if (importBlob) {
+                 stats_->increment(&HgBackingStoreStats::importBlobSuccess);
                } else {
-                 stats_->increment(&HgBackingStoreStats::fetchBlobRetrySuccess);
+                 stats_->increment(&HgBackingStoreStats::importBlobFailure);
                }
-
                stats_->addDuration(
                    &HgBackingStoreStats::importBlobDuration, watch.elapsed());
-
-               return blob;
+               return importBlob;
              })
       .thenError([this](folly::exception_wrapper&& ew) {
         stats_->increment(&HgBackingStoreStats::importBlobError);

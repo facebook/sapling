@@ -197,7 +197,7 @@ void HgDatapackStore::getTreeBatch(const ImportRequestsList& importRequests) {
       });
 }
 
-TreePtr HgDatapackStore::getTree(
+folly::Try<TreePtr> HgDatapackStore::getTree(
     const RelativePath& path,
     const Hash20& manifestId,
     const ObjectId& edenTreeId,
@@ -212,35 +212,43 @@ TreePtr HgDatapackStore::getTree(
   auto tree = store_.getTree(
       manifestId.getBytes(),
       local_only /*, sapling::ClientRequestInfo(context)*/);
-  if (!tree && local_only) {
+  if (tree.hasException() && local_only) {
     // Mercurial might have just written the tree to the store. Refresh the
     // store and try again, this time allowing remote fetches.
     store_.flush();
     tree = store_.getTree(
         manifestId.getBytes(), false /*, sapling::ClientRequestInfo(context)*/);
   }
-  if (tree) {
+
+  using GetTreeResult = folly::Try<TreePtr>;
+
+  if (tree.hasValue()) {
     auto hgObjectIdFormat =
         config_->getEdenConfig()->hgObjectIdFormat.getValue();
     const auto filteredPaths =
         config_->getEdenConfig()->hgFilteredPaths.getValue();
-    return fromRawTree(
-        tree.get(), edenTreeId, path, hgObjectIdFormat, *filteredPaths);
+    return GetTreeResult{fromRawTree(
+        tree.value().get(),
+        edenTreeId,
+        path,
+        std::move(hgObjectIdFormat),
+        std::move(*filteredPaths))};
+  } else {
+    return GetTreeResult{tree.exception()};
   }
-  return nullptr;
 }
 
 TreePtr HgDatapackStore::getTreeLocal(
     const ObjectId& edenTreeId,
     const HgProxyHash& proxyHash) {
   auto tree = store_.getTree(proxyHash.byteHash(), /*local=*/true);
-  if (tree) {
+  if (tree.hasValue()) {
     auto hgObjectIdFormat =
         config_->getEdenConfig()->hgObjectIdFormat.getValue();
     const auto filteredPaths =
         config_->getEdenConfig()->hgFilteredPaths.getValue();
     return fromRawTree(
-        tree.get(),
+        tree.value().get(),
         edenTreeId,
         proxyHash.path(),
         hgObjectIdFormat,
@@ -312,30 +320,41 @@ void HgDatapackStore::getBlobBatch(const ImportRequestsList& importRequests) {
       });
 }
 
-BlobPtr HgDatapackStore::getBlob(const HgProxyHash& hgInfo, bool localOnly) {
-  auto content = store_.getBlob(hgInfo.byteHash(), localOnly);
-  if (content) {
-    return std::make_shared<BlobPtr::element_type>(std::move(*content));
-  }
+folly::Try<BlobPtr> HgDatapackStore::getBlob(
+    const HgProxyHash& hgInfo,
+    bool localOnly) {
+  auto blob = store_.getBlob(hgInfo.byteHash(), localOnly);
 
-  return nullptr;
+  using GetBlobResult = folly::Try<BlobPtr>;
+
+  if (blob.hasValue()) {
+    return GetBlobResult{
+        std::make_shared<BlobPtr::element_type>(std::move(*blob.value()))};
+  } else {
+    return GetBlobResult{blob.exception()};
+  }
 }
 
-BlobMetadataPtr HgDatapackStore::getLocalBlobMetadata(
+folly::Try<BlobMetadataPtr> HgDatapackStore::getLocalBlobMetadata(
     const HgProxyHash& hgInfo) {
   auto metadata =
       store_.getBlobMetadata(hgInfo.byteHash(), true /*local_only*/);
-  if (metadata) {
+
+  using GetBlobMetadataResult = folly::Try<BlobMetadataPtr>;
+
+  if (metadata.hasValue()) {
     std::optional<Hash32> blake3;
-    if (metadata->has_blake3) {
-      blake3.emplace(Hash32{std::move(metadata->content_blake3)});
+    if (metadata.value()->has_blake3) {
+      blake3.emplace(Hash32{std::move(metadata.value()->content_blake3)});
     }
-    return std::make_shared<BlobMetadataPtr::element_type>(BlobMetadata{
-        Hash20{std::move(metadata->content_sha1)},
-        blake3,
-        metadata->total_size});
+    return GetBlobMetadataResult{
+        std::make_shared<BlobMetadataPtr::element_type>(BlobMetadata{
+            Hash20{std::move(metadata.value()->content_sha1)},
+            blake3,
+            metadata.value()->total_size})};
+  } else {
+    return GetBlobMetadataResult{metadata.exception()};
   }
-  return nullptr;
 }
 
 void HgDatapackStore::getBlobMetadataBatch(

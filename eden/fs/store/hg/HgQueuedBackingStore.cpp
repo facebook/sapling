@@ -488,9 +488,10 @@ folly::SemiFuture<BackingStore::GetBlobResult> HgQueuedBackingStore::getBlob(
       folly::Range{&proxyHash, 1},
       ObjectFetchContext::ObjectType::Blob);
 
-  if (auto blob = backingStore_->getDatapackStore().getBlobLocal(proxyHash)) {
+  auto blob = backingStore_->getDatapackStore().getBlobLocal(proxyHash);
+  if (blob.hasValue()) {
     return folly::makeSemiFuture(GetBlobResult{
-        std::move(blob), ObjectFetchContext::Origin::FromDiskCache});
+        std::move(blob.value()), ObjectFetchContext::Origin::FromDiskCache});
   }
 
   return getBlobImpl(id, proxyHash, context)
@@ -569,10 +570,12 @@ HgQueuedBackingStore::getBlobMetadata(
       folly::Range{&proxyHash, 1},
       ObjectFetchContext::ObjectType::BlobMetadata);
 
-  if (auto metadata =
-          backingStore_->getDatapackStore().getLocalBlobMetadata(proxyHash)) {
+  auto metadata =
+      backingStore_->getDatapackStore().getLocalBlobMetadata(proxyHash);
+  if (metadata.hasValue()) {
     return folly::makeSemiFuture(GetBlobMetaResult{
-        std::move(metadata), ObjectFetchContext::Origin::FromDiskCache});
+        std::move(metadata.value()),
+        ObjectFetchContext::Origin::FromDiskCache});
   }
 
   return getBlobMetadataImpl(id, proxyHash, context)

@@ -3388,9 +3388,8 @@ EdenServiceHandler::semifuture_debugGetBlob(
     blobFutures.emplace_back(transformToBlobFromOrigin(
         edenMount,
         id,
-        folly::Try<BlobPtr>{
-            hgBackingStore->getHgBackingStore().getDatapackStore().getBlobLocal(
-                proxyHash)},
+        hgBackingStore->getHgBackingStore().getDatapackStore().getBlobLocal(
+            proxyHash),
         DataFetchOrigin::LOCAL_BACKING_STORE));
   }
   if (originFlags.contains(FROMWHERE_REMOTE_BACKING_STORE)) {
@@ -3470,7 +3469,9 @@ EdenServiceHandler::semifuture_debugGetBlobMetadata(
 
     auto metadata = hgBackingStore->getHgBackingStore()
                         .getDatapackStore()
-                        .getLocalBlobMetadata(proxyHash);
+                        .getLocalBlobMetadata(proxyHash)
+                        .value_or(nullptr);
+
     blobFutures.emplace_back(transformToBlobMetadataFromOrigin(
         edenMount,
         id,

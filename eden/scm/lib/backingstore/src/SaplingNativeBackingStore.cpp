@@ -54,22 +54,21 @@ std::optional<ManifestId> SaplingNativeBackingStore::getManifestNode(
   }
 }
 
-std::shared_ptr<Tree> SaplingNativeBackingStore::getTree(
+folly::Try<std::shared_ptr<Tree>> SaplingNativeBackingStore::getTree(
     NodeId node,
     bool local) {
   XLOG(DBG7) << "Importing tree node=" << folly::hexlify(node)
              << " from hgcache";
-
-  try {
-    return sapling_backingstore_get_tree(
+  return folly::makeTryWith([&] {
+    auto tree = sapling_backingstore_get_tree(
         *store_.get(),
         rust::Slice<const uint8_t>{node.data(), node.size()},
         local);
-  } catch (const rust::Error& error) {
-    XLOG(DBG5) << "Error while getting tree node=" << folly::hexlify(node)
-               << " from backingstore: " << error.what();
-    return nullptr;
-  }
+    XCHECK(
+        tree.get(),
+        "sapling_backingstore_get_tree returned a nullptr, but did not throw an exception.");
+    return tree;
+  });
 }
 
 void SaplingNativeBackingStore::getTreeBatch(
@@ -97,18 +96,20 @@ void SaplingNativeBackingStore::getTreeBatch(
       std::move(resolver));
 }
 
-std::unique_ptr<folly::IOBuf> SaplingNativeBackingStore::getBlob(
+folly::Try<std::unique_ptr<folly::IOBuf>> SaplingNativeBackingStore::getBlob(
     NodeId node,
     bool local) {
   XLOG(DBG7) << "Importing blob node=" << folly::hexlify(node)
              << " from hgcache";
-
-  try {
+  return folly::makeTryWith([&] {
     auto blob = sapling_backingstore_get_blob(
                     *store_.get(),
                     rust::Slice<const uint8_t>{node.data(), node.size()},
                     local)
                     .into_raw();
+    XCHECK(
+        blob,
+        "sapling_backingstore_get_blob returned a nullptr, but did not throw an exception.");
     return folly::IOBuf::takeOwnership(
         reinterpret_cast<void*>(blob->bytes.data()),
         blob->bytes.size(),
@@ -116,11 +117,7 @@ std::unique_ptr<folly::IOBuf> SaplingNativeBackingStore::getBlob(
           auto vec = rust::Box<Blob>::from_raw(reinterpret_cast<Blob*>(blob));
         },
         reinterpret_cast<void*>(blob));
-  } catch (const rust::Error& error) {
-    XLOG(DBG5) << "Error while getting blob node=" << folly::hexlify(node)
-               << " from backingstore: " << error.what();
-    return nullptr;
-  }
+  });
 }
 
 void SaplingNativeBackingStore::getBlobBatch(
@@ -148,23 +145,20 @@ void SaplingNativeBackingStore::getBlobBatch(
       std::move(resolver));
 }
 
-std::shared_ptr<FileAuxData> SaplingNativeBackingStore::getBlobMetadata(
-    NodeId node,
-    bool local) {
+folly::Try<std::shared_ptr<FileAuxData>>
+SaplingNativeBackingStore::getBlobMetadata(NodeId node, bool local) {
   XLOG(DBG7) << "Importing blob metadata"
              << " node=" << folly::hexlify(node) << " from hgcache";
-
-  try {
-    return sapling_backingstore_get_file_aux(
+  return folly::makeTryWith([&] {
+    auto metadata = sapling_backingstore_get_file_aux(
         *store_.get(),
         rust::Slice<const uint8_t>{node.data(), node.size()},
         local);
-  } catch (const rust::Error& error) {
-    XLOG(DBG5) << "Error while getting blob metadata"
-               << " node=" << folly::hexlify(node)
-               << " from backingstore: " << error.what();
-    return nullptr;
-  }
+    XCHECK(
+        metadata.get(),
+        "sapling_backingstore_get_file_aux returned a nullptr, but did not throw an exception.");
+    return metadata;
+  });
 }
 
 void SaplingNativeBackingStore::getBlobMetadataBatch(
