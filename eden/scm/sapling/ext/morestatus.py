@@ -15,6 +15,7 @@ import os
 from sapling import (
     commands,
     hbisect,
+    localrepo,
     merge as mergemod,
     node as nodeutil,
     pycompat,
@@ -220,6 +221,9 @@ STATES = (
 def extsetup(ui):
     if ui.configbool("morestatus", "show") and not ui.plain():
         wrapcommand(commands.table, "status", statuscmd)
+
+        localrepo.localrepository._wlockfreeprefix.add(UPDATEARGS)
+
         # Write down `hg update` args to show the continue command in
         # interrupted update state.
         ui.setconfig("hooks", "pre-update.morestatus", saveupdateargs)
