@@ -13,7 +13,7 @@ namespace php SourceControlService
 namespace py scm.service.thrift.source_control
 namespace py3 scm.service.thrift
 
-typedef binary (rust.type = "bytes::Bytes") binary_bytes
+typedef binary (rust.type = "Bytes") binary_bytes
 typedef binary small_binary (
   rust.newtype,
   rust.type = "smallvec::SmallVec<[u8; 24]>",

@@ -20,7 +20,9 @@ namespace py3 eden.mononoke.mononoke_types
 typedef binary Blake2 (rust.newtype, rust.type = "smallvec::SmallVec<[u8; 32]>")
 
 // NB don't call the type bytes as py3 bindings don't like it
-typedef binary (rust.type = "bytes::Bytes") binary_bytes
+// NB (SF, 23-12-04) It can't be called bytes::Bytes because that is the syntax
+// of a nonstandard type which this isn't.
+typedef binary (rust.type = "Bytes") binary_bytes
 typedef binary small_binary (
   rust.newtype,
   rust.type = "smallvec::SmallVec<[u8; 24]>",

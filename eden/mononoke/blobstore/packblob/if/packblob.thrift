@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-typedef binary (rust.type = "bytes::Bytes") bytes
+typedef binary (rust.type = "Bytes") bytes
 
 // Independent single data value.
 union SingleValue {

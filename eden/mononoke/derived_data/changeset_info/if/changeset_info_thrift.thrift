@@ -11,7 +11,7 @@ typedef binary small_binary (
   rust.newtype,
   rust.type = "smallvec::SmallVec<[u8; 24]>",
 )
-typedef binary (rust.type = "bytes::Bytes") binary_bytes
+typedef binary (rust.type = "Bytes") binary_bytes
 
 // Derived data structure that represents a Bonsai changeset's metadata.
 // It contains the same data as Bonsai itself except of the file changes,
