@@ -110,8 +110,7 @@ def updatecleanmsg(dest=None):
 
 
 def graftmsg(repo, ui):
-    # tweakdefaults requires `update` to have a rev hence the `.`
-    helpmessage(ui, _("@prog@ graft --continue"), updatecleanmsg())
+    helpmessage(ui, _("@prog@ graft --continue"), _("@prog@ graft --abort"))
 
 
 def updatemsg(repo, ui):

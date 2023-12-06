@@ -747,7 +747,7 @@ def _updatecleanmsg(dest=None):
 
 def _graftmsg():
     # tweakdefaults requires `update` to have a rev hence the `.`
-    return _helpmessage(_("@prog@ graft --continue"), _updatecleanmsg())
+    return _helpmessage(_("@prog@ graft --continue"), _("@prog@ graft --abort"))
 
 
 def _mergemsg():
