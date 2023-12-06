@@ -4,9 +4,9 @@
 # GNU General Public License version 2.
 
 from collections import defaultdict
-from typing import Optional
+from typing import List, Optional, Tuple
 
-from . import edenapi_upload, error, mutation
+from . import edenapi_upload, error, mutation, phases
 from .bookmarks import readremotenames, saveremotenames
 from .i18n import _
 from .node import bin, hex, nullhex, short
@@ -40,7 +40,7 @@ def push(repo, dest, head_node, remote_bookmark, opargs=None):
         % (short(head_node), edenapi.url(), remote_bookmark)
     )
 
-    # push revs via EdenApi
+    # upload revs via EdenApi
     uploaded, failed = edenapi_upload.uploadhgchangesets(repo, [head_node])
     if failed:
         raise error.Abort(
@@ -51,6 +51,8 @@ def push(repo, dest, head_node, remote_bookmark, opargs=None):
     ui.debug(f"uploaded {len(uploaded)} new commits\n")
 
     bookmark_node = get_remote_bookmark_node(ui, edenapi, remote_bookmark)
+
+    # create remote bookmark
     if bookmark_node is None:
         if opargs.get("create"):
             create_remote_bookmark(ui, edenapi, remote_bookmark, head_node)
@@ -63,8 +65,40 @@ def push(repo, dest, head_node, remote_bookmark, opargs=None):
                 % remote_bookmark
             )
 
-    # update the exiting bookmark with push rebase
-    return push_rebase(repo, dest, head_node, remote_bookmark, opargs)
+    if repo[head_node].phase() == phases.public:
+        # if the head is already a public commit, then do a plain push (no pushrebase)
+        plain_push(repo, edenapi, remote_bookmark, head_node, bookmark_node, opargs)
+    else:
+        # update the exiting bookmark with push rebase
+        return push_rebase(repo, dest, head_node, remote_bookmark, opargs)
+
+
+def plain_push(repo, edenapi, bookmark, to_node, from_node, opargs=None):
+    """Plain push without rebasing."""
+    pushvars = parse_pushvars(opargs)
+
+    # setbookmark api server logic does not check if it's a non fast-forward move,
+    # let's check it in the client side as a workaround for now
+    is_ancestor = repo.dageval(lambda: isancestor(from_node, to_node))
+    if not is_ancestor:
+        if not is_true(dict(pushvars).get("NON_FAST_FORWARD")):
+            raise error.Abort(
+                _(
+                    "non-fast-forward push to remote bookmark %s from %s to %s "
+                    "(set pushvar NON_FAST_FORWARD=true for a non-fast-forward move)"
+                )
+                % (bookmark, short(from_node), short(to_node)),
+            )
+
+    repo.ui.status(
+        _("moving remote bookmark %s from %s to %s\n")
+        % (bookmark, short(from_node), short(to_node))
+    )
+    result = edenapi.setbookmark(bookmark, to_node, from_node, pushvars)["data"]
+    if "Err" in result:
+        raise error.Abort(_("server error: %s") % result["Err"]["message"])
+
+    record_remote_bookmark(repo, bookmark, to_node)
 
 
 def push_rebase(repo, dest, head_node, remote_bookmark, opargs=None):
@@ -82,8 +116,6 @@ def push_rebase(repo, dest, head_node, remote_bookmark, opargs=None):
     ui, edenapi = repo.ui, repo.edenapi
     bookmark = remote_bookmark
     ui.write(_("updating remote bookmark %s\n") % bookmark)
-
-    # todo (zhaolong): handle public head_node case, which should be BookmarkOnlyPushRebase?
 
     # according to the Mononoke API (D23813368), base is the parent of the bottom of the stack
     # that is to be landed.
@@ -176,3 +208,24 @@ def delete_remote_bookmark(repo, edenapi, bookmark) -> None:
     remote = repo.ui.config("remotenames", "hoist")
     remotenamechanges = {bookmark: nullhex}
     saveremotenames(repo, {remote: remotenamechanges}, override=False)
+
+
+### utils
+
+
+def parse_pushvars(opargs) -> List[Tuple[str, str]]:
+    pushvars = []
+    kvs = opargs.get("pushvars", [])
+    for kv in kvs:
+        try:
+            k, v = kv.split("=", 1)
+        except ValueError:
+            raise error.Abort(
+                _("invalid pushvar: '%s', expecting 'key=value' format") % kv
+            )
+        pushvars.append((k, v))
+    return pushvars
+
+
+def is_true(s: Optional[str]) -> bool:
+    return s == "true" or s == "True"
