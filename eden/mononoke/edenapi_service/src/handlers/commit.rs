@@ -12,6 +12,7 @@ use std::time::Duration;
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
+use async_stream::try_stream;
 use async_trait::async_trait;
 use blobstore::Loadable;
 use edenapi_types::wire::WireCommitHashToLocationRequestBatch;
@@ -701,30 +702,31 @@ impl EdenApiHandler for GraphSegmentsHandler {
             .map(|hg_id| HgChangesetId::new(HgNodeHash::from(hg_id)))
             .collect();
 
-        let graph_segment_entries =
-            repo.graph_segments(common, heads)
-                .await?
-                .into_iter()
-                .map(|segment| {
-                    Ok(CommitGraphSegmentsEntry {
-                        head: HgId::from(segment.head.into_nodehash()),
-                        base: HgId::from(segment.base.into_nodehash()),
-                        length: segment.length,
-                        parents: segment
-                            .parents
-                            .into_iter()
-                            .map(|parent| CommitGraphSegmentParent {
-                                hgid: HgId::from(parent.hgid.into_nodehash()),
-                                location: parent.location.map(|location| {
-                                    location.map_descendant(|descendant| {
-                                        HgId::from(descendant.into_nodehash())
-                                    })
-                                }),
-                            })
-                            .collect(),
-                    })
-                });
-        Ok(stream::iter(graph_segment_entries).boxed())
+        Ok(try_stream! {
+            let graph_segments = repo.graph_segments(common, heads).await?;
+
+            for await segment in graph_segments {
+                let segment = segment?;
+                yield CommitGraphSegmentsEntry {
+                    head: HgId::from(segment.head.into_nodehash()),
+                    base: HgId::from(segment.base.into_nodehash()),
+                    length: segment.length,
+                    parents: segment
+                        .parents
+                        .into_iter()
+                        .map(|parent| CommitGraphSegmentParent {
+                            hgid: HgId::from(parent.hgid.into_nodehash()),
+                            location: parent.location.map(|location| {
+                                location.map_descendant(|descendant| {
+                                    HgId::from(descendant.into_nodehash())
+                                })
+                            }),
+                        })
+                        .collect(),
+                }
+            }
+        }
+        .boxed())
     }
 }
 

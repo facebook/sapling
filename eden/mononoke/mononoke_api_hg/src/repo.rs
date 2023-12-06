@@ -838,7 +838,8 @@ impl HgRepoContext {
         &self,
         common: Vec<HgChangesetId>,
         heads: Vec<HgChangesetId>,
-    ) -> Result<Vec<HgChangesetSegment>, MononokeError> {
+    ) -> Result<impl Stream<Item = Result<HgChangesetSegment, MononokeError>> + '_, MononokeError>
+    {
         let bonsai_common = self.convert_changeset_ids(common).await?;
         let bonsai_heads = self.convert_changeset_ids(heads).await?;
 
@@ -849,77 +850,67 @@ impl HgRepoContext {
             .ancestors_difference_segments(self.ctx(), bonsai_heads, bonsai_common)
             .await?;
 
-        let bonsai_hg_mapping = stream::iter(segments.clone())
-            .flat_map(|segment| {
-                stream::iter([segment.head, segment.base])
-                    .chain(stream::iter(segment.parents).map(|parent| parent.cs_id))
-            })
-            .chunks(100)
-            .then(move |chunk| async move {
-                let mapping = self
+        Ok(stream::iter(segments.into_iter())
+            .chunks(25)
+            .map(move |segments| async move {
+                let mut ids = HashSet::with_capacity(segments.len() * 4);
+                for segment in segments.iter() {
+                    ids.insert(segment.head);
+                    ids.insert(segment.base);
+                    for parent in segment.parents.iter() {
+                        ids.insert(parent.cs_id);
+                        if let Some(location) = &parent.location {
+                            ids.insert(location.head);
+                        }
+                    }
+                }
+                let mapping: HashMap<ChangesetId, HgChangesetId> = self
                     .blob_repo()
-                    .get_hg_bonsai_mapping(self.ctx().clone(), chunk.to_vec())
+                    .get_hg_bonsai_mapping(self.ctx().clone(), ids.into_iter().collect::<Vec<_>>())
                     .await
-                    .context("error fetching hg bonsai mapping")?;
-                Ok::<_, Error>(mapping)
-            })
-            .try_collect::<Vec<Vec<(HgChangesetId, ChangesetId)>>>()
-            .await?
-            .into_iter()
-            .flatten()
-            .map(|(hgid, csid)| (csid, hgid))
-            .collect::<HashMap<_, _>>();
-
-        segments
-            .into_iter()
-            .map(|segment| {
-                Ok(HgChangesetSegment {
-                    head: *bonsai_hg_mapping.get(&segment.head).ok_or_else(|| {
-                        MononokeError::InvalidRequest(format!(
-                            "failed to find hg equivalent for segment head {}",
-                            segment.head
-                        ))
-                    })?,
-                    base: *bonsai_hg_mapping.get(&segment.base).ok_or_else(|| {
-                        MononokeError::InvalidRequest(format!(
-                            "failed to find hg equivalent for segment base {}",
-                            segment.base
-                        ))
-                    })?,
-                    length: segment.length,
-                    parents: segment
-                        .parents
-                        .into_iter()
-                        .map(|parent| {
-                            Ok(HgChangesetSegmentParent {
-                                hgid: *bonsai_hg_mapping.get(&parent.cs_id).ok_or_else(|| {
-                                    MononokeError::InvalidRequest(format!(
-                                        "failed to find hg equivalent for segment parent {}",
-                                        parent
-                                    ))
-                                })?,
-                                location: parent
-                                    .location
-                                    .map(|location| {
-                                        Ok::<_, Error>(Location {
-                                            descendant: *bonsai_hg_mapping.get(&location.head).ok_or_else(
-                                                || {
-                                                    MononokeError::InvalidRequest(format!(
-                                                        "failed to find hg equivalent for location head {}",
-                                                        location.head
-                                                    ))
-                                                },
-                                            )?,
-                                            distance: location.distance,
-                                        })
-                                    })
-                                    .transpose()?,
-                            })
+                    .context("error fetching hg bonsai mapping")?
+                    .into_iter()
+                    .map(|(hgid, csid)| (csid, hgid))
+                    .collect();
+                let map_id = move |name, csid| {
+                    mapping
+                        .get(&csid)
+                        .ok_or_else(|| {
+                            MononokeError::InvalidRequest(format!(
+                                "failed to find hg equivalent for {} {}",
+                                name, csid,
+                            ))
                         })
-                        .collect::<Result<_, MononokeError>>()?,
-                })
+                        .copied()
+                };
+                anyhow::Ok(stream::iter(segments.into_iter().map(move |segment| {
+                    Ok(HgChangesetSegment {
+                        head: map_id("segment head", segment.head)?,
+                        base: map_id("segment base", segment.base)?,
+                        length: segment.length,
+                        parents: segment
+                            .parents
+                            .into_iter()
+                            .map(|parent| {
+                                Ok(HgChangesetSegmentParent {
+                                    hgid: map_id("segment parent", parent.cs_id)?,
+                                    location: parent
+                                        .location
+                                        .map(|location| {
+                                            anyhow::Ok(Location::new(
+                                                map_id("location head", location.head)?,
+                                                location.distance,
+                                            ))
+                                        })
+                                        .transpose()?,
+                                })
+                            })
+                            .collect::<Result<_, MononokeError>>()?,
+                    })
+                })))
             })
-            .collect::<Result<_, MononokeError>>()
+            .buffered(10)
+            .try_flatten())
     }
 
     /// Return a mapping of commits to their parents that are in the segment of

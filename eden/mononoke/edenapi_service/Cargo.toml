@@ -9,6 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.75"
+async-stream = "0.3"
 async-trait = "0.1.71"
 base64 = "0.13"
 blobstore = { version = "0.1.0", path = "../blobstore" }
