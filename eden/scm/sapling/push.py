@@ -144,21 +144,22 @@ def push_rebase(repo, dest, head_node, remote_bookmark, opargs=None):
     new_head = data["new_head"]
     old_to_new_hgids = data["old_to_new_hgids"]
 
-    repo.pull(source=dest, headnodes=(new_head,))
+    with repo.wlock(), repo.lock(), repo.transaction("pushrebase"):
+        repo.pull(source=dest, headnodes=(new_head,))
 
-    if wnode in old_to_new_hgids:
-        ui.note(_("moving working copy parent\n"))
-        hg.update(repo, old_to_new_hgids[wnode])
+        if wnode in old_to_new_hgids:
+            ui.note(_("moving working copy parent\n"))
+            hg.update(repo, old_to_new_hgids[wnode])
 
-    entries = [
-        mutation.createsyntheticentry(repo, [node], new_node, "pushrebase")
-        for (node, new_node) in old_to_new_hgids.items()
-    ]
-    mutation.recordentries(repo, entries, skipexisting=False)
+        entries = [
+            mutation.createsyntheticentry(repo, [node], new_node, "pushrebase")
+            for (node, new_node) in old_to_new_hgids.items()
+        ]
+        mutation.recordentries(repo, entries, skipexisting=False)
 
-    record_remote_bookmark(repo, bookmark, new_head)
-    ui.write(_("updated remote bookmark %s to %s\n") % (bookmark, short(new_head)))
-    return 0
+        record_remote_bookmark(repo, bookmark, new_head)
+        ui.write(_("updated remote bookmark %s to %s\n") % (bookmark, short(new_head)))
+        return 0
 
 
 def get_remote_bookmark_node(ui, edenapi, bookmark) -> Optional[bytes]:
