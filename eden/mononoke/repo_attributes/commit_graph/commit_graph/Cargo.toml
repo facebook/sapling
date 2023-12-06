@@ -13,6 +13,7 @@ async-trait = "0.1.71"
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 buffered_commit_graph_storage = { version = "0.1.0", path = "../buffered_commit_graph_storage" }
 changeset_fetcher = { version = "0.1.0", path = "../../../blobrepo/changeset_fetcher" }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 commit_graph_types = { version = "0.1.0", path = "../commit_graph_types" }
 context = { version = "0.1.0", path = "../../../server/context" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
@@ -22,4 +23,5 @@ itertools = "0.11.0"
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }
+tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
 vec1 = { version = "1", features = ["serde"] }

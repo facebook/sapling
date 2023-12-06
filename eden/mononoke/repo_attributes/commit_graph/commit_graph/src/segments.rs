@@ -13,6 +13,7 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Result;
+use cloned::cloned;
 use commit_graph_types::segments::ChangesetSegment;
 use commit_graph_types::segments::ChangesetSegmentFrontier;
 use commit_graph_types::segments::ChangesetSegmentLocation;
@@ -20,10 +21,6 @@ use commit_graph_types::segments::ChangesetSegmentParent;
 use commit_graph_types::storage::CommitGraphStorage;
 use commit_graph_types::storage::Prefetch;
 use context::CoreContext;
-use futures::pin_mut;
-use futures::stream;
-use futures::StreamExt;
-use futures::TryStreamExt;
 use futures_stats::TimedTryFutureExt;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
@@ -501,72 +498,87 @@ impl CommitGraph {
             self.segment_frontier(ctx, common)
         )?;
 
-        let mut difference_segments_futures = vec![];
+        let (tx, mut rx) = tokio::sync::mpsc::channel(100);
 
-        while let Some((generation, segments)) = heads_segment_frontier.segments.pop_last() {
-            self.lower_segment_frontier(ctx, &mut common_segment_frontier, generation)
-                .await?;
-
-            let mut bases_not_reachable_from_common = vec![];
-
-            // Go through all the segment bases and calculate the disjoint segments rooted
-            // at each base, and for all bases not reachable from common, continue traversing
-            // the merge graph.
-
-            for (base, heads) in segments {
-                let common = match common_segment_frontier
-                    .segments
-                    .get(&generation)
-                    .and_then(|segments| segments.get(&base))
+        let segment_generation_handle = tokio::spawn({
+            cloned!(self as graph, ctx);
+            async move {
+                while let Some((generation, segments)) = heads_segment_frontier.segments.pop_last()
                 {
-                    Some(common_segments) => common_segments.iter().copied().collect(),
-                    None => {
-                        bases_not_reachable_from_common.push(base);
-                        vec![]
+                    graph
+                        .lower_segment_frontier(&ctx, &mut common_segment_frontier, generation)
+                        .await?;
+
+                    let mut bases_not_reachable_from_common = vec![];
+
+                    // Go through all the segment bases and calculate the disjoint segments rooted
+                    // at each base, and for all bases not reachable from common, continue traversing
+                    // the merge graph.
+
+                    for (base, heads) in segments {
+                        let common = match common_segment_frontier
+                            .segments
+                            .get(&generation)
+                            .and_then(|segments| segments.get(&base))
+                        {
+                            Some(common_segments) => common_segments.iter().copied().collect(),
+                            None => {
+                                bases_not_reachable_from_common.push(base);
+                                vec![]
+                            }
+                        };
+                        tx.send(tokio::spawn({
+                            cloned!(graph, ctx);
+                            async move {
+                                graph
+                                    .disjoint_segments(
+                                        &ctx,
+                                        base,
+                                        heads.into_iter().collect(),
+                                        common,
+                                        generation,
+                                    )
+                                    .await
+                            }
+                        }))
+                        .await?;
                     }
-                };
-                difference_segments_futures.push(self.disjoint_segments(
-                    ctx,
-                    base,
-                    heads.into_iter().collect(),
-                    common,
-                    generation,
-                ));
+
+                    let all_edges = graph
+                        .storage
+                        .fetch_many_edges(&ctx, &bases_not_reachable_from_common, Prefetch::None)
+                        .await?;
+
+                    let parents: Vec<_> = all_edges
+                        .into_iter()
+                        .flat_map(|(_cs_id, edges)| edges.edges().parents)
+                        .map(|node| node.cs_id)
+                        .collect();
+
+                    let parent_edges = graph
+                        .storage
+                        .fetch_many_edges(&ctx, &parents, Prefetch::None)
+                        .await?;
+
+                    for (cs_id, edges) in parent_edges {
+                        let base = edges.merge_ancestor.unwrap_or(edges.node);
+                        heads_segment_frontier
+                            .segments
+                            .entry(base.generation)
+                            .or_default()
+                            .entry(base.cs_id)
+                            .or_default()
+                            .insert(cs_id);
+                    }
+                }
+                anyhow::Ok(())
             }
+        });
 
-            let all_edges = self
-                .storage
-                .fetch_many_edges(ctx, &bases_not_reachable_from_common, Prefetch::None)
-                .await?;
-
-            let parents: Vec<_> = all_edges
-                .into_iter()
-                .flat_map(|(_cs_id, edges)| edges.edges().parents)
-                .map(|node| node.cs_id)
-                .collect();
-
-            let parent_edges = self
-                .storage
-                .fetch_many_edges(ctx, &parents, Prefetch::None)
-                .await?;
-
-            for (cs_id, edges) in parent_edges {
-                let base = edges.merge_ancestor.unwrap_or(edges.node);
-                heads_segment_frontier
-                    .segments
-                    .entry(base.generation)
-                    .or_default()
-                    .entry(base.cs_id)
-                    .or_default()
-                    .insert(cs_id);
-            }
-        }
-
-        let s = stream::iter(difference_segments_futures).buffered(100);
-        pin_mut!(s);
         let mut all_segments = Vec::new();
         let mut parent_locations = HashMap::new();
-        while let Some((mut segments, locations)) = s.try_next().await? {
+        while let Some(segment_handle) = rx.recv().await {
+            let (mut segments, locations) = segment_handle.await??;
             all_segments.append(&mut segments);
             parent_locations.extend(locations);
         }
@@ -581,6 +593,10 @@ impl CommitGraph {
                 }
             }
         }
+
+        // Await the segment generation handle to return any errors
+        // encountered there to the user.
+        segment_generation_handle.await??;
 
         Ok(all_segments)
     }
