@@ -16,6 +16,7 @@ use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 
 #[derive(Debug, Args)]
+#[clap(about = "Import all commits from a small repo into a large one before setting up live sync")]
 pub struct InitialImportCommandArgs {
     #[clap(long = "version-name")]
     pub sync_config_version_name: String,
@@ -26,6 +27,9 @@ pub struct InitialImportCommandArgs {
 }
 
 #[derive(Debug, Args)]
+#[clap(
+    about = "Sync a commit and all of its unsynced ancestors if the given commit has at least one synced ancestor"
+)]
 pub struct OnceCommandArgs {
     #[clap(long)]
     pub target_bookmark: Option<String>,
@@ -34,6 +38,9 @@ pub struct OnceCommandArgs {
 }
 
 #[derive(Debug, Args, Clone)]
+#[clap(
+    about = "Start a live sync between repos, so commits from the small repo are automatically synced to the large one"
+)]
 pub struct TailCommandArgs {
     #[clap(long, default_value_t = 10)]
     pub sleep_secs: u64,
@@ -60,6 +67,7 @@ pub enum ForwardSyncerCommand {
 }
 
 #[derive(Debug, Parser)]
+#[clap(about = "CLI to sync commits from small repositories to large ones (i.e. mega repos)")]
 pub struct ForwardSyncerArgs {
     /// Identifiers or names for the source and target repos
     #[clap(flatten, next_help_heading = "CROSS REPO OPTIONS")]

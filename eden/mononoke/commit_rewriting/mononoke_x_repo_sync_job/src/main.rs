@@ -109,6 +109,8 @@ use crate::sync::sync_commit_and_ancestors;
 use crate::sync::sync_commits_for_initial_import;
 use crate::sync::sync_single_bookmark_update_log;
 
+/// Sync and all of its unsynced ancestors **if the given commit has at least
+/// one synced ancestor**.
 async fn run_in_single_commit_mode<M: SyncedCommitMapping + Clone + 'static>(
     ctx: &CoreContext,
     bcs: ChangesetId,
@@ -155,6 +157,8 @@ async fn run_in_single_commit_mode<M: SyncedCommitMapping + Clone + 'static>(
 /// Run the initial import of a small repo into a large repo.
 /// It will sync a specific commit (i.e. head commit) and all of its ancestors
 /// and optionally bookmark the head commit.
+/// A commit sync config version has to be provided as this is used for the
+/// initial import of the repo.
 async fn run_in_initial_import_mode<M: SyncedCommitMapping + Clone + 'static>(
     ctx: &CoreContext,
     bcs: ChangesetId,

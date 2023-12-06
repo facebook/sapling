@@ -130,6 +130,8 @@ where
     // Note: counter update might fail after a successful sync
 }
 
+/// Sync and all of its unsynced ancestors **if the given commit has at least
+/// one synced ancestor**.
 pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static, R>(
     ctx: &CoreContext,
     commit_syncer: &CommitSyncer<M, R>,
