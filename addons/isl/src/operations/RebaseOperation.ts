@@ -84,9 +84,34 @@ export class RebaseOperation extends Operation {
   }
 
   optimisticDag(dag: Dag): Dag {
-    const src = dag.resolve(latestSuccessor(dag, this.source));
-    const dest = dag.resolve(latestSuccessor(dag, this.destination));
-    return dag.rebase(dag.descendants(src?.hash), dest?.hash);
+    const src = dag.resolve(latestSuccessor(dag, this.source))?.hash;
+    const dest = dag.resolve(latestSuccessor(dag, this.destination))?.hash;
+    // src already on dest?
+    if (src && dest && dag.parentHashes(src).includes(dest)) {
+      // The stack might be partially rebased while the rebase is onging.
+      // For example, graph
+      //   a--b--c--d--e  z
+      // Rebasing b (and descendants) to z, we might observe:
+      //   a--bOld--cOld--d--e  z--bNew--cNew
+
+      // bOld
+      const srcOrig = dag.resolve(latestSuccessor(dag.remove(src), this.source))?.hash;
+      // bOld + cOld + d + e
+      const toRebase = dag.descendants(srcOrig);
+      // bNew + cNew + d + e
+      const successors = dag.followSuccessors(toRebase);
+      // d + e
+      const remainingToRebase = toRebase.intersect(successors);
+      // cNew (simplified, does not handle merges)
+      const newDest = dag.heads(dag.descendants(src).intersect(successors)).toHashes().first();
+
+      // To test this in a real repo, try adding these configs to slow down rebases:
+      // --config "hooks.pretxncommit.slow=sleep 3"
+      // --config "rebase.experimental.inmemory=false"
+      // and goto the src stack top before rebasing.
+      return dag.rebase(remainingToRebase, newDest);
+    }
+    return dag.rebase(dag.descendants(src), dest);
   }
 }
 

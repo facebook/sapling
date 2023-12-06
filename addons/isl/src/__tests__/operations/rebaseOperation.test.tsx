@@ -8,6 +8,8 @@
 import type {Hash} from '../../types';
 
 import App from '../../App';
+import {Dag} from '../../dag/dag';
+import {RebaseOperation} from '../../operations/RebaseOperation';
 import {CommitPreview} from '../../previews';
 import {ignoreRTL} from '../../testQueries';
 import {
@@ -184,6 +186,35 @@ describe('rebase operation', () => {
     dragAndDropCommits('d', '2');
 
     expect(screen.queryByText('Run Rebase')).toBeInTheDocument();
+  });
+
+  it('handles partial rebase in optimistic dag', () => {
+    const dag = new Dag().add(TEST_COMMIT_HISTORY);
+
+    const type = 'succeedable-revset';
+    // Rebase a-b-c-d-e to z
+    const rebaseOp = new RebaseOperation({type, revset: 'a'}, {type, revset: 'z'});
+    // Count commits with the given title in a dag.
+    const count = (dag: Dag, title: string): number =>
+      dag.getBatch([...dag]).filter(c => c.title === title).length;
+    // Emulate partial rebased: a-b was rebased to z, but not c-d-e
+    const partialRebased = dag.rebase(['a', 'b'], 'z');
+    // There are 2 "Commit A"s in the partially rebased dag - one obsolsted.
+    expect(count(partialRebased, 'Commit A')).toBe(2);
+    expect(count(partialRebased, 'Commit B')).toBe(2);
+    expect(partialRebased.descendants('z').size).toBe(dag.descendants('z').size + 2);
+
+    // Calculate the optimistic dag from a partial rebase state.
+    const optimisticDag = rebaseOp.optimisticDag(partialRebased);
+    // should be only 1 "Commit A"s.
+    expect(count(optimisticDag, 'Commit A')).toBe(1);
+    expect(count(optimisticDag, 'Commit B')).toBe(1);
+    expect(count(optimisticDag, 'Commit E')).toBe(1);
+    // check the Commit A..E branch is completed rebased.
+    expect(dag.children(dag.parents('a')).size).toBe(
+      optimisticDag.children(dag.parents('a')).size + 1,
+    );
+    expect(optimisticDag.descendants('z').size).toBe(dag.descendants('a').size + 1);
   });
 
   describe('stacking optimistic state', () => {
