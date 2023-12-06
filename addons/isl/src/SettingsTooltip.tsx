@@ -23,7 +23,7 @@ import {debugToolsEnabledState} from './debug/DebugToolsState';
 import {t, T} from './i18n';
 import {SetConfigOperation} from './operations/SetConfigOperation';
 import platform from './platform';
-import {renderCompactAtom, zoomUISettingAtom} from './responsive';
+import {renderCompactAtom, useZoomShortcut, zoomUISettingAtom} from './responsive';
 import {repositoryInfo, useRunOperation} from './serverAPIState';
 import {useThemeShortcut, themeState} from './theme';
 import {
@@ -43,6 +43,7 @@ import './SettingsTooltip.css';
 
 export function SettingsGearButton() {
   useThemeShortcut();
+  useZoomShortcut();
   const showShortcutsHelp = useShowKeyboardShortcutsHelp();
   return (
     <Tooltip

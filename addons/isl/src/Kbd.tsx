@@ -33,6 +33,10 @@ function keycodeToString(keycode: KeyCode): string {
       return '.';
     case KeyCode.Escape:
       return 'Esc';
+    case KeyCode.Plus:
+      return '+';
+    case KeyCode.Minus:
+      return '-';
     default:
       return String.fromCharCode(keycode).toUpperCase();
   }

@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {globalRecoil} from './AccessGlobalRecoil';
+import {useCommand} from './ISLShortcuts';
 import {
   persistAtomToConfigEffect,
   persistAtomToLocalStorageEffect,
@@ -39,6 +41,15 @@ export const zoomUISettingAtom = atom<number>({
     },
   ],
 });
+
+export function useZoomShortcut() {
+  useCommand('ZoomIn', () => {
+    globalRecoil().set(zoomUISettingAtom, old => Math.round((old + 0.1) * 100) / 100);
+  });
+  useCommand('ZoomOut', () => {
+    globalRecoil().set(zoomUISettingAtom, old => Math.round((old - 0.1) * 100) / 100);
+  });
+}
 
 export function useMainContentWidth() {
   const setMainContentWidth = useSetRecoilState(mainContentWidthState);
