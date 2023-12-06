@@ -73,11 +73,11 @@
 
 .drawer.drawer-expanded.drawer-left {
   min-width: var(--min-pane-width);
-  max-width: calc(100vw - var(--min-pane-width));
+  max-width: calc((100vw / var(--zoom)) - var(--min-pane-width));
 }
 .drawer.drawer-expanded.drawer-top {
   min-height: var(--min-pane-width);
-  max-height: calc(100vw - var(--min-pane-width));
+  max-height: calc((100vw / var(--zoom)) - var(--min-pane-width));
 }
 
 .drawer .resizable-drag-handle {

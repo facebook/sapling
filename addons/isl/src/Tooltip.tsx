@@ -12,6 +12,7 @@ import type {ExclusiveOr} from 'shared/typeUtils';
 import React, {useLayoutEffect, useEffect, useRef, useState} from 'react';
 import ReactDOM from 'react-dom';
 import {findParentWithClassName} from 'shared/utils';
+import {getZoomLevel} from 'shared/zoom';
 
 import './Tooltip.css';
 
@@ -238,8 +239,11 @@ function RenderTooltipOnto({
   const sourceBoundingRect = element.getBoundingClientRect();
   const tooltipRef = useRef<HTMLDivElement | null>(null);
 
+  const zoom = getZoomLevel();
   let effectivePlacement = placement;
   const viewportDimensions = document.body.getBoundingClientRect();
+  viewportDimensions.width /= zoom;
+  viewportDimensions.height /= zoom;
 
   // to center the tooltip over the tooltip-creator, we need to measure its final rendered size
   const renderedDimensions = useRenderedDimensions(tooltipRef, children);
@@ -437,6 +441,10 @@ function getViewportAdjustedDelta(
 
   const viewportPadding = 5;
   const viewportDimensions = document.body.getBoundingClientRect();
+
+  const zoom = getZoomLevel();
+  viewportDimensions.width /= zoom;
+  viewportDimensions.height /= zoom;
 
   if (placement === 'right' || placement === 'left') {
     const topEdgeOffset = pos.top - viewportPadding;

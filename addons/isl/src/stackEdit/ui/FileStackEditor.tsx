@@ -478,7 +478,7 @@ function FileStackEditorUnifiedStack(props: EditorRowProps) {
     );
   }
 
-  return <ScrollY maxSize="calc(100vh - 300px)">{editor}</ScrollY>;
+  return <ScrollY maxSize="calc((100vh / var(--zoom)) - 300px)">{editor}</ScrollY>;
 }
 
 export function FileStackEditorRow(props: EditorRowProps) {

@@ -8,8 +8,8 @@
 .interactive-split {
   height: 100%;
   position: relative;
-  min-width: calc(100vw - 81px);
-  min-height: calc(100vh - 220px);
+  min-width: calc((100vw / var(--zoom)) - 81px);
+  min-height: calc((100vh / var(--zoom)) - 220px);
 
   margin-inline: calc(0px - var(--pad));
   font-size: var(--editor-font-size);

@@ -23,7 +23,7 @@ import {debugToolsEnabledState} from './debug/DebugToolsState';
 import {t, T} from './i18n';
 import {SetConfigOperation} from './operations/SetConfigOperation';
 import platform from './platform';
-import {renderCompactAtom} from './responsive';
+import {renderCompactAtom, zoomUISettingAtom} from './responsive';
 import {repositoryInfo, useRunOperation} from './serverAPIState';
 import {useThemeShortcut, themeState} from './theme';
 import {
@@ -108,6 +108,10 @@ function SettingsDropdown({
           </div>
         </Setting>
       )}
+
+      <Setting title={<T>UI Scale</T>}>
+        <ZoomUISetting />
+      </Setting>
       <Setting title={<T>Commits</T>}>
         <RenderCompactSetting />
       </Setting>
@@ -218,6 +222,66 @@ function RenderCompactSetting() {
         <T>Compact Mode</T>
       </VSCodeCheckbox>
     </Tooltip>
+  );
+}
+
+function ZoomUISetting() {
+  const [zoom, setZoom] = useRecoilState(zoomUISettingAtom);
+  function roundToPercent(n: number): number {
+    return Math.round(n * 100) / 100;
+  }
+  return (
+    <div className="zoom-setting">
+      <Tooltip title={t('Decrease UI Zoom')}>
+        <VSCodeButton
+          className="zoom-out"
+          appearance="icon"
+          onClick={() => {
+            setZoom(zoom => roundToPercent(zoom - 0.1));
+          }}>
+          <Icon icon="zoom-out" />
+        </VSCodeButton>
+      </Tooltip>
+      <span>{`${Math.round(100 * zoom)}%`}</span>
+      <Tooltip title={t('Increase UI Zoom')}>
+        <VSCodeButton
+          className="zoom-in"
+          appearance="icon"
+          onClick={() => {
+            setZoom(zoom => roundToPercent(zoom + 0.1));
+          }}>
+          <Icon icon="zoom-in" />
+        </VSCodeButton>
+      </Tooltip>
+      <div style={{width: '20px'}} />
+      <label>
+        <T>Presets:</T>
+      </label>
+      <VSCodeButton
+        className="zoom-80"
+        appearance="icon"
+        onClick={() => {
+          setZoom(0.8);
+        }}>
+        <T>Small</T>
+      </VSCodeButton>
+      <VSCodeButton
+        className="zoom-100"
+        appearance="icon"
+        onClick={() => {
+          setZoom(1.0);
+        }}>
+        <T>Normal</T>
+      </VSCodeButton>
+      <VSCodeButton
+        className="zoom-120"
+        appearance="icon"
+        onClick={() => {
+          setZoom(1.2);
+        }}>
+        <T>Large</T>
+      </VSCodeButton>
+    </div>
   );
 }
 

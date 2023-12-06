@@ -95,7 +95,7 @@ function LoadedEditStackModal() {
         </VSCodePanelTab>
         <VSCodePanelView style={getPanelViewStyle('commits')} id="view-commits">
           {/* Skip rendering (which might trigger slow dependency calculation) if the tab is inactive */}
-          <ScrollY maxSize="calc(100vh - 200px)">
+          <ScrollY maxSize="calc((100vh / var(--zoom)) - 200px)">
             {activeTab === 'commits' && (
               <StackEditSubTree
                 activateSplitTab={() => {

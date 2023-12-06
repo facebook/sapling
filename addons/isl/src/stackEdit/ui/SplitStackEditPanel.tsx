@@ -104,7 +104,7 @@ export function SplitStackEditPanel() {
 
   return (
     <div className="interactive-split">
-      <ScrollX maxSize="calc(100vw - 50px)">
+      <ScrollX maxSize="calc((100vw / var(--zoom)) - 50px)">
         <Row style={{padding: '0 var(--pad)'}}>{columns}</Row>
       </ScrollX>
     </div>
@@ -188,7 +188,7 @@ function SplitColumn(props: SplitColumnProps) {
       </Column>
     </EmptyState>
   ) : (
-    <ScrollY maxSize="calc(100vh - 280px)" hideBar={true}>
+    <ScrollY maxSize="calc((100vh / var(--zoom)) - 280px)" hideBar={true}>
       {editors}
     </ScrollY>
   );

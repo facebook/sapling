@@ -6,6 +6,7 @@
  */
 
 import {findParentWithClassName} from './utils';
+import {getZoomLevel} from './zoom';
 import {useEffect, useRef, useState} from 'react';
 import {atom, useRecoilState, useSetRecoilState} from 'recoil';
 
@@ -29,7 +30,8 @@ export function useContextMenu<T>(
 ): React.MouseEventHandler<T> {
   const setState = useSetRecoilState(contextMenuState);
   return e => {
-    setState({x: e.clientX, y: e.clientY, items: creator()});
+    const zoom = getZoomLevel();
+    setState({x: e.clientX / zoom, y: e.clientY / zoom, items: creator()});
 
     e.preventDefault();
     e.stopPropagation();
@@ -87,8 +89,9 @@ export function ContextMenus() {
     return null;
   }
 
-  const topOrBottom = state.y > window.innerHeight / 2 ? 'bottom' : 'top';
-  const leftOrRight = state.x > window.innerWidth / 2 ? 'right' : 'left';
+  const zoom = getZoomLevel();
+  const topOrBottom = state.y > window.innerHeight / zoom / 2 ? 'bottom' : 'top';
+  const leftOrRight = state.x > window.innerWidth / zoom / 2 ? 'right' : 'left';
   const yOffset = 10;
   const xOffset = -10; // var(--pad)
   let position: React.CSSProperties;
@@ -96,20 +99,20 @@ export function ContextMenus() {
     if (leftOrRight === 'left') {
       position = {top: state.y + yOffset, left: state.x + xOffset};
     } else {
-      position = {top: state.y + yOffset, right: window.innerWidth - (state.x - xOffset)};
+      position = {top: state.y + yOffset, right: window.innerWidth / zoom - (state.x - xOffset)};
     }
   } else {
     if (leftOrRight === 'left') {
-      position = {bottom: window.innerHeight - (state.y - yOffset), left: state.x + xOffset};
+      position = {bottom: window.innerHeight / zoom - (state.y - yOffset), left: state.x + xOffset};
     } else {
       position = {
-        bottom: window.innerHeight - (state.y - yOffset),
-        right: window.innerWidth - (state.x + xOffset),
+        bottom: window.innerHeight / zoom - (state.y - yOffset),
+        right: window.innerWidth / zoom - (state.x + xOffset),
       };
     }
   }
   position.maxHeight =
-    window.innerHeight -
+    window.innerHeight / zoom -
     ((position.top as number | null) ?? 0) -
     ((position.bottom as number | null) ?? 0);
 

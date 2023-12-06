@@ -5,7 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {persistAtomToConfigEffect} from './persistAtomToConfigEffect';
+import {
+  persistAtomToConfigEffect,
+  persistAtomToLocalStorageEffect,
+} from './persistAtomToConfigEffect';
 import {useRef, useEffect} from 'react';
 import {atom, selector, useSetRecoilState} from 'recoil';
 
@@ -18,6 +21,23 @@ export const renderCompactAtom = atom<boolean>({
   key: 'renderCompactAtom',
   default: false,
   effects: [persistAtomToConfigEffect('isl.render-compact', false as boolean)],
+});
+
+export const zoomUISettingAtom = atom<number>({
+  key: 'zoomUISettingAtom',
+  default: 1.0,
+  effects: [
+    persistAtomToLocalStorageEffect('isl.ui-zoom'),
+    ({onSet, getLoadable}) => {
+      const initial = getLoadable(zoomUISettingAtom).valueMaybe();
+      if (initial != null) {
+        document.body?.style.setProperty('--zoom', `${initial}`);
+      }
+      onSet(newValue => {
+        document.body?.style.setProperty('--zoom', `${newValue}`);
+      });
+    },
+  ],
 });
 
 export function useMainContentWidth() {

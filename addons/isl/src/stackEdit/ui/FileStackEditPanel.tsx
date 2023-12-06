@@ -132,8 +132,8 @@ export default function FileStackEditPanel() {
         style={{
           marginLeft: 'calc(0px - var(--pad))',
           marginRight: 'calc(0px - var(--pad))',
-          minWidth: 'calc(100vw - 81px)',
-          minHeight: 'calc(100vh - 265px)',
+          minWidth: 'calc((100vw / var(--zoom)) - 81px)',
+          minHeight: 'calc((100vh / var(--zoom)) - 265px)',
         }}>
         {editorRow}
       </div>
