@@ -6,7 +6,7 @@
 from collections import defaultdict
 from typing import List, Optional, Tuple
 
-from . import edenapi_upload, error, hg, mutation, phases
+from . import edenapi_upload, error, hg, mutation, phases, scmutil
 from .bookmarks import readremotenames, saveremotenames
 from .i18n import _
 from .node import bin, hex, nullhex, short
@@ -150,6 +150,9 @@ def push_rebase(repo, dest, head_node, remote_bookmark, opargs=None):
         if wnode in old_to_new_hgids:
             ui.note(_("moving working copy parent\n"))
             hg.update(repo, old_to_new_hgids[wnode])
+
+        replacements = {old: [new] for old, new in old_to_new_hgids.items()}
+        scmutil.cleanupnodes(repo, replacements, "pushrebase")
 
         entries = [
             mutation.createsyntheticentry(repo, [node], new_node, "pushrebase")
