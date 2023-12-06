@@ -2571,6 +2571,7 @@ def _dograft(ui, repo, *revs, **opts):
         if opts.get("continue"):
             cont = True
         if opts.get("abort"):
+            repo.localvfs.tryunlink("graftstate")
             return update(ui, repo, node=".", clean=True)
     else:
         cmdutil.checkunfinished(repo)
