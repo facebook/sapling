@@ -1,5 +1,5 @@
-#debugruntest-compatible
-#inprocess-hg-incompatible
+debugruntest seems to time out (deadlock?)
+#chg-compatible
 
   $ eagerepo
   $ enable mergedriver

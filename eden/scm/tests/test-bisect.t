@@ -536,9 +536,9 @@
   abort: unresolved conflicts, can't continue
   (use 'hg resolve' and 'hg graft --continue')
   [255]
+  $ hg graft -q --abort
   $ hg bisect --reset
-  $ hg up -C .
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg up -qC .
 
 # Test the validation message when exclusive options are used:
 

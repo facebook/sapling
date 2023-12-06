@@ -91,6 +91,7 @@ Test graft state
 
 
 Test hg status is normal after graft abort
+  $ hg graft --abort -q
   $ hg up --clean -q
   $ hg status
   ? a.orig
