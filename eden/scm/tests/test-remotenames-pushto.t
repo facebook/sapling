@@ -135,7 +135,7 @@ Test that --non-forward-move allows moving bookmark around arbitrarily
   abort: pushed rev is not in the foreground of remote bookmark
   (use --non-forward-move flag to complete arbitrary moves)
   [255]
-  $ hg push --to @ -r headc --non-forward-move --force
+  $ hg push --to @ -r headc --non-forward-move
   pushing rev cc61aa6be3dc to destination test:repo1 bookmark @
   searching for changes
   updating bookmark @
