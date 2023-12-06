@@ -6,7 +6,7 @@
 from collections import defaultdict
 from typing import List, Optional, Tuple
 
-from . import edenapi_upload, error, mutation, phases
+from . import edenapi_upload, error, hg, mutation, phases
 from .bookmarks import readremotenames, saveremotenames
 from .i18n import _
 from .node import bin, hex, nullhex, short
@@ -116,6 +116,7 @@ def push_rebase(repo, dest, head_node, remote_bookmark, opargs=None):
     """
     ui, edenapi = repo.ui, repo.edenapi
     bookmark = remote_bookmark
+    wnode = repo["."].node()
     ui.write(_("updating remote bookmark %s\n") % bookmark)
 
     # according to the Mononoke API (D23813368), base is the parent of the bottom of the stack
@@ -144,11 +145,17 @@ def push_rebase(repo, dest, head_node, remote_bookmark, opargs=None):
     old_to_new_hgids = data["old_to_new_hgids"]
 
     repo.pull(source=dest, headnodes=(new_head,))
+
+    if wnode in old_to_new_hgids:
+        ui.note(_("moving working copy parent\n"))
+        hg.update(repo, old_to_new_hgids[wnode])
+
     entries = [
         mutation.createsyntheticentry(repo, [node], new_node, "pushrebase")
         for (node, new_node) in old_to_new_hgids.items()
     ]
     mutation.recordentries(repo, entries, skipexisting=False)
+
     record_remote_bookmark(repo, bookmark, new_head)
     ui.write(_("updated remote bookmark %s to %s\n") % (bookmark, short(new_head)))
     return 0
