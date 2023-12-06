@@ -908,7 +908,7 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
         opts["rev"] = ["null"]
         if edenapi:
             return pushmod.delete_remote_bookmark(
-                repo, edenapi, bookmark=opargs["delete"]
+                repo, edenapi, opargs["delete"], opts.get("pushvars")
             )
         return orig(ui, repo, dest, opargs=opargs, **opts)
 

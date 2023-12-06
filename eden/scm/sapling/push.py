@@ -34,6 +34,7 @@ def push(repo, dest, head_node, remote_bookmark, opargs=None):
     """Push via EdenApi (HTTP)"""
     ui = repo.ui
     edenapi = get_edenapi_for_dest(repo, dest)
+    opargs = opargs or {}
 
     ui.status_err(
         _("pushing rev %s to destination %s bookmark %s\n")
@@ -55,7 +56,7 @@ def push(repo, dest, head_node, remote_bookmark, opargs=None):
     # create remote bookmark
     if bookmark_node is None:
         if opargs.get("create"):
-            create_remote_bookmark(ui, edenapi, remote_bookmark, head_node)
+            create_remote_bookmark(ui, edenapi, remote_bookmark, head_node, opargs)
             ui.debug("remote bookmark %s created\n" % remote_bookmark)
             record_remote_bookmark(repo, remote_bookmark, head_node)
             return 0
@@ -75,7 +76,7 @@ def push(repo, dest, head_node, remote_bookmark, opargs=None):
 
 def plain_push(repo, edenapi, bookmark, to_node, from_node, opargs=None):
     """Plain push without rebasing."""
-    pushvars = parse_pushvars(opargs)
+    pushvars = parse_pushvars(opargs.get("pushvars"))
 
     # setbookmark api server logic does not check if it's a non fast-forward move,
     # let's check it in the client side as a workaround for now
@@ -131,12 +132,8 @@ def push_rebase(repo, dest, head_node, remote_bookmark, opargs=None):
         )
     base = parents[0].node()
 
-    # todo (zhaolong): support pushvars
-    response = edenapi.landstack(
-        bookmark,
-        head=head_node,
-        base=base,
-    )
+    pushvars = parse_pushvars(opargs.get("pushvars"))
+    response = edenapi.landstack(bookmark, head=head_node, base=base, pushvars=pushvars)
 
     result = response["data"]
     if "Err" in result:
@@ -164,9 +161,10 @@ def get_remote_bookmark_node(ui, edenapi, bookmark) -> Optional[bytes]:
     return bin(hexnode) if hexnode else None
 
 
-def create_remote_bookmark(ui, edenapi, bookmark, node) -> None:
+def create_remote_bookmark(ui, edenapi, bookmark, node, opargs) -> None:
     ui.write(_("creating remote bookmark %s\n") % bookmark)
-    result = edenapi.setbookmark(bookmark, node, None, pushvars=None)["data"]
+    pushvars = parse_pushvars(opargs.get("pushvars"))
+    result = edenapi.setbookmark(bookmark, node, None, pushvars=pushvars)["data"]
     if "Err" in result:
         raise error.Abort(
             _("failed to create remote bookmark:\n  remote server error: %s")
@@ -188,7 +186,7 @@ def record_remote_bookmark(repo, bookmark, new_node) -> None:
         saveremotenames(repo, data)
 
 
-def delete_remote_bookmark(repo, edenapi, bookmark) -> None:
+def delete_remote_bookmark(repo, edenapi, bookmark, pushvars_strs) -> None:
     ui = repo.ui
     node = get_remote_bookmark_node(ui, edenapi, bookmark)
     if node is None:
@@ -196,7 +194,8 @@ def delete_remote_bookmark(repo, edenapi, bookmark) -> None:
 
     # delete remote bookmark from server
     ui.write(_("deleting remote bookmark %s\n") % bookmark)
-    result = edenapi.setbookmark(bookmark, None, node, pushvars=None)["data"]
+    pushvars = parse_pushvars(pushvars_strs)
+    result = edenapi.setbookmark(bookmark, None, node, pushvars=pushvars)["data"]
     if "Err" in result:
         raise error.Abort(
             _("failed to delete remote bookmark:\n  remote server error: %s")
@@ -212,9 +211,9 @@ def delete_remote_bookmark(repo, edenapi, bookmark) -> None:
 ### utils
 
 
-def parse_pushvars(opargs) -> List[Tuple[str, str]]:
+def parse_pushvars(pushvars_strs: Optional[List[str]]) -> List[Tuple[str, str]]:
+    kvs = pushvars_strs or []
     pushvars = {}
-    kvs = opargs.get("pushvars", [])
     for kv in kvs:
         try:
             k, v = kv.split("=", 1)
