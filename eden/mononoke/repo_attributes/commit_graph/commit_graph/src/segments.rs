@@ -211,6 +211,7 @@ impl CommitGraph {
         base: ChangesetId,
         heads: Vec<ChangesetId>,
         common: Vec<ChangesetId>,
+        base_generation: Generation,
     ) -> Result<(
         Vec<ChangesetSegment>,
         HashMap<ChangesetId, ChangesetSegmentLocation>,
@@ -304,7 +305,11 @@ impl CommitGraph {
                     let cs_ids: Vec<_> = last_changesets.keys().copied().collect();
                     let all_edges = self
                         .storage
-                        .fetch_many_edges(ctx, &cs_ids, Prefetch::None)
+                        .fetch_many_edges(
+                            ctx,
+                            &cs_ids,
+                            Prefetch::for_skip_tree_traversal(base_generation),
+                        )
                         .await?;
 
                     // Try to lower the highest generation changesets in the frontier to their
@@ -525,6 +530,7 @@ impl CommitGraph {
                     base,
                     heads.into_iter().collect(),
                     common,
+                    generation,
                 ));
             }
 
