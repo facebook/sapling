@@ -211,14 +211,12 @@ pub trait EdenApiPyExt: EdenApi {
         bookmark: String,
         to: Option<HgId>,
         from: Option<HgId>,
-        pushvars: Vec<(String, String)>,
+        pushvars: HashMap<String, String>,
     ) -> PyResult<Serde<SetBookmarkResponse>> {
         let response = py
             .allow_threads(|| {
                 block_unless_interrupted(async move {
-                    let response = self
-                        .set_bookmark(bookmark, to, from, pushvars.into_iter().collect())
-                        .await?;
+                    let response = self.set_bookmark(bookmark, to, from, pushvars).await?;
                     Ok::<_, EdenApiError>(response)
                 })
             })
@@ -234,14 +232,12 @@ pub trait EdenApiPyExt: EdenApi {
         bookmark: String,
         head: HgId,
         base: HgId,
-        pushvars: Vec<(String, String)>,
+        pushvars: HashMap<String, String>,
     ) -> PyResult<Serde<LandStackResponse>> {
         let response = py
             .allow_threads(|| {
                 block_unless_interrupted(async move {
-                    let response = self
-                        .land_stack(bookmark, head, base, pushvars.into_iter().collect())
-                        .await?;
+                    let response = self.land_stack(bookmark, head, base, pushvars).await?;
                     Ok::<_, EdenApiError>(response)
                 })
             })

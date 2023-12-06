@@ -81,7 +81,7 @@ def plain_push(repo, edenapi, bookmark, to_node, from_node, opargs=None):
     # let's check it in the client side as a workaround for now
     is_ancestor = repo.dageval(lambda: isancestor(from_node, to_node))
     if not is_ancestor:
-        if not is_true(dict(pushvars).get("NON_FAST_FORWARD")):
+        if not is_true(pushvars.get("NON_FAST_FORWARD")):
             raise error.Abort(
                 _(
                     "non-fast-forward push to remote bookmark %s from %s to %s "
@@ -136,7 +136,6 @@ def push_rebase(repo, dest, head_node, remote_bookmark, opargs=None):
         bookmark,
         head=head_node,
         base=base,
-        pushvars=[],
     )
 
     result = response["data"]
@@ -167,7 +166,7 @@ def get_remote_bookmark_node(ui, edenapi, bookmark) -> Optional[bytes]:
 
 def create_remote_bookmark(ui, edenapi, bookmark, node) -> None:
     ui.write(_("creating remote bookmark %s\n") % bookmark)
-    result = edenapi.setbookmark(bookmark, node, None, pushvars=[])["data"]
+    result = edenapi.setbookmark(bookmark, node, None, pushvars=None)["data"]
     if "Err" in result:
         raise error.Abort(
             _("failed to create remote bookmark:\n  remote server error: %s")
@@ -197,7 +196,7 @@ def delete_remote_bookmark(repo, edenapi, bookmark) -> None:
 
     # delete remote bookmark from server
     ui.write(_("deleting remote bookmark %s\n") % bookmark)
-    result = edenapi.setbookmark(bookmark, None, node, pushvars=[])["data"]
+    result = edenapi.setbookmark(bookmark, None, node, pushvars=None)["data"]
     if "Err" in result:
         raise error.Abort(
             _("failed to delete remote bookmark:\n  remote server error: %s")
@@ -214,7 +213,7 @@ def delete_remote_bookmark(repo, edenapi, bookmark) -> None:
 
 
 def parse_pushvars(opargs) -> List[Tuple[str, str]]:
-    pushvars = []
+    pushvars = {}
     kvs = opargs.get("pushvars", [])
     for kv in kvs:
         try:
@@ -223,7 +222,7 @@ def parse_pushvars(opargs) -> List[Tuple[str, str]]:
             raise error.Abort(
                 _("invalid pushvar: '%s', expecting 'key=value' format") % kv
             )
-        pushvars.append((k, v))
+        pushvars[k] = v
     return pushvars
 
 
