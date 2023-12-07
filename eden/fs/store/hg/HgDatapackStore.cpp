@@ -165,11 +165,7 @@ void HgDatapackStore::getTreeBatch(const ImportRequestsList& importRequests) {
                 false});
           }
 
-          if (config_->getEdenConfig()->hgTreeFetchFallback.getValue()) {
-            // If we're falling back, the caller will fulfill this Promise with
-            // a tree from HgImporter.
-            return;
-          }
+          return;
         }
 
         XLOGF(DBG9, "Imported Tree node={}", folly::hexlify(requests[index]));
@@ -296,11 +292,7 @@ void HgDatapackStore::getBlobBatch(const ImportRequestsList& importRequests) {
                 false});
           }
 
-          if (config_->getEdenConfig()->hgBlobFetchFallback.getValue()) {
-            // If we're falling back, the caller will fulfill this Promise with
-            // a blob from HgImporter.
-            return;
-          }
+          return;
         }
 
         XLOGF(DBG9, "Imported Blob node={}", folly::hexlify(requests[index]));
@@ -398,11 +390,7 @@ void HgDatapackStore::getBlobMetadataBatch(
                 false});
           }
 
-          if (config_->getEdenConfig()->hgBlobMetaFetchFallback.getValue()) {
-            // If we're falling back, the caller will fulfill this Promise with
-            // a blob metadata from HgImporter.
-            return;
-          }
+          return;
         }
 
         XLOGF(
