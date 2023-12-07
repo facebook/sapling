@@ -40,40 +40,24 @@ Create commit that modifies git submodule in small repo
   successful sync
 
 
-  $ clone_and_log_large_repo "768a9c6d2b6943900f9d4374028a891c7d3dc62d7ecc25a1fd2a9c3fc9aba14b" "$C"
-  commit:      d6af9545397f
-  user:        author
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     C
-  
-   smallrepofolder1/foo/b.txt |  1 +
-   1 files changed, 1 insertions(+), 0 deletions(-)
-  
-  commit:      7e73c01eea00
-  user:        author
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     B
-  
-   smallrepofolder1/bar/c.txt |  1 +
-   1 files changed, 1 insertions(+), 0 deletions(-)
-  
-  commit:      e462fc947f26
-  user:        author
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     A
-  
-   smallrepofolder1/bar/b.txt |  1 +
-   smallrepofolder1/foo/a.txt |  1 +
-   2 files changed, 2 insertions(+), 0 deletions(-)
+  $ clone_and_log_large_repo 768a9c6d2b6943900f9d4374028a891c7d3dc62d7ecc25a1fd2a9c3fc9aba14b
+  o  d6af9545397f C
+  │   smallrepofolder1/foo/b.txt |  1 +
+  │   1 files changed, 1 insertions(+), 0 deletions(-)
+  │
+  o  7e73c01eea00 B
+  │   smallrepofolder1/bar/c.txt |  1 +
+  │   1 files changed, 1 insertions(+), 0 deletions(-)
+  │
+  o  e462fc947f26 A
+      smallrepofolder1/bar/b.txt |  1 +
+      smallrepofolder1/foo/a.txt |  1 +
+      2 files changed, 2 insertions(+), 0 deletions(-)
   
   
   
   Running mononoke_admin to verify mapping
   
-  using repo "small_repo" repoid RepositoryId(1)
-  using repo "large_repo" repoid RepositoryId(0)
-  changeset resolved as: ChangesetId(Blake2(00b0b4d6130a22ccf3fada118572a85a6bb2d7c253d4285557802b7b8f250821))
-  RewrittenAs([(ChangesetId(Blake2(768a9c6d2b6943900f9d4374028a891c7d3dc62d7ecc25a1fd2a9c3fc9aba14b)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
+  RewrittenAs([(ChangesetId(Blake2(00b0b4d6130a22ccf3fada118572a85a6bb2d7c253d4285557802b7b8f250821)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
   
   Deriving all the enabled derived data types
-  success

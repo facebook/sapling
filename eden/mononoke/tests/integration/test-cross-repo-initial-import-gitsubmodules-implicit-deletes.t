@@ -38,37 +38,25 @@ Create commit that modifies git submodule in small repo
 
 
 
-  $ clone_and_log_large_repo "30a912050a27826f649bcce7bd1b2fbfe1bf9b2883dcabc17753c2f9f1ab3ad5" "$B"
-  commit:      9b75b98ff186
-  user:        author
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     B
-  
-   smallrepofolder1/foo/a/c |  1 -
-   smallrepofolder1/foo/a/d |  1 -
-   smallrepofolder1/foo/b/e |  1 -
-   3 files changed, 0 insertions(+), 3 deletions(-)
-  
-  commit:      22cdfd416dbb
-  user:        author
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     A
-  
-   smallrepofolder1/bar/f/g |  1 +
-   smallrepofolder1/bar/h/i |  1 +
-   smallrepofolder1/foo/a/c |  1 +
-   smallrepofolder1/foo/a/d |  1 +
-   smallrepofolder1/foo/b/e |  1 +
-   5 files changed, 5 insertions(+), 0 deletions(-)
+  $ clone_and_log_large_repo "30a912050a27826f649bcce7bd1b2fbfe1bf9b2883dcabc17753c2f9f1ab3ad5"
+  o  9b75b98ff186 B
+  │   smallrepofolder1/foo/a/c |  1 -
+  │   smallrepofolder1/foo/a/d |  1 -
+  │   smallrepofolder1/foo/b/e |  1 -
+  │   3 files changed, 0 insertions(+), 3 deletions(-)
+  │
+  o  22cdfd416dbb A
+      smallrepofolder1/bar/f/g |  1 +
+      smallrepofolder1/bar/h/i |  1 +
+      smallrepofolder1/foo/a/c |  1 +
+      smallrepofolder1/foo/a/d |  1 +
+      smallrepofolder1/foo/b/e |  1 +
+      5 files changed, 5 insertions(+), 0 deletions(-)
   
   
   
   Running mononoke_admin to verify mapping
   
-  using repo "small_repo" repoid RepositoryId(1)
-  using repo "large_repo" repoid RepositoryId(0)
-  changeset resolved as: ChangesetId(Blake2(4ab1f8925a8b6a48eaafb3bb8ce5bfb351bd4301c78d557cd799b721b5a4c6e9))
-  RewrittenAs([(ChangesetId(Blake2(30a912050a27826f649bcce7bd1b2fbfe1bf9b2883dcabc17753c2f9f1ab3ad5)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
+  RewrittenAs([(ChangesetId(Blake2(4ab1f8925a8b6a48eaafb3bb8ce5bfb351bd4301c78d557cd799b721b5a4c6e9)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
   
   Deriving all the enabled derived data types
-  success

@@ -100,21 +100,26 @@ function run_common_xrepo_sync_with_gitsubmodules_setup {
 }
 
 function clone_and_log_large_repo {
-  LARGE_BCS_ID=$1
-  SMALL_CS_ID=$2
+  LARGE_BCS_IDS=( "$@" )
   cd "$TESTTMP" || exit
   REPONAME="$LARGE_REPO_NAME" hgmn_clone "mononoke://$(mononoke_address)/$LARGE_REPO_NAME" "$LARGE_REPO_NAME"
   cd "$LARGE_REPO_NAME" || exit
 
-  LARGE_CS_ID=$(mononoke_newadmin convert --from bonsai --to hg -R "$LARGE_REPO_NAME" "$LARGE_BCS_ID" --derive)
 
-  hg co -q "$LARGE_CS_ID"
+  for LARGE_BCS_ID in "${LARGE_BCS_IDS[@]}"; do
+    LARGE_CS_ID=$(mononoke_newadmin convert --from bonsai --to hg -R "$LARGE_REPO_NAME" "$LARGE_BCS_ID" --derive)
+    hg pull -q -r "$LARGE_CS_ID"
+  done
 
-  hg log --stat
+  hg log --graph -T '{node|short} {desc}\n' --stat -r "all()"
 
   printf "\n\nRunning mononoke_admin to verify mapping\n\n"
-  with_stripped_logs mononoke_admin_source_target "$SMALL_REPO_ID" "$LARGE_REPO_ID" crossrepo map "$SMALL_CS_ID"
+  for LARGE_BCS_ID in "${LARGE_BCS_IDS[@]}"; do
+    quiet_grep RewrittenAs -- with_stripped_logs mononoke_admin_source_target "$LARGE_REPO_ID" "$SMALL_REPO_ID" crossrepo map "$LARGE_BCS_ID"
+  done
 
   printf "\nDeriving all the enabled derived data types\n"
-  mononoke_newadmin derived-data -R "$LARGE_REPO_NAME" derive --all-types -i "$LARGE_BCS_ID" && echo success || echo failure
+  for LARGE_BCS_ID in "${LARGE_BCS_IDS[@]}"; do
+    quiet mononoke_newadmin derived-data -R "$LARGE_REPO_NAME" derive --all-types -i "$LARGE_BCS_ID"
+  done
 }
