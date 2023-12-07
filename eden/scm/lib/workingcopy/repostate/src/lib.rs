@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-mod command_state;
+pub mod command_state;
 mod merge_state;
 
 pub use merge_state::ConflictState;

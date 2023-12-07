@@ -9,6 +9,7 @@ use std::fmt::Display;
 
 use anyhow::Result;
 use repolock::LockedPath;
+use serde::Deserialize;
 
 use crate::MergeState;
 
@@ -168,7 +169,8 @@ static UNRESOLVED_CONFLICTS: State = State {
     abort_lossy: true,
 };
 
-#[derive(Debug, Eq, PartialEq, Clone, Copy)]
+#[derive(Debug, Eq, PartialEq, Clone, Copy, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Operation {
     GotoClean,
     Commit,

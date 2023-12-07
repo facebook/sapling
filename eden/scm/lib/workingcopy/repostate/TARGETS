@@ -13,6 +13,7 @@ rust_library(
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:byteorder",
         "fbsource//third-party/rust:fs-err",
+        "fbsource//third-party/rust:serde",
         "//eden/scm/lib/identity:identity",
         "//eden/scm/lib/repolock:repolock",
         "//eden/scm/lib/types:types",
