@@ -45,11 +45,11 @@ export const CommitInfoTestUtils = {
     });
   },
 
-  clickToSelectCommit(hash: string) {
+  clickToSelectCommit(hash: string, cmdClick?: boolean) {
     const commit = within(screen.getByTestId(`commit-${hash}`)).queryByTestId('draggable-commit');
     expect(commit).toBeInTheDocument();
     act(() => {
-      fireEvent.click(unwrap(commit));
+      fireEvent.click(unwrap(commit), {metaKey: cmdClick === true});
     });
   },
 
