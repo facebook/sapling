@@ -10,6 +10,7 @@ use clap::command;
 use clap::Args;
 use clap::Parser;
 use fbinit::FacebookInit;
+use mononoke_app::args::ChangesetArgs;
 use mononoke_app::args::SourceAndTargetRepoArgs;
 use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeApp;
@@ -20,8 +21,8 @@ use mononoke_app::MononokeAppBuilder;
 pub struct InitialImportCommandArgs {
     #[clap(long = "version-name")]
     pub sync_config_version_name: String,
-    #[clap(long = "commit", short = 'i')]
-    pub commit: String,
+    #[clap(flatten)]
+    pub changeset_args: ChangesetArgs,
 }
 
 #[derive(Debug, Args)]

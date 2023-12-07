@@ -154,15 +154,10 @@ async fn run_in_single_commit_mode<M: SyncedCommitMapping + Clone + 'static>(
     res.map(|_| ())
 }
 
-/// Run the initial import of a small repo into a large repo.
-/// It will sync a specific commit (i.e. head commit) and all of its ancestors
-/// and optionally bookmark the head commit.
-/// A commit sync config version has to be provided as this is used for the
-/// initial import of the repo.
-async fn run_in_initial_import_mode<M: SyncedCommitMapping + Clone + 'static>(
+async fn run_in_initial_import_mode_for_single_head<M: SyncedCommitMapping + Clone + 'static>(
     ctx: &CoreContext,
     bcs: ChangesetId,
-    commit_syncer: CommitSyncer<M, Repo>,
+    commit_syncer: &CommitSyncer<M, Repo>,
     config_version: CommitSyncConfigVersion,
     scuba_sample: MononokeScubaSampleBuilder,
 ) -> Result<()> {
@@ -180,15 +175,39 @@ async fn run_in_initial_import_mode<M: SyncedCommitMapping + Clone + 'static>(
         info!(ctx.logger(), "{} is already synced", bcs);
         return Ok(());
     }
+    let _ = sync_commits_for_initial_import(
+        ctx,
+        commit_syncer,
+        scuba_sample.clone(),
+        bcs,
+        config_version,
+    )
+    .await?;
+    info!(ctx.logger(), "successful sync of head {}", bcs);
+    Ok(())
+}
 
-    let res =
-        sync_commits_for_initial_import(ctx, &commit_syncer, scuba_sample, bcs, config_version)
-            .await;
-
-    if res.is_ok() {
-        info!(ctx.logger(), "successful sync");
+/// Run the initial import of a small repo into a large repo.
+/// It will sync a specific commit (i.e. head commit) and all of its ancestors
+/// if commit is notprovided
+async fn run_in_initial_import_mode<M: SyncedCommitMapping + Clone + 'static>(
+    ctx: &CoreContext,
+    bcs_ids: Vec<ChangesetId>,
+    commit_syncer: CommitSyncer<M, Repo>,
+    config_version: CommitSyncConfigVersion,
+    scuba_sample: MononokeScubaSampleBuilder,
+) -> Result<()> {
+    for bcs_id in bcs_ids {
+        run_in_initial_import_mode_for_single_head(
+            ctx,
+            bcs_id,
+            &commit_syncer,
+            config_version.clone(),
+            scuba_sample.clone(),
+        )
+        .await?;
     }
-    res.map(|_| ())
+    Ok(())
 }
 
 enum TailingArgs<M, R> {
@@ -481,15 +500,19 @@ async fn async_main<'a>(app: MononokeApp, ctx: CoreContext) -> Result<(), Error>
         InitialImport(initial_import_args) => {
             let sync_config_version_name = initial_import_args.sync_config_version_name.clone();
             let config_version = CommitSyncConfigVersion(sync_config_version_name);
+            let resolved_csids = initial_import_args
+                .changeset_args
+                .resolve_changesets(&ctx, &source_repo)
+                .await?;
 
-            let bcs = helpers::csid_resolve(
+            run_in_initial_import_mode(
                 &ctx,
-                source_repo.blob_repo(),
-                &initial_import_args.commit.as_str(),
+                resolved_csids,
+                commit_syncer,
+                config_version,
+                scuba_sample,
             )
-            .await?;
-
-            run_in_initial_import_mode(&ctx, bcs, commit_syncer, config_version, scuba_sample).await
+            .await
         }
         Once(once_cmd_args) => {
             let maybe_target_bookmark = once_cmd_args
