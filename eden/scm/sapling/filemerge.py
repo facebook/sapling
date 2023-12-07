@@ -966,7 +966,7 @@ def partextras(labels):
 
     Intended use is in strings of the form "(l)ocal%(l)s".
     """
-    if labels is None:
+    if not labels:
         return {"l": "", "o": ""}
 
     return {"l": " [%s]" % labels[0], "o": " [%s]" % labels[1]}

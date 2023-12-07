@@ -188,7 +188,8 @@ class mergestate:
 
     @util.propertycache
     def _labels(self):
-        return self._rust_ms.labels()
+        # Maintain historical behavior of no labels being `None`, not `[]`.
+        return self._rust_ms.labels() or None
 
     def active(self):
         """Whether mergestate is active.

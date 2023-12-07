@@ -162,3 +162,19 @@ Now we see the default commit message
   HG: branch 'default'
   HG: added bar
   changeset 9b702c98cd4b backs out changeset 4dc95485382f
+
+Test with conflicts (interesting because there are no merge labels):
+  $ newclientrepo
+  $ drawdag << 'EOS'
+  > C  # C/foo=three
+  > |
+  > B  # B/foo=two
+  > |
+  > A  # A/foo=one
+  > EOS
+  $ hg go -q $C
+  $ hg backout $B --tool :prompt
+  keep (l)ocal, take (o)ther, or leave (u)nresolved for foo? u
+  0 files updated, 0 files merged, 1 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges
+  [1]
