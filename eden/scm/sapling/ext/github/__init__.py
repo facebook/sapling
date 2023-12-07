@@ -47,6 +47,7 @@ configtable = {}
 configitem = registrar.configitem(configtable)
 
 configitem("github", "pull-request-include-reviewstack", default=True)
+configitem("github", "preserve-pull-request-description", default=False)
 
 
 @hint("unlink-closed-pr")
@@ -402,3 +403,4 @@ def _autopullghpr(repo, name, rewritepullrev: bool = False) -> Optional[pullatte
             # HASH".
             friendlyname = "PR%s (%s)" % (prno, hex(n))
             return autopull.pullattempt(headnodes=[n], friendlyname=friendlyname)
+

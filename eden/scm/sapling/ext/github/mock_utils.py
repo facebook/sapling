@@ -501,6 +501,7 @@ class GetPrDetailsRequest(MockRequest):
         base_ref_name: str = "main",
         base_ref_oid: str = "",
         body: str = "",
+        title: str = "",
     ):
         head_ref_name = head_ref_name or f"pr{self._pr_number}"
         head_ref_oid = head_ref_oid or gen_hash_hexdigest(pr_id)
@@ -517,6 +518,7 @@ class GetPrDetailsRequest(MockRequest):
                         "baseRefOid": base_ref_oid,
                         "baseRefName": base_ref_name,
                         "body": body,
+                        "title": title,
                     }
                 }
             }

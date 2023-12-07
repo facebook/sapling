@@ -4,7 +4,7 @@
 # GNU General Public License version 2.
 
 import re
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 from .gh_submit import Repository
 
@@ -17,6 +17,7 @@ def create_pull_request_title_and_body(
     pr_numbers_and_num_commits: List[Tuple[int, int]],
     pr_numbers_index: int,
     repository: Repository,
+    title: Optional[str] = None,
     reviewstack: bool = True,
 ) -> Tuple[str, str]:
     r"""Returns (title, body) for the pull request.
@@ -66,8 +67,8 @@ def create_pull_request_title_and_body(
     """
     owner, name = repository.get_upstream_owner_and_name()
     pr = pr_numbers_and_num_commits[pr_numbers_index][0]
-    title = firstline(commit_msg)
-    body = commit_msg
+    title = title if title is not None else firstline(commit_msg)
+    body = _strip_stack_information(commit_msg)
     extra = []
     if len(pr_numbers_and_num_commits) > 1:
         if reviewstack:
@@ -146,6 +147,13 @@ def _line_has_stack_list_marker(line: str) -> bool:
     return line == _SAPLING_FOOTER_MARKER or line.startswith(
         "Stack created with [Sapling]"
     )
+
+
+def _strip_stack_information(body: str) -> str:
+    marker = "\n".join([_HORIZONTAL_RULE, _SAPLING_FOOTER_MARKER])
+    if marker in body:
+        body = body.rsplit(marker, maxsplit=1)[0]
+    return body
 
 
 def _format_stack_entry(
