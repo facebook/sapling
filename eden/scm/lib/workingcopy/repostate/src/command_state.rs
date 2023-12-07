@@ -78,7 +78,9 @@ impl Conflict {
 
 impl Display for Conflict {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0.description)?;
+        write!(f, "{}", self.description())?;
+        write!(f, "\n({})", self.hint())?;
+
         Ok(())
     }
 }
@@ -220,7 +222,7 @@ mod test {
         let err = try_operation(&locked_path, Operation::GotoClean).unwrap_err();
         let err: Conflict = err.downcast().unwrap();
         assert_eq!(
-            format!("{err}\n({})", err.hint()),
+            format!("{err}"),
             "goto --merge in progress
 (use 'sl goto --continue' to continue or
      'sl goto --clean' to abort - WARNING: will destroy uncommitted changes)"
