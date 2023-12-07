@@ -1014,12 +1014,16 @@ class localrepository:
         headnames=(),
         quiet=True,
         visible=True,
+        remotebookmarks=None,
     ):
         """Pull specified revisions and remote bookmarks.
 
-        headnodes is a list of binary nodes to pull.
-        headnames is a list of text names (ex. hex prefix of a commit hash).
-        bookmarknames is a list of bookmark names to pull.
+        - headnodes is a list of binary nodes to pull.
+        - headnames is a list of text names (ex. hex prefix of a commit hash).
+        - bookmarknames is a list of bookmark names to pull.
+        - remotebookmarks is a map of {bookmark: node}. Instead of fetching the
+          new nodes of those remote bookmarks from server, we just use the value
+          from this map.
 
         visible=False can disable updating visible heads. This means the pulled
         commit hashes will not be visible, although bookmarks are still updated.
@@ -1092,22 +1096,37 @@ class localrepository:
 
             # Resolve the bookmark names to heads.
             if bookmarknames:
-                if (
-                    self.ui.configbool("pull", "httpbookmarks")
-                    and self.nullableedenapi is not None
-                ):
-                    fetchedbookmarks = self.edenapi.bookmarks(list(bookmarknames))
-                    tracing.debug(
-                        "edenapi fetched bookmarks: %s" % str(fetchedbookmarks),
-                        target="pull::httpbookmarks",
-                    )
-                    remotebookmarks = {
-                        bm: n for (bm, n) in fetchedbookmarks.items() if n is not None
-                    }
-                else:
-                    remotebookmarks = remote.listkeyspatterns(
-                        "bookmarks", patterns=list(bookmarknames)
-                    )  # {name: hexnode}
+                # Convert nodes to hexnodes, so it matches the return type of bookmarks
+                # api calls below
+                remotebookmarks = {
+                    b: hex(n) for b, n in (remotebookmarks or {}).items()
+                }
+                missing_bookmarknames = [
+                    b for b in bookmarknames if b not in remotebookmarks
+                ]
+                if missing_bookmarknames:
+                    if (
+                        self.ui.configbool("pull", "httpbookmarks")
+                        and self.nullableedenapi is not None
+                    ):
+                        fetchedbookmarks = self.edenapi.bookmarks(missing_bookmarknames)
+                        tracing.debug(
+                            "edenapi fetched bookmarks: %s" % str(fetchedbookmarks),
+                            target="pull::httpbookmarks",
+                        )
+                        remotebookmarks.update(
+                            {
+                                bm: n
+                                for (bm, n) in fetchedbookmarks.items()
+                                if n is not None
+                            }
+                        )
+                    else:
+                        remotebookmarks.update(
+                            remote.listkeyspatterns(
+                                "bookmarks", patterns=missing_bookmarknames
+                            )
+                        )  # {name: hexnode}
 
                 for name in bookmarknames:
                     if name in remotebookmarks:
