@@ -2453,12 +2453,4 @@ def uisetup(ui) -> None:
     )
     entry[1].append(("t", "tool", "", _("specify merge tool for rebase")))
     cmdutil.summaryhooks.add("rebase", summaryhook)
-    cmdutil.unfinishedstates.append(
-        [
-            "rebasestate",
-            False,
-            _("rebase in progress"),
-            _("use '@prog@ rebase --continue' or '@prog@ rebase --abort'"),
-        ]
-    )
     cmdutil.afterresolvedstates.append(("rebasestate", _("@prog@ rebase --continue")))

@@ -45,7 +45,6 @@
   o  11eb9c356adf draft 'C2'
   │
   o  178f1774564f draft 'C1'
-  
 Try to call --continue:
 
   $ hg rebase --continue
@@ -75,7 +74,6 @@ Conflicting rebase:
   
   # To continue:                hg rebase --continue
   # To abort:                   hg rebase --abort
-  
 
 Try to continue without solving the conflict:
 
@@ -106,7 +104,6 @@ Conclude rebase:
   o  11eb9c356adf draft 'C2'
   │
   o  178f1774564f draft 'C1'
-  
 Check correctness:
 
   $ hg cat -r 'desc(C1)' common
@@ -235,4 +232,3 @@ Test rebase with obsstore turned on and off (issue5606)
   │ x  112478962961 draft 'B'
   ├─╯
   o  426bada5c675 draft 'A' A
-  

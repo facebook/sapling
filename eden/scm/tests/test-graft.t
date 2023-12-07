@@ -261,7 +261,8 @@
 
   $ hg ci -m 'commit interrupted graft'
   abort: graft in progress
-  (use 'hg graft --continue' or 'hg graft --abort' to abort)
+  (use 'hg graft --continue' to continue or
+       'hg graft --abort' to abort)
   [255]
 
 # Abort the graft and try committing:

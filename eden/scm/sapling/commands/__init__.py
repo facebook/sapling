@@ -1729,7 +1729,7 @@ def _docommit(ui, repo, *pats, **opts):
         # commit(), 1 if nothing changed or None on success.
         return 1 if ret == 0 else ret
 
-    cmdutil.checkunfinished(repo, commit=True)
+    cmdutil.checkunfinished(repo, op="commit")
 
     branch = repo[None].branch()
 
@@ -6472,7 +6472,7 @@ def update(
         # different destination.
         repo.localvfs.tryunlink("updatestate")
 
-        cmdutil.checkunfinished(repo)
+        cmdutil.checkunfinished(repo, op="goto_clean" if clean else None)
 
         if date:
             rev = hex(cmdutil.finddate(ui, repo, date))

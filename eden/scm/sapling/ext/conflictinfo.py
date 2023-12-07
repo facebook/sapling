@@ -42,10 +42,10 @@ from sapling.node import bin
 
 testedwith = "ships-with-fb-ext"
 
-# `unfinishedstates` would be ideal for this except it does not include merge,
-# and doesn't expose the command to run to resume by itself (it instead exposes
-# a help string)
 # Note: order matters (consider rebase v. merge).
+#
+# TODO: Consolidate with state logic in repostate::command_state.
+#       Logic for merge/state2 will need to be tweaked to work here.
 CONFLICTSTATES = [
     [
         "graftstate",

@@ -162,7 +162,8 @@
   [1]
   $ hg rebase --restack
   abort: rebase in progress
-  (use 'hg rebase --continue' or 'hg rebase --abort')
+  (use 'hg rebase --continue' to continue or
+       'hg rebase --abort' to abort)
   [255]
   $ echo merged > d
   $ hg resolve --mark d

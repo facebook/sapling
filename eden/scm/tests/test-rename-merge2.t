@@ -833,7 +833,9 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
   M a
   M b
-  abort: unresolved merge conflicts (see 'hg help resolve')
+  abort: unresolved merge state
+  (use 'hg resolve' to continue or
+       'hg goto --clean' to abort - WARNING: will destroy uncommitted changes)
   --------------
   
   $ tm "up a b" "nm a b" "      " "19 merge b no ancestor, prompt remove a"
@@ -891,7 +893,9 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
   M b
   C a
-  abort: unresolved merge conflicts (see 'hg help resolve')
+  abort: unresolved merge state
+  (use 'hg resolve' to continue or
+       'hg goto --clean' to abort - WARNING: will destroy uncommitted changes)
   --------------
   
   $ tm "up a  " "um a b" "      " "20 merge a and b to b, remove a"

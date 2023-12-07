@@ -1243,14 +1243,6 @@ def shelvecmd(ui, repo, *pats, **opts):
 
 
 def extsetup(ui) -> None:
-    cmdutil.unfinishedstates.append(
-        [
-            shelvedstate._filename,
-            False,
-            _("unshelve already in progress"),
-            _("use '@prog@ unshelve --continue' or '@prog@ unshelve --abort'"),
-        ]
-    )
     cmdutil.afterresolvedstates.append(
         (shelvedstate._filename, _("@prog@ unshelve --continue"))
     )

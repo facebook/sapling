@@ -304,7 +304,8 @@ user has somehow managed to update to a different revision (issue4009)
   $ echo new > a
   $ hg up 1               # user gets an error saying to run hg rebase --abort
   abort: rebase in progress
-  (use 'hg rebase --continue' or 'hg rebase --abort')
+  (use 'hg rebase --continue' to continue or
+       'hg rebase --abort' to abort)
   [255]
 
   $ cat a

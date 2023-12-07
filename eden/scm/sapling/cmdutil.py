@@ -356,7 +356,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, filterfn, *pats, **opt
         will be left in place, so the user can continue working.
         """
 
-        checkunfinished(repo, commit=True)
+        checkunfinished(repo, op="commit")
         wctx = repo[None]
         merge = len(wctx.parents()) > 1
         if merge:
@@ -4725,45 +4725,15 @@ summaryhooks = util.hooks()
 #  - (desturl,   destbranch,   destpeer,   outgoing)
 summaryremotehooks = util.hooks()
 
-# A list of state files kept by multistep operations like graft.
-# note: bisect is intentionally excluded
-# (state file, allowcommit, error, hint)
-unfinishedstates = [
-    (
-        "graftstate",
-        False,
-        _("graft in progress"),
-        _("use '@prog@ graft --continue' or '@prog@ graft --abort' to abort"),
-    ),
-    (
-        "updatemergestate",
-        True,
-        _("update --merge in progress"),
-        _("use '@prog@ goto --continue' to continue"),
-    ),
-    (
-        "updatestate",
-        False,
-        _("last update was interrupted"),
-        _(
-            "use '@prog@ goto DESTINATION' to get a consistent checkout\n"
-            "note: '@prog@ goto --continue' is supported in some cases, such as "
-            "during clone, and will resume the checkout where it left off"
-        ),
-    ),
-]
 
-
-def checkunfinished(repo, commit=False):
+def checkunfinished(repo, op=None):
     """Look for an unfinished multistep operation, like graft, and abort
     if found. It's probably good to check this right before
     bailifchanged().
     """
-    for f, allowcommit, msg, hint in unfinishedstates:
-        if commit and allowcommit:
-            continue
-        if repo.localvfs.exists(f):
-            raise error.Abort(msg, hint=hint)
+    state = repo._rsrepo.workingcopy().commandstate(op)
+    if state:
+        raise error.Abort(state[0], hint=state[1])
 
 
 afterresolvedstates = [

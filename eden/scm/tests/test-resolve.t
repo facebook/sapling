@@ -213,7 +213,9 @@ can not update or merge when there are unresolved conflicts
   use 'hg resolve' to retry unresolved file merges
   [1]
   $ hg up 99726c03216e233810a2564cbc0adfe395007eac
-  abort: outstanding merge conflicts
+  abort: unresolved merge state
+  (use 'hg resolve' to continue or
+       'hg goto --clean' to abort - WARNING: will destroy uncommitted changes)
   [255]
   $ hg merge 'max(desc(append))'
   abort: outstanding merge conflicts
