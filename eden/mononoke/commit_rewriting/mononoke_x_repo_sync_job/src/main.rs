@@ -164,7 +164,6 @@ async fn run_in_initial_import_mode<M: SyncedCommitMapping + Clone + 'static>(
     bcs: ChangesetId,
     commit_syncer: CommitSyncer<M, Repo>,
     config_version: CommitSyncConfigVersion,
-    new_bookmark: Option<BookmarkKey>,
     scuba_sample: MononokeScubaSampleBuilder,
 ) -> Result<()> {
     info!(
@@ -182,15 +181,9 @@ async fn run_in_initial_import_mode<M: SyncedCommitMapping + Clone + 'static>(
         return Ok(());
     }
 
-    let res = sync_commits_for_initial_import(
-        ctx,
-        &commit_syncer,
-        scuba_sample,
-        bcs,
-        config_version,
-        new_bookmark,
-    )
-    .await;
+    let res =
+        sync_commits_for_initial_import(ctx, &commit_syncer, scuba_sample, bcs, config_version)
+            .await;
 
     if res.is_ok() {
         info!(ctx.logger(), "successful sync");
@@ -488,11 +481,6 @@ async fn async_main<'a>(app: MononokeApp, ctx: CoreContext) -> Result<(), Error>
         InitialImport(initial_import_args) => {
             let sync_config_version_name = initial_import_args.sync_config_version_name.clone();
             let config_version = CommitSyncConfigVersion(sync_config_version_name);
-            let maybe_new_bookmark = initial_import_args
-                .new_bookmark
-                .clone()
-                .map(BookmarkKey::new)
-                .transpose()?;
 
             let bcs = helpers::csid_resolve(
                 &ctx,
@@ -501,15 +489,7 @@ async fn async_main<'a>(app: MononokeApp, ctx: CoreContext) -> Result<(), Error>
             )
             .await?;
 
-            run_in_initial_import_mode(
-                &ctx,
-                bcs,
-                commit_syncer,
-                config_version,
-                maybe_new_bookmark,
-                scuba_sample,
-            )
-            .await
+            run_in_initial_import_mode(&ctx, bcs, commit_syncer, config_version, scuba_sample).await
         }
         Once(once_cmd_args) => {
             let maybe_target_bookmark = once_cmd_args

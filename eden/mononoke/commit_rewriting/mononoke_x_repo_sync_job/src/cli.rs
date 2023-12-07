@@ -20,8 +20,6 @@ use mononoke_app::MononokeAppBuilder;
 pub struct InitialImportCommandArgs {
     #[clap(long = "version-name")]
     pub sync_config_version_name: String,
-    #[clap(long)]
-    pub new_bookmark: Option<String>,
     #[clap(long = "commit", short = 'i')]
     pub commit: String,
 }

@@ -33,34 +33,20 @@ Create commit that modifies git submodule in small repo
   B=cd6bd41f62adb809024156682965586754610ac4687b2833317151c239a58b71
   C=ab5bf42dd164f61fa2bcb2de20224d8ffb60f12619bb3692f69d7c171dc1c3be
 
-  $ with_stripped_logs mononoke_x_repo_sync "$SMALL_REPO_ID"  "$LARGE_REPO_ID" initial-import -i "$C" --version-name "$LATEST_CONFIG_VERSION_NAME" --new-bookmark "$NEW_BOOKMARK_NAME"
+  $ with_stripped_logs mononoke_x_repo_sync "$SMALL_REPO_ID"  "$LARGE_REPO_ID" initial-import -i "$C" --version-name "$LATEST_CONFIG_VERSION_NAME"
   changeset resolved as: ChangesetId(Blake2(ab5bf42dd164f61fa2bcb2de20224d8ffb60f12619bb3692f69d7c171dc1c3be))
   Checking if ab5bf42dd164f61fa2bcb2de20224d8ffb60f12619bb3692f69d7c171dc1c3be is already synced 1->0
   syncing ab5bf42dd164f61fa2bcb2de20224d8ffb60f12619bb3692f69d7c171dc1c3be
-  Setting bookmark SYNCED_HEAD to changeset f299e57c379932297b130d60f6d86e54c87c8e02507bf0867783e23d7d8f8a50
   changeset ab5bf42dd164f61fa2bcb2de20224d8ffb60f12619bb3692f69d7c171dc1c3be synced as f299e57c379932297b130d60f6d86e54c87c8e02507bf0867783e23d7d8f8a50 in * (glob)
   successful sync
 
 # NOTE: this command is expected to fail because some types can't be derived 
 # for bonsais with git submodules.
-  $ clone_and_log_large_repo "$NEW_BOOKMARK_NAME" "$C"
-  streaming all changes
-  2 files to transfer, 0 bytes of data
-  transferred 0 bytes in 0.0 seconds (0 bytes/sec)
-  remote: Command failed
-  remote:   Error:
-  remote:     Git submodules not supported
-  remote: 
-  remote:   Root cause:
-  remote:     Git submodules not supported
-  remote: 
-  remote:   Debug context:
-  remote:     "Git submodules not supported"
-  abort: unexpected EOL, expected netstring digit
-  abort: '$TESTTMP/large_repo' is not inside a repository, but this command requires a repository!
-  (use 'cd' to go to a directory inside a repository and try again)
-  abort: '$TESTTMP/large_repo' is not inside a repository, but this command requires a repository!
-  (use 'cd' to go to a directory inside a repository and try again)
+  $ clone_and_log_large_repo "f299e57c379932297b130d60f6d86e54c87c8e02507bf0867783e23d7d8f8a50" "$C"
+  Error: Failed to derive Mercurial changeset
+  
+  Caused by:
+      Git submodules not supported
   
   
   Running mononoke_admin to verify mapping

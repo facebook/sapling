@@ -422,8 +422,6 @@ pub async fn sync_commits_for_initial_import<M: SyncedCommitMapping + Clone + 's
     cs_id: ChangesetId,
     // Sync config version to use for importing the commits.
     config_version: CommitSyncConfigVersion,
-    // Optional: Bookmark head commit synced in the large repo.
-    mb_new_bookmark: Option<BookmarkKey>,
 ) -> Result<Vec<ChangesetId>>
 where
     R: Repo,
@@ -485,22 +483,6 @@ where
     })?;
 
     res.push(new_cs_id.clone());
-
-    // If a bookmark name to tag the head commit was provided, create the
-    // bookmark.
-    if let Some(new_bookmark) = mb_new_bookmark {
-        info!(
-            ctx.logger(),
-            "Setting bookmark {} to changeset {}", &new_bookmark, &new_cs_id
-        );
-        move_or_create_bookmark(
-            ctx,
-            commit_syncer.get_target_repo(),
-            &new_bookmark,
-            new_cs_id,
-        )
-        .await?;
-    }
 
     log_non_pushrebase_sync_single_changeset_result(
         ctx.clone(),

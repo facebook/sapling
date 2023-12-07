@@ -28,19 +28,15 @@ Create commit that modifies git submodule in small repo
   B=b51882d566acc1f3979a389e452e2c11ccdd05be65bf777c05924fc412b2cc71
   C=6473a332b6f2c52543365108144f9b1cff6b4874bc3ade72a8268f50226f86f4
 
-  $ with_stripped_logs mononoke_x_repo_sync "$SMALL_REPO_ID"  "$LARGE_REPO_ID" initial-import -i "$C" --version-name "$LATEST_CONFIG_VERSION_NAME" --new-bookmark "$NEW_BOOKMARK_NAME"
+  $ with_stripped_logs mononoke_x_repo_sync "$SMALL_REPO_ID"  "$LARGE_REPO_ID" initial-import -i "$C" --version-name "$LATEST_CONFIG_VERSION_NAME"
   changeset resolved as: ChangesetId(Blake2(6473a332b6f2c52543365108144f9b1cff6b4874bc3ade72a8268f50226f86f4))
   Checking if 6473a332b6f2c52543365108144f9b1cff6b4874bc3ade72a8268f50226f86f4 is already synced 1->0
   syncing 6473a332b6f2c52543365108144f9b1cff6b4874bc3ade72a8268f50226f86f4
-  Setting bookmark SYNCED_HEAD to changeset 5cac851d3a164f682613d6901e17a03e18afe8576145d4f5ff9dd0a51a82437f
   changeset 6473a332b6f2c52543365108144f9b1cff6b4874bc3ade72a8268f50226f86f4 synced as 5cac851d3a164f682613d6901e17a03e18afe8576145d4f5ff9dd0a51a82437f in * (glob)
   successful sync
 
-
-
-  $ clone_and_log_large_repo "$NEW_BOOKMARK_NAME" "$C"
+  $ clone_and_log_large_repo 5cac851d3a164f682613d6901e17a03e18afe8576145d4f5ff9dd0a51a82437f "$C"
   commit:      f9abb21ba833
-  bookmark:    SYNCED_HEAD
   user:        author
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     C

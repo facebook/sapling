@@ -100,19 +100,21 @@ function run_common_xrepo_sync_with_gitsubmodules_setup {
 }
 
 function clone_and_log_large_repo {
-  TARGET_BOOKMARK=$1
-  HEAD_COMMIT=$2
+  LARGE_BCS_ID=$1
+  SMALL_CS_ID=$2
   cd "$TESTTMP" || exit
   REPONAME="$LARGE_REPO_NAME" hgmn_clone "mononoke://$(mononoke_address)/$LARGE_REPO_NAME" "$LARGE_REPO_NAME"
   cd "$LARGE_REPO_NAME" || exit
 
-  hg co -q "$TARGET_BOOKMARK"
+  LARGE_CS_ID=$(mononoke_newadmin convert --from bonsai --to hg -R "$LARGE_REPO_NAME" "$LARGE_BCS_ID" --derive)
+
+  hg co -q "$LARGE_CS_ID"
 
   hg log --stat
 
   printf "\n\nRunning mononoke_admin to verify mapping\n\n"
-  with_stripped_logs mononoke_admin_source_target "$SMALL_REPO_ID" "$LARGE_REPO_ID" crossrepo map "$HEAD_COMMIT"
+  with_stripped_logs mononoke_admin_source_target "$SMALL_REPO_ID" "$LARGE_REPO_ID" crossrepo map "$SMALL_CS_ID"
 
   printf "\nDeriving all the enabled derived data types\n"
-  mononoke_newadmin derived-data -R "$LARGE_REPO_NAME" derive --all-types -B "$TARGET_BOOKMARK" && echo success || echo failure
+  mononoke_newadmin derived-data -R "$LARGE_REPO_NAME" derive --all-types -i "$LARGE_BCS_ID" && echo success || echo failure
 }
