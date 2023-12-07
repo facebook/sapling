@@ -355,8 +355,16 @@ folly::Future<TreePtr> HgBackingStore::fetchTreeFromImporter(
                      path,
                      writeBatch.get());
                } else {
-                 // No fallback to importer, return SaplingNativeBackingStore
-                 // error
+                 // No fallback to importer, record miss and return error
+                 if (logger_) {
+                   logger_->logEvent(FetchMiss{
+                       repoName_,
+                       FetchMiss::BackingStore,
+                       FetchMiss::Tree,
+                       tree.exception().what().toStdString(),
+                       true});
+                 }
+
                  auto ew = folly::exception_wrapper{tree.exception()};
                  result = folly::makeFuture<TreePtr>(std::move(ew));
                }
@@ -636,8 +644,16 @@ SemiFuture<BlobPtr> HgBackingStore::fetchBlobFromHgImporter(
                    stats_->increment(&HgBackingStoreStats::importBlobFailure);
                  }
                } else {
-                 // No fallback to importer, return SaplingNativeBackingStore
-                 // error
+                 // No fallback to importer, record miss and return error
+                 if (logger_) {
+                   logger_->logEvent(FetchMiss{
+                       repoName_,
+                       FetchMiss::BackingStore,
+                       FetchMiss::Blob,
+                       blob.exception().what().toStdString(),
+                       true});
+                 }
+
                  auto ew = folly::exception_wrapper{blob.exception()};
                  result = folly::makeFuture<BlobPtr>(std::move(ew));
                }
