@@ -145,7 +145,11 @@ def push_rebase(repo, dest, head_node, remote_bookmark, opargs=None):
     old_to_new_hgids = data["old_to_new_hgids"]
 
     with repo.wlock(), repo.lock(), repo.transaction("pushrebase"):
-        repo.pull(source=dest, headnodes=(new_head,))
+        repo.pull(
+            source=dest,
+            bookmarknames=(bookmark,),
+            remotebookmarks={bookmark: new_head},
+        )
 
         if wnode in old_to_new_hgids:
             ui.note(_("moving working copy parent\n"))
@@ -160,7 +164,6 @@ def push_rebase(repo, dest, head_node, remote_bookmark, opargs=None):
         ]
         mutation.recordentries(repo, entries, skipexisting=False)
 
-        record_remote_bookmark(repo, bookmark, new_head)
         ui.write(_("updated remote bookmark %s to %s\n") % (bookmark, short(new_head)))
         return 0
 
