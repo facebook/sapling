@@ -14,7 +14,6 @@ use std::fs::Permissions;
 use std::io;
 use std::io::Write;
 use std::num::NonZeroU64;
-use std::ops::Add;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
@@ -22,7 +21,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::thread::sleep;
 use std::time::Duration;
-use std::time::SystemTime;
+use std::time::Instant;
 
 use configmodel::Config;
 use configmodel::ConfigExt;
@@ -96,6 +95,7 @@ impl ReentrantLockHandle {
     }
 }
 
+#[derive(Debug)]
 struct LockConfigs {
     pub deadline: Duration,
     pub warn_deadline: Duration,
@@ -348,13 +348,7 @@ fn lock(
     name: &str,
     contents: &[u8],
 ) -> Result<LockHandle, LockError> {
-    let now = SystemTime::now();
-
-    let deadline = now.add(config.deadline);
-
-    let warn_deadline = now.add(config.warn_deadline);
-
-    let backoff = config.backoff;
+    let start = Instant::now();
 
     loop {
         match try_lock(dir, name, contents) {
@@ -362,19 +356,19 @@ fn lock(
             Err(err) => match err {
                 LockError::Contended(_) => {
                     // TODO: add user friendly debugging similar to Python locks.
+                    let elapsed = start.elapsed();
 
-                    let now = SystemTime::now();
-                    if now >= warn_deadline {
+                    if elapsed >= config.warn_deadline {
                         tracing::warn!(name, "lock contended");
                     } else {
                         tracing::info!(name, "lock contended");
                     };
 
-                    if now >= deadline {
+                    if elapsed >= config.deadline {
                         return Err(err);
                     }
 
-                    sleep(backoff)
+                    sleep(config.backoff)
                 }
                 _ => return Err(err),
             },
