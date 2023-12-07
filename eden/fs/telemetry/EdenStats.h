@@ -354,6 +354,7 @@ struct HgBackingStoreStats : StatsGroup<HgBackingStoreStats> {
   Duration getTree{"store.hg.get_tree_us"};
   Duration fetchTree{"store.hg.fetch_tree_us"};
   Counter fetchTreeRetrySuccess{"store.hg.fetch_tree_retry_success"};
+  Counter fetchTreeRetryFailure{"store.hg.fetch_tree_retry_failure"};
   Duration importTreeDuration{"store.hg.import_tree_us"};
   Counter importTreeSuccess{"store.hg.import_tree_success"};
   Counter importTreeFailure{"store.hg.import_tree_failure"};
@@ -361,6 +362,7 @@ struct HgBackingStoreStats : StatsGroup<HgBackingStoreStats> {
   Duration getBlob{"store.hg.get_blob_us"};
   Duration fetchBlob{"store.hg.fetch_blob_us"};
   Counter fetchBlobRetrySuccess{"store.hg.fetch_blob_retry_success"};
+  Counter fetchBlobRetryFailure{"store.hg.fetch_blob_retry_failure"};
   Duration importBlobDuration{"store.hg.import_blob_us"};
   Counter importBlobSuccess{"store.hg.import_blob_success"};
   Counter importBlobFailure{"store.hg.import_blob_failure"};

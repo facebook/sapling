@@ -365,6 +365,7 @@ folly::Future<TreePtr> HgBackingStore::fetchTreeFromImporter(
                        true});
                  }
 
+                 stats_->increment(&HgBackingStoreStats::fetchTreeRetryFailure);
                  auto ew = folly::exception_wrapper{tree.exception()};
                  result = folly::makeFuture<TreePtr>(std::move(ew));
                }
@@ -654,6 +655,7 @@ SemiFuture<BlobPtr> HgBackingStore::fetchBlobFromHgImporter(
                        true});
                  }
 
+                 stats_->increment(&HgBackingStoreStats::fetchBlobRetryFailure);
                  auto ew = folly::exception_wrapper{blob.exception()};
                  result = folly::makeFuture<BlobPtr>(std::move(ew));
                }
