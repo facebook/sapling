@@ -297,6 +297,7 @@ class MockGitHubServer:
             ]
             body += (
                 "\n---\n"
+                "[//]: # (BEGIN SAPLING FOOTER)\n"
                 "Stack created with [Sapling](https://sapling-scm.com). Best reviewed"
                 f" with [ReviewStack](https://reviewstack.dev/{owner}/{name}/pull/{pr_number}).\n"
                 + "\n".join(pr_list)
