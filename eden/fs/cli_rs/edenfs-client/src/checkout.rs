@@ -42,7 +42,6 @@ use serde::Deserializer;
 use serde::Serialize;
 use serde::Serializer;
 use thrift_types::edenfs::errors::eden_service::PrefetchFilesError;
-use thrift_types::edenfs::types::Glob;
 use thrift_types::edenfs::types::GlobParams;
 use thrift_types::edenfs::types::MountInfo;
 use thrift_types::edenfs::types::MountState;
