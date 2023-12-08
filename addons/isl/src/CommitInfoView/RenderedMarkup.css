@@ -83,3 +83,8 @@
 .rendered-markup ol {
   padding-left: 30px;
 }
+
+.rendered-markup video,
+.rendered-markup img {
+  max-width: 100%;
+}
