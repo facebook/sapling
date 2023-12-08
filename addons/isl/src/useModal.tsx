@@ -26,6 +26,7 @@ type ModalConfigBase = {
   height?: string | number;
   maxWidth?: string | number;
   maxHeight?: string | number;
+  dataTestId?: string;
 };
 type ModalConfig<T> = ModalConfigBase &
   (
@@ -124,6 +125,7 @@ export function ModalContainer() {
       className="use-modal"
       aria-labelledby="use-modal-title"
       aria-describedby="use-modal-message"
+      dataTestId={modal.config.dataTestId}
       dismiss={dismiss}>
       {modal.config.title != null && (
         <div id="use-modal-title">

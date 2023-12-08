@@ -19,6 +19,7 @@ export function Modal({
   'aria-labelledby': ariaLabelledBy,
   'aria-describedby': ariaDescribedBy,
   dismiss,
+  dataTestId,
 }: {
   className?: string;
   children: React.ReactNode;
@@ -30,6 +31,7 @@ export function Modal({
   'aria-describedby'?: string;
   /** Callback to dismiss the modal. If provided, an 'x' button is added to the top-right corner of the modal. */
   dismiss?: () => void;
+  dataTestId?: string;
 }) {
   const style: React.CSSProperties = {
     width: width ?? 'fit-content',
@@ -43,7 +45,8 @@ export function Modal({
       role="dialog"
       aria-modal={true}
       aria-labelledby={ariaLabelledBy}
-      aria-describedby={ariaDescribedBy}>
+      aria-describedby={ariaDescribedBy}
+      data-testid={dataTestId}>
       <div className={`modal-contents ${className ?? ''}`} style={style}>
         {dismiss != null ? (
           <div className="dismiss-modal">
