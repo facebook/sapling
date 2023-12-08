@@ -26,6 +26,8 @@ export interface UICodeReviewProvider {
     children?: ReactNode;
     syncStatus?: SyncStatus;
   }): JSX.Element | null;
+  /** If this provider is capable of landing from the UI, this component renders the land button */
+  DiffLandButtonContent?(props: {diff?: DiffSummary}): JSX.Element | null;
   formatDiffNumber(diffId: DiffId): string;
 
   submitOperation(

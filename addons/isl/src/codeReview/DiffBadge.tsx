@@ -116,6 +116,7 @@ function DiffInfoInner({
       data-testid={`${provider.name}-diff-info`}>
       <DiffSignalSummary diff={info} />
       <DiffBadge provider={provider} diff={info} url={info.url} syncStatus={syncStatus} />
+      {provider.DiffLandButtonContent && <provider.DiffLandButtonContent diff={info} />}
       <DiffComments diff={info} />
       <DiffNumber>{provider.formatDiffNumber(diffId)}</DiffNumber>
       {hideActions === true ? null : syncStatus === SyncStatus.RemoteIsNewer ? (
