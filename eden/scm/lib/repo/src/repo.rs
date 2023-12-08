@@ -232,10 +232,10 @@ impl Repo {
     }
 
     /// Invalidate all repo state.
-    pub fn invalidate_all(&mut self) -> Result<()> {
+    pub fn invalidate_all(&self) -> Result<()> {
         self.invalidate_dag_commits()?;
         self.invalidate_stores()?;
-        self.invalidate_metalog();
+        self.invalidate_metalog()?;
         Ok(())
     }
 
@@ -289,19 +289,23 @@ impl Repo {
         match &self.metalog {
             Some(metalog) => Ok(metalog.clone()),
             None => {
-                let metalog_path = self.metalog_path();
-                let metalog = MetaLog::open_from_env(metalog_path.as_path())?;
-                let metalog = Arc::new(RwLock::new(metalog));
-                self.metalog = Some(metalog.clone());
-                Ok(metalog)
+                let ml = Arc::new(RwLock::new(self.load_metalog()?));
+                self.metalog = Some(ml.clone());
+                Ok(ml)
             }
         }
     }
 
-    pub fn invalidate_metalog(&mut self) {
-        if self.metalog.is_some() {
-            self.metalog = None;
+    pub fn invalidate_metalog(&self) -> Result<()> {
+        if let Some(ml) = &self.metalog {
+            *ml.write() = self.load_metalog()?;
         }
+        Ok(())
+    }
+
+    fn load_metalog(&self) -> Result<MetaLog> {
+        let metalog_path = self.metalog_path();
+        Ok(MetaLog::open_from_env(metalog_path.as_path())?)
     }
 
     pub fn metalog_path(&self) -> PathBuf {
@@ -411,9 +415,8 @@ impl Repo {
         }
     }
 
-    pub fn invalidate_dag_commits(&mut self) -> Result<()> {
-        if let Some(dag_commits) = &mut self.dag_commits {
-            let dag_commits = dag_commits.clone();
+    pub fn invalidate_dag_commits(&self) -> Result<()> {
+        if let Some(dag_commits) = &self.dag_commits {
             let mut dag_commits = dag_commits.write();
             let info: &dyn StoreInfo = self;
             let new_commits: Box<dyn DagCommits + Send + 'static> =
@@ -596,7 +599,7 @@ impl Repo {
         }
     }
 
-    pub fn invalidate_stores(&mut self) -> Result<()> {
+    pub fn invalidate_stores(&self) -> Result<()> {
         if let Some(file_store) = &self.file_store {
             file_store.refresh()?;
         }
