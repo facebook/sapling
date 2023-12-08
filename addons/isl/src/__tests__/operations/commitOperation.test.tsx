@@ -70,7 +70,12 @@ describe('CommitOperation', () => {
     expectMessageSentToServer({
       type: 'runOperation',
       operation: {
-        args: ['commit', '--addremove', '--message', 'Temporary Commit'],
+        args: [
+          'commit',
+          '--addremove',
+          '--message',
+          `Temporary Commit at ${new Date().toLocaleString()}`,
+        ],
         id: expect.anything(),
         runner: CommandRunner.Sapling,
         trackEventName: 'CommitOperation',
@@ -91,7 +96,7 @@ describe('CommitOperation', () => {
           'commit',
           '--addremove',
           '--message',
-          'Temporary Commit',
+          `Temporary Commit at ${new Date().toLocaleString()}`,
           {type: 'repo-relative-file', path: 'file1.txt'},
           {type: 'repo-relative-file', path: 'file3.txt'},
         ],

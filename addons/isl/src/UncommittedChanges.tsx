@@ -28,6 +28,7 @@ import {
   commitMessageFieldsSchema,
   commitMessageFieldsToString,
 } from './CommitInfoView/CommitMessageFields';
+import {temporaryCommitTitle} from './CommitTitle';
 import {OpenComparisonViewButton} from './ComparisonView/OpenComparisonViewButton';
 import {ErrorNotice} from './ErrorNotice';
 import {FileTree, FileTreeFolderHeader} from './FileTree';
@@ -657,7 +658,7 @@ export function UncommittedChanges({place}: {place: Place}) {
     const title =
       (commitTitleRef.current as HTMLInputElement | null)?.value ||
       template?.fields.Title ||
-      t('Temporary Commit');
+      temporaryCommitTitle();
     // use the template, unless a specific quick title is given
     const fields: CommitMessageFields = {...template?.fields, Title: title};
     const message = commitMessageFieldsToString(schema, fields);

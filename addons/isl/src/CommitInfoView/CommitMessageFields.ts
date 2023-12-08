@@ -8,8 +8,8 @@
 import type {EditedMessage} from './CommitInfoState';
 import type {CommitMessageFields, FieldConfig, FieldsBeingEdited} from './types';
 
+import {temporaryCommitTitle} from '../CommitTitle';
 import {Internal} from '../Internal';
-import {t} from '../i18n';
 import {clearOnCwdChange} from '../recoilUtils';
 import {atom} from 'recoil';
 import {notEmpty} from 'shared/utils';
@@ -108,7 +108,7 @@ export function commitMessageFieldsToString(
       if (config.key === 'Title') {
         const value = fields[config.key] as string;
         if (allowEmptyTitle !== true && value.trim().length === 0) {
-          return t('Temporary Commit');
+          return temporaryCommitTitle();
         }
       }
 

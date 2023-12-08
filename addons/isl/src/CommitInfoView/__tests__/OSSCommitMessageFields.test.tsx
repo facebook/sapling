@@ -48,7 +48,7 @@ line 2`,
         Description: 'my summary\nline 2',
       }),
     ).toEqual(
-      `Temporary Commit
+      `Temporary Commit at ${new Date().toLocaleString()}
 
 my summary
 line 2`,
