@@ -14,6 +14,8 @@ import type {
   OperationCommandProgressReporter,
   LandInfo,
   LandConfirmationInfo,
+  CodeReviewProviderSpecificClientToServerMessages,
+  ClientToServerMessage,
 } from 'isl/src/types';
 
 type DiffSummaries = Map<DiffId, DiffSummary>;
@@ -54,4 +56,8 @@ export interface CodeReviewProvider {
 
   fetchLandInfo?(topOfStack: DiffId): Promise<LandInfo>;
   confirmLand?(landConfirmationInfo: NonNullable<LandConfirmationInfo>): Promise<Result<undefined>>;
+
+  handleClientToServerMessage?(
+    message: ClientToServerMessage,
+  ): message is CodeReviewProviderSpecificClientToServerMessages;
 }

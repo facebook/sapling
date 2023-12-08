@@ -24,6 +24,7 @@ import type {
   FetchedCommits,
   FetchedUncommittedChanges,
   LandInfo,
+  CodeReviewProviderSpecificClientToServerMessages,
 } from 'isl/src/types';
 import type {ExportStack, ImportedStack} from 'shared/types/stack';
 
@@ -793,9 +794,12 @@ export default class ServerToClientAPI {
         break;
       }
       default: {
+        if (repo.codeReviewProvider?.handleClientToServerMessage?.(data) === true) {
+          break;
+        }
         this.platform.handleMessageFromClient(
           repo,
-          data,
+          data as Exclude<typeof data, CodeReviewProviderSpecificClientToServerMessages>,
           message => this.postMessage(message),
           (dispose: () => unknown) => {
             this.repoDisposables.push({dispose});

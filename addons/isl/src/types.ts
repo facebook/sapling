@@ -434,6 +434,10 @@ export type PlatformSpecificServerToClientMessages =
       value: Json | undefined;
     };
 
+export type CodeReviewProviderSpecificClientToServerMessages =
+  | never
+  | InternalTypes['PhabricatorClientToServerMessages'];
+
 export type PageVisibility = 'focused' | 'visible' | 'hidden';
 
 export type FileABugFields = {title: string; description: string; repro: string};
@@ -528,6 +532,7 @@ export type ClientToServerMessage =
       title: string;
       comparison: Comparison;
     }
+  | CodeReviewProviderSpecificClientToServerMessages
   | PlatformSpecificClientToServerMessages;
 
 export type SubscriptionResultsData = {
