@@ -28,5 +28,8 @@
   color: var(--button-primary-background);
 }
 .icon-red {
-  color: var(--error-fg-color);
+  color: var(--signal-bad-bg);
+}
+.icon-green {
+  color: var(--signal-good-bg);
 }
