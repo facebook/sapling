@@ -654,6 +654,20 @@ export default class ServerToClientAPI {
 
         break;
       }
+      case 'confirmLand': {
+        if (data.landConfirmationInfo == null) {
+          break;
+        }
+        repo.codeReviewProvider
+          ?.confirmLand?.(data.landConfirmationInfo)
+          ?.then((result: Result<undefined>) => {
+            this.postMessage({
+              type: 'confirmedLand',
+              result,
+            });
+          });
+        break;
+      }
       case 'fetchAvatars': {
         repo.codeReviewProvider?.fetchAvatars?.(data.authors)?.then(avatars => {
           this.postMessage({

@@ -76,6 +76,11 @@ export type DiffSignalSummary = 'running' | 'pass' | 'failed' | 'warning' | 'no-
  */
 export type LandInfo = undefined | InternalTypes['PhabricatorLandInfo'];
 
+/**
+ * Information used to confirm a land from a given initiation LandInfo.
+ */
+export type LandConfirmationInfo = undefined | InternalTypes['PhabricatorLandConfirmationInfo'];
+
 /** An error causing the entire Repository to not be accessible */
 export type RepositoryError =
   | {
@@ -493,9 +498,10 @@ export type ClientToServerMessage =
   | {type: 'requestRepoInfo'}
   | {type: 'requestApplicationInfo'}
   | {type: 'fetchAvatars'; authors: Array<string>}
+  | {type: 'fetchCommitCloudState'}
   | {type: 'fetchDiffSummaries'; diffIds?: Array<DiffId>}
   | {type: 'fetchLandInfo'; topOfStack: DiffId}
-  | {type: 'fetchCommitCloudState'}
+  | {type: 'confirmLand'; landConfirmationInfo: LandConfirmationInfo}
   | {type: 'getSuggestedReviewers'; context: {paths: Array<string>}; key: string}
   | {type: 'updateRemoteDiffMessage'; diffId: DiffId; title: string; description: string}
   | {type: 'pageVisibility'; state: PageVisibility}
@@ -561,6 +567,7 @@ export type ServerToClientMessage =
   | {type: 'fetchedAvatars'; avatars: Map<string, string>}
   | {type: 'fetchedDiffSummaries'; summaries: Result<Map<DiffId, DiffSummary>>}
   | {type: 'fetchedLandInfo'; topOfStack: DiffId; landInfo: Result<LandInfo>}
+  | {type: 'confirmedLand'; result: Result<undefined>}
   | {type: 'fetchedCommitCloudState'; state: Result<CommitCloudSyncState>}
   | {type: 'renderedMarkup'; html: string; id: number}
   | {type: 'gotSuggestedReviewers'; reviewers: Array<string>; key: string}

@@ -13,6 +13,7 @@ import type {
   Result,
   OperationCommandProgressReporter,
   LandInfo,
+  LandConfirmationInfo,
 } from 'isl/src/types';
 
 type DiffSummaries = Map<DiffId, DiffSummary>;
@@ -52,4 +53,5 @@ export interface CodeReviewProvider {
   renderMarkup?: (markup: string) => Promise<string>;
 
   fetchLandInfo?(topOfStack: DiffId): Promise<LandInfo>;
+  confirmLand?(landConfirmationInfo: NonNullable<LandConfirmationInfo>): Promise<Result<undefined>>;
 }
