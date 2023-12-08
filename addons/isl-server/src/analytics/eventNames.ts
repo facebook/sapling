@@ -54,6 +54,8 @@ export type TrackEventName =
   | 'LandModalConfirm'
   | 'LandModalSuccess'
   | 'LandModalError'
+  | 'LandModalUriLandShown'
+  | 'LandModalCliLandShown'
   | 'LandRoadblockShown'
   | 'LandRoadblockContinue'
   | 'LandRoadblockContinueExternal'
