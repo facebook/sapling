@@ -109,45 +109,45 @@ pub(crate) mod ffi {
         ) -> Result<[u8; 20]>;
 
         pub fn sapling_backingstore_get_tree(
-            store: &mut BackingStore,
+            store: &BackingStore,
             node: &[u8],
             local: bool,
         ) -> Result<SharedPtr<Tree>>;
 
         pub fn sapling_backingstore_get_tree_batch(
-            store: &mut BackingStore,
+            store: &BackingStore,
             requests: &[Request],
             local: bool,
             resolver: SharedPtr<GetTreeBatchResolver>,
         );
 
         pub fn sapling_backingstore_get_blob(
-            store: &mut BackingStore,
+            store: &BackingStore,
             node: &[u8],
             local: bool,
         ) -> Result<Box<Blob>>;
 
         pub fn sapling_backingstore_get_blob_batch(
-            store: &mut BackingStore,
+            store: &BackingStore,
             requests: &[Request],
             local: bool,
             resolver: SharedPtr<GetBlobBatchResolver>,
         );
 
         pub fn sapling_backingstore_get_file_aux(
-            store: &mut BackingStore,
+            store: &BackingStore,
             node: &[u8],
             local: bool,
         ) -> Result<SharedPtr<FileAuxData>>;
 
         pub fn sapling_backingstore_get_file_aux_batch(
-            store: &mut BackingStore,
+            store: &BackingStore,
             requests: &[Request],
             local: bool,
             resolver: SharedPtr<GetFileAuxBatchResolver>,
         );
 
-        pub fn sapling_backingstore_flush(store: &mut BackingStore);
+        pub fn sapling_backingstore_flush(store: &BackingStore);
     }
 }
 
@@ -178,7 +178,7 @@ pub fn sapling_backingstore_get_manifest(
 }
 
 pub fn sapling_backingstore_get_tree(
-    store: &mut BackingStore,
+    store: &BackingStore,
     node: &[u8],
     local: bool,
 ) -> Result<SharedPtr<ffi::Tree>> {
@@ -191,7 +191,7 @@ pub fn sapling_backingstore_get_tree(
 }
 
 pub fn sapling_backingstore_get_tree_batch(
-    store: &mut BackingStore,
+    store: &BackingStore,
     requests: &[ffi::Request],
     local: bool,
     resolver: SharedPtr<ffi::GetTreeBatchResolver>,
@@ -211,7 +211,7 @@ pub fn sapling_backingstore_get_tree_batch(
 }
 
 pub fn sapling_backingstore_get_blob(
-    store: &mut BackingStore,
+    store: &BackingStore,
     node: &[u8],
     local: bool,
 ) -> Result<Box<ffi::Blob>> {
@@ -222,7 +222,7 @@ pub fn sapling_backingstore_get_blob(
 }
 
 pub fn sapling_backingstore_get_blob_batch(
-    store: &mut BackingStore,
+    store: &BackingStore,
     requests: &[ffi::Request],
     local: bool,
     resolver: SharedPtr<ffi::GetBlobBatchResolver>,
@@ -243,7 +243,7 @@ pub fn sapling_backingstore_get_blob_batch(
 }
 
 pub fn sapling_backingstore_get_file_aux(
-    store: &mut BackingStore,
+    store: &BackingStore,
     node: &[u8],
     local: bool,
 ) -> Result<SharedPtr<ffi::FileAuxData>> {
@@ -256,7 +256,7 @@ pub fn sapling_backingstore_get_file_aux(
 }
 
 pub fn sapling_backingstore_get_file_aux_batch(
-    store: &mut BackingStore,
+    store: &BackingStore,
     requests: &[ffi::Request],
     local: bool,
     resolver: SharedPtr<ffi::GetFileAuxBatchResolver>,
@@ -275,7 +275,7 @@ pub fn sapling_backingstore_get_file_aux_batch(
     });
 }
 
-pub fn sapling_backingstore_flush(store: &mut BackingStore) {
+pub fn sapling_backingstore_flush(store: &BackingStore) {
     store.flush();
     store.refresh();
 }
