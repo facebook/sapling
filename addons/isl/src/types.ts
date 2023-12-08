@@ -71,6 +71,11 @@ export type DiffSummary = GitHubDiffSummary | InternalTypes['PhabricatorDiffSumm
  */
 export type DiffSignalSummary = 'running' | 'pass' | 'failed' | 'warning' | 'no-signal';
 
+/**
+ * Information about a land request, specific to each Code Review Provider.
+ */
+export type LandInfo = undefined | InternalTypes['PhabricatorLandInfo'];
+
 /** An error causing the entire Repository to not be accessible */
 export type RepositoryError =
   | {
@@ -489,6 +494,7 @@ export type ClientToServerMessage =
   | {type: 'requestApplicationInfo'}
   | {type: 'fetchAvatars'; authors: Array<string>}
   | {type: 'fetchDiffSummaries'; diffIds?: Array<DiffId>}
+  | {type: 'fetchLandInfo'; topOfStack: DiffId}
   | {type: 'fetchCommitCloudState'}
   | {type: 'getSuggestedReviewers'; context: {paths: Array<string>}; key: string}
   | {type: 'updateRemoteDiffMessage'; diffId: DiffId; title: string; description: string}
@@ -554,6 +560,7 @@ export type ServerToClientMessage =
   | {type: 'repoError'; error: RepositoryError | undefined}
   | {type: 'fetchedAvatars'; avatars: Map<string, string>}
   | {type: 'fetchedDiffSummaries'; summaries: Result<Map<DiffId, DiffSummary>>}
+  | {type: 'fetchedLandInfo'; topOfStack: DiffId; landInfo: Result<LandInfo>}
   | {type: 'fetchedCommitCloudState'; state: Result<CommitCloudSyncState>}
   | {type: 'renderedMarkup'; html: string; id: number}
   | {type: 'gotSuggestedReviewers'; reviewers: Array<string>; key: string}

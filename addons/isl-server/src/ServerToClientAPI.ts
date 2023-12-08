@@ -23,6 +23,7 @@ import type {
   ClientToServerMessageWithPayload,
   FetchedCommits,
   FetchedUncommittedChanges,
+  LandInfo,
 } from 'isl/src/types';
 import type {ExportStack, ImportedStack} from 'shared/types/stack';
 
@@ -631,6 +632,26 @@ export default class ServerToClientAPI {
       }
       case 'fetchDiffSummaries': {
         repo.codeReviewProvider?.triggerDiffSummariesFetch(data.diffIds ?? repo.getAllDiffIds());
+        break;
+      }
+      case 'fetchLandInfo': {
+        repo.codeReviewProvider
+          ?.fetchLandInfo?.(data.topOfStack)
+          ?.then((landInfo: LandInfo) => {
+            this.postMessage({
+              type: 'fetchedLandInfo',
+              topOfStack: data.topOfStack,
+              landInfo: {value: landInfo},
+            });
+          })
+          .catch(err => {
+            this.postMessage({
+              type: 'fetchedLandInfo',
+              topOfStack: data.topOfStack,
+              landInfo: {error: err as Error},
+            });
+          });
+
         break;
       }
       case 'fetchAvatars': {

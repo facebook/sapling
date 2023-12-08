@@ -12,6 +12,7 @@ import type {
   Disposable,
   Result,
   OperationCommandProgressReporter,
+  LandInfo,
 } from 'isl/src/types';
 
 type DiffSummaries = Map<DiffId, DiffSummary>;
@@ -49,4 +50,6 @@ export interface CodeReviewProvider {
   fetchAvatars?(authors: Array<string>): Promise<Map<string, string>>;
 
   renderMarkup?: (markup: string) => Promise<string>;
+
+  fetchLandInfo?(topOfStack: DiffId): Promise<LandInfo>;
 }
