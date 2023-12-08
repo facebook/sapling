@@ -21,7 +21,7 @@ type ButtonConfig = {label: string | React.ReactNode; primary?: boolean};
 type ModalConfigBase = {
   /** Optional codicon to show next to the title */
   icon?: string;
-  title: React.ReactNode;
+  title?: React.ReactNode;
   width?: string | number;
   height?: string | number;
   maxWidth?: string | number;
@@ -125,14 +125,16 @@ export function ModalContainer() {
       aria-labelledby="use-modal-title"
       aria-describedby="use-modal-message"
       dismiss={dismiss}>
-      <div id="use-modal-title">
-        {modal.config.icon != null ? <Icon icon={modal.config.icon} size="M" /> : null}
-        {typeof modal.config.title === 'string' ? (
-          <span>{modal.config.title}</span>
-        ) : (
-          modal.config.title
-        )}
-      </div>
+      {modal.config.title != null && (
+        <div id="use-modal-title">
+          {modal.config.icon != null ? <Icon icon={modal.config.icon} size="M" /> : null}
+          {typeof modal.config.title === 'string' ? (
+            <span>{modal.config.title}</span>
+          ) : (
+            modal.config.title
+          )}
+        </div>
+      )}
       {content}
     </Modal>
   );
