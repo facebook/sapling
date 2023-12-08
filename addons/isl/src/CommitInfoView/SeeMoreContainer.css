@@ -12,7 +12,6 @@
   flex-direction: column;
 }
 .see-more-container-collapsed {
-  max-height: 275px;
   overflow-y: hidden;
 }
 
