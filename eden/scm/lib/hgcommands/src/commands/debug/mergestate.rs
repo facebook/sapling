@@ -26,10 +26,10 @@ define_flags! {
 }
 
 pub fn run(ctx: ReqCtx<DebugMergeStateOpts>, _repo: &mut Repo, wc: &mut WorkingCopy) -> Result<u8> {
-    let _wlock = wc.lock()?;
-
     if ctx.opts.add_unsupported_mandatory_record || ctx.opts.add_unsupported_advisory_record {
         ensure!(std::env::var_os("TESTTMP").is_some(), "only for tests");
+
+        let _wlock = wc.lock()?;
 
         let mut ms = wc.read_merge_state()?.unwrap_or_default();
         if ctx.opts.add_unsupported_mandatory_record {

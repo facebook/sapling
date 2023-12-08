@@ -1,5 +1,4 @@
-debugruntest seems to time out (deadlock?)
-#chg-compatible
+#debugruntest-compatible
 
   $ eagerepo
   $ enable mergedriver
@@ -359,10 +358,14 @@ XXX shouldn't output a warning
     other path: foo.txt (node 0b0743b512ba9b7c5db411597cf374a73b9f00ac)
     extras: ancestorlinknode=b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92
   $ hg commit -m 'merged'
-  abort: unresolved merge conflicts (see 'hg help resolve')
+  abort: unresolved merge state
+  (use 'hg resolve' to continue or
+       'hg goto --clean' to abort - WARNING: will destroy uncommitted changes)
   [255]
   $ hg goto 'desc(c)'
-  abort: outstanding uncommitted merge
+  abort: unresolved merge state
+  (use 'hg resolve' to continue or
+       'hg goto --clean' to abort - WARNING: will destroy uncommitted changes)
   [255]
 
 raise an error
@@ -415,8 +418,9 @@ raise an error
     other path: foo.txt (node 0b0743b512ba9b7c5db411597cf374a73b9f00ac)
     extras: ancestorlinknode=b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92
   $ hg commit -m 'merged'
-  abort: driver-resolved merge conflicts
-  (run "hg resolve --all" to resolve)
+  abort: unresolved merge state
+  (use 'hg resolve' to continue or
+       'hg goto --clean' to abort - WARNING: will destroy uncommitted changes)
   [255]
   $ hg resolve --list
   R bar.txt
@@ -489,8 +493,9 @@ XXX this is really confused
 
 this should abort
   $ hg commit -m 'merged'
-  abort: driver-resolved merge conflicts
-  (run "hg resolve --all" to resolve)
+  abort: unresolved merge state
+  (use 'hg resolve' to continue or
+       'hg goto --clean' to abort - WARNING: will destroy uncommitted changes)
   [255]
 
 this should disable the merge driver
@@ -826,6 +831,7 @@ delete all the files, but with a non-interactive conflict resolution involved
   $ hg resolve --all
   * conclude called
   (no more unresolved files)
+  continue: hg rebase --continue
   $ hg st
   M other.txt
   R foo.txt
