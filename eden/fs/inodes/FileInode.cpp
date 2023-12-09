@@ -481,7 +481,7 @@ FileInodeState::~FileInodeState() {
       materializedState.~MaterializedState();
       break;
   }
-};
+}
 
 void FileInodeState::checkInvariants() {
   // FileInode is the most allocated structure in EdenFS, make sure that its
