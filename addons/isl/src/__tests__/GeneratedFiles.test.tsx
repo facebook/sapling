@@ -114,9 +114,6 @@ describe('Generated Files', () => {
   function expectHasPartiallyGeneratedFiles() {
     expect(screen.queryByText('Partially Generated Files')).toBeInTheDocument();
   }
-  function expectNOTHasPartiallyGeneratedFiles() {
-    expect(screen.queryByText('Partially Generated Files')).not.toBeInTheDocument();
-  }
   function expectHasGeneratedFiles() {
     expect(screen.queryByText('Generated Files')).toBeInTheDocument();
   }
@@ -132,98 +129,34 @@ describe('Generated Files', () => {
   }
 
   it('Paginates generated files', async () => {
-    await simulateGeneratedFiles(500);
-    // 500 files, but 400 files per fetched batch of generated statuses.
-    // Sorted by status, that puts 400/3 manual files, then 400/3 partially generated, then 400/3 generated,
-    // then the remaining 100/3 manual, 100/3 partially generated, and 100/3 generated,
-    // all in pages of 25 at a time.
+    await simulateGeneratedFiles(1200);
+    // 1200 files, but 1000 files per fetched batch of generated statuses.
+    // Sorted by status, that puts 1000/3 manual files, then 1000/3 partially generated, then 1000/3 generated,
+    // then the remaining 200/3 manual, 200/3 partially generated, and 200/3 generated,
+    // all in pages of 500 at a time.
 
-    // first page is all manual
-    expectNOTHasPartiallyGeneratedFiles();
-    expectNOTHasGeneratedFiles();
-    expect(getChangedFiles()).toMatchSnapshot();
-
-    // pages 2-5 are all manual
-    goToNextPage();
-    expectNOTHasPartiallyGeneratedFiles();
-    expectNOTHasGeneratedFiles();
-    expect(getChangedFiles()).toMatchSnapshot();
-    goToNextPage();
-    expectNOTHasPartiallyGeneratedFiles();
-    expectNOTHasGeneratedFiles();
-    expect(getChangedFiles()).toMatchSnapshot();
-    goToNextPage();
-    expectNOTHasPartiallyGeneratedFiles();
-    expectNOTHasGeneratedFiles();
-    expect(getChangedFiles()).toMatchSnapshot();
-    goToNextPage();
-    expectNOTHasPartiallyGeneratedFiles();
-    expectNOTHasGeneratedFiles();
-    expect(getChangedFiles()).toMatchSnapshot();
-
-    // 5th page is a mix of 16 manual and 9 partially generated
-    goToNextPage();
+    // first page is manual and partial
     expectHasPartiallyGeneratedFiles();
     expectNOTHasGeneratedFiles();
     expect(getChangedFiles()).toMatchSnapshot();
 
-    // pages 6-9 are partially generated
-    goToNextPage();
-    expectHasPartiallyGeneratedFiles();
-    expectNOTHasGeneratedFiles();
-    expect(getChangedFiles()).toMatchSnapshot();
-    goToNextPage();
-    expectHasPartiallyGeneratedFiles();
-    expectNOTHasGeneratedFiles();
-    expect(getChangedFiles()).toMatchSnapshot();
-    goToNextPage();
-    expectHasPartiallyGeneratedFiles();
-    expectNOTHasGeneratedFiles();
-    expect(getChangedFiles()).toMatchSnapshot();
-    goToNextPage();
-    expectHasPartiallyGeneratedFiles();
-    expectNOTHasGeneratedFiles();
-    expect(getChangedFiles()).toMatchSnapshot();
-
-    // 10th is partial and generated
+    // next page has partial and generated
     goToNextPage();
     expectHasPartiallyGeneratedFiles();
     expectHasGeneratedFiles();
     expect(getChangedFiles()).toMatchSnapshot();
 
-    // pages 11-15 are all generated
+    // next page has remaining files from all 3 types
     goToNextPage();
-    expectNOTHasPartiallyGeneratedFiles();
+    expectHasPartiallyGeneratedFiles();
     expectHasGeneratedFiles();
-    expect(getChangedFiles()).toMatchSnapshot();
-    goToNextPage();
-    expectNOTHasPartiallyGeneratedFiles();
-    expectHasGeneratedFiles();
-    expect(getChangedFiles()).toMatchSnapshot();
-    goToNextPage();
-    expectNOTHasPartiallyGeneratedFiles();
-    expectHasGeneratedFiles();
-    expect(getChangedFiles()).toMatchSnapshot();
-    goToNextPage();
-    expectNOTHasPartiallyGeneratedFiles();
-    expectHasGeneratedFiles();
-    expect(getChangedFiles()).toMatchSnapshot();
-    goToNextPage();
-    expectNOTHasPartiallyGeneratedFiles();
-    expectHasGeneratedFiles();
-    expect(getChangedFiles()).toMatchSnapshot();
-
-    // page 16 is now back to manual (next fetched batch of generated files)
-    goToNextPage();
-    expectNOTHasPartiallyGeneratedFiles();
-    expectNOTHasGeneratedFiles();
     expect(getChangedFiles()).toMatchSnapshot();
   });
 
   it('Warns about too many files to fetch all generated statuses', async () => {
-    await simulateGeneratedFiles(401);
+    await simulateGeneratedFiles(1001);
     expect(
-      screen.getByText('There are more than 400 files, some files may appear out of order'),
+      screen.getByText('There are more than 1000 files, some files may appear out of order'),
     ).toBeInTheDocument();
   });
 });

@@ -19,7 +19,7 @@ export const PARTIALLY_GENERATED_TAG = '@' + 'partially-generated';
 
 export class GeneratedFilesDetector {
   // We assume the same file path doesn't switch generated status, so we can cache aggressively.
-  private cache = new LRU<RepoRelativePath, GeneratedStatus>(1000);
+  private cache = new LRU<RepoRelativePath, GeneratedStatus>(1500);
 
   /**
    * Given a list of files, return an object mapping path to Generated Status.

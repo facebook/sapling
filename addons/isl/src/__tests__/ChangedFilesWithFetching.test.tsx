@@ -13,15 +13,13 @@ import {
   expectMessageSentToServer,
   simulateCommits,
   COMMIT,
-  simulateUncommittedChangedFiles,
-  closeCommitInfoSidebar,
   simulateRepoConnected,
   resetTestMessages,
   simulateMessageFromServer,
   expectMessageNOTSentToServer,
 } from '../testUtils';
+import {leftPad} from '../utils';
 import {fireEvent, render, screen, waitFor} from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import {act} from 'react-dom/test-utils';
 
 jest.mock('../MessageBus');
@@ -29,7 +27,7 @@ jest.mock('../MessageBus');
 function makeFiles(n: number): Array<ChangedFile> {
   return new Array(n)
     .fill(null)
-    .map((_, i) => ({path: `file${i}.txt`, status: 'M'} as ChangedFile));
+    .map((_, i) => ({path: `file${leftPad(i, 3, '0')}.txt`, status: 'M'} as ChangedFile));
 }
 
 describe('ChangedFilesWithFetching', () => {
@@ -54,12 +52,12 @@ describe('ChangedFilesWithFetching', () => {
             ],
           }),
           COMMIT('b', 'Another Commit', 'a', {
-            totalFileCount: 30,
-            filesSample: makeFiles(25),
+            totalFileCount: 700,
+            filesSample: makeFiles(500),
           }),
           COMMIT('c', 'Another Commit 2', 'a', {
-            totalFileCount: 30,
-            filesSample: makeFiles(25),
+            totalFileCount: 700,
+            filesSample: makeFiles(500),
           }),
         ],
       });
@@ -86,18 +84,19 @@ describe('ChangedFilesWithFetching', () => {
       simulateMessageFromServer({
         type: 'fetchedAllCommitChangedFiles',
         hash: 'b',
-        result: {value: makeFiles(30)},
+        result: {value: makeFiles(510)},
       });
     });
 
     await waitForNextPageToLoad();
 
-    expect(screen.getByText(ignoreRTL('file0.txt'))).toBeInTheDocument();
-    expect(screen.getByText(ignoreRTL('file24.txt'))).toBeInTheDocument();
-    expect(screen.queryByText(ignoreRTL('file25.txt'))).not.toBeInTheDocument();
+    expect(screen.getByText(ignoreRTL('file000.txt'))).toBeInTheDocument();
+    expect(screen.getByText(ignoreRTL('file499.txt'))).toBeInTheDocument();
+    expect(screen.queryByText(ignoreRTL('file500.txt'))).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId('changed-files-next-page'));
-    expect(screen.getByText(ignoreRTL('file25.txt'))).toBeInTheDocument();
-    expect(screen.getByText(ignoreRTL('file29.txt'))).toBeInTheDocument();
+    expect(screen.queryByText(ignoreRTL('file499.txt'))).not.toBeInTheDocument();
+    expect(screen.getByText(ignoreRTL('file500.txt'))).toBeInTheDocument();
+    expect(screen.getByText(ignoreRTL('file509.txt'))).toBeInTheDocument();
   });
 
   it('Caches files', () => {

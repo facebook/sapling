@@ -252,8 +252,8 @@ export function ChangedFiles(props: {
 }) {
   const displayType = useRecoilValue(changedFilesDisplayType);
   const {filesSubset, totalFiles, ...rest} = props;
-  const PAGE_SIZE = 25;
-  const PAGE_FETCH_COUNT = 16;
+  const PAGE_SIZE = 500;
+  const PAGE_FETCH_COUNT = 2;
   const [pageNum, setPageNum] = useState(0);
   const isLastPage = pageNum >= Math.floor((totalFiles - 1) / PAGE_SIZE);
   const rangeStart = pageNum * PAGE_SIZE;

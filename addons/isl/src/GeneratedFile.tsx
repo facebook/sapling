@@ -14,7 +14,7 @@ import {useMemo} from 'react';
 import {DefaultValue, atom, useRecoilValue} from 'recoil';
 import {LRU} from 'shared/LRU';
 
-export const genereatedFileCache = new LRU<RepoRelativePath, GeneratedStatus>(1000);
+export const genereatedFileCache = new LRU<RepoRelativePath, GeneratedStatus>(1500);
 
 /** To avoid sending multiple redundant fetch requests, also save which files are being fetched right now */
 const currentlyFetching = new Set<RepoRelativePath>();

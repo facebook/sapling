@@ -48,3 +48,8 @@ export function getWindowWidthInPixels(): number {
   // Use client width and not screen width to handle embedding as an iframe.
   return document.body.clientWidth;
 }
+
+export function leftPad(val: string | number, len: number, char: string) {
+  const str = val.toString();
+  return `${Array(len - str.length + 1).join(char)}${str}`;
+}
