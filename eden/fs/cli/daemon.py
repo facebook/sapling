@@ -327,6 +327,7 @@ def get_edenfs_environment() -> Dict[str, str]:
         "EDENSCM_EDENAPI",
         "RUST_BACKTRACE",
         "RUST_LIB_BACKTRACE",
+        "SL_LOG",  # alias for EDENSCM_LOG
         # Useful for environments that look like prod, but are actually corp
         "CONFIGERATOR_PRETEND_NOT_PROD",
         # Ensure EdenFS respects redirecting which cache directory to write to
