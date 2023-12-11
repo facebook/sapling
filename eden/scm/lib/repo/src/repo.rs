@@ -80,7 +80,7 @@ pub struct Repo {
     repo_name: Option<String>,
     metalog: Option<Arc<RwLock<MetaLog>>>,
     eden_api: OnceCell<Arc<dyn EdenApi>>,
-    dag_commits: Option<Arc<RwLock<Box<dyn DagCommits + Send + 'static>>>>,
+    dag_commits: OnceCell<Arc<RwLock<Box<dyn DagCommits + Send + 'static>>>>,
     file_store: Option<Arc<dyn FileStore>>,
     file_scm_store: Option<Arc<scmstore::FileStore>>,
     tree_store: Option<Arc<dyn TreeStore>>,
@@ -201,7 +201,7 @@ impl Repo {
             repo_name,
             metalog: None,
             eden_api: Default::default(),
-            dag_commits: None,
+            dag_commits: Default::default(),
             file_store: None,
             file_scm_store: None,
             tree_store: None,
@@ -401,22 +401,23 @@ impl Repo {
         Ok(Some(self.force_construct_eden_api()?))
     }
 
-    pub fn dag_commits(&mut self) -> Result<Arc<RwLock<Box<dyn DagCommits + Send + 'static>>>> {
-        match &self.dag_commits {
-            Some(commits) => Ok(commits.clone()),
-            None => {
-                let info: &dyn StoreInfo = self;
-                let commits: Box<dyn DagCommits + Send + 'static> =
-                    factory::call_constructor(info)?;
-                let commits = Arc::new(RwLock::new(commits));
-                self.dag_commits = Some(commits.clone());
-                Ok(commits)
-            }
-        }
+    pub fn dag_commits(&self) -> Result<Arc<RwLock<Box<dyn DagCommits + Send + 'static>>>> {
+        Ok(self
+            .dag_commits
+            .get_or_try_init(
+                || -> Result<Arc<RwLock<Box<dyn DagCommits + Send + 'static>>>> {
+                    let info: &dyn StoreInfo = self;
+                    let commits: Box<dyn DagCommits + Send + 'static> =
+                        factory::call_constructor(info)?;
+                    let commits = Arc::new(RwLock::new(commits));
+                    Ok(commits)
+                },
+            )?
+            .clone())
     }
 
     pub fn invalidate_dag_commits(&self) -> Result<()> {
-        if let Some(dag_commits) = &self.dag_commits {
+        if let Some(dag_commits) = self.dag_commits.get() {
             let mut dag_commits = dag_commits.write();
             let info: &dyn StoreInfo = self;
             let new_commits: Box<dyn DagCommits + Send + 'static> =
@@ -705,7 +706,7 @@ impl Repo {
         )?)
     }
 
-    pub async fn get_root_tree_id(&mut self, commit_id: HgId) -> Result<HgId> {
+    pub async fn get_root_tree_id(&self, commit_id: HgId) -> Result<HgId> {
         let commit_store = self.dag_commits()?.read().to_dyn_read_root_tree_ids();
         let tree_ids = commit_store.read_root_tree_ids(vec![commit_id]).await?;
         Ok(tree_ids[0].1)
