@@ -55,5 +55,10 @@ Test GPG error.
   updated config in $TESTTMP/repo1/.hg/hgrc
   $ echo 1 > delta
   $ hg commit -m gamma
-  abort: error when running gpg with gpgkeyid foobar
+  abort: error when running gpg with gpgkeyid foobar:
+    gpg: skipped "foobar": * (glob)
+    [GNUPG:] * (glob)
+    [GNUPG:] * (glob)
+    gpg: signing failed: * (glob)
+  
   [255]
