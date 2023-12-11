@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.33
+
+### Dec 11 2023
+
+- Add UI zoom setting
+- Confirm when uncommitting
+- Add date to temporary commit titles
+- Increase number of uncommitted files shown at once
+- Previewing system was rewritten with several improvements, such as commits not appearing duplicated during a rebase
+
 ## 0.1.32
 
 ### Nov 30 2023
