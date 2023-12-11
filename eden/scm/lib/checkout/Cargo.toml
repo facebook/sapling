@@ -48,4 +48,4 @@ walkdir = "2.3"
 fs-err = { version = "2.6.0", features = ["tokio"] }
 
 [features]
-eden = ["async-runtime", "edenfs-client", "hg-metrics", "toml"]
+eden = ["async-runtime", "edenfs-client", "hg-metrics", "toml", "workingcopy/eden"]

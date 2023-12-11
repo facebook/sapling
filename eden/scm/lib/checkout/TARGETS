@@ -25,6 +25,7 @@ rust_library(
                     "edenfs-client",
                     "hg-metrics",
                     "toml",
+                    "workingcopy/eden",
                 ],
             },
         },
