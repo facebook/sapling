@@ -672,7 +672,7 @@ export function UncommittedChanges({place}: {place: Place}) {
   if (error) {
     return <ErrorNotice title={t('Failed to fetch Uncommitted Changes')} error={error} />;
   }
-  if (uncommittedChanges.length === 0) {
+  if (uncommittedChanges.length === 0 && conflicts == null) {
     return null;
   }
   const allFilesSelected = selection.isEverythingSelected();
