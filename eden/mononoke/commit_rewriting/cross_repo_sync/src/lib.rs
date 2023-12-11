@@ -1649,7 +1649,8 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                 .await
         } else {
             // Syncing merge doesn't take rewrite_opts because merges are always rewritten.
-            self.sync_merge_in_memory(cs, expected_version).await
+            self.sync_merge_in_memory(cs, commit_sync_context, expected_version)
+                .await
         }
     }
 
@@ -1839,9 +1840,14 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
     async fn sync_merge_in_memory(
         self,
         cs: BonsaiChangeset,
+        commit_sync_context: CommitSyncContext,
         expected_version: Option<CommitSyncConfigVersion>,
     ) -> Result<CommitSyncInMemoryResult, Error> {
-        if self.small_to_large {
+        // It's safe to sync merges during initial import because there's no pushrebase going on
+        // which allows us to avoid the edge-cases.
+        if self.small_to_large
+            && commit_sync_context != CommitSyncContext::ForwardSyncerInitialImport
+        {
             bail!("syncing merge commits is supported only in large to small direction");
         }
 
