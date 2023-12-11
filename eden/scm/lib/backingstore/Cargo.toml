@@ -11,6 +11,7 @@ crate-type = ["lib", "staticlib"]
 
 [dependencies]
 anyhow = "1.0.75"
+arc-swap = "1.5"
 async-runtime = { version = "0.1.0", path = "../async-runtime" }
 configloader = { version = "0.1.0", path = "../config/loader" }
 constructors = { version = "0.1.0", path = "../constructors", default-features = false }

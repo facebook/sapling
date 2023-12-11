@@ -8,9 +8,16 @@
 use std::collections::HashMap;
 use std::fmt;
 use std::path::Path;
+use std::path::PathBuf;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::time::Duration;
+use std::time::Instant;
+use std::time::SystemTime;
 
 use anyhow::Result;
+use arc_swap::ArcSwap;
 use async_runtime::block_on;
 use log::warn;
 use repo::repo::Repo;
@@ -28,15 +35,29 @@ use types::RepoPath;
 use crate::FetchMode;
 
 pub struct BackingStore {
+    // ArcSwap is similar to RwLock, but has lower overhead for read operations.
+    inner: ArcSwap<Inner>,
+}
+
+struct Inner {
     filestore: Arc<dyn FileStore>,
     treestore: Arc<dyn TreeStore>,
-    repo: Repo,
+    repo: Arc<Repo>,
+
+    // We store these so we can maintain them when reloading ourself.
+    allow_retries: bool,
+    extra_configs: Vec<String>,
+
+    // State used to track the touch file and determine if we need to reload ourself.
+    create_time: Instant,
+    touch_file_mtime: Option<SystemTime>,
+    already_reloading: AtomicBool,
 }
 
 impl BackingStore {
     /// Initialize `BackingStore` with the `allow_retries` setting.
     pub fn new<P: AsRef<Path>>(root: P, allow_retries: bool) -> Result<Self> {
-        Self::new_impl(root.as_ref(), allow_retries, &[])
+        Self::new_with_config(root.as_ref(), allow_retries, &[])
     }
 
     /// Initialize `BackingStore` with the `allow_retries` setting and extra configs.
@@ -46,14 +67,25 @@ impl BackingStore {
         allow_retries: bool,
         extra_configs: &[String],
     ) -> Result<Self> {
-        Self::new_impl(root.as_ref(), allow_retries, extra_configs)
+        Ok(Self {
+            inner: ArcSwap::new(Arc::new(Self::new_inner(
+                root.as_ref(),
+                allow_retries,
+                extra_configs,
+                touch_file_mtime(),
+            )?)),
+        })
     }
 
-    fn new_impl(root: &Path, allow_retries: bool, extra_configs: &[String]) -> Result<Self> {
+    fn new_inner(
+        root: &Path,
+        allow_retries: bool,
+        extra_configs: &[String],
+        touch_file_mtime: Option<SystemTime>,
+    ) -> Result<Inner> {
         constructors::init();
 
-        let root = root.as_ref();
-        let mut config = configloader::hg::load(Some(root), &extra_configs, &[])?;
+        let mut config = configloader::hg::load(Some(root), extra_configs, &[])?;
 
         let source = "backingstore".into();
         config.set("store", "aux", Some("true"), &source);
@@ -70,16 +102,21 @@ impl BackingStore {
         let filestore = repo.file_store()?;
         let treestore = repo.tree_store()?;
 
-        Ok(Self {
+        Ok(Inner {
             treestore,
             filestore,
-            repo,
+            repo: Arc::new(repo),
+            allow_retries,
+            extra_configs: extra_configs.to_vec(),
+            create_time: Instant::now(),
+            touch_file_mtime,
+            already_reloading: AtomicBool::new(false),
         })
     }
 
     #[instrument(level = "debug", skip(self))]
     pub fn get_blob(&self, node: &[u8], fetch_mode: FetchMode) -> Result<Option<Vec<u8>>> {
-        self.filestore.single(node, fetch_mode)
+        self.maybe_reload().filestore.single(node, fetch_mode)
     }
 
     /// Fetch file contents in batch. Whenever a blob is fetched, the supplied `resolve` function is
@@ -90,21 +127,23 @@ impl BackingStore {
     where
         F: Fn(usize, Result<Option<Vec<u8>>>),
     {
-        self.filestore
+        self.maybe_reload()
+            .filestore
             .batch_with_callback(keys, fetch_mode, resolve)
     }
 
     #[instrument(level = "debug", skip(self))]
-    pub fn get_manifest(&mut self, node: &[u8]) -> Result<[u8; 20]> {
+    pub fn get_manifest(&self, node: &[u8]) -> Result<[u8; 20]> {
+        let inner = self.maybe_reload();
         let hgid = HgId::from_slice(node)?;
-        let root_tree_id = match block_on(self.repo.get_root_tree_id(hgid)) {
+        let root_tree_id = match block_on(inner.repo.get_root_tree_id(hgid)) {
             Ok(root_tree_id) => root_tree_id,
             Err(_e) => {
                 // This call may fail with a `NotFoundError` if the revision in question
                 // was added to the repository after we originally opened it. Invalidate
                 // the repository and try again, in case our cached repo data is just stale.
-                self.repo.invalidate_all()?;
-                block_on(self.repo.get_root_tree_id(hgid))?
+                inner.repo.invalidate_all()?;
+                block_on(inner.repo.get_root_tree_id(hgid))?
             }
         };
         Ok(root_tree_id.into_byte_array())
@@ -116,7 +155,7 @@ impl BackingStore {
         node: &[u8],
         fetch_mode: FetchMode,
     ) -> Result<Option<Box<dyn TreeEntry>>> {
-        self.treestore.single(node, fetch_mode)
+        self.maybe_reload().treestore.single(node, fetch_mode)
     }
 
     /// Fetch tree contents in batch. Whenever a tree is fetched, the supplied `resolve` function is
@@ -127,34 +166,149 @@ impl BackingStore {
     where
         F: Fn(usize, Result<Option<Box<dyn TreeEntry>>>),
     {
-        self.treestore
+        self.maybe_reload()
+            .treestore
             .batch_with_callback(keys, fetch_mode, resolve)
     }
 
     pub fn get_file_aux(&self, node: &[u8], fetch_mode: FetchMode) -> Result<Option<FileAuxData>> {
-        self.filestore.single(node, fetch_mode)
+        self.maybe_reload().filestore.single(node, fetch_mode)
     }
 
     pub fn get_file_aux_batch<F>(&self, keys: Vec<Key>, fetch_mode: FetchMode, resolve: F)
     where
         F: Fn(usize, Result<Option<FileAuxData>>),
     {
-        self.filestore
+        self.maybe_reload()
+            .filestore
             .batch_with_callback(keys, fetch_mode, resolve)
     }
 
     /// Forces backing store to rescan pack files or local indexes
     #[instrument(level = "debug", skip(self))]
     pub fn refresh(&self) {
-        self.filestore.refresh().ok();
-        self.treestore.refresh().ok();
+        // We don't need maybe_reload() here. It doesn't make sense to
+        // potentially reload everything right before refreshing it again
+        // (although it wouldn't hurt).
+        let inner = self.inner.load();
+
+        inner.filestore.refresh().ok();
+        inner.treestore.refresh().ok();
     }
 
     #[instrument(level = "debug", skip(self))]
     pub fn flush(&self) {
+        // No need to maybe_reload() - flush intends to operate on current backingstore.
+        // It wouldn't hurt, though, since reloading also flushes.
+        self.inner.load().flush();
+    }
+
+    // Fully reload the stores if a touch file has a newer mtime than last time
+    // we checked, or the touch file exists and didn't exist last time. The main
+    // purpose of reloading is to allow a running EdenFS to pick up Sapling
+    // config changes that affect fetching/caching.
+    //
+    // We perform the check at most once every 5 seconds. If the touch file
+    // hasn't changed, we still swap out the Inner object solely to reset the
+    // state we use to track the touch file (i.e. we keep all the store objects
+    // the same). Any errors reloading are ignored and the existing stores are
+    // used.
+    //
+    // We return an arc_swap::Guard so we only call inner.load() once normally.
+    #[instrument(level = "trace", skip(self))]
+    fn maybe_reload(&self) -> arc_swap::Guard<Arc<Inner>> {
+        let inner = self.inner.load();
+
+        if inner.create_time.elapsed() < Duration::from_secs(5) {
+            return inner;
+        }
+
+        tracing::debug!("checking if we need to reload");
+
+        if inner.already_reloading.swap(true, Ordering::AcqRel) {
+            tracing::debug!("another thread is already reloading");
+            // No need to wait - just serve up the old one for now.
+            return inner;
+        }
+
+        let new_mtime = touch_file_mtime();
+
+        let needs_reload =
+            new_mtime
+                .as_ref()
+                .is_some_and(|new_mtime| match &inner.touch_file_mtime {
+                    Some(old_mtime) => new_mtime > old_mtime,
+                    None => true,
+                });
+
+        tracing::debug!(old_mtime=?inner.touch_file_mtime, ?new_mtime, "checking touch file mtime");
+
+        let new_inner = if needs_reload {
+            tracing::info!("reloading backing store");
+
+            // We are actually going to reload. Flush first to make sure pending
+            // cache writes are picked up by newly initialized backingstore.
+            // There is no locking, so some cache writes could be missed by the reload.
+            inner.flush();
+
+            match Self::new_inner(
+                inner.repo.path(),
+                inner.allow_retries,
+                &inner.extra_configs,
+                new_mtime,
+            ) {
+                Ok(new_inner) => new_inner,
+                Err(err) => {
+                    tracing::warn!(?err, "error reloading backingstore");
+                    inner.as_ref().soft_reload(new_mtime)
+                }
+            }
+        } else {
+            inner.as_ref().soft_reload(new_mtime)
+        };
+
+        self.inner.store(Arc::new(new_inner));
+
+        self.inner.load()
+    }
+}
+
+impl Inner {
+    // Perform a shallow clone, retaining stores but resetting state related to the touch file.
+    fn soft_reload(&self, touch_file_mtime: Option<SystemTime>) -> Self {
+        Self {
+            filestore: self.filestore.clone(),
+            treestore: self.treestore.clone(),
+            repo: self.repo.clone(),
+            allow_retries: self.allow_retries,
+            extra_configs: self.extra_configs.clone(),
+
+            touch_file_mtime,
+            create_time: Instant::now(),
+            already_reloading: AtomicBool::new(false),
+        }
+    }
+
+    fn flush(&self) {
         self.filestore.flush().ok();
         self.treestore.flush().ok();
     }
+}
+
+fn touch_file_mtime() -> Option<SystemTime> {
+    let path = if cfg!(windows) {
+        std::env::var_os("PROGRAMDATA")
+            .map(|dir| PathBuf::from(dir).join(r"Facebook\Mercurial\eden_reload"))
+    } else {
+        Some(PathBuf::from("/etc/mercurial/eden_reload"))
+    };
+
+    let path = path?;
+    let res = path.metadata();
+
+    tracing::debug!(?path, ?res, "statting touch file");
+
+    res.ok()?.modified().ok()
 }
 
 /// Given a single point local fetch function, and a "streaming" (via iterator)

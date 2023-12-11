@@ -71,6 +71,7 @@ rust_library(
     crate_root = "src/lib.rs",
     deps = [
         "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:arc-swap",
         "fbsource//third-party/rust:cxx",
         "fbsource//third-party/rust:env_logger",
         "fbsource//third-party/rust:log",
