@@ -5,7 +5,6 @@ load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
 oncall("mercurial_release")
 
 cpp_library(
-    # @autodeps-skip
     name = "sapling_native_backingstore-include",
     srcs = [],
     headers = glob(["include/**/*.h"]),
