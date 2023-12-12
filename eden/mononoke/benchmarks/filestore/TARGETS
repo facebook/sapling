@@ -18,7 +18,6 @@ rust_binary(
         "//common/rust/shed/cachelib_stub:cachelib",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/futures_stats:futures_stats",
-        "//common/rust/shed/tokio_shim:tokio_shim",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/blobstore:blobstore_factory",
         "//eden/mononoke/blobstore:cacheblob",

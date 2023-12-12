@@ -15,13 +15,12 @@ rust_library(
     },
     test_deps = [
         "fbsource//third-party/rust:nonzero_ext",
-        "fbsource//third-party/rust:tokio",
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:governor",
         "fbsource//third-party/rust:thiserror",
-        "//common/rust/shed/tokio_shim:tokio_shim",
+        "fbsource//third-party/rust:tokio",
     ],
 )

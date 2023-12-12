@@ -21,9 +21,6 @@ def tokio_dependency_test(name, rule):
             # This is fine because that crate depends on Tokio 1.0 only for a
             # trait impl on a foreign type. It's not used at runtime.
             "//common/rust/srserver:srserver",
-            # This is fine because that crate depends on various Tokio
-            # versions but checks which one is which at runtime.
-            "//common/rust/shed/tokio_shim:tokio_shim",
             # This provides a 0.1 version.
             "//common/rust/shed/stats:stats",
             # This has modules for tokio 0.1, 0.2 and 1.x  It doesn't actually

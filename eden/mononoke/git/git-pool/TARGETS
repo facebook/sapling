@@ -13,6 +13,5 @@ rust_library(
         "fbsource//third-party/rust:num_cpus",
         "fbsource//third-party/rust:r2d2",
         "fbsource//third-party/rust:tokio",
-        "//common/rust/shed/tokio_shim:tokio_shim",
     ],
 )
