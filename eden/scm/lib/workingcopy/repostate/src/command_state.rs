@@ -105,8 +105,7 @@ static STATES: &[State] = &[
         command: "goto",
         description: "goto --merge in progress",
         state_file: "updatemergestate",
-        // In Python, we allowed "commit", but I don't think that makes sense (anymore).
-        allows: &[],
+        allows: &[Operation::Commit],
         proceed: "goto --continue",
         abort: "goto --clean",
         abort_lossy: true,
