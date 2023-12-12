@@ -227,7 +227,7 @@ def _fail(repo, diffids: Sized, *msgs) -> List[str]:
 
 @memoize
 def getdiffstatus(repo, *diffid):
-    """Perform a Conduit API call to get the diff status
+    """Perform a GraphQL request to get the diff status
 
     Returns status of the diff"""
 
@@ -390,6 +390,49 @@ def showsyncstatus(repo, ctx, templ, **args) -> Optional[str]:
         return "committed"
     else:
         return "unsync"
+
+
+@templatekeyword("diffversion")
+def showdiffversion(repo, ctx, templ, **args) -> Optional[str]:
+    """String. Returns which phabricator diff version this commit
+    is in sync with (if any)
+    """
+    if not ctx.mutable():
+        return None
+
+    diffnum = getdiffnum(repo, ctx)
+    if diffnum is None:
+        return None
+
+    populateresponseforphab(repo, diffnum)
+    results = getdiffstatus(repo, diffnum)
+    try:
+        result = results[0]
+        remote = result["hash"]
+        alldiffversions = result["diff_versions"]
+    except (IndexError, KeyError, ValueError, TypeError):
+        # We got no result back, or it did not contain all required fields
+        return "Error"
+
+    if not alldiffversions:
+        return None
+
+    local = ctx.hex()
+    version = alldiffversions.get(local)
+    if version is not None:
+        if local == remote:
+            version += " (latest)"
+        return version
+    for pred in mutation.allpredecessors(repo, [ctx.node()]):
+        predhex = hex(pred)
+        if predhex in alldiffversions:
+            version = alldiffversions[predhex]
+            if predhex == remote:
+                version += " (latest + local changes)"
+            else:
+                version += " (+ local changes)"
+            return version
+    return None
 
 
 def getdiffnum(repo, ctx):

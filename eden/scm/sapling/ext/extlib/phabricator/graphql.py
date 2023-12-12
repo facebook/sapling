@@ -368,6 +368,22 @@ class Client:
                 is_landing
                 land_job_status
                 needs_final_review_status
+                unpublished_phabricator_versions {
+                  phabricator_version_migration {
+                    ordinal_label {
+                      abbreviated
+                    }
+                    commit_hash_best_effort
+                  }
+                }
+                phabricator_versions {
+                  nodes {
+                    ordinal_label {
+                      abbreviated
+                    }
+                    commit_hash_best_effort
+                  }
+                }
                 %s
               }
             }
@@ -422,6 +438,18 @@ class Client:
                         .title()
                         .replace("_", " ")
                     )
+
+                alldiffversions = {}
+                phabversions = node.get("phabricator_versions", {}).get("nodes", [])
+                phabdraftversions = node.get("unpublished_phabricator_versions", [])
+                for version in phabversions + phabdraftversions:
+                    if "phabricator_version_migration" in version:
+                        version = version["phabricator_version_migration"]
+                    name = version.get("ordinal_label", {}).get("abbreviated")
+                    vhash = version.get("commit_hash_best_effort")
+                    if name and vhash:
+                        alldiffversions[vhash] = name
+                info["diff_versions"] = alldiffversions
 
                 active_version = node.get(
                     "latest_publishable_draft_phabricator_version"
