@@ -27,6 +27,7 @@ import {Tooltip} from '../../Tooltip';
 import {tracker} from '../../analytics';
 import {t, T} from '../../i18n';
 import {firstLine} from '../../utils';
+import {isAbsent} from '../commitStackState';
 import {computeLinesForFileStackEditor} from './FileStackEditorLines';
 import {bumpStackEditMetric, SplitRangeRecord, useStackEditState} from './stackEditState';
 import {VSCodeButton, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
@@ -324,6 +325,16 @@ function SplitEditorWithTitle(props: SplitEditorWithTitleProps) {
     setSubStack(newStack);
   };
 
+  const changedMeta = subStack.changedFileMetadata(rev, path, false);
+  let diffType = DiffType.Modified;
+  if (changedMeta != null) {
+    const [oldMeta, newMeta] = changedMeta;
+    if (isAbsent(oldMeta) && !isAbsent(newMeta)) {
+      diffType = DiffType.Added;
+    } else if (!isAbsent(oldMeta) && isAbsent(newMeta)) {
+      diffType = DiffType.Removed;
+    }
+  }
   const canMoveLeft =
     rev > 0 && (file.copyFrom == null || isAbsent(subStack.getFile(rev - 1, path)));
 
@@ -331,7 +342,7 @@ function SplitEditorWithTitle(props: SplitEditorWithTitleProps) {
     <div className="split-commit-file">
       <FileHeader
         path={path}
-        diffType={DiffType.Modified}
+        diffType={diffType}
         open={!collapsed}
         onChangeOpen={toggleCollapsed}
         fileActions={
