@@ -192,6 +192,28 @@ describe('CommitStackState', () => {
         );
       });
     });
+
+    it('parentFile follows rename to bottomFile', () => {
+      const stack = new CommitStackState([
+        {
+          ...exportCommitDefault,
+          relevantFiles: {
+            'x.txt': {data: '11'},
+            'z.txt': {data: '22'},
+          },
+          files: {
+            'z.txt': {data: '33', copyFrom: 'x.txt'},
+          },
+          text: 'Commit Foo',
+        },
+      ]);
+      const file = stack.getFile(0, 'z.txt');
+      expect(stack.getUtf8Data(file)).toBe('33');
+      const [, , parentFileWithRename] = stack.parentFile(0, 'z.txt', true);
+      expect(stack.getUtf8Data(parentFileWithRename)).toBe('11');
+      const [, , parentFile] = stack.parentFile(0, 'z.txt', false);
+      expect(stack.getUtf8Data(parentFile)).toBe('22');
+    });
   });
 
   it('provides file contents at given revs', () => {
@@ -252,7 +274,7 @@ describe('CommitStackState', () => {
         // y.txt connects to x.txt's history.
         '0:./x.txt 1:A/x.txt(xx) 2:B/y.txt(yy)',
         // z.txt does not connect to x.txt's history (but still have one parent for diff).
-        '0:./z.txt 1:B/z.txt(zz)',
+        '0:./y.txt 1:B/z.txt(zz)',
       ]);
     });
 

@@ -490,7 +490,8 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     let prevRev = -1;
     let prevPath = path;
     let prevFile = unwrap(this.bottomFiles.get(path));
-    const logFile = this.logFile(rev, path, followRenames);
+    const includeBottom = true;
+    const logFile = this.logFile(rev, path, followRenames, includeBottom);
     for (const [logRev, logPath, file] of logFile) {
       if (logRev !== rev) {
         [prevRev, prevPath] = [logRev, logPath];
