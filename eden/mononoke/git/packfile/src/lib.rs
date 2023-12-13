@@ -8,5 +8,4 @@
 pub mod bundle;
 mod hash_writer;
 pub mod pack;
-mod test;
 pub mod types;

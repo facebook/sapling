@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![cfg(test)]
-
 use std::io::Write;
 use std::sync::atomic::AtomicBool;
 
@@ -22,14 +20,13 @@ use gix_hash::ObjectId;
 use gix_object::Object;
 use gix_object::ObjectRef;
 use gix_object::Tag;
+use packfile::bundle::BundleWriter;
+use packfile::pack::DeltaForm;
+use packfile::pack::PackfileWriter;
+use packfile::types::to_vec_bytes;
+use packfile::types::BaseObject;
+use packfile::types::PackfileItem;
 use tempfile::NamedTempFile;
-
-use crate::bundle::BundleWriter;
-use crate::pack::DeltaForm;
-use crate::pack::PackfileWriter;
-use crate::types::to_vec_bytes;
-use crate::types::BaseObject;
-use crate::types::PackfileItem;
 
 async fn get_objects_stream(
     with_delta: bool,

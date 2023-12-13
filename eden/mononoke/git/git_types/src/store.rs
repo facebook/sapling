@@ -89,6 +89,7 @@ where
         .put(ctx, blobstore_key, blobstore_bytes)
         .await
         .map_err(|e| GitError::StorageFailure(git_hash.to_hex().to_string(), e.into()))
+    // TODO(rajshar): Create and upload PackfileItem corresponding to the stored git object
 }
 
 /// Free function for fetching the raw bytes of stored git objects

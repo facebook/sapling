@@ -210,7 +210,7 @@ pub(crate) fn to_vec_bytes_without_header(git_object: &Object) -> anyhow::Result
 
 /// Free function responsible for writing Git object data to a Vec
 /// in loose format
-pub(crate) fn to_vec_bytes(git_object: &Object) -> anyhow::Result<Vec<u8>> {
+pub fn to_vec_bytes(git_object: &Object) -> anyhow::Result<Vec<u8>> {
     let mut object_bytes = git_object.loose_header().into_vec();
     git_object.write_to(object_bytes.by_ref())?;
     Ok(object_bytes)

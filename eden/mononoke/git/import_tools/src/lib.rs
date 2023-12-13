@@ -273,7 +273,8 @@ pub async fn gitimport_acc<Uploader: GitUploader>(
                         let diff = extracted_commit.diff(&ctx, &reader, submodules);
                         let file_changes =
                             find_file_changes(&ctx, &lfs, &reader, uploader, diff).await?;
-
+                        // TODO(rajshar): Store the Packfile Item corresponding to each Git blob that is present
+                        // in the diff of the commit (i.e file changed in this commit)
                         Result::<_, Error>::Ok((extracted_commit, file_changes))
                     }
                 })
