@@ -225,6 +225,43 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     return file;
   }
 
+  /**
+   * Update a single file without affecting the rest of the stack.
+   * Use `getFile` to get the `FileState`.
+   *
+   * Does some normalization:
+   * - If a file is non-empty, then "absent" flag will be ignored.
+   * - If a file is absent, then "copyFrom" and other flags will be ignored.
+   * - If the "copyFrom" file does not exist in parent, it'll be ignored.
+   */
+  setFile(rev: Rev, path: RepoPath, editFile: (f: FileState) => FileState): CommitStackState {
+    if (rev < 0) {
+      throw new Error(`invalid rev for setFile: ${rev}`);
+    }
+    const origFile = this.getFile(rev, path);
+    const newFile = editFile(origFile);
+    let file = newFile;
+    // Remove 'absent' for non-empty files.
+    if (isAbsent(file) && this.getUtf8Data(file) !== '') {
+      const newFlags = (file.flags ?? '').replace(ABSENT_FLAG, '');
+      file = file.set('flags', newFlags);
+    }
+    // Remove other flags for absent files.
+    if (isAbsent(file) && file.flags !== ABSENT_FLAG) {
+      file = file.set('flags', ABSENT_FLAG);
+    }
+    // Check "copyFrom".
+    const copyFrom = file.copyFrom;
+    if (copyFrom != null) {
+      const copyFromFile = this.getFile(rev - 1, copyFrom);
+      if (isAbsent(copyFromFile)) {
+        file = file.remove('copyFrom');
+      }
+    }
+    const newStack = this.stack.setIn([rev, 'files', path], file);
+    return this.set('stack', newStack);
+  }
+
   /** Get all file paths ever referred (via "copy from") or changed in the stack. */
   getAllPaths(): RepoPath[] {
     return [...this.bottomFiles.keys()].sort();
