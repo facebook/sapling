@@ -324,13 +324,17 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
   /**
    * List revs that change the given file, starting from the given rev.
    * Optionally follow renames.
+   * Optionally return bottom (rev -1) file.
    */
   *logFile(
     startRev: Rev,
     startPath: RepoPath,
     followRenames = false,
+    includeBottom = false,
   ): Generator<[Rev, RepoPath, FileState], void> {
     let path = startPath;
+    let lastFile = undefined;
+    let lastPath = path;
     for (const rev of this.log(startRev)) {
       const commit = this.stack.get(rev);
       if (commit == null) {
@@ -339,9 +343,17 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
       const file = commit.files.get(path);
       if (file !== undefined) {
         yield [rev, path, file];
+        lastFile = file;
+        lastPath = path;
       }
       if (followRenames && file?.copyFrom) {
         path = file.copyFrom;
+      }
+    }
+    if (includeBottom && lastFile != null) {
+      const bottomFile = this.bottomFiles.get(path);
+      if (bottomFile != null && (path !== lastPath || !bottomFile.equals(lastFile))) {
+        yield [-1, path, bottomFile];
       }
     }
   }

@@ -145,7 +145,8 @@ describe('CommitStackState', () => {
     // [rev, path] => [rev, path, file]
     const extend = (stack: CommitStackState, revPathPairs: Array<[Rev, string]>) => {
       return revPathPairs.map(([rev, path]) => {
-        const file = stack.get(rev)?.files.get(path);
+        const file = rev >= 0 ? stack.get(rev)?.files.get(path) : stack.bottomFiles.get(path);
+        expect(file).toBe(stack.getFile(rev, path));
         return [rev, path, file];
       });
     };
@@ -177,6 +178,19 @@ describe('CommitStackState', () => {
           [1, 'x.txt'],
         ]),
       );
+    });
+
+    it('logs file history including the bottom', () => {
+      const stack = new CommitStackState(exportStack1);
+      ['x.txt', 'z.txt'].forEach(path => {
+        expect([...stack.logFile(1, path, true, true)]).toStrictEqual(
+          extend(stack, [
+            [1, path],
+            // rev 0 does not change x.txt or z.txt
+            [-1, path],
+          ]),
+        );
+      });
     });
   });
 
