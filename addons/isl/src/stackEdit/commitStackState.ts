@@ -1494,6 +1494,15 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     return state.set('stack', newStack);
   }
 
+  /** Test if a path at the given rev is a renamed (not copy). */
+  isRename(rev: Rev, path: RepoPath): boolean {
+    const commit = this.get(rev);
+    if (commit == null) {
+      return false;
+    }
+    return isRename(commit, path);
+  }
+
   /**
    * If the given file has a metadata change, return the old and new metadata.
    * Otherwise, return undefined.
@@ -1661,7 +1670,7 @@ function isRename(commit: CommitState, path: RepoPath): boolean {
 }
 
 /** Test if a file is absent. */
-function isAbsent(file: FileState | undefined): boolean {
+export function isAbsent(file: FileState | FileMetadata | undefined): boolean {
   if (file == null) {
     return true;
   }
@@ -1669,7 +1678,7 @@ function isAbsent(file: FileState | undefined): boolean {
 }
 
 /** Test if a file has utf-8 content. */
-function isUtf8(file: FileState): boolean {
+export function isUtf8(file: FileState): boolean {
   return typeof file.data === 'string' || file.data instanceof FileIdx;
 }
 
@@ -1792,8 +1801,8 @@ type DataRefProps = {node: Hash; path: RepoPath};
 const DataRef = Record<DataRefProps>({node: '', path: ''});
 type DataRef = RecordOf<DataRefProps>;
 
-const FileState = Record<FileStateProps>({data: '', copyFrom: undefined, flags: ''});
-type FileState = RecordOf<FileStateProps>;
+export const FileState = Record<FileStateProps>({data: '', copyFrom: undefined, flags: ''});
+export type FileState = RecordOf<FileStateProps>;
 
 export const FileMetadata = Record<FileMetadataProps>({copyFrom: undefined, flags: ''});
 export type FileMetadata = RecordOf<FileMetadataProps>;
@@ -1816,7 +1825,7 @@ export type FileIdx = RecordOf<FileIdxProps>;
 export const CommitIdx = Record<CommitIdxProps>({rev: -1, path: ''});
 export type CommitIdx = RecordOf<CommitIdxProps>;
 
-const ABSENT_FLAG = 'a';
+export const ABSENT_FLAG = 'a';
 
 /**
  * Represents an absent (or deleted) file.
