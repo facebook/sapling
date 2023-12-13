@@ -7,6 +7,7 @@
 
 import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 import type {DiffType} from 'shared/patch/parse';
+import type {RepoPath} from 'shared/types/common';
 
 import {Tooltip} from '../../Tooltip';
 import {t} from '../../i18n';
@@ -18,12 +19,14 @@ import './SplitDiffHunk.css';
 
 export function FileHeader({
   path,
+  copyFrom,
   diffType,
   open,
   onChangeOpen,
   fileActions,
 }: {
-  path: string;
+  path: RepoPath;
+  copyFrom?: RepoPath;
   diffType?: DiffType;
   fileActions?: JSX.Element;
 } & EnsureAssignedTogether<{
@@ -38,15 +41,44 @@ export function FileHeader({
   const pathSeparator = '/';
   const pathParts = path.split(pathSeparator);
 
+  // show: dir1 / dir2 / ... / dir9 / file
+  //       ^^^^                ^^^^   ^^^^
+  // copy: full path    "dir9/file"   "file"
+
+  // with copyFrom: "dir1/dir2/dir3/foo" renamed to "dir1/dir2/dir4/bar"
+  // show: dir1 / dir2 / "dir3 / foo ->" dir4 / bar
+  // commonPrefixLen = 2 # (dir1 / dir2)
+  // copyFromRest = "dir3/foo"
+  let commonPrefixLen = -1;
+  let copyFromRest = '';
+  if (copyFrom != null) {
+    const copyFromParts = copyFrom.split(pathSeparator);
+    commonPrefixLen = commonPrefixLength(pathParts, copyFromParts);
+    copyFromRest = copyFromParts.slice(commonPrefixLen).join(pathSeparator);
+  }
+
   const filePathParts = (
     <>
       {pathParts.reduce((acc, part, idx) => {
         // Nest path parts in a particular way so we can use plain CSS
         // hover selectors to underline nested sub-paths.
         const pathSoFar = pathParts.slice(idx).join(pathSeparator);
+        let copyFromSpan = null;
+        if (idx === commonPrefixLen) {
+          // Insert "copyFromRest ->"
+          copyFromSpan = (
+            <Tooltip title={t('Renamed or copied from')} delayMs={100} placement="bottom">
+              <span className="file-header-copyfrom-path">
+                {copyFromRest}
+                {' → '}
+              </span>
+            </Tooltip>
+          );
+        }
         return (
           <span className={'file-header-copyable-path'} key={idx}>
             {acc}
+            {copyFromSpan}
             {
               <Tooltip
                 component={() => (
@@ -103,3 +135,11 @@ const diffTypeToIcon: Record<keyof typeof DiffType, string> = {
   Renamed: 'diff-renamed',
   Copied: 'diff-renamed',
 };
+
+function commonPrefixLength<T>(a: Array<T>, b: Array<T>): number {
+  let i = 0;
+  while (i < a.length && i < b.length && a[i] === b[i]) {
+    i++;
+  }
+  return i;
+}

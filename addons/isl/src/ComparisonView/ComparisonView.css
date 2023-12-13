@@ -54,8 +54,22 @@
   white-space: nowrap;
 }
 
-.file-header-copyable-path:hover > .tooltip-creator {
+.file-header-copyable-path .file-header-copyfrom-path {
+  cursor: default;
+  opacity: 0.5;
+  color: grey;
+}
+
+.file-header-copyable-path .file-header-copyfrom-path {
+  padding: 0 0.5em;
+}
+
+.file-header-copyable-path:hover > .tooltip-creator > span {
   text-decoration: underline;
+}
+
+.file-header-copyable-path:hover > .tooltip-creator > span.file-header-copyfrom-path {
+  text-decoration: none;
 }
 
 .file-header-copyable-path-hover {

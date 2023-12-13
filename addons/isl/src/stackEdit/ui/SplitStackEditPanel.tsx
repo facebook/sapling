@@ -344,6 +344,7 @@ function SplitEditorWithTitle(props: SplitEditorWithTitleProps) {
     <div className="split-commit-file">
       <FileHeader
         path={path}
+        copyFrom={file.copyFrom}
         diffType={diffType}
         open={!collapsed}
         onChangeOpen={toggleCollapsed}
