@@ -1817,6 +1817,8 @@ class StartCmd(Subcmd):
 
         if config_mod.should_migrate_mount_protocol_to_nfs(instance):
             config_mod._do_nfs_migration(instance, get_migration_success_message)
+        if config_mod.should_migrate_inode_catalog_to_in_memory(instance):
+            config_mod._do_in_memory_inode_catalog_migration(instance)
         return daemon.start_edenfs_service(instance, daemon_binary, args.edenfs_args)
 
     def start_in_foreground(

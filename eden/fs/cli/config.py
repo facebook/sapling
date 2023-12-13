@@ -1562,6 +1562,19 @@ class EdenCheckout:
 
         self.save_config(new_config)
 
+    def migrate_inode_catalog(self, new_inode_catalog_type: str) -> None:
+        """
+        Migrate this checkout to the new_inode_catalog_type. This will only take
+        effect if EdenFS is restarted. It is recommended to only run this while
+        EdenFS is stopped.
+        """
+
+        old_config = self.get_config()
+
+        new_config = old_config._replace(inode_catalog_type=new_inode_catalog_type)
+
+        self.save_config(new_config)
+
 
 _MIGRATE_EXISTING_TO_NFS = "core.migrate_existing_to_nfs"
 _MIGRATE_EXISTING_TO_NFS_ALL_MACOS = "core.migrate_existing_to_nfs_all_macos"
@@ -1587,10 +1600,38 @@ def should_migrate_mount_protocol_to_nfs(instance: AbstractEdenInstance) -> bool
     return False
 
 
+_MIGRATE_EXISTING_TO_IN_MEMORY_CATALOG = "core.migrate_existing_to_in_memory_catalog"
+
+
+def should_migrate_inode_catalog_to_in_memory(instance: AbstractEdenInstance) -> bool:
+    if sys.platform != "win32":
+        return False
+
+    if util.is_sandcastle():
+        return False
+
+    # default to migration, allow override in Eden config
+    if instance.get_config_bool(_MIGRATE_EXISTING_TO_IN_MEMORY_CATALOG, default=True):
+        return True
+
+    return False
+
+
 def count_non_nfs_mounts(instance: AbstractEdenInstance) -> int:
     count = 0
     for checkout in instance.get_checkouts():
         if checkout.get_config().mount_protocol != util.NFS_MOUNT_PROTOCOL_STRING:
+            count += 1
+    return count
+
+
+def count_non_in_memory_inode_catalogs(instance: AbstractEdenInstance) -> int:
+    count = 0
+    for checkout in instance.get_checkouts():
+        if (
+            checkout.get_config().inode_catalog_type
+            != util.INODE_CATALOG_TYPE_IN_MEMORY_STRING
+        ):
             count += 1
     return count
 
@@ -1622,6 +1663,26 @@ def _do_nfs_migration(
 
     instance.log_sample("migrate_existing_clones_to_nfs")
     print(get_migration_success_message(util.NFS_MOUNT_PROTOCOL_STRING))
+
+
+# Checks for any non in memory catalogs and migrates them to in memory.
+def _do_in_memory_inode_catalog_migration(instance: EdenInstance) -> None:
+    if count_non_in_memory_inode_catalogs(instance) == 0:
+        # most the time this should be the case. we only need to migrate catalogs
+        # once, and then we should just be able to skip this all other times.
+        return
+
+    print("migrating mounts to inmemory inode catalog...")
+
+    for checkout in instance.get_checkouts():
+        if (
+            checkout.get_config().inode_catalog_type
+            != util.INODE_CATALOG_TYPE_IN_MEMORY_STRING
+        ):
+            checkout.migrate_inode_catalog(util.INODE_CATALOG_TYPE_IN_MEMORY_STRING)
+
+    instance.log_sample("migrate_existing_clones_to_in_memory")
+    print("Successfully migrated all your mounts to inmemory inode catalog.\n")
 
 
 def _do_manual_migration(

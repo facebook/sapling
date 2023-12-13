@@ -226,6 +226,15 @@ class EdenConfig : private ConfigSettingManager {
   // [config]
 
   /**
+   * If EdenFS should auto migrate non inmemory inode catalogs to inmemory on
+   * Windows.
+   */
+  ConfigSetting<bool> migrateToInMemoryCatalog{
+      "core:migrate_existing_to_in_memory_catalog",
+      true,
+      this};
+
+  /**
    * How often the on-disk config information should be checked for changes.
    */
   ConfigSetting<std::chrono::nanoseconds> configReloadInterval{

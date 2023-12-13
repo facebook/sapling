@@ -45,6 +45,8 @@ NFS_MOUNT_PROTOCOL_STRING = "nfs"
 FUSE_MOUNT_PROTOCOL_STRING = "fuse"
 PRJFS_MOUNT_PROTOCOL_STRING = "prjfs"
 
+INODE_CATALOG_TYPE_IN_MEMORY_STRING = "inmemory"
+
 
 class EdenStartError(Exception):
     pass
