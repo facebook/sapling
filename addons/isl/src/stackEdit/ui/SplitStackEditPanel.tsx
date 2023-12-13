@@ -146,6 +146,12 @@ function SplitColumn(props: SplitColumnProps) {
 
   const [collapsedFiles, setCollapsedFiles] = useState(new Set());
 
+  const toggleCollapsed = (path: RepoPath) => {
+    const updated = new Set(collapsedFiles);
+    updated.has(path) ? updated.delete(path) : updated.add(path);
+    setCollapsedFiles(updated);
+  };
+
   const commit = subStack.get(rev);
   const commitMessage = commit?.text ?? '';
   const sortedFileStacks = subStack.fileStacks
@@ -168,11 +174,7 @@ function SplitColumn(props: SplitColumnProps) {
         fileIdx={fileIdx}
         fileRev={fileRev}
         collapsed={collapsedFiles.has(path)}
-        toggleCollapsed={() => {
-          const updated = new Set(collapsedFiles);
-          updated.has(path) ? updated.delete(path) : updated.add(path);
-          setCollapsedFiles(updated);
-        }}
+        toggleCollapsed={() => toggleCollapsed(path)}
       />
     );
     const result = isModified ? [editor] : [];
