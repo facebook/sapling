@@ -72,7 +72,7 @@ export function FileHeader({
   // copyFromRest = "dir3/foo"
   let commonPrefixLen = -1;
   let copyFromRest = '';
-  if (copyFrom != null) {
+  if (copyFrom != null && copyFrom !== path) {
     const copyFromParts = copyFrom.split(pathSeparator);
     commonPrefixLen = commonPrefixLength(pathParts, copyFromParts);
     copyFromRest = copyFromParts.slice(commonPrefixLen).join(pathSeparator);
@@ -83,7 +83,7 @@ export function FileHeader({
     const pathSoFar = pathParts.slice(idx).join(pathSeparator);
     let copyFromLeft = null;
     let copyFromRight = null;
-    if (idx === commonPrefixLen) {
+    if (idx === commonPrefixLen && copyFromRest.length > 0) {
       // Insert "{" (when commonPrefix is not empty), " copyFromRest ->".
       const prefix = commonPrefixLen > 0 ? '{ ' : '';
       copyFromLeft = (
@@ -96,7 +96,7 @@ export function FileHeader({
         </Tooltip>
       );
     }
-    if (idx + 1 === pathParts.length && commonPrefixLen > 0) {
+    if (idx + 1 === pathParts.length && commonPrefixLen > 0 && copyFromRest.length > 0) {
       // Append "}" (when commonPrefix is not empty)
       copyFromRight = copySpan('}');
     }
