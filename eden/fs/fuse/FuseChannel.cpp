@@ -1175,7 +1175,7 @@ TraceDetailedArgumentsHandle FuseChannel::traceDetailedArguments() const {
       });
   traceDetailedArguments_->fetch_add(1, std::memory_order_acq_rel);
   return handle;
-};
+}
 
 void FuseChannel::requestSessionExit(StopReason reason) {
   requestSessionExit(state_.wlock(), reason);
