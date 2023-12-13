@@ -24,6 +24,7 @@ use changeset_fetcher::ChangesetFetcherRef;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use cross_repo_sync::find_toposorted_unsynced_ancestors;
+use cross_repo_sync::find_toposorted_unsynced_ancestors_with_commit_graph;
 use cross_repo_sync::types::Source;
 use cross_repo_sync::types::Target;
 use cross_repo_sync::CandidateSelectionHint;
@@ -429,8 +430,29 @@ where
 {
     info!(ctx.logger(), "syncing {}", cs_id);
 
-    let (unsynced_ancestors, _unsynced_ancestors_versions) =
-        find_toposorted_unsynced_ancestors(ctx, commit_syncer, cs_id.clone()).await?;
+    // All the synced ancestors of the provided commit should have been synced
+    // using the config version that was provided manually, or we can create
+    // a broken set of commits.
+    let (unsynced_ancestors, synced_ancestors_versions) =
+        find_toposorted_unsynced_ancestors_with_commit_graph(ctx, commit_syncer, cs_id.clone())
+            .await?;
+
+    let synced_ancestors_versions = synced_ancestors_versions
+        .versions
+        .into_iter()
+        .collect::<Vec<_>>();
+
+    // IF YOU REALLY KNOW WHAT YOU'RE DOING, you can comment out the
+    // assertions below and use different config versions.
+    if !synced_ancestors_versions.is_empty() {
+        if synced_ancestors_versions.len() != 1 {
+            bail!("Multiple config versions were used to sync the ancestors of the head commit.");
+        }
+
+        if config_version != synced_ancestors_versions[0] {
+            bail!("Provided config version doesn't match the one used to sync ancestors");
+        }
+    }
 
     info!(
         ctx.logger(),

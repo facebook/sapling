@@ -17,6 +17,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use std::time::Instant;
 
+use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Context;
@@ -33,6 +34,7 @@ use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::Bookmarks;
 use bookmarks::BookmarksArc;
 use bookmarks::BookmarksRef;
+use borrowed::borrowed;
 use cacheblob::InProcessLease;
 use cacheblob::LeaseOps;
 use cacheblob::MemcacheOps;
@@ -334,7 +336,7 @@ async fn remap_parents<'a, M: SyncedCommitMapping + Clone + 'static, R: Repo>(
 #[derive(Clone, Default, Debug)]
 pub struct SyncedAncestorsVersions {
     // Versions of all synced ancestors
-    versions: HashSet<CommitSyncConfigVersion>,
+    pub versions: HashSet<CommitSyncConfigVersion>,
 }
 
 impl SyncedAncestorsVersions {
@@ -451,6 +453,93 @@ where
             .filter(|r| commits_to_backsync.contains_key(r))
             .collect(),
         synced_ancestors_versions,
+    ))
+}
+
+/// Same as `find_toposorted_unsynced_ancestors` but uses the skew binary commit
+/// graph to find the oldest unsynced ancestor quicker.
+/// NOTE: because this is used to run initial imports of small repos into large
+/// repos, this function DOES NOT take into account hardcoded mappings in
+/// hg extra metadata, as `find_toposorted_unsynced_ancestors` does.
+pub async fn find_toposorted_unsynced_ancestors_with_commit_graph<'a, M, R>(
+    ctx: &'a CoreContext,
+    commit_syncer: &'a CommitSyncer<M, R>,
+    start_cs_id: ChangesetId,
+) -> Result<(Vec<ChangesetId>, SyncedAncestorsVersions)>
+where
+    M: SyncedCommitMapping + Clone + 'static,
+    R: Repo,
+{
+    let source_repo = commit_syncer.get_source_repo();
+
+    let commit_graph = source_repo.commit_graph();
+
+    // Monotonic property function that will be used to traverse the commit
+    // graph to find the latest synced ancestors (if any).
+    let is_synced = |cs_id: ChangesetId| {
+        borrowed!(ctx, commit_syncer);
+
+        async move {
+            let maybe_plural_outcome = commit_syncer
+                .get_plural_commit_sync_outcome(ctx, cs_id)
+                .await?;
+
+            match maybe_plural_outcome {
+                Some(_plural) => Ok(true),
+                None => Ok(false),
+            }
+        }
+    };
+
+    let synced_ancestors_frontier = commit_graph
+        .ancestors_frontier_with(ctx, vec![start_cs_id], is_synced)
+        .await?;
+
+    // Get the config versions from all synced ancestors
+    let synced_ancestors_versions = stream::iter(&synced_ancestors_frontier)
+        .then(|cs_id| {
+            borrowed!(ctx, commit_syncer);
+
+            async move {
+                let maybe_plural_outcome = commit_syncer
+                    .get_plural_commit_sync_outcome(ctx, *cs_id)
+                    .await?;
+
+                match maybe_plural_outcome {
+                    Some(plural) => {
+                        use PluralCommitSyncOutcome::*;
+                        match plural {
+                            NotSyncCandidate(version) => Ok(vec![version]),
+                            RewrittenAs(cs_ids_versions) => {
+                                Ok(cs_ids_versions.into_iter().map(|(_, v)| v).collect())
+                            }
+                            EquivalentWorkingCopyAncestor(_, version) => Ok(vec![version]),
+                        }
+                    }
+                    None => Err(anyhow!("Failed to get config version from synced ancestor")),
+                }
+            }
+        })
+        .try_collect::<HashSet<_>>()
+        .await?
+        .into_iter()
+        .flatten()
+        .collect::<HashSet<_>>();
+
+    // Get the oldest unsynced ancestors by getting the difference between the
+    // ancestors from the starting changeset and its synced ancestors.
+    let mut commits_to_sync = commit_graph
+        .ancestors_difference(ctx, vec![start_cs_id], synced_ancestors_frontier)
+        .await?;
+
+    // `ancestors_difference` returns the commits in reverse topological order
+    commits_to_sync.reverse();
+
+    Ok((
+        commits_to_sync,
+        SyncedAncestorsVersions {
+            versions: synced_ancestors_versions,
+        },
     ))
 }
 

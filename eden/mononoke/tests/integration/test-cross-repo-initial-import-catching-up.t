@@ -40,8 +40,6 @@ Create small repo commits
   Reloading redacted config from configerator
   Checking if 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3 is already synced 1->0
   syncing 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3
-  derive changeset_info for 7e97054c51a17ea2c03cd5184826b6a7556d141d57c5a1641bbd62c0854d1a36
-  derive changeset_info for 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3
   Found 2 unsynced ancestors
   Unsynced ancestors: [
       ChangesetId(
@@ -52,8 +50,10 @@ Create small repo commits
       ),
   ]
   CommitSyncer{1->0}: unsafe_sync_commit called for 7e97054c51a17ea2c03cd5184826b6a7556d141d57c5a1641bbd62c0854d1a36, with hint: CandidateSelectionHint::Only
+  derive changeset_info for 7e97054c51a17ea2c03cd5184826b6a7556d141d57c5a1641bbd62c0854d1a36
   CommitSyncer{1->0}: unsafe_sync_commit called for 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3, with hint: CandidateSelectionHint::Only
   get_commit_sync_outcome_with_hint called for 1->0, cs 7e97054c51a17ea2c03cd5184826b6a7556d141d57c5a1641bbd62c0854d1a36, hint CandidateSelectionHint::Only
+  derive changeset_info for 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3
   derive skeleton_manifests for 7e97054c51a17ea2c03cd5184826b6a7556d141d57c5a1641bbd62c0854d1a36
   CommitSyncer{1->0}: unsafe_sync_commit called for 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3, with hint: CandidateSelectionHint::Only
   get_commit_sync_outcome_with_hint called for 1->0, cs 7e97054c51a17ea2c03cd5184826b6a7556d141d57c5a1641bbd62c0854d1a36, hint CandidateSelectionHint::Only
@@ -102,8 +102,6 @@ Add more commits to small repo
   Reloading redacted config from configerator
   Checking if d2ba11302a912b679610fd60d7e56dd8f01372c130faa3ae72816d5568b25f3a is already synced 1->0
   syncing d2ba11302a912b679610fd60d7e56dd8f01372c130faa3ae72816d5568b25f3a
-  derive changeset_info for 9eeb57261a4dfbeeb2e1c06ef6dc3f83b11e314eb34c598f2d042967b1938583
-  derive changeset_info for d2ba11302a912b679610fd60d7e56dd8f01372c130faa3ae72816d5568b25f3a
   Found 2 unsynced ancestors
   Unsynced ancestors: [
       ChangesetId(
@@ -115,9 +113,11 @@ Add more commits to small repo
   ]
   CommitSyncer{1->0}: unsafe_sync_commit called for 9eeb57261a4dfbeeb2e1c06ef6dc3f83b11e314eb34c598f2d042967b1938583, with hint: CandidateSelectionHint::Only
   get_commit_sync_outcome_with_hint called for 1->0, cs 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3, hint CandidateSelectionHint::Only
+  derive changeset_info for 9eeb57261a4dfbeeb2e1c06ef6dc3f83b11e314eb34c598f2d042967b1938583
   derive skeleton_manifests for 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3
   CommitSyncer{1->0}: unsafe_sync_commit called for d2ba11302a912b679610fd60d7e56dd8f01372c130faa3ae72816d5568b25f3a, with hint: CandidateSelectionHint::Only
   get_commit_sync_outcome_with_hint called for 1->0, cs 9eeb57261a4dfbeeb2e1c06ef6dc3f83b11e314eb34c598f2d042967b1938583, hint CandidateSelectionHint::Only
+  derive changeset_info for d2ba11302a912b679610fd60d7e56dd8f01372c130faa3ae72816d5568b25f3a
   derive skeleton_manifests for 9eeb57261a4dfbeeb2e1c06ef6dc3f83b11e314eb34c598f2d042967b1938583
   CommitSyncer{1->0}: unsafe_sync_commit called for d2ba11302a912b679610fd60d7e56dd8f01372c130faa3ae72816d5568b25f3a, with hint: CandidateSelectionHint::Only
   get_commit_sync_outcome_with_hint called for 1->0, cs 9eeb57261a4dfbeeb2e1c06ef6dc3f83b11e314eb34c598f2d042967b1938583, hint CandidateSelectionHint::Only

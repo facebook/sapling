@@ -133,14 +133,14 @@ impl CommitGraph {
     /// Note: The property needs to be monotonic i.e. if the
     /// property holds for one changeset then it has to hold
     /// for all its parents.
-    pub async fn ancestors_frontier_with<MonotonicProperty, Out>(
-        &self,
-        ctx: &CoreContext,
+    pub async fn ancestors_frontier_with<'a, MonotonicProperty, Out>(
+        &'a self,
+        ctx: &'a CoreContext,
         heads: Vec<ChangesetId>,
         monotonic_property: MonotonicProperty,
     ) -> Result<Vec<ChangesetId>>
     where
-        MonotonicProperty: Fn(ChangesetId) -> Out + Send + Sync + 'static,
+        MonotonicProperty: Fn(ChangesetId) -> Out + Send + Sync + 'a,
         Out: Future<Output = Result<bool>>,
     {
         let mut ancestors_frontier = vec![];
