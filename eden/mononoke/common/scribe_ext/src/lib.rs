@@ -24,7 +24,11 @@ use scribe::ScribeClient; // oss uses anyhow
 mod oss;
 
 #[cfg(not(fbcode_build))]
+pub use oss::new_scribe_client;
+#[cfg(not(fbcode_build))]
 pub use oss::ScribeClientImplementation;
+#[cfg(fbcode_build)]
+pub use scuba::new_scribe_client;
 #[cfg(fbcode_build)]
 pub use scuba::ScribeClientImplementation;
 
@@ -45,7 +49,7 @@ impl ::std::fmt::Debug for Scribe {
 
 impl Scribe {
     pub fn new(fb: FacebookInit) -> Self {
-        Self::Client(Arc::new(ScribeClientImplementation::new(fb)))
+        Self::Client(Arc::new(new_scribe_client(fb)))
     }
 
     pub fn new_to_file(dir_path: PathBuf) -> Self {
