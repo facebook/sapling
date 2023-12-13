@@ -213,7 +213,7 @@ function RenderCompactSetting() {
     <Tooltip
       title={t(
         'Render commits in the tree more compactly, by reducing spacing and not wrapping Diff info to multiple lines. ' +
-          'May require more horiztonal scrolling.',
+          'May require more horizontal scrolling.',
       )}>
       <VSCodeCheckbox
         checked={value}
