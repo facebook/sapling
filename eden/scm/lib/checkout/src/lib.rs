@@ -58,7 +58,7 @@ use types::RepoPathBuf;
 use vfs::UpdateFlag;
 use vfs::VFS;
 use workingcopy::sparse;
-use workingcopy::workingcopy::WorkingCopy;
+use workingcopy::workingcopy::LockedWorkingCopy;
 
 #[allow(dead_code)]
 mod actions;
@@ -837,7 +837,7 @@ fn truncate_u64(f: &str, path: &RepoPath, v: u64) -> i32 {
 pub fn checkout(
     io: &IO,
     repo: &mut Repo,
-    wc: &mut WorkingCopy,
+    wc: &LockedWorkingCopy,
     target_commit: HgId,
 ) -> Result<Option<(usize, usize)>> {
     #[cfg(feature = "eden")]
@@ -858,7 +858,7 @@ pub fn checkout(
 pub fn sparse_checkout(
     io: &IO,
     repo: &mut Repo,
-    wc: &mut WorkingCopy,
+    wc: &LockedWorkingCopy,
     target_commit: HgId,
 ) -> Result<(usize, usize)> {
     wc.ensure_locked()?;

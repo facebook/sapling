@@ -26,6 +26,7 @@ use treestate::filestate::StateFlags;
 use types::HgId;
 use types::RepoPath;
 use workingcopy::util::walk_treestate;
+use workingcopy::workingcopy::LockedWorkingCopy;
 use workingcopy::workingcopy::WorkingCopy;
 
 use crate::errors::EdenConflictError;
@@ -33,7 +34,7 @@ use crate::errors::EdenConflictError;
 pub fn edenfs_checkout(
     io: &IO,
     repo: &mut Repo,
-    wc: &mut WorkingCopy,
+    wc: &LockedWorkingCopy,
     target_commit: HgId,
     checkout_mode: edenfs_client::CheckoutMode,
 ) -> anyhow::Result<()> {
@@ -55,7 +56,7 @@ pub fn edenfs_checkout(
     Ok(())
 }
 
-fn clear_edenfs_dirstate(wc: &mut WorkingCopy) -> anyhow::Result<()> {
+fn clear_edenfs_dirstate(wc: &LockedWorkingCopy) -> anyhow::Result<()> {
     let tbind = wc.treestate();
     let mut treestate = tbind.lock();
     let matcher = Arc::new(AlwaysMatcher::new());

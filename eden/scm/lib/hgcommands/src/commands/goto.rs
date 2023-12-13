@@ -18,6 +18,7 @@ use configmodel::ConfigExt;
 use fs_err as fs;
 use repo::repo::Repo;
 use repostate::command_state::Operation;
+use workingcopy::workingcopy::LockedWorkingCopy;
 use workingcopy::workingcopy::WorkingCopy;
 
 use super::MergeToolOpts;
@@ -102,12 +103,12 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
     }
 
     // Protect the various ".hg" state file checks.
-    let wc_lock = wc.lock()?;
+    let wc = wc.lock()?;
 
     // Clean up the "updatemergestate" file if we are done merging.
     // We do this before try_operation since that will error on "updatemergestate".
     // This should happen even without "--continue".
-    let cleaned_mergestate = maybe_clear_update_merge_state(wc, ctx.opts.clean)?;
+    let cleaned_mergestate = maybe_clear_update_merge_state(&wc, ctx.opts.clean)?;
 
     let updatestate_path = wc.dot_hg_path().join("updatestate");
 
@@ -139,7 +140,7 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
 
     // This aborts if there are unresolved conflicts, or have some other
     // operation (e.g. "graft") in progress.
-    repostate::command_state::try_operation(&wc_lock, op)?;
+    repostate::command_state::try_operation(wc.locked_dot_hg_path(), op)?;
 
     if dest.len() > 1 {
         abort!(
@@ -166,7 +167,7 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
     tracing::debug!(target: "checkout_info", checkout_mode="rust");
 
     let _lock = repo.lock()?;
-    let update_result = checkout::checkout(ctx.io(), repo, wc, target)?;
+    let update_result = checkout::checkout(ctx.io(), repo, &wc, target)?;
 
     if !ctx.global_opts().quiet {
         if let Some((updated, removed)) = update_result {
@@ -184,7 +185,7 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
 
 // Clear use out of the "updatemergestate" state if there are no unresolved
 // files or user specified "--clean". Returns whether state was cleared.
-fn maybe_clear_update_merge_state(wc: &WorkingCopy, clean: bool) -> Result<bool> {
+fn maybe_clear_update_merge_state(wc: &LockedWorkingCopy, clean: bool) -> Result<bool> {
     let ums_path = wc.dot_hg_path().join("updatemergestate");
 
     if !ums_path.try_exists().context("updatemergestate")? {

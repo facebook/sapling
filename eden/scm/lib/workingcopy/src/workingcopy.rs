@@ -32,6 +32,7 @@ use pathmatcher::IntersectMatcher;
 use pathmatcher::Matcher;
 use pathmatcher::NegateMatcher;
 use pathmatcher::UnionMatcher;
+use repolock::LockedPath;
 use repolock::RepoLocker;
 use repostate::MergeState;
 use status::FileStatus;
@@ -149,8 +150,12 @@ impl WorkingCopy {
         &self.dot_hg_path
     }
 
-    pub fn lock(&self) -> Result<repolock::LockedPath, repolock::LockError> {
-        self.locker.lock_working_copy(self.dot_hg_path.clone())
+    pub fn lock(&self) -> Result<LockedWorkingCopy, repolock::LockError> {
+        let locked_path = self.locker.lock_working_copy(self.dot_hg_path.clone())?;
+        Ok(LockedWorkingCopy {
+            dot_hg_path: locked_path,
+            wc: self,
+        })
     }
 
     pub fn ensure_locked(&self) -> Result<(), repolock::LockError> {
@@ -167,20 +172,6 @@ impl WorkingCopy {
 
     pub fn parents(&self) -> Result<Vec<HgId>> {
         self.treestate.lock().parents().collect()
-    }
-
-    pub fn set_parents(
-        &mut self,
-        parents: Vec<HgId>,
-        parent_tree_hash: Option<HgId>,
-    ) -> Result<()> {
-        let p1 = parents
-            .get(0)
-            .context("At least one parent is required for setting parents")?
-            .clone();
-        let p2 = parents.get(1).copied();
-        self.treestate.lock().set_parents(&mut parents.iter())?;
-        self.filesystem.lock().set_parents(p1, p2, parent_tree_hash)
     }
 
     pub fn filestore(&self) -> ArcFileStore {
@@ -514,15 +505,42 @@ impl WorkingCopy {
 
         MergeState::read(&self.dot_hg_path().join("merge/state2"))
     }
+}
+
+pub struct LockedWorkingCopy<'a> {
+    dot_hg_path: LockedPath,
+    wc: &'a WorkingCopy,
+}
+
+impl<'a> std::ops::Deref for LockedWorkingCopy<'a> {
+    type Target = WorkingCopy;
+
+    fn deref(&self) -> &Self::Target {
+        self.wc
+    }
+}
+
+impl<'a> LockedWorkingCopy<'a> {
+    pub fn locked_dot_hg_path(&self) -> &LockedPath {
+        &self.dot_hg_path
+    }
 
     pub fn write_merge_state(&self, ms: &MergeState) -> Result<()> {
-        self.ensure_locked()?;
-
-        let dir = self.dot_hg_path().join("merge");
+        let dir = self.dot_hg_path.join("merge");
         fs_err::create_dir_all(&dir)?;
         let mut f = util::file::atomic_open(&dir.join("state2"))?;
         ms.serialize(f.as_file())?;
         f.save()?;
         Ok(())
+    }
+
+    pub fn set_parents(&self, parents: Vec<HgId>, parent_tree_hash: Option<HgId>) -> Result<()> {
+        let p1 = parents
+            .get(0)
+            .context("At least one parent is required for setting parents")?
+            .clone();
+        let p2 = parents.get(1).copied();
+        self.treestate.lock().set_parents(&mut parents.iter())?;
+        self.filesystem.lock().set_parents(p1, p2, parent_tree_hash)
     }
 }

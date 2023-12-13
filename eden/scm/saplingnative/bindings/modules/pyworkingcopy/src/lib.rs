@@ -215,7 +215,7 @@ py_class!(pub class workingcopy |py| {
 
     def writemergestate(&self, ms: mergestate) -> PyResult<PyNone> {
         let ms = ms.extract_inner_ref(py);
-        self.inner(py).read().write_merge_state(&*ms.borrow()).map_pyerr(py)?;
+        self.inner(py).read().lock().map_pyerr(py)?.write_merge_state(&*ms.borrow()).map_pyerr(py)?;
         Ok(PyNone)
     }
 
@@ -226,9 +226,9 @@ py_class!(pub class workingcopy |py| {
     // as "commit").
     def commandstate(&self, op: Option<Serde<Operation>> = None) -> PyResult<Option<(String, String)>> {
         let wc = self.inner(py).read();
-        let locked_path = wc.lock().map_pyerr(py)?;
+        let wc = wc.lock().map_pyerr(py)?;
         let op = op.map_or(Operation::Other, |op| *op);
-        match repostate::command_state::try_operation(&locked_path, op) {
+        match repostate::command_state::try_operation(wc.locked_dot_hg_path(), op) {
             Ok(()) => Ok(None),
             Err(err) => {
                 if let Some(conflict) = err.downcast_ref::<repostate::command_state::Conflict>() {
