@@ -35,6 +35,7 @@ use crate::path::NonRootMPath;
 use crate::thrift;
 use crate::typed_hash::SkeletonManifestId;
 use crate::typed_hash::SkeletonManifestIdContext;
+use crate::PrefixTrie;
 
 /// A skeleton manifest is a manifest node containing summary information about the
 /// the structure of files (their names, but not their contents) that is useful
@@ -151,20 +152,27 @@ impl SkeletonManifest {
         ctx: &'a CoreContext,
         blobstore: &'a impl Blobstore,
         parents: Vec<SkeletonManifest>,
+        excluded_paths: &PrefixTrie,
     ) -> Result<Option<(NonRootMPath, NonRootMPath)>> {
         bounded_traversal(
             256,
             (None, self, parents),
-            |(path, sk_mf, parents)| {
+            |(path, sk_mf, parents): (Option<NonRootMPath>, _, _)| {
                 async move {
                     if sk_mf.summary.child_case_conflicts {
-                        if let Some((name1, name2)) = sk_mf.first_new_child_case_conflict(&parents)
+                        if !excluded_paths
+                            .contains_prefix(path.as_ref().iter().flat_map(|p| p.as_ref()))
                         {
-                            let path1 = NonRootMPath::join_opt_element(path.as_ref(), name1);
-                            let path2 = NonRootMPath::join_opt_element(path.as_ref(), name2);
-                            // Since we only want the first conflict, don't
-                            // recurse to child directories.
-                            return Ok((Some((path1, path2)), Vec::new()));
+                            if let Some((name1, name2)) =
+                                sk_mf.first_new_child_case_conflict(&parents)
+                            {
+                                let path1 = NonRootMPath::join_opt_element(path.as_ref(), name1);
+                                let path2 = NonRootMPath::join_opt_element(path.as_ref(), name2);
+
+                                // Since we only want the first conflict, don't
+                                // recurse to child directories.
+                                return Ok((Some((path1, path2)), Vec::new()));
+                            }
                         }
                     }
 

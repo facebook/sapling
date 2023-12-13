@@ -16,6 +16,7 @@ use blobstore::Loadable;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks_types::BookmarkKey;
 use bookmarks_types::BookmarkKind;
+use borrowed::borrowed;
 use bytes::Bytes;
 use context::CoreContext;
 use cross_repo_sync::CHANGE_XREPO_MAPPING_EXTRA;
@@ -321,55 +322,65 @@ impl AffectedChangesets {
         kind: BookmarkKind,
         additional_changesets: AdditionalChangesets,
     ) -> Result<(), BookmarkMovementError> {
+        let config = &repo.repo_config().pushrebase.flags;
         if (kind == BookmarkKind::Publishing || kind == BookmarkKind::PullDefaultPublishing)
-            && repo.repo_config().pushrebase.flags.casefolding_check
+            && config.casefolding_check
         {
             self.load_additional_changesets(ctx, repo, bookmark, additional_changesets)
                 .await
                 .context("Failed to load additional affected changesets to check case conflicts")?;
 
             stream::iter(self.iter().map(Ok))
-                .try_for_each_concurrent(100, |bcs| async move {
-                    let bcs_id = bcs.get_changeset_id();
+                .try_for_each_concurrent(100, |bcs| {
+                    borrowed!(config);
+                    async move {
+                        let bcs_id = bcs.get_changeset_id();
 
-                    let sk_mf = repo
-                        .repo_derived_data()
-                        .derive::<RootSkeletonManifestId>(ctx, bcs_id)
-                        .await
-                        .map_err(Error::from)?
-                        .into_skeleton_manifest_id()
-                        .load(ctx, repo.repo_blobstore())
-                        .await
-                        .map_err(Error::from)?;
-                    if sk_mf.has_case_conflicts() {
-                        // We only reject a commit if it introduces new case
-                        // conflicts compared to its parents.
-                        let parents = stream::iter(bcs.parents().map(|parent_bcs_id| async move {
-                            repo.repo_derived_data()
-                                .derive::<RootSkeletonManifestId>(ctx, parent_bcs_id)
-                                .await
-                                .map_err(Error::from)?
-                                .into_skeleton_manifest_id()
-                                .load(ctx, repo.repo_blobstore())
-                                .await
-                                .map_err(Error::from)
-                        }))
-                        .buffered(10)
-                        .try_collect::<Vec<_>>()
-                        .await?;
+                        let sk_mf = repo
+                            .repo_derived_data()
+                            .derive::<RootSkeletonManifestId>(ctx, bcs_id)
+                            .await
+                            .map_err(Error::from)?
+                            .into_skeleton_manifest_id()
+                            .load(ctx, repo.repo_blobstore())
+                            .await
+                            .map_err(Error::from)?;
+                        if sk_mf.has_case_conflicts() {
+                            // We only reject a commit if it introduces new case
+                            // conflicts compared to its parents.
+                            let parents =
+                                stream::iter(bcs.parents().map(|parent_bcs_id| async move {
+                                    repo.repo_derived_data()
+                                        .derive::<RootSkeletonManifestId>(ctx, parent_bcs_id)
+                                        .await
+                                        .map_err(Error::from)?
+                                        .into_skeleton_manifest_id()
+                                        .load(ctx, repo.repo_blobstore())
+                                        .await
+                                        .map_err(Error::from)
+                                }))
+                                .buffered(10)
+                                .try_collect::<Vec<_>>()
+                                .await?;
 
-                        if let Some((path1, path2)) = sk_mf
-                            .first_new_case_conflict(ctx, repo.repo_blobstore(), parents)
-                            .await?
-                        {
-                            return Err(BookmarkMovementError::CaseConflict {
-                                changeset_id: bcs_id,
-                                path1,
-                                path2,
-                            });
+                            if let Some((path1, path2)) = sk_mf
+                                .first_new_case_conflict(
+                                    ctx,
+                                    repo.repo_blobstore(),
+                                    parents,
+                                    &config.casefolding_check_excluded_paths,
+                                )
+                                .await?
+                            {
+                                return Err(BookmarkMovementError::CaseConflict {
+                                    changeset_id: bcs_id,
+                                    path1,
+                                    path2,
+                                });
+                            }
                         }
+                        Ok(())
                     }
-                    Ok(())
                 })
                 .await?;
         }

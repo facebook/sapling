@@ -344,6 +344,7 @@ mod test {
     use fbinit::FacebookInit;
     use filestore::FilestoreConfig;
     use mononoke_types::ChangesetId;
+    use mononoke_types::PrefixTrie;
     use pretty_assertions::assert_eq;
     use repo_blobstore::RepoBlobstore;
     use repo_blobstore::RepoBlobstoreRef;
@@ -581,11 +582,34 @@ mod test {
         assert_eq!(
             c_skeleton
                 .clone()
-                .first_new_case_conflict(&ctx, repo.repo_blobstore(), vec![b_skeleton])
+                .first_new_case_conflict(
+                    &ctx,
+                    repo.repo_blobstore(),
+                    vec![b_skeleton.clone()],
+                    &PrefixTrie::new()
+                )
                 .await?,
             Some((
                 NonRootMPath::new(b"dir1/subdir1/SUBSUBDIR2")?,
                 NonRootMPath::new(b"dir1/subdir1/subsubdir2")?
+            ))
+        );
+
+        let mut excluded_paths = PrefixTrie::new();
+        excluded_paths.add(&NonRootMPath::new(b"dir1/subdir1")?);
+        assert_eq!(
+            c_skeleton
+                .clone()
+                .first_new_case_conflict(
+                    &ctx,
+                    repo.repo_blobstore(),
+                    vec![b_skeleton],
+                    &excluded_paths
+                )
+                .await?,
+            Some((
+                NonRootMPath::new(b"dir1/subdir2/SUBSUBDIR1")?,
+                NonRootMPath::new(b"dir1/subdir2/subsubdir1")?
             ))
         );
 
@@ -643,7 +667,12 @@ mod test {
         assert_eq!(
             d_skeleton
                 .clone()
-                .first_new_case_conflict(&ctx, repo.repo_blobstore(), vec![c_skeleton.clone()])
+                .first_new_case_conflict(
+                    &ctx,
+                    repo.repo_blobstore(),
+                    vec![c_skeleton.clone()],
+                    &PrefixTrie::new()
+                )
                 .await?,
             None,
         );
@@ -809,7 +838,12 @@ mod test {
         assert_eq!(
             h_skeleton
                 .clone()
-                .first_new_case_conflict(&ctx, repo.repo_blobstore(), vec![c_skeleton])
+                .first_new_case_conflict(
+                    &ctx,
+                    repo.repo_blobstore(),
+                    vec![c_skeleton],
+                    &PrefixTrie::new()
+                )
                 .await?,
             Some((
                 NonRootMPath::new(b"dir1/subdir1/SUBSUBDIR3/FILE3")?,
@@ -849,7 +883,8 @@ mod test {
                 .first_new_case_conflict(
                     &ctx,
                     repo.repo_blobstore(),
-                    vec![h_skeleton.clone(), j_skeleton]
+                    vec![h_skeleton.clone(), j_skeleton],
+                    &PrefixTrie::new()
                 )
                 .await?,
             None,
@@ -890,7 +925,12 @@ mod test {
         );
         assert_eq!(
             m_skeleton
-                .first_new_case_conflict(&ctx, repo.repo_blobstore(), vec![h_skeleton, l_skeleton])
+                .first_new_case_conflict(
+                    &ctx,
+                    repo.repo_blobstore(),
+                    vec![h_skeleton, l_skeleton],
+                    &PrefixTrie::new()
+                )
                 .await?,
             Some((
                 NonRootMPath::new(b"dir2/subdir1/subsubdir1/FILE1")?,

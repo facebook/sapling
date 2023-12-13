@@ -184,7 +184,6 @@ rust_library(
     autocargo = {"cargo_toml_dir": "bookmarks_movement"},
     test_deps = [
         "fbsource//third-party/rust:maplit",
-        "//common/rust/shed/borrowed:borrowed",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//common/rust/shed/sql:sql",
@@ -202,6 +201,7 @@ rust_library(
         "fbsource//third-party/rust:thiserror",
         ":bookmarks",
         ":bookmarks_types",
+        "//common/rust/shed/borrowed:borrowed",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/futures_ext:futures_ext",
         "//common/rust/shed/futures_stats:futures_stats",
