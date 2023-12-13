@@ -16,12 +16,11 @@ import {Tooltip} from '../../Tooltip';
 import {T} from '../../i18n';
 import platform from '../../platform';
 import {GeneratedStatus} from '../../types';
-import {FileHeader} from './SplitDiffFileHeader';
+import {FileHeader, diffTypeToIconType} from './SplitDiffFileHeader';
 import {SplitDiffTable} from './SplitDiffHunk';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useState} from 'react';
 import {Icon} from 'shared/Icon';
-import {DiffType} from 'shared/patch/parse';
 
 export function SplitDiffView({
   ctx,
@@ -61,10 +60,7 @@ export function SplitDiffView({
     );
   }
 
-  // A file must be newly created when it is copied or renamed.
-  const diffType =
-    patch.type === DiffType.Copied || patch.type === DiffType.Renamed ? DiffType.Added : patch.type;
-
+  const iconType = diffTypeToIconType(patch.type);
   const fileActions = (
     <>
       {platform.openDiff == null ? null : (
@@ -97,7 +93,7 @@ export function SplitDiffView({
       <FileHeader
         path={fileName}
         copyFrom={patch.oldFileName}
-        diffType={diffType}
+        iconType={iconType}
         open={!collapsed}
         onChangeOpen={open => ctx.setCollapsed(!open)}
         fileActions={fileActions}

@@ -18,7 +18,7 @@ import {
   commitMessageFieldsSchema,
   commitMessageFieldsToString,
 } from '../../CommitInfoView/CommitMessageFields';
-import {FileHeader} from '../../ComparisonView/SplitDiffView/SplitDiffFileHeader';
+import {FileHeader, IconType} from '../../ComparisonView/SplitDiffView/SplitDiffFileHeader';
 import {useTokenizedContentsOnceVisible} from '../../ComparisonView/SplitDiffView/syntaxHighlighting';
 import {Column, Row, ScrollX, ScrollY} from '../../ComponentUtils';
 import {EmptyState} from '../../EmptyState';
@@ -38,7 +38,6 @@ import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
 import {type LineIdx, splitLines, diffBlocks} from 'shared/diff';
 import {useThrottledEffect} from 'shared/hooks';
-import {DiffType} from 'shared/patch/parse';
 import {unwrap} from 'shared/utils';
 
 import './SplitStackEditPanel.css';
@@ -348,13 +347,13 @@ function SplitEditorWithTitle(props: SplitEditorWithTitleProps) {
   };
 
   const changedMeta = subStack.changedFileMetadata(rev, path, false);
-  let diffType = DiffType.Modified;
+  let iconType = IconType.Modified;
   if (changedMeta != null) {
     const [oldMeta, newMeta] = changedMeta;
     if (isAbsent(oldMeta) && !isAbsent(newMeta)) {
-      diffType = DiffType.Added;
+      iconType = IconType.Added;
     } else if (!isAbsent(oldMeta) && isAbsent(newMeta)) {
-      diffType = DiffType.Removed;
+      iconType = IconType.Removed;
     }
   }
   const canMoveLeft =
@@ -373,7 +372,7 @@ function SplitEditorWithTitle(props: SplitEditorWithTitleProps) {
       <FileHeader
         path={path}
         copyFrom={file.copyFrom}
-        diffType={diffType}
+        iconType={iconType}
         open={!collapsed}
         onChangeOpen={toggleCollapsed}
         fileActions={

@@ -17,17 +17,38 @@ import {Icon} from 'shared/Icon';
 
 import './SplitDiffHunk.css';
 
+/**
+ * Decides the icon of the file header.
+ * Subset of `DiffType` - no Copied for Removed.
+ */
+export enum IconType {
+  Modified = 'Modified',
+  Added = 'Added',
+  Removed = 'Removed',
+}
+
+export function diffTypeToIconType(diffType?: DiffType): IconType {
+  if (diffType != null) {
+    const diffTypeStr = diffType as string;
+    if (diffTypeStr === 'Added' || diffTypeStr === 'Removed' || diffTypeStr === 'Modified') {
+      return diffTypeStr as IconType;
+    }
+  }
+  // "Copied" and "Renamed" should only apply to new files.
+  return IconType.Added;
+}
+
 export function FileHeader({
   path,
   copyFrom,
-  diffType,
+  iconType,
   open,
   onChangeOpen,
   fileActions,
 }: {
   path: RepoPath;
   copyFrom?: RepoPath;
-  diffType?: DiffType;
+  iconType?: IconType;
   fileActions?: JSX.Element;
 } & EnsureAssignedTogether<{
   open: boolean;
@@ -36,7 +57,7 @@ export function FileHeader({
   // Even though the enclosing <SplitDiffView> will have border-radius set, we
   // have to define it again here or things don't look right.
   const color =
-    diffType === undefined ? 'var(--scm-modified-foreground)' : diffTypeToColor[diffType];
+    iconType === undefined ? 'var(--scm-modified-foreground)' : iconTypeToColor[iconType];
 
   const pathSeparator = '/';
   const pathParts = path.split(pathSeparator);
@@ -115,27 +136,23 @@ export function FileHeader({
           <Icon icon={open ? 'chevron-down' : 'chevron-right'} />
         </VSCodeButton>
       )}
-      {diffType !== undefined && <Icon icon={diffTypeToIcon[diffType]} />}
+      {iconType !== undefined && <Icon icon={iconTypeToIcon[iconType]} />}
       <div className="split-diff-view-file-path-parts">{filePathParts}</div>
       {fileActions}
     </div>
   );
 }
 
-const diffTypeToColor: Record<keyof typeof DiffType, string> = {
+const iconTypeToColor: Record<keyof typeof IconType, string> = {
   Modified: 'var(--scm-modified-foreground)',
   Added: 'var(--scm-added-foreground)',
   Removed: 'var(--scm-removed-foreground)',
-  Renamed: 'var(--scm-modified-foreground)',
-  Copied: 'var(--scm-added-foreground)',
 };
 
-const diffTypeToIcon: Record<keyof typeof DiffType, string> = {
+const iconTypeToIcon: Record<keyof typeof IconType, string> = {
   Modified: 'diff-modified',
   Added: 'diff-added',
   Removed: 'diff-removed',
-  Renamed: 'diff-renamed',
-  Copied: 'diff-renamed',
 };
 
 function commonPrefixLength<T>(a: Array<T>, b: Array<T>): number {
