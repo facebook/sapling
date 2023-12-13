@@ -50,6 +50,7 @@ use synced_commit_mapping::SyncedCommitMapping;
 use crate::reporting::log_bookmark_deletion_result;
 use crate::reporting::log_non_pushrebase_sync_single_changeset_result;
 use crate::reporting::log_pushrebase_sync_single_changeset_result;
+use crate::reporting::log_success_to_scuba;
 
 pub trait Repo = cross_repo_sync::Repo;
 
@@ -469,7 +470,7 @@ where
     let mut res = vec![];
     // Sync all of the ancestors first
     for ancestor_cs_id in unsynced_ancestors {
-        let mb_synced = commit_syncer
+        let (stats, mb_synced) = commit_syncer
             .unsafe_sync_commit(
                 ctx,
                 ancestor_cs_id,
@@ -477,10 +478,15 @@ where
                 CommitSyncContext::ForwardSyncerInitialImport,
                 Some(config_version.clone()),
             )
-            .await?;
-        let synced =
-            mb_synced.ok_or(anyhow!("Failed to sync ancestor commit {}", ancestor_cs_id))?;
+            .timed()
+            .await;
+        let mb_synced = mb_synced?;
+        let synced = mb_synced
+            .clone()
+            .ok_or(anyhow!("Failed to sync ancestor commit {}", ancestor_cs_id))?;
         res.push(synced);
+
+        log_success_to_scuba(scuba_sample.clone(), ancestor_cs_id, mb_synced, stats, None);
     }
 
     let (stats, result) = commit_syncer
