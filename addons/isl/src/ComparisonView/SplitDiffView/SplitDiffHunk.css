@@ -47,13 +47,8 @@
   flex-grow: 1;
   flex-shrink: 1;
   font-size: 12px;
-  overflow-x: scroll;
-
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-.split-diff-view-file-path-parts::-webkit-scrollbar {
-  display: none;
+  flex-wrap: wrap;
+  line-height: 1em;
 }
 
 .split-diff-view-file-preamble {
