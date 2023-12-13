@@ -1270,25 +1270,31 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
    * - Does not have "originalStack".
    * - "Dense". Therefore file revs (in fileStacks) map to all
    *   commits.
-   * - Does not have rename information, which adds complexities
-   *   to "dense" handling. This might be solvable but the current
-   *   implementation ignores renames for simplicity.
+   * - Preserves the rename information, but does not follow renames
+   *   when building the file stacks.
+   * - Preserves non-utf8 files, but does not build into the file
+   *   stacks, which means their content cannot be edited, but might
+   *   still be moved around.
    *
    * It is for the interactive split use-case.
    */
   denseSubStack(revs: List<Rev>): CommitStackState {
     const commits = revs.map(rev => this.stack.get(rev)).filter(Boolean) as List<CommitState>;
     const bottomFiles = new Map<RepoPath, FileState>();
-    const followRename = false;
+    const followRenames = false;
 
     // Use this.parentFile to populate bottomFiles.
     commits.forEach(commit => {
       const startRev = commit.rev;
       commit.files.forEach((file, startPath) => {
-        ([startPath, followRename && file.copyFrom].filter(Boolean) as [string]).forEach(path => {
+        ([startPath].filter(Boolean) as [string]).forEach(path => {
           if (!bottomFiles.has(path)) {
-            const [, , file] = this.parentFile(startRev, path, followRename);
-            bottomFiles.set(path, followRename ? file : file.remove('copyFrom'));
+            const [, , file] = this.parentFile(startRev, path, false);
+            bottomFiles.set(path, file);
+          }
+          if (file.copyFrom != null) {
+            const [, fromPath, fromFile] = this.parentFile(startRev, path, true);
+            bottomFiles.set(fromPath, fromFile);
           }
         });
       });
@@ -1297,19 +1303,10 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     // Modify stack:
     // - Re-assign "rev"s (including "parents").
     // - Assign file contents so files are considered changed in every commit.
-    // - Remove rename info.
     const currentFiles = new Map(bottomFiles);
     const stack: List<CommitState> = commits.map((commit, i) => {
       const newFiles = commit.files.withMutations(mut => {
         let files = mut;
-        // Remove rename info.
-        if (!followRename) {
-          files.forEach((file, path) => {
-            if (file.copyFrom != null) {
-              files = files.setIn([path, 'copyFrom'], undefined);
-            }
-          });
-        }
         // Add unchanged files to force treating files as "modified".
         currentFiles.forEach((file, path) => {
           const inCommitFile = files.get(path);
@@ -1318,7 +1315,8 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
             files = files.set(path, file ?? ABSENT_FILE);
           } else {
             // Update currentFiles so it can be used by the next commit.
-            currentFiles.set(path, inCommitFile);
+            // Avoid repeating "copyFrom".
+            currentFiles.set(path, inCommitFile.remove('copyFrom'));
           }
         });
         return files;
@@ -1332,7 +1330,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
       bottomFiles,
     });
     const newStack = new CommitStackState(undefined, record);
-    return newStack.maybeBuildFileStacks().useFileStack();
+    return newStack.buildFileStacks({followRenames}).useFileStack();
   }
 
   /**

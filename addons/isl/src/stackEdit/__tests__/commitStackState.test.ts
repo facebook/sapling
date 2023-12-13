@@ -978,7 +978,7 @@ describe('CommitStackState', () => {
 
       // Compare the old and new file stacks.
       // - x.txt deletion is now by commit 'C', not 'B'.
-      // - y.txt rename is lost (current limitation)
+      // - x.txt -> y.txt rename is preserved.
       expect(stack.describeFileStacks(true)).toEqual([
         '0:./x.txt 1:A/x.txt(33) 2:B/y.txt(33)',
         '0:./z.txt(11) 1:A/z.txt(22) 2:C/z.txt',
@@ -986,7 +986,7 @@ describe('CommitStackState', () => {
       expect(newStack.describeFileStacks(true)).toEqual([
         '0:./x.txt 1:A/x.txt(33) 2:B/x.txt(3) 3:C/x.txt',
         '0:./z.txt(11) 1:A/z.txt(22) 2:C/z.txt',
-        '0:./y.txt 1:B/y.txt(33)',
+        '0:A/x.txt(33) 1:B/y.txt(33)',
       ]);
     });
 
