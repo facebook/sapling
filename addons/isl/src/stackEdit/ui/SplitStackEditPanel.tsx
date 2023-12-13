@@ -157,9 +157,13 @@ function SplitColumn(props: SplitColumnProps) {
   const commitMessage = commit?.text ?? '';
 
   // File stacks contain text (content-editable) files.
+  // Note: subStack might contain files that are not editable
+  // (ex. currently binary, but previously absent). Filter them out.
+  const editablePaths = new Set(subStack.getPaths(rev, {text: true}));
   const sortedFileStacks = subStack.fileStacks
-    .map((fileStack, fileIdx): [RepoPath, FileStackState, Rev] => {
-      return [subStack.getFileStackPath(fileIdx, 0) ?? '', fileStack, fileIdx];
+    .flatMap((fileStack, fileIdx): Array<[RepoPath, FileStackState, Rev]> => {
+      const path = subStack.getFileStackPath(fileIdx, 0) ?? '';
+      return editablePaths.has(path) ? [[path, fileStack, fileIdx]] : [];
     })
     .sortBy(t => t[0]);
 
