@@ -310,41 +310,18 @@ function SplitEditorWithTitle(props: SplitEditorWithTitleProps) {
     setSubStack(newSubStack);
   };
 
-    const aRev = fileRev - 1;
-    const bRev = fileRev;
-
-    const newFileStack = fileStack.mapAllLines(line => {
-      let newRevs = line.revs;
-      const inA = line.revs.has(aRev);
-      const inB = line.revs.has(bRev);
-      const isContext = inA && inB;
-      if (!isContext) {
-        if (inA) {
-          // This is a deletion.
-          if (dir === 'right') {
-            // Move deletion right - add it in bRev.
-            newRevs = newRevs.add(bRev);
-          } else {
-            // Move deletion left - drop it from aRev.
-            newRevs = newRevs.remove(aRev);
-          }
-        }
-        if (inB) {
-          // This is an insertion.
-          if (dir === 'right') {
-            // Move insertion right - drop it in bRev.
-            newRevs = newRevs.remove(bRev);
-          } else {
-            // Move insertion left - add it to aRev.
-            newRevs = newRevs.add(aRev);
-          }
-        }
-      }
-      return newRevs === line.revs ? line : line.set('revs', newRevs);
-    });
+  const moveEntireFile = (dir: 'left' | 'right') => {
+    // Suppose the file has 5 versions, and current version is 'v3':
+    //             v1--v2--v3--v4--v5
+    // Move left:
+    //             v1--v3--v3--v4--v5 (replace v2 with v3)
+    // Move right:
+    //             v1--v2--v2--v4--v5 (replace v3 with v2)
+    const [fromRev, toRev] = dir === 'left' ? [rev, rev - 1] : [rev - 1, rev];
+    const fromFile = subStack.getFile(fromRev, path);
+    const newStack = subStack.setFile(toRev, path, _f => fromFile);
     bumpStackEditMetric('splitMoveFile');
-
-    setStack(newFileStack);
+    setSubStack(newStack);
   };
 
   const canMoveLeft =
