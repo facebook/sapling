@@ -57,45 +57,41 @@ export function FileHeader({
     copyFromRest = copyFromParts.slice(commonPrefixLen).join(pathSeparator);
   }
 
-  const filePathParts = (
-    <>
-      {pathParts.map((part, idx) => {
-        const pathSoFar = pathParts.slice(idx).join(pathSeparator);
-        let copyFromSpan = null;
-        if (idx === commonPrefixLen) {
-          // Insert "copyFromRest ->"
-          copyFromSpan = (
-            <Tooltip title={t('Renamed or copied from')} delayMs={100} placement="bottom">
-              <span className="file-header-copyfrom-path">
-                {copyFromRest}
-                {' → '}
-              </span>
-            </Tooltip>
-          );
-        }
-        return (
-          <span className={'file-header-copyable-path'} key={idx}>
-            {copyFromSpan}
-            {
-              <Tooltip
-                component={() => (
-                  <span className="file-header-copyable-path-hover">
-                    {t('Copy $path', {replace: {$path: pathSoFar}})}
-                  </span>
-                )}
-                delayMs={100}
-                placement="bottom">
-                <span onClick={() => platform.clipboardCopy(pathSoFar)}>
-                  {part}
-                  {idx < pathParts.length - 1 ? pathSeparator : ''}
-                </span>
-              </Tooltip>
-            }
+  const filePathParts = pathParts.map((part, idx) => {
+    const pathSoFar = pathParts.slice(idx).join(pathSeparator);
+    let copyFromSpan = null;
+    if (idx === commonPrefixLen) {
+      // Insert "copyFromRest ->"
+      copyFromSpan = (
+        <Tooltip title={t('Renamed or copied from')} delayMs={100} placement="bottom">
+          <span className="file-header-copyfrom-path">
+            {copyFromRest}
+            {' → '}
           </span>
-        );
-      }, <span />)}
-    </>
-  );
+        </Tooltip>
+      );
+    }
+    return (
+      <>
+        <span className={'file-header-copyable-path'} key={idx}>
+          {copyFromSpan}
+          <Tooltip
+            component={() => (
+              <span className="file-header-copyable-path-hover">
+                {t('Copy $path', {replace: {$path: pathSoFar}})}
+              </span>
+            )}
+            delayMs={100}
+            placement="bottom">
+            <span onClick={() => platform.clipboardCopy(pathSoFar)}>
+              {part}
+              {idx < pathParts.length - 1 ? pathSeparator : ''}
+            </span>
+          </Tooltip>
+        </span>
+      </>
+    );
+  });
 
   return (
     <div
