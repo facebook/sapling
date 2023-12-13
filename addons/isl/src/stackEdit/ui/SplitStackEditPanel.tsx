@@ -154,13 +154,18 @@ function SplitColumn(props: SplitColumnProps) {
 
   const commit = subStack.get(rev);
   const commitMessage = commit?.text ?? '';
+
+  // File stacks contain text (content-editable) files.
   const sortedFileStacks = subStack.fileStacks
     .map((fileStack, fileIdx): [RepoPath, FileStackState, Rev] => {
       return [subStack.getFileStackPath(fileIdx, 0) ?? '', fileStack, fileIdx];
     })
     .sortBy(t => t[0]);
 
-  const editors = sortedFileStacks.flatMap(([path, fileStack, fileIdx]) => {
+  // There might be non-text (ex. binary, or too large) files.
+  const nonEditablePaths = subStack.getPaths(rev, {text: false}).sort();
+
+  const editables = sortedFileStacks.flatMap(([path, fileStack, fileIdx]) => {
     // subStack is a "dense" stack. fileRev is commitRev + 1.
     const fileRev = rev + 1;
     const isModified = fileRev > 0 && fileStack.getRev(fileRev - 1) !== fileStack.getRev(fileRev);
@@ -180,6 +185,28 @@ function SplitColumn(props: SplitColumnProps) {
     const result = isModified ? [editor] : [];
     return result;
   });
+
+  const nonEditables = nonEditablePaths.flatMap(path => {
+    const file = subStack.getFile(rev, path);
+    const prev = subStack.getFile(rev - 1, path);
+    const isModified = !file.equals(prev);
+    if (!isModified) {
+      return [];
+    }
+    const editor = (
+      <SplitEditorWithTitle
+        key={path}
+        subStack={subStack}
+        rev={rev}
+        path={path}
+        collapsed={collapsedFiles.has(path)}
+        toggleCollapsed={() => toggleCollapsed(path)}
+      />
+    );
+    return [editor];
+  });
+
+  const editors = editables.concat(nonEditables);
 
   const body = editors.isEmpty() ? (
     <EmptyState small>
