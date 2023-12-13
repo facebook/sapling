@@ -1422,6 +1422,23 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     // Do not build file stacks (potentially slow) now.
     return state.set('stack', newStack);
   }
+
+  /**
+   * If the given file has a metadata change, return the old and new metadata.
+   * Otherwise, return undefined.
+   */
+  changedFileMetadata(
+    rev: Rev,
+    path: RepoPath,
+    followRenames = false,
+  ): [FileMetadata, FileMetadata] | undefined {
+    const file = this.getFile(rev, path);
+    const parentFile = this.parentFile(rev, path, followRenames)[2];
+    const fileMeta = toMetadata(file);
+    // Only report "changed" if copyFrom is newly set.
+    const parentMeta = toMetadata(parentFile).remove('copyFrom');
+    return fileMeta.equals(parentMeta) ? undefined : [parentMeta, fileMeta];
+  }
 }
 
 function getBottomFilesFromExportStack(stack: Readonly<ExportStack>): Map<RepoPath, FileState> {
@@ -1590,6 +1607,11 @@ function isContentSame(file1: FileState, file2: FileState): boolean {
   return is(file1.data, file2.data) && (file1.flags ?? '') === (file2.flags ?? '');
 }
 
+/** Extract metadata */
+export function toMetadata(file: FileState): FileMetadata {
+  return FileMetadata({copyFrom: file.copyFrom, flags: file.flags});
+}
+
 /**
  * Turn distinct numbers to a 0..n sequence preserving the order.
  * For example, turn [0, 100, 50] into [0, 2, 1].
@@ -1679,6 +1701,12 @@ export type CommitState = RecordOf<CommitStateProps>;
  */
 type FileStateProps = {
   data: string | Base85 | FileIdx | DataRef;
+} & FileMetadataProps;
+
+/**
+ * File metadata properties without file content.
+ */
+type FileMetadataProps = {
   /** If present, this file is copied (or renamed) from another file. */
   copyFrom?: RepoPath;
   /** 'x': executable. 'l': symlink. 'm': submodule. */
@@ -1695,6 +1723,9 @@ type DataRef = RecordOf<DataRefProps>;
 
 const FileState = Record<FileStateProps>({data: '', copyFrom: undefined, flags: ''});
 type FileState = RecordOf<FileStateProps>;
+
+export const FileMetadata = Record<FileMetadataProps>({copyFrom: undefined, flags: ''});
+export type FileMetadata = RecordOf<FileMetadataProps>;
 
 type FileStackIndex = number;
 
