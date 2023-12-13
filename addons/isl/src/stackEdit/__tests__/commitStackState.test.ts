@@ -990,7 +990,8 @@ describe('CommitStackState', () => {
       ]);
     });
 
-    it('adds ABSENT flag if content becomes empty', () => {
+    it('does not add ABSENT flag if content becomes empty', () => {
+      // This was a herustics when `flags` are not handled properly. Now it is no longer needed.
       // y.txt was added by subStack rev 0 (B). We are moving it to be added by rev 1 (C).
       const fileIdx = unwrap(subStack.commitToFile.get(CommitIdx({rev: 0, path: 'y.txt'}))).fileIdx;
       const fileStack = unwrap(subStack.fileStacks.get(fileIdx));
@@ -1003,7 +1004,7 @@ describe('CommitStackState', () => {
       // Check that y.txt in rev 2 (B) is absent, not just empty.
       const file = newStack.getFile(2, 'y.txt');
       expect(file.data).toBe('');
-      expect(file.flags).toBe(ABSENT_FILE.flags);
+      expect(file.flags).toBe('');
     });
   });
 });

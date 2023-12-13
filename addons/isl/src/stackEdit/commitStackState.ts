@@ -1340,9 +1340,6 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
    * Unmodified changes will be dropped. Top commits with empty changes are
    * dropped. This turns a "dense" back to a non-"dense" one.
    *
-   * Note: `denseSubStack` does not preserve renaming info. This function
-   * currently does not try to reconstruct the rename info.
-   *
    * Intended for interactive split use-case.
    */
   applySubStack(startRev: Rev, endRev: Rev, subStack: CommitStackState): CommitStackState {
@@ -1412,30 +1409,6 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
             file = file.remove('flags');
           } else {
             file = file.set('flags', oldFlag);
-          }
-        } else {
-          // Add "absent" flag for empty files (herustics).
-          // The file must be non-empty in the old stack.
-          if (
-            oldFile?.flags?.includes(ABSENT_FLAG) &&
-            file.data === '' &&
-            !file.flags?.includes(ABSENT_FLAG)
-          ) {
-            // Check the old stack. Does it have a non-absent empty file in the range?
-            let hasEmpty = false;
-            for (let i = startRev; i < endRev; ++i) {
-              const oldFile = state.getFile(i, path);
-              if (isAbsent(oldFile)) {
-                continue;
-              } else {
-                hasEmpty = oldFile.data === '';
-                break;
-              }
-            }
-            // If not, let's re-add the "absent" flag.
-            if (!hasEmpty) {
-              file = file.set('flags', ABSENT_FLAG);
-            }
           }
         }
         // Drop unchanged files.
