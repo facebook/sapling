@@ -6,7 +6,7 @@
  */
 
 import type {CommitMessageFields} from '../../CommitInfoView/types';
-import type {CommitStackState} from '../commitStackState';
+import type {CommitStackState, FileMetadata} from '../commitStackState';
 import type {FileStackState, Rev} from '../fileStackState';
 import type {UseStackEditState} from './stackEditState';
 import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
@@ -169,7 +169,9 @@ function SplitColumn(props: SplitColumnProps) {
   const editables = sortedFileStacks.flatMap(([path, fileStack, fileIdx]) => {
     // subStack is a "dense" stack. fileRev is commitRev + 1.
     const fileRev = rev + 1;
-    const isModified = fileRev > 0 && fileStack.getRev(fileRev - 1) !== fileStack.getRev(fileRev);
+    const isModified =
+      (fileRev > 0 && fileStack.getRev(fileRev - 1) !== fileStack.getRev(fileRev)) ||
+      subStack.changedFileMetadata(rev, path) != null;
     const editor = (
       <SplitEditorWithTitle
         key={path}
@@ -358,20 +360,63 @@ function SplitEditorWithTitle(props: SplitEditorWithTitleProps) {
           </div>
         }
       />
-      {!collapsed &&
-        (fileRev != null && fileStack != null ? (
-          <SplitFile
-            key={fileIdx}
-            rev={fileRev}
-            stack={fileStack}
-            setStack={setStack}
-            path={path}
-          />
-        ) : (
-          <NonEditable />
-        ))}
+      {!collapsed && (
+        <>
+          <ModeChangeHints changedMeta={changedMeta} />
+          {fileRev != null && fileStack != null ? (
+            <SplitFile
+              key={fileIdx}
+              rev={fileRev}
+              stack={fileStack}
+              setStack={setStack}
+              path={path}
+            />
+          ) : (
+            <NonEditable />
+          )}
+        </>
+      )}
     </div>
   );
+}
+
+const FLAG_TO_MESSAGE = new Map<string, string>([
+  ['', t('regular')],
+  ['l', t('symlink')],
+  ['x', t('executable')],
+  ['m', t('Git submodule')],
+]);
+
+function ModeChangeHints(props: {changedMeta?: [FileMetadata, FileMetadata]}) {
+  const {changedMeta} = props;
+  if (changedMeta == null) {
+    return null;
+  }
+
+  const [oldMeta, newMeta] = changedMeta;
+  const oldFlag = oldMeta.flags ?? '';
+  const newFlag = newMeta.flags ?? '';
+  let message = null;
+
+  if (!isAbsent(newMeta)) {
+    const newDesc = FLAG_TO_MESSAGE.get(newFlag);
+    // Show hint for newly added non-regular files.
+    if (newFlag !== '' && isAbsent(oldMeta)) {
+      if (newDesc != null) {
+        message = t('File type: $new', {replace: {$new: newDesc}});
+      }
+    } else {
+      // Show hint when the flag (mode) has changed.
+      if (newFlag !== oldFlag) {
+        const oldDesc = FLAG_TO_MESSAGE.get(oldFlag);
+        if (oldDesc != null && newDesc != null && oldDesc !== newDesc) {
+          message = t('File type change: $old → $new', {replace: {$old: oldDesc, $new: newDesc}});
+        }
+      }
+    }
+  }
+
+  return message == null ? null : <div className="split-header-hint">{message}</div>;
 }
 
 function NonEditable() {
