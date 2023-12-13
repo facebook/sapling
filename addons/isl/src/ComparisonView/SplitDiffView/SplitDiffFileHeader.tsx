@@ -46,7 +46,7 @@ export function FileHeader({
   // copy: full path    "dir9/file"   "file"
 
   // with copyFrom: "dir1/dir2/dir3/foo" renamed to "dir1/dir2/dir4/bar"
-  // show: dir1 / dir2 / "dir3 / foo ->" dir4 / bar
+  // show: dir1 / dir2 / { dir3 / foo -> dir4 / bar }
   // commonPrefixLen = 2 # (dir1 / dir2)
   // copyFromRest = "dir3/foo"
   let commonPrefixLen = -1;
@@ -57,23 +57,31 @@ export function FileHeader({
     copyFromRest = copyFromParts.slice(commonPrefixLen).join(pathSeparator);
   }
 
+  const copySpan = (s: string) => <span className="file-header-copyfrom-path">{s}</span>;
   const filePathParts = pathParts.map((part, idx) => {
     const pathSoFar = pathParts.slice(idx).join(pathSeparator);
-    let copyFromSpan = null;
+    let copyFromLeft = null;
+    let copyFromRight = null;
     if (idx === commonPrefixLen) {
-      // Insert "copyFromRest ->"
-      copyFromSpan = (
-        <Tooltip title={t('Renamed or copied from')} delayMs={100} placement="bottom" key="copy">
-          <span className="file-header-copyfrom-path">
-            {copyFromRest}
-            {' → '}
-          </span>
+      // Insert "{" (when commonPrefix is not empty), " copyFromRest ->".
+      const prefix = commonPrefixLen > 0 ? '{ ' : '';
+      copyFromLeft = (
+        <Tooltip
+          title={t('Renamed or copied from $path', {replace: {$path: copyFrom ?? ''}})}
+          delayMs={100}
+          placement="bottom"
+          key="copy">
+          {copySpan(`${prefix}${copyFromRest} →`)}
         </Tooltip>
       );
     }
+    if (idx + 1 === pathParts.length && commonPrefixLen > 0) {
+      // Append "}" (when commonPrefix is not empty)
+      copyFromRight = copySpan('}');
+    }
     return (
       <>
-        {copyFromSpan}
+        {copyFromLeft}
         <span className={'file-header-copyable-path'} key={idx}>
           <Tooltip
             component={() => (
@@ -89,6 +97,7 @@ export function FileHeader({
             </span>
           </Tooltip>
         </span>
+        {copyFromRight}
       </>
     );
   });
