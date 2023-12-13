@@ -337,3 +337,10 @@ label.split-range-label {
   padding-left: var(--pad);
   text-overflow: ellipsis;
 }
+
+.split-header-hint {
+  padding: var(--pad);
+  border: 1px solid var(--panel-view-border);
+  border-top: none;
+  background: var(--hint-background);
+}

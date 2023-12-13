@@ -162,6 +162,7 @@ function SplitColumn(props: SplitColumnProps) {
       <SplitEditorWithTitle
         key={path}
         subStack={subStack}
+        rev={rev}
         path={path}
         fileStack={fileStack}
         fileIdx={fileIdx}
@@ -242,10 +243,11 @@ function SplitColumn(props: SplitColumnProps) {
 
 type SplitEditorWithTitleProps = {
   subStack: CommitStackState;
+  rev: Rev;
   path: RepoPath;
-  fileStack: FileStackState;
-  fileIdx: number;
-  fileRev: Rev;
+  fileStack?: FileStackState;
+  fileIdx?: number;
+  fileRev?: Rev;
   collapsed: boolean;
   toggleCollapsed: () => unknown;
 };
@@ -254,9 +256,13 @@ function SplitEditorWithTitle(props: SplitEditorWithTitleProps) {
   const stackEdit = useStackEditState();
 
   const {commitStack} = stackEdit;
-  const {subStack, path, fileStack, fileIdx, fileRev, collapsed, toggleCollapsed} = props;
+  const {subStack, path, fileStack, fileIdx, fileRev, collapsed, toggleCollapsed, rev} = props;
+  const file = subStack.getFile(rev, path);
 
   const setStack = (newFileStack: FileStackState) => {
+    if (fileIdx == null || fileRev == null) {
+      return;
+    }
     const newSubStack = subStack.setFileStack(fileIdx, newFileStack);
     const [startRev, endRev] = findStartEndRevs(stackEdit);
     if (startRev != null && endRev != null) {
@@ -272,6 +278,10 @@ function SplitEditorWithTitle(props: SplitEditorWithTitleProps) {
   };
 
   const moveEntireFile = (dir: 'left' | 'right') => {
+    if (fileIdx == null || fileRev == null || fileStack == null) {
+      return;
+    }
+
     const aRev = fileRev - 1;
     const bRev = fileRev;
 
@@ -309,6 +319,9 @@ function SplitEditorWithTitle(props: SplitEditorWithTitleProps) {
     setStack(newFileStack);
   };
 
+  const canMoveLeft =
+    rev > 0 && (file.copyFrom == null || isAbsent(subStack.getFile(rev - 1, path)));
+
   return (
     <div className="split-commit-file">
       <FileHeader
@@ -318,7 +331,7 @@ function SplitEditorWithTitle(props: SplitEditorWithTitleProps) {
         onChangeOpen={toggleCollapsed}
         fileActions={
           <div className="split-commit-file-arrows">
-            {fileRev > 1 /* rev == 0 corresponds to fileRev == 1  */ ? (
+            {canMoveLeft ? (
               <VSCodeButton appearance="icon" onClick={() => moveEntireFile('left')}>
                 ⬅
               </VSCodeButton>
@@ -329,9 +342,26 @@ function SplitEditorWithTitle(props: SplitEditorWithTitleProps) {
           </div>
         }
       />
-      {!collapsed && (
-        <SplitFile key={fileIdx} rev={fileRev} stack={fileStack} setStack={setStack} path={path} />
-      )}
+      {!collapsed &&
+        (fileRev != null && fileStack != null ? (
+          <SplitFile
+            key={fileIdx}
+            rev={fileRev}
+            stack={fileStack}
+            setStack={setStack}
+            path={path}
+          />
+        ) : (
+          <NonEditable />
+        ))}
+    </div>
+  );
+}
+
+function NonEditable() {
+  return (
+    <div className="split-header-hint">
+      <T>Binary or large file content is not editable.</T>
     </div>
   );
 }

@@ -44,6 +44,8 @@ html .vscode-light {
   --editor-changedBackground: hsla(211, 100%, 87%, 0.3);
   --editor-changedHighlightBackground: hsla(211, 100%, 87%, 0.5);
 
+  --hint-background: rgba(241, 168, 23, 0.2);
+
   --banner-fg: rgb(36, 41, 47);
   --banner-warning-bg: #f9ec5666;
   --banner-error-bg: #fa7e7c66;

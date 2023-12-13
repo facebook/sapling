@@ -44,6 +44,8 @@ html .vscode-dark {
   --editor-changedBackground: hsla(212, 90%, 70%, 0.15);
   --editor-changedHighlightBackground: hsla(212, 90%, 70%, 0.3);
 
+  --hint-background: rgba(252, 193, 43, 0.2);
+
   --banner-fg: rgb(235, 236, 237);
   --banner-warning-bg: #deb94066;
   --banner-error-bg: #fa7e7c55;
