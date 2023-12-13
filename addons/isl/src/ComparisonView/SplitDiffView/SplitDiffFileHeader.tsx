@@ -63,7 +63,7 @@ export function FileHeader({
     if (idx === commonPrefixLen) {
       // Insert "copyFromRest ->"
       copyFromSpan = (
-        <Tooltip title={t('Renamed or copied from')} delayMs={100} placement="bottom">
+        <Tooltip title={t('Renamed or copied from')} delayMs={100} placement="bottom" key="copy">
           <span className="file-header-copyfrom-path">
             {copyFromRest}
             {' → '}
@@ -73,8 +73,8 @@ export function FileHeader({
     }
     return (
       <>
+        {copyFromSpan}
         <span className={'file-header-copyable-path'} key={idx}>
-          {copyFromSpan}
           <Tooltip
             component={() => (
               <span className="file-header-copyable-path-hover">
