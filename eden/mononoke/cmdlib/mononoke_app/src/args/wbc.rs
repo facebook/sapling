@@ -18,10 +18,10 @@ use crate::AppExtension;
 #[derive(Parser, Debug)]
 pub struct WarmBookmarksCacheArgs {
     /// What needs to be warmed
-    #[clap(long, value_enum, value_name = "warm derived data")]
+    #[clap(long, value_enum, value_name = "WARMING_MODE")]
     pub enable_wbc_with: Option<BookmarkCacheDerivedData>,
 
-    #[clap(long, value_name = "Use remote bookmark cache")]
+    #[clap(long, value_name = "BOOL")]
     pub use_remote_bookmark_cache: Option<bool>,
 
     /// Specify SMC tier for the derived data service
