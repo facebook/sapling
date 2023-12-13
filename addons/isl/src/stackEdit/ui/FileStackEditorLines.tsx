@@ -141,7 +141,21 @@ export function computeLinesForFileStackEditor(
       const bRev = rev;
       let currentAIdx = 0;
       let currentBIdx = 0;
-      const newStack = stack.mapAllLines(line => {
+      let mutStack = stack;
+
+      // When `aTextIsOverriden` is set (usually because "copyFrom"), the `aLines`
+      // does not match `stack.getRev(aRev)`. The lines in `aIdxToMove` might not
+      // exist in `stack`. To move `aIdxToMove` properly, patch `stack` to use the
+      // `aLines` content temporarily.
+      //
+      // Practically, this is needed for moving deleted lines right for renamed
+      // files. "moving left" is disabled for renamed files so it is ignored now.
+      const needPatchARev = aTextIsOverriden && revOffset > 0 && aIdxToMove.size > 0;
+      if (needPatchARev) {
+        mutStack = mutStack.editText(aRev, aLines.join(''), false);
+      }
+
+      mutStack = mutStack.mapAllLines(line => {
         let newRevs = line.revs;
         if (line.revs.has(aRev)) {
           // This is a deletion.
@@ -171,7 +185,12 @@ export function computeLinesForFileStackEditor(
         }
         return newRevs === line.revs ? line : line.set('revs', newRevs);
       });
-      setStack(newStack);
+
+      if (needPatchARev) {
+        mutStack = mutStack.editText(aRev, stack.getRev(aRev), false);
+      }
+
+      setStack(mutStack);
 
       bumpStackEditMetric('splitMoveLine');
 
