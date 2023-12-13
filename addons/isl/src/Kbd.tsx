@@ -16,7 +16,9 @@ export function Kbd({keycode, modifiers}: {keycode: KeyCode; modifiers?: Array<M
       {modifiers
         ?.filter(modifier => modifier != Modifier.NONE)
         .map(modifier => (
-          <kbd className="modifier">{modifierToIcon[modifier]}</kbd>
+          <kbd className="modifier" key={modifier}>
+            {modifierToIcon[modifier]}
+          </kbd>
         ))}
       <kbd>{keycodeToString(keycode)}</kbd>
     </span>
