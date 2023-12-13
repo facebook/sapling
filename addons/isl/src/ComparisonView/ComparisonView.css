@@ -64,12 +64,14 @@
   padding: 0 0.5em;
 }
 
-.file-header-copyable-path:hover > .tooltip-creator > span {
-  text-decoration: underline;
+.file-header-copyable-path:hover,
+.file-header-copyable-path:hover ~ .file-header-copyable-path {
+  text-decoration-line: underline;
 }
 
-.file-header-copyable-path:hover > .tooltip-creator > span.file-header-copyfrom-path {
-  text-decoration: none;
+.file-header-copyfrom-path {
+  text-decoration-line: underline;
+  text-decoration-color: var(--background);
 }
 
 .file-header-copyable-path-hover {

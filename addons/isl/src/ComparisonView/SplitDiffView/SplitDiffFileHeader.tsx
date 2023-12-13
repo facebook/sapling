@@ -59,9 +59,7 @@ export function FileHeader({
 
   const filePathParts = (
     <>
-      {pathParts.reduce((acc, part, idx) => {
-        // Nest path parts in a particular way so we can use plain CSS
-        // hover selectors to underline nested sub-paths.
+      {pathParts.map((part, idx) => {
         const pathSoFar = pathParts.slice(idx).join(pathSeparator);
         let copyFromSpan = null;
         if (idx === commonPrefixLen) {
@@ -77,7 +75,6 @@ export function FileHeader({
         }
         return (
           <span className={'file-header-copyable-path'} key={idx}>
-            {acc}
             {copyFromSpan}
             {
               <Tooltip
