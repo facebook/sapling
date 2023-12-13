@@ -34,7 +34,7 @@ Create small repo commits
 
 # Ignoring lines with `initializing` or `initialized
   $ with_stripped_logs mononoke_x_repo_sync "$SMALL_REPO_ID" "$LARGE_REPO_ID" --log-level=TRACE \
-  > initial-import -i "$B" --version-name "$LATEST_CONFIG_VERSION_NAME" | rg -v "nitializ"
+  > initial-import --no-progress-bar -i "$B" --version-name "$LATEST_CONFIG_VERSION_NAME" | rg -v "nitializ"
   enabled stdlog with level: Error (set RUST_LOG to configure)
   Starting session with id * (glob)
   Reloading redacted config from configerator
@@ -96,7 +96,7 @@ Add more commits to small repo
 
 # Ignoring lines with `initializing` or `initialized
   $ with_stripped_logs mononoke_x_repo_sync "$SMALL_REPO_ID" "$LARGE_REPO_ID" --log-level=TRACE \
-  > initial-import -i "$D" --version-name "$LATEST_CONFIG_VERSION_NAME" | rg -v "nitializ"
+  > initial-import --no-progress-bar -i "$D" --version-name "$LATEST_CONFIG_VERSION_NAME" | rg -v "nitializ"
   enabled stdlog with level: Error (set RUST_LOG to configure)
   Starting session with id * (glob)
   Reloading redacted config from configerator

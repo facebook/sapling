@@ -36,6 +36,8 @@ use futures::future::try_join_all;
 use futures::stream::TryStreamExt;
 use futures::try_join;
 use futures_stats::TimedFutureExt;
+use indicatif::ProgressBar;
+use indicatif::ProgressStyle;
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::ChangesetId;
 use mononoke_types::Timestamp;
@@ -425,6 +427,7 @@ pub async fn sync_commits_for_initial_import<M: SyncedCommitMapping + Clone + 's
     cs_id: ChangesetId,
     // Sync config version to use for importing the commits.
     config_version: CommitSyncConfigVersion,
+    disable_progress_bar: bool,
 ) -> Result<Vec<ChangesetId>>
 where
     R: Repo,
@@ -455,10 +458,11 @@ where
         }
     }
 
+    let num_unsynced_ancestors: u64 = unsynced_ancestors.len().try_into()?;
+
     info!(
         ctx.logger(),
-        "Found {0} unsynced ancestors",
-        unsynced_ancestors.len()
+        "Found {0} unsynced ancestors", num_unsynced_ancestors
     );
 
     trace!(
@@ -466,6 +470,21 @@ where
         "Unsynced ancestors: {0:#?}",
         &unsynced_ancestors
     );
+
+    let mb_prog_bar = if disable_progress_bar {
+        None
+    } else {
+        let progress_bar = ProgressBar::new(num_unsynced_ancestors)
+        .with_message("Syncing ancestors...")
+        .with_style(
+            ProgressStyle::with_template(
+                "[{percent}%][elapsed: {elapsed}] {msg} [{bar:60.cyan}] (ETA: {eta}) ({pos}/{len}) ({per_sec}) ",
+            )?
+            .progress_chars("#>-"),
+        );
+        progress_bar.enable_steady_tick(std::time::Duration::from_secs(3));
+        Some(progress_bar)
+    };
 
     let mut res = vec![];
     // Sync all of the ancestors first
@@ -485,6 +504,10 @@ where
             .clone()
             .ok_or(anyhow!("Failed to sync ancestor commit {}", ancestor_cs_id))?;
         res.push(synced);
+
+        if let Some(progress_bar) = &mb_prog_bar {
+            progress_bar.inc(1);
+        }
 
         log_success_to_scuba(scuba_sample.clone(), ancestor_cs_id, mb_synced, stats, None);
     }

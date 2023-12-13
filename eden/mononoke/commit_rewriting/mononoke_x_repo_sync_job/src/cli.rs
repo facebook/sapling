@@ -21,8 +21,12 @@ use mononoke_app::MononokeAppBuilder;
 pub struct InitialImportCommandArgs {
     #[clap(long = "version-name")]
     pub sync_config_version_name: String,
+
     #[clap(flatten)]
     pub changeset_args: ChangesetArgs,
+
+    #[clap(long)]
+    pub no_progress_bar: bool,
 }
 
 #[derive(Debug, Args)]
