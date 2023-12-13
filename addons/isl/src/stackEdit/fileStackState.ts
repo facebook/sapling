@@ -19,20 +19,20 @@ export const Source = Record<SourceProps>({
 });
 type Source = RecordOf<SourceProps>;
 
-const State = Record<FileStackStateProps>({source: Source()});
-type State = RecordOf<FileStackStateProps>;
+const FileStackStateRecord = Record<FileStackStateProps>({source: Source()});
+type FileStackStateRecord = RecordOf<FileStackStateProps>;
 
 /**
  * A stack of file contents with stack editing features.
  */
-export class FileStackState extends SelfUpdate<State> {
-  constructor(value: RecordOf<SourceProps> | string[]) {
+export class FileStackState extends SelfUpdate<FileStackStateRecord> {
+  constructor(value: Source | string[]) {
     if (Array.isArray(value)) {
       const contents: string[] = value;
       const source = Source({type: 'plain', value: List(contents), revLength: contents.length});
-      super(State({source}));
+      super(FileStackStateRecord({source}));
     } else {
-      super(State({source: value}));
+      super(FileStackStateRecord({source: value}));
     }
   }
 
