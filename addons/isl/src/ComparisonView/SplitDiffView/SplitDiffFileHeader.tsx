@@ -136,7 +136,11 @@ export function FileHeader({
           <Icon icon={open ? 'chevron-down' : 'chevron-right'} />
         </VSCodeButton>
       )}
-      {iconType !== undefined && <Icon icon={iconTypeToIcon[iconType]} />}
+      {iconType !== undefined && (
+        <Tooltip title={iconTypeToTooltip[iconType]}>
+          <Icon icon={iconTypeToIcon[iconType]} />
+        </Tooltip>
+      )}
       <div className="split-diff-view-file-path-parts">{filePathParts}</div>
       {fileActions}
     </div>
@@ -153,6 +157,12 @@ const iconTypeToIcon: Record<keyof typeof IconType, string> = {
   Modified: 'diff-modified',
   Added: 'diff-added',
   Removed: 'diff-removed',
+};
+
+const iconTypeToTooltip: Record<keyof typeof IconType, string> = {
+  Modified: t('This file was modified.'),
+  Added: t('This file was added.'),
+  Removed: t('This file was removed.'),
 };
 
 function commonPrefixLength<T>(a: Array<T>, b: Array<T>): number {
