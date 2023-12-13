@@ -201,17 +201,21 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
    * Note this is different from `this.stack[rev].files.get(path)`,
    * since `files` only tracks modified files, not existing files
    * created from the bottom of the stack.
+   *
+   * If `rev` is `-1`, check `bottomFiles`.
    */
   getFile(rev: Rev, path: RepoPath): FileState {
-    for (const logRev of this.log(rev)) {
-      const commit = this.stack.get(logRev);
-      if (commit == null) {
-        return ABSENT_FILE;
-      }
-      const file = commit.files.get(path);
-      if (file !== undefined) {
-        // Commit modified `file`.
-        return file;
+    if (rev > -1) {
+      for (const logRev of this.log(rev)) {
+        const commit = this.stack.get(logRev);
+        if (commit == null) {
+          return ABSENT_FILE;
+        }
+        const file = commit.files.get(path);
+        if (file !== undefined) {
+          // Commit modified `file`.
+          return file;
+        }
       }
     }
     const file = this.bottomFiles.get(path) ?? ABSENT_FILE;
@@ -233,6 +237,9 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
    * - If a file is non-empty, then "absent" flag will be ignored.
    * - If a file is absent, then "copyFrom" and other flags will be ignored.
    * - If the "copyFrom" file does not exist in parent, it'll be ignored.
+   * - If a file is not newly added, "copyFrom" will be ignored.
+   *
+   * `rev` cannot be `-1`. `bottomFiles` cannot be modified.
    */
   setFile(rev: Rev, path: RepoPath, editFile: (f: FileState) => FileState): CommitStackState {
     if (rev < 0) {
@@ -253,9 +260,14 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     // Check "copyFrom".
     const copyFrom = file.copyFrom;
     if (copyFrom != null) {
-      const copyFromFile = this.getFile(rev - 1, copyFrom);
-      if (isAbsent(copyFromFile)) {
+      const p1 = this.singleParentRev(rev) ?? -1;
+      if (!isAbsent(this.getFile(p1, path))) {
         file = file.remove('copyFrom');
+      } else {
+        const copyFromFile = this.getFile(p1, copyFrom);
+        if (isAbsent(copyFromFile)) {
+          file = file.remove('copyFrom');
+        }
       }
     }
     const newStack = this.stack.setIn([rev, 'files', path], file);
@@ -272,7 +284,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     const toVisit = [startRev];
     while (true) {
       const rev = toVisit.pop();
-      if (rev === undefined) {
+      if (rev === undefined || rev < 0) {
         break;
       }
       yield rev;
