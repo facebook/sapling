@@ -14,6 +14,7 @@ import sys
 
 from thrift.transport.TSocket import TSocket
 from thrift.transport.TTransport import TTransportException
+from typing_extensions import Buffer
 
 
 if sys.platform == "win32":
@@ -283,7 +284,7 @@ class WindowsSocketHandle:
         self._checkReturnCode(retsize)
         return buff.raw[0:retsize]
 
-    def recv_into(self, buffer, size: int = 0):
+    def recv_into(self, buffer: Buffer, size: int = 0):
         if size == 0:
             size = len(buffer)
 
