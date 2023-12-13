@@ -84,14 +84,6 @@ function LoadedEditStackModal() {
         </VSCodePanelTab> */}
         <VSCodePanelTab id="tab-split">
           <T>Split</T>
-          <sup
-            style={{
-              color: 'var(--scm-removed-foreground)',
-              marginLeft: 'var(--halfpad)',
-              fontSize: '80%',
-            }}>
-            (Beta)
-          </sup>
         </VSCodePanelTab>
         <VSCodePanelView style={getPanelViewStyle('commits')} id="view-commits">
           {/* Skip rendering (which might trigger slow dependency calculation) if the tab is inactive */}
