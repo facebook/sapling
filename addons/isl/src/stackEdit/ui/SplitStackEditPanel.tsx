@@ -339,6 +339,14 @@ function SplitEditorWithTitle(props: SplitEditorWithTitleProps) {
   }
   const canMoveLeft =
     rev > 0 && (file.copyFrom == null || isAbsent(subStack.getFile(rev - 1, path)));
+  let copyFromText = undefined;
+  if (file.copyFrom != null) {
+    const copyFromFile = subStack.getFile(rev - 1, file.copyFrom);
+    try {
+      // This will throw if copyFromFile is non-text (binary, or too large).
+      copyFromText = subStack.getUtf8Data(copyFromFile);
+    } catch {}
+  }
 
   return (
     <div className="split-commit-file">
@@ -371,6 +379,7 @@ function SplitEditorWithTitle(props: SplitEditorWithTitleProps) {
               stack={fileStack}
               setStack={setStack}
               path={path}
+              copyFromText={copyFromText}
             />
           ) : (
             <NonEditable />
@@ -661,6 +670,14 @@ type SplitFileProps = {
    */
   stack: FileStackState;
 
+  /**
+   * Override the "left side" text (diff against).
+   *
+   * This is useful to provide the text from the "copyFrom" file.
+   * Once set, move left buttons will be disabled.
+   */
+  copyFromText?: string;
+
   /** Function to update the stack. */
   setStack: (stack: FileStackState) => void;
 
@@ -687,7 +704,7 @@ export function SplitFile(props: SplitFileProps) {
   const mainContentRef = useRef<HTMLTableElement | null>(null);
   const [expandedLines, setExpandedLines] = useState<ImSet<LineIdx>>(ImSet);
   const [selectedLineIds, setSelectedLineIds] = useState<ImSet<string>>(ImSet);
-  const {stack, rev, setStack} = props;
+  const {stack, rev, setStack, copyFromText} = props;
 
   // Selection change is a document event, not a <pre> event.
   useEffect(() => {
@@ -720,13 +737,14 @@ export function SplitFile(props: SplitFileProps) {
 
   // Diff with the left side.
   const bText = stack.getRev(rev);
-  const aText = stack.getRev(Math.max(0, rev - 1));
+  const aText = copyFromText ?? stack.getRev(Math.max(0, rev - 1));
   // memo to avoid syntax highlighting repeatedly even when the text hasn't changed
   const bLines = useMemo(() => splitLines(bText), [bText]);
   const aLines = useMemo(() => splitLines(aText), [aText]);
   const abBlocks = diffBlocks(aLines, bLines);
 
   const highlights = useTokenizedContentsOnceVisible(props.path, aLines, bLines, mainContentRef);
+  const hasCopyFrom = copyFromText != null;
 
   const {leftGutter, leftButtons, mainContent, rightGutter, rightButtons, lineKind} =
     computeLinesForFileStackEditor(
@@ -747,6 +765,7 @@ export function SplitFile(props: SplitFileProps) {
       [],
       false,
       false,
+      hasCopyFrom,
     );
 
   const rows = mainContent.map((line, i) => (

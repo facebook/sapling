@@ -48,6 +48,7 @@ export function computeLinesForFileStackEditor(
   rangeInfos: Array<RangeInfo>,
   readOnly: boolean,
   textEdit: boolean,
+  aTextIsOverriden?: boolean,
 ): ComputedFileStackLines {
   const leftGutter: JSX.Element[] = [];
   const leftButtons: JSX.Element[] = [];
@@ -56,7 +57,9 @@ export function computeLinesForFileStackEditor(
   const rightButtons: JSX.Element[] = [];
   const lineKind: Array<string> = [];
 
-  const leftMost = rev <= 1;
+  // Can move left? If `leftIsOverriden` is set (because copyFrom),
+  // disabling moving left by setting leftMost to true.
+  const leftMost = rev <= 1 || aTextIsOverriden === true;
   const rightMost = rev + 1 >= stack.revLength;
 
   // Utility to get the "different" block containing the given b-side line number.
