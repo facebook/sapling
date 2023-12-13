@@ -1,0 +1,13 @@
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+
+oncall("mononoke")
+
+thrift_library(
+    name = "packfile-thrift",
+    languages = [
+        "rust",
+        "cpp2",
+    ],
+    thrift_rust_options = ["deprecated_default_enum_min_i32"],
+    thrift_srcs = {"packfile_thrift.thrift": []},
+)

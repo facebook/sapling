@@ -17,9 +17,14 @@ rust_library(
         "fbsource//third-party/rust:gix-object",
         "fbsource//third-party/rust:gix-pack",
         "fbsource//third-party/rust:pin-project",
+        "fbsource//third-party/rust:quickcheck",
         "fbsource//third-party/rust:sha1",
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tokio",
+        "//eden/mononoke/blobstore:blobstore",
+        "//eden/mononoke/git/packfile/if:packfile-thrift-rust",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//thrift/lib/rust:fbthrift",
     ],
 )
 
@@ -36,6 +41,7 @@ rust_unittest(
         "fbsource//third-party/rust:gix-hash",
         "fbsource//third-party/rust:gix-object",
         "fbsource//third-party/rust:gix-pack",
+        "fbsource//third-party/rust:quickcheck",
         "fbsource//third-party/rust:tempfile",
         ":packfile",
         "//common/rust/shed/fbinit:fbinit",

@@ -13,14 +13,19 @@ path = "test/packfile_test.rs"
 
 [dependencies]
 anyhow = "1.0.75"
+blobstore = { version = "0.1.0", path = "../../blobstore" }
 bytes = { version = "1.1", features = ["serde"] }
+fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 flate2 = { version = "1.0.26", features = ["rust_backend"], default-features = false }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 gix-features = { version = "0.32", features = ["parallel", "rustsha1"] }
 gix-hash = "0.11"
 gix-object = "0.33"
 gix-pack = "0.40"
+mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+packfile_thrift = { version = "0.1.0", path = "if" }
 pin-project = "0.4.30"
+quickcheck = "1.0"
 sha1 = "0.10.5"
 thiserror = "1.0.49"
 tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }

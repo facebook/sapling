@@ -288,6 +288,8 @@ members = [
   "git/import_direct",
   "git/import_tools",
   "git/packfile",
+  "git/packfile/if",
+  "git/packfile/if/types",
   "git/protocol",
   "git_symbolic_refs",
   "gotham_ext",

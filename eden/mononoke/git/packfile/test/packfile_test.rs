@@ -23,9 +23,12 @@ use gix_object::Tag;
 use packfile::bundle::BundleWriter;
 use packfile::pack::DeltaForm;
 use packfile::pack::PackfileWriter;
+use packfile::thrift;
 use packfile::types::to_vec_bytes;
 use packfile::types::BaseObject;
+use packfile::types::GitPackfileBaseItem;
 use packfile::types::PackfileItem;
+use quickcheck::quickcheck;
 use tempfile::NamedTempFile;
 
 async fn get_objects_stream(
@@ -433,4 +436,14 @@ async fn validate_staggered_bundle_generation() -> anyhow::Result<()> {
         .await
         .expect("Expected successful finish of bundle creation");
     Ok(())
+}
+
+quickcheck! {
+    fn git_packfile_base_item_thrift_roundtrip(entry: GitPackfileBaseItem) -> bool {
+        let thrift_entry: thrift::GitPackfileBaseItem = entry.clone().into();
+        let from_thrift_entry: GitPackfileBaseItem = thrift_entry.try_into().expect("thrift roundtrips should always be valid");
+        println!("entry: {:?}", entry);
+        println!("entry_from_thrift: {:?}", from_thrift_entry);
+        entry == from_thrift_entry
+    }
 }
