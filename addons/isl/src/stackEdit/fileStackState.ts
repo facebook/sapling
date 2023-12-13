@@ -12,16 +12,6 @@ import {LineLog} from '../linelog';
 import {Record, List} from 'immutable';
 import {SelfUpdate} from 'shared/immutableExt';
 
-export const Source = Record<SourceProps>({
-  type: 'plain',
-  value: List([]),
-  revLength: 0,
-});
-type Source = RecordOf<SourceProps>;
-
-const FileStackStateRecord = Record<FileStackStateProps>({source: Source()});
-type FileStackStateRecord = RecordOf<FileStackStateProps>;
-
 /**
  * A stack of file contents with stack editing features.
  */
@@ -255,8 +245,17 @@ type SourceProps =
       revLength: number;
     };
 
+export const Source = Record<SourceProps>({
+  type: 'plain',
+  value: List([]),
+  revLength: 0,
+});
+type Source = RecordOf<SourceProps>;
+
 type FileStackStateProps = {
   source: Source;
 };
+const FileStackStateRecord = Record<FileStackStateProps>({source: Source()});
+type FileStackStateRecord = RecordOf<FileStackStateProps>;
 
 export type {Rev};
