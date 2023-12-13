@@ -311,6 +311,16 @@ describe('CommitStackState', () => {
         '0:./z.txt(11) 1:A/z.txt(22) 2:C/z.txt',
       ]);
     });
+
+    it('with rename tracking disabled', () => {
+      const stack = new CommitStackState(exportStack1).buildFileStacks({followRenames: false});
+      // no x.txt -> y.txt rename
+      expect(stack.describeFileStacks()).toStrictEqual([
+        '0:./x.txt 1:A/x.txt(33) 2:B/x.txt',
+        '0:./z.txt(11) 1:A/z.txt(22) 2:C/z.txt',
+        '0:./y.txt 1:B/y.txt(33)',
+      ]);
+    });
   });
 
   describe('calculates dependencies', () => {

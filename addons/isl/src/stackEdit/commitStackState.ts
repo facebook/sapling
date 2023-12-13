@@ -516,16 +516,21 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
 
   /**
    * (Re-)build file stacks and mappings.
+   *
+   * If `followRenames` is true, then attempt to follow renames
+   * when building linelogs (default: true).
    */
-  buildFileStacks(): CommitStackState {
+  buildFileStacks(opts?: BuildFileStackOptions): CommitStackState {
     const fileStacks: FileStackState[] = [];
     let commitToFile = ImMap<CommitIdx, FileIdx>();
     let fileToCommit = ImMap<FileIdx, CommitIdx>();
 
+    const followRenames = opts?.followRenames ?? true;
+
     this.assertRevOrder();
 
     const processFile = (state: CommitStackState, rev: Rev, file: FileState, path: RepoPath) => {
-      const [prevRev, prevPath, prevFile] = state.parentFile(rev, path);
+      const [prevRev, prevPath, prevFile] = state.parentFile(rev, path, followRenames);
       if (isUtf8(file)) {
         // File was added or modified and has utf-8 content.
         let fileAppended = false;
@@ -583,7 +588,8 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
       // Process order: renames, non-copy, copies.
       const priorityFiles: [number, RepoPath, FileState][] = [...files.entries()].map(
         ([path, file]) => {
-          const priority = isRename(commit, path) ? 0 : file.copyFrom == null ? 1 : 2;
+          const priority =
+            followRenames && isRename(commit, path) ? 0 : file.copyFrom == null ? 1 : 2;
           return [priority, path, file];
         },
       );
@@ -614,8 +620,8 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
   }
 
   /** Build file stacks if it's not present. */
-  maybeBuildFileStacks(): CommitStackState {
-    return this.fileStacks.size === 0 ? this.buildFileStacks() : this;
+  maybeBuildFileStacks(opts?: BuildFileStackOptions): CommitStackState {
+    return this.fileStacks.size === 0 ? this.buildFileStacks(opts) : this;
   }
 
   /** Invalidate file stacks so they need to be rebuilt from commit contents. */
@@ -1726,6 +1732,8 @@ export function reorderedRevs(state: CommitStackState, rev: number): Rev[] {
   order.splice(rev, 2, rev2, rev1);
   return order;
 }
+
+type BuildFileStackOptions = {followRenames?: boolean};
 
 type DateTupleProps = {
   /** UTC Unix timestamp in seconds. */
