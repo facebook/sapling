@@ -274,6 +274,28 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     return this.set('stack', newStack);
   }
 
+  /**
+   * Get a list of paths changed by a commit.
+   *
+   * If `text` is set to `true`, only return text (content editable) paths.
+   * If `text` is set to `false`, only return non-text (not content editable) paths.
+   */
+  getPaths(rev: Rev, props?: {text?: boolean}): RepoPath[] {
+    const commit = this.stack.get(rev);
+    if (commit == null) {
+      return [];
+    }
+    const text = props?.text;
+    const result = [];
+    for (const [path, file] of commit.files) {
+      if (text != null && isUtf8(file) !== text) {
+        continue;
+      }
+      result.push(path);
+    }
+    return result.sort();
+  }
+
   /** Get all file paths ever referred (via "copy from") or changed in the stack. */
   getAllPaths(): RepoPath[] {
     return [...this.bottomFiles.keys()].sort();
