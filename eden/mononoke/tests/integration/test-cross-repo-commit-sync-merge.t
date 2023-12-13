@@ -75,6 +75,7 @@ insert sync mapping entry
 
 run the sync again
   $ mononoke_x_repo_sync 1 0 once --target-bookmark master_bookmark --commit fbsource_master |& grep -v "using repo"
+  * Starting session with id * (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
   * Checking if * is already synced 1->0 (glob)
   * 2 unsynced ancestors of 46bab414a4d4a87666622accf4af5e1450feba6bfd5f41467f5b5d671b41aa55 (glob)

@@ -42,6 +42,7 @@ use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::info;
+use slog::trace;
 use slog::warn;
 use synced_commit_mapping::SyncedCommitMapping;
 
@@ -430,6 +431,18 @@ where
 
     let (unsynced_ancestors, _unsynced_ancestors_versions) =
         find_toposorted_unsynced_ancestors(ctx, commit_syncer, cs_id.clone()).await?;
+
+    info!(
+        ctx.logger(),
+        "Found {0} unsynced ancestors",
+        unsynced_ancestors.len()
+    );
+
+    trace!(
+        ctx.logger(),
+        "Unsynced ancestors: {0:#?}",
+        &unsynced_ancestors
+    );
 
     let mut res = vec![];
     // Sync all of the ancestors first

@@ -53,6 +53,7 @@
 -- The second bookmark move of master_bookmark to S_D fails with "No common pushrebase root for master_bookmark". This is a bug.
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO mutable_counters (repo_id, name, value) VALUES (0, 'xreposync_from_1', 0)";
   $ mononoke_x_repo_sync 1 0 tail --catch-up-once
+  * Starting session with id * (glob)
   * queue size is 3 (glob)
   * processing log entry #1 (glob)
   * 0 unsynced ancestors of 1ba347e63a4bf200944c22ade8dbea038dd271ef97af346ba4ccfaaefb10dd4d (glob)

@@ -606,6 +606,12 @@ fn main(fb: FacebookInit) -> Result<()> {
         scuba
     });
 
+    info!(
+        ctx.logger(),
+        "Starting session with id {}",
+        metadata.session_id()
+    );
+
     app.run_with_monitoring_and_logging(
         |app| async_main(app, ctx.clone()),
         "x_repo_sync_job",
