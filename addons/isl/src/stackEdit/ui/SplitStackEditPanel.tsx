@@ -288,11 +288,7 @@ function SplitEditorWithTitle(props: SplitEditorWithTitleProps) {
   const {subStack, path, fileStack, fileIdx, fileRev, collapsed, toggleCollapsed, rev} = props;
   const file = subStack.getFile(rev, path);
 
-  const setStack = (newFileStack: FileStackState) => {
-    if (fileIdx == null || fileRev == null) {
-      return;
-    }
-    const newSubStack = subStack.setFileStack(fileIdx, newFileStack);
+  const setSubStack = (newSubStack: CommitStackState) => {
     const [startRev, endRev] = findStartEndRevs(stackEdit);
     if (startRev != null && endRev != null) {
       const newCommitStack = commitStack.applySubStack(startRev, endRev + 1, newSubStack);
@@ -306,10 +302,13 @@ function SplitEditorWithTitle(props: SplitEditorWithTitleProps) {
     }
   };
 
-  const moveEntireFile = (dir: 'left' | 'right') => {
-    if (fileIdx == null || fileRev == null || fileStack == null) {
+  const setStack = (newFileStack: FileStackState) => {
+    if (fileIdx == null || fileRev == null) {
       return;
     }
+    const newSubStack = subStack.setFileStack(fileIdx, newFileStack);
+    setSubStack(newSubStack);
+  };
 
     const aRev = fileRev - 1;
     const bRev = fileRev;
