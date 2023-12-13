@@ -16,6 +16,11 @@ use crate::scuba_common::hex;
 use crate::scuba_common::report_megarepo_target;
 use crate::scuba_common::Reported;
 
+/// To avoid logging very large numbers of commit ids to scuba, we limit
+/// requests that potentially involve unbounded numbers of commits to logging
+/// just the first few.
+const COMMIT_LIMIT: usize = 10;
+
 /// A trait for logging a thrift `Params` struct to scuba.
 ///
 /// Common and meaningful parameters (e.g. `other_commit` or
@@ -196,9 +201,39 @@ impl AddScubaParams for thrift::RepoResolveCommitPrefixParams {
     }
 }
 
-impl AddScubaParams for thrift::RepoStackInfoParams {}
+impl AddScubaParams for thrift::RepoStackInfoParams {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add(
+            "param_first_n_commits",
+            self.heads
+                .iter()
+                .take(COMMIT_LIMIT)
+                .map(CommitIdExt::to_string)
+                .collect::<ScubaValue>(),
+        );
+        scuba.add("param_commit_count", self.heads.len());
+        scuba.add("param_limit", self.limit);
+        self.identity_schemes.add_scuba_params(scuba);
+    }
+}
 
-impl AddScubaParams for thrift::RepoPrepareCommitsParams {}
+impl AddScubaParams for thrift::RepoPrepareCommitsParams {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add(
+            "param_first_n_commits",
+            self.commits
+                .iter()
+                .take(COMMIT_LIMIT)
+                .map(CommitIdExt::to_string)
+                .collect::<ScubaValue>(),
+        );
+        scuba.add("param_commit_count", self.commits.len());
+        scuba.add(
+            "param_derived_data_type",
+            self.derived_data_type.to_string(),
+        );
+    }
+}
 
 impl AddScubaParams for thrift::RepoUploadFileContentParams {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
