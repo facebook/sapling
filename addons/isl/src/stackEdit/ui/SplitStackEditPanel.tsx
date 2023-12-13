@@ -318,11 +318,27 @@ function SplitEditorWithTitle(props: SplitEditorWithTitleProps) {
     //             v1--v2--v3--v4--v5
     // Move left:
     //             v1--v3--v3--v4--v5 (replace v2 with v3)
+    //             If v3 has 'copyFrom', drop 'copyFrom' on the second 'v3'.
+    //             If v2 had 'copyFrom', preserve it on the first 'v3'.
     // Move right:
     //             v1--v2--v2--v4--v5 (replace v3 with v2)
+    //             If v3 has 'copyFrom', update 'copyFrom' on 'v4'.
+    //             v4 should not have 'copyFrom'.
     const [fromRev, toRev] = dir === 'left' ? [rev, rev - 1] : [rev - 1, rev];
     const fromFile = subStack.getFile(fromRev, path);
-    const newStack = subStack.setFile(toRev, path, _f => fromFile);
+    let newStack = subStack.setFile(toRev, path, oldFile => {
+      if (dir === 'left' && oldFile.copyFrom != null) {
+        return fromFile.set('copyFrom', oldFile.copyFrom);
+      }
+      return fromFile;
+    });
+    if (file.copyFrom != null) {
+      if (dir === 'right') {
+        newStack = newStack.setFile(rev + 1, path, f => f.set('copyFrom', file.copyFrom));
+      } else {
+        newStack = newStack.setFile(rev, path, f => f.remove('copyFrom'));
+      }
+    }
     bumpStackEditMetric('splitMoveFile');
     setSubStack(newStack);
   };
