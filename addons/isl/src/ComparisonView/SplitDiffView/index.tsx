@@ -48,34 +48,6 @@ export function SplitDiffView({
   const [isContentCollapsed, setIsContentCollapsed] = useState(isGenerated);
 
   const preamble = [];
-  if (patch.type === DiffType.Added) {
-    preamble.push(
-      <FileStatusBanner key="added" color="added">
-        {t('This file was added')}
-      </FileStatusBanner>,
-    );
-  }
-  if (patch.type === DiffType.Removed) {
-    preamble.push(
-      <FileStatusBanner key="deleted" color="removed">
-        {t('This file was removed')}
-      </FileStatusBanner>,
-    );
-  }
-  if (patch.type === DiffType.Renamed) {
-    preamble.push(
-      <FileStatusBanner key="renamed" color="modified">
-        {t('This file was renamed from')} {patch.oldFileName ?? ''}
-      </FileStatusBanner>,
-    );
-  }
-  if (patch.type === DiffType.Copied) {
-    preamble.push(
-      <FileStatusBanner key="copied" color="added">
-        {t('This file was copied from')} {patch.oldFileName ?? ''}
-      </FileStatusBanner>,
-    );
-  }
   if (generatedStatus != null && generatedStatus !== GeneratedStatus.Manual) {
     preamble.push(
       <FileStatusBanner key="generated" color={'modified'}>
@@ -88,6 +60,10 @@ export function SplitDiffView({
       </FileStatusBanner>,
     );
   }
+
+  // A file must be newly created when it is copied or renamed.
+  const diffType =
+    patch.type === DiffType.Copied || patch.type === DiffType.Renamed ? DiffType.Added : patch.type;
 
   const fileActions = (
     <>
@@ -120,7 +96,8 @@ export function SplitDiffView({
     <div className="split-diff-view">
       <FileHeader
         path={fileName}
-        diffType={patch.type}
+        copyFrom={patch.oldFileName}
+        diffType={diffType}
         open={!collapsed}
         onChangeOpen={open => ctx.setCollapsed(!open)}
         fileActions={fileActions}
