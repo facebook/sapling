@@ -96,7 +96,7 @@ describe('CommitOperation', () => {
           'commit',
           '--addremove',
           '--message',
-          `Temporary Commit at ${new Date().toLocaleString()}`,
+          expect.stringContaining(`Temporary Commit at`),
           {type: 'repo-relative-file', path: 'file1.txt'},
           {type: 'repo-relative-file', path: 'file3.txt'},
         ],

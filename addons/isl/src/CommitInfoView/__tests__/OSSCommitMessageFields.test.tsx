@@ -47,12 +47,7 @@ line 2`,
         Title: '',
         Description: 'my summary\nline 2',
       }),
-    ).toEqual(
-      `Temporary Commit at ${new Date().toLocaleString()}
-
-my summary
-line 2`,
-    );
+    ).toEqual(expect.stringMatching(/Temporary Commit at .*\n\nmy summary\nline 2/));
   });
 
   it('leading spaces in title is OK', () => {
