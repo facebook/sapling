@@ -141,27 +141,43 @@ describe('CommitStackState', () => {
     expect([...stack.log(3)]).toStrictEqual([3, 2, 1, 0]);
   });
 
-  it('logs file history', () => {
-    const stack = new CommitStackState(exportStack1);
-    expect([...stack.logFile(3, 'x.txt')]).toStrictEqual([
-      [2, 'x.txt'],
-      [1, 'x.txt'],
-    ]);
-    expect([...stack.logFile(3, 'y.txt')]).toStrictEqual([[2, 'y.txt']]);
-    expect([...stack.logFile(3, 'z.txt')]).toStrictEqual([
-      [3, 'z.txt'],
-      [1, 'z.txt'],
-    ]);
-    // Changes in not requested commits (rev 0) are ignored.
-    expect([...stack.logFile(3, 'k.txt')]).toStrictEqual([]);
-  });
+  describe('log file history', () => {
+    // [rev, path] => [rev, path, file]
+    const extend = (stack: CommitStackState, revPathPairs: Array<[Rev, string]>) => {
+      return revPathPairs.map(([rev, path]) => {
+        const file = stack.get(rev)?.files.get(path);
+        return [rev, path, file];
+      });
+    };
 
-  it('logs file history following renames', () => {
-    const stack = new CommitStackState(exportStack1);
-    expect([...stack.logFile(3, 'y.txt', true)]).toStrictEqual([
-      [2, 'y.txt'],
-      [1, 'x.txt'],
-    ]);
+    it('logs file history', () => {
+      const stack = new CommitStackState(exportStack1);
+      expect([...stack.logFile(3, 'x.txt')]).toStrictEqual(
+        extend(stack, [
+          [2, 'x.txt'],
+          [1, 'x.txt'],
+        ]),
+      );
+      expect([...stack.logFile(3, 'y.txt')]).toStrictEqual(extend(stack, [[2, 'y.txt']]));
+      expect([...stack.logFile(3, 'z.txt')]).toStrictEqual(
+        extend(stack, [
+          [3, 'z.txt'],
+          [1, 'z.txt'],
+        ]),
+      );
+      // Changes in not requested commits (rev 0) are ignored.
+      expect([...stack.logFile(3, 'k.txt')]).toStrictEqual([]);
+    });
+
+    it('logs file history following renames', () => {
+      const stack = new CommitStackState(exportStack1);
+      expect([...stack.logFile(3, 'y.txt', true)]).toStrictEqual(
+        extend(stack, [
+          [2, 'y.txt'],
+          [1, 'x.txt'],
+        ]),
+      );
+    });
   });
 
   it('provides file contents at given revs', () => {

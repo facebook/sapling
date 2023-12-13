@@ -329,7 +329,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     startRev: Rev,
     startPath: RepoPath,
     followRenames = false,
-  ): Generator<[Rev, RepoPath], void> {
+  ): Generator<[Rev, RepoPath, FileState], void> {
     let path = startPath;
     for (const rev of this.log(startRev)) {
       const commit = this.stack.get(rev);
@@ -338,7 +338,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
       }
       const file = commit.files.get(path);
       if (file !== undefined) {
-        yield [rev, path];
+        yield [rev, path, file];
       }
       if (followRenames && file?.copyFrom) {
         path = file.copyFrom;
@@ -479,10 +479,10 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     let prevPath = path;
     let prevFile = unwrap(this.bottomFiles.get(path));
     const logFile = this.logFile(rev, path, followRenames);
-    for (const [logRev, logPath] of logFile) {
+    for (const [logRev, logPath, file] of logFile) {
       if (logRev !== rev) {
         [prevRev, prevPath] = [logRev, logPath];
-        prevFile = unwrap(this.stack.get(prevRev)?.files?.get(prevPath));
+        prevFile = file;
         break;
       }
     }
