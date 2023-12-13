@@ -16,6 +16,7 @@ use std::time::Duration;
 use std::time::Instant;
 use std::time::SystemTime;
 
+use anyhow::anyhow;
 use anyhow::Result;
 use arc_swap::ArcSwap;
 use async_runtime::block_on;
@@ -58,6 +59,13 @@ impl BackingStore {
     /// Initialize `BackingStore` with the `allow_retries` setting.
     pub fn new<P: AsRef<Path>>(root: P, allow_retries: bool) -> Result<Self> {
         Self::new_with_config(root.as_ref(), allow_retries, &[])
+    }
+
+    pub fn name(&self) -> Result<String> {
+        match self.maybe_reload().repo.repo_name() {
+            Some(repo_name) => Ok(repo_name.to_string()),
+            None => Err(anyhow!("no repo name")),
+        }
     }
 
     /// Initialize `BackingStore` with the `allow_retries` setting and extra configs.

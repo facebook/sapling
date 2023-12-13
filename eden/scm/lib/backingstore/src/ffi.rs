@@ -103,6 +103,8 @@ pub(crate) mod ffi {
             options: &BackingStoreOptions,
         ) -> Result<Box<BackingStore>>;
 
+        pub unsafe fn sapling_backingstore_get_name(store: &BackingStore) -> Result<String>;
+
         pub fn sapling_backingstore_get_manifest(
             store: &mut BackingStore,
             node: &[u8],
@@ -168,6 +170,10 @@ pub unsafe fn sapling_backingstore_new(
     let repo = CStr::from_ptr(repository.as_ptr()).to_str()?;
     let store = BackingStore::new(repo, options.allow_retries)?;
     Ok(Box::new(store))
+}
+
+pub unsafe fn sapling_backingstore_get_name(store: &BackingStore) -> Result<String> {
+    store.name()
 }
 
 pub fn sapling_backingstore_get_manifest(

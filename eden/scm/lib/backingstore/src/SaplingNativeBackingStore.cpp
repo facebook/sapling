@@ -32,7 +32,13 @@ SaplingNativeBackingStore::SaplingNativeBackingStore(
               .into_raw(),
           [](BackingStore* backingStore) {
             auto box = rust::Box<BackingStore>::from_raw(backingStore);
-          }} {}
+          }} {
+  try {
+    repoName_ = std::string(sapling_backingstore_get_name(*store_.get()));
+  } catch (const rust::Error& error) {
+    XLOG(DBG2) << "Error while repo name from backingstore: " << error.what();
+  }
+}
 
 std::optional<ManifestId> SaplingNativeBackingStore::getManifestNode(
     NodeId node) {

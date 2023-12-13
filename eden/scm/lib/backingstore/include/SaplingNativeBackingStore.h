@@ -59,6 +59,10 @@ class SaplingNativeBackingStore {
       std::string_view repository,
       const BackingStoreOptions& options);
 
+  std::string_view getRepoName() const {
+    return repoName_;
+  }
+
   std::optional<ManifestId> getManifestNode(NodeId node);
 
   folly::Try<std::shared_ptr<Tree>> getTree(NodeId node, bool local);
@@ -92,6 +96,7 @@ class SaplingNativeBackingStore {
  private:
   std::unique_ptr<sapling::BackingStore, void (*)(sapling::BackingStore*)>
       store_;
+  std::string repoName_;
 };
 
 } // namespace sapling

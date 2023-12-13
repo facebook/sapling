@@ -185,14 +185,12 @@ HgBackingStore::HgBackingStore(
       config_(std::move(config)),
       serverThreadPool_(serverThreadPool),
       logger_(std::move(logger)),
-      repoName_(HgImporter(repository, stats.copy()).getOptions().repoName),
       datapackStore_(
           repository,
           computeOptions(),
           config_,
           logger_,
-          faultInjector,
-          repoName_) {}
+          faultInjector) {}
 
 /**
  * Create an HgBackingStore suitable for use in unit tests. It uses an inline
@@ -212,14 +210,12 @@ HgBackingStore::HgBackingStore(
       config_(std::move(config)),
       serverThreadPool_{importThreadPool_.get()},
       logger_(nullptr),
-      repoName_(importer->getOptions().repoName),
       datapackStore_(
           repository,
           testOptions(),
           config_,
           logger_,
-          faultInjector,
-          repoName_) {}
+          faultInjector) {}
 
 HgBackingStore::~HgBackingStore() = default;
 
@@ -358,7 +354,7 @@ folly::Future<TreePtr> HgBackingStore::fetchTreeFromImporter(
                  // No fallback to importer, record miss and return error
                  if (logger_) {
                    logger_->logEvent(FetchMiss{
-                       repoName_,
+                       datapackStore_.getRepoName(),
                        FetchMiss::BackingStore,
                        FetchMiss::Tree,
                        tree.exception().what().toStdString(),
@@ -648,7 +644,7 @@ SemiFuture<BlobPtr> HgBackingStore::fetchBlobFromHgImporter(
                  // No fallback to importer, record miss and return error
                  if (logger_) {
                    logger_->logEvent(FetchMiss{
-                       repoName_,
+                       datapackStore_.getRepoName(),
                        FetchMiss::BackingStore,
                        FetchMiss::Blob,
                        blob.exception().what().toStdString(),

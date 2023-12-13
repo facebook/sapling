@@ -158,7 +158,7 @@ void HgDatapackStore::getTreeBatch(const ImportRequestsList& importRequests) {
         if (content.hasException()) {
           if (logger_) {
             logger_->logEvent(FetchMiss{
-                repoName_,
+                store_.getRepoName(),
                 FetchMiss::BackingStore,
                 FetchMiss::Tree,
                 content.exception().what().toStdString(),
@@ -285,7 +285,7 @@ void HgDatapackStore::getBlobBatch(const ImportRequestsList& importRequests) {
         if (content.hasException()) {
           if (logger_) {
             logger_->logEvent(FetchMiss{
-                repoName_,
+                store_.getRepoName(),
                 FetchMiss::BackingStore,
                 FetchMiss::Blob,
                 content.exception().what().toStdString(),
@@ -383,7 +383,7 @@ void HgDatapackStore::getBlobMetadataBatch(
         if (auxTry.hasException()) {
           if (logger_) {
             logger_->logEvent(FetchMiss{
-                repoName_,
+                store_.getRepoName(),
                 FetchMiss::BackingStore,
                 FetchMiss::BlobMetadata,
                 auxTry.exception().what().toStdString(),

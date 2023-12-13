@@ -90,9 +90,7 @@ struct HgDatapackStoreTest : TestRepo, ::testing::Test {
       options,
       edenConfig,
       nullptr,
-      &faultInjector,
-      importer.getOptions().repoName,
-  };
+      &faultInjector};
   std::shared_ptr<MemoryLocalStore> localStore{
       std::make_shared<MemoryLocalStore>(stats.copy())};
 };

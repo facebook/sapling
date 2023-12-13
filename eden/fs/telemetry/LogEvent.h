@@ -395,14 +395,14 @@ struct FetchMiss {
 
   static constexpr const char* type = "fetch_miss";
 
-  std::string repo_source;
+  std::string_view repo_source;
   MissSource miss_source;
   MissType miss_type;
   std::string reason;
   bool retry;
 
   void populate(DynamicEvent& event) const {
-    event.addString("repo_source", repo_source);
+    event.addString("repo_source", std::string(repo_source));
     if (miss_source == BackingStore) {
       event.addString("miss_source", "backingstore");
     } else {

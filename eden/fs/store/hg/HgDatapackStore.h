@@ -10,6 +10,7 @@
 #include <folly/Range.h>
 #include <folly/futures/Promise.h>
 #include <optional>
+#include <string_view>
 
 #include "eden/fs/model/BlobFwd.h"
 #include "eden/fs/model/BlobMetadataFwd.h"
@@ -48,13 +49,15 @@ class HgDatapackStore {
       const Options& options,
       std::shared_ptr<ReloadableConfig> config,
       std::shared_ptr<StructuredLogger> logger,
-      FaultInjector* FOLLY_NONNULL faultInjector,
-      std::string repoName)
+      FaultInjector* FOLLY_NONNULL faultInjector)
       : store_{repository.view(), options},
         config_{std::move(config)},
         logger_{std::move(logger)},
-        faultInjector_{*faultInjector},
-        repoName_{std::move(repoName)} {}
+        faultInjector_{*faultInjector} {}
+
+  std::string_view getRepoName() const {
+    return store_.getRepoName();
+  }
 
   std::optional<Hash20> getManifestNode(const ObjectId& commitId);
 
@@ -156,7 +159,6 @@ class HgDatapackStore {
   std::shared_ptr<ReloadableConfig> config_;
   std::shared_ptr<StructuredLogger> logger_;
   FaultInjector& faultInjector_;
-  std::string repoName_;
 
   mutable RequestMetricsScope::LockedRequestWatchList liveBatchedBlobWatches_;
   mutable RequestMetricsScope::LockedRequestWatchList liveBatchedTreeWatches_;
