@@ -216,6 +216,8 @@ py_class!(class mutationstore |py| {
         Ok(entry.is_some())
     }
 
+    /// get(succ) -> Optional[mutationentry].
+    /// Query predecessor entry by a successor.
     def get(&self, succ: &PyBytes) -> PyResult<Option<mutationentry>> {
         let succ = Node::from_slice(succ.data(py)).map_pyerr(py)?;
         let ms = self.mut_store(py).borrow();
@@ -238,6 +240,7 @@ py_class!(class mutationstore |py| {
         Ok(succ)
     }
 
+    /// Query successors by a predecessor.
     def getsuccessorssets(&self, node: &PyBytes) -> PyResult<Vec<Vec<PyBytes>>> {
         let node = Node::from_slice(node.data(py)).map_pyerr(py)?;
         let ms = self.mut_store(py).borrow();

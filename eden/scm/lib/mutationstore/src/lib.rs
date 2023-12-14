@@ -293,6 +293,7 @@ impl MutationStore {
         Ok(obsoleted.flatten().await?)
     }
 
+    /// Query successors by a predecessor.
     pub fn get_successors_sets(&self, node: Node) -> Result<Vec<Vec<Node>>> {
         let mut successors_sets = Vec::new();
         for entry in self.log.lookup(INDEX_PRED, node)? {
@@ -305,6 +306,7 @@ impl MutationStore {
         Ok(successors_sets)
     }
 
+    /// Query predecessors by a successor. Consider split.
     pub fn get_predecessors(&self, node: Node) -> Result<Vec<Node>> {
         let mut lookup = self
             .log
@@ -327,6 +329,7 @@ impl MutationStore {
         Ok(mutation_entry)
     }
 
+    /// Query predecessor entry by a successor.
     pub fn get(&self, succ: Node) -> Result<Option<MutationEntry>> {
         let mutation_entry = match self.log.lookup(INDEX_SUCC, succ)?.next() {
             Some(entry) => Some(MutationEntry::deserialize(&mut Cursor::new(entry?))?),
