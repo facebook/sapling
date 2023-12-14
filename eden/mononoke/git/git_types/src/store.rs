@@ -27,6 +27,8 @@ use futures::StreamExt;
 use futures::TryStreamExt;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::BlobstoreKey;
+use packfile::types::BaseObject;
+use packfile::types::GitPackfileBaseItem;
 
 use crate::delta::DeltaInstructionChunk;
 use crate::delta::DeltaInstructionChunkId;
@@ -46,6 +48,7 @@ impl_loadable_storable! {
 }
 
 const GIT_OBJECT_PREFIX: &str = "git_object";
+const GIT_PACKFILE_BASE_ITEM_PREFIX: &str = "git_packfile_base_item";
 const SEPARATOR: &str = ".";
 
 /// Free function for uploading serialized git objects
@@ -127,6 +130,71 @@ where
         )
     })?;
     Ok(object.into())
+}
+
+/// Free function for uploading packfile item for git base object
+#[allow(dead_code)]
+pub async fn upload_packfile_base_item<B>(
+    ctx: &CoreContext,
+    blobstore: &B,
+    git_hash: &gix_hash::oid,
+    raw_content: Vec<u8>,
+) -> anyhow::Result<(), GitError>
+where
+    B: Blobstore + Clone,
+{
+    // Check if packfile base item can be constructed from the provided bytes
+    let packfile_base_item = BaseObject::new(Bytes::from(raw_content))
+        .and_then(GitPackfileBaseItem::try_from)
+        .map_err(|e| {
+            GitError::InvalidContent(
+                git_hash.to_hex().to_string(),
+                anyhow::anyhow!(e.to_string()).into(),
+            )
+        })?;
+
+    // The bytes are valid, upload to blobstore with the key:
+    // git_packfile_base_item_{hex-value-of-hash}
+    let blobstore_key = format!(
+        "{}{}{}",
+        GIT_PACKFILE_BASE_ITEM_PREFIX,
+        SEPARATOR,
+        git_hash.to_hex()
+    );
+    blobstore
+        .put(
+            ctx,
+            blobstore_key,
+            packfile_base_item.into_blobstore_bytes(),
+        )
+        .await
+        .map_err(|e| GitError::StorageFailure(git_hash.to_hex().to_string(), e.into()))
+}
+
+/// Free function for fetching stored packfile item for base git object
+#[allow(dead_code)]
+pub async fn fetch_packfile_base_item<B>(
+    ctx: &CoreContext,
+    blobstore: &B,
+    git_hash: &gix_hash::oid,
+) -> anyhow::Result<GitPackfileBaseItem, GitError>
+where
+    B: Blobstore + Clone,
+{
+    let blobstore_key = format!(
+        "{}{}{}",
+        GIT_PACKFILE_BASE_ITEM_PREFIX,
+        SEPARATOR,
+        git_hash.to_hex()
+    );
+    let object_bytes = blobstore
+        .get(ctx, &blobstore_key)
+        .await
+        .map_err(|e| GitError::StorageFailure(git_hash.to_hex().to_string(), e.into()))?
+        .ok_or_else(|| GitError::NonExistentObject(git_hash.to_hex().to_string()))?
+        .into_raw_bytes();
+    GitPackfileBaseItem::from_encoded_bytes(object_bytes)
+        .map_err(|_| GitError::InvalidPackfileItem(git_hash.to_hex().to_string()))
 }
 
 /// Struct containing the information pertaining to stored chunks of raw instructions
@@ -278,5 +346,51 @@ impl Loadable for DeltaInstructionChunkId {
         let bytes = get.await?.ok_or(LoadableError::Missing(blobstore_key))?;
         DeltaInstructionChunk::from_encoded_bytes(bytes.into_raw_bytes())
             .map_err(LoadableError::Error)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use anyhow::Result;
+    use bytes::Bytes;
+    use fbinit::FacebookInit;
+    use fixtures::TestRepoFixture;
+    use gix_hash::ObjectId;
+    use gix_object::Object;
+    use gix_object::Tag;
+    use packfile::types::to_vec_bytes;
+    use packfile::types::BaseObject;
+    use repo_blobstore::RepoBlobstoreArc;
+
+    use super::*;
+
+    #[fbinit::test]
+    async fn store_and_load_packfile_base_item(fb: FacebookInit) -> Result<()> {
+        let repo = fixtures::Linear::getrepo(fb).await;
+        let ctx = CoreContext::test_mock(fb);
+        let blobstore = repo.repo_blobstore_arc();
+        // Create a random Git object and get its bytes
+        let tag_bytes = Bytes::from(to_vec_bytes(&Object::Tag(Tag {
+            target: ObjectId::empty_tree(gix_hash::Kind::Sha1),
+            target_kind: gix_object::Kind::Tree,
+            name: "TreeTag".into(),
+            tagger: None,
+            message: "Tag pointing to a tree".into(),
+            pgp_signature: None,
+        }))?);
+        // Create the base object using the Git bytes. This will be used later for comparision
+        let base_object = BaseObject::new(tag_bytes.clone())?;
+        // Get the hash of the created Git object
+        let tag_hash = base_object.hash().to_owned();
+        // Validate that storing the Git object bytes as a packfile base item is successful
+        let result =
+            upload_packfile_base_item(&ctx, &blobstore, &tag_hash, tag_bytes.to_vec()).await;
+        assert!(result.is_ok());
+        // Fetch the uploaded packfile base item and validate that it corresponds to the same base object
+        let fetched_packfile_base_item =
+            fetch_packfile_base_item(&ctx, &blobstore, &tag_hash).await?;
+        let original_packfile_base_item: GitPackfileBaseItem = base_object.try_into()?;
+        assert_eq!(fetched_packfile_base_item, original_packfile_base_item);
+        anyhow::Ok(())
     }
 }
