@@ -266,6 +266,89 @@ EOF
 
 }
 
+function update_commit_sync_map_for_new_repo_import {
+  cat > "$COMMIT_SYNC_CONF/all" << EOF
+{
+  "repos": {
+    "megarepo_test": {
+      "versions": [
+        {
+          "large_repo_id": 0,
+          "common_pushrebase_bookmarks": ["master_bookmark"],
+          "small_repos": [
+            {
+              "repoid": 1,
+              "bookmark_prefix": "bookprefix/",
+              "default_action": "prepend_prefix",
+              "default_prefix": "smallrepofolder",
+              "direction": "large_to_small",
+              "mapping": {
+                "non_path_shifting": "non_path_shifting"
+              }
+            }
+          ],
+          "version_name": "test_version"
+        },
+        {
+          "large_repo_id": 0,
+          "common_pushrebase_bookmarks": ["master_bookmark"],
+          "small_repos": [
+            {
+              "repoid": 2,
+              "bookmark_prefix": "imported_repo/",
+              "default_action": "prepend_prefix",
+              "default_prefix": "imported_repo",
+              "direction": "large_to_small",
+              "mapping": {}
+            }
+          ],
+          "version_name": "imported_noop"
+        },
+        {
+          "large_repo_id": 0,
+          "common_pushrebase_bookmarks": ["master_bookmark"],
+          "small_repos": [
+            {
+              "repoid": 1,
+              "bookmark_prefix": "bookprefix/",
+              "default_action": "prepend_prefix",
+              "default_prefix": "smallrepofolder",
+              "direction": "large_to_small",
+              "mapping": {
+                "non_path_shifting": "non_path_shifting"
+              }
+            },
+            {
+              "repoid": 2,
+              "bookmark_prefix": "imported_repo/",
+              "default_action": "prepend_prefix",
+              "default_prefix": "imported_repo",
+              "direction": "large_to_small",
+              "mapping": {}
+            }
+          ],
+          "version_name": "new_version"
+        }
+      ],
+      "common": {
+        "common_pushrebase_bookmarks": ["master_bookmark"],
+        "large_repo_id": 0,
+        "small_repos": {
+          1: {
+            "bookmark_prefix": "bookprefix/"
+          },
+          2: {
+            "bookmark_prefix": "imported_repo/"
+          }
+        }
+      }
+    }
+  }
+}
+EOF
+
+}
+
 function init_large_small_repo() {
   create_large_small_repo
   start_large_small_repo "$@"
