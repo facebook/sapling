@@ -56,6 +56,7 @@ macro_rules! impl_commit_graph_tests {
             test_children,
             test_ancestors_difference_segments_1,
             test_ancestors_difference_segments_2,
+            test_ancestors_difference_segments_3,
             test_process_topologically,
             test_minimize_frontier,
         );
@@ -1036,7 +1037,7 @@ pub async fn test_ancestors_difference_segments_1(
            \         \    /
             F-G-H     M  /
              \       /  /
-              I-J---K--/
+              I-J---K--/---Q---R
                  \
                   \---------P
         ",
@@ -1055,6 +1056,8 @@ pub async fn test_ancestors_difference_segments_1(
     assert_ancestors_difference_segments(&ctx, &graph, vec!["O", "P"], vec!["H"], 4).await?;
     assert_ancestors_difference_segments(&ctx, &graph, vec!["O", "P"], vec!["D", "I"], 4).await?;
     assert_ancestors_difference_segments(&ctx, &graph, vec!["F"], vec!["H"], 0).await?;
+    assert_ancestors_difference_segments(&ctx, &graph, vec!["M"], vec!["K"], 2).await?;
+    assert_ancestors_difference_segments(&ctx, &graph, vec!["N", "R"], vec![], 3).await?;
 
     Ok(())
 }
@@ -1102,6 +1105,31 @@ pub async fn test_ancestors_difference_segments_2(
         7,
     )
     .await?;
+    Ok(())
+}
+
+pub async fn test_ancestors_difference_segments_3(
+    ctx: CoreContext,
+    storage: Arc<dyn CommitGraphStorageTest>,
+) -> Result<()> {
+    let graph = from_dag(
+        &ctx,
+        r"
+        A--B--C--D
+            \  \
+             E--F
+        ",
+        storage.clone(),
+    )
+    .await?;
+    storage.flush();
+
+    // This is a bug.
+    assert!(
+        assert_ancestors_difference_segments(&ctx, &graph, vec!["F"], vec!["D"], 2)
+            .await
+            .is_err()
+    );
 
     Ok(())
 }

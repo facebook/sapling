@@ -38,10 +38,10 @@ setup configuration
 returns nothing as there are no ancestors of C that are not also ancestors of I
   $ mononoke_newadmin commit-graph -R repo segments --heads $C --common $I --verify
 
-returns a segment representing E, F and G and a segment representing D
+(fails) returns a segment representing E, F and G and a segment representing D
   $ mononoke_newadmin commit-graph -R repo segments --heads $G --common $H --verify
-  9711852ec4f4b42937dd5b760c7b3f84345bf48c74b7ef3ca7118d1d7928744d -> f0c81a03319da010415f712831abe8469ba3c30b93b0b07af175302b8c15f0e6, length: 3, parents: e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2 (e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2~0), 5a25c0a76794bbcc5180da0949a652750101597f0fbade488e611d5c0917e7be (5a25c0a76794bbcc5180da0949a652750101597f0fbade488e611d5c0917e7be~0)
-  5a25c0a76794bbcc5180da0949a652750101597f0fbade488e611d5c0917e7be -> 5a25c0a76794bbcc5180da0949a652750101597f0fbade488e611d5c0917e7be, length: 1, parents: f8c75e41a0c4d29281df765f39de47bca1dcadfdc55ada4ccc2f6df567201658
+  Error: Segment parent location e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2~0 isn't relative to a subsequent segment head
+  [1]
 
 returns 4 segments representing G-F, L-E, J-H, D
   $ mononoke_newadmin commit-graph -R repo segments --heads $J,$G,$L --common $C --verify

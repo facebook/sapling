@@ -679,6 +679,7 @@ impl CommitGraph {
         let difference_cs_ids: HashSet<_> = difference_cs_ids.into_iter().collect();
 
         let mut union_segments_cs_ids: HashMap<_, _> = Default::default();
+        let mut segment_heads: HashSet<_> = Default::default();
 
         for (segment_num, segment) in difference_segments.iter().rev().enumerate() {
             let parents = self.changeset_parents(ctx, segment.base).await?;
@@ -708,8 +709,16 @@ impl CommitGraph {
                     parent.location,
                     union_segments_cs_ids.contains_key(&parent.cs_id),
                 ) {
-                    // If a location is provided, verify that it resolves to the changeset id.
+                    // If a location is provided, verify that it resolves to the correct changeset id.
+                    // Also verify that location.head is a head of a subsequent segment.
                     (Some(location), _) => {
+                        if !segment_heads.contains(&location.head) {
+                            return Err(anyhow!(
+                                "Segment parent location {} isn't relative to a subsequent segment head",
+                                location
+                            ));
+                        }
+
                         let location_head_depth = self
                             .storage
                             .fetch_edges(ctx, location.head)
@@ -752,6 +761,8 @@ impl CommitGraph {
                     _ => {}
                 }
             }
+
+            segment_heads.insert(segment.head);
 
             let segment_cs_ids = self
                 .segment_changesets(ctx, segment.head, segment.base)
