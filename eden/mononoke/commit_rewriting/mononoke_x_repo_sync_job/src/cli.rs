@@ -41,6 +41,9 @@ pub struct OnceCommandArgs {
     pub target_bookmark: Option<String>,
     #[clap(long = "commit", short = 'i')]
     pub commit: String,
+    // Performs mapping version change.
+    #[clap(long = "unsafe-change-version-to")]
+    pub new_version: Option<String>,
 }
 
 #[derive(Debug, Args, Clone)]

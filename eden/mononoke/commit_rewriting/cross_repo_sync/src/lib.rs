@@ -109,6 +109,7 @@ use static_assertions::assert_impl_all;
 use sync_config_version_utils::get_mapping_change_version;
 use sync_config_version_utils::get_version;
 use sync_config_version_utils::get_version_for_merge;
+use sync_config_version_utils::set_mapping_change_version;
 pub use sync_config_version_utils::CHANGE_XREPO_MAPPING_EXTRA;
 use synced_commit_mapping::EquivalentWorkingCopyEntry;
 use synced_commit_mapping::SyncedCommitMapping;
@@ -1308,6 +1309,7 @@ where
         commit_sync_context: CommitSyncContext,
         rewritedates: PushrebaseRewriteDates,
         version: CommitSyncConfigVersion,
+        change_mapping_version: Option<CommitSyncConfigVersion>,
     ) -> Result<Option<ChangesetId>, Error> {
         let source_cs_id = source_cs.get_changeset_id();
         let before = Instant::now();
@@ -1318,6 +1320,7 @@ where
                 target_bookmark,
                 rewritedates,
                 version,
+                change_mapping_version,
             )
             .await;
         let elapsed = before.elapsed();
@@ -1349,6 +1352,7 @@ where
         target_bookmark: Target<BookmarkKey>,
         rewritedates: PushrebaseRewriteDates,
         version: CommitSyncConfigVersion,
+        change_mapping_version: Option<CommitSyncConfigVersion>,
     ) -> Result<Option<ChangesetId>, Error> {
         let hash = source_cs.get_changeset_id();
         let (source_repo, target_repo) = self.get_source_target();
@@ -1382,7 +1386,10 @@ where
             self.repos.get_source_repo().repo_identity().id(),
         )
         .await?;
-        let source_cs_mut = source_cs.clone().into_mut();
+        let mut source_cs_mut = source_cs.clone().into_mut();
+        if let Some(change_mapping_version) = change_mapping_version {
+            set_mapping_change_version(&mut source_cs_mut, change_mapping_version)?;
+        }
         let remapped_parents =
             remap_parents(ctx, &source_cs_mut, self, parent_selection_hint).await?;
         let rewritten = rewrite_commit(

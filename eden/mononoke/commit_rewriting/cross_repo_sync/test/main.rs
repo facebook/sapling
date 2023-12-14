@@ -202,6 +202,7 @@ where
             CommitSyncContext::Tests,
             PushrebaseRewriteDates::No,
             version,
+            None,
         )
         .await
 }
@@ -1015,6 +1016,7 @@ async fn get_multiple_master_mapping_setup(
             CommitSyncContext::Tests,
             PushrebaseRewriteDates::No,
             version.clone(),
+            None,
         )
         .await
         .expect("sync should have succeeded");
@@ -1027,6 +1029,7 @@ async fn get_multiple_master_mapping_setup(
             CommitSyncContext::Tests,
             PushrebaseRewriteDates::No,
             version,
+            None,
         )
         .await
         .expect("sync should have succeeded");
@@ -1127,6 +1130,7 @@ async fn test_sync_no_op_pushrebase_has_multiple_mappings(fb: FacebookInit) -> R
             CommitSyncContext::Tests,
             PushrebaseRewriteDates::No,
             version,
+            None,
         )
         .await
         .expect("sync should have succeeded");
@@ -1174,6 +1178,7 @@ async fn test_sync_real_pushrebase_has_multiple_mappings(fb: FacebookInit) -> Re
             CommitSyncContext::Tests,
             PushrebaseRewriteDates::No,
             version,
+            None,
         )
         .await
         .expect("sync should have succeeded");
@@ -1545,6 +1550,7 @@ async fn test_disabled_sync_pushrebase(fb: FacebookInit) -> Result<(), Error> {
                     CommitSyncContext::Tests,
                     PushrebaseRewriteDates::No,
                     version,
+                    None,
                 )
                 .await
         }

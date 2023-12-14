@@ -129,6 +129,7 @@ where
         scuba_sample,
         pushrebase_rewrite_dates,
         Some(entry.timestamp),
+        &None,
     )
     .await
     // TODO(stash): test with other movers
@@ -137,6 +138,9 @@ where
 
 /// Sync and all of its unsynced ancestors **if the given commit has at least
 /// one synced ancestor**.
+/// Unsafe_change_mapping_version allows for changing the mapping version used when pushrebasing the
+/// commit. Should be only used when we know that the new mapping version is safe to use on common
+/// pushrebase bookmark.
 pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static, R>(
     ctx: &CoreContext,
     commit_syncer: &CommitSyncer<M, R>,
@@ -147,6 +151,7 @@ pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static,
     scuba_sample: MononokeScubaSampleBuilder,
     pushrebase_rewrite_dates: PushrebaseRewriteDates,
     bookmark_update_timestamp: Option<Timestamp>,
+    unsafe_change_mapping_version_during_pushrebase: &Option<CommitSyncConfigVersion>,
 ) -> Result<SyncResult, Error>
 where
     R: Repo,
@@ -195,6 +200,7 @@ where
                 &version,
                 pushrebase_rewrite_dates,
                 bookmark_update_timestamp,
+                unsafe_change_mapping_version_during_pushrebase,
             )
             .await
             .map(SyncResult::Synced);
@@ -244,6 +250,10 @@ where
 ///
 /// Just as normal pushrebase behaves while pushing merges, we rebase the actual merge
 /// commit and it's ancestors, but we don't rebase merge ancestors.
+///
+/// Optionally, the mapping version can be changed during pushrebase - this is useful
+/// for setting up the initial configuration for the sync. The validation of the version
+/// applicability to pushrebased bookmarks belongs to caller.
 /// ```
 pub async fn sync_commits_via_pushrebase<M: SyncedCommitMapping + Clone + 'static, R>(
     ctx: &CoreContext,
@@ -252,13 +262,24 @@ pub async fn sync_commits_via_pushrebase<M: SyncedCommitMapping + Clone + 'stati
     common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
     scuba_sample: MononokeScubaSampleBuilder,
     unsynced_ancestors: Vec<ChangesetId>,
-    version: &CommitSyncConfigVersion,
+    mut version: &CommitSyncConfigVersion,
     pushrebase_rewrite_dates: PushrebaseRewriteDates,
     bookmark_update_timestamp: Option<Timestamp>,
+    unsafe_change_mapping_version: &Option<CommitSyncConfigVersion>,
 ) -> Result<Vec<ChangesetId>, Error>
 where
     R: Repo,
 {
+    let change_mapping_version =
+        if let Some(unsafe_change_mapping_version) = unsafe_change_mapping_version {
+            if version != unsafe_change_mapping_version {
+                version = unsafe_change_mapping_version;
+            }
+            Some(unsafe_change_mapping_version.clone())
+        } else {
+            None
+        };
+
     let source_repo = commit_syncer.get_source_repo();
     // It stores commits that were introduced as part of current bookmark update, but that
     // shouldn't be pushrebased.
@@ -309,6 +330,7 @@ where
                 cs_id,
                 pushrebase_rewrite_dates,
                 version.clone(),
+                change_mapping_version.clone(),
             )
             .timed()
             .await;
@@ -641,6 +663,7 @@ async fn pushrebase_commit<M: SyncedCommitMapping + Clone + 'static, R>(
     cs_id: ChangesetId,
     pushrebase_rewrite_dates: PushrebaseRewriteDates,
     version: CommitSyncConfigVersion,
+    change_mapping_version: Option<CommitSyncConfigVersion>,
 ) -> Result<Option<ChangesetId>, Error>
 where
     R: Repo,
@@ -655,6 +678,7 @@ where
             CommitSyncContext::XRepoSyncJob,
             pushrebase_rewrite_dates,
             version,
+            change_mapping_version,
         )
         .await
 }

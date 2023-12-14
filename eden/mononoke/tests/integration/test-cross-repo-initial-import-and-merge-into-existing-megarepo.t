@@ -186,6 +186,47 @@ Before config change
   IC=65f0b76c034d87adf7dac6f0b5a5442ab3f62edda21adb8e8ec57d1a99fb5905
   ID=a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707
 
+  $ with_stripped_logs mononoke_x_repo_sync "$IMPORTED_REPO_ID"  "$LARGE_REPO_ID" once --commit "$ID" --unsafe-change-version-to "new_version" --target-bookmark master_bookmark
+  Starting session with id * (glob)
+  changeset resolved as: ChangesetId(Blake2(a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707))
+  Checking if a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707 is already synced 2->0
+  1 unsynced ancestors of a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707
+  syncing a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707 via pushrebase for master_bookmark
+  changeset a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707 synced as 6c3b56b6a5f88d184fd96060390436a4b7c47bd9b3fd64633c91cb916045ee4f in *ms (glob)
+  successful sync
+  $ sleep 2
+
+  $ cd "$TESTTMP/small-hg-client"
+  $ REPONAME=small-mon hgmn pull -q
+  $ hg update master_bookmark
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ log -r .^::.
+  @  ID [public;rev=6;61c2e6c8f99d] default/master_bookmark
+  │
+  o  after merge from small [public;rev=5;ea10f199d79f]
+  │
+  ~
+  $ echo baz_from_small2 > bar
+  $ hg add bar
+  $ hg ci -Aqm "after mapping change from small"
+  $ REPONAME=small-mon hgmn push -r . --to master_bookmark -q
+
+  $ log -r master_bookmark^::master_bookmark
+  @  after mapping change from small [public;rev=7;7fdb0a9ff02f] default/master_bookmark
+  │
+  o  ID [public;rev=6;61c2e6c8f99d]
+  │
+  ~
+
+  $ cd "$TESTTMP/large-hg-client"
+  $ REPONAME=large-mon hgmn pull -q
+  $ log -r master_bookmark^::master_bookmark
+  o  after mapping change from small [public;rev=11;30c33a40decf] default/master_bookmark
+  │
+  o  ID [public;rev=10;68305fcbe005]
+  │
+  ~
+
   $ testtool_drawdag -R "$IMPORTED_REPO_NAME" <<EOF
   > ID-IE
   > # exists: ID $ID
@@ -202,3 +243,18 @@ Before config change
   IE=ee275b10c734fa09ff52acf808a3baafd24348114fa937e8f41958490b9b6857
   IF=20d91840623a3e0e6f3bc3c46ce6755d5f4c9ce6cfb49dae7b9cc8d9d0acfae9
   IG=2daec24778b88c326d1ba0f830d43a2d24d471dc22c48c8307096d0f60c9477f
+  $ quiet mononoke_newadmin mutable-counters --repo-id $LARGE_REPO_ID set xreposync_from_$IMPORTED_REPO_ID 2
+  $ quiet mononoke_x_repo_sync "$IMPORTED_REPO_ID"  "$LARGE_REPO_ID" tail --bookmark-regex "master_bookmark" --catch-up-once
+
+
+  $ REPONAME=large-mon hgmn pull -q
+  $ log -r master_bookmark^^^::master_bookmark
+  o  IG [public;rev=14;80bd79756619] default/master_bookmark
+  │
+  o  IF [public;rev=13;9eff798794ff]
+  │
+  o  IE [public;rev=12;32117f92bb02]
+  │
+  o  after mapping change from small [public;rev=11;30c33a40decf]
+  │
+  ~

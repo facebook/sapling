@@ -119,6 +119,7 @@ async fn run_in_single_commit_mode<M: SyncedCommitMapping + Clone + 'static>(
     maybe_bookmark: Option<BookmarkKey>,
     common_bookmarks: HashSet<BookmarkKey>,
     pushrebase_rewrite_dates: PushrebaseRewriteDates,
+    new_version: Option<CommitSyncConfigVersion>,
 ) -> Result<(), Error> {
     info!(
         ctx.logger(),
@@ -145,6 +146,7 @@ async fn run_in_single_commit_mode<M: SyncedCommitMapping + Clone + 'static>(
         scuba_sample,
         pushrebase_rewrite_dates,
         None,
+        &new_version,
     )
     .await;
 
@@ -531,6 +533,7 @@ async fn async_main<'a>(app: MononokeApp, ctx: CoreContext) -> Result<(), Error>
                 &once_cmd_args.commit.as_str(),
             )
             .await?;
+            let new_version = once_cmd_args.new_version.map(CommitSyncConfigVersion);
 
             run_in_single_commit_mode(
                 &ctx,
@@ -540,6 +543,7 @@ async fn async_main<'a>(app: MononokeApp, ctx: CoreContext) -> Result<(), Error>
                 maybe_target_bookmark,
                 common_bookmarks,
                 pushrebase_rewrite_dates,
+                new_version,
             )
             .await
         }
