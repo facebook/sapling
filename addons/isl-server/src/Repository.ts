@@ -74,7 +74,9 @@ const FIELDS = {
   hash: '{node}',
   title: '{desc|firstline}',
   author: '{author}',
-  date: '{date|isodatesec}',
+  // We prefer committerdate over authordate as authordate sometimes makes
+  // amended or rebased commits look stale
+  date: '{committerdate|isodatesec}',
   phase: '{phase}',
   bookmarks: `{bookmarks % '{bookmark}${ESCAPED_NULL_CHAR}'}`,
   remoteBookmarks: `{remotenames % '{remotename}${ESCAPED_NULL_CHAR}'}`,
