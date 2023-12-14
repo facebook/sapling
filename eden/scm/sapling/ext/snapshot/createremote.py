@@ -174,7 +174,9 @@ def createremote(ui, repo, **opts) -> None:
     overrides = {}
     if ui.plain():
         overrides[("ui", "quiet")] = True
-    with repo.lock(), repo.transaction("snapshot"), ui.configoverride(overrides):
+    with repo.wlock(), repo.lock(), repo.transaction("snapshot"), ui.configoverride(
+        overrides
+    ):
         # Current working context
         wctx = repo[None]
 
