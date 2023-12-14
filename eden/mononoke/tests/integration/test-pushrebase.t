@@ -7,7 +7,8 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
   $ setconfig ui.ignorerevnum=false
-  $ BLOB_TYPE="blob_files" default_setup --scuba-dataset "file://$TESTTMP/log.json"
+  $ setconfig push.edenapi=true
+  $ ENABLE_API_WRITES=1 BLOB_TYPE="blob_files" default_setup --scuba-dataset "file://$TESTTMP/log.json"
   hg repo
   o  C [draft;rev=2;26805aba1e60]
   │
@@ -23,25 +24,26 @@
 Pushrebase commit 1
   $ hg up -q "min(all())"
   $ echo 1 > 1 && hg add 1 && hg ci -m 1
-  $ hgmn push -r . --to master_bookmark
-  pushing rev a0c9c5791058 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  updating bookmark master_bookmark
-
-  $ hgmn up master_bookmark
+  $ hgedenapi push -r . --to master_bookmark
+  pushing rev a0c9c5791058 to destination https://localhost:*/edenapi/ bookmark master_bookmark (glob)
+  edenapi: queue 1 commit for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
+  edenapi: queue 1 tree for upload
+  edenapi: uploaded 1 tree
+  edenapi: uploading commit 'a0c9c57910584da709d7f4ed9852d66693a45ba7'...
+  edenapi: uploaded 1 changeset
+  updating remote bookmark master_bookmark
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated remote bookmark master_bookmark to c2e526aacb51
+
   $ log -r "all()"
   @  1 [public;rev=4;c2e526aacb51] default/master_bookmark
   │
-  │ o  1 [draft;rev=3;a0c9c5791058]
-  │ │
-  o │  C [public;rev=2;26805aba1e60]
-  │ │
-  o │  B [public;rev=1;112478962961]
-  ├─╯
+  o  C [public;rev=2;26805aba1e60]
+  │
+  o  B [public;rev=1;112478962961]
+  │
   o  A [public;rev=0;426bada5c675]
   $
 
@@ -76,19 +78,17 @@ Push rebase fails with conflict in the bottom of the stack
   $ hg up -q "min(all())"
   $ echo 1 > 1 && hg add 1 && hg ci -m 1
   $ echo 2 > 2 && hg add 2 && hg ci -m 2
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 0c67ec8c24b9 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
-  searching for changes
-  remote: Command failed
-  remote:   Error:
-  remote: * pushrebase failed * (glob)
-  remote: 
-  remote:   Root cause:
-  remote:     pushrebase failed Conflicts([PushrebaseConflict { left: NonRootMPath("1"), right: NonRootMPath("1") }])
-  remote: 
-  remote:   Debug context:
-  remote:     "pushrebase failed Conflicts([PushrebaseConflict { left: NonRootMPath(\"1\"), right: NonRootMPath(\"1\") }])"
-  abort: * (glob)
+  $ hgedenapi push -r . --to master_bookmark
+  pushing rev 0c67ec8c24b9 to destination https://localhost:*/edenapi/ bookmark master_bookmark (glob)
+  edenapi: queue 1 commit for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
+  edenapi: queue 1 tree for upload
+  edenapi: uploaded 1 tree
+  edenapi: uploading commit '0c67ec8c24b924e95a718ea8217267b85d7af608'...
+  edenapi: uploaded 1 changeset
+  updating remote bookmark master_bookmark
+  abort: Server error: Conflicts while pushrebasing: [PushrebaseConflict { left: NonRootMPath("1"), right: NonRootMPath("1") }]
   [255]
   $ hg hide -r ".^ + ." -q
 
@@ -97,19 +97,17 @@ Push rebase fails with conflict in the top of the stack
   $ hg up -q "min(all())"
   $ echo 2 > 2 && hg add 2 && hg ci -m 2
   $ echo 1 > 1 && hg add 1 && hg ci -m 1
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 8d2ff619947e to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
-  searching for changes
-  remote: Command failed
-  remote:   Error:
-  remote: * pushrebase failed * (glob)
-  remote: 
-  remote:   Root cause:
-  remote:     pushrebase failed Conflicts([PushrebaseConflict { left: NonRootMPath("1"), right: NonRootMPath("1") }])
-  remote: 
-  remote:   Debug context:
-  remote:     "pushrebase failed Conflicts([PushrebaseConflict { left: NonRootMPath(\"1\"), right: NonRootMPath(\"1\") }])"
-  abort: * (glob)
+  $ hgedenapi push -r . --to master_bookmark
+  pushing rev 8d2ff619947e to destination https://localhost:*/edenapi/ bookmark master_bookmark (glob)
+  edenapi: queue 2 commits for upload
+  edenapi: queue 0 files for upload
+  edenapi: queue 2 trees for upload
+  edenapi: uploaded 2 trees
+  edenapi: uploading commit 'c9b2673d32182756f799beff4ee8dc6a28645167'...
+  edenapi: uploading commit '8d2ff619947e17ac013521d001c0a1e4c2f89a94'...
+  edenapi: uploaded 2 changesets
+  updating remote bookmark master_bookmark
+  abort: Server error: Conflicts while pushrebasing: [PushrebaseConflict { left: NonRootMPath("1"), right: NonRootMPath("1") }]
   [255]
   $ hg hide -r ".^ + ." -q
 
@@ -118,14 +116,19 @@ Push stack
   $ hg up -q "min(all())"
   $ echo 3 > 3 && hg add 3 && hg ci -m 3
   $ echo 4 > 4 && hg add 4 && hg ci -m 4
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 7a68f123d810 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  updating bookmark master_bookmark
-  $ hg hide -r ".^ + ." -q
+  $ hgedenapi push -r . --to master_bookmark
+  pushing rev 7a68f123d810 to destination https://localhost:*/edenapi/ bookmark master_bookmark (glob)
+  edenapi: queue 2 commits for upload
+  edenapi: queue 2 files for upload
+  edenapi: uploaded 2 files
+  edenapi: queue 2 trees for upload
+  edenapi: uploaded 2 trees
+  edenapi: uploading commit 'e91cd89a81a52269b7767c800db21e62b9cf98db'...
+  edenapi: uploading commit '7a68f123d810d76ef65e286a3e4eb46461955530'...
+  edenapi: uploaded 2 changesets
+  updating remote bookmark master_bookmark
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated remote bookmark master_bookmark to 4f5a4463b24b
   $ hgmn up -q master_bookmark
   $ log -r "all()"
   @  4 [public;rev=11;4f5a4463b24b] default/master_bookmark
@@ -149,13 +152,18 @@ Push fast-forward
   $ hg up master_bookmark
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo 5 > 5 && hg add 5 && hg ci -m 5
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 59e5396444cf to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  updating bookmark master_bookmark
+  $ hgedenapi push -r . --to master_bookmark
+  pushing rev 59e5396444cf to destination https://localhost:*/edenapi/ bookmark master_bookmark (glob)
+  edenapi: queue 1 commit for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
+  edenapi: queue 1 tree for upload
+  edenapi: uploaded 1 tree
+  edenapi: uploading commit '59e5396444cfbcb86719d32e14c930bf0558fe98'...
+  edenapi: uploaded 1 changeset
+  updating remote bookmark master_bookmark
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated remote bookmark master_bookmark to 59e5396444cf
   $ log -r "all()"
   @  5 [public;rev=12;59e5396444cf] default/master_bookmark
   │
@@ -176,17 +184,13 @@ Push fast-forward
 
 
 Push with no new commits
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 59e5396444cf to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
-  searching for changes
-  no changes found
-  updating bookmark master_bookmark
+  $ hgedenapi push -r . --to master_bookmark
+  pushing rev 59e5396444cf to destination https://localhost:*/edenapi/ bookmark master_bookmark (glob)
+  moving remote bookmark master_bookmark from 59e5396444cf to 59e5396444cf
   $ log -r "."
   @  5 [public;rev=12;59e5396444cf] default/master_bookmark
   │
   ~
-  $ jq < "$TESTTMP/log.json" '.int.pushrebase_distance | numbers' | tail -n 1
-  0
 
 Push a merge commit with both parents not ancestors of destination bookmark
   $ hg up -q 1
@@ -216,7 +220,8 @@ Push a merge commit with both parents not ancestors of destination bookmark
   o  A [public;rev=0;426bada5c675]
   $
 
-  $ hgmn push -r . --to master_bookmark
+  $ hgedenapi push -r . --to master_bookmark
+  fallback reason: merge commit is not supported by EdenApi push yet
   pushing rev fad460d85200 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   adding changesets
@@ -260,7 +265,7 @@ Push-rebase of a commit with p2 being the ancestor of the destination bookmark
   $ echo 9 > 9 && hg add 9 && hg ci -m 9
   $ echo 10 > 10 && hg add 10 && hg ci -m 10
   $ echo 11 > 11 && hg add 11 && hg ci -m 11
-  $ hgmn push -r . --to master_bookmark -q
+  $ hgedenapi push -r . --to master_bookmark -q
   $ hgmn up .^^ && echo 12 > 12 && hg add 12 && hg ci -m 12
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg log -r master_bookmark -T '{node}\n'
@@ -275,7 +280,8 @@ Push-rebase of a commit with p2 being the ancestor of the destination bookmark
   589551466f2555a4d90ca544b23273a2eed21f9d
 
 - Actually test the push
-  $ hgmn push -r . --to master_bookmark
+  $ hgedenapi push -r . --to master_bookmark
+  fallback reason: merge commit is not supported by EdenApi push yet
   pushing rev e3db177db1d1 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   adding changesets
@@ -286,11 +292,9 @@ Push-rebase of a commit with p2 being the ancestor of the destination bookmark
   $ hg log -r master_bookmark -T '{node}\n'
   eb388b759fde98ed5b1e05fd2da5309f3762c2fd
 Test creating a bookmark on a public commit
-  $ hgmn push --rev 25 --to master_bookmark_2 --create
-  pushing rev eb388b759fde to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark_2
-  searching for changes
-  no changes found
-  exporting bookmark master_bookmark_2
+  $ hgedenapi push --rev 25 --to master_bookmark_2 --create
+  pushing rev eb388b759fde to destination https://localhost:*/edenapi/ bookmark master_bookmark_2 (glob)
+  creating remote bookmark master_bookmark_2
   $ log -r "20::"
   @    merge 10 and 12 [public;rev=25;eb388b759fde] default/master_bookmark default/master_bookmark_2
   ├─╮
@@ -318,7 +322,8 @@ Test a non-forward push
   o  9 [public;rev=20;2f7cc50dc4e5]
   │
   ~
-  $ hgmn push --force -r . --to master_bookmark_2 --non-forward-move --pushvar NON_FAST_FORWARD=true
+  $ hgedenapi push --force -r . --to master_bookmark_2 --non-forward-move --pushvar NON_FAST_FORWARD=true
+  fallback reason: --force is not supported by EdenApi push yet
   pushing rev 589551466f25 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark_2
   searching for changes
   no changes found
@@ -337,12 +342,8 @@ Test a non-forward push
   ~
 
 Test deleting a bookmark
-  $ hgmn push --delete master_bookmark_2
-  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
-  searching for changes
-  no changes found
+  $ hgedenapi push --delete master_bookmark_2
   deleting remote bookmark master_bookmark_2
-  [1]
   $ log -r "20::"
   o    merge 10 and 12 [public;rev=25;eb388b759fde] default/master_bookmark
   ├─╮
@@ -358,13 +359,16 @@ Test deleting a bookmark
 
 Test creating a bookmark and new head
   $ echo draft > draft && hg add draft && hg ci -m draft
-  $ hgmn push -r . --to newbook --create
-  pushing rev 7a037594e202 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark newbook
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  exporting bookmark newbook
+  $ hgedenapi push -r . --to newbook --create
+  pushing rev 7a037594e202 to destination https://localhost:*/edenapi/ bookmark newbook (glob)
+  edenapi: queue 1 commit for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
+  edenapi: queue 1 tree for upload
+  edenapi: uploaded 1 tree
+  edenapi: uploading commit '7a037594e2026b6ceb5dd9bc01eaf96b28dc3ce4'...
+  edenapi: uploaded 1 changeset
+  creating remote bookmark newbook
 
 Test non-fast-forward force pushrebase
   $ hgmn up -qr 20
@@ -386,7 +390,8 @@ Test non-fast-forward force pushrebase
   │
   ~
 -- we don't need to pass --pushvar NON_FAST_FORWARD if we're doing a force pushrebase
-  $ hgmn push -r . -f --to newbook
+  $ hgedenapi push -r . -f --to newbook
+  fallback reason: --force is not supported by EdenApi push yet
   pushing rev 4899f9112d9b to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark newbook
   searching for changes
   adding changesets
@@ -426,7 +431,8 @@ Test non-fast-forward force pushrebase
 -- Check that a force pushrebase with mutation markers is a fail
   $ echo SPARTACUS > sum_ego && hg ci -qAm 27
   $ echo SPARTACUS! > sum_ego && hg amend --config mutation.enabled=true --config mutation.record=true
-  $ hgmn push -r . -f --to newbook
+  $ hgedenapi push -r . -f --to newbook
+  fallback reason: --force is not supported by EdenApi push yet
   pushing rev * to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark newbook (glob)
   searching for changes
   remote: Command failed
@@ -453,13 +459,18 @@ Check that we can replace a file with a directory
   $ echo hello > A/hello
   $ hgmn add A/hello -q
   $ hgmn ci -qm "replace a file with a dir"
-  $ hgmn push --to newbook
-  pushing rev 4e5fec14573f to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark newbook
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  updating bookmark newbook
+  $ hgedenapi push --to newbook
+  pushing rev 4e5fec14573f to destination https://localhost:*/edenapi/ bookmark newbook (glob)
+  edenapi: queue 1 commit for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
+  edenapi: queue 2 trees for upload
+  edenapi: uploaded 2 trees
+  edenapi: uploading commit '4e5fec14573fa557760d017acfa25e0021088623'...
+  edenapi: uploaded 1 changeset
+  updating remote bookmark newbook
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated remote bookmark newbook to 4e5fec14573f
 
   $ ls A
   hello
