@@ -919,6 +919,10 @@ def undo(ui, repo, **opts):
         cmdutil.bailifchanged(repo)
 
         class undopreview(interactiveui.viewframe):
+            def __init__(self, ui, repo, index):
+                super().__init__(ui, repo)
+                self.index = index
+
             def render(self):
                 ui = self.ui
                 ui.pushbuffer()
@@ -942,19 +946,20 @@ def undo(ui, repo, **opts):
                 )
                 return ui.popbuffer()
 
-            def rightarrow(self):
-                self.index += 1
-
-            def leftarrow(self):
-                self.index -= 1
-
-            def enter(self):
-                del opts["preview"]
-                del opts["interactive"]
-                opts["absolute"] = "absolute"
-                opts["step"] = self.index
-                undo(ui, repo, **opts)
-                return
+            def handlekeypress(self, key):
+                if key == self.KEY_Q:
+                    self.finish()
+                if key == self.KEY_RETURN:
+                    del opts["preview"]
+                    del opts["interactive"]
+                    opts["absolute"] = "absolute"
+                    opts["step"] = self.index
+                    undo(ui, repo, **opts)
+                    self.finish()
+                if key == self.KEY_RIGHT:
+                    self.index += 1
+                if key == self.KEY_LEFT:
+                    self.index -= 1
 
         viewobj = undopreview(ui, repo, reverseindex)
         interactiveui.view(viewobj)

@@ -110,43 +110,36 @@ def getchar(fd: int) -> Union[None, bytes, str]:
 
 
 class viewframe:
+    # Useful Keycode Constants
+    KEY_Q = b"q"
+    KEY_RETURN = b"\r"
+    KEY_RIGHT = b"\x1b[C"
+    KEY_LEFT = b"\x1b[D"
+
     # framework for view
-    def __init__(self, ui, repo, index):
+    def __init__(self, ui, repo):
         self.ui = ui
         self.repo = repo
-        self.index = index
+        self._active = True
         ui.disablepager()
         repo.ui.disablepager()
 
-    def render():
+    def render(self):
         # returns string to print
         pass
 
-    def enter():
-        # handle user keypress return
+    def handlekeypress(self, key):
+        # handle user keypress
         pass
 
-    def leftarrow():
-        # handle user keypress left arrow
-        pass
-
-    def rightarrow():
-        # handle user keypress right arrow
-        pass
-
-    def apress():
-        # handle user keypress 'a'
-        pass
-
-    def dpress():
-        # handle user keypress 'b'
-        pass
+    def finish(self):
+        # End interactive session
+        self._active = False
 
 
 def view(viewobj) -> None:
     if pycompat.iswindows:
         raise error.Abort(_("interactive UI does not support Windows"))
-    done = False
     if viewobj.ui.pageractive:
         raise error.Abort(_("interactiveui doesn't work with pager"))
     # disable line wrapping
@@ -154,24 +147,11 @@ def view(viewobj) -> None:
     sys.stdout.write("\x1b[?7l")
     s = viewobj.render()
     sys.stdout.write(s)
-    while not done:
+    while viewobj._active:
         output = getchar(sys.stdin.fileno())
-        if output == b"q":
-            done = True
+        viewobj.handlekeypress(output)
+        if not viewobj._active:
             break
-        if output == b"\r":
-            # \r = return
-            viewobj.enter()
-            done = True
-            break
-        if output == b"\x1b[C":
-            viewobj.rightarrow()
-        if output == b"\x1b[D":
-            viewobj.leftarrow()
-        if output == b"a":
-            viewobj.apress()
-        if output == b"d":
-            viewobj.dpress()
         linecount = s.count("\n")
         s = viewobj.render()
         newlinecount = s.count("\n")
