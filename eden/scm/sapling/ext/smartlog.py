@@ -36,10 +36,12 @@ from sapling import (
     cmdutil,
     commands,
     dagop,
+    error,
     extensions,
     graphmod,
     node as nodemod,
     phases,
+    pycompat,
     registrar,
     revset,
     revsetlang,
@@ -50,6 +52,10 @@ from sapling import (
 from sapling.i18n import _
 from sapling.pycompat import range
 
+if not pycompat.iswindows:
+    from . import interactiveui
+else:
+    interactiveui = None
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -517,8 +523,29 @@ def _smartlog(ui, repo, *pats, **opts):
         return
 
     if opts.get("interactive"):
+        if interactiveui is None:
+            raise error.Abort(_("interactive ui is not supported on Windows"))
+
         ui.write_err(_("warning: interactive mode is WIP\n"))
 
+        class interactivesmartlog(interactiveui.viewframe):
+            def render(self):
+                ui = self.ui
+                ui.pushbuffer()
+                # Print it!
+                template = opts.get("template") or ""
+                revdag, reserved = getdag(ui, repo, sorted(revs), masterrev, template)
+                displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
+                cmdutil.displaygraph(ui, repo, revdag, displayer, reserved=reserved)
+                return ui.popbuffer()
+
+            def handlekeypress(self, key):
+                if key == self.KEY_Q:
+                    self.finish()
+
+        viewobj = interactivesmartlog(ui, repo)
+        interactiveui.view(viewobj)
+        return
     # Print it!
     template = opts.get("template") or ""
     revdag, reserved = getdag(ui, repo, sorted(revs), masterrev, template)
