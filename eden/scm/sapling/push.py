@@ -217,9 +217,10 @@ def delete_remote_bookmark(repo, edenapi, bookmark, pushvars_strs) -> None:
         )
 
     # delete remote bookmark from repo
-    remote = repo.ui.config("remotenames", "hoist")
-    remotenamechanges = {bookmark: nullhex}
-    saveremotenames(repo, {remote: remotenamechanges}, override=False)
+    with repo.wlock(), repo.lock(), repo.transaction("deleteremotebookmark"):
+        remote = repo.ui.config("remotenames", "hoist")
+        remotenamechanges = {bookmark: nullhex}
+        saveremotenames(repo, {remote: remotenamechanges}, override=False)
 
 
 ### utils
