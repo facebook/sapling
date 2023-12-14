@@ -147,12 +147,25 @@ def push_rebase(repo, dest, head_node, stack_nodes, remote_bookmark, opargs=None
     new_head = data["new_head"]
     old_to_new_hgids = data["old_to_new_hgids"]
 
+    if len(stack_nodes) != len(old_to_new_hgids):
+        ui.warn(
+            _(
+                "server returned unexpected number of commits after pushrebase: "
+                "length of commits to be pushed (%d) != length of pushed commits (%d)\n"
+            )
+            % (len(stack_nodes), len(old_to_new_hgids))
+        )
+
     with repo.wlock(), repo.lock(), repo.transaction("pushrebase"):
         repo.pull(
             source=dest,
             bookmarknames=(bookmark,),
             remotebookmarks={bookmark: new_head},
         )
+        # new nodes might be unknown locally due to the lazy pull, let's query them
+        # to make the graph aware of the hashes, this is needed for the mutation
+        # change below.
+        repo.changelog.filternodes(list(old_to_new_hgids.values()))
 
         if wnode in old_to_new_hgids:
             ui.note(_("moving working copy parent\n"))
