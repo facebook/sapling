@@ -1713,17 +1713,45 @@ impl RepoContext {
         cs_ids: Vec<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, Result<Location<ChangesetId>, MononokeError>>, MononokeError>
     {
-        let segmented_changelog = self.repo.segmented_changelog();
-        let result = segmented_changelog
-            .many_changeset_ids_to_locations(&self.ctx, master_heads, cs_ids)
-            .await
-            .map(|ok| {
-                ok.into_iter()
-                    .map(|(k, v)| (k, v.map_err(Into::into)))
-                    .collect::<HashMap<ChangesetId, Result<_, MononokeError>>>()
-            })
-            .map_err(MononokeError::from)?;
-        Ok(result)
+        let use_commit_graph = justknobs::eval(
+            "scm/mononoke:commit_graph_hash_to_location",
+            None,
+            Some(self.name()),
+        )
+        .unwrap_or_default();
+
+        match use_commit_graph {
+            true => Ok(self
+                .repo()
+                .commit_graph()
+                .changeset_ids_to_locations(self.ctx(), master_heads, cs_ids)
+                .await
+                .map(|ok| {
+                    ok.into_iter()
+                        .map(|(k, v)| {
+                            (
+                                k,
+                                Ok(Location {
+                                    descendant: v.cs_id,
+                                    distance: v.distance,
+                                }),
+                            )
+                        })
+                        .collect::<HashMap<ChangesetId, Result<_, MononokeError>>>()
+                })
+                .map_err(MononokeError::from)?),
+            false => Ok(self
+                .repo()
+                .segmented_changelog()
+                .many_changeset_ids_to_locations(&self.ctx, master_heads, cs_ids)
+                .await
+                .map(|ok| {
+                    ok.into_iter()
+                        .map(|(k, v)| (k, v.map_err(Into::into)))
+                        .collect::<HashMap<ChangesetId, Result<_, MononokeError>>>()
+                })
+                .map_err(MononokeError::from)?),
+        }
     }
 
     pub async fn segmented_changelog_clone_data(
