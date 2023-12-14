@@ -159,7 +159,7 @@ where
     } else {
         let maybe_version = unsynced_ancestors_versions
             .get_only_version()
-            .with_context(|| format!("failed to backsync cs id {}", to_cs_id))?;
+            .with_context(|| format!("failed to sync cs id {}", to_cs_id))?;
         maybe_version.ok_or_else(|| {
             format_err!(
                 "failed to sync {} - all of the ancestors are NotSyncCandidate",
