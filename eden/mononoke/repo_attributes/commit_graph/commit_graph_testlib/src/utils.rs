@@ -19,6 +19,7 @@ use context::CoreContext;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures::Future;
+use itertools::Itertools;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 
@@ -463,6 +464,47 @@ pub async fn assert_process_topologically(
         remaining_cs_ids.remove(&cs_id);
     }
     assert!(remaining_cs_ids.is_empty());
+
+    Ok(())
+}
+
+pub async fn assert_minimize_frontier(
+    ctx: &CoreContext,
+    graph: &CommitGraph,
+    cs_ids: Vec<&str>,
+    expected_frontier: Vec<&str>,
+) -> Result<()> {
+    let cs_ids: Vec<_> = cs_ids.into_iter().map(name_cs_id).collect();
+    let expected_frontier: Vec<_> = expected_frontier.into_iter().map(name_cs_id).collect();
+
+    let minimal_frontier = graph.minimize_frontier(ctx, cs_ids.clone()).await?;
+
+    assert_eq!(
+        minimal_frontier.iter().copied().collect::<HashSet<_>>(),
+        expected_frontier.iter().copied().collect::<HashSet<_>>()
+    );
+
+    // Check that no two changesets in the minimal frontier are ancestors of each other.
+    for cs_id_pair in minimal_frontier.iter().permutations(2) {
+        if let &[x, y] = cs_id_pair.as_slice() {
+            assert!(!graph.is_ancestor(ctx, *x, *y).await?);
+        }
+    }
+
+    // Check that the ancestors of the initial frontier and the ancestors of the minimal frontier
+    // are equal.
+    assert_eq!(
+        graph
+            .ancestors_difference(ctx, cs_ids, vec![])
+            .await?
+            .into_iter()
+            .collect::<HashSet<_>>(),
+        graph
+            .ancestors_difference(ctx, minimal_frontier, vec![])
+            .await?
+            .into_iter()
+            .collect::<HashSet<_>>()
+    );
 
     Ok(())
 }

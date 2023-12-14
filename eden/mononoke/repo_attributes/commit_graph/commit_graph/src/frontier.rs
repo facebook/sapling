@@ -178,4 +178,38 @@ impl CommitGraph {
         }
         Ok(())
     }
+
+    /// Minimize a frontier by removing all changesets that are ancestors of other changesets
+    /// in the frontier.
+    pub async fn minimize_frontier(
+        &self,
+        ctx: &CoreContext,
+        frontier: Vec<ChangesetId>,
+    ) -> Result<Vec<ChangesetId>> {
+        // Process the frontier generation by generation starting from the highest,
+        // removing changesets that are ancestors of a higher generation changeset.
+
+        let mut processed_frontier = ChangesetFrontier::new();
+        let mut remaining_frontier = self.frontier(ctx, frontier).await?;
+        let mut minimal_frontier = vec![];
+
+        while let Some((generation, cs_ids)) = remaining_frontier.pop_last() {
+            // Lower the frontier of the previously processed generations to the current
+            // generation. Any changeset that's contained in this frontier is an ancestor
+            // of a higher generation changeset and should be removed.
+            self.lower_frontier(ctx, &mut processed_frontier, generation)
+                .await?;
+
+            let new_cs_ids = cs_ids
+                .iter()
+                .copied()
+                .filter(|cs_id| !processed_frontier.highest_generation_contains(*cs_id, generation))
+                .collect::<Vec<_>>();
+
+            minimal_frontier.extend(new_cs_ids.clone());
+            processed_frontier.extend(new_cs_ids.into_iter().map(|cs_id| (cs_id, generation)))
+        }
+
+        Ok(minimal_frontier)
+    }
 }

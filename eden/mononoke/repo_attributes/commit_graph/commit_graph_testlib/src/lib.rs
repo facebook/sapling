@@ -57,6 +57,7 @@ macro_rules! impl_commit_graph_tests {
             test_ancestors_difference_segments_1,
             test_ancestors_difference_segments_2,
             test_process_topologically,
+            test_minimize_frontier,
         );
     };
 }
@@ -1135,6 +1136,42 @@ pub async fn test_process_topologically(
     assert_process_topologically(&ctx, &graph, vec!["H", "C", "L"]).await?;
     assert_process_topologically(&ctx, &graph, vec!["B", "C", "J", "I"]).await?;
     assert_process_topologically(&ctx, &graph, vec![]).await?;
+
+    Ok(())
+}
+
+pub async fn test_minimize_frontier(
+    ctx: CoreContext,
+    storage: Arc<dyn CommitGraphStorageTest>,
+) -> Result<()> {
+    let graph = from_dag(
+        &ctx,
+        r"
+        A-B-C-D-E-L------N
+           \       \    /
+            F-G-H   M  /
+             \     /  /
+              I-J-K--/
+        ",
+        storage.clone(),
+    )
+    .await?;
+    storage.flush();
+
+    assert_minimize_frontier(&ctx, &graph, vec!["L", "M", "N"], vec!["M", "N"]).await?;
+    assert_minimize_frontier(&ctx, &graph, vec!["A", "B", "C", "D"], vec!["D"]).await?;
+    assert_minimize_frontier(&ctx, &graph, vec!["D", "L", "I", "K"], vec!["L", "K"]).await?;
+    assert_minimize_frontier(&ctx, &graph, vec![], vec![]).await?;
+    assert_minimize_frontier(&ctx, &graph, vec!["B", "C", "H"], vec!["C", "H"]).await?;
+    assert_minimize_frontier(
+        &ctx,
+        &graph,
+        vec![
+            "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N",
+        ],
+        vec!["H", "M", "N"],
+    )
+    .await?;
 
     Ok(())
 }
