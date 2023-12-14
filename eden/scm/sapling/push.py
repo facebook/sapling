@@ -117,7 +117,7 @@ def push_rebase(repo, dest, head_node, remote_bookmark, opargs=None):
     ui, edenapi = repo.ui, repo.edenapi
     bookmark = remote_bookmark
     wnode = repo["."].node()
-    ui.write(_("updating remote bookmark %s\n") % bookmark)
+    ui.status(_("updating remote bookmark %s\n") % bookmark)
 
     # according to the Mononoke API (D23813368), base is the parent of the bottom of the stack
     # that is to be landed.
@@ -164,7 +164,7 @@ def push_rebase(repo, dest, head_node, remote_bookmark, opargs=None):
         ]
         mutation.recordentries(repo, entries, skipexisting=False)
 
-        ui.write(_("updated remote bookmark %s to %s\n") % (bookmark, short(new_head)))
+        ui.status(_("updated remote bookmark %s to %s\n") % (bookmark, short(new_head)))
         return 0
 
 
@@ -176,7 +176,7 @@ def get_remote_bookmark_node(ui, edenapi, bookmark) -> Optional[bytes]:
 
 
 def create_remote_bookmark(ui, edenapi, bookmark, node, opargs) -> None:
-    ui.write(_("creating remote bookmark %s\n") % bookmark)
+    ui.status(_("creating remote bookmark %s\n") % bookmark)
     pushvars = parse_pushvars(opargs.get("pushvars"))
     result = edenapi.setbookmark(bookmark, node, None, pushvars=pushvars)["data"]
     if "Err" in result:
@@ -207,7 +207,7 @@ def delete_remote_bookmark(repo, edenapi, bookmark, pushvars_strs) -> None:
         raise error.Abort(_("remote bookmark %s does not exist") % bookmark)
 
     # delete remote bookmark from server
-    ui.write(_("deleting remote bookmark %s\n") % bookmark)
+    ui.status(_("deleting remote bookmark %s\n") % bookmark)
     pushvars = parse_pushvars(pushvars_strs)
     result = edenapi.setbookmark(bookmark, None, node, pushvars=pushvars)["data"]
     if "Err" in result:
