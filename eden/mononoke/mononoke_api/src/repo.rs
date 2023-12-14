@@ -1673,12 +1673,35 @@ impl RepoContext {
         location: Location<ChangesetId>,
         count: u64,
     ) -> Result<Vec<ChangesetId>, MononokeError> {
-        let segmented_changelog = self.repo.segmented_changelog();
-        let ancestor = segmented_changelog
-            .location_to_many_changeset_ids(&self.ctx, location, count)
-            .await
-            .map_err(MononokeError::from)?;
-        Ok(ancestor)
+        let use_commit_graph = justknobs::eval(
+            "scm/mononoke:commit_graph_location_to_hash",
+            None,
+            Some(self.name()),
+        )
+        .unwrap_or_default();
+
+        let ancestors = match use_commit_graph {
+            true => {
+                self.repo()
+                    .commit_graph()
+                    .locations_to_changeset_ids(
+                        self.ctx(),
+                        location.descendant,
+                        location.distance,
+                        count,
+                    )
+                    .await?
+            }
+            false => {
+                let segmented_changelog = self.repo.segmented_changelog();
+                segmented_changelog
+                    .location_to_many_changeset_ids(&self.ctx, location, count)
+                    .await
+                    .map_err(MononokeError::from)?
+            }
+        };
+
+        Ok(ancestors)
     }
 
     /// A Segmented Changelog client needs to know how to translate between a commit hash,

@@ -58,6 +58,7 @@ rust_library(
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/futures_lazy_shared:futures_lazy_shared",
         "//common/rust/shed/futures_stats:futures_stats",
+        "//common/rust/shed/justknobs_stub:justknobs",
         "//common/rust/shed/sorted_vector_map:sorted_vector_map",
         "//common/rust/shed/stats:stats",
         "//eden/mononoke/acl_regions:acl_regions",
