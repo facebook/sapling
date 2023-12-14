@@ -41,13 +41,19 @@ def push(repo, dest, head_node, remote_bookmark, force=False, opargs=None):
     edenapi = get_edenapi_for_dest(repo, dest)
     opargs = opargs or {}
 
+    draft_nodes = repo.dageval(lambda: only([head_node], public()))
+    if repo.dageval(lambda: merges(draft_nodes)):
+        raise error.UnsupportedEdenApiPush(
+            _("merge commit is not supported by EdenApi push yet")
+        )
+
+    # upload revs via EdenApi
+
     ui.status_err(
         _("pushing rev %s to destination %s bookmark %s\n")
         % (short(head_node), edenapi.url(), remote_bookmark)
     )
 
-    # upload revs via EdenApi
-    draft_nodes = repo.dageval(lambda: only([head_node], public()))
     uploaded, failed = edenapi_upload.uploadhgchangesets(repo, draft_nodes)
     if failed:
         raise error.Abort(
@@ -77,7 +83,7 @@ def push(repo, dest, head_node, remote_bookmark, force=False, opargs=None):
         plain_push(repo, edenapi, remote_bookmark, head_node, bookmark_node, opargs)
     else:
         # update the exiting bookmark with push rebase
-        return push_rebase(repo, dest, head_node, remote_bookmark, opargs)
+        return push_rebase(repo, dest, head_node, draft_nodes, remote_bookmark, opargs)
 
 
 def plain_push(repo, edenapi, bookmark, to_node, from_node, opargs=None):
@@ -108,7 +114,7 @@ def plain_push(repo, edenapi, bookmark, to_node, from_node, opargs=None):
     record_remote_bookmark(repo, bookmark, to_node)
 
 
-def push_rebase(repo, dest, head_node, remote_bookmark, opargs=None):
+def push_rebase(repo, dest, head_node, stack_nodes, remote_bookmark, opargs=None):
     """Update the remote bookmark with server side rebase.
 
     For updating the existing remote bookmark, push_rebase allows the server to
@@ -127,17 +133,8 @@ def push_rebase(repo, dest, head_node, remote_bookmark, opargs=None):
 
     # according to the Mononoke API (D23813368), base is the parent of the bottom of the stack
     # that is to be landed.
-    draft_nodes = repo.dageval(lambda: roots(ancestors([head_node]) & draft()))
-    if len(draft_nodes) > 1:
-        # todo (zhaolong): handle merge commit
-        raise error.Abort(_("multiple roots found for stack %s") % short(head_node))
-
-    parents = repo[draft_nodes[0]].parents()
-    if len(parents) != 1:
-        raise error.Abort(
-            _("%d parents found for commit %s") % (len(parents), short(draft_nodes[0]))
-        )
-    base = parents[0].node()
+    # It's guaranteed there is only one base for a linear stack of draft nodes
+    base = repo.dageval(lambda: parents(roots(stack_nodes))).last()
 
     pushvars = parse_pushvars(opargs.get("pushvars"))
     response = edenapi.landstack(bookmark, head=head_node, base=base, pushvars=pushvars)
