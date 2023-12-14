@@ -77,3 +77,4 @@ builtins =
   tonodes,
   parentnames,
   isancestor,
+  merges,
