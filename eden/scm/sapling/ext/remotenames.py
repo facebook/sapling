@@ -1031,9 +1031,18 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
         )
 
     if edenapi:
-        return pushmod.push(
-            repo, dest, node, remote_bookmark=opargs["to"], opargs=opargs
-        )
+        try:
+            return pushmod.push(
+                repo,
+                dest,
+                node,
+                remote_bookmark=opargs["to"],
+                force=force,
+                opargs=opargs,
+            )
+        except error.UnsupportedEdenApiPush as e:
+            ui.status_err(_("fallback reason: %s\n") % e)
+            # fallback to old push
 
     ui.status_err(
         _("pushing rev %s to destination %s bookmark %s\n")

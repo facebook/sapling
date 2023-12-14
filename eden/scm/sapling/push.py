@@ -30,8 +30,13 @@ def get_edenapi_for_dest(repo, _dest):
         return None
 
 
-def push(repo, dest, head_node, remote_bookmark, opargs=None):
+def push(repo, dest, head_node, remote_bookmark, force=False, opargs=None):
     """Push via EdenApi (HTTP)"""
+    if force:
+        raise error.UnsupportedEdenApiPush(
+            _("--force is not supported by EdenApi push yet")
+        )
+
     ui = repo.ui
     edenapi = get_edenapi_for_dest(repo, dest)
     opargs = opargs or {}

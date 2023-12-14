@@ -543,3 +543,7 @@ class AbortSnapshotFileCountLimit(Abort):
 def addcontext(ex: Context, messageorfunc) -> None:
     if isinstance(ex, Context):
         ex.addcontext(messageorfunc)
+
+
+class UnsupportedEdenApiPush(Abort):
+    """This error should only be used for edenapi push fallback logic."""
