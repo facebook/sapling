@@ -229,14 +229,7 @@ impl CommitGraph {
                 .await?;
         }
 
-        let mut locations = heads
-            .into_iter()
-            .filter_map(|head| {
-                // Exclude head locations that are also ancestors of common.
-                let include_location = !common_skew_ancestors_set.contains_ancestor(head);
-                include_location.then_some((head, ChangesetSegmentLocation { head, distance: 0 }))
-            })
-            .collect::<HashMap<_, _>>();
+        let mut locations: HashMap<_, _> = Default::default();
 
         #[derive(Copy, Clone, Debug)]
         enum Origin {
@@ -267,11 +260,27 @@ impl CommitGraph {
                 {
                     if let Some((generation, heads)) = heads_skew_ancestors_set.pop_last() {
                         for cs_id in heads {
-                            frontier
+                            let origin = frontier
                                 .entry(generation)
                                 .or_default()
                                 .entry(cs_id)
                                 .or_insert(Origin::Head { cs_id, generation });
+
+                            // If the origin of this changeset in the frontier is a head,
+                            // add a location for the changeset relative to the origin.
+                            if let Origin::Head {
+                                cs_id: origin_cs_id,
+                                generation: origin_generation,
+                            } = origin
+                            {
+                                locations.insert(
+                                    cs_id,
+                                    ChangesetSegmentLocation {
+                                        head: *origin_cs_id,
+                                        distance: origin_generation.value() - generation.value(),
+                                    },
+                                );
+                            }
                         }
                     }
                 }
@@ -292,6 +301,9 @@ impl CommitGraph {
                                 .entry(generation)
                                 .or_default()
                                 .insert(cs_id, Origin::Common);
+
+                            // Remove any location for the changeset since it's part of common.
+                            locations.remove(&cs_id);
                         }
                     }
                 }
@@ -455,17 +467,6 @@ impl CommitGraph {
                                 // Parent isn't contained in any other segment, and isn't an ancestor of common.
                                 // Continue extending segment.
                                 (None, false) => {
-                                    if let Some(location) = locations.get_mut(&parent.cs_id) {
-                                        // Parent is a head that is being merged into this segment.
-                                        // We need to update its location to be within this segment
-                                        // so that it can be resolved later on.
-                                        *location = ChangesetSegmentLocation {
-                                            head: origin_cs_id,
-                                            distance: origin_generation.value()
-                                                - edges.node.generation.value()
-                                                + 1,
-                                        };
-                                    }
                                     frontier.entry(parent.generation).or_default().insert(
                                         parent.cs_id,
                                         Origin::Head {

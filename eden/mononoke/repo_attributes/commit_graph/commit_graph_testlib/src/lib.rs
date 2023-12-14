@@ -1124,12 +1124,7 @@ pub async fn test_ancestors_difference_segments_3(
     .await?;
     storage.flush();
 
-    // This is a bug.
-    assert!(
-        assert_ancestors_difference_segments(&ctx, &graph, vec!["F"], vec!["D"], 2)
-            .await
-            .is_err()
-    );
+    assert_ancestors_difference_segments(&ctx, &graph, vec!["F"], vec!["D"], 2).await?;
 
     Ok(())
 }
