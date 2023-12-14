@@ -338,6 +338,29 @@ impl MutationStore {
         Ok(mutation_entry)
     }
 
+    /// Get all mutation entries that have one predecessor match or successor match.
+    /// Might return duplicated entries.
+    pub fn get_entries(
+        &self,
+        predecessors: &[Node],
+        successors: &[Node],
+    ) -> Result<Vec<MutationEntry>> {
+        let mut result = Vec::new();
+        for node in predecessors {
+            for entry in self.log.lookup(INDEX_PRED, node)? {
+                let entry = MutationEntry::deserialize(&mut Cursor::new(entry?))?;
+                result.push(entry);
+            }
+        }
+        for node in successors {
+            for entry in self.log.lookup(INDEX_SUCC, node)? {
+                let entry = MutationEntry::deserialize(&mut Cursor::new(entry?))?;
+                result.push(entry);
+            }
+        }
+        Ok(result)
+    }
+
     /// Return a connected component that includes `nodes` and represents
     /// commit replacement relations.  The returned graph supports graph
     /// operations like common ancestors, heads, roots, etc. Parents in the
