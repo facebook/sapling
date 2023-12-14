@@ -21,6 +21,7 @@ const ON_FOCUS_REFETCH_THROTTLE = 10_000;
 const ON_VISIBLE_REFETCH_THROTTLE = 20_000;
 
 export type KindOfChange = 'uncommitted changes' | 'commits' | 'merge conflicts' | 'everything';
+export type PollKind = PageVisibility | 'force';
 
 /**
  * Handles watching for changes to files on disk which should trigger refetching data,
@@ -36,7 +37,7 @@ export class WatchForChanges {
     private repoInfo: RepoInfo,
     private logger: Logger,
     private pageFocusTracker: PageFocusTracker,
-    private changeCallback: (kind: KindOfChange) => unknown,
+    private changeCallback: (kind: KindOfChange, pollKind?: PollKind) => unknown,
     watchman?: Watchman | undefined,
   ) {
     this.watchman = watchman ?? new Watchman(logger);
@@ -66,7 +67,7 @@ export class WatchForChanges {
    * This function calls itself on an interval to check whether we should fetch changes,
    * but it can also be called in response to events like focus being gained.
    */
-  public poll = (kind?: PageVisibility | 'force') => {
+  public poll = (kind?: PollKind) => {
     // calculate how long we'd like to be waiting from what we know of the windows.
     let desiredNextTickTime = DEFAULT_POLL_INTERVAL;
     if (this.watchman.status !== 'healthy') {
@@ -89,7 +90,7 @@ export class WatchForChanges {
       (kind === 'visible' && elapsedTickTime >= ON_VISIBLE_REFETCH_THROTTLE)
     ) {
       // it's time to fetch
-      this.changeCallback('everything');
+      this.changeCallback('everything', kind);
       this.lastFetch = Date.now();
 
       clearTimeout(this.timeout);
