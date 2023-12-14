@@ -10,8 +10,6 @@
   $ LARGE_REPO_ID="0"
   $ SMALL_REPO_ID="1"
   $ IMPORTED_REPO_ID="2"
-  $ IMPORTED_REPO_NAME="imported_repo"
-  $ REPOID="$IMPORTED_REPO_ID" REPONAME="$IMPORTED_REPO_NAME" setup_common_config "blob_files"
   $ merge_tunables <<EOF
   > {
   >   "killswitches": {
@@ -22,6 +20,7 @@
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > rebase =
+  > globalrevs =
   > EOF
 
   $ setup_configerator_configs
@@ -40,13 +39,32 @@
   > }
   > EOF
 
--- Init Mononoke thingies
-  $ init_large_small_repo
+-- Init large and small repos
+  $ GLOBALREVS_PUBLISHING_BOOKMARK=master_bookmark GLOBALREVS_SMALL_REPO_ID=$SMALL_REPO_ID REPOID=$LARGE_REPO_ID INFINITEPUSH_ALLOW_WRITES=true REPONAME=large-mon setup_common_config blob_files
+  $ DISALLOW_NON_PUSHREBASE=1 GLOBALREVS_PUBLISHING_BOOKMARK=master_bookmark REPOID=$SMALL_REPO_ID REPONAME=small-mon setup_common_config blob_files
+  $ large_small_megarepo_config
+  $ large_small_setup
   Adding synced mapping entry
+  $ start_large_small_repo
   Starting Mononoke server
+  $ init_local_large_small_clones
+-- Init the impoorted repo
+  $ IMPORTED_REPO_NAME="imported_repo"
+  $ REPOID="$IMPORTED_REPO_ID" REPONAME="$IMPORTED_REPO_NAME" setup_common_config "blob_files"
 
 -- Start up the backsyncer in the background
   $ backsync_large_to_small_forever
+-- Setup initial globalrevs
+  $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi small-mon master_bookmark)
+  $ quiet testtool_drawdag -R large-mon --no-default-files <<EOF
+  > L_C-L_D
+  > # extra: L_D  global_rev "1000157970"
+  > # modify: L_D smallrepofolder/file.txt "22\n"
+  > # bookmark: L_D master_bookmark
+  > # exists: L_C $LARGE_MASTER_BONSAI
+  > EOF
+  $ set_bonsai_globalrev_mapping "$LARGE_REPO_ID" "$L_D" 1000157970
+  $ wait_for_bookmark_move_away_edenapi small-mon master_bookmark  "$PREV_BOOK_VALUE"
 
 Before config change
 -- push to a large repo
@@ -58,8 +76,8 @@ Before config change
   $ hg ci -Aqm "before merge"
   $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi small-mon master_bookmark)
   $ REPONAME=large-mon hgmn push -r . --to master_bookmark -q
-  $ log -r master_bookmark
-  @  before merge [public;rev=3;dcd2b2ad78ed] default/master_bookmark
+  $ log_globalrev -r master_bookmark
+  o  before merge [public;globalrev=1000157971;a94d137602c0] default/master_bookmark
   │
   ~
 
@@ -70,8 +88,8 @@ Before config change
   $ cd "$TESTTMP/small-hg-client"
   $ REPONAME=small-mon hgmn pull -q
   $ REPONAME=small-mon hgmn up -q master_bookmark
-  $ log -r master_bookmark
-  @  before merge [public;rev=2;*] default/master_bookmark (glob)
+  $ log_globalrev -r master_bookmark
+  @  before merge [public;globalrev=1000157971;61807722d4ec] default/master_bookmark
   │
   ~
   $ hg log -r master_bookmark -T "{files % '{file}\n'}"
@@ -129,8 +147,8 @@ Before config change
   $ cd "$TESTTMP"/large-hg-client
   $ REPONAME=large-mon hgmn -q pull
   $ REPONAME=large-mon hgmn up -q master_bookmark
-  $ log -r master_bookmark
-  @    [MEGAREPO GRADUAL MERGE] gradual merge (0) [public;rev=7;*] default/master_bookmark (glob)
+  $ log_globalrev -r master_bookmark
+  @    [MEGAREPO GRADUAL MERGE] gradual merge (0) [public;globalrev=;1954d0904eb7] default/master_bookmark
   ├─╮
   │ │
   ~ ~
@@ -141,8 +159,8 @@ Before config change
   $ hg ci -Aqm "after merge"
   $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi small-mon master_bookmark)
   $ REPONAME=large-mon hgmn push -r . --to master_bookmark -q
-  $ log -r master_bookmark
-  @  after merge [public;rev=*;*] default/master_bookmark (glob)
+  $ log_globalrev -r master_bookmark
+  o  after merge [public;globalrev=1000157972;32af51e4582a] default/master_bookmark
   │
   ~
 -- wait a second to give backsyncer some time to catch up
@@ -152,28 +170,28 @@ Before config change
   $ cd "$TESTTMP/small-hg-client"
   $ REPONAME=small-mon hgmn pull -q
   $ REPONAME=small-mon hgmn up -q master_bookmark
-  $ log -r master_bookmark^::master_bookmark
-  @  after merge [public;rev=*;*] default/master_bookmark (glob)
+  $ log_globalrev -r master_bookmark^::master_bookmark
+  @  after merge [public;globalrev=1000157972;8c1a6ca3e45c] default/master_bookmark
   │
-  o  [MEGAREPO GRADUAL MERGE] gradual merge (0) [public;rev=3;*] (glob)
+  o  [MEGAREPO GRADUAL MERGE] gradual merge (0) [public;globalrev=;acb039254948]
   │
   ~
 
   $ echo baz_from_small > baz
   $ hg ci -Aqm "after merge from small"
   $ REPONAME=small-mon hgmn push -r . --to master_bookmark -q
-  $ log -r master_bookmark^::master_bookmark
-  @  after merge from small [public;rev=5;*] default/master_bookmark (glob)
+  $ log_globalrev -r master_bookmark^::master_bookmark
+  o  after merge from small [public;globalrev=1000157973;b9837a40b210] default/master_bookmark
   │
-  o  after merge [public;rev=4;*] (glob)
+  o  after merge [public;globalrev=1000157972;8c1a6ca3e45c]
   │
   ~
   $ cd "$TESTTMP/large-hg-client"
   $ REPONAME=large-mon hgmn pull -q
-  $ log -r master_bookmark^::master_bookmark
-  o  after merge from small [public;rev=9;*] default/master_bookmark (glob)
+  $ log_globalrev -r master_bookmark^::master_bookmark
+  o  after merge from small [public;globalrev=1000157973;8423eafd5666] default/master_bookmark
   │
-  @  after merge [public;rev=8;*] (glob)
+  o  after merge [public;globalrev=1000157972;32af51e4582a]
   │
   ~
 
@@ -186,24 +204,25 @@ Before config change
   IC=65f0b76c034d87adf7dac6f0b5a5442ab3f62edda21adb8e8ec57d1a99fb5905
   ID=a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707
 
+  $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi small-mon master_bookmark)
   $ with_stripped_logs mononoke_x_repo_sync "$IMPORTED_REPO_ID"  "$LARGE_REPO_ID" once --commit "$ID" --unsafe-change-version-to "new_version" --target-bookmark master_bookmark
   Starting session with id * (glob)
   changeset resolved as: ChangesetId(Blake2(a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707))
   Checking if a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707 is already synced 2->0
   1 unsynced ancestors of a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707
   syncing a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707 via pushrebase for master_bookmark
-  changeset a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707 synced as 6c3b56b6a5f88d184fd96060390436a4b7c47bd9b3fd64633c91cb916045ee4f in *ms (glob)
+  changeset a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707 synced as a040063b0ff75182b0a3b77315bfcb76901cb21f0c7488b84ac583dce187cae7 in *ms (glob)
   successful sync
-  $ sleep 2
+  $ wait_for_bookmark_move_away_edenapi small-mon master_bookmark  "$PREV_BOOK_VALUE"
 
   $ cd "$TESTTMP/small-hg-client"
   $ REPONAME=small-mon hgmn pull -q
   $ hg update master_bookmark
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ log -r .^::.
-  @  ID [public;rev=6;61c2e6c8f99d] default/master_bookmark
+  $ log_globalrev -r .^::.
+  @  ID [public;globalrev=;10ead7acb400] default/master_bookmark
   │
-  o  after merge from small [public;rev=5;ea10f199d79f]
+  o  after merge from small [public;globalrev=1000157973;b9837a40b210]
   │
   ~
   $ echo baz_from_small2 > bar
@@ -211,19 +230,19 @@ Before config change
   $ hg ci -Aqm "after mapping change from small"
   $ REPONAME=small-mon hgmn push -r . --to master_bookmark -q
 
-  $ log -r master_bookmark^::master_bookmark
-  @  after mapping change from small [public;rev=7;7fdb0a9ff02f] default/master_bookmark
+  $ log_globalrev -r master_bookmark^::master_bookmark
+  o  after mapping change from small [public;globalrev=1000157974;48b023620dfd] default/master_bookmark
   │
-  o  ID [public;rev=6;61c2e6c8f99d]
+  o  ID [public;globalrev=;10ead7acb400]
   │
   ~
 
   $ cd "$TESTTMP/large-hg-client"
   $ REPONAME=large-mon hgmn pull -q
-  $ log -r master_bookmark^::master_bookmark
-  o  after mapping change from small [public;rev=11;30c33a40decf] default/master_bookmark
+  $ log_globalrev -r master_bookmark^::master_bookmark
+  o  after mapping change from small [public;globalrev=1000157974;48decdcb8706] default/master_bookmark
   │
-  o  ID [public;rev=10;68305fcbe005]
+  o  ID [public;globalrev=;42cc2884f69d]
   │
   ~
 
@@ -248,13 +267,13 @@ Before config change
 
 
   $ REPONAME=large-mon hgmn pull -q
-  $ log -r master_bookmark^^^::master_bookmark
-  o  IG [public;rev=14;80bd79756619] default/master_bookmark
+  $ log_globalrev -r master_bookmark^^^::master_bookmark
+  o  IG [public;globalrev=;2855d838fb40] default/master_bookmark
   │
-  o  IF [public;rev=13;9eff798794ff]
+  o  IF [public;globalrev=;38d3576af0ee]
   │
-  o  IE [public;rev=12;32117f92bb02]
+  o  IE [public;globalrev=;08e49bec7b7e]
   │
-  o  after mapping change from small [public;rev=11;30c33a40decf]
+  o  after mapping change from small [public;globalrev=1000157974;48decdcb8706]
   │
   ~

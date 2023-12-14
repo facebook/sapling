@@ -630,6 +630,13 @@ function get_bonsai_globalrev_mapping {
   sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select hex(bcs_id), globalrev from bonsai_globalrev_mapping order by globalrev";
 }
 
+function set_bonsai_globalrev_mapping {
+  REPO_ID="$1"
+  BCS_ID="$2"
+  GLOBALREV="$3"
+  sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO bonsai_globalrev_mapping (repo_id, bcs_id, globalrev) VALUES ($REPO_ID, X'$BCS_ID', $GLOBALREV)";
+}
+
 function setup_mononoke_config {
   cd "$TESTTMP" || exit
 
@@ -1994,6 +2001,11 @@ function read_blobstore_wal_queue_size() {
 function log() {
   # Prepend "$" to the end of the log output to prevent having trailing whitespaces
   hg log -G -T "{desc} [{phase};rev={rev};{node|short}] {remotenames}" "$@" | sed 's/^[ \t]*$/$/'
+}
+
+function log_globalrev() {
+  # Prepend "$" to the end of the log output to prevent having trailing whitespaces
+  hg log -G -T "{desc} [{phase};globalrev={globalrev};{node|short}] {remotenames}" "$@" | sed 's/^[ \t]*$/$/'
 }
 
 # Default setup that many of the test use
