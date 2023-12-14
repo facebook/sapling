@@ -454,8 +454,14 @@ def smartdate(context, mapping, args):
     [
         ("", "master", "", _("master bookmark"), _("BOOKMARK")),
         ("r", "rev", [], _("show the specified revisions or range"), _("REV")),
-        ("", "all", False, _("don't hide old local changesets"), ""),
-        ("", "commit-info", False, _("show changes in current changeset"), ""),
+        ("", "all", False, _("don't hide old local changesets")),
+        ("", "commit-info", False, _("show changes in current changeset")),
+        (
+            "i",
+            "interactive",
+            False,
+            _("enter command line interactive smartlog (EXPERIMENTAL)"),
+        ),
     ]
     + logopts,
     _("[OPTION]... [[-r] REV]"),
@@ -509,6 +515,9 @@ def _smartlog(ui, repo, *pats, **opts):
 
     if len(revs) == 0:
         return
+
+    if opts.get("interactive"):
+        ui.write_err(_("warning: interactive mode is WIP\n"))
 
     # Print it!
     template = opts.get("template") or ""
