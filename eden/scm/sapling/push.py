@@ -42,7 +42,8 @@ def push(repo, dest, head_node, remote_bookmark, opargs=None):
     )
 
     # upload revs via EdenApi
-    uploaded, failed = edenapi_upload.uploadhgchangesets(repo, [head_node])
+    draft_nodes = repo.dageval(lambda: only([head_node], public()))
+    uploaded, failed = edenapi_upload.uploadhgchangesets(repo, draft_nodes)
     if failed:
         raise error.Abort(
             _("failed to upload commits to server: {}").format(
