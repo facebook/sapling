@@ -21,7 +21,6 @@ use synced_commit_mapping::SyncedCommitMapping;
 
 use crate::sync::SyncResult;
 
-#[allow(dead_code)] // TODO(T169692462): enable scuba logging by default
 pub const SCUBA_TABLE: &str = "mononoke_x_repo_sync";
 
 const SOURCE_REPO: &str = "source_repo";
