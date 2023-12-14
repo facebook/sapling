@@ -352,6 +352,8 @@ export class Repository {
     this.checkForMergeConflicts();
 
     this.disposables.push(() => subscription.dispose());
+
+    this.applyConfigInBackground();
   }
 
   public nextVisibleCommitRangeInDays(): number | undefined {
@@ -1052,6 +1054,18 @@ export class Repository {
       configName,
       configValue,
     );
+  }
+
+  /** Load and apply configs to `this` in background. */
+  private applyConfigInBackground() {
+    this.getConfig('isl.hold-off-refresh-ms').then(configValue => {
+      if (configValue != null) {
+        const numberValue = parseInt(configValue, 10);
+        if (numberValue >= 0) {
+          this.configHoldOffRefreshMs = numberValue;
+        }
+      }
+    });
   }
 }
 

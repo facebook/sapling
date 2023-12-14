@@ -166,6 +166,18 @@ describe('Repository', () => {
     });
   });
 
+  it('applies isl.hold-off-refresh-ms config', async () => {
+    mockExeca([[/^sl config isl\.hold-off-refresh-ms/, {stdout: '12345'}]]);
+    const info = (await Repository.getRepoInfo(
+      'sl',
+      mockLogger,
+      '/path/to/cwd',
+    )) as ValidatedRepoInfo;
+    const repo = new Repository(info, mockLogger, mockTracker);
+    await new Promise(process.nextTick);
+    expect(repo.configHoldOffRefreshMs).toBe(12345);
+  });
+
   it('extracting repo info', async () => {
     mockExeca([
       [/^sl config paths.default/, {stdout: 'mononoke://0.0.0.0/fbsource'}],
