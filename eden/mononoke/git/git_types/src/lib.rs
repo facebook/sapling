@@ -43,6 +43,7 @@ pub use crate::store::fetch_delta_instructions;
 pub use crate::store::fetch_git_object;
 pub use crate::store::fetch_git_object_bytes;
 pub use crate::store::upload_git_object;
+pub use crate::store::upload_packfile_base_item;
 pub use crate::tree::Tree;
 pub use crate::tree::TreeBuilder;
 pub use crate::tree::TreeHandle;

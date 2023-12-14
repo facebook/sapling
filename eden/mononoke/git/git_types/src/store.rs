@@ -133,7 +133,6 @@ where
 }
 
 /// Free function for uploading packfile item for git base object
-#[allow(dead_code)]
 pub async fn upload_packfile_base_item<B>(
     ctx: &CoreContext,
     blobstore: &B,

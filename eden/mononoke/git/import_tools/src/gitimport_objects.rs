@@ -656,6 +656,15 @@ pub trait GitUploader: Clone + Send + Sync + 'static {
         git_bytes: Bytes,
     ) -> Result<(), Error>;
 
+    /// Upload a single packfile item corresponding to a git base object, i.e. commit,
+    /// tree, blob or tag
+    async fn upload_packfile_base_item(
+        &self,
+        ctx: &CoreContext,
+        oid: ObjectId,
+        git_bytes: Bytes,
+    ) -> Result<(), Error>;
+
     /// Generate a single Bonsai changeset ID for corresponding Git commit
     /// This should delay saving the changeset if possible
     /// but may save it if required.

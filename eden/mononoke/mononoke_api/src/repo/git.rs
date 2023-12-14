@@ -164,6 +164,19 @@ where
     git_types::upload_git_object(ctx, blobstore, git_hash, raw_content).await
 }
 
+/// Free function for uploading packfile item for git base object
+pub async fn upload_packfile_base_item<B>(
+    ctx: &CoreContext,
+    blobstore: &B,
+    git_hash: &gix_hash::oid,
+    raw_content: Vec<u8>,
+) -> anyhow::Result<(), GitError>
+where
+    B: Blobstore + Clone,
+{
+    git_types::upload_packfile_base_item(ctx, blobstore, git_hash, raw_content).await
+}
+
 /// Free function for creating Mononoke counterpart of Git tree object
 pub async fn create_git_tree(
     ctx: &CoreContext,

@@ -32,6 +32,7 @@ use import_tools::HGGIT_COMMIT_ID_EXTRA;
 use import_tools::HGGIT_MARKER_EXTRA;
 use import_tools::HGGIT_MARKER_VALUE;
 use mononoke_api::repo::git::create_annotated_tag;
+use mononoke_api::repo::git::upload_packfile_base_item;
 use mononoke_api::repo::upload_git_object;
 use mononoke_types::bonsai_changeset::BonsaiAnnotatedTag;
 use mononoke_types::bonsai_changeset::BonsaiAnnotatedTagTarget;
@@ -110,6 +111,24 @@ where
             .bonsai_git_mapping()
             .get_bonsai_from_git_sha1(ctx, hash::GitSha1::from_bytes(oid.as_bytes())?)
             .await
+    }
+
+    /// Upload a single packfile item corresponding to a git base object, i.e. commit,
+    /// tree, blob or tag
+    async fn upload_packfile_base_item(
+        &self,
+        ctx: &CoreContext,
+        oid: ObjectId,
+        git_bytes: Bytes,
+    ) -> Result<(), Error> {
+        upload_packfile_base_item(ctx, self.inner.repo_blobstore(), &oid, git_bytes.to_vec())
+            .await
+            .map_err(|e| {
+                anyhow::anyhow!(
+                    "Failure in uploading packfile base item for git object. Cause: {}",
+                    e.to_string()
+                )
+            })
     }
 
     async fn upload_file(
