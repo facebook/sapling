@@ -1333,36 +1333,18 @@ where
         .await
     }
 
-    async fn unsafe_sync_commit_pushrebase_impl<'a>(
+    /// Chooses the mapping version that will be used for pushrebasing the commit.
+    /// We fail when there's no parents or they are all not sync candidates.
+    /// If there's only one parent then we just use its version.
+    /// If there's two parents then we resort to get_version_for_merge.
+    async fn mapping_version_for_pushrebase<'a>(
         &'a self,
         ctx: &'a CoreContext,
-        source_cs: BonsaiChangeset,
-        target_bookmark: Target<BookmarkKey>,
-        rewritedates: PushrebaseRewriteDates,
-    ) -> Result<Option<ChangesetId>, Error> {
+        source_cs: &BonsaiChangeset,
+        _target_bookmark: &Target<BookmarkKey>,
+        remapped_parents_outcome: &Vec<(CommitSyncOutcome, ChangesetId)>,
+    ) -> Result<CommitSyncConfigVersion, Error> {
         let hash = source_cs.get_changeset_id();
-        let (source_repo, target_repo) = self.get_source_target();
-
-        let parent_selection_hint = CandidateSelectionHint::OnlyOrAncestorOfBookmark(
-            target_bookmark.clone(),
-            Target(self.get_target_repo().clone()),
-        );
-
-        let mut remapped_parents_outcome = vec![];
-        for p in source_cs.parents() {
-            let maybe_commit_sync_outcome = self
-                .get_commit_sync_outcome_with_hint(ctx, Source(p), parent_selection_hint.clone())
-                .await?
-                .map(|sync_outcome| (sync_outcome, p));
-            let commit_sync_outcome = maybe_commit_sync_outcome.ok_or_else(|| {
-                format_err!(
-                    "parent {} has not been remapped yet, therefore can't remap {}",
-                    p,
-                    source_cs.get_changeset_id()
-                )
-            })?;
-            remapped_parents_outcome.push(commit_sync_outcome);
-        }
 
         let p1 = remapped_parents_outcome.get(0);
         let p2 = remapped_parents_outcome.get(1);
@@ -1397,6 +1379,48 @@ where
                 get_version_for_merge(ctx, self.get_source_repo(), hash, outcomes).await?
             }
         };
+        Ok(version_name)
+    }
+
+    async fn unsafe_sync_commit_pushrebase_impl<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        source_cs: BonsaiChangeset,
+        target_bookmark: Target<BookmarkKey>,
+        rewritedates: PushrebaseRewriteDates,
+    ) -> Result<Option<ChangesetId>, Error> {
+        let hash = source_cs.get_changeset_id();
+        let (source_repo, target_repo) = self.get_source_target();
+
+        let parent_selection_hint = CandidateSelectionHint::OnlyOrAncestorOfBookmark(
+            target_bookmark.clone(),
+            Target(self.get_target_repo().clone()),
+        );
+
+        let mut remapped_parents_outcome = vec![];
+        for p in source_cs.parents() {
+            let maybe_commit_sync_outcome = self
+                .get_commit_sync_outcome_with_hint(ctx, Source(p), parent_selection_hint.clone())
+                .await?
+                .map(|sync_outcome| (sync_outcome, p));
+            let commit_sync_outcome = maybe_commit_sync_outcome.ok_or_else(|| {
+                format_err!(
+                    "parent {} has not been remapped yet, therefore can't remap {}",
+                    p,
+                    source_cs.get_changeset_id()
+                )
+            })?;
+            remapped_parents_outcome.push(commit_sync_outcome);
+        }
+
+        let version_name = self
+            .mapping_version_for_pushrebase(
+                ctx,
+                &source_cs,
+                &target_bookmark,
+                &remapped_parents_outcome,
+            )
+            .await?;
 
         let mover = self.get_mover_by_version(&version_name).await?;
 
