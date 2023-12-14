@@ -22,6 +22,7 @@ use commit_graph_types::storage::CommitGraphStorage;
 use commit_graph_types::storage::Prefetch;
 use context::CoreContext;
 use futures_stats::TimedTryFutureExt;
+use itertools::Itertools;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 use slog::debug;
@@ -809,5 +810,83 @@ impl CommitGraph {
         }
 
         Ok(difference_segments)
+    }
+
+    /// Returns a vec of length `count` of segment ancestors of `cs_id` (i.e. ancestors
+    /// where the are no merge changesets between them and `cs_id`), that are `distance`
+    /// generations lower than `cs_id`. The returned ancestors are ordered from highest
+    /// generation to the lowest.
+    ///
+    /// Returns an error if any of the ancestors except possibly the last one is a
+    /// merge changeset.
+    ///
+    /// Note: If `count` is zero, this function returns a single ancestor. This is done
+    /// to match the behaviour of the segmented changelog implementation.
+    pub async fn locations_to_changeset_ids(
+        &self,
+        ctx: &CoreContext,
+        cs_id: ChangesetId,
+        distance: u64,
+        count: u64,
+    ) -> Result<Vec<ChangesetId>> {
+        let edges = self.storage.fetch_edges(ctx, cs_id).await?;
+        let merge_or_root_ancestor = edges.merge_ancestor.unwrap_or(edges.node);
+
+        // Check that the generation of the lowest requested ancestor is greater than or equal
+        // to the generation of the nearest merge/root ancestor. Otherwise the request ancestor
+        // doesn't belong to the same segment so we return an error.
+        if edges
+            .node
+            .generation
+            .value()
+            .saturating_sub(distance)
+            .saturating_sub(count.saturating_sub(1))
+            < merge_or_root_ancestor.generation.value()
+        {
+            return Err(anyhow!(
+                "Requested {}th segment ancestor of {}, found only {} segment ancestors",
+                distance + count,
+                cs_id,
+                edges.node.generation.value() - merge_or_root_ancestor.generation.value() + 1,
+            ));
+        }
+
+        // Find the ancestor that's at `distance` from `cs_id`.
+        let mut ancestor = self
+            .skip_tree_level_ancestor(ctx, cs_id, edges.node.skip_tree_depth - distance)
+            .await?
+            .ok_or_else(|| {
+                anyhow!(
+                    "Failed to find skip tree level ancestor for {} at depth {}",
+                    cs_id,
+                    edges.node.skip_tree_depth - distance
+                )
+            })?
+            .cs_id;
+
+        // We add the ancestor even if `count` is zero. This is the done to keep
+        // the same behaviour as the segmented changelog implementation.
+        let mut ancestors = vec![ancestor];
+
+        // Traverse the parents of the ancestor `count` - 1 times to get the rest
+        // of the ancestors.
+        for _ in 1..count {
+            let ancestor_edges = self.storage.fetch_edges(ctx, ancestor).await?;
+            ancestor = ancestor_edges
+                .parents
+                .into_iter()
+                .exactly_one()
+                .map_err(|parents| {
+                    anyhow!(
+                        "Expected exactly one parent for segment ancestor {}, found {}",
+                        ancestor,
+                        parents.len()
+                    )
+                })?
+                .cs_id;
+            ancestors.push(ancestor);
+        }
+
+        Ok(ancestors)
     }
 }

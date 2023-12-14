@@ -433,6 +433,46 @@ pub async fn assert_ancestors_difference_segments(
     Ok(())
 }
 
+pub async fn assert_locations_to_changeset_ids(
+    ctx: &CoreContext,
+    graph: &CommitGraph,
+    cs_id: &str,
+    distance: u64,
+    count: u64,
+    ancestors: Vec<&str>,
+) -> Result<()> {
+    let cs_id = name_cs_id(cs_id);
+    let ancestors = ancestors.into_iter().map(name_cs_id).collect::<Vec<_>>();
+
+    assert_eq!(
+        graph
+            .locations_to_changeset_ids(ctx, cs_id, distance, count)
+            .await?,
+        ancestors,
+    );
+
+    Ok(())
+}
+
+pub async fn assert_locations_to_changeset_ids_errors(
+    ctx: &CoreContext,
+    graph: &CommitGraph,
+    cs_id: &str,
+    distance: u64,
+    count: u64,
+) -> Result<()> {
+    let cs_id = name_cs_id(cs_id);
+
+    assert!(
+        graph
+            .locations_to_changeset_ids(ctx, cs_id, distance, count)
+            .await
+            .is_err(),
+    );
+
+    Ok(())
+}
+
 pub async fn assert_process_topologically(
     ctx: &CoreContext,
     graph: &CommitGraph,
