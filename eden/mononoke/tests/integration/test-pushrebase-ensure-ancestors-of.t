@@ -75,20 +75,22 @@ Now try to pushrebase "ancestor" bookmark, should fail
   remote:     Pushrebase is not allowed onto the bookmark 'ancestor', because this bookmark is required to be an ancestor of 'master_bookmark'
   remote: 
   remote:   Debug context:
-  remote:     PushrebaseNotAllowedRequiresAncestorsOf {
-  remote:         bookmark: BookmarkKey {
-  remote:             name: BookmarkName {
-  remote:                 bookmark: "ancestor",
+  remote:     PushrebaseHooksError(
+  remote:         PushrebaseNotAllowedRequiresAncestorsOf {
+  remote:             bookmark: BookmarkKey {
+  remote:                 name: BookmarkName {
+  remote:                     bookmark: "ancestor",
+  remote:                 },
+  remote:                 category: Branch,
   remote:             },
-  remote:             category: Branch,
-  remote:         },
-  remote:         descendant_bookmark: BookmarkKey {
-  remote:             name: BookmarkName {
-  remote:                 bookmark: "master_bookmark",
+  remote:             descendant_bookmark: BookmarkKey {
+  remote:                 name: BookmarkName {
+  remote:                     bookmark: "master_bookmark",
+  remote:                 },
+  remote:                 category: Branch,
   remote:             },
-  remote:             category: Branch,
   remote:         },
-  remote:     }
+  remote:     )
   abort: unexpected EOL, expected netstring digit
   [255]
 

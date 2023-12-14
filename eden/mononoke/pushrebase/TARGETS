@@ -69,6 +69,28 @@ rust_library(
 )
 
 rust_library(
+    name = "pushrebase_hooks",
+    srcs = glob(["pushrebase_hooks/**/*.rs"]),
+    autocargo = {"cargo_toml_dir": "pushrebase_hooks"},
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:thiserror",
+        "//eden/mononoke/bonsai_git_mapping:bonsai_git_mapping",
+        "//eden/mononoke/bonsai_git_mapping:git_mapping_pushrebase_hook",
+        "//eden/mononoke/bonsai_globalrev_mapping:bonsai_globalrev_mapping",
+        "//eden/mononoke/bonsai_globalrev_mapping:globalrev_pushrebase_hook",
+        "//eden/mononoke/bookmarks:bookmarks_types",
+        "//eden/mononoke/metaconfig:metaconfig_types",
+        "//eden/mononoke/pushrebase:pushrebase_hook",
+        "//eden/mononoke/pushrebase_mutation_mapping:pushrebase_mutation_mapping",
+        "//eden/mononoke/repo_attributes/repo_bookmark_attrs:repo_bookmark_attrs",
+        "//eden/mononoke/repo_attributes/repo_cross_repo:repo_cross_repo",
+        "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
+        "//eden/mononoke/server/context:context",
+    ],
+)
+
+rust_library(
     name = "pushrebase_client",
     srcs = glob(["client/**/*.rs"]),
     autocargo = {"cargo_toml_dir": "client"},

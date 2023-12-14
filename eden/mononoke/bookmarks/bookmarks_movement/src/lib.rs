@@ -48,11 +48,12 @@ pub use bookmarks_types::BookmarkKind;
 pub use hooks::CrossRepoPushSource;
 pub use hooks::HookRejection;
 pub use pushrebase::PushrebaseOutcome;
+pub use pushrebase_hooks::get_pushrebase_hooks;
+pub use pushrebase_hooks::PushrebaseHooksError;
 
 pub use crate::create::CreateBookmarkOp;
 pub use crate::delete::DeleteBookmarkOp;
 pub use crate::hook_running::run_hooks;
-pub use crate::pushrebase_onto::get_pushrebase_hooks;
 pub use crate::pushrebase_onto::PushrebaseOntoBookmarkOp;
 pub use crate::restrictions::check_bookmark_sync_config;
 pub use crate::restrictions::BookmarkKindRestrictions;
@@ -132,6 +133,9 @@ pub enum BookmarkMovementError {
     #[error("Pushrebase failed: {0}")]
     PushrebaseError(#[source] PushrebaseError),
 
+    #[error(transparent)]
+    PushrebaseHooksError(#[from] PushrebaseHooksError),
+
     #[error("Repo is locked: {0}")]
     RepoLocked(String),
 
@@ -140,26 +144,6 @@ pub enum BookmarkMovementError {
         changeset_id: ChangesetId,
         path1: NonRootMPath,
         path2: NonRootMPath,
-    },
-
-    #[error(
-        "This repository uses Globalrevs. Pushrebase is only allowed onto the bookmark '{}', this push was for '{}'",
-        .globalrevs_publishing_bookmark,
-        .bookmark
-    )]
-    PushrebaseInvalidGlobalrevsBookmark {
-        bookmark: BookmarkKey,
-        globalrevs_publishing_bookmark: BookmarkKey,
-    },
-
-    #[error(
-        "Pushrebase is not allowed onto the bookmark '{}', because this bookmark is required to be an ancestor of '{}'",
-        .bookmark,
-        .descendant_bookmark,
-    )]
-    PushrebaseNotAllowedRequiresAncestorsOf {
-        bookmark: BookmarkKey,
-        descendant_bookmark: BookmarkKey,
     },
 
     #[error("Bookmark '{bookmark}' can only be moved to ancestors of '{descendant_bookmark}'")]

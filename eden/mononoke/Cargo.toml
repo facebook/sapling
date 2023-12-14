@@ -347,6 +347,7 @@ members = [
   "pushrebase",
   "pushrebase/client",
   "pushrebase/pushrebase_hook",
+  "pushrebase/pushrebase_hooks",
   "pushrebase_mutation_mapping",
   "quiet_stream",
   "rate_limiting",
