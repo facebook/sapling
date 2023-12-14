@@ -7,9 +7,13 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
   $ hook_test_setup \
-  > limit_commitsize <(
+  > limit_commit_size <(
   >   cat <<CONF
-  > config_ints_64={commitsizelimit=10, changed_files_limit=5}
+  > config_json='''{
+  >   "changed_files_limit": 5,
+  >   "too_many_files_message": "Too many files: \${count} > \${limit}.",
+  >   "too_large_message": "Too large: \${size} > \${limit}."
+  > }'''
   > CONF
   > )
 
@@ -35,13 +39,13 @@ Large commit, a lot of files changed
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     limit_commitsize for bb41d2a5d8c3492f085f4d276927533e79f269ae: Commit changed 6 files but at most 5 are allowed. See https://fburl.com/landing_big_diffs for instructions.
+  remote:     limit_commit_size for bb41d2a5d8c3492f085f4d276927533e79f269ae: Too many files: 6 > 5.
   remote: 
   remote:   Root cause:
   remote:     hooks failed:
-  remote:     limit_commitsize for bb41d2a5d8c3492f085f4d276927533e79f269ae: Commit changed 6 files but at most 5 are allowed. See https://fburl.com/landing_big_diffs for instructions.
+  remote:     limit_commit_size for bb41d2a5d8c3492f085f4d276927533e79f269ae: Too many files: 6 > 5.
   remote: 
   remote:   Debug context:
-  remote:     "hooks failed:\nlimit_commitsize for bb41d2a5d8c3492f085f4d276927533e79f269ae: Commit changed 6 files but at most 5 are allowed. See https://fburl.com/landing_big_diffs for instructions."
+  remote:     "hooks failed:\nlimit_commit_size for bb41d2a5d8c3492f085f4d276927533e79f269ae: Too many files: 6 > 5."
   abort: unexpected EOL, expected netstring digit
   [255]

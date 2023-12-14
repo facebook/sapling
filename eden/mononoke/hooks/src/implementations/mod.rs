@@ -14,7 +14,7 @@ mod block_empty_commit;
 mod conflict_markers;
 pub(crate) mod deny_files;
 mod limit_commit_message_length;
-pub(crate) mod limit_commitsize;
+pub(crate) mod limit_commit_size;
 pub(crate) mod limit_filesize;
 mod limit_path_length;
 pub(crate) mod no_bad_extensions;
@@ -67,9 +67,13 @@ pub async fn make_changeset_hook(
         "limit_commit_message_length" => Some(b(
             limit_commit_message_length::LimitCommitMessageLength::new(&params.config)?,
         )),
-        "limit_commitsize" => Some(b(limit_commitsize::LimitCommitsize::builder()
-            .set_from_config(&params.config)
-            .build()?)),
+        "limit_commit_size" => Some(b(limit_commit_size::LimitCommitSizeHook::new(
+            &params.config,
+        )?)),
+        // Implement old hook behaviour during the transisiton
+        "limit_commitsize" => Some(b(limit_commit_size::legacy_limit_commitsize(
+            &params.config,
+        )?)),
         _ => None,
     })
 }
