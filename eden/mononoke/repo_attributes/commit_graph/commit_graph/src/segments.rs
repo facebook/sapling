@@ -18,9 +18,13 @@ use commit_graph_types::segments::ChangesetSegment;
 use commit_graph_types::segments::ChangesetSegmentFrontier;
 use commit_graph_types::segments::ChangesetSegmentLocation;
 use commit_graph_types::segments::ChangesetSegmentParent;
+use commit_graph_types::segments::Location;
 use commit_graph_types::storage::CommitGraphStorage;
 use commit_graph_types::storage::Prefetch;
 use context::CoreContext;
+use futures::stream;
+use futures::StreamExt;
+use futures::TryStreamExt;
 use futures_stats::TimedTryFutureExt;
 use itertools::Itertools;
 use mononoke_types::ChangesetId;
@@ -888,5 +892,158 @@ impl CommitGraph {
         }
 
         Ok(ancestors)
+    }
+
+    /// Same as changeset_ids_to_locations but all changesets in `heads` and `targets` must
+    /// all have the same base (i.e. nearest merge/root ancestor).
+    async fn changeset_ids_to_locations_same_base(
+        &self,
+        ctx: &CoreContext,
+        heads: Vec<ChangesetId>,
+        targets: Vec<ChangesetId>,
+    ) -> Result<HashMap<ChangesetId, Location>> {
+        let (targets_edges, heads_edges) = futures::try_join!(
+            self.storage.fetch_many_edges(ctx, &targets, Prefetch::None),
+            self.storage.fetch_many_edges(ctx, &heads, Prefetch::None),
+        )?;
+
+        // Group `targets` by their generations.
+        let mut targets_frontier: BTreeMap<Generation, HashSet<ChangesetId>> = Default::default();
+        for (target, edges) in targets_edges {
+            targets_frontier
+                .entry(edges.node.generation)
+                .or_default()
+                .insert(target);
+        }
+
+        // Group `heads` by their generations. This frontier will be lowered
+        // so we need to additionally store for each changeset where it
+        // originated from (its initial id and generation).
+        let mut heads_frontier: BTreeMap<
+            Generation,
+            HashMap<ChangesetId, (ChangesetId, Generation)>,
+        > = Default::default();
+        for (head, edges) in heads_edges {
+            heads_frontier
+                .entry(edges.node.generation)
+                .or_default()
+                .insert(head, (head, edges.node.generation));
+        }
+
+        let mut mapping: HashMap<ChangesetId, Location> = Default::default();
+
+        while let Some((targets_generation, targets)) = targets_frontier.pop_last() {
+            // Lower all changesets in the heads frontier that have a generation
+            // higher than `targets_generation` down to `targets_generation`.
+            loop {
+                match heads_frontier.last_key_value() {
+                    Some((heads_generation, _)) if *heads_generation > targets_generation => {}
+                    _ => break,
+                }
+
+                if let Some((_, heads)) = heads_frontier.pop_last() {
+                    let heads_edges = self
+                        .storage
+                        .fetch_many_edges(
+                            ctx,
+                            &heads.keys().copied().collect::<Vec<_>>(),
+                            Prefetch::for_skip_tree_traversal(targets_generation),
+                        )
+                        .await?;
+
+                    // Lower each head to either it's skew binary ancestor if it's
+                    // generation is not less than `targets_generation` or to its
+                    // immediate parent otherwise.
+                    for (head, origin) in heads {
+                        let edges = heads_edges.get(&head).ok_or_else(|| {
+                            anyhow!("Missing changeset edges in commit graph {}", head)
+                        })?;
+
+                        if let Some(ancestor) = edges
+                            .lowest_skip_tree_edge_with(|ancestor| {
+                                futures::future::ok(ancestor.generation >= targets_generation)
+                            })
+                            .await?
+                        {
+                            heads_frontier
+                                .entry(ancestor.generation)
+                                .or_default()
+                                .insert(ancestor.cs_id, origin);
+                        }
+                    }
+                }
+            }
+
+            for target in targets {
+                // Check if this target changeset is contained in the lowered
+                // heads frontier, and add a location relative to the origin
+                // of the head if so.
+                if let Some(frontier) = heads_frontier.get(&targets_generation) {
+                    if let Some((origin_head, origin_head_generation)) = frontier.get(&target) {
+                        mapping.insert(
+                            target,
+                            Location {
+                                cs_id: *origin_head,
+                                distance: origin_head_generation.value()
+                                    - targets_generation.value(),
+                            },
+                        );
+                    }
+                }
+            }
+        }
+
+        Ok(mapping)
+    }
+
+    /// Returns a map of locations for all changesets in `targets` that are ancestors of
+    /// any changeset in `heads`, ignoring other changesets. Each location is of the form
+    /// `cs_id~distance` which points to the `distance`-th ancestor of `cs_id`. The `cs_id`
+    /// in each location must be either a changeset in `heads` or a parent of a merge ancestor
+    /// of a changeset in `heads`.
+    pub async fn changeset_ids_to_locations(
+        &self,
+        ctx: &CoreContext,
+        heads: Vec<ChangesetId>,
+        targets: Vec<ChangesetId>,
+    ) -> Result<HashMap<ChangesetId, Location>> {
+        let (targets_frontier, mut heads_frontier) = futures::try_join!(
+            self.segment_frontier(ctx, targets),
+            self.segment_frontier(ctx, heads),
+        )?;
+
+        let mut same_base_futures = vec![];
+
+        // Iterate over changesets in targets grouped by the generation of their base
+        // (nearest merge/root ancestor) from the highest generation to the lowest.
+        for (generation, targets_segments) in targets_frontier.segments.into_iter().rev() {
+            // Lower the heads frontier so that the highest generation of the base
+            // of each changeset is less than or equal to the targets base generation.
+            self.lower_segment_frontier(ctx, &mut heads_frontier, generation)
+                .await?;
+
+            // Iterate over changesets in targets grouped by their base.
+            for (base, targets) in targets_segments {
+                if let Some(heads) = heads_frontier
+                    .segments
+                    .get(&generation)
+                    .and_then(|segments| segments.get(&base))
+                {
+                    // Calculate locations for targets and heads that share the same base.
+                    same_base_futures.push(self.changeset_ids_to_locations_same_base(
+                        ctx,
+                        heads.iter().copied().collect(),
+                        targets.into_iter().collect(),
+                    ));
+                }
+            }
+        }
+
+        stream::iter(same_base_futures)
+            .buffer_unordered(100)
+            .map_ok(|mapping| stream::iter(mapping).map(Ok))
+            .try_flatten()
+            .try_collect()
+            .await
     }
 }

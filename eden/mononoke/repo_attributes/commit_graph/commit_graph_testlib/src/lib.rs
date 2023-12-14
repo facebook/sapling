@@ -58,6 +58,7 @@ macro_rules! impl_commit_graph_tests {
             test_ancestors_difference_segments_2,
             test_ancestors_difference_segments_3,
             test_locations_to_changeset_ids,
+            test_changeset_ids_to_locations,
             test_process_topologically,
             test_minimize_frontier,
         );
@@ -1162,6 +1163,60 @@ pub async fn test_locations_to_changeset_ids(
     assert_locations_to_changeset_ids(&ctx, &graph, "O", 0, 1, vec!["O"]).await?;
     assert_locations_to_changeset_ids(&ctx, &graph, "O", 0, 2, vec!["O", "N"]).await?;
     assert_locations_to_changeset_ids_errors(&ctx, &graph, "O", 0, 3).await?;
+
+    Ok(())
+}
+
+pub async fn test_changeset_ids_to_locations(
+    ctx: CoreContext,
+    storage: Arc<dyn CommitGraphStorageTest>,
+) -> Result<()> {
+    let graph = from_dag(
+        &ctx,
+        r"
+        A-B-C-D-E---L------N----O
+           \         \    /
+            F-G-H     M  /
+             \       /  /
+              I-J---K--/---Q---R
+                 \
+                  \---------P
+        ",
+        storage.clone(),
+    )
+    .await?;
+    storage.flush();
+
+    assert_changeset_ids_to_locations(
+        &ctx,
+        &graph,
+        vec!["O"],
+        vec![
+            "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q",
+            "R",
+        ],
+    )
+    .await?;
+    assert_changeset_ids_to_locations(
+        &ctx,
+        &graph,
+        vec!["O", "R"],
+        vec![
+            "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q",
+            "R",
+        ],
+    )
+    .await?;
+    assert_changeset_ids_to_locations(
+        &ctx,
+        &graph,
+        vec!["O", "R", "P"],
+        vec![
+            "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q",
+            "R",
+        ],
+    )
+    .await?;
 
     Ok(())
 }

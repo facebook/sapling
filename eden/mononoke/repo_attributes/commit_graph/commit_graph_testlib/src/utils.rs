@@ -10,6 +10,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 use std::sync::RwLock;
 
+use anyhow::anyhow;
 use anyhow::Result;
 use cloned::cloned;
 use commit_graph::AncestorsStreamBuilder;
@@ -469,6 +470,43 @@ pub async fn assert_locations_to_changeset_ids_errors(
             .await
             .is_err(),
     );
+
+    Ok(())
+}
+
+pub async fn assert_changeset_ids_to_locations(
+    ctx: &CoreContext,
+    graph: &CommitGraph,
+    heads: Vec<&str>,
+    targets: Vec<&str>,
+) -> Result<()> {
+    let targets = targets.into_iter().map(name_cs_id).collect::<Vec<_>>();
+    let heads = heads.into_iter().map(name_cs_id).collect::<Vec<_>>();
+
+    let locations = graph
+        .changeset_ids_to_locations(ctx, heads.clone(), targets.clone())
+        .await?;
+
+    for target in targets {
+        // If a target is an ancestor of any of the heads a location should be returned,
+        // otherwise a location shouldn't be returned.
+        if graph.is_ancestor_of_any(ctx, target, heads.clone()).await? {
+            let location = locations.get(&target).ok_or_else(|| {
+                anyhow!(
+                    "changeset_ids_to_locations didn't return location for {} which is an ancestor of heads {:?}", target, heads
+                )
+            })?;
+            // Verify that the returned location resolves to the target.
+            assert_eq!(
+                graph
+                    .locations_to_changeset_ids(ctx, location.cs_id, location.distance, 1)
+                    .await?,
+                vec![target]
+            );
+        } else {
+            assert!(!locations.contains_key(&target));
+        }
+    }
 
     Ok(())
 }
