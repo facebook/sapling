@@ -308,6 +308,7 @@ where
                 target_bookmark,
                 cs_id,
                 pushrebase_rewrite_dates,
+                version.clone(),
             )
             .timed()
             .await;
@@ -639,6 +640,7 @@ async fn pushrebase_commit<M: SyncedCommitMapping + Clone + 'static, R>(
     target_bookmark: &Target<BookmarkKey>,
     cs_id: ChangesetId,
     pushrebase_rewrite_dates: PushrebaseRewriteDates,
+    version: CommitSyncConfigVersion,
 ) -> Result<Option<ChangesetId>, Error>
 where
     R: Repo,
@@ -652,6 +654,7 @@ where
             target_bookmark.clone(),
             CommitSyncContext::XRepoSyncJob,
             pushrebase_rewrite_dates,
+            version,
         )
         .await
 }

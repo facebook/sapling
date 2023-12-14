@@ -1298,6 +1298,8 @@ where
     /// This function is prefixed with unsafe because it requires that ancestors commits are
     /// already synced and because there should be exactly one sync job that uses this function
     /// for a (small repo -> large repo) pair.
+    ///
+    /// Validation that the version is applicable is done by the caller.
     pub async fn unsafe_sync_commit_pushrebase<'a>(
         &'a self,
         ctx: &'a CoreContext,
@@ -1305,11 +1307,18 @@ where
         target_bookmark: Target<BookmarkKey>,
         commit_sync_context: CommitSyncContext,
         rewritedates: PushrebaseRewriteDates,
+        version: CommitSyncConfigVersion,
     ) -> Result<Option<ChangesetId>, Error> {
         let source_cs_id = source_cs.get_changeset_id();
         let before = Instant::now();
         let res = self
-            .unsafe_sync_commit_pushrebase_impl(ctx, source_cs, target_bookmark, rewritedates)
+            .unsafe_sync_commit_pushrebase_impl(
+                ctx,
+                source_cs,
+                target_bookmark,
+                rewritedates,
+                version,
+            )
             .await;
         let elapsed = before.elapsed();
 
@@ -1333,61 +1342,13 @@ where
         .await
     }
 
-    /// Chooses the mapping version that will be used for pushrebasing the commit.
-    /// We fail when there's no parents or they are all not sync candidates.
-    /// If there's only one parent then we just use its version.
-    /// If there's two parents then we resort to get_version_for_merge.
-    async fn mapping_version_for_pushrebase<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        source_cs: &BonsaiChangeset,
-        _target_bookmark: &Target<BookmarkKey>,
-        remapped_parents_outcome: &Vec<(CommitSyncOutcome, ChangesetId)>,
-    ) -> Result<CommitSyncConfigVersion, Error> {
-        let hash = source_cs.get_changeset_id();
-
-        let p1 = remapped_parents_outcome.get(0);
-        let p2 = remapped_parents_outcome.get(1);
-        let version_name = match (p1, p2) {
-            (None, None) => {
-                return Err(format_err!("cannot pushrebase a commit with no parents"));
-            }
-            (Some((sync_outcome, _)), None) => {
-                use CommitSyncOutcome::*;
-
-                let version_name = match sync_outcome {
-                    NotSyncCandidate(_) => {
-                        return Err(ErrorKind::ParentNotSyncCandidate(hash).into());
-                    }
-                    RewrittenAs(_, version_name)
-                    | EquivalentWorkingCopyAncestor(_, version_name) => version_name.clone(),
-                };
-
-                let maybe_version =
-                    get_version(ctx, self.get_source_repo(), hash, &[version_name]).await?;
-                maybe_version.ok_or_else(|| {
-                    format_err!("unexpected can not find commit sync version for {}", hash)
-                })?
-            }
-            _ => {
-                // FIXME: Had to turn it to a vector to avoid "One type is more general than the other"
-                // errors
-                let outcomes = remapped_parents_outcome
-                    .iter()
-                    .map(|(outcome, _)| outcome)
-                    .collect::<Vec<_>>();
-                get_version_for_merge(ctx, self.get_source_repo(), hash, outcomes).await?
-            }
-        };
-        Ok(version_name)
-    }
-
     async fn unsafe_sync_commit_pushrebase_impl<'a>(
         &'a self,
         ctx: &'a CoreContext,
         source_cs: BonsaiChangeset,
         target_bookmark: Target<BookmarkKey>,
         rewritedates: PushrebaseRewriteDates,
+        version: CommitSyncConfigVersion,
     ) -> Result<Option<ChangesetId>, Error> {
         let hash = source_cs.get_changeset_id();
         let (source_repo, target_repo) = self.get_source_target();
@@ -1413,20 +1374,11 @@ where
             remapped_parents_outcome.push(commit_sync_outcome);
         }
 
-        let version_name = self
-            .mapping_version_for_pushrebase(
-                ctx,
-                &source_cs,
-                &target_bookmark,
-                &remapped_parents_outcome,
-            )
-            .await?;
-
-        let mover = self.get_mover_by_version(&version_name).await?;
+        let mover = self.get_mover_by_version(&version).await?;
 
         let git_submodules_action = get_strip_git_submodules_by_version(
             Arc::clone(&self.live_commit_sync_config),
-            &version_name,
+            &version,
             self.repos.get_source_repo().repo_identity().id(),
         )
         .await?;
@@ -1447,7 +1399,7 @@ where
         match rewritten {
             None => {
                 if remapped_parents_outcome.is_empty() {
-                    self.set_no_sync_candidate(ctx, hash, version_name).await?;
+                    self.set_no_sync_candidate(ctx, hash, version).await?;
                 } else if remapped_parents_outcome.len() == 1 {
                     use CommitSyncOutcome::*;
                     let (sync_outcome, _) = &remapped_parents_outcome[0];
@@ -1505,7 +1457,7 @@ where
                     &[CrossRepoSyncPushrebaseHook::new(
                         hash,
                         self.repos.clone(),
-                        version_name.clone(),
+                        version.clone(),
                     )],
                 )
                 .await;

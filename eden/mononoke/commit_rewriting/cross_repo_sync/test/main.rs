@@ -24,6 +24,7 @@ use bookmarks::BookmarksRef;
 use cacheblob::InProcessLease;
 use changeset_fetcher::ChangesetFetcherRef;
 use context::CoreContext;
+use cross_repo_sync::find_toposorted_unsynced_ancestors;
 use cross_repo_sync::types::Target;
 use cross_repo_sync::update_mapping_with_version;
 use cross_repo_sync::validation::verify_working_copy;
@@ -159,6 +160,26 @@ async fn create_empty_commit(ctx: CoreContext, repo: &TestRepo) -> ChangesetId {
     bcs_id
 }
 
+async fn get_version<M>(
+    ctx: &CoreContext,
+    config: &CommitSyncer<M, TestRepo>,
+    source_bcs_id: ChangesetId,
+) -> Result<CommitSyncConfigVersion, Error>
+where
+    M: SyncedCommitMapping + Clone + 'static,
+{
+    let (_unsynced_ancestors, unsynced_ancestors_versions) =
+        find_toposorted_unsynced_ancestors(ctx, config, source_bcs_id.clone()).await?;
+
+    let version = if !unsynced_ancestors_versions.has_ancestor_with_a_known_outcome() {
+        panic!("no known version");
+    } else {
+        let maybe_version = unsynced_ancestors_versions.get_only_version().unwrap();
+        maybe_version.unwrap()
+    };
+    Ok(version)
+}
+
 async fn sync_to_master<M>(
     ctx: CoreContext,
     config: &CommitSyncer<M, TestRepo>,
@@ -172,7 +193,7 @@ where
         .load(&ctx, config.get_source_repo().repo_blobstore())
         .await
         .unwrap();
-
+    let version = get_version(&ctx, config, source_bcs_id).await?;
     config
         .unsafe_sync_commit_pushrebase(
             &ctx,
@@ -180,6 +201,7 @@ where
             Target(bookmark_name),
             CommitSyncContext::Tests,
             PushrebaseRewriteDates::No,
+            version,
         )
         .await
 }
@@ -984,6 +1006,7 @@ async fn get_multiple_master_mapping_setup(
     let small_cs = small_repo_master_cs_id
         .load(&ctx, small_repo.repo_blobstore())
         .await?;
+    let version = get_version(&ctx, &small_to_large_syncer, small_repo_master_cs_id).await?;
     small_to_large_syncer
         .unsafe_sync_commit_pushrebase(
             &ctx,
@@ -991,6 +1014,7 @@ async fn get_multiple_master_mapping_setup(
             Target(BookmarkKey::new("master").unwrap()),
             CommitSyncContext::Tests,
             PushrebaseRewriteDates::No,
+            version.clone(),
         )
         .await
         .expect("sync should have succeeded");
@@ -1002,6 +1026,7 @@ async fn get_multiple_master_mapping_setup(
             Target(BookmarkKey::new("other_branch").unwrap()),
             CommitSyncContext::Tests,
             PushrebaseRewriteDates::No,
+            version,
         )
         .await
         .expect("sync should have succeeded");
@@ -1093,6 +1118,7 @@ async fn test_sync_no_op_pushrebase_has_multiple_mappings(fb: FacebookInit) -> R
     .await;
     let to_sync = to_sync_id.load(&ctx, small_repo.repo_blobstore()).await?;
 
+    let version = get_version(&ctx, &small_to_large_syncer, small_repo_master_cs_id).await?;
     small_to_large_syncer
         .unsafe_sync_commit_pushrebase(
             &ctx,
@@ -1100,6 +1126,7 @@ async fn test_sync_no_op_pushrebase_has_multiple_mappings(fb: FacebookInit) -> R
             Target(BookmarkKey::new("master").unwrap()),
             CommitSyncContext::Tests,
             PushrebaseRewriteDates::No,
+            version,
         )
         .await
         .expect("sync should have succeeded");
@@ -1138,6 +1165,7 @@ async fn test_sync_real_pushrebase_has_multiple_mappings(fb: FacebookInit) -> Re
     .await;
     let to_sync = to_sync_id.load(&ctx, small_repo.repo_blobstore()).await?;
 
+    let version = get_version(&ctx, &small_to_large_syncer, small_repo_master_cs_id).await?;
     small_to_large_syncer
         .unsafe_sync_commit_pushrebase(
             &ctx,
@@ -1145,6 +1173,7 @@ async fn test_sync_real_pushrebase_has_multiple_mappings(fb: FacebookInit) -> Re
             Target(BookmarkKey::new("master").unwrap()),
             CommitSyncContext::Tests,
             PushrebaseRewriteDates::No,
+            version,
         )
         .await
         .expect("sync should have succeeded");
@@ -1506,6 +1535,8 @@ async fn test_disabled_sync_pushrebase(fb: FacebookInit) -> Result<(), Error> {
     let res = with_tunables_async(
         tunables,
         async {
+            let version =
+                get_version(&ctx, &small_to_large_syncer, small_repo_master_cs_id).await?;
             small_to_large_syncer
                 .unsafe_sync_commit_pushrebase(
                     &ctx,
@@ -1513,6 +1544,7 @@ async fn test_disabled_sync_pushrebase(fb: FacebookInit) -> Result<(), Error> {
                     Target(BookmarkKey::new("master").unwrap()),
                     CommitSyncContext::Tests,
                     PushrebaseRewriteDates::No,
+                    version,
                 )
                 .await
         }
