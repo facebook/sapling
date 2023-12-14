@@ -15,6 +15,8 @@ path = "test/main.rs"
 anyhow = "1.0.75"
 async-trait = "0.1.71"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
+bonsai_git_mapping = { version = "0.1.0", path = "../../bonsai_git_mapping" }
+bonsai_globalrev_mapping = { version = "0.1.0", path = "../../bonsai_globalrev_mapping" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
 bookmark_renaming = { version = "0.1.0", path = "../bookmark_renaming" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
@@ -46,9 +48,13 @@ mutable_counters = { version = "0.1.0", path = "../../mutable_counters" }
 phases = { version = "0.1.0", path = "../../phases" }
 pushrebase = { version = "0.1.0", path = "../../pushrebase" }
 pushrebase_hook = { version = "0.1.0", path = "../../pushrebase/pushrebase_hook" }
+pushrebase_hooks = { version = "0.1.0", path = "../../pushrebase/pushrebase_hooks" }
+pushrebase_mutation_mapping = { version = "0.1.0", path = "../../pushrebase_mutation_mapping" }
 rand = { version = "0.8", features = ["small_rng"] }
 ref-cast = "1.0.18"
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
+repo_bookmark_attrs = { version = "0.1.0", path = "../../repo_attributes/repo_bookmark_attrs" }
+repo_cross_repo = { version = "0.1.0", path = "../../repo_attributes/repo_cross_repo" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 scopeguard = "1.0.0"

@@ -16,6 +16,7 @@ use blobrepo::AsBlobRepo;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bonsai_git_mapping::BonsaiGitMapping;
+use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarkKey;
@@ -55,7 +56,10 @@ use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use mutable_counters::MutableCounters;
 use phases::Phases;
+use pushrebase_mutation_mapping::PushrebaseMutationMapping;
 use repo_blobstore::RepoBlobstore;
+use repo_bookmark_attrs::RepoBookmarkAttrs;
+use repo_cross_repo::RepoCrossRepo;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
 use sql_construct::SqlConstruct;
@@ -74,6 +78,9 @@ pub struct TestRepo {
         dyn BookmarkUpdateLog,
         dyn BonsaiHgMapping,
         dyn BonsaiGitMapping,
+        dyn BonsaiGlobalrevMapping,
+        dyn PushrebaseMutationMapping,
+        RepoBookmarkAttrs,
         dyn Changesets,
         dyn ChangesetFetcher,
         dyn Filenodes,
@@ -86,6 +93,9 @@ pub struct TestRepo {
         CommitGraph,
     )]
     pub blob_repo: BlobRepo,
+
+    #[facet]
+    pub repo_cross_repo: RepoCrossRepo,
 
     #[facet]
     pub repo_config: RepoConfig,

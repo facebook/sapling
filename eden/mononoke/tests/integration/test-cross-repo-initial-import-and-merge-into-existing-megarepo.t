@@ -211,7 +211,7 @@ Before config change
   Checking if a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707 is already synced 2->0
   1 unsynced ancestors of a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707
   syncing a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707 via pushrebase for master_bookmark
-  changeset a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707 synced as a040063b0ff75182b0a3b77315bfcb76901cb21f0c7488b84ac583dce187cae7 in *ms (glob)
+  changeset a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707 synced as ade6701cded74fef53787cd062f51df11857bcfead8a7753f4ce55d21df65b54 in *ms (glob)
   successful sync
   $ wait_for_bookmark_move_away_edenapi small-mon master_bookmark  "$PREV_BOOK_VALUE"
 
@@ -220,7 +220,7 @@ Before config change
   $ hg update master_bookmark
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ log_globalrev -r .^::.
-  @  ID [public;globalrev=;10ead7acb400] default/master_bookmark
+  @  ID [public;globalrev=1000157974;b9be108c6ac9] default/master_bookmark
   │
   o  after merge from small [public;globalrev=1000157973;b9837a40b210]
   │
@@ -231,18 +231,18 @@ Before config change
   $ REPONAME=small-mon hgmn push -r . --to master_bookmark -q
 
   $ log_globalrev -r master_bookmark^::master_bookmark
-  o  after mapping change from small [public;globalrev=1000157974;48b023620dfd] default/master_bookmark
+  o  after mapping change from small [public;globalrev=1000157975;46c7df7abb67] default/master_bookmark
   │
-  o  ID [public;globalrev=;10ead7acb400]
+  o  ID [public;globalrev=1000157974;b9be108c6ac9]
   │
   ~
 
   $ cd "$TESTTMP/large-hg-client"
   $ REPONAME=large-mon hgmn pull -q
   $ log_globalrev -r master_bookmark^::master_bookmark
-  o  after mapping change from small [public;globalrev=1000157974;48decdcb8706] default/master_bookmark
+  o  after mapping change from small [public;globalrev=1000157975;d184fcb0f99c] default/master_bookmark
   │
-  o  ID [public;globalrev=;42cc2884f69d]
+  o  ID [public;globalrev=1000157974;44724c7890d3]
   │
   ~
 
@@ -263,17 +263,18 @@ Before config change
   IF=20d91840623a3e0e6f3bc3c46ce6755d5f4c9ce6cfb49dae7b9cc8d9d0acfae9
   IG=2daec24778b88c326d1ba0f830d43a2d24d471dc22c48c8307096d0f60c9477f
   $ quiet mononoke_newadmin mutable-counters --repo-id $LARGE_REPO_ID set xreposync_from_$IMPORTED_REPO_ID 2
+  $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi large-mon master_bookmark)
   $ quiet mononoke_x_repo_sync "$IMPORTED_REPO_ID"  "$LARGE_REPO_ID" tail --bookmark-regex "master_bookmark" --catch-up-once
-
+  $ wait_for_bookmark_move_away_edenapi large-mon master_bookmark  "$PREV_BOOK_VALUE"
 
   $ REPONAME=large-mon hgmn pull -q
   $ log_globalrev -r master_bookmark^^^::master_bookmark
-  o  IG [public;globalrev=;2855d838fb40] default/master_bookmark
+  o  IG [public;globalrev=1000157978;e9c227f0707a] default/master_bookmark
   │
-  o  IF [public;globalrev=;38d3576af0ee]
+  o  IF [public;globalrev=1000157977;adfb545bf843]
   │
-  o  IE [public;globalrev=;08e49bec7b7e]
+  o  IE [public;globalrev=1000157976;517da9a1a5eb]
   │
-  o  after mapping change from small [public;globalrev=1000157974;48decdcb8706]
+  o  after mapping change from small [public;globalrev=1000157975;d184fcb0f99c]
   │
   ~

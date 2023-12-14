@@ -24,6 +24,11 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use blobstore::Loadable;
+use bonsai_git_mapping::BonsaiGitMapping;
+use bonsai_git_mapping::BonsaiGitMappingArc;
+use bonsai_git_mapping::BonsaiGitMappingRef;
+use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
+use bonsai_globalrev_mapping::BonsaiGlobalrevMappingArc;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmark_renaming::BookmarkRenamer;
@@ -93,9 +98,16 @@ use phases::Phases;
 use phases::PhasesRef;
 use pushrebase::do_pushrebase_bonsai;
 use pushrebase::PushrebaseError;
+use pushrebase_hooks::get_pushrebase_hooks;
+use pushrebase_mutation_mapping::PushrebaseMutationMapping;
+use pushrebase_mutation_mapping::PushrebaseMutationMappingRef;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_bookmark_attrs::RepoBookmarkAttrs;
+use repo_bookmark_attrs::RepoBookmarkAttrsRef;
+use repo_cross_repo::RepoCrossRepo;
+use repo_cross_repo::RepoCrossRepoRef;
 use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentity;
@@ -550,6 +562,12 @@ pub trait Repo = BookmarksArc
     + BookmarkUpdateLogRef
     + RepoBlobstoreArc
     + BonsaiHgMappingRef
+    + BonsaiGlobalrevMappingArc
+    + RepoCrossRepoRef
+    + PushrebaseMutationMappingRef
+    + RepoBookmarkAttrsRef
+    + BonsaiGitMappingRef
+    + BonsaiGitMappingArc
     + FilestoreConfigRef
     + ChangesetsRef
     + RepoIdentityRef
@@ -580,6 +598,15 @@ pub struct ConcreteRepo {
     bonsai_hg_mapping: dyn BonsaiHgMapping,
 
     #[facet]
+    bonsai_git_mapping: dyn BonsaiGitMapping,
+
+    #[facet]
+    bonsai_globalrev_mapping: dyn BonsaiGlobalrevMapping,
+
+    #[facet]
+    pushrebase_mutation_mapping: dyn PushrebaseMutationMapping,
+
+    #[facet]
     filestore_config: FilestoreConfig,
 
     #[facet]
@@ -590,6 +617,12 @@ pub struct ConcreteRepo {
 
     #[facet]
     phases: dyn Phases,
+
+    #[facet]
+    repo_cross_repo: RepoCrossRepo,
+
+    #[facet]
+    repo_bookmark_attrs: RepoBookmarkAttrs,
 
     #[facet]
     changeset_fetcher: dyn ChangesetFetcher,
@@ -1454,6 +1487,20 @@ where
                     recursion_limit: None,
                     ..Default::default()
                 };
+                // We need to run all pushrebase hooks because the're not only validating if the
+                // commit should be pushed. Some of them do important housekeeping that we shouldn't
+                // pass on.
+                let mut pushrebase_hooks = get_pushrebase_hooks(
+                    ctx,
+                    &target_repo,
+                    &target_bookmark,
+                    &target_repo.repo_config().pushrebase,
+                )?;
+                pushrebase_hooks.push(CrossRepoSyncPushrebaseHook::new(
+                    hash,
+                    self.repos.clone(),
+                    version.clone(),
+                ));
 
                 let pushrebase_res = do_pushrebase_bonsai(
                     ctx,
@@ -1461,11 +1508,7 @@ where
                     &pushrebase_flags,
                     &target_bookmark,
                     &rewritten_list,
-                    &[CrossRepoSyncPushrebaseHook::new(
-                        hash,
-                        self.repos.clone(),
-                        version.clone(),
-                    )],
+                    pushrebase_hooks.as_slice(),
                 )
                 .await;
                 let pushrebase_res =

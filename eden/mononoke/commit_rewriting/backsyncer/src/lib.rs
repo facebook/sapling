@@ -33,6 +33,8 @@ use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Error;
 use blobstore::Loadable;
+use bonsai_git_mapping::BonsaiGitMapping;
+use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingEntry;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::BookmarkKind;
@@ -74,8 +76,11 @@ use mutable_counters::MutableCounters;
 use mutable_counters::MutableCountersArc;
 use mutable_counters::SqlMutableCounters;
 use phases::Phases;
+use pushrebase_mutation_mapping::PushrebaseMutationMapping;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_bookmark_attrs::RepoBookmarkAttrs;
+use repo_cross_repo::RepoCrossRepo;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityRef;
@@ -96,6 +101,11 @@ use wireproto_handler::TargetRepoDbs;
 #[facet::container]
 pub struct Repo(
     dyn BonsaiHgMapping,
+    dyn BonsaiGitMapping,
+    dyn BonsaiGlobalrevMapping,
+    dyn PushrebaseMutationMapping,
+    RepoCrossRepo,
+    RepoBookmarkAttrs,
     dyn Bookmarks,
     dyn BookmarkUpdateLog,
     dyn Changesets,
