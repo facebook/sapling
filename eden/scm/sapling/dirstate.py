@@ -104,7 +104,7 @@ ParentChangeCallback = Callable[
 
 
 # pyre-fixme[2]: Parameter must be annotated.
-def fastreadp1(repopath) -> Optional[bytes]:
+def fastreadp1(repopath, is_dot_hg_path=False) -> Optional[bytes]:
     """Read dirstate p1 node without constructing repo or dirstate objects
 
     This is the first 20-bytes of the dirstate file. All known dirstate
@@ -113,11 +113,13 @@ def fastreadp1(repopath) -> Optional[bytes]:
     Return None if p1 cannot be read.
     """
     try:
-        ident = identity.sniffdir(repopath)
-        if not ident:
-            return None
+        if not is_dot_hg_path:
+            ident = identity.sniffdir(repopath)
+            if not ident:
+                return None
+            repopath = os.path.join(repopath, ident.dotdir())
 
-        with open(os.path.join(repopath, ident.dotdir(), "dirstate"), "rb") as f:
+        with open(os.path.join(repopath, "dirstate"), "rb") as f:
             node = f.read(len(nullid))
             return node
     except IOError:

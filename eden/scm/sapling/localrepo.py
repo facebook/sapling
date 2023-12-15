@@ -2450,7 +2450,12 @@ class localrepository:
         # to be used as a working copy. Let's skip the sharedwlock to avoid
         # deadlock. See test-git-submodule-loop.t.
         sharedwlock = None
-        if self.shared() and self.submodule is None:
+        if (
+            self.shared()
+            and self.submodule is None
+            # Escape hatch in case we need to bring below locking back.
+            and self.ui.configbool("experimental", "allow-shared-wlock")
+        ):
             sharedwlock = self._lock(
                 self.sharedvfs,
                 "wlock",
