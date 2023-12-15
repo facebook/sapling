@@ -481,7 +481,6 @@ rust_library(
         "//eden/mononoke/common/scuba_ext:scuba_ext",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/server/context:context",
-        "//eden/mononoke/tunables:tunables",
     ],
 )
 
