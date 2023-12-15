@@ -20,9 +20,9 @@ rust_library(
         "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:bytes",
         "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/justknobs_stub:justknobs",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/server/context:context",
-        "//eden/mononoke/tunables:tunables",
         "//manifold/clients/rust:manifold_client",
     ],
 )
