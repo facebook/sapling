@@ -79,9 +79,9 @@ pub enum HistoryAcrossDeletions {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum FollowMutableFileHistory {
-    MutableFileParents,
-    ImmutableCommitParents,
+pub enum FollowMutableRenames {
+    Yes,
+    No,
 }
 
 pub type CsAndPath = (ChangesetId, Arc<MPath>);
@@ -293,7 +293,7 @@ pub async fn list_file_history<'a>(
     changeset_id: ChangesetId,
     mut visitor: impl Visitor,
     history_across_deletions: HistoryAcrossDeletions,
-    mut follow_mutable_renames: FollowMutableFileHistory,
+    mut follow_mutable_renames: FollowMutableRenames,
     mutable_renames: Arc<MutableRenames>,
     mut order: TraversalOrder,
 ) -> Result<impl NewStream<Item = Result<ChangesetId, Error>> + 'a, FastlogError> {
@@ -301,7 +301,7 @@ pub async fn list_file_history<'a>(
         .by_repo_fastlog_disable_mutable_renames(repo.repo_identity().name())
         .unwrap_or(false)
     {
-        follow_mutable_renames = FollowMutableFileHistory::ImmutableCommitParents;
+        follow_mutable_renames = FollowMutableRenames::No;
     }
     let path = Arc::new(path);
 
@@ -336,7 +336,7 @@ pub async fn list_file_history<'a>(
     // Find out if there's mutable rename between the current changeset and last
     // changeset that touched the path. (There's no such if the current
     // changeset and last changeset are the same commit.)
-    let last_changesets = if follow_mutable_renames == FollowMutableFileHistory::MutableFileParents
+    let last_changesets = if follow_mutable_renames == FollowMutableRenames::Yes
         && !last_changesets
             .iter()
             .any(|x| x == &(changeset_id, path.clone()))
@@ -582,7 +582,7 @@ async fn do_history_unfold<V>(
     repo: &impl Repo,
     state: TraversalState<V>,
     history_across_deletions: HistoryAcrossDeletions,
-    follow_mutable_renames: FollowMutableFileHistory,
+    follow_mutable_renames: FollowMutableRenames,
     mutable_renames: &MutableRenames,
 ) -> Result<Option<(Vec<ChangesetId>, TraversalState<V>)>, Error>
 where
@@ -1008,7 +1008,7 @@ async fn try_continue_traversal_when_no_parents(
     (cs_id, path): (ChangesetId, Arc<MPath>),
     history_across_deletions: HistoryAcrossDeletions,
     history_graph: &mut CommitGraph,
-    follow_mutable_renames: FollowMutableFileHistory,
+    follow_mutable_renames: FollowMutableRenames,
     mutable_renames: &MutableRenames,
 ) -> Result<Vec<CsAndPath>, FastlogError> {
     if history_across_deletions == HistoryAcrossDeletions::Track {
@@ -1027,12 +1027,11 @@ async fn try_continue_traversal_when_no_parents(
 
     if !tunables::tunables()
         .by_repo_fastlog_disable_mutable_renames(repo.repo_identity().name())
-        .unwrap_or(follow_mutable_renames == FollowMutableFileHistory::ImmutableCommitParents)
+        .unwrap_or(follow_mutable_renames == FollowMutableRenames::No)
     {
         return find_mutable_renames(ctx, repo, (cs_id, path), history_graph, mutable_renames)
             .await;
     }
-
     Ok(vec![])
 }
 
@@ -1090,14 +1089,14 @@ async fn prefetch_and_process_history(
     visitor: &mut impl Visitor,
     (changeset_id, path): (ChangesetId, Arc<MPath>),
     history_graph: &mut CommitGraph,
-    follow_mutable_renames: FollowMutableFileHistory,
+    follow_mutable_renames: FollowMutableRenames,
     possible_mutable_ancestors_cache: &mut PossibleMutableAncestorsCache,
 ) -> Result<(), Error> {
     let fastlog_batch = prefetch_fastlog_by_changeset(ctx, repo, changeset_id, &path).await?;
     let affected_changesets: Vec<_> = fastlog_batch.iter().map(|(cs_id, _)| *cs_id).collect();
     let mut graph_insertions = process_unode_batch(fastlog_batch, history_graph, path.clone());
 
-    if follow_mutable_renames == FollowMutableFileHistory::MutableFileParents {
+    if follow_mutable_renames == FollowMutableRenames::Yes {
         graph_insertions = augment_history_graph_insertions_with_mutable_ancestry(
             ctx,
             repo,
@@ -1293,7 +1292,7 @@ mod test {
             (),
             HistoryAcrossDeletions::Track,
             mutable_renames,
-            FollowMutableFileHistory::ImmutableCommitParents,
+            FollowMutableRenames::No,
             expected,
         )
         .await?;
@@ -1368,7 +1367,7 @@ mod test {
             (),
             HistoryAcrossDeletions::Track,
             mutable_renames,
-            FollowMutableFileHistory::ImmutableCommitParents,
+            FollowMutableRenames::No,
             expected,
         )
         .await?;
@@ -1434,7 +1433,7 @@ mod test {
             (),
             HistoryAcrossDeletions::Track,
             mutable_renames,
-            FollowMutableFileHistory::ImmutableCommitParents,
+            FollowMutableRenames::No,
             expected,
         )
         .await?;
@@ -1509,7 +1508,7 @@ mod test {
             NothingVisitor {},
             HistoryAcrossDeletions::Track,
             mutable_renames.clone(),
-            FollowMutableFileHistory::ImmutableCommitParents,
+            FollowMutableRenames::No,
             vec![],
         )
         .await?;
@@ -1535,7 +1534,7 @@ mod test {
             top,
             SingleBranchOfHistoryVisitor {},
             HistoryAcrossDeletions::Track,
-            FollowMutableFileHistory::ImmutableCommitParents,
+            FollowMutableRenames::No,
             mutable_renames,
             TraversalOrder::new_gen_num_order(ctx.clone(), repo.changeset_fetcher_arc()),
         )
@@ -1604,7 +1603,7 @@ mod test {
                     (),
                     HistoryAcrossDeletions::Track,
                     mutable_renames,
-                    FollowMutableFileHistory::ImmutableCommitParents,
+                    FollowMutableRenames::No,
                     expected,
                 )
                 .await?;
@@ -1737,7 +1736,7 @@ mod test {
                     (),
                     HistoryAcrossDeletions::Track,
                     mutable_renames,
-                    FollowMutableFileHistory::ImmutableCommitParents,
+                    FollowMutableRenames::No,
                     expected,
                 )
                 .await?;
@@ -1811,7 +1810,7 @@ mod test {
             (),
             HistoryAcrossDeletions::Track,
             mutable_renames.clone(),
-            FollowMutableFileHistory::ImmutableCommitParents,
+            FollowMutableRenames::No,
             expected,
         )
         .await?;
@@ -1824,7 +1823,7 @@ mod test {
             (),
             HistoryAcrossDeletions::DontTrack,
             mutable_renames,
-            FollowMutableFileHistory::ImmutableCommitParents,
+            FollowMutableRenames::No,
             vec![bcs_id],
         )
         .await?;
@@ -1891,7 +1890,7 @@ mod test {
             (),
             HistoryAcrossDeletions::Track,
             mutable_renames.clone(),
-            FollowMutableFileHistory::ImmutableCommitParents,
+            FollowMutableRenames::No,
             expected.clone(),
         )
         .await?;
@@ -1906,7 +1905,7 @@ mod test {
             (),
             HistoryAcrossDeletions::Track,
             mutable_renames,
-            FollowMutableFileHistory::ImmutableCommitParents,
+            FollowMutableRenames::No,
             expected,
         )
         .await?;
@@ -1959,7 +1958,7 @@ mod test {
             (),
             HistoryAcrossDeletions::Track,
             mutable_renames.clone(),
-            FollowMutableFileHistory::ImmutableCommitParents,
+            FollowMutableRenames::No,
             vec![third_bcs_id],
         )
         .await?;
@@ -1972,7 +1971,7 @@ mod test {
             (),
             HistoryAcrossDeletions::Track,
             mutable_renames.clone(),
-            FollowMutableFileHistory::ImmutableCommitParents,
+            FollowMutableRenames::No,
             vec![third_bcs_id],
         )
         .await?;
@@ -2027,7 +2026,7 @@ mod test {
             (),
             HistoryAcrossDeletions::Track,
             mutable_renames.clone(),
-            FollowMutableFileHistory::MutableFileParents,
+            FollowMutableRenames::Yes,
             vec![third_bcs_id],
         );
         with_tunables_async_arc(tunables.clone(), actual.boxed()).await?;
@@ -2040,7 +2039,7 @@ mod test {
             (),
             HistoryAcrossDeletions::Track,
             mutable_renames.clone(),
-            FollowMutableFileHistory::MutableFileParents,
+            FollowMutableRenames::Yes,
             vec![third_bcs_id],
         );
         with_tunables_async_arc(tunables.clone(), actual.boxed()).await?;
@@ -2054,7 +2053,7 @@ mod test {
             (),
             HistoryAcrossDeletions::Track,
             mutable_renames.clone(),
-            FollowMutableFileHistory::MutableFileParents,
+            FollowMutableRenames::Yes,
             vec![third_bcs_id, second_bcs_id, first_bcs_id],
         )
         .await?;
@@ -2067,7 +2066,7 @@ mod test {
             (),
             HistoryAcrossDeletions::Track,
             mutable_renames,
-            FollowMutableFileHistory::MutableFileParents,
+            FollowMutableRenames::Yes,
             vec![third_bcs_id, first_bcs_id],
         )
         .await?;
@@ -2184,7 +2183,7 @@ mod test {
             (),
             HistoryAcrossDeletions::Track,
             mutable_renames.clone(),
-            FollowMutableFileHistory::MutableFileParents,
+            FollowMutableRenames::Yes,
             vec![fourth_bcs_id, third_bcs_id, first_bcs_id],
         )
         .await?;
@@ -2197,7 +2196,7 @@ mod test {
             (),
             HistoryAcrossDeletions::Track,
             mutable_renames,
-            FollowMutableFileHistory::MutableFileParents,
+            FollowMutableRenames::Yes,
             vec![fifth_bcs_id, first_bcs_id],
         )
         .await?;
@@ -2261,7 +2260,7 @@ mod test {
             merge,
             (),
             HistoryAcrossDeletions::Track,
-            FollowMutableFileHistory::ImmutableCommitParents,
+            FollowMutableRenames::No,
             mutable_renames.clone(),
             TraversalOrder::new_gen_num_order(ctx.clone(), repo.changeset_fetcher_arc()),
         )
@@ -2329,7 +2328,7 @@ mod test {
             bcs_id,
             (),
             HistoryAcrossDeletions::Track,
-            FollowMutableFileHistory::ImmutableCommitParents,
+            FollowMutableRenames::No,
             mutable_renames.clone(),
             TraversalOrder::new_gen_num_order(ctx.clone(), Arc::new(cs_fetcher)),
         )
@@ -2476,7 +2475,7 @@ mod test {
         visitor: impl Visitor + Clone,
         history_across_deletions: HistoryAcrossDeletions,
         mutable_renames: Arc<MutableRenames>,
-        follow_mutable_file_history: FollowMutableFileHistory,
+        follow_mutable_file_history: FollowMutableRenames,
         expected: Vec<ChangesetId>,
     ) -> Result<(), Error> {
         let history = list_file_history(

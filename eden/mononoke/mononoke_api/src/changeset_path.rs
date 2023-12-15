@@ -33,7 +33,7 @@ use futures_lazy_shared::LazyShared;
 use history_traversal::list_file_history;
 use history_traversal::CsAndPath;
 use history_traversal::FastlogError;
-use history_traversal::FollowMutableFileHistory;
+use history_traversal::FollowMutableRenames;
 use history_traversal::HistoryAcrossDeletions;
 use history_traversal::TraversalOrder;
 use history_traversal::Visitor;
@@ -699,9 +699,9 @@ impl ChangesetPathHistoryContext {
             },
             history_across_deletions,
             if opts.follow_mutable_file_history {
-                FollowMutableFileHistory::MutableFileParents
+                FollowMutableRenames::Yes
             } else {
-                FollowMutableFileHistory::ImmutableCommitParents
+                FollowMutableRenames::No
             },
             self.repo().mutable_renames().clone(),
             TraversalOrder::new_gen_num_order(
