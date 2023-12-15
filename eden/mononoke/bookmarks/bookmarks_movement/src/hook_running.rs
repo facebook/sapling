@@ -19,7 +19,6 @@ use hooks::HookManager;
 use hooks::HookOutcome;
 use hooks::PushAuthoredBy;
 use mononoke_types::BonsaiChangeset;
-use tunables::tunables;
 
 use crate::BookmarkMovementError;
 
@@ -72,10 +71,13 @@ pub async fn run_hooks(
     push_authored_by: PushAuthoredBy,
 ) -> Result<(), BookmarkMovementError> {
     if cross_repo_push_source == CrossRepoPushSource::PushRedirected {
-        if tunables()
-            .disable_running_hooks_in_pushredirected_repo()
-            .unwrap_or_default()
-        {
+        let disable_running_hooks_in_pushredirected_repo = justknobs::eval(
+            "scm/mononoke:disable_running_hooks_in_pushredirected_repo",
+            None,
+            None,
+        )?;
+
+        if disable_running_hooks_in_pushredirected_repo {
             let cs_ids = take_n_changeset_ids(changesets, 10);
             ctx.scuba()
                 .clone()

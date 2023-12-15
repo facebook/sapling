@@ -205,6 +205,7 @@ rust_library(
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/futures_ext:futures_ext",
         "//common/rust/shed/futures_stats:futures_stats",
+        "//common/rust/shed/justknobs_stub:justknobs",
         "//common/rust/shed/sql:sql",
         "//eden/mononoke/blobrepo:blobrepo",
         "//eden/mononoke/blobrepo:changeset_fetcher",

@@ -9,7 +9,8 @@
     "scm/mononoke:scs_commit_find_files_use_bssm_for_suffix_queries": false,
     "scm/mononoke:sql_disable_auto_cache": false,
     "scm/mononoke:sql_disable_auto_retries": false,
-    "scm/mononoke:static-backend": false
+    "scm/mononoke:static-backend": false,
+    "scm/mononoke:disable_running_hooks_in_pushredirected_repo": false
   },
   "ints": {
     "scm/mononoke_timeouts:repo_client_clone_timeout_secs": 14400,
