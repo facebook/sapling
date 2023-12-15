@@ -13,6 +13,7 @@ import {Tooltip} from '../../Tooltip';
 import {t} from '../../i18n';
 import platform from '../../platform';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
+import React from 'react';
 import {Icon} from 'shared/Icon';
 
 import './SplitDiffHunk.css';
@@ -90,8 +91,7 @@ export function FileHeader({
         <Tooltip
           title={t('Renamed or copied from $path', {replace: {$path: copyFrom ?? ''}})}
           delayMs={100}
-          placement="bottom"
-          key="copy">
+          placement="bottom">
           {copySpan(`${prefix}${copyFromRest} →`)}
         </Tooltip>
       );
@@ -101,9 +101,9 @@ export function FileHeader({
       copyFromRight = copySpan('}');
     }
     return (
-      <>
+      <React.Fragment key={idx}>
         {copyFromLeft}
-        <span className={'file-header-copyable-path'} key={idx}>
+        <span className={'file-header-copyable-path'}>
           <Tooltip
             component={() => (
               <span className="file-header-copyable-path-hover">
@@ -119,7 +119,7 @@ export function FileHeader({
           </Tooltip>
         </span>
         {copyFromRight}
-      </>
+      </React.Fragment>
     );
   });
 
