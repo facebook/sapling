@@ -871,7 +871,7 @@ is case-sensitive. This is not recommended and is intended only for testing."""
                 args.backing_store,
                 args.re_use_case,
                 args.enable_windows_symlinks
-                or instance.get_config_bool("experimental.windows-symlinks", True),
+                or instance.get_config_bool("experimental.windows-symlinks", False),
             )
         except RepoError as ex:
             print_stderr("error: {}", ex)
