@@ -52,6 +52,10 @@ pub(super) struct CommandArgs {
     #[clap(long)]
     /// For Source Control use only. A bookmark to use as an OnlyOrDescendantOfBookmark CandidateSelectionHint
     hint_descendant_of_bookmark: Option<String>,
+    #[clap(long, short)]
+    /// Do not sync the commit between source and target repo on demand. Only return result of
+    /// previous sync (if synced at all).
+    no_ondemand_sync: bool,
 }
 
 async fn build_commit_hint(
@@ -132,6 +136,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         other_repo: target_repo,
         identity_schemes: args.scheme_args.clone().into_request_schemes(),
         candidate_selection_hint: hint,
+        no_ondemand_sync: args.no_ondemand_sync,
         ..Default::default()
     };
     // XXX Repos for xrepo methods need to be available on all servers,
