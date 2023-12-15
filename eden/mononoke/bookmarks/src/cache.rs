@@ -35,7 +35,6 @@ use mononoke_types::RepositoryId;
 use shared_error::anyhow::IntoSharedError;
 use shared_error::anyhow::SharedError;
 use stats::prelude::*;
-use tunables::tunables;
 
 use crate::log::BookmarkUpdateReason;
 use crate::subscription::BookmarksSubscription;
@@ -117,14 +116,12 @@ pub struct CachedBookmarks {
 }
 
 fn ttl() -> Option<Duration> {
-    let ttl_ms = match tunables()
-        .bookmarks_cache_ttl_ms()
-        .unwrap_or_default()
+    let ttl_ms = match justknobs::get_as::<i64>("scm/mononoke:bookmarks_cache_ttl_ms", None)
+        .unwrap_or(2000) // if not set use this as default
         .try_into()
     {
-        Ok(0) => 2000,            // 0 means default.
-        Ok(duration) => duration, // Use provided duration.
-        Err(_) => return None,    // Negative values mean no cache.
+        Ok(duration) => duration,
+        Err(_) => return None, // Negative values mean no cache.
     };
 
     Some(Duration::from_millis(ttl_ms))
@@ -497,14 +494,15 @@ mod tests {
     use futures::future::Future;
     use futures::stream::Stream;
     use futures::stream::StreamFuture;
+    use justknobs::test_helpers::with_just_knobs_async;
+    use justknobs::test_helpers::JustKnobsInMemory;
+    use justknobs::test_helpers::KnobVal;
     use maplit::hashmap;
     use mononoke_types_mocks::changesetid::ONES_CSID;
     use mononoke_types_mocks::changesetid::THREES_CSID;
     use mononoke_types_mocks::changesetid::TWOS_CSID;
     use quickcheck::quickcheck;
     use tokio::runtime::Runtime;
-    use tunables::with_tunables_async;
-    use tunables::MononokeTunables;
 
     use super::*;
 
@@ -745,6 +743,16 @@ mod tests {
         })
     }
 
+    fn with_cache_ttl<Out>(
+        ttl: Option<i64>,
+        fut: impl Future<Output = Out> + Unpin,
+    ) -> impl Future<Output = Out> {
+        let just_knobs = JustKnobsInMemory::new(
+            hashmap! {"scm/mononoke:bookmarks_cache_ttl_ms".to_string() => KnobVal::Int(ttl.unwrap_or(2000))},
+        );
+        with_just_knobs_async(just_knobs, fut)
+    }
+
     #[fbinit::test]
     fn test_cached_bookmarks(fb: FacebookInit) {
         let rt = tokio::runtime::Builder::new_current_thread()
@@ -762,7 +770,7 @@ mod tests {
         let spawn_query = |prefix: &'static str, ttl: Option<i64>, rt: &Runtime| {
             let (sender, receiver) = oneshot::channel();
 
-            // Tunables are read in list(), which is a sync function. We wrap this into a future to
+            // JustKnobs are read in list(), which is a sync function. We wrap this into a future to
             // make ita little more refactoring friendly.
             let bookmarks = bookmarks.clone();
             let ctx = ctx.clone();
@@ -787,12 +795,7 @@ mod tests {
             }
             .boxed();
 
-            let tunables = MononokeTunables::default();
-            if let Some(ttl) = ttl {
-                tunables.update_ints(&hashmap! {"bookmarks_cache_ttl_ms".to_string() => ttl});
-            }
-
-            rt.spawn(with_tunables_async(tunables, fut));
+            rt.spawn(with_cache_ttl(ttl, fut));
 
             receiver
         };
@@ -834,14 +837,16 @@ mod tests {
 
         // Create a non dirty transaction and make sure that no requests go to master.
         let transaction = bookmarks.create_transaction(ctx.clone());
-        rt.block_on(transaction.commit()).unwrap();
+        rt.block_on(with_cache_ttl(ttl, transaction.commit()))
+            .unwrap();
 
         std::mem::drop(spawn_query("c", ttl, &rt));
         let requests = assert_no_pending_requests(requests, &rt, 100);
 
         // successfull transaction should redirect further requests to master
         let transaction = create_dirty_transaction(&bookmarks, ctx.clone());
-        rt.block_on(transaction.commit()).unwrap();
+        rt.block_on(with_cache_ttl(ttl, transaction.commit()))
+            .unwrap();
 
         let res = spawn_query("a", ttl, &rt);
 
@@ -966,9 +971,6 @@ mod tests {
 
         let (sender, receiver) = oneshot::channel();
 
-        let tunables = MononokeTunables::default();
-        tunables.update_ints(&hashmap! {"bookmarks_cache_ttl_ms".to_string() => 100_000});
-
         // Send the query to our cache.
         let fut = store
             .list(
@@ -982,7 +984,7 @@ mod tests {
             )
             .try_collect()
             .map_ok(|r: Vec<_>| sender.send(r).unwrap());
-        rt.spawn(with_tunables_async(tunables, fut));
+        rt.spawn(with_cache_ttl(Some(100_000), fut));
 
         // Wait for the underlying MockBookmarks to receive the request. We
         // expect it to have a freshness consistent with the one we send.
