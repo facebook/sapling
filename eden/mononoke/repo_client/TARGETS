@@ -119,7 +119,6 @@ rust_library(
         "//eden/mononoke/filestore:filestore",
         "//eden/mononoke/mercurial:mercurial_types",
         "//eden/mononoke/server/context:context",
-        "//eden/mononoke/tunables:tunables",
         "//eden/scm/lib/revisionstore:revisionstore_types",
     ],
 )

@@ -241,10 +241,8 @@ pub fn get_unordered_file_history_for_multiple_nodes(
     allow_short_getpack_history: bool,
 ) -> impl Stream<Item = Result<HgFileHistoryEntry>> {
     let limit = if allow_short_getpack_history {
-        let limit = tunables::tunables()
-            .remotefilelog_file_history_limit()
-            .unwrap_or_default();
-        if limit <= 0 { None } else { Some(limit as u64) }
+        const REMOTEFILELOG_FILE_HISTORY_LIMIT: u64 = 1000;
+        Some(REMOTEFILELOG_FILE_HISTORY_LIMIT)
     } else {
         None
     };

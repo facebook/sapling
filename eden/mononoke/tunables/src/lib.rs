@@ -104,7 +104,6 @@ pub struct MononokeTunables {
 
     deduplicated_put_sampling_rate: TunableI64,
     disable_repo_client_warm_bookmarks_cache: TunableBool,
-    remotefilelog_file_history_limit: TunableI64,
     disable_hooks_on_plain_push: TunableBool,
     run_hooks_on_additional_changesets: TunableBool,
     hooks_additional_changesets_limit: TunableI64,

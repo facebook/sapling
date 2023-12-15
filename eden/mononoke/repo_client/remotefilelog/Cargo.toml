@@ -24,7 +24,6 @@ redactedblobstore = { version = "0.1.0", path = "../../blobstore/redactedblobsto
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 revisionstore_types = { version = "0.1.0", path = "../../../scm/lib/revisionstore/types" }
 thiserror = "1.0.49"
-tunables = { version = "0.1.0", path = "../../tunables" }
 
 [dev-dependencies]
 assert_matches = "1.5"
