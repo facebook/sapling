@@ -23,7 +23,7 @@ try:
     )
 
     def getFakeVSCodeExtensionsChecker() -> FakeVSCodeExtensionsChecker:
-        return FakeVSCodeExtensionsChecker()
+        return FakeVSCodeExtensionsChecker(None)
 
 except ImportError:
 

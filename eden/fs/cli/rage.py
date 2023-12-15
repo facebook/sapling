@@ -57,7 +57,7 @@ try:
 except ImportError:
 
     class VSCodeExtensionsChecker:
-        def find_problematic_vscode_extensions(self) -> None:
+        def find_problematic_vscode_extensions(self, instance: EdenInstance) -> None:
             return
 
 
@@ -228,7 +228,7 @@ def print_diagnostic_info(
 
     print_prefetch_profiles_list(instance, out)
 
-    print_third_party_vscode_extensions(out)
+    print_third_party_vscode_extensions(instance, out)
 
     print_env_variables(out)
 
@@ -729,9 +729,10 @@ def print_sample_trace(pid: int, sink: IO[bytes]) -> None:
     )
 
 
-def print_third_party_vscode_extensions(out: IO[bytes]) -> None:
+def print_third_party_vscode_extensions(instance: EdenInstance, out: IO[bytes]) -> None:
+
     problematic_extensions = (
-        VSCodeExtensionsChecker().find_problematic_vscode_extensions()
+        VSCodeExtensionsChecker().find_problematic_vscode_extensions(instance)
     )
 
     if problematic_extensions is None:

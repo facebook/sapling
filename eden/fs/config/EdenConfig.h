@@ -1296,6 +1296,40 @@ class EdenConfig : private ConfigSettingManager {
       "TODO,TEST",
       this};
 
+  /**
+   * Extensions that may do bad things that we want to warn about in
+   * doctor.
+   */
+  ConfigSetting<std::vector<std::string>> doctorExtensionWarnList{
+      "doctor:vscode-extensions-warn-list",
+      {},
+      this};
+
+  /**
+   * Extensions that will do bad things that we definitely want to advise
+   * against using.
+   */
+  ConfigSetting<std::vector<std::string>> doctorExtensionBlockList{
+      "doctor:vscode-extensions-block-list",
+      {},
+      this};
+
+  /**
+   * Extensions that we know are fine and should not be warned against.
+   */
+  ConfigSetting<std::vector<std::string>> doctorExtensionAllowList{
+      "doctor:vscode-extensions-allow-list",
+      {},
+      this};
+
+  /**
+   * Extensions authors that are known and we should not warn about.
+   */
+  ConfigSetting<std::vector<std::string>> doctorExtensionAuthorAllowList{
+      "doctor:vscode-extensions-author-allow-list",
+      {},
+      this};
+
   // [hash]
   /**
    * The key to use for blake3 hash computation.
