@@ -322,11 +322,6 @@ pub struct MononokeTunables {
 
     // Skip backsyncing for empty commits (except mapping changes via extras and merges)
     cross_repo_skip_backsyncing_ordinary_empty_commits: TunableBoolByRepo,
-
-    // During cross-repo sync, mark a generated changeset as created by lossy conversion if it is
-    // See [this post](https://fburl.com/workplace/l5job9po) for context
-    // The repo it is tuned by refers to the source repo in the sync
-    cross_repo_mark_changesets_as_created_by_lossy_conversion: TunableBoolByRepo,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {

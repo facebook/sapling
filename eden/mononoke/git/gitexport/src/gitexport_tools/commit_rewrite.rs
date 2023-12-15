@@ -410,7 +410,6 @@ async fn create_bonsai_for_new_repo<'a>(
         None,
         implicit_deletes,
         Default::default(),
-        source_repo_ctx.repo(),
     )?
     // This shouldn't happen because every changeset provided is modifying
     // at least one of the exported files.

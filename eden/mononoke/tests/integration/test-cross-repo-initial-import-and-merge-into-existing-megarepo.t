@@ -220,7 +220,7 @@ Before config change
   $ hg update master_bookmark
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ log_globalrev -r .^::.
-  @  ID [public;globalrev=1000157974;b9be108c6ac9] default/master_bookmark
+  @  ID [public;globalrev=1000157974;d5e2ea2233b5] default/master_bookmark
   │
   o  after merge from small [public;globalrev=1000157973;b9837a40b210]
   │
@@ -231,9 +231,9 @@ Before config change
   $ REPONAME=small-mon hgmn push -r . --to master_bookmark -q
 
   $ log_globalrev -r master_bookmark^::master_bookmark
-  o  after mapping change from small [public;globalrev=1000157975;46c7df7abb67] default/master_bookmark
+  o  after mapping change from small [public;globalrev=1000157975;e1a0505284e4] default/master_bookmark
   │
-  o  ID [public;globalrev=1000157974;b9be108c6ac9]
+  o  ID [public;globalrev=1000157974;d5e2ea2233b5]
   │
   ~
 

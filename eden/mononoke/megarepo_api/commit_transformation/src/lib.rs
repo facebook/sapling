@@ -51,7 +51,6 @@ use slog::debug;
 use slog::Logger;
 use sorted_vector_map::SortedVectorMap;
 use thiserror::Error;
-use tunables::tunables;
 
 pub type MultiMover<'a> =
     Arc<dyn Fn(&NonRootMPath) -> Result<Vec<NonRootMPath>, Error> + Send + Sync + 'a>;
@@ -402,7 +401,6 @@ pub async fn rewrite_commit_with_file_changes_filter<'a>(
         force_first_parent,
         renamed_implicit_deletes,
         rewrite_opts,
-        source_repo,
     )
 }
 
@@ -518,7 +516,6 @@ pub async fn rewrite_stack_no_merges<'a>(
             force_first_parent,
             renamed_implicit_deletes,
             Default::default(),
-            source_repo,
         )?;
 
         let maybe_cs = maybe_cs
@@ -545,7 +542,6 @@ pub fn rewrite_commit_with_implicit_deletes<'a>(
     force_first_parent: Option<ChangesetId>,
     renamed_implicit_deletes: Vec<Vec<NonRootMPath>>,
     rewrite_opts: RewriteOpts,
-    source_repo: &impl RepoIdentityRef,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
     let empty_commit = cs.file_changes.is_empty();
     if !empty_commit
@@ -649,7 +645,6 @@ pub fn rewrite_commit_with_implicit_deletes<'a>(
                 logger,
                 &mut cs,
                 LossyConversionReason::FileChanges,
-                source_repo,
             );
         // If any implicit delete in the source bonsai changeset has no equivalent file change in the destination
         // changeset, the conversion was lossy
@@ -661,7 +656,6 @@ pub fn rewrite_commit_with_implicit_deletes<'a>(
                 logger,
                 &mut cs,
                 LossyConversionReason::ImplicitFileChanges,
-                source_repo,
             );
         }
 
@@ -734,27 +728,21 @@ fn mark_as_created_by_lossy_conversion(
     logger: &Logger,
     cs: &mut BonsaiChangesetMut,
     reason: LossyConversionReason,
-    source_repo: &impl RepoIdentityRef,
 ) {
-    if tunables().by_repo_cross_repo_mark_changesets_as_created_by_lossy_conversion(
-        source_repo.repo_identity().name(),
-    ) == Some(true)
-    {
-        let reason = match reason {
-            LossyConversionReason::FileChanges => {
-                "the file changes from the source changeset don't all have an equivalent file change in the target changeset"
-            }
-            LossyConversionReason::ImplicitFileChanges => {
-                "implicit file changes from the source changeset don't all have an equivalent implicit file change in the target changeset"
-            }
-        };
-        debug!(
-            logger,
-            "Marking changeset as created by lossy conversion because {}", reason
-        );
-        cs.hg_extra
-            .insert("created_by_lossy_conversion".to_string(), Vec::new());
-    }
+    let reason = match reason {
+        LossyConversionReason::FileChanges => {
+            "the file changes from the source changeset don't all have an equivalent file change in the target changeset"
+        }
+        LossyConversionReason::ImplicitFileChanges => {
+            "implicit file changes from the source changeset don't all have an equivalent implicit file change in the target changeset"
+        }
+    };
+    debug!(
+        logger,
+        "Marking changeset as created by lossy conversion because {}", reason
+    );
+    cs.hg_extra
+        .insert("created_by_lossy_conversion".to_string(), Vec::new());
 }
 
 pub async fn upload_commits<'a>(
@@ -831,7 +819,6 @@ mod test {
     use test_repo_factory::TestRepoFactory;
     use tests_utils::list_working_copy_utf8;
     use tests_utils::CreateCommitContext;
-    use tunables::MononokeTunables;
 
     use super::*;
 
@@ -972,19 +959,6 @@ mod test {
     #[fbinit::test]
     async fn test_rewrite_commit_marks_lossy_conversions(fb: FacebookInit) -> Result<(), Error> {
         let repo: blobrepo::BlobRepo = TestRepoFactory::new(fb)?.build().await?;
-        let tunables = MononokeTunables::default();
-        tunables.update_by_repo_bools(&hashmap! {
-            repo.repo_identity().name().to_string() => hashmap! {
-                "cross_repo_mark_changesets_as_created_by_lossy_conversion".to_string() => true,
-            },
-        });
-        tunables::override_tunables(Some(Arc::new(tunables)));
-        assert_eq!(
-            tunables::tunables().by_repo_cross_repo_mark_changesets_as_created_by_lossy_conversion(
-                repo.repo_identity().name(),
-            ),
-            Some(true)
-        );
         let ctx = CoreContext::test_mock(fb);
         let mapping_rules = SourceMappingRules {
             default_prefix: "".to_string(), // Rewrite to root
@@ -1119,19 +1093,6 @@ mod test {
         fb: FacebookInit,
     ) -> Result<(), Error> {
         let repo: blobrepo::BlobRepo = TestRepoFactory::new(fb)?.build().await?;
-        let tunables = MononokeTunables::default();
-        tunables.update_by_repo_bools(&hashmap! {
-            repo.repo_identity().name().to_string() => hashmap! {
-                "cross_repo_mark_changesets_as_created_by_lossy_conversion".to_string() => true,
-            },
-        });
-        tunables::override_tunables(Some(Arc::new(tunables)));
-        assert_eq!(
-            tunables::tunables().by_repo_cross_repo_mark_changesets_as_created_by_lossy_conversion(
-                repo.repo_identity().name(),
-            ),
-            Some(true)
-        );
         let ctx = CoreContext::test_mock(fb);
         // This commit is not lossy because all paths will be mapped somewhere.
         let first = CreateCommitContext::new_root(&ctx, &repo)
