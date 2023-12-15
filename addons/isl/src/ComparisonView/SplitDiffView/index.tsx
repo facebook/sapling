@@ -88,11 +88,12 @@ export function SplitDiffView({
     </>
   );
 
+  const copyFrom = patch.oldFileName === fileName ? undefined : patch.oldFileName;
   return (
     <div className="split-diff-view">
       <FileHeader
         path={fileName}
-        copyFrom={patch.oldFileName}
+        copyFrom={copyFrom}
         iconType={iconType}
         open={!collapsed}
         onChangeOpen={open => ctx.setCollapsed(!open)}
