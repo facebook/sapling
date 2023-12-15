@@ -38,6 +38,7 @@ use mononoke_api::MononokePath;
 use mononoke_api::RepoContext;
 use mononoke_api::UnifiedDiff;
 use mononoke_api::UnifiedDiffMode;
+use mononoke_api::XRepoLookupSyncBehaviour;
 use source_control as thrift;
 
 use crate::commit_id::map_commit_identities;
@@ -989,11 +990,17 @@ impl SourceControlServiceImpl {
             None => None,
         };
 
+        let sync_behaviour = if params.no_ondemand_sync {
+            XRepoLookupSyncBehaviour::NeverSync
+        } else {
+            XRepoLookupSyncBehaviour::SyncIfAbsent
+        };
         match repo
             .xrepo_commit_lookup(
                 &other_repo,
                 ChangesetSpecifier::from_request(&commit.id)?,
                 candidate_selection_hint,
+                sync_behaviour,
             )
             .await?
         {

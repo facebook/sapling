@@ -388,6 +388,14 @@ pub async fn open_synced_commit_mapping(
     ))
 }
 
+/// Defines behavuiour of xrepo_commit_lookup when there's no mapping for queries commit just yet.
+pub enum XRepoLookupSyncBehaviour {
+    // Initiates sync and returns the sync result
+    SyncIfAbsent,
+    // Returns None
+    NeverSync,
+}
+
 impl Repo {
     /// Construct a new Repo based on an existing one with a bubble opened.
     pub fn with_bubble(&self, bubble: Bubble) -> Self {
@@ -1577,12 +1585,14 @@ impl RepoContext {
         }
     }
 
-    /// Get the equivalent changeset from another repo - it will sync it if needed
+    /// Get the equivalent changeset from another repo - it may sync it if needed (depending on
+    /// `sync_behaviour` arg).
     pub async fn xrepo_commit_lookup(
         &self,
         other: &Self,
         specifier: impl Into<ChangesetSpecifier>,
         maybe_candidate_selection_hint_args: Option<CandidateSelectionHintArgs>,
+        sync_behaviour: XRepoLookupSyncBehaviour,
     ) -> Result<Option<ChangesetContext>, MononokeError> {
         let common_config = self
             .live_commit_sync_config()
@@ -1614,15 +1624,33 @@ impl RepoContext {
             self.repo.x_repo_sync_lease().clone(),
         );
 
-        let maybe_cs_id = commit_syncer
-            .sync_commit(
-                &self.ctx,
-                changeset,
-                candidate_selection_hint,
-                CommitSyncContext::ScsXrepoLookup,
-                false,
-            )
-            .await?;
+        let maybe_cs_id = match sync_behaviour {
+            XRepoLookupSyncBehaviour::NeverSync => {
+                // We are not using the candidate_selection_hint here as  it's also not used by the
+                // sync_commit to resolve the result to return. (It's used when remapping parents).
+                use cross_repo_sync::CommitSyncOutcome::*;
+                commit_syncer
+                    .get_commit_sync_outcome(&self.ctx, changeset)
+                    .await?
+                    .and_then(|outcome| match outcome {
+                        NotSyncCandidate(_) => None,
+                        RewrittenAs(cs_id, _) | EquivalentWorkingCopyAncestor(cs_id, _) => {
+                            Some(cs_id)
+                        }
+                    })
+            }
+            XRepoLookupSyncBehaviour::SyncIfAbsent => {
+                commit_syncer
+                    .sync_commit(
+                        &self.ctx,
+                        changeset,
+                        candidate_selection_hint,
+                        CommitSyncContext::ScsXrepoLookup,
+                        false,
+                    )
+                    .await?
+            }
+        };
         Ok(maybe_cs_id.map(|cs_id| ChangesetContext::new(other.clone(), cs_id)))
     }
 

@@ -1466,6 +1466,9 @@ struct CommitLookupXRepoParams {
   /// Candidate selection hint for resolving plural
   /// mapping situations
   3: optional CandidateSelectionHint candidate_selection_hint;
+  /// Do not sync the requests commit on-demand. Returns quicker with result or not-existing mapped
+  /// commit if the commit wasn't synced yet.
+  4: bool no_ondemand_sync;
 }
 
 /// Synchronization target
