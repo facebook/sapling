@@ -107,6 +107,19 @@ impl WorkingCopy {
         let vfs = VFS::new(path.to_path_buf())?;
 
         let is_eden = has_requirement("eden");
+
+        // In case the "requires" file gets corrupted, check `.eden` directory
+        // and prevent treating edenfs as non-edenfs.
+        if !is_eden && path.join(".eden").is_dir() {
+            anyhow::bail!(
+                "Detected conflicting information about whether EdenFS is enabled.\n\
+                 This might indicate repo metadata (ex. {}) corruption.\n\
+                 To avoid further corruption, this is a fatal error.\n\
+                 Contact the Source Control support team for investigation.",
+                dot_dir.join("requires").display()
+            );
+        }
+
         let fsmonitor_ext = config.get("extensions", "fsmonitor");
         let fsmonitor_mode = config.get_nonempty("fsmonitor", "mode");
         let is_watchman = if fsmonitor_ext.is_none() || fsmonitor_ext == Some("!".into()) {
