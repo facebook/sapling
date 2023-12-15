@@ -199,7 +199,7 @@ class LowDiskSpaceMacOS(Problem, FixableProblem):
 
     def perform_fix(self) -> None:
         apfs_util = "/System/Library/Filesystems/apfs.fs/Contents/Resources/apfs.util"
-        command = f"{apfs_util} -P ~/*"
+        command = f"{apfs_util} -P -high ~"
         try:
             subprocess.run(
                 command,
