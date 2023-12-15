@@ -300,7 +300,7 @@ def uploadhgchangesets(repo, revs, force=False, skipknowncheck=False):
     # Uploading changesets
     changesets = []
     for node in uploadcommitqueue.iterrev():
-        repo.ui.status(
+        repo.ui.note(
             _("uploading commit '%s'...\n") % nodemod.hex(node), component="edenapi"
         )
         ctx = repo[node]

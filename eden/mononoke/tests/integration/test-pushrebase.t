@@ -31,7 +31,6 @@ Pushrebase commit 1
   edenapi: uploaded 1 file
   edenapi: queue 1 tree for upload
   edenapi: uploaded 1 tree
-  edenapi: uploading commit 'a0c9c57910584da709d7f4ed9852d66693a45ba7'...
   edenapi: uploaded 1 changeset
   updating remote bookmark master_bookmark
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -85,7 +84,6 @@ Push rebase fails with conflict in the bottom of the stack
   edenapi: uploaded 1 file
   edenapi: queue 1 tree for upload
   edenapi: uploaded 1 tree
-  edenapi: uploading commit '0c67ec8c24b924e95a718ea8217267b85d7af608'...
   edenapi: uploaded 1 changeset
   updating remote bookmark master_bookmark
   abort: Server error: Conflicts while pushrebasing: [PushrebaseConflict { left: NonRootMPath("1"), right: NonRootMPath("1") }]
@@ -103,8 +101,6 @@ Push rebase fails with conflict in the top of the stack
   edenapi: queue 0 files for upload
   edenapi: queue 2 trees for upload
   edenapi: uploaded 2 trees
-  edenapi: uploading commit 'c9b2673d32182756f799beff4ee8dc6a28645167'...
-  edenapi: uploading commit '8d2ff619947e17ac013521d001c0a1e4c2f89a94'...
   edenapi: uploaded 2 changesets
   updating remote bookmark master_bookmark
   abort: Server error: Conflicts while pushrebasing: [PushrebaseConflict { left: NonRootMPath("1"), right: NonRootMPath("1") }]
@@ -123,8 +119,6 @@ Push stack
   edenapi: uploaded 2 files
   edenapi: queue 2 trees for upload
   edenapi: uploaded 2 trees
-  edenapi: uploading commit 'e91cd89a81a52269b7767c800db21e62b9cf98db'...
-  edenapi: uploading commit '7a68f123d810d76ef65e286a3e4eb46461955530'...
   edenapi: uploaded 2 changesets
   updating remote bookmark master_bookmark
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -159,7 +153,6 @@ Push fast-forward
   edenapi: uploaded 1 file
   edenapi: queue 1 tree for upload
   edenapi: uploaded 1 tree
-  edenapi: uploading commit '59e5396444cfbcb86719d32e14c930bf0558fe98'...
   edenapi: uploaded 1 changeset
   updating remote bookmark master_bookmark
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -363,7 +356,6 @@ Test creating a bookmark and new head
   edenapi: uploaded 1 file
   edenapi: queue 1 tree for upload
   edenapi: uploaded 1 tree
-  edenapi: uploading commit '7a037594e2026b6ceb5dd9bc01eaf96b28dc3ce4'...
   edenapi: uploaded 1 changeset
   creating remote bookmark newbook
 
@@ -394,7 +386,6 @@ Test non-fast-forward force pushrebase
   edenapi: uploaded 1 file
   edenapi: queue 1 tree for upload
   edenapi: uploaded 1 tree
-  edenapi: uploading commit '4899f9112d9b79c3ecbc343169db37fbe1efdd20'...
   edenapi: uploaded 1 changeset
   moving remote bookmark newbook from 7a037594e202 to 4899f9112d9b
 -- "20 draft newbook" gets moved to 26 and 20 gets hidden.
@@ -437,7 +428,6 @@ Check that a force pushrebase with mutation markers.
   edenapi: uploaded 1 file
   edenapi: queue 1 tree for upload
   edenapi: uploaded 1 tree
-  edenapi: uploading commit '*'... (glob)
   edenapi: uploaded 1 changeset
   abort: forced push blocked because commit * contains mutation metadata (glob)
   (use 'hg amend --config mutation.record=false' to remove the metadata)
@@ -458,7 +448,6 @@ Check that we can replace a file with a directory
   edenapi: uploaded 1 file
   edenapi: queue 2 trees for upload
   edenapi: uploaded 2 trees
-  edenapi: uploading commit '4e5fec14573fa557760d017acfa25e0021088623'...
   edenapi: uploaded 1 changeset
   updating remote bookmark newbook
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
