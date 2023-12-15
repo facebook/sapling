@@ -9,7 +9,7 @@ edition = "2021"
 anyhow = "1.0.75"
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 configmodel = { version = "0.1.0", path = "../config/model" }
-indexmap = { version = "1.9.2", features = ["arbitrary", "rayon", "serde-1"] }
+indexmap = { version = "2.1.0", features = ["arbitrary", "rayon", "serde"] }
 pem = "0.8"
 simple_asn1 = "0.5.4"
 thiserror = "1.0.49"
