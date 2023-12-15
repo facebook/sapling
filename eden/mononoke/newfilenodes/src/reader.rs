@@ -251,7 +251,7 @@ impl FilenodesReader {
                     }
 
                     let disable_fallback_to_master = justknobs::eval(
-                        "scm/mononoke:derived_data_disable_remote_derivation",
+                        "scm/mononoke:filenodes_disable_master_fallback",
                         None,
                         None,
                     )
