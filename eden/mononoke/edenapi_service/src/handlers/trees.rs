@@ -46,7 +46,6 @@ use mononoke_api_hg::HgRepoContext;
 use mononoke_api_hg::HgTreeContext;
 use rate_limiting::Metric;
 use serde::Deserialize;
-use tunables::tunables;
 use types::Key;
 use types::RepoPathBuf;
 
@@ -63,10 +62,11 @@ use crate::utils::custom_cbor_stream;
 use crate::utils::get_repo;
 use crate::utils::parse_wire_request;
 
-/// XXX: This number was chosen arbitrarily.
+/// XXX: These numbers were chosen arbitrarily.
 const MAX_CONCURRENT_TREE_FETCHES_PER_REQUEST: usize = 10;
 const MAX_CONCURRENT_METADATA_FETCHES_PER_TREE_FETCH: usize = 100;
 const MAX_CONCURRENT_UPLOAD_TREES_PER_REQUEST: usize = 100;
+const LARGE_TREE_METADATA_LIMIT: usize = 25000;
 
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
 pub struct TreeParams {
@@ -166,10 +166,8 @@ async fn fetch_child_metadata_entries<'a>(
     Error,
 > {
     let manifest = ctx.clone().into_blob_manifest()?;
-    if let Some(limit) = tunables().edenapi_large_tree_metadata_limit() {
-        if manifest.content().files.len() > limit as usize {
-            return Ok(None);
-        }
+    if manifest.content().files.len() > LARGE_TREE_METADATA_LIMIT {
+        return Ok(None);
     }
     let entries = manifest.list().collect::<Vec<_>>();
 
