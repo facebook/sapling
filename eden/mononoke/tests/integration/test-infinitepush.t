@@ -8,11 +8,11 @@
 
 setup configuration
   $ INFINITEPUSH_NAMESPACE_REGEX='^scratch/.+$' setup_common_config
-  $ merge_tunables <<EOF
+  $ merge_just_knobs <<EOF
   > {
-  >   "ints": {
-  >     "zstd_compression_level": 3
-  >   }
+  >    "ints": {
+  >      "scm/mononoke:zstd_compression_level": 3
+  >    }
   > }
   > EOF
   $ cd $TESTTMP

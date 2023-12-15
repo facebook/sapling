@@ -39,6 +39,7 @@ rust_library(
         "//common/rust/shed/futures_ext:futures_ext",
         "//common/rust/shed/futures_stats:futures_stats",
         "//common/rust/shed/hostname:hostname",
+        "//common/rust/shed/justknobs_stub:justknobs",
         "//common/rust/shed/stats:stats",
         "//common/rust/shed/time_ext:time_ext",
         "//eden/mononoke/bookmarks:bookmarks",
