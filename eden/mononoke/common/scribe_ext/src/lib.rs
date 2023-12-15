@@ -5,15 +5,12 @@
  * GNU General Public License version 2.
  */
 
-#![cfg_attr(not(fbcode_build), allow(unused_crate_dependencies))]
-
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
 
-use anyhow as _;
 use anyhow::anyhow;
 use anyhow::Error;
 use fbinit::FacebookInit;
