@@ -511,7 +511,7 @@ impl Client {
         reqs: Vec<FileSpec>,
     ) -> Result<Response<FileResponse>, EdenApiError> {
         tracing::info!(
-            "Requesting fetching of attributes for {} file(s)",
+            "Requesting fetching of content and attributes for {} file(s)",
             reqs.len()
         );
 
@@ -676,7 +676,10 @@ impl EdenApi for Client {
         &self,
         reqs: Vec<FileSpec>,
     ) -> Result<Response<FileResponse>, EdenApiError> {
-        tracing::info!("Requesting attributes for {} file(s)", reqs.len());
+        tracing::info!(
+            "Requesting content and attributes for {} file(s)",
+            reqs.len()
+        );
 
         let prog = self.inner.file_progress.create_or_extend(reqs.len() as u64);
 
