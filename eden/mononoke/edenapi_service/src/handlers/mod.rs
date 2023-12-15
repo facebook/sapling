@@ -244,9 +244,9 @@ fn proxygen_health_handler(state: State) -> (State, &'static str) {
         (state, EXITING)
     } else {
         if let Some(request_load) = RequestLoad::try_borrow_from(&state) {
-            let threshold = tunables::tunables()
-                .edenapi_high_load_threshold()
-                .unwrap_or_default();
+            let threshold =
+                justknobs::get_as::<i64>("scm/mononoke:edenapi_high_load_threshold", None)
+                    .unwrap_or_default();
             if threshold > 0 && request_load.0 > threshold {
                 return (state, HIGH_LOAD_SIGNAL);
             }
