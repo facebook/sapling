@@ -323,11 +323,8 @@ Test a non-forward push
   │
   ~
   $ hgedenapi push --force -r . --to master_bookmark_2 --non-forward-move --pushvar NON_FAST_FORWARD=true
-  fallback reason: --force is not supported by EdenApi push yet
-  pushing rev 589551466f25 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark_2
-  searching for changes
-  no changes found
-  updating bookmark master_bookmark_2
+  pushing rev 589551466f25 to destination https://localhost:*/edenapi/ bookmark master_bookmark_2 (glob)
+  moving remote bookmark master_bookmark_2 from eb388b759fde to 589551466f25
   $ log -r "20::"
   o    merge 10 and 12 [public;rev=25;eb388b759fde] default/master_bookmark
   ├─╮
@@ -391,13 +388,15 @@ Test non-fast-forward force pushrebase
   ~
 -- we don't need to pass --pushvar NON_FAST_FORWARD if we're doing a force pushrebase
   $ hgedenapi push -r . -f --to newbook
-  fallback reason: --force is not supported by EdenApi push yet
-  pushing rev 4899f9112d9b to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark newbook
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  updating bookmark newbook
+  pushing rev 4899f9112d9b to destination https://localhost:*/edenapi/ bookmark newbook (glob)
+  edenapi: queue 1 commit for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
+  edenapi: queue 1 tree for upload
+  edenapi: uploaded 1 tree
+  edenapi: uploading commit '4899f9112d9b79c3ecbc343169db37fbe1efdd20'...
+  edenapi: uploaded 1 changeset
+  moving remote bookmark newbook from 7a037594e202 to 4899f9112d9b
 -- "20 draft newbook" gets moved to 26 and 20 gets hidden.
   $ log -r "20::"
   @  26 [public;rev=27;4899f9112d9b] default/newbook
@@ -428,27 +427,20 @@ Test non-fast-forward force pushrebase
   4899f9112d9b79c3ecbc343169db37fbe1efdd20
   $ cd ../repo2
 
--- Check that a force pushrebase with mutation markers is a fail
+Check that a force pushrebase with mutation markers.
   $ echo SPARTACUS > sum_ego && hg ci -qAm 27
   $ echo SPARTACUS! > sum_ego && hg amend --config mutation.enabled=true --config mutation.record=true
-  $ hgedenapi push -r . -f --to newbook
-  fallback reason: --force is not supported by EdenApi push yet
-  pushing rev * to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark newbook (glob)
-  searching for changes
-  remote: Command failed
-  remote:   Error:
-  remote:     Forced push blocked because it contains mutation metadata.
-  remote:     You can remove the metadata from a commit with `hg amend --config mutation.record=false`.
-  remote:     For more help, please contact the Source Control team at https://fburl.com/27qnuyl2
-  remote: 
-  remote:   Root cause:
-  remote:     Forced push blocked because it contains mutation metadata.
-  remote:     You can remove the metadata from a commit with `hg amend --config mutation.record=false`.
-  remote:     For more help, please contact the Source Control team at https://fburl.com/27qnuyl2
-  remote: 
-  remote:   Debug context:
-  remote:     "Forced push blocked because it contains mutation metadata.\nYou can remove the metadata from a commit with `hg amend --config mutation.record=false`.\nFor more help, please contact the Source Control team at https://fburl.com/27qnuyl2"
-  abort: unexpected EOL, expected netstring digit
+  $ hgedenapi push -r . -f --to newbook --config push.check-mutation=true
+  pushing rev * to destination https://localhost:*/edenapi/ bookmark newbook (glob)
+  edenapi: queue 1 commit for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
+  edenapi: queue 1 tree for upload
+  edenapi: uploaded 1 tree
+  edenapi: uploading commit '*'... (glob)
+  edenapi: uploaded 1 changeset
+  abort: forced push blocked because commit * contains mutation metadata (glob)
+  (use 'hg amend --config mutation.record=false' to remove the metadata)
   [255]
 
 Check that we can replace a file with a directory

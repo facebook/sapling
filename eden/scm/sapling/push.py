@@ -12,6 +12,9 @@ from .i18n import _
 from .node import bin, hex, nullhex, short
 
 
+MUTATION_KEYS = {"mutpred", "mutuser", "mutdate", "mutop", "mutsplit"}
+
+
 def get_edenapi_for_dest(repo, _dest):
     """Get an EdenApi instance for the given destination."""
     if not repo.ui.configbool("push", "edenapi"):
@@ -32,11 +35,6 @@ def get_edenapi_for_dest(repo, _dest):
 
 def push(repo, dest, head_node, remote_bookmark, force=False, opargs=None):
     """Push via EdenApi (HTTP)"""
-    if force:
-        raise error.UnsupportedEdenApiPush(
-            _("--force is not supported by EdenApi push yet")
-        )
-
     ui = repo.ui
     edenapi = get_edenapi_for_dest(repo, dest)
     opargs = opargs or {}
@@ -78,30 +76,36 @@ def push(repo, dest, head_node, remote_bookmark, force=False, opargs=None):
                 % remote_bookmark
             )
 
-    if repo[head_node].phase() == phases.public:
-        # if the head is already a public commit, then do a plain push (no pushrebase)
-        plain_push(repo, edenapi, remote_bookmark, head_node, bookmark_node, opargs)
+    if force or repo[head_node].phase() == phases.public:
+        # if the head is already a public commit or force is set, then do a plain
+        # push (no pushrebase)
+        plain_push(
+            repo, edenapi, remote_bookmark, head_node, bookmark_node, force, opargs
+        )
     else:
         # update the exiting bookmark with push rebase
         return push_rebase(repo, dest, head_node, draft_nodes, remote_bookmark, opargs)
 
 
-def plain_push(repo, edenapi, bookmark, to_node, from_node, opargs=None):
+def plain_push(repo, edenapi, bookmark, to_node, from_node, force, opargs=None):
     """Plain push without rebasing."""
     pushvars = parse_pushvars(opargs.get("pushvars"))
 
-    # setbookmark api server logic does not check if it's a non fast-forward move,
-    # let's check it in the client side as a workaround for now
-    is_ancestor = repo.dageval(lambda: isancestor(from_node, to_node))
-    if not is_ancestor:
-        if not is_true(pushvars.get("NON_FAST_FORWARD")):
-            raise error.Abort(
-                _(
-                    "non-fast-forward push to remote bookmark %s from %s to %s "
-                    "(set pushvar NON_FAST_FORWARD=true for a non-fast-forward move)"
+    if force:
+        check_mutation_metadata(repo, to_node)
+    else:
+        # setbookmark api server logic does not check if it's a non fast-forward move,
+        # let's check it in the client side as a workaround for now
+        is_ancestor = repo.dageval(lambda: isancestor(from_node, to_node))
+        if not is_ancestor:
+            if not is_true(pushvars.get("NON_FAST_FORWARD")):
+                raise error.Abort(
+                    _(
+                        "non-fast-forward push to remote bookmark %s from %s to %s "
+                        "(set pushvar NON_FAST_FORWARD=true for a non-fast-forward move)"
+                    )
+                    % (bookmark, short(from_node), short(to_node)),
                 )
-                % (bookmark, short(from_node), short(to_node)),
-            )
 
     repo.ui.status(
         _("moving remote bookmark %s from %s to %s\n")
@@ -254,6 +258,31 @@ def parse_pushvars(pushvars_strs: Optional[List[str]]) -> List[Tuple[str, str]]:
             )
         pushvars[k] = v
     return pushvars
+
+
+def check_mutation_metadata(repo, to_node):
+    """Check if the given commits have mutation metadata. If so, abort."""
+    # context: https://github.com/facebook/sapling/blob/fb09c14ae6d1a134259f66d9997d1af21c605c07/eden/mononoke/repo_client/unbundle/src/resolver.rs#L616
+    # this logic is probably not be needed nowadays (disabled by default), but we
+    # keep it here just in case.
+    if not repo.ui.configbool("push", "check-mutation"):
+        return
+
+    draft_nodes = repo.dageval(lambda: only([to_node], public()))
+    for node in draft_nodes:
+        ctx = repo[node]
+        if ctx.extra().keys() & MUTATION_KEYS:
+            hint = _(
+                "use 'hg amend --config mutation.record=false' to remove the metadata"
+            )
+            support = repo.ui.config("ui", "supportcontact")
+            if support:
+                hint += _(" or contact %s for help") % support
+            raise error.Abort(
+                _("forced push blocked because commit %s contains mutation metadata")
+                % ctx,
+                hint=hint,
+            )
 
 
 def is_true(s: Optional[str]) -> bool:
