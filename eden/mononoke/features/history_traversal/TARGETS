@@ -32,6 +32,7 @@ rust_library(
         "fbsource//third-party/rust:thiserror",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/futures_stats:futures_stats",
+        "//common/rust/shed/justknobs_stub:justknobs",
         "//common/rust/shed/stats:stats",
         "//common/rust/shed/time_ext:time_ext",
         "//eden/mononoke/blobrepo:blobrepo",
@@ -51,6 +52,5 @@ rust_library(
         "//eden/mononoke/repo_attributes/repo_derived_data:repo_derived_data",
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/mononoke/server/context:context",
-        "//eden/mononoke/tunables:tunables",
     ],
 )
