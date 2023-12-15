@@ -26,8 +26,6 @@ use fs_err as fs;
 use metalog::MetaLog;
 use once_cell::sync::Lazy;
 use once_cell::sync::OnceCell;
-#[cfg(feature = "wdir")]
-use parking_lot::Mutex;
 use parking_lot::RwLock;
 use repolock::RepoLocker;
 use revisionstore::scmstore;
@@ -42,20 +40,10 @@ use storemodel::FileStore;
 use storemodel::StoreInfo;
 use storemodel::StoreOutput;
 use storemodel::TreeStore;
-#[cfg(feature = "wdir")]
-use treestate::dirstate::Dirstate;
-#[cfg(feature = "wdir")]
-use treestate::dirstate::TreeStateFields;
-#[cfg(feature = "wdir")]
-use treestate::serialization::Serializable;
 use treestate::treestate::TreeState;
 use types::repo::StorageFormat;
 use types::HgId;
 use util::path::absolute;
-#[cfg(feature = "wdir")]
-use vfs::VFS;
-#[cfg(feature = "wdir")]
-use workingcopy::filesystem::FileSystemType;
 #[cfg(feature = "wdir")]
 use workingcopy::workingcopy::WorkingCopy;
 
@@ -612,97 +600,22 @@ impl Repo {
 
     #[cfg(feature = "wdir")]
     pub fn working_copy(&mut self) -> Result<WorkingCopy, errors::InvalidWorkingCopy> {
-        let path = &self.path;
-        let is_eden = self.requirements.contains("eden");
-        let fsmonitor_ext = self.config.get("extensions", "fsmonitor");
-        let fsmonitor_mode = self.config.get_nonempty("fsmonitor", "mode");
-        let is_watchman = if fsmonitor_ext.is_none() || fsmonitor_ext == Some("!".into()) {
-            false
-        } else {
-            fsmonitor_mode.is_none() || fsmonitor_mode == Some("on".into())
-        };
-        let filesystem = match (is_eden, is_watchman) {
-            (true, _) => FileSystemType::Eden,
-            (false, true) => FileSystemType::Watchman,
-            (false, false) => FileSystemType::Normal,
-        };
-
-        tracing::trace!(target: "repo::workingcopy", "initializing vfs at {path:?}");
-        let vfs = VFS::new(path.to_path_buf())?;
-        let case_sensitive = vfs.case_sensitive();
-        tracing::trace!(target: "repo::workingcopy", "case sensitive: {case_sensitive}");
-
-        let dirstate_path = path.join(self.ident.dot_dir()).join("dirstate");
-        tracing::trace!(target: "repo::workingcopy", dirstate_path=?dirstate_path);
-
-        let treestate = match filesystem {
-            FileSystemType::Eden => {
-                tracing::trace!(target: "repo::workingcopy", "loading edenfs dirstate");
-                TreeState::from_eden_dirstate(dirstate_path, case_sensitive)?
-            }
-            _ => {
-                let treestate_path = path.join(self.ident.dot_dir()).join("treestate");
-                if util::file::exists(&dirstate_path)
-                    .map_err(anyhow::Error::from)?
-                    .is_some()
-                {
-                    tracing::trace!(target: "repo::workingcopy", "reading dirstate file");
-                    let mut buf =
-                        util::file::open(dirstate_path, "r").map_err(anyhow::Error::from)?;
-                    tracing::trace!(target: "repo::workingcopy", "deserializing dirstate");
-                    let dirstate = Dirstate::deserialize(&mut buf)?;
-                    let fields = dirstate
-                        .tree_state
-                        .ok_or_else(|| anyhow!("missing treestate fields on dirstate"))?;
-
-                    let filename = fields.tree_filename;
-                    let root_id = fields.tree_root_id;
-                    tracing::trace!(target: "repo::workingcopy", "loading treestate {filename} {root_id:?}");
-                    TreeState::open(treestate_path.join(filename), root_id, case_sensitive)?
-                } else {
-                    tracing::trace!(target: "repo::workingcopy", "creating treestate");
-                    let (treestate, root_id) = TreeState::new(&treestate_path, case_sensitive)?;
-
-                    tracing::trace!(target: "repo::workingcopy", "creating dirstate");
-                    let dirstate = Dirstate {
-                        p1: *HgId::null_id(),
-                        p2: *HgId::null_id(),
-                        tree_state: Some(TreeStateFields {
-                            tree_filename: treestate.file_name()?,
-                            tree_root_id: root_id,
-                            // TODO: set threshold
-                            repack_threshold: None,
-                        }),
-                    };
-
-                    tracing::trace!(target: "repo::workingcopy", "creating dirstate file");
-                    let mut file =
-                        util::file::create(dirstate_path).map_err(anyhow::Error::from)?;
-
-                    tracing::trace!(target: "repo::workingcopy", "serializing dirstate");
-                    dirstate.serialize(&mut file)?;
-                    treestate
-                }
-            }
-        };
-        tracing::trace!(target: "repo::workingcopy", "treestate loaded");
-        let treestate = Arc::new(Mutex::new(treestate));
-
         tracing::trace!(target: "repo::workingcopy", "creating file store");
         let file_store = self.file_store()?;
 
         tracing::trace!(target: "repo::workingcopy", "creating tree resolver");
         let tree_resolver = Arc::new(self.tree_resolver()?);
+        let has_requirement = |s: &str| self.requirements.contains(s);
 
         Ok(WorkingCopy::new(
-            vfs,
+            &self.path,
+            &self.config,
             self.storage_format(),
-            filesystem,
-            treestate,
             tree_resolver,
             file_store,
-            &self.config,
             self.locker.clone(),
+            &self.dot_hg_path,
+            &has_requirement,
         )?)
     }
 

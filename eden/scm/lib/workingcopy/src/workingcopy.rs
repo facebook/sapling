@@ -39,7 +39,10 @@ use status::FileStatus;
 use status::Status;
 use status::StatusBuilder;
 use storemodel::FileStore;
+use treestate::dirstate::Dirstate;
+use treestate::dirstate::TreeStateFields;
 use treestate::filestate::StateFlags;
+use treestate::serialization::Serializable;
 use treestate::tree::VisitorResult;
 use treestate::treestate::TreeState;
 use types::repo::StorageFormat;
@@ -90,17 +93,89 @@ pub struct WorkingCopy {
 
 impl WorkingCopy {
     pub fn new(
-        vfs: VFS,
+        path: &Path,
+        config: &dyn Config,
         format: StorageFormat,
-        // TODO: Have constructor figure out FileSystemType
-        file_system_type: FileSystemType,
-        treestate: Arc<Mutex<TreeState>>,
         tree_resolver: ArcReadTreeManifest,
         filestore: ArcFileStore,
-        config: &dyn Config,
         locker: Arc<RepoLocker>,
+        // For dirstate
+        dot_dir: &Path,
+        has_requirement: &dyn Fn(&str) -> bool,
     ) -> Result<Self> {
-        tracing::debug!(target: "dirstate_size", dirstate_size=treestate.lock().len());
+        tracing::trace!("initializing vfs at {path:?}");
+        let vfs = VFS::new(path.to_path_buf())?;
+
+        let is_eden = has_requirement("eden");
+        let fsmonitor_ext = config.get("extensions", "fsmonitor");
+        let fsmonitor_mode = config.get_nonempty("fsmonitor", "mode");
+        let is_watchman = if fsmonitor_ext.is_none() || fsmonitor_ext == Some("!".into()) {
+            false
+        } else {
+            fsmonitor_mode.is_none() || fsmonitor_mode == Some("on".into())
+        };
+        let file_system_type = match (is_eden, is_watchman) {
+            (true, _) => FileSystemType::Eden,
+            (false, true) => FileSystemType::Watchman,
+            (false, false) => FileSystemType::Normal,
+        };
+        let treestate = {
+            let case_sensitive = vfs.case_sensitive();
+            tracing::trace!("case sensitive: {case_sensitive}");
+            let dirstate_path = dot_dir.join("dirstate");
+            let treestate = match file_system_type {
+                FileSystemType::Eden => {
+                    tracing::trace!("loading edenfs dirstate");
+                    TreeState::from_eden_dirstate(dirstate_path, case_sensitive)?
+                }
+                _ => {
+                    let treestate_path = dot_dir.join("treestate");
+                    if util::file::exists(&dirstate_path)
+                        .map_err(anyhow::Error::from)?
+                        .is_some()
+                    {
+                        tracing::trace!("reading dirstate file");
+                        let mut buf =
+                            util::file::open(dirstate_path, "r").map_err(anyhow::Error::from)?;
+                        tracing::trace!("deserializing dirstate");
+                        let dirstate = Dirstate::deserialize(&mut buf)?;
+                        let fields = dirstate
+                            .tree_state
+                            .ok_or_else(|| anyhow!("missing treestate fields on dirstate"))?;
+
+                        let filename = fields.tree_filename;
+                        let root_id = fields.tree_root_id;
+                        tracing::trace!("loading treestate {filename} {root_id:?}");
+                        TreeState::open(treestate_path.join(filename), root_id, case_sensitive)?
+                    } else {
+                        tracing::trace!("creating treestate");
+                        let (treestate, root_id) = TreeState::new(&treestate_path, case_sensitive)?;
+
+                        tracing::trace!("creating dirstate");
+                        let dirstate = Dirstate {
+                            p1: *HgId::null_id(),
+                            p2: *HgId::null_id(),
+                            tree_state: Some(TreeStateFields {
+                                tree_filename: treestate.file_name()?,
+                                tree_root_id: root_id,
+                                // TODO: set threshold
+                                repack_threshold: None,
+                            }),
+                        };
+
+                        tracing::trace!(target: "repo::workingcopy", "creating dirstate file");
+                        let mut file =
+                            util::file::create(dirstate_path).map_err(anyhow::Error::from)?;
+
+                        tracing::trace!(target: "repo::workingcopy", "serializing dirstate");
+                        dirstate.serialize(&mut file)?;
+                        treestate
+                    }
+                }
+            };
+            tracing::debug!(target: "dirstate_size", dirstate_size=treestate.len());
+            Arc::new(Mutex::new(treestate))
+        };
 
         let ignore_matcher = Arc::new(GitignoreMatcher::new(
             vfs.root(),
