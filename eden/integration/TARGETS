@@ -623,7 +623,6 @@ python_unittest(
 )
 
 python_unittest(
-    # @autodeps-skip
     name = "projfs_enumeration",
     srcs = ["projfs_enumeration.py"],
     compatible_with = [
@@ -635,6 +634,7 @@ python_unittest(
     runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/lib:lib",
+        "//eden/integration/lib:ntapi",
     ],
 )
 
