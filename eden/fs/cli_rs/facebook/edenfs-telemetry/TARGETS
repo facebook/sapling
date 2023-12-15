@@ -6,17 +6,6 @@ oncall("scm_client_infra")
 rust_library(
     name = "edenfs-telemetry",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "extra_buck_dependencies": {
-                "dependencies": [
-                    # fb-only dependencies
-                    (None, "fbsource//third-party/rust:whoami"),
-                    (None, "//common/rust/build_info:build_info"),
-                ],
-            },
-        },
-    },
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:rand",
