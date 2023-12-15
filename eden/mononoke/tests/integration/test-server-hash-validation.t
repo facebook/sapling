@@ -6,14 +6,6 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
 
-  $ merge_tunables <<EOF
-  > {
-  >   "ints": {
-  >     "hash_validation_percentage": 100
-  >   }
-  > }
-  > EOF
-
 setup configuration
   $ setup_common_config "blob_files"
   $ cd $TESTTMP

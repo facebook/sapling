@@ -140,7 +140,6 @@ use stats::prelude::*;
 use streaming_clone::RevlogStreamingChunks;
 use streaming_clone::StreamingCloneArc;
 use time_ext::DurationExt;
-use tunables::tunables;
 use unbundle::run_hooks;
 use unbundle::run_post_resolve_action;
 use unbundle::BundleResolverError;
@@ -566,10 +565,6 @@ impl RepoClient {
         ctx: CoreContext,
         params: GettreepackArgs,
     ) -> BoxStream<BytesOld, Error> {
-        let hash_validation_percentage =
-            tunables().hash_validation_percentage().unwrap_or_default();
-        let validate_hash = ((rand::random::<usize>() % 100) as i64) < hash_validation_percentage;
-
         let changed_entries = gettreepack_entries(ctx.clone(), self.repo.blob_repo(), params)
             .filter({
                 let mut used_hashes = HashSet::new();
@@ -590,7 +585,7 @@ impl RepoClient {
                     if ctx.session().is_quicksand() {
                         STATS::quicksand_tree_count.add_value(1);
                     }
-                    fetch_treepack_part_input(ctx.clone(), &blobrepo, hg_mf_id, path, validate_hash)
+                    fetch_treepack_part_input(ctx.clone(), &blobrepo, hg_mf_id, path, true)
                 }
             });
 
@@ -628,10 +623,6 @@ impl RepoClient {
 
             let lfs_params = self.lfs_params();
 
-            let hash_validation_percentage =
-                tunables().hash_validation_percentage().unwrap_or_default();
-            let validate_hash =
-                rand::thread_rng().gen_ratio(hash_validation_percentage as u32, 100);
             let getpack_buffer_size = 500;
 
             let request_stream = move || {
@@ -672,7 +663,7 @@ impl RepoClient {
                                                 repo.clone(),
                                                 *filenode,
                                                 lfs_params.clone(),
-                                                validate_hash,
+                                                true,
                                             )
                                             .compat()
                                         })
