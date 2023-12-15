@@ -67,7 +67,6 @@ use mutable_renames::MutableRenameEntry;
 use mutable_renames::MutableRenames;
 use repo_authorization::AuthorizationContext;
 use sorted_vector_map::SortedVectorMap;
-use tunables::tunables;
 use unodes::RootUnodeManifestId;
 
 use crate::Repo;
@@ -511,13 +510,6 @@ pub trait MegarepoOp {
             let src_path: Option<NonRootMPath> = src_path.into();
             match (src_path, entry) {
                 (Some(src_path), Entry::Leaf(leaf)) => {
-                    if tunables()
-                        .megarepo_api_dont_set_file_mutable_renames()
-                        .unwrap_or_default()
-                    {
-                        continue;
-                    }
-
                     // TODO(stash, simonfar, mitrandir): we record file
                     // moves to mutable_renames even though these moves are already
                     // recorded in non-mutable renames. We have to do it because
@@ -537,13 +529,6 @@ pub trait MegarepoOp {
                     }
                 }
                 (src_path, Entry::Tree(tree)) => {
-                    if tunables()
-                        .megarepo_api_dont_set_directory_mutable_renames()
-                        .unwrap_or_default()
-                    {
-                        continue;
-                    }
-
                     let dst_paths = directory_mover(&src_path)?;
                     for dst_path in dst_paths {
                         let mutable_rename_entry = MutableRenameEntry::new(
