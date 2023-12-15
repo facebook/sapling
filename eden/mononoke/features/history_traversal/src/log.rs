@@ -1025,10 +1025,7 @@ async fn try_continue_traversal_when_no_parents(
         }
     }
 
-    if !tunables::tunables()
-        .by_repo_fastlog_disable_mutable_renames(repo.repo_identity().name())
-        .unwrap_or(follow_mutable_renames == FollowMutableRenames::No)
-    {
+    if follow_mutable_renames == FollowMutableRenames::Yes {
         return find_mutable_renames(ctx, repo, (cs_id, path), history_graph, mutable_renames)
             .await;
     }
