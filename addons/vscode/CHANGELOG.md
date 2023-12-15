@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.34
+
+### Dec 14 2023
+
+- Multiple improvements to Interactive Split
+  - Handles binary and copied/renamed files
+  - Shows file flag changes, like making a file executable
+  - Show file status (added/removed) in file header
+  - Long filenames wrap to multiple lines and don't break up the left/right arrows
+  - Show how a file was renamed or copied
+- Don't run status refreshing commands while an operation is running, to fix lots of random files being shown.
+- Fix conflicts sometimes not being shown when they should be
+
 ## 0.1.33
 
 ### Dec 11 2023
