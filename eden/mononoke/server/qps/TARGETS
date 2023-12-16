@@ -6,6 +6,15 @@ oncall("mononoke")
 rust_library(
     name = "qps",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "extra_buck_dependencies": {
+                "dependencies": [
+                    (None, "//common/rust/fbwhoami:fbwhoami"),  # T172908111
+                ],
+            },
+        },
+    },
     deps = [
         "fbsource//third-party/rust:anyhow",
         "//common/rust/fbwhoami:fbwhoami",

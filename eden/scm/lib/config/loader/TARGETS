@@ -38,7 +38,6 @@ rust_library(
                     "sha2",
                     "types",
                     "zstd",
-                    "hostcaps/fb",
                     "identity/fb",
                     "tempfile",
                     "filetime",

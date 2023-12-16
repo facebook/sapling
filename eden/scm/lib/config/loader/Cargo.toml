@@ -49,4 +49,4 @@ testutil = { version = "0.1.0", path = "../../util/testutil" }
 
 [features]
 default = []
-fb = ["filetime", "hgtime", "hostcaps/fb", "http-client", "identity/fb", "regex", "serde", "serde_json", "serde_urlencoded", "sha2", "sha2", "tempfile", "types", "zstd"]
+fb = ["filetime", "hgtime", "http-client", "identity/fb", "regex", "serde", "serde_json", "serde_urlencoded", "sha2", "sha2", "tempfile", "types", "zstd"]

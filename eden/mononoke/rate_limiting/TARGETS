@@ -5,6 +5,15 @@ oncall("mononoke")
 rust_library(
     name = "rate_limiting",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "extra_buck_dependencies": {
+                "dependencies": [
+                    (None, "//common/rust/fbwhoami:fbwhoami"),  # T172908111
+                ],
+            },
+        },
+    },
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",

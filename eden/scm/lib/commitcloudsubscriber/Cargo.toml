@@ -39,6 +39,3 @@ tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]
 tempfile = "3.8"
-
-[features]
-default = []

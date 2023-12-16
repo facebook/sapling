@@ -9,39 +9,39 @@
 
 use once_cell::sync::Lazy;
 
-#[cfg(any(fbcode_build, feature = "fb"))]
+#[cfg(fbcode_build)]
 mod facebook;
-#[cfg(any(fbcode_build, feature = "fb"))]
+#[cfg(fbcode_build)]
 pub use facebook::get_env;
-#[cfg(any(fbcode_build, feature = "fb"))]
+#[cfg(fbcode_build)]
 pub use facebook::is_corp;
-#[cfg(any(fbcode_build, feature = "fb"))]
+#[cfg(fbcode_build)]
 pub use facebook::is_lab;
-#[cfg(any(fbcode_build, feature = "fb"))]
+#[cfg(fbcode_build)]
 pub use facebook::is_prod;
-#[cfg(any(fbcode_build, feature = "fb"))]
+#[cfg(fbcode_build)]
 pub use facebook::Env;
 
 pub static IN_PROD: Lazy<bool> = Lazy::new(is_prod);
 pub static IN_CORP: Lazy<bool> = Lazy::new(is_corp);
 pub static IN_LAB: Lazy<bool> = Lazy::new(is_lab);
 
-#[cfg(not(any(fbcode_build, feature = "fb")))]
+#[cfg(not(fbcode_build))]
 pub fn get_env() -> u8 {
     0
 }
 
-#[cfg(not(any(fbcode_build, feature = "fb")))]
+#[cfg(not(fbcode_build))]
 pub fn is_prod() -> bool {
     false
 }
 
-#[cfg(not(any(fbcode_build, feature = "fb")))]
+#[cfg(not(fbcode_build))]
 pub fn is_corp() -> bool {
     false
 }
 
-#[cfg(not(any(fbcode_build, feature = "fb")))]
+#[cfg(not(fbcode_build))]
 pub fn is_lab() -> bool {
     false
 }

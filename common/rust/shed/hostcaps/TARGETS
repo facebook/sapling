@@ -10,14 +10,14 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     autocargo = {
         "cargo_toml_config": {
-            "features": {
-                "default": [],
-                "fb": [],
+            "extra_buck_dependencies": {
+                "dependencies": [
+                    (None, "//common/rust/fbwhoami:fbwhoami"),  # T172908111
+                ],
             },
         },
     },
     crate_root = "src/lib.rs",
-    features = ["fb"],
     deps = [
         "fbsource//third-party/rust:once_cell",
         "//common/rust/fbwhoami:fbwhoami",

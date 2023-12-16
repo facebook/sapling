@@ -8,9 +8,6 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     autocargo = {
         "cargo_toml_config": {
-            "features": {
-                "default": ["hostcaps/fb"],
-            },
             "package": {
                 "description": """\
     Cross platform client for subscribing to Commit Cloud eventsource (http server-sent events)
