@@ -1,5 +1,7 @@
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
 
+oncall("scm_client_infra")
+
 cpp_library(
     name = "http",
     srcs = ["HttpBackingStore.cpp"],
