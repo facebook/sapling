@@ -219,3 +219,4 @@ members = [
   "saplingnative/conch_parser",
   "saplingnative/pybindings",
 ]
+resolver = "2"

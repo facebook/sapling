@@ -30,3 +30,4 @@ members = [
   "service/thrift_streaming/types",
   "service/types",
 ]
+resolver = "2"
