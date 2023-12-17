@@ -183,9 +183,9 @@ impl SourceControlServiceImpl {
         }
 
         let sampling_rate = core::num::NonZeroU64::new(if POPULAR_METHODS.contains(name) {
-            tunables()
-                .scs_popular_methods_sampling_rate()
-                .unwrap_or_default() as u64
+            const FALLBACK_SAMPLING_RATE: u64 = 1000;
+            justknobs::get_as::<u64>("scm/mononoke:scs_popular_methods_sampling_rate", None)
+                .unwrap_or(FALLBACK_SAMPLING_RATE)
         } else {
             tunables()
                 .scs_other_methods_sampling_rate()
