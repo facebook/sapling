@@ -6,7 +6,6 @@
  */
 
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
@@ -18,13 +17,14 @@ use manifest::ManifestOps;
 use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::NonRootMPath;
 use mononoke_types::ChangesetId;
-use repo_blobstore::RepoBlobstoreRef;
 use slog::info;
 use unodes::RootUnodeManifestId;
 
+use crate::Repo;
+
 pub async fn get_working_copy_paths(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     bcs_id: ChangesetId,
 ) -> Result<Vec<NonRootMPath>, Error> {
     let hg_cs_id = repo.derive_hg_changeset(ctx, bcs_id).await?;
@@ -44,7 +44,7 @@ pub async fn get_working_copy_paths(
 
 pub async fn get_changed_content_working_copy_paths(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     bcs_id: ChangesetId,
     base_cs_id: ChangesetId,
 ) -> Result<Vec<NonRootMPath>, Error> {
@@ -84,7 +84,7 @@ pub async fn get_changed_content_working_copy_paths(
 
 pub async fn get_colliding_paths_between_commits(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     bcs_id: ChangesetId,
     base_cs_id: ChangesetId,
 ) -> Result<Vec<NonRootMPath>, Error> {
@@ -122,7 +122,7 @@ pub async fn get_colliding_paths_between_commits(
 
 pub async fn get_changed_working_copy_paths(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     bcs_id: ChangesetId,
     base_cs_id: ChangesetId,
 ) -> Result<Vec<NonRootMPath>, Error> {
@@ -162,7 +162,7 @@ pub async fn get_changed_working_copy_paths(
 
 pub async fn get_working_copy_paths_by_prefixes(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     bcs_id: ChangesetId,
     prefixes: impl IntoIterator<Item = NonRootMPath>,
 ) -> Result<Vec<NonRootMPath>, Error> {

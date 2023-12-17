@@ -11,9 +11,10 @@ use std::num::NonZeroU64;
 
 use anyhow::anyhow;
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
+use bookmarks::BookmarksRef;
+use changesets::ChangesetsRef;
 use context::CoreContext;
 use futures::future;
 use futures::Stream;
@@ -30,7 +31,9 @@ use mononoke_types::ContentId;
 use mononoke_types::FileChange;
 use mononoke_types::FileType;
 use movers::Mover;
+use phases::PhasesRef;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedDataRef;
 use slog::info;
 
 pub mod chunking;
@@ -48,6 +51,16 @@ use crate::common::StackPosition;
 const BUFFER_SIZE: usize = 100;
 const REPORTING_INTERVAL_FILES: usize = 10000;
 
+pub trait Repo = BonsaiHgMappingRef
+    + RepoBlobstoreRef
+    + RepoDerivedDataRef
+    + ChangesetsRef
+    + PhasesRef
+    + BookmarksRef
+    + Send
+    + Sync
+    + Clone;
+
 struct FileMove {
     old_path: NonRootMPath,
     maybe_new_path: Option<NonRootMPath>,
@@ -58,7 +71,7 @@ struct FileMove {
 
 fn get_all_file_moves<'a>(
     ctx: &'a CoreContext,
-    repo: &'a BlobRepo,
+    repo: &'a impl Repo,
     hg_cs: HgBlobChangeset,
     path_converter: &'a Mover,
 ) -> impl Stream<Item = Result<FileMove, Error>> + 'a {
@@ -102,7 +115,7 @@ fn get_all_file_moves<'a>(
 
 pub async fn perform_move<'a>(
     ctx: &'a CoreContext,
-    repo: &'a BlobRepo,
+    repo: &'a impl Repo,
     parent_bcs_id: ChangesetId,
     path_converter: Mover,
     resulting_changeset_args: ChangesetArgs,
@@ -135,7 +148,7 @@ pub async fn perform_move<'a>(
 /// Creating a stack of commits might be desirable if we want to keep each commit smaller.
 pub async fn perform_stack_move<'a>(
     ctx: &'a CoreContext,
-    repo: &'a BlobRepo,
+    repo: &'a impl Repo,
     parent_bcs_id: ChangesetId,
     path_converter: Mover,
     max_num_of_moves_in_commit: NonZeroU64,
@@ -161,7 +174,7 @@ pub async fn perform_stack_move<'a>(
 
 async fn perform_stack_move_impl<'a, Chunker>(
     ctx: &'a CoreContext,
-    repo: &'a BlobRepo,
+    repo: &'a impl Repo,
     mut parent_bcs_id: ChangesetId,
     path_converter: Mover,
     chunker: Chunker,
@@ -231,8 +244,13 @@ mod test {
     use std::sync::Arc;
 
     use anyhow::Result;
+    use bonsai_hg_mapping::BonsaiHgMapping;
+    use bookmarks::Bookmarks;
+    use changeset_fetcher::ChangesetFetcher;
+    use changesets::Changesets;
     use cloned::cloned;
     use fbinit::FacebookInit;
+    use filestore::FilestoreConfig;
     use fixtures::Linear;
     use fixtures::ManyFilesDirs;
     use fixtures::TestRepoFixture;
@@ -241,8 +259,31 @@ mod test {
     use mononoke_types::BonsaiChangeset;
     use mononoke_types::BonsaiChangesetMut;
     use mononoke_types::DateTime;
+    use phases::Phases;
+    use repo_blobstore::RepoBlobstore;
+    use repo_derived_data::RepoDerivedData;
     use sorted_vector_map::sorted_vector_map;
     use tests_utils::resolve_cs_id;
+
+    #[facet::container]
+    struct TestRepo {
+        #[facet]
+        bonsai_hg_mapping: dyn BonsaiHgMapping,
+        #[facet]
+        bookmarks: dyn Bookmarks,
+        #[facet]
+        repo_blobstore: RepoBlobstore,
+        #[facet]
+        repo_derived_data: RepoDerivedData,
+        #[facet]
+        changeset_fetcher: dyn ChangesetFetcher,
+        #[facet]
+        changesets: dyn Changesets,
+        #[facet]
+        filestore_config: FilestoreConfig,
+        #[facet]
+        pub phases: dyn Phases,
+    }
 
     use super::*;
 
@@ -290,12 +331,12 @@ mod test {
         fb: FacebookInit,
     ) -> (
         CoreContext,
-        BlobRepo,
+        Arc<TestRepo>,
         HgChangesetId,
         ChangesetId,
         ChangesetArgs,
     ) {
-        let repo = ManyFilesDirs::getrepo(fb).await;
+        let repo: Arc<TestRepo> = Arc::new(ManyFilesDirs::get_custom_test_repo(fb).await);
         let ctx = CoreContext::test_mock(fb);
 
         let hg_cs_id = HgChangesetId::from_str("2f866e7e549760934e31bf0420a873f65100ad63").unwrap();
@@ -317,7 +358,7 @@ mod test {
 
     async fn get_bonsai_by_hg_cs_id(
         ctx: CoreContext,
-        repo: BlobRepo,
+        repo: impl Repo,
         hg_cs_id: HgChangesetId,
     ) -> BonsaiChangeset {
         let bcs_id = repo
@@ -400,7 +441,7 @@ mod test {
 
     async fn get_working_copy_contents(
         ctx: CoreContext,
-        repo: BlobRepo,
+        repo: impl Repo,
         hg_cs_id: HgChangesetId,
     ) -> BTreeMap<NonRootMPath, (FileType, ContentId)> {
         let hg_cs = hg_cs_id.load(&ctx, repo.repo_blobstore()).await.unwrap();
@@ -446,7 +487,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_stack_move(fb: FacebookInit) -> Result<(), Error> {
-        let repo = Linear::getrepo(fb).await;
+        let repo: Arc<TestRepo> = Arc::new(Linear::get_custom_test_repo(fb).await);
         let ctx = CoreContext::test_mock(fb);
 
         let old_bcs_id = resolve_cs_id(&ctx, &repo, "master").await?;

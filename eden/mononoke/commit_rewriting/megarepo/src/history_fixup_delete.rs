@@ -8,7 +8,6 @@
 use std::collections::BTreeSet;
 
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use context::CoreContext;
 use mercurial_types::NonRootMPath;
 use mononoke_types::ChangesetId;
@@ -17,6 +16,7 @@ use crate::chunking::Chunker;
 use crate::common::delete_files_in_chunks;
 use crate::common::ChangesetArgsFactory;
 use crate::working_copy::get_changed_content_working_copy_paths;
+use crate::Repo;
 
 /// A struct containing pre-merge delete information
 /// Pre-merge delete commits look like this:
@@ -50,7 +50,7 @@ pub struct HistoryFixupDeletes {
 /// See also <https://fb.quip.com/JfHhAyOZ2FBj> for strategy and discussion
 pub async fn create_history_fixup_deletes<'a>(
     ctx: &'a CoreContext,
-    repo: &'a BlobRepo,
+    repo: &'a impl Repo,
     fixup_bcs_id: ChangesetId,
     chunker: Chunker<NonRootMPath>,
     delete_commits_changeset_args_factory: impl ChangesetArgsFactory,

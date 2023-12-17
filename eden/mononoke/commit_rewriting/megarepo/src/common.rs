@@ -7,7 +7,6 @@
 
 use anyhow::format_err;
 use anyhow::Error;
-use blobrepo::save_bonsai_changesets;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
@@ -89,7 +88,7 @@ async fn save_and_maybe_mark_public(
     mark_public: bool,
 ) -> Result<ChangesetId, Error> {
     let bcs_id = bcs.get_changeset_id();
-    save_bonsai_changesets(vec![bcs], ctx.clone(), repo).await?;
+    changesets_creation::save_changesets(ctx, repo, vec![bcs]).await?;
 
     if mark_public {
         repo.phases()
