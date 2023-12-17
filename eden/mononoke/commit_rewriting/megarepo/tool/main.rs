@@ -13,7 +13,6 @@ use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use blobrepo::BlobRepo;
 use bookmarks::BookmarkKey;
 use borrowed::borrowed;
 use clap::ArgMatches;
@@ -50,7 +49,6 @@ use manifest::ManifestOps;
 use manifest::PathOrPrefix;
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::MetadataDatabaseConfig;
-use mononoke_api_types::InnerRepo;
 use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
@@ -85,6 +83,15 @@ mod manual_commit_sync;
 mod merging;
 mod sync_diamond_merge;
 
+use bonsai_git_mapping::BonsaiGitMapping;
+use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
+use bonsai_hg_mapping::BonsaiHgMapping;
+use bookmarks::BookmarkUpdateLog;
+use bookmarks::Bookmarks;
+use changeset_fetcher::ChangesetFetcher;
+use changesets::Changesets;
+use commit_graph::CommitGraph;
+use filestore::FilestoreConfig;
 use megarepolib::chunking::even_chunker_with_max_size;
 use megarepolib::chunking::parse_chunking_hint;
 use megarepolib::chunking::path_chunker_from_hint;
@@ -100,6 +107,15 @@ use megarepolib::perform_stack_move;
 use megarepolib::pre_merge_delete::create_pre_merge_delete;
 use megarepolib::pre_merge_delete::PreMergeDelete;
 use megarepolib::working_copy::get_working_copy_paths_by_prefixes;
+use metaconfig_types::RepoConfig;
+use mutable_counters::MutableCounters;
+use phases::Phases;
+use pushrebase_mutation_mapping::PushrebaseMutationMapping;
+use repo_blobstore::RepoBlobstore;
+use repo_bookmark_attrs::RepoBookmarkAttrs;
+use repo_cross_repo::RepoCrossRepo;
+use repo_derived_data::RepoDerivedData;
+use repo_identity::RepoIdentity;
 
 use crate::cli::cs_args_from_matches;
 use crate::cli::get_catchup_head_delete_commits_cs_args_factory;
@@ -160,6 +176,29 @@ use crate::cli::VERSION;
 use crate::cli::WAIT_SECS;
 use crate::merging::perform_merge;
 
+#[derive(Clone)]
+#[facet::container]
+pub struct Repo(
+    dyn BonsaiHgMapping,
+    dyn BonsaiGitMapping,
+    dyn BonsaiGlobalrevMapping,
+    dyn PushrebaseMutationMapping,
+    RepoCrossRepo,
+    RepoBookmarkAttrs,
+    dyn Bookmarks,
+    dyn Phases,
+    dyn BookmarkUpdateLog,
+    dyn Changesets,
+    dyn ChangesetFetcher,
+    FilestoreConfig,
+    dyn MutableCounters,
+    RepoBlobstore,
+    RepoConfig,
+    RepoDerivedData,
+    RepoIdentity,
+    CommitGraph,
+);
+
 async fn run_move<'a>(
     ctx: &CoreContext,
     matches: &MononokeMatches<'a>,
@@ -185,7 +224,7 @@ async fn run_move<'a>(
         args::get_and_parse_opt(sub_m, MAX_NUM_OF_MOVES_IN_COMMIT);
 
     let (repo, resulting_changeset_args) = try_join(
-        args::not_shardmanager_compatible::open_repo::<BlobRepo>(
+        args::not_shardmanager_compatible::open_repo::<Repo>(
             ctx.fb,
             &ctx.logger().clone(),
             matches,
@@ -232,7 +271,7 @@ async fn run_merge<'a>(
     let second_parent = sub_m.value_of(SECOND_PARENT).unwrap().to_owned();
     let resulting_changeset_args = cs_args_from_matches(sub_m);
     let (repo, resulting_changeset_args) = try_join(
-        args::not_shardmanager_compatible::open_repo::<BlobRepo>(
+        args::not_shardmanager_compatible::open_repo::<Repo>(
             ctx.fb,
             &ctx.logger().clone(),
             matches,
@@ -284,11 +323,9 @@ async fn run_sync_diamond_merge<'a>(
     .await?;
 
     let merge_commit_hash = sub_m.value_of(COMMIT_HASH).unwrap().to_owned();
-    let (source_repo, target_repo): (InnerRepo, InnerRepo) =
-        try_join(source_repo, target_repo).await?;
+    let (source_repo, target_repo): (Repo, Repo) = try_join(source_repo, target_repo).await?;
 
-    let source_merge_cs_id =
-        helpers::csid_resolve(ctx, &source_repo.blob_repo, merge_commit_hash).await?;
+    let source_merge_cs_id = helpers::csid_resolve(ctx, &source_repo, merge_commit_hash).await?;
 
     let config_store = matches.config_store();
     let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), config_store)?;
@@ -298,8 +335,8 @@ async fn run_sync_diamond_merge<'a>(
 
     sync_diamond_merge::do_sync_diamond_merge(
         ctx,
-        source_repo,
-        target_repo,
+        &source_repo,
+        &target_repo,
         source_merge_cs_id,
         mapping,
         bookmark,
@@ -315,7 +352,7 @@ async fn run_pre_merge_delete<'a>(
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let repo: BlobRepo =
+    let repo: Repo =
         args::not_shardmanager_compatible::open_repo(ctx.fb, &ctx.logger().clone(), matches)
             .await?;
 
@@ -385,7 +422,7 @@ async fn run_history_fixup_delete<'a>(
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let repo: BlobRepo =
+    let repo: Repo =
         args::not_shardmanager_compatible::open_repo(ctx.fb, &ctx.logger().clone(), matches)
             .await?;
 
@@ -463,7 +500,7 @@ async fn run_gradual_delete<'a>(
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let repo: BlobRepo =
+    let repo: Repo =
         args::not_shardmanager_compatible::open_repo(ctx.fb, &ctx.logger().clone(), matches)
             .await?;
 
@@ -523,7 +560,7 @@ async fn run_bonsai_merge<'a>(
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let repo: BlobRepo =
+    let repo: Repo =
         args::not_shardmanager_compatible::open_repo(ctx.fb, &ctx.logger().clone(), matches)
             .await?;
 
@@ -555,7 +592,7 @@ async fn run_gradual_merge<'a>(
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
     let config_store = matches.config_store();
-    let repo: InnerRepo =
+    let repo: Repo =
         args::not_shardmanager_compatible::open_repo(ctx.fb, ctx.logger(), matches).await?;
 
     let last_deletion_commit = sub_m
@@ -571,9 +608,9 @@ async fn run_gradual_merge<'a>(
 
     let limit = args::get_usize_opt(sub_m, LIMIT);
     let (_, repo_config) =
-        args::get_config_by_repoid(config_store, matches, repo.blob_repo.repo_identity().id())?;
-    let last_deletion_commit = helpers::csid_resolve(ctx, &repo.blob_repo, last_deletion_commit);
-    let pre_deletion_commit = helpers::csid_resolve(ctx, &repo.blob_repo, pre_deletion_commit);
+        args::get_config_by_repoid(config_store, matches, repo.repo_identity().id())?;
+    let last_deletion_commit = helpers::csid_resolve(ctx, &repo, last_deletion_commit);
+    let pre_deletion_commit = helpers::csid_resolve(ctx, &repo, pre_deletion_commit);
 
     let (last_deletion_commit, pre_deletion_commit) =
         try_join(last_deletion_commit, pre_deletion_commit).await?;
@@ -597,7 +634,7 @@ async fn run_gradual_merge_progress<'a>(
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let repo: InnerRepo =
+    let repo: Repo =
         args::not_shardmanager_compatible::open_repo(ctx.fb, ctx.logger(), matches).await?;
 
     let last_deletion_commit = sub_m
@@ -610,8 +647,8 @@ async fn run_gradual_merge_progress<'a>(
         .value_of(COMMIT_BOOKMARK)
         .ok_or_else(|| format_err!("bookmark where to merge is not specified"))?;
 
-    let last_deletion_commit = helpers::csid_resolve(ctx, &repo.blob_repo, last_deletion_commit);
-    let pre_deletion_commit = helpers::csid_resolve(ctx, &repo.blob_repo, pre_deletion_commit);
+    let last_deletion_commit = helpers::csid_resolve(ctx, &repo, last_deletion_commit);
+    let pre_deletion_commit = helpers::csid_resolve(ctx, &repo, pre_deletion_commit);
 
     let (last_deletion_commit, pre_deletion_commit) =
         try_join(last_deletion_commit, pre_deletion_commit).await?;
@@ -635,7 +672,7 @@ async fn run_manual_commit_sync<'a>(
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let commit_syncer = create_commit_syncer_from_matches::<InnerRepo>(ctx, matches, None).await?;
+    let commit_syncer = create_commit_syncer_from_matches::<Repo>(ctx, matches, None).await?;
 
     let target_repo = commit_syncer.get_target_repo();
     let target_repo_parents = if sub_m.is_present(SELECT_PARENTS_AUTOMATICALLY) {
@@ -750,7 +787,7 @@ async fn run_catchup_delete_head<'a>(
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let repo: BlobRepo =
+    let repo: Repo =
         args::not_shardmanager_compatible::open_repo(ctx.fb, &ctx.logger().clone(), matches)
             .await?;
 
@@ -814,7 +851,7 @@ async fn run_catchup_validate<'a>(
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let repo: BlobRepo =
+    let repo: Repo =
         args::not_shardmanager_compatible::open_repo(ctx.fb, &ctx.logger().clone(), matches)
             .await?;
 

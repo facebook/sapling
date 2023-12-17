@@ -9,7 +9,6 @@ use std::time::Duration;
 
 use anyhow::anyhow;
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarksRef;
@@ -38,9 +37,11 @@ use slog::info;
 use tokio::time::sleep;
 use unodes::RootUnodeManifestId;
 
+use crate::Repo;
+
 pub async fn create_deletion_head_commits<'a>(
     ctx: &'a CoreContext,
-    repo: &'a BlobRepo,
+    repo: &'a Repo,
     head_bookmark: BookmarkKey,
     commit_to_merge: ChangesetId,
     path_regex: Regex,
@@ -106,7 +107,7 @@ pub async fn create_deletion_head_commits<'a>(
 
 pub async fn validate(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &Repo,
     head_commit: ChangesetId,
     to_merge_commit: ChangesetId,
     path_regex: Regex,
@@ -172,7 +173,7 @@ pub async fn validate(
 // 2) Either do not exist in `commit_to_merge` or have different content/filetype.
 async fn find_files_that_need_to_be_deleted(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &Repo,
     head_bookmark: &BookmarkKey,
     commit_to_merge: ChangesetId,
     path_regex: Regex,
@@ -267,7 +268,7 @@ mod test {
     async fn test_find_changed_files_with_revert(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
 
-        let repo: BlobRepo = test_repo_factory::build_empty(fb).await?;
+        let repo: Repo = test_repo_factory::build_empty(fb).await?;
 
         let root_commit = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("file", "a")
@@ -366,8 +367,8 @@ mod test {
         Ok(())
     }
 
-    async fn prepare_repo(ctx: &CoreContext) -> Result<BlobRepo, Error> {
-        let repo: BlobRepo = test_repo_factory::build_empty(ctx.fb).await?;
+    async fn prepare_repo(ctx: &CoreContext) -> Result<Repo, Error> {
+        let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
 
         let root_commit = CreateCommitContext::new_root(ctx, &repo)
             .add_file("unchanged/a", "a")
