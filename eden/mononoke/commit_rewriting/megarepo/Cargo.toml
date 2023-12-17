@@ -53,6 +53,7 @@ movers = { version = "0.1.0", path = "../movers" }
 mutable_counters = { version = "0.1.0", path = "../../mutable_counters" }
 phases = { version = "0.1.0", path = "../../phases" }
 pushrebase = { version = "0.1.0", path = "../../pushrebase" }
+pushrebase_hooks = { version = "0.1.0", path = "../../pushrebase/pushrebase_hooks" }
 pushrebase_mutation_mapping = { version = "0.1.0", path = "../../pushrebase_mutation_mapping" }
 regex = "1.9.2"
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }

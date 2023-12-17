@@ -105,6 +105,7 @@ rust_binary(
         "//eden/mononoke/mutable_counters:mutable_counters",
         "//eden/mononoke/phases:phases",
         "//eden/mononoke/pushrebase:pushrebase",
+        "//eden/mononoke/pushrebase:pushrebase_hooks",
         "//eden/mononoke/pushrebase_mutation_mapping:pushrebase_mutation_mapping",
         "//eden/mononoke/repo_attributes/commit_graph/commit_graph:commit_graph",
         "//eden/mononoke/repo_attributes/repo_bookmark_attrs:repo_bookmark_attrs",

@@ -24,8 +24,10 @@ use megarepolib::common::ChangesetArgsFactory;
 use megarepolib::common::StackPosition;
 use mercurial_derivation::DeriveHgChangeset;
 use metaconfig_types::PushrebaseFlags;
+use metaconfig_types::RepoConfigRef;
 use mononoke_types::ChangesetId;
 use pushrebase::do_pushrebase_bonsai;
+use pushrebase_hooks::get_pushrebase_hooks;
 use repo_blobstore::RepoBlobstoreRef;
 use slog::info;
 
@@ -309,13 +311,19 @@ async fn push_merge_commit(
     info!(ctx.logger(), "Now running pushrebase...");
 
     let merge_cs = merge_cs_id.load(ctx, repo.repo_blobstore()).await?;
+    let pushrebase_hooks = get_pushrebase_hooks(
+        ctx,
+        &repo,
+        bookmark_to_merge_into,
+        &repo.repo_config().pushrebase,
+    )?;
     let pushrebase_res = do_pushrebase_bonsai(
         ctx,
         repo,
         pushrebase_flags,
         bookmark_to_merge_into,
         &hashset![merge_cs],
-        &[],
+        &pushrebase_hooks,
     )
     .await?;
 
