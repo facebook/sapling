@@ -338,7 +338,8 @@ function update_commit_sync_map_for_new_repo_import {
             "bookmark_prefix": "bookprefix/"
           },
           2: {
-            "bookmark_prefix": "imported_repo/"
+            "bookmark_prefix": "imported_repo/",
+            "common_pushrebase_bookmarks_map": { "master_bookmark": "heads/master_bookmark" }
           }
         }
       }

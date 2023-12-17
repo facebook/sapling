@@ -108,7 +108,7 @@ Before config change
   > # modify: IB "bar/c.txt" "random change"
   > # modify: IB "foo/d" "another random change"
   > # copy: IC "foo/b.txt" "copying file from bar into foo" IB "bar/b.txt"
-  > # bookmark: IC master_bookmark
+  > # bookmark: IC heads/master_bookmark
   > EOF
   IA=84c956fabb06e66011b9ad0c8f12a17995b86d66b949ebb08a320d91b6ab7646
   IB=e1238541007d381b788b0aaab2425ed3aad02e38afd80b4e85bb922deb452972
@@ -249,7 +249,7 @@ Before config change
   $ testtool_drawdag -R "$IMPORTED_REPO_NAME" <<EOF
   > ID-IE
   > # exists: ID $ID
-  > # bookmark: IE master_bookmark
+  > # bookmark: IE heads/master_bookmark
   > EOF
   ID=a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707
   IE=ee275b10c734fa09ff52acf808a3baafd24348114fa937e8f41958490b9b6857
@@ -257,14 +257,14 @@ Before config change
   $ testtool_drawdag -R "$IMPORTED_REPO_NAME" <<EOF
   > IE-IF-IG
   > # exists: IE $IE
-  > # bookmark: IG master_bookmark
+  > # bookmark: IG heads/master_bookmark
   > EOF
   IE=ee275b10c734fa09ff52acf808a3baafd24348114fa937e8f41958490b9b6857
   IF=20d91840623a3e0e6f3bc3c46ce6755d5f4c9ce6cfb49dae7b9cc8d9d0acfae9
   IG=2daec24778b88c326d1ba0f830d43a2d24d471dc22c48c8307096d0f60c9477f
   $ quiet mononoke_newadmin mutable-counters --repo-id $LARGE_REPO_ID set xreposync_from_$IMPORTED_REPO_ID 2
   $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi large-mon master_bookmark)
-  $ quiet mononoke_x_repo_sync "$IMPORTED_REPO_ID"  "$LARGE_REPO_ID" tail --bookmark-regex "master_bookmark" --catch-up-once
+  $ quiet mononoke_x_repo_sync "$IMPORTED_REPO_ID"  "$LARGE_REPO_ID" tail --bookmark-regex "heads/master_bookmark" --catch-up-once
   $ wait_for_bookmark_move_away_edenapi large-mon master_bookmark  "$PREV_BOOK_VALUE"
 
   $ REPONAME=large-mon hgmn pull -q
