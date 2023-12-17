@@ -3,6 +3,7 @@
     "scm/mononoke:bssm_enable_optimized_derivation": false,
     "scm/mononoke:derived_data_disable_derivation_workers": false,
     "scm/mononoke:derived_data_disable_remote_derivation": false,
+    "scm/mononoke:disable_hooks_on_plain_push": false,
     "scm/mononoke:lfs_k_consistent_hash_routing": false,
     "scm/mononoke:mononoke_force_local_pushrebase": false,
     "scm/mononoke:scs_commit_find_files_disable_bssm": false,

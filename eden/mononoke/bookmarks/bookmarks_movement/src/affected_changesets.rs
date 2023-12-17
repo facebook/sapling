@@ -407,11 +407,14 @@ impl AffectedChangesets {
         if (kind == BookmarkKind::Publishing || kind == BookmarkKind::PullDefaultPublishing)
             && should_run_hooks(authz, reason)
         {
-            if reason == BookmarkUpdateReason::Push
-                && tunables().disable_hooks_on_plain_push().unwrap_or_default()
-            {
-                // Skip running hooks for this plain push.
-                return Ok(());
+            if reason == BookmarkUpdateReason::Push {
+                let disable_fallback_to_master =
+                    justknobs::eval("scm/mononoke:disable_hooks_on_plain_push", None, None)
+                        .unwrap_or_default();
+                if disable_fallback_to_master {
+                    // Skip running hooks for this plain push.
+                    return Ok(());
+                }
             }
 
             if hook_manager.hooks_exist_for_bookmark(bookmark) {
