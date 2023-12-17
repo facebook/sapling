@@ -32,7 +32,6 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use repo_authorization::AuthorizationContext;
 use skeleton_manifest::RootSkeletonManifestId;
-use tunables::tunables;
 
 use crate::hook_running::run_hooks;
 use crate::restrictions::should_run_hooks;
@@ -153,13 +152,7 @@ impl AffectedChangesets {
                 future::ready(!exists)
             });
 
-        let limit = match tunables()
-            .hooks_additional_changesets_limit()
-            .unwrap_or_default()
-        {
-            limit if limit > 0 => limit as usize,
-            _ => std::usize::MAX,
-        };
+        const ADDITIONAL_CHANGESETS_LIMIT: usize = 200000;
 
         let additional_changesets = if justknobs::eval(
             "scm/mononoke:run_hooks_on_additional_changesets",
@@ -173,7 +166,7 @@ impl AffectedChangesets {
                     let mut count = 0;
                     move |bcs_id| {
                         count += 1;
-                        if count > limit {
+                        if count > ADDITIONAL_CHANGESETS_LIMIT {
                             future::ready(Err(anyhow!(
                                 "bookmark movement additional changesets limit reached at {}",
                                 bcs_id
@@ -203,13 +196,13 @@ impl AffectedChangesets {
             // Logging-only mode.  Work out how many changesets we would have run
             // on, and whether the limit would have been reached.
             let count = range
-                .take(limit)
+                .take(ADDITIONAL_CHANGESETS_LIMIT)
                 .try_fold(0usize, |acc, _| async move { Ok(acc + 1) })
                 .await?;
 
             let mut scuba = ctx.scuba().clone();
             scuba.add("hook_running_additional_changesets", count);
-            if count >= limit {
+            if count >= ADDITIONAL_CHANGESETS_LIMIT {
                 scuba.add("hook_running_additional_changesets_limit_reached", true);
             }
             scuba.log_with_msg("Hook running skipping additional changesets", None);
