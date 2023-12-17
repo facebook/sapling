@@ -161,9 +161,12 @@ impl AffectedChangesets {
             _ => std::usize::MAX,
         };
 
-        let additional_changesets = if tunables()
-            .run_hooks_on_additional_changesets()
-            .unwrap_or_default()
+        let additional_changesets = if justknobs::eval(
+            "scm/mononoke:run_hooks_on_additional_changesets",
+            None,
+            None,
+        )
+        .unwrap_or(true)
         {
             let bonsais = range
                 .and_then({

@@ -19,10 +19,10 @@ setup configuration
 
   $ register_hook_limit_filesize_global_limit 10 'bypass_pushvar="ALLOW_LARGE_FILES=true"'
 
-  $ merge_tunables <<EOF
+  $ merge_just_knobs <<EOF
   > {
-  >   "killswitches": {
-  >     "run_hooks_on_additional_changesets": true
+  >   "bools": {
+  >     "scm/mononoke:run_hooks_on_additional_changesets": true
   >   }
   > }
   > EOF

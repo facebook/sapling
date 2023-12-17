@@ -104,7 +104,6 @@ pub struct MononokeTunables {
 
     deduplicated_put_sampling_rate: TunableI64,
     disable_repo_client_warm_bookmarks_cache: TunableBool,
-    run_hooks_on_additional_changesets: TunableBool,
     hooks_additional_changesets_limit: TunableI64,
     // SCS scuba sampling knobs
     scs_popular_methods_sampling_rate: TunableI64,

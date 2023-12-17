@@ -17,10 +17,10 @@ setup configuration
   > hooks_skip_ancestors_of=["main"]
   > CONFIG
 
-  $ merge_tunables <<EOF
+  $ merge_just_knobs <<EOF
   > {
-  >   "killswitches": {
-  >     "run_hooks_on_additional_changesets": true
+  >   "bools": {
+  >     "scm/mononoke:run_hooks_on_additional_changesets": true
   >   }
   > }
   > EOF
