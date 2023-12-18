@@ -304,6 +304,7 @@ rust_binary(
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/futures_stats:futures_stats",
+        "//common/rust/shed/justknobs_stub:justknobs",
         "//common/rust/shed/stats:stats",
         "//common/rust/shed/time_ext:time_ext",
         "//eden/mononoke/blobrepo:blobrepo",
@@ -339,7 +340,6 @@ rust_binary(
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/mononoke/repo_factory:repo_factory",
         "//eden/mononoke/server/context:context",
-        "//eden/mononoke/tunables:tunables",
     ],
 )
 

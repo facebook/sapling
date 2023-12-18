@@ -41,6 +41,7 @@ fsnodes = { version = "0.1.0", path = "../derived_data/fsnodes" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 humantime = "2.1"
+justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 manifest = { version = "0.1.0", path = "../manifest" }
 mercurial_derivation = { version = "0.1.0", path = "../derived_data/mercurial_derivation" }
 mononoke_api_types = { version = "0.1.0", path = "../mononoke_api/types" }
@@ -59,7 +60,6 @@ time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
 tokio-stream = { version = "0.1.14", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
 topo_sort = { version = "0.1.0", path = "../common/topo_sort" }
-tunables = { version = "0.1.0", path = "../tunables" }
 unodes = { version = "0.1.0", path = "../derived_data/unodes" }
 wait_for_replication = { version = "0.1.0", path = "../common/wait_for_replication" }
 
