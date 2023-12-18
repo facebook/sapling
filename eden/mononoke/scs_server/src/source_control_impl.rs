@@ -187,9 +187,9 @@ impl SourceControlServiceImpl {
             justknobs::get_as::<u64>("scm/mononoke:scs_popular_methods_sampling_rate", None)
                 .unwrap_or(FALLBACK_SAMPLING_RATE)
         } else {
-            tunables()
-                .scs_other_methods_sampling_rate()
-                .unwrap_or_default() as u64
+            const FALLBACK_SAMPLING_RATE: u64 = 1;
+            justknobs::get_as::<u64>("scm/mononoke:scs_other_methods_sampling_rate", None)
+                .unwrap_or(FALLBACK_SAMPLING_RATE)
         });
         if let Some(sampling_rate) = sampling_rate {
             scuba.sampled(sampling_rate);

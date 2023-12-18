@@ -24,6 +24,7 @@
     "scm/mononoke:repo_client_max_nodes_in_known_method": 100000,
     "scm/mononoke:repo_client_concurrent_blob_uploads": 1000,
     "scm/mononoke_timeouts:derived_data_slow_derivation_threshold_secs": 15,
-    "scm/mononoke:scs_popular_methods_sampling_rate": 1000
+    "scm/mononoke:scs_popular_methods_sampling_rate": 1000,
+    "scm/mononoke:scs_other_methods_sampling_rate": 1
   }
 }
