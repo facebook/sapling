@@ -57,7 +57,6 @@ use source_control::services::source_control_service as service;
 use srserver::RequestContext;
 use stats::prelude::*;
 use time_ext::DurationExt;
-use tunables::tunables;
 
 use crate::commit_id::CommitIdExt;
 use crate::errors;
@@ -604,7 +603,9 @@ fn log_result<T: AddScubaResponse>(
     scuba.add_future_stats(stats);
     scuba.add("status", status);
     if let Some(error) = error {
-        if !tunables().scs_error_log_sampling().unwrap_or_default() {
+        let scs_error_log_sampling =
+            justknobs::eval("scm/mononoke:scs_error_log_sampling", None, None).unwrap_or(true);
+        if !scs_error_log_sampling {
             scuba.unsampled();
         }
         scuba.add("error", error.as_str());

@@ -74,7 +74,6 @@ rust_binary(
         "//eden/mononoke/scs/if:source_control-rust",
         "//eden/mononoke/server/context:context",
         "//eden/mononoke/server/metadata:metadata",
-        "//eden/mononoke/tunables:tunables",
         "//eden/scm/lib/clientinfo:clientinfo",
         "//fb303/thrift:fb303_core-rust",
         "//login/if:login_objects_thrift-rust",
