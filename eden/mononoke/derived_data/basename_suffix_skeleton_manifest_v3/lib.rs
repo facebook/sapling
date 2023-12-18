@@ -8,6 +8,7 @@
 mod derive;
 mod derive_from_predecessor;
 mod mapping;
+mod ops;
 #[cfg(test)]
 mod tests;
 
