@@ -22,7 +22,6 @@ reloader = { version = "0.1.0", path = "../../common/reloader" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 thiserror = "1.0.49"
-tunables = { version = "0.1.0", path = "../../tunables" }
 
 [dev-dependencies]
 assert_matches = "1.5"
