@@ -1148,7 +1148,7 @@ CONFIG
 else
   cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 [derived_data_config.available_configs.default]
-types=["blame", "changeset_info", "deleted_manifest", "fastlog", "filenodes", "fsnodes", "unodes", "hgchangesets", "skeleton_manifests", "bssm", "testmanifest", "testshardedmanifest"]
+types=["blame", "changeset_info", "deleted_manifest", "fastlog", "filenodes", "fsnodes", "unodes", "hgchangesets", "skeleton_manifests", "bssm", "bssm_v3", "testmanifest", "testshardedmanifest"]
 CONFIG
 fi
 

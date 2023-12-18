@@ -30,6 +30,9 @@ use fixtures::ManyFilesDirs;
 use fixtures::TestRepoFixture;
 use futures::stream::TryStreamExt;
 use futures::FutureExt;
+use justknobs::test_helpers::with_just_knobs_async;
+use justknobs::test_helpers::JustKnobsInMemory;
+use justknobs::test_helpers::KnobVal;
 use live_commit_sync_config::TestLiveCommitSyncConfigSource;
 use maplit::hashmap;
 use metaconfig_types::CommitSyncConfigVersion;
@@ -666,7 +669,7 @@ async fn commit_find_files_impl(fb: FacebookInit) -> Result<(), Error> {
         .await?
         .try_collect()
         .await?;
-    // BSSM have different but consistent orders
+    // BSSM have different but consistent orders. BSSMv3 produces the same order as BSSM.
     let expected_files = if tunables()
         .disable_basename_suffix_skeleton_manifest()
         .unwrap_or_default()
@@ -787,6 +790,18 @@ async fn commit_find_files_impl(fb: FacebookInit) -> Result<(), Error> {
     assert_eq!(files, expected_files);
 
     Ok(())
+}
+
+#[fbinit::test]
+async fn commit_find_files_with_bssm_v3(fb: FacebookInit) {
+    let justknobs = JustKnobsInMemory::new(hashmap! {
+        "scm/mononoke:enable_bssm_v3".to_string() => KnobVal::Bool(true),
+        "scm/mononoke:enable_bssm_v3_suffix_query".to_string() => KnobVal::Bool(true),
+    });
+
+    with_just_knobs_async(justknobs, commit_find_files_impl(fb).boxed())
+        .await
+        .unwrap();
 }
 
 #[fbinit::test]
