@@ -10,8 +10,8 @@ rust_library(
         "cargo_toml_config": {
             "extra_buck_dependencies": {
                 "dependencies": [
-                    (None, "//common/rust/scribe:scribe"),
-                    (None, "//common/rust/scribe:scuba"),
+                    (None, "//common/rust/scribe:scribe"),  # T172908111
+                    (None, "//common/rust/scribe:scuba"),  # T172908111
                 ],
             },
         },
