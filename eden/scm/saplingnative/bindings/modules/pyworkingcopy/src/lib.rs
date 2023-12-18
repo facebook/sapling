@@ -226,9 +226,8 @@ py_class!(pub class workingcopy |py| {
     // as "commit").
     def commandstate(&self, op: Option<Serde<Operation>> = None) -> PyResult<Option<(String, String)>> {
         let wc = self.inner(py).read();
-        let wc = wc.lock().map_pyerr(py)?;
         let op = op.map_or(Operation::Other, |op| *op);
-        match repostate::command_state::try_operation(wc.locked_dot_hg_path(), op) {
+        match repostate::command_state::try_operation(wc.dot_hg_path(), op) {
             Ok(()) => Ok(None),
             Err(err) => {
                 if let Some(conflict) = err.downcast_ref::<repostate::command_state::Conflict>() {

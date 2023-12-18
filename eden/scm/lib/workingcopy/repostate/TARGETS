@@ -8,6 +8,7 @@ rust_library(
     crate_root = "src/lib.rs",
     test_deps = [
         "fbsource//third-party/rust:tempfile",
+        "//eden/scm/lib/repolock:repolock",
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
@@ -15,7 +16,6 @@ rust_library(
         "fbsource//third-party/rust:fs-err",
         "fbsource//third-party/rust:serde",
         "//eden/scm/lib/identity:identity",
-        "//eden/scm/lib/repolock:repolock",
         "//eden/scm/lib/types:types",
         "//eden/scm/lib/util:util",
     ],

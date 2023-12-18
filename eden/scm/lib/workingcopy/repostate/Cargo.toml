@@ -10,10 +10,10 @@ anyhow = "1.0.75"
 byteorder = "1.3"
 fs-err = { version = "2.6.0", features = ["tokio"] }
 identity = { version = "0.1.0", path = "../../identity" }
-repolock = { version = "0.1.0", path = "../../repolock" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 types = { version = "0.1.0", path = "../../types" }
 util = { version = "0.1.0", path = "../../util" }
 
 [dev-dependencies]
+repolock = { version = "0.1.0", path = "../../repolock" }
 tempfile = "3.8"

@@ -6,9 +6,9 @@
  */
 
 use std::fmt::Display;
+use std::path::Path;
 
 use anyhow::Result;
-use repolock::LockedPath;
 use serde::Deserialize;
 
 use crate::MergeState;
@@ -33,7 +33,7 @@ pub struct State {
 }
 
 impl State {
-    fn is_active(&self, dot_path: &LockedPath) -> Result<bool> {
+    fn is_active(&self, dot_path: &Path) -> Result<bool> {
         Ok(util::file::exists(dot_path.join(self.state_file))?.is_some())
     }
 
@@ -178,7 +178,12 @@ pub enum Operation {
     Other,
 }
 
-pub fn try_operation(dot_path: &LockedPath, op: Operation) -> Result<()> {
+pub fn try_operation(dot_path: &Path, op: Operation) -> Result<()> {
+    // This originally took a &repolock::LockedPath, but that required taking
+    // the wlock "randomly" from places in Python such as the "undo" extension
+    // (which caused lock ordering and deadlock issues). This "should" require
+    // the wlock, but at least for now that caused more problems than it solved.
+
     for s in STATES.iter() {
         if !s.is_active(dot_path)? {
             continue;
