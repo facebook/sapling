@@ -1648,6 +1648,17 @@ struct UploadGitObjectParams {
   3: optional string service_identity;
 }
 
+/// Params for upload_packfile_base_item method
+struct RepoUploadPackfileBaseItemParams {
+  /// The raw bytes of the hash of the git object that is being uploaded as packfile base item.
+  /// In git terminology, this is the git object_id in bytes
+  1: binary git_hash;
+  /// The raw content of the git object that is being uploaded as packfile base item.
+  2: binary raw_content;
+  /// The identity of the service making the upload packfile base item request.
+  3: optional string service_identity;
+}
+
 /// Params for create_git_tree method
 struct CreateGitTreeParams {
   /// The raw bytes of the hash of the git tree object that is being stored
@@ -2022,6 +2033,8 @@ struct MegarepoRemergeSourcePollResponse {
 }
 
 struct UploadGitObjectResponse {}
+
+struct RepoUploadPackfileBaseItemResponse {}
 
 struct CreateGitTreeResponse {}
 
@@ -2505,6 +2518,12 @@ service SourceControlService extends fb303_core.BaseService {
   UploadGitObjectResponse upload_git_object(
     1: RepoSpecifier repo,
     2: UploadGitObjectParams params,
+  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+
+  /// Upload packfile base item corresponding to git object to Mononoke data store
+  RepoUploadPackfileBaseItemResponse repo_upload_packfile_base_item(
+    1: RepoSpecifier repo,
+    2: RepoUploadPackfileBaseItemParams params,
   ) throws (1: RequestError request_error, 2: InternalError internal_error);
 
   /// Create Mononoke counterpart of git tree object in the form of a bonsai changeset.

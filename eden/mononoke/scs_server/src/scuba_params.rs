@@ -608,3 +608,9 @@ impl AddScubaParams for thrift::RepoStackGitBundleStoreParams {
         scuba.add("base", hex(&self.base));
     }
 }
+
+impl AddScubaParams for thrift::RepoUploadPackfileBaseItemParams {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add("param_git_object_id", hex(&self.git_hash));
+    }
+}

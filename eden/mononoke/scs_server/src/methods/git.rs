@@ -245,4 +245,17 @@ impl SourceControlServiceImpl {
             ..Default::default()
         })
     }
+
+    /// Upload packfile base item corresponding to git object to Mononoke data store
+    pub(crate) async fn repo_upload_packfile_base_item(
+        &self,
+        _ctx: CoreContext,
+        _repo: thrift::RepoSpecifier,
+        _params: thrift::RepoUploadPackfileBaseItemParams,
+    ) -> Result<thrift::RepoUploadPackfileBaseItemResponse, errors::ServiceError> {
+        Err(crate::errors::not_implemented(
+            "repo_upload_packfile_base_item is not yet implemented".to_string(),
+        )
+        .into())
+    }
 }

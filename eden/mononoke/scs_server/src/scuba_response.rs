@@ -239,6 +239,7 @@ impl AddScubaResponse for thrift::MegarepoSyncChangesetToken {
 impl AddScubaResponse for thrift::UploadGitObjectResponse {}
 impl AddScubaResponse for thrift::CreateGitTreeResponse {}
 impl AddScubaResponse for thrift::CreateGitTagResponse {}
+impl AddScubaResponse for thrift::RepoUploadPackfileBaseItemResponse {}
 
 impl AddScubaResponse for thrift::RepoStackGitBundleStoreResponse {
     fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {

@@ -959,5 +959,10 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             repo: thrift::RepoSpecifier,
             params: thrift::RepoStackGitBundleStoreParams,
         ) -> Result<thrift::RepoStackGitBundleStoreResponse, service::RepoStackGitBundleStoreExn>;
+
+        async fn repo_upload_packfile_base_item(
+            repo: thrift::RepoSpecifier,
+            params: thrift::RepoUploadPackfileBaseItemParams,
+        ) -> Result<thrift::RepoUploadPackfileBaseItemResponse, service::RepoUploadPackfileBaseItemExn>;
     }
 }
