@@ -430,13 +430,13 @@ pub async fn maybe_client_from_address<'a>(
     remote_mode: &'a PushrebaseRemoteMode,
     ctx: &'a CoreContext,
     repo: &'a impl Repo,
-) -> Option<Box<dyn PushrebaseClient + 'a>> {
+) -> Result<Option<Box<dyn PushrebaseClient + 'a>>> {
     match remote_mode {
         PushrebaseRemoteMode::RemoteLandService(address)
         | PushrebaseRemoteMode::RemoteLandServiceWithLocalFallback(address) => {
-            address_from_land_service(address, ctx, repo).await
+            Ok(address_from_land_service(address, ctx, repo).await?)
         }
-        PushrebaseRemoteMode::Local => None,
+        PushrebaseRemoteMode::Local => Ok(None),
     }
 }
 
@@ -444,20 +444,16 @@ async fn address_from_land_service<'a>(
     address: &'a Address,
     ctx: &'a CoreContext,
     repo: &'a impl Repo,
-) -> Option<Box<dyn PushrebaseClient + 'a>> {
+) -> Result<Option<Box<dyn PushrebaseClient + 'a>>> {
     #[cfg(fbcode_build)]
     {
         match address {
-            metaconfig_types::Address::Tier(tier) => Some(Box::new(
-                LandServicePushrebaseClient::from_tier(ctx, tier.clone(), repo)
-                    .await
-                    .ok()?,
-            )),
-            metaconfig_types::Address::HostPort(host_port) => Some(Box::new(
-                LandServicePushrebaseClient::from_host_port(ctx, host_port.clone(), repo)
-                    .await
-                    .ok()?,
-            )),
+            metaconfig_types::Address::Tier(tier) => Ok(Some(Box::new(
+                LandServicePushrebaseClient::from_tier(ctx, tier.clone(), repo).await?,
+            ))),
+            metaconfig_types::Address::HostPort(host_port) => Ok(Some(Box::new(
+                LandServicePushrebaseClient::from_host_port(ctx, host_port.clone(), repo).await?,
+            ))),
         }
     }
     #[cfg(not(fbcode_build))]
@@ -485,7 +481,7 @@ async fn normal_pushrebase<'a>(
     };
     let maybe_fallback_scuba: Option<(MononokeScubaSampleBuilder, BookmarkMovementError)> = {
         let maybe_client: Option<Box<dyn PushrebaseClient>> =
-            maybe_client_from_address(&remote_mode, ctx, repo).await;
+            maybe_client_from_address(&remote_mode, ctx, repo).await?;
 
         if let Some(client) = maybe_client {
             let result = client
