@@ -32,6 +32,7 @@ rust_library(
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/futures_stats:futures_stats",
+        "//common/rust/shed/justknobs_stub:justknobs",
         "//common/rust/shed/time_ext:time_ext",
         "//eden/mononoke/cats:cats",
         "//eden/mononoke/common/connection_security_checker:connection_security_checker",
@@ -42,7 +43,6 @@ rust_library(
         "//eden/mononoke/quiet_stream:quiet_stream",
         "//eden/mononoke/rate_limiting:rate_limiting",
         "//eden/mononoke/server/metadata:metadata",
-        "//eden/mononoke/tunables:tunables",
         "//eden/scm/lib/clientinfo:clientinfo",
     ],
 )

@@ -249,16 +249,16 @@ fn log_stats<H: ScubaHandler>(
     let callbacks = state.try_borrow_mut::<PostResponseCallbacks>()?;
     callbacks.add(move |info| {
         if let Some(duration) = info.duration {
-            // If tunables say we should, log high values unsampled
-            if let Ok(threshold) = tunables::tunables()
-                .edenapi_unsampled_duration_threshold_ms()
-                .unwrap_or_default()
-                .try_into()
-            {
-                if duration.as_millis_unchecked() > threshold {
-                    scuba.unsampled();
-                }
+            let threshold: u64 = justknobs::get_as::<u64>(
+                "scm/mononoke_timeouts:edenapi_unsampled_duration_threshold_ms",
+                None,
+            )
+            .unwrap_or_default();
+
+            if duration.as_millis_unchecked() > threshold {
+                scuba.unsampled();
             }
+
             scuba.add(HttpScubaKey::DurationMs, duration.as_millis_unchecked());
         }
 
