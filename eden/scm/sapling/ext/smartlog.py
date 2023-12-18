@@ -536,7 +536,14 @@ def _smartlog(ui, repo, *pats, **opts):
                 template = opts.get("template") or ""
                 revdag, reserved = getdag(ui, repo, sorted(revs), masterrev, template)
                 displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
-                cmdutil.displaygraph(ui, repo, revdag, displayer, reserved=reserved)
+                cmdutil.displaygraph(
+                    ui,
+                    repo,
+                    revdag,
+                    displayer,
+                    reserved=reserved,
+                    props={"highlighted_rev": revdag[0][2].hex()},
+                )
                 return ui.popbuffer()
 
             def handlekeypress(self, key):
