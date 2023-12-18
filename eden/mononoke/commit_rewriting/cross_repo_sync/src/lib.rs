@@ -1087,12 +1087,10 @@ where
                 }
                 Ok(())
             };
-
-            if tunables()
-                .xrepo_disable_commit_sync_lease()
-                .unwrap_or_default()
-                || disable_lease
-            {
+            let xrepo_disable_commit_sync_lease =
+                justknobs::eval("scm/mononoke:xrepo_disable_commit_sync_lease", None, None)
+                    .unwrap_or_default();
+            if xrepo_disable_commit_sync_lease || disable_lease {
                 sync().await?;
             } else {
                 run_with_lease(ctx, &self.x_repo_sync_lease, lease_key, checker, sync).await?;

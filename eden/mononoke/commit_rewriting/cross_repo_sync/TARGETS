@@ -41,6 +41,7 @@ rust_library(
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/justknobs_stub:justknobs",
         "//common/rust/shed/sql:sql",
         "//eden/mononoke/blobrepo:changeset_fetcher",
         "//eden/mononoke/blobrepo:repo_blobstore",
