@@ -136,6 +136,12 @@ impl ShardedMapV2Value for BssmV3Entry {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct BssmV3RollupCount(pub u64);
 
+impl BssmV3RollupCount {
+    pub fn into_inner(self) -> u64 {
+        self.0
+    }
+}
+
 impl ThriftConvert for BssmV3RollupCount {
     const NAME: &'static str = "BssmV3RollupCount";
     type Thrift = i64;

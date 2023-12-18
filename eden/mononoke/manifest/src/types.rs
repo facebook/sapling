@@ -659,6 +659,52 @@ impl<Store: Blobstore> AsyncOrderedManifest<Store> for BasenameSuffixSkeletonMan
     }
 }
 
+fn convert_bssm_v3_to_weighted(
+    entry: Entry<BssmV3Directory, ()>,
+) -> Entry<(Weight, BssmV3Directory), ()> {
+    match entry {
+        Entry::Tree(dir) => Entry::Tree((
+            dir.rollup_count()
+                .into_inner()
+                .try_into()
+                .unwrap_or(usize::MAX),
+            dir,
+        )),
+        Entry::Leaf(()) => Entry::Leaf(()),
+    }
+}
+
+#[async_trait]
+impl<Store: Blobstore> AsyncOrderedManifest<Store> for BssmV3Directory {
+    async fn list_weighted(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<
+        BoxStream<
+            'async_trait,
+            Result<(MPathElement, Entry<(Weight, Self::TreeId), Self::LeafId>)>,
+        >,
+    > {
+        self.list(ctx, blobstore).await.map(|stream| {
+            stream
+                .map_ok(|(p, entry)| (p, convert_bssm_v3_to_weighted(entry)))
+                .boxed()
+        })
+    }
+
+    async fn lookup_weighted(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+        name: &MPathElement,
+    ) -> Result<Option<Entry<(Weight, Self::TreeId), Self::LeafId>>> {
+        AsyncManifest::lookup(self, ctx, blobstore, name)
+            .await
+            .map(|opt| opt.map(convert_bssm_v3_to_weighted))
+    }
+}
+
 impl OrderedManifest for SkeletonManifest {
     fn lookup_weighted(
         &self,
