@@ -149,6 +149,22 @@ impl RepoContext {
     ) -> Result<Bytes, GitError> {
         repo_stack_git_bundle(self.ctx(), self.inner_repo(), head, base).await
     }
+
+    /// Upload the packfile base item corresponding to the raw git object with the
+    /// input git hash
+    pub async fn repo_upload_packfile_base_item(
+        &self,
+        git_hash: &gix_hash::oid,
+        raw_content: Vec<u8>,
+    ) -> anyhow::Result<(), GitError> {
+        upload_packfile_base_item(
+            &self.ctx,
+            self.inner_repo().repo_blobstore(),
+            git_hash,
+            raw_content,
+        )
+        .await
+    }
 }
 
 /// Free function for uploading serialized git objects

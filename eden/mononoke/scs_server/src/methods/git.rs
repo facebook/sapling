@@ -249,13 +249,28 @@ impl SourceControlServiceImpl {
     /// Upload packfile base item corresponding to git object to Mononoke data store
     pub(crate) async fn repo_upload_packfile_base_item(
         &self,
-        _ctx: CoreContext,
-        _repo: thrift::RepoSpecifier,
-        _params: thrift::RepoUploadPackfileBaseItemParams,
+        ctx: CoreContext,
+        repo: thrift::RepoSpecifier,
+        params: thrift::RepoUploadPackfileBaseItemParams,
     ) -> Result<thrift::RepoUploadPackfileBaseItemResponse, errors::ServiceError> {
-        Err(crate::errors::not_implemented(
-            "repo_upload_packfile_base_item is not yet implemented".to_string(),
-        )
-        .into())
+        let repo_ctx = self
+            .repo_for_service(ctx, &repo, params.service_identity.clone())
+            .await
+            .with_context(|| format!("Error in opening repo using specifier {:?}", repo))?;
+        // Validate that the request sender has an internal service identity with the right permission.
+        repo_ctx
+            .authorization_context()
+            .require_git_import_operations(repo_ctx.ctx(), repo_ctx.inner_repo())
+            .await
+            .map_err(MononokeError::from)?;
+        // Validate that the bytes correspond to a valid git hash.
+        let git_hash = gix_hash::oid::try_from_bytes(&params.git_hash)
+            .map_err(|_| GitError::InvalidHash(format!("{:x?}", params.git_hash)))?;
+        repo_ctx
+            .repo_upload_packfile_base_item(git_hash, params.raw_content)
+            .await?;
+        Ok(thrift::RepoUploadPackfileBaseItemResponse {
+            ..Default::default()
+        })
     }
 }
