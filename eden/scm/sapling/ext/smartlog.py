@@ -529,26 +529,34 @@ def _smartlog(ui, repo, *pats, **opts):
         ui.write_err(_("warning: interactive mode is WIP\n"))
 
         class interactivesmartlog(interactiveui.viewframe):
+            dag_index = 0
+            template = opts.get("template") or ""
+            revdag, reserved = getdag(ui, repo, sorted(revs), masterrev, template)
+
             def render(self):
                 ui = self.ui
                 ui.pushbuffer()
                 # Print it!
-                template = opts.get("template") or ""
-                revdag, reserved = getdag(ui, repo, sorted(revs), masterrev, template)
                 displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
                 cmdutil.displaygraph(
                     ui,
                     repo,
-                    revdag,
+                    self.revdag,
                     displayer,
-                    reserved=reserved,
-                    props={"highlighted_rev": revdag[0][2].hex()},
+                    reserved=self.reserved,
+                    props={"highlighted_rev": self.revdag[self.dag_index][2].hex()},
                 )
                 return ui.popbuffer()
 
             def handlekeypress(self, key):
                 if key == self.KEY_Q:
                     self.finish()
+                if key == self.KEY_J:
+                    if self.dag_index < len(self.revdag) - 1:
+                        self.dag_index += 1
+                if key == self.KEY_K:
+                    if self.dag_index > 0:
+                        self.dag_index -= 1
 
         viewobj = interactivesmartlog(ui, repo)
         interactiveui.view(viewobj)

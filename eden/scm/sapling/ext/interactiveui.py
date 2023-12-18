@@ -111,6 +111,8 @@ def getchar(fd: int) -> Union[None, bytes, str]:
 
 class viewframe:
     # Useful Keycode Constants
+    KEY_J = b"j"
+    KEY_K = b"k"
     KEY_Q = b"q"
     KEY_RETURN = b"\r"
     KEY_RIGHT = b"\x1b[C"
