@@ -203,7 +203,6 @@ rust_binary(
         "//eden/mononoke/repo_attributes/repo_derived_data_service:repo_derived_data_service",
         "//eden/mononoke/server/context:context",
         "//eden/mononoke/server/metadata:metadata",
-        "//eden/mononoke/tunables:tunables",
         "//eden/scm/lib/clientinfo:clientinfo",
     ],
 )
