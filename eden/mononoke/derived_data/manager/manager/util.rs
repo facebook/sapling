@@ -65,15 +65,6 @@ impl DerivedDataManager {
     }
 
     pub(super) fn max_parallel_derivations(&self) -> usize {
-        let buffer_size = tunables::tunables()
-            .derived_data_parallel_derivation_buffer()
-            .unwrap_or_default();
-        if buffer_size > 0 {
-            buffer_size
-                .try_into()
-                .expect("buffer size should convert to usize")
-        } else {
-            10
-        }
+        10
     }
 }
