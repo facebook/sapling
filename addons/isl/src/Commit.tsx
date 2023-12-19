@@ -280,7 +280,11 @@ export const Commit = memo(
     if (!actionsPrevented && !commit.isHead) {
       commitActions.push(
         <span className="goto-button" key="goto-button">
-          <Tooltip title={t('Move the working copy to this commit')} delayMs={250}>
+          <Tooltip
+            title={t(
+              'Update files in the working copy to match this commit. Mark this commit as the "current commit".',
+            )}
+            delayMs={250}>
             <VSCodeButton
               appearance="secondary"
               aria-label={t('Go to commit "$title"', {replace: {$title: commit.title}})}
