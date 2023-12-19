@@ -915,8 +915,27 @@ async fn hg_changeset_step<V: VisitOne>(
     checker: &Checker<V>,
     key: ChangesetKey<HgChangesetId>,
 ) -> Result<StepOutput, StepError> {
-    let hgchangeset = key.inner.load(ctx, repo.repo_blobstore()).await?;
+    const HGCHANGESET_PARSE_ERROR: &str = "Error while deserializing changeset";
     let mut edges = vec![];
+    let hgchangeset = match key.inner.load(ctx, repo.repo_blobstore()).await {
+        Err(e) => match e {
+            LoadableError::Error(e) if e.to_string().contains(HGCHANGESET_PARSE_ERROR) => {
+                let mut scuba = ctx.scuba().clone();
+                scuba.add("changeset_key", key.inner.to_string());
+                scuba.add("repo", repo.repo_identity().name());
+                scuba.log_with_msg(
+                    "Invalid HgChangset",
+                    "Invalid HgChangset encountered by walker".to_string(),
+                );
+                return Ok(StepOutput::Done(
+                    checker.step_data(NodeType::HgChangeset, || NodeData::NotRequired),
+                    edges,
+                ));
+            }
+            other_error => Err(other_error),
+        },
+        changeset => changeset,
+    }?;
     // 1:1 but will then expand a lot, usually
     checker.add_edge(&mut edges, EdgeType::HgChangesetToHgManifest, || {
         Node::HgManifest(PathKey::new(hgchangeset.manifestid(), WrappedPath::Root))
