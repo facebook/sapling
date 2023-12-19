@@ -30,7 +30,6 @@ import {FoldButton, useRunFoldPreview} from './fold';
 import {t, T} from './i18n';
 import {IconStack} from './icons/IconStack';
 import {getAmendToOperation, isAmendToAllowedForCommit} from './operationUtils';
-import {FoldOperation} from './operations/FoldOperation';
 import {GotoOperation} from './operations/GotoOperation';
 import {HideOperation} from './operations/HideOperation';
 import {RebaseOperation} from './operations/RebaseOperation';
