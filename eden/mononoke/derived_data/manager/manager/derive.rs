@@ -40,7 +40,6 @@ use futures_stats::TimedTryFutureExt;
 use mononoke_types::ChangesetId;
 use slog::debug;
 use topo_sort::TopoSortedDagTraversal;
-use tunables::tunables;
 
 use super::DerivationAssignment;
 use super::DerivedDataManager;
@@ -577,22 +576,22 @@ impl DerivedDataManager {
     where
         Derivable: BonsaiDerivable,
     {
-        // How long to wait between requests to the remote derivation service, either to
-        // check for completion of ongoing remote derivation or after failures.
-        const RETRY_DELAY: Duration = Duration::from_millis(100);
-        // The maximum number of times to try remote derivation before giving up.
-        const RETRY_ATTEMPTS_LIMIT: u32 = 10;
-        // Total time to wait for remote derivation before giving up and deriving locally.
-        const FALLBACK_TIMEOUT: Duration = Duration::from_secs(15);
         if let Some(client) = self.derivation_service_client() {
             let mut attempt = 0;
             let started = Instant::now();
-            let fallback_timeout = tunables()
-                .remote_derivation_fallback_timeout_secs()
-                .map_or(FALLBACK_TIMEOUT, Duration::from_secs);
-            let retry_delay = tunables()
-                .derivation_request_retry_delay()
-                .map_or(RETRY_DELAY, Duration::from_millis);
+            // Total time to wait for remote derivation before giving up (and maybe deriving locally).
+            let overall_timeout = Duration::from_millis(justknobs::get_as::<u64>(
+                "scm/mononoke_timeouts:remote_derivation_client_timeout_ms",
+                None,
+            )?);
+            // The maximum number of times to try remote derivation before giving up.
+            const RETRY_ATTEMPTS_LIMIT: u32 = 10;
+            // How long to wait between requests to the remote derivation service, either to
+            // check for completion of ongoing remote derivation or after failures.
+            let retry_delay = Duration::from_millis(justknobs::get_as::<u64>(
+                "scm/mononoke_timeouts:remote_derivation_client_retry_delay_ms",
+                None,
+            )?);
             let request = DeriveRequest {
                 repo_name: self.repo_name().to_string(),
                 derived_data_type: DerivedDataType {
@@ -620,15 +619,15 @@ impl DerivedDataManager {
                     return Ok(None);
                 }
 
-                if started.elapsed() >= fallback_timeout {
+                if started.elapsed() >= overall_timeout {
                     derived_data_scuba.log_remote_derivation_end(
                         ctx,
                         Some(format!(
                             "Remote derivation timed out after {:?}",
-                            fallback_timeout
+                            overall_timeout
                         )),
                     );
-                    break DerivationError::Timeout(Derivable::NAME, fallback_timeout);
+                    break DerivationError::Timeout(Derivable::NAME, overall_timeout);
                 }
 
                 let service_response = match request_state {
@@ -694,9 +693,12 @@ impl DerivedDataManager {
             };
 
             // Derivation has failed or timed out.  Consider falling back to local derivation.
-            if tunables()
-                .remote_derivation_fallback_enabled()
-                .unwrap_or_default()
+            if justknobs::eval(
+                "scm/mononoke:derived_data_enable_remote_derivation_local_fallback",
+                None,
+                Some(self.repo_name()),
+            )
+            .unwrap_or_default()
             {
                 // Discard the error and fall back to local derivation.
                 Ok(None)
