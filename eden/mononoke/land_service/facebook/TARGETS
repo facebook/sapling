@@ -1,5 +1,5 @@
 load("//antlir/fbpkg:fbpkg.bzl", "fbpkg")
-load("//tupperware/image/bzl:tw.bzl", "tw")
+load("//tupperware/cm/antlir2/bzl:buck2_container.bzl", "tw")
 
 oncall("mononoke")
 
@@ -15,7 +15,5 @@ tw.container(
             ),
         ),
     ],
-    # Use the CentOS 8 base image for this container
-    flavor = "centos8",
     oncall = "scm_server_infra",
 )
