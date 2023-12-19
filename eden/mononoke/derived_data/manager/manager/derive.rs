@@ -31,7 +31,6 @@ use futures::future::try_join;
 use futures::future::FutureExt;
 use futures::future::TryFutureExt;
 use futures::join;
-use futures::select_biased;
 use futures::stream;
 use futures::stream::FuturesUnordered;
 use futures::stream::StreamExt;
@@ -739,19 +738,13 @@ impl DerivedDataManager {
 
         let pc = ctx.clone().fork_perf_counters();
 
-        select_biased! {
-            _ = derivation_disabled_watcher(self.repo_name(), Derivable::NAME).fuse() =>
-            // Derivation was disabled during the derivation process.
-            Err(DerivationError::Disabled(
-                Derivable::NAME,
-                self.repo_id(),
-                self.repo_name().to_string(),
-            )),
-            (stats, res) = self.derive_underived(ctx, Arc::new(derivation_ctx), csid).timed().fuse() => {
-                self.log_slow_derivation(ctx, csid, &stats, &pc, &res);
-                res.map(|r| r.derived)
-            }
-        }
+        let (stats, res) = self
+            .derive_underived(ctx, Arc::new(derivation_ctx), csid)
+            .timed()
+            .fuse()
+            .await;
+        self.log_slow_derivation(ctx, csid, &stats, &pc, &res);
+        Ok(res?.derived)
     }
 
     #[async_recursion]
@@ -1110,38 +1103,4 @@ pub(super) struct DerivationOutcome<Derivable> {
 enum DerivationState {
     NotRequested,
     InProgress,
-}
-
-fn emergency_disabled(repo_name: &str, derivable_name: &str) -> bool {
-    let disabled_for_repo = tunables::tunables()
-        .by_repo_all_derived_data_disabled(repo_name)
-        .unwrap_or(false);
-
-    if disabled_for_repo {
-        return true;
-    }
-
-    let disabled_for_type = tunables::tunables()
-        .by_repo_derived_data_types_disabled(repo_name)
-        .unwrap_or_else(Vec::new);
-
-    if disabled_for_type
-        .iter()
-        .any(|ty| ty.as_str() == derivable_name)
-    {
-        return true;
-    }
-
-    // Not disabled
-    false
-}
-
-async fn derivation_disabled_watcher(repo_name: &str, derivable_name: &'static str) {
-    const DELAY_DURATION: Duration = Duration::from_secs(10);
-    let delay_duration = tunables()
-        .derived_data_disabled_watcher_delay_secs()
-        .map_or(DELAY_DURATION, Duration::from_secs);
-    while !emergency_disabled(repo_name, derivable_name) {
-        tokio::time::sleep(delay_duration).await;
-    }
 }

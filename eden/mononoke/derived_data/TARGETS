@@ -51,7 +51,6 @@ rust_unittest(
         "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:futures",
-        "fbsource//third-party/rust:maplit",
         "fbsource//third-party/rust:tokio",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/facet:facet",
@@ -75,7 +74,6 @@ rust_unittest(
         "//eden/mononoke/server/context:context",
         "//eden/mononoke/tests/fixtures:fixtures",
         "//eden/mononoke/tests/utils:tests_utils",
-        "//eden/mononoke/tunables:tunables",
     ],
 )
 
