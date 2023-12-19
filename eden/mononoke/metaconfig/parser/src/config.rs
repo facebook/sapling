@@ -1158,6 +1158,7 @@ mod test {
                 ],
                 push: PushParams {
                     pure_push_allowed: false,
+                    unbundle_commit_limit: None,
                 },
                 pushrebase: PushrebaseParams {
                     flags: PushrebaseFlags {

@@ -1109,6 +1109,12 @@ pure_push_allowed = true
 CONFIG
 fi
 
+if [[ -n "${UNBUNDLE_COMMIT_LIMIT}" ]]; then
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
+unbundle_commit_limit = ${UNBUNDLE_COMMIT_LIMIT}
+CONFIG
+fi
+
 if [[ -n "${CACHE_WARMUP_BOOKMARK:-}" ]]; then
   cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 [cache_warmup]

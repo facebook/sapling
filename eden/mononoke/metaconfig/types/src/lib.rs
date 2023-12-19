@@ -612,12 +612,15 @@ pub struct HookParams {
 pub struct PushParams {
     /// Whether normal non-pushrebase pushes are allowed
     pub pure_push_allowed: bool,
+    /// Limit of commits in a single unbundle
+    pub unbundle_commit_limit: Option<u64>,
 }
 
 impl Default for PushParams {
     fn default() -> Self {
         PushParams {
             pure_push_allowed: true,
+            unbundle_commit_limit: None,
         }
     }
 }

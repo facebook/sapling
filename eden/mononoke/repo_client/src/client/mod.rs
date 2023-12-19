@@ -1594,7 +1594,6 @@ impl HgCommands for RepoClient {
 
                     let infinitepush_writes_allowed = repo.repo_config().infinitepush.allow_writes;
                     let pushrebase_params = repo.repo_config().pushrebase.clone();
-                    let pure_push_allowed = repo.repo_config().push.pure_push_allowed;
                     let maybe_backup_repo_source = client.maybe_backup_repo_source.clone();
 
                     let pushrebase_flags = pushrebase_params.flags.clone();
@@ -1603,7 +1602,7 @@ impl HgCommands for RepoClient {
                         repo.as_blob_repo(),
                         infinitepush_writes_allowed,
                         stream.compat().boxed(),
-                        pure_push_allowed,
+                        &repo.repo_config().push,
                         pushrebase_flags,
                         maybe_backup_repo_source,
                     )

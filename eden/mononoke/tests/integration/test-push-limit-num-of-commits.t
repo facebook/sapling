@@ -7,7 +7,7 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
-  $ setup_common_config
+  $ UNBUNDLE_COMMIT_LIMIT=2 setup_common_config
 
   $ cd $TESTTMP
 
@@ -40,13 +40,6 @@ setup push source repo
 
 start mononoke
 
-  $ merge_tunables <<EOF
-  > {
-  >   "ints": {
-  >     "unbundle_limit_num_of_commits_in_push": 2
-  >   }
-  > }
-  > EOF
   $ start_and_wait_for_mononoke_server
 create new commit in repo2 and check that push fails
 
