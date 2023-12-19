@@ -455,8 +455,8 @@ impl SqlShardedConstruct for SqlBlobstoreWal {
                     RendezVousOptions {
                         free_connections: 1,
                     },
-                    || Duration::from_secs(5),
-                    || DEL_CHUNK,
+                    Duration::from_secs(5),
+                    DEL_CHUNK,
                 ),
                 Arc::new(RendezVousStats::new("wal_delete".to_owned())),
             ),

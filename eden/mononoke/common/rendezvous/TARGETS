@@ -23,6 +23,5 @@ rust_library(
         "//common/rust/shed/shared_error:shared_error",
         "//common/rust/shed/stats:stats",
         "//common/rust/shed/time_ext:time_ext",
-        "//eden/mononoke/tunables:tunables",
     ],
 )

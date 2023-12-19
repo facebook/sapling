@@ -7,23 +7,20 @@
 
 use clap::Args;
 
+mod configurable;
 mod multi_rendez_vous;
 mod rendez_vous;
 mod rendez_vous_stats;
-mod tunables;
 
 #[cfg(test)]
 mod test;
 
-pub use multi_rendez_vous::MultiRendezVous;
-pub use multi_rendez_vous::MultiRendezVousController;
-pub use rendez_vous::RendezVous;
-pub use rendez_vous::RendezVousController;
-pub use rendez_vous_stats::RendezVousStats;
-
-pub use crate::tunables::ConfigurableRendezVousController;
-pub use crate::tunables::TunablesMultiRendezVousController;
-pub use crate::tunables::TunablesRendezVousController;
+pub use crate::configurable::ConfigurableRendezVousController;
+pub use crate::multi_rendez_vous::MultiRendezVous;
+pub use crate::multi_rendez_vous::MultiRendezVousController;
+pub use crate::rendez_vous::RendezVous;
+pub use crate::rendez_vous::RendezVousController;
+pub use crate::rendez_vous_stats::RendezVousStats;
 
 #[derive(Copy, Clone, Debug)]
 pub struct RendezVousOptions {
@@ -76,7 +73,10 @@ mod demo {
 
         // Callers sharing a RendezVous instance will be eligible to have their calls batched
         // together.
-        let rdv = RendezVous::new(TunablesRendezVousController::new(opts), stats);
+        let rdv = RendezVous::new(
+            ConfigurableRendezVousController::new_with_defaults(opts),
+            stats,
+        );
 
         let out = rdv
             .dispatch(fb, hashset! { 1u64 }, || {
