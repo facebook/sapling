@@ -10,6 +10,7 @@
 #include <folly/Portability.h>
 #include <folly/dynamic.h>
 #include <optional>
+
 #include "eden/fs/config/InodeCatalogType.h"
 #include "eden/fs/config/MountProtocol.h"
 #include "eden/fs/config/ParentCommit.h"
@@ -74,6 +75,12 @@ class CheckoutConfig {
    * Get the parent commit of the working directory.
    */
   ParentCommit getParentCommit() const;
+
+  /**
+   * Gets the last active FilterID (if any). This will return std::nullopt if a
+   * FilteredBackingStore is not in use.
+   */
+  std::optional<std::string> getLastActiveFilter() const;
 
   /**
    * Set the currently checked out commit of the working copy.

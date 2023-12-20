@@ -12,6 +12,7 @@ cpp_library(
     deps = [
         "//eden/fs/utils:enum",
         "//eden/fs/utils:file_utils",
+        "//eden/fs/utils:filter_utils",
         "//eden/fs/utils:system_error",
         "//eden/fs/utils:user_info",
         "//folly:map_util",
