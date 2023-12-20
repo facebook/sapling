@@ -441,7 +441,6 @@ FILTEREDFS_TEST_DISABLED = {
         "test_eden_doctor_fixes_bad_dirstate_file",
         "test_eden_doctor_fixes_valid_mismatched_parents",
     ],
-    "hg.sparse_test.SparseTestTreeOnly": ["test_sparse"],
     "hg.update_test.UpdateTestTreeOnly": [
         "test_update_dir_to_file",
         "test_mount_state_during_unmount_with_in_progress_checkout",
