@@ -435,49 +435,8 @@ for (class_name, value_name) in TEST_DISABLED.items():
         FILTEREDFS_PARITY[class_name + "FilteredHg"] = value_name
 TEST_DISABLED.update(FILTEREDFS_PARITY)
 
-# Some tests fail on FilteredFS. We will fix these in follow-up diffs.
-FILTEREDFS_TEST_DISABLED = {
-    "mount_test.MountTest": [
-        "test_unmount_succeeds_while_dir_handle_is_open",
-        "test_unmount_succeeds_while_file_handle_is_open",
-    ],
-    "config_test.ConfigTestDefault": ["test_periodic_reload"],
-    "xattr_test.XattrTest": [
-        "test_get_sha1_xattr",
-        "test_get_sha1_xattr_succeeds_after_querying_xattr_on_dir",
-    ],
-    "setattr_test.SetAttrTest": [
-        "test_setuid_setgid_and_sticky_bits_fail_with_eperm",
-        "test_chown_uid_as_nonroot_fails",
-        "test_chown_gid_as_nonroot_fails_if_not_member",
-    ],
-    "takeover_test.TakeoverTest": [
-        "test_takeover_succeeds",
-        "test_takeover_with_inode_number",
-    ],
-    # Windows specific failures
-    "prjfs_stress.PrjFSStress": [
-        "test_create_directory_to_file",
-        "test_create_already_removed",
-        "test_rename_hierarchy",
-        "test_create_and_remove_file",
-        "test_out_of_order_file_removal_to_renamed",
-        "test_create_file_to_directory",
-        "test_out_of_order_file_removal",
-        "test_rename_twice",
-        "test_rename_and_replace",
-        "test_rename_to_file",
-        "test_truncate",
-    ],
-    "prjfs_stress.PrjfsStressNoListenToFull": ["test_truncate"],
-    "windows_fsck_test.WindowsRebuildOverlayTest": [
-        "test_rebuild_partial_overlay",
-        "test_rebuild_entire_overlay",
-    ],
-    "windows_fsck_test.WindowsFsckTest": ["test_loaded_inodes_not_loaded_on_restart"],
-    # macOS specific failures
-    "takeover_test.TakeoverTest": ["test_takeover_after_diff_revisions"],
-}
+# Any future FilteredHg skips should be added here
+FILTEREDFS_TEST_DISABLED = {}
 for (testModule, disabled) in FILTEREDFS_TEST_DISABLED.items():
     # We should add skips for all combinations of FilteredHg mixins.
     for fs_type in ["", "NFS"]:
