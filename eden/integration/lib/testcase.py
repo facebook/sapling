@@ -619,9 +619,11 @@ def _replicate_eden_repo_test(
         nfs_variants.append(("NFS", [NFSTestMixin]))
 
     scm_variants: MixinList = [("Hg", [HgRepoTestMixin])]
-    # Only run the git tests if EdenFS was built with git support.
+    # Gate some tests on whether EdenFS was built to support them.
     if eden.config.HAVE_GIT:
         scm_variants.append(("Git", [GitRepoTestMixin]))
+    if eden.config.HAVE_FILTEREDHG:
+        scm_variants.append(("FilteredHg", [FilteredHgTestMixin]))
 
     case_variants: MixinList = [("", [])]
     if case_sensitivity_dependent:
@@ -672,6 +674,13 @@ class HgRepoTestMixin:
         return self.create_hg_repo(
             name, init_configs=["experimental.windows-symlinks=True"]
         )
+
+
+class FilteredHgTestMixin(HgRepoTestMixin):
+    backing_store_type: Optional[str] = "filteredhg"
+
+    def create_repo(self, name: str) -> repobase.Repository:
+        return super().create_repo(name)
 
 
 class GitRepoTestMixin:

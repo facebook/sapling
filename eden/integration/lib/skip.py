@@ -425,6 +425,102 @@ except ImportError:
     pass
 
 
+# We temporarily need to add skips for FilteredFS mixins. Do not add FilteredFS
+# specific skips here. Add them below to FILTERED_TEST_DISABLED instead.
+FILTEREDFS_PARITY = {}
+for (class_name, value_name) in TEST_DISABLED.items():
+    if class_name.endswith("Hg"):
+        FILTEREDFS_PARITY[class_name.replace("Hg", "FilteredHg")] = value_name
+    elif not class_name.endswith("FilteredHg") and not class_name.endswith("Git"):
+        FILTEREDFS_PARITY[class_name + "FilteredHg"] = value_name
+TEST_DISABLED.update(FILTEREDFS_PARITY)
+
+# Some tests fail on FilteredFS. We will fix these in follow-up diffs.
+FILTEREDFS_TEST_DISABLED = {
+    "info_test.InfoTest": ["test_relative_path"],
+    "thrift_test.ThriftTest": [
+        "test_pid_fetch_counts",
+        "test_unload_free_inodes",
+        "test_diff_revisions_hex",
+        "test_diff_revisions_with_reverted_file",
+        "test_diff_revisions",
+    ],
+    "glob_test.GlobTest": [
+        "test_glob_background",
+        "test_glob_multiple_commits",
+        "test_duplicate_file_multiple_commits",
+        "test_multiple_file_multiple_commits",
+        "test_glob_on_non_current_commit",
+        "test_search_root_with_specified_commits",
+        "test_prefetch_matching_files",
+        "test_simple_matching_commit",
+    ],
+    "mount_test.MountTest": [
+        "test_unmount_succeeds_while_dir_handle_is_open",
+        "test_unmount_succeeds_while_file_handle_is_open",
+    ],
+    "readdir_test.ReaddirTest": [
+        "test_get_attributes_directory",
+        "test_get_attributes",
+        "test_readdir",
+        "test_get_attributes_symlink",
+        "test_readdir_directory_symlink_and_other",
+    ],
+    "config_test.ConfigTestDefault": ["test_periodic_reload"],
+    "xattr_test.XattrTest": [
+        "test_get_sha1_xattr",
+        "test_get_sha1_xattr_succeeds_after_querying_xattr_on_dir",
+    ],
+    "setattr_test.SetAttrTest": [
+        "test_setuid_setgid_and_sticky_bits_fail_with_eperm",
+        "test_chown_uid_as_nonroot_fails",
+        "test_chown_gid_as_nonroot_fails_if_not_member",
+    ],
+    "takeover_test.TakeoverTest": [
+        "test_takeover_succeeds",
+        "test_takeover_with_inode_number",
+    ],
+    # Windows specific failures
+    "prjfs_stress.PrjFSStress": [
+        "test_create_directory_to_file",
+        "test_create_already_removed",
+        "test_rename_hierarchy",
+        "test_create_and_remove_file",
+        "test_out_of_order_file_removal_to_renamed",
+        "test_create_file_to_directory",
+        "test_out_of_order_file_removal",
+        "test_rename_twice",
+        "test_rename_and_replace",
+        "test_rename_to_file",
+        "test_truncate",
+    ],
+    "prjfs_stress.PrjfsStressNoListenToFull": ["test_truncate"],
+    "windows_fsck_test.WindowsRebuildOverlayTest": [
+        "test_rebuild_partial_overlay",
+        "test_rebuild_entire_overlay",
+    ],
+    "windows_fsck_test.WindowsFsckTest": ["test_loaded_inodes_not_loaded_on_restart"],
+    # macOS specific failures
+    "takeover_test.TakeoverTest": ["test_takeover_after_diff_revisions"],
+}
+for (testModule, disabled) in FILTEREDFS_TEST_DISABLED.items():
+    # We should add skips for all combinations of FilteredHg mixins.
+    for fs_type in ["", "NFS"]:
+        # We need to be careful that we don't overwrite any pre-existing lists
+        # or bulk disables that were disabled by other criteria.
+        new_class_name = testModule + fs_type + "FilteredHg"
+        prev_disabled = TEST_DISABLED.get(new_class_name)
+        if prev_disabled is None:
+            # There are no previously disabled tests, we're free to bulk add
+            TEST_DISABLED[new_class_name] = disabled
+        else:
+            # If there's a list of previously disabled tests, we need to append
+            # our list. Otherwise, we can no-op since all tests (including the
+            # ones we specified) are already disabled.
+            if isinstance(prev_disabled, list):
+                TEST_DISABLED[new_class_name] = prev_disabled + disabled
+
+
 def is_class_disabled(class_name: str) -> bool:
     class_skipped = TEST_DISABLED.get(class_name)
     if class_skipped is None:
