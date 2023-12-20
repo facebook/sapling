@@ -153,6 +153,35 @@ std::string resolveRootId(
   }
 }
 
+// parseRootId() assumes that the provided hash will contain information
+// about the active filter. Some legacy code paths do not respect
+// filters (or accept Filters as arguments), so we need to construct a
+// FilteredRootId using the last active filter. For non-FilteredFS repos, the
+// last filterID will be std::nullopt.
+std::string resolveRootIdWithLastFilter(
+    std::string rootId,
+    const EdenMountHandle& handle) {
+  auto filterId =
+      handle.getEdenMount().getCheckoutConfig()->getLastActiveFilter();
+  RootIdOptions rootIdOptions{};
+  rootIdOptions.filterId_ref().from_optional(std::move(filterId));
+  return resolveRootId(std::move(rootId), rootIdOptions, handle);
+}
+
+// Similar to the above function, but can be used with endpoints that pass in
+// many RootIds.
+std::vector<std::string> resolveRootsWithLastFilter(
+    std::vector<std::string>& originalRootIds,
+    const EdenMountHandle& mountHandle) {
+  std::vector<std::string> resolvedRootIds;
+  resolvedRootIds.reserve(originalRootIds.size());
+  for (auto& rev : originalRootIds) {
+    resolvedRootIds.push_back(
+        resolveRootIdWithLastFilter(std::move(rev), mountHandle));
+  }
+  return resolvedRootIds;
+}
+
 #define EDEN_MICRO reinterpret_cast<const char*>(u8"\u00B5s")
 
 class ThriftFetchContext : public ObjectFetchContext {
@@ -2922,6 +2951,11 @@ EdenServiceHandler::semifuture_ensureMaterialized(
 folly::SemiFuture<std::unique_ptr<Glob>>
 EdenServiceHandler::semifuture_predictiveGlobFiles(
     std::unique_ptr<GlobParams> params) {
+  auto mountHandle = lookupMount(params->mountPoint());
+  if (!params->revisions_ref().value().empty()) {
+    params->revisions_ref() = resolveRootsWithLastFilter(
+        params->revisions_ref().value(), mountHandle);
+  }
   ThriftGlobImpl globber{*params};
   auto helper =
       INSTRUMENT_THRIFT_CALL(DBG3, *params->mountPoint(), globber.logString());
@@ -2933,7 +2967,6 @@ EdenServiceHandler::semifuture_predictiveGlobFiles(
       serverState->getEdenConfig()->predictivePrefetchProfileSize.getValue();
   // if user is not specified, get user info from the server state
   auto user = folly::StringPiece{serverState->getUserInfo().getUsername()};
-  auto mountHandle = lookupMount(params->mountPoint());
   auto backingStore = mountHandle.getObjectStore().getBackingStore();
   // if repo is not specified, get repository name from the backingstore
   auto repo_optional = backingStore->getRepoName();
@@ -3013,6 +3046,11 @@ EdenServiceHandler::semifuture_predictiveGlobFiles(
 folly::SemiFuture<std::unique_ptr<Glob>>
 EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
   TaskTraceBlock block{"EdenServiceHandler::globFiles"};
+  auto mountHandle = lookupMount(params->mountPoint());
+  if (!params->revisions_ref().value().empty()) {
+    params->revisions_ref() = resolveRootsWithLastFilter(
+        params->revisions_ref().value(), mountHandle);
+  }
   ThriftGlobImpl globber{*params};
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG3,
@@ -3033,8 +3071,6 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
       globber,
       context,
       server_->getServerState());
-
-  auto mountHandle = lookupMount(params->mountPoint());
 
   auto globFut = std::move(backgroundFuture)
                      .thenValue([mountHandle,
@@ -3069,6 +3105,11 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
 
 folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_prefetchFiles(
     std::unique_ptr<PrefetchParams> params) {
+  auto mountHandle = lookupMount(params->mountPoint());
+  if (!params->revisions_ref().value().empty()) {
+    params->revisions_ref() = resolveRootsWithLastFilter(
+        params->revisions_ref().value(), mountHandle);
+  }
   ThriftGlobImpl globber{*params};
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG2,
@@ -3089,8 +3130,6 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_prefetchFiles(
       globber,
       context,
       server_->getServerState());
-
-  auto mountHandle = lookupMount(params->mountPoint());
 
   auto globFut =
       std::move(backgroundFuture)
@@ -3213,7 +3252,14 @@ EdenServiceHandler::semifuture_getScmStatus(
   // want to enforce that even for this call, if we confirm that all existing
   // callers of this method can deal with the error.
   auto mountHandle = lookupMount(mountPoint);
-  auto hash = mountHandle.getObjectStore().parseRootId(*commitHash);
+
+  // parseRootId assumes that the passed in hash will contain information about
+  // the active filter. This legacy code path does not respect filters, so the
+  // last active filter will always be passed in if it exists. For non-FFS
+  // repos, the last filterID will be std::nullopt.
+  std::string parsedCommit =
+      resolveRootIdWithLastFilter(std::move(*commitHash), mountHandle);
+  auto hash = mountHandle.getObjectStore().parseRootId(parsedCommit);
   return wrapImmediateFuture(
              std::move(helper),
              mountHandle.getEdenMount().diff(
@@ -3241,10 +3287,19 @@ EdenServiceHandler::semifuture_getScmStatusBetweenRevisions(
   auto mountHandle = lookupMount(mountPoint);
   auto& fetchContext = helper->getFetchContext();
 
+  // parseRootId assumes that the passed in hash will contain information about
+  // the active filter. This legacy code path does not respect filters, so the
+  // last active filter will always be passed in if it exists. For non-FFS
+  // repos, the last filterID will be std::nullopt.
+  std::string resolvedOldHash =
+      resolveRootIdWithLastFilter(std::move(*oldHash), mountHandle);
+  std::string resolvedNewHash =
+      resolveRootIdWithLastFilter(std::move(*newHash), mountHandle);
+
   auto callback = std::make_unique<ScmStatusDiffCallback>();
   auto diffFuture = diffBetweenRoots(
-      mountHandle.getObjectStore().parseRootId(*oldHash),
-      mountHandle.getObjectStore().parseRootId(*newHash),
+      mountHandle.getObjectStore().parseRootId(resolvedOldHash),
+      mountHandle.getObjectStore().parseRootId(resolvedNewHash),
       *mountHandle.getEdenMount().getCheckoutConfig(),
       mountHandle.getObjectStorePtr(),
       context->getConnectionContext()->getCancellationToken(),

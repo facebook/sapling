@@ -437,23 +437,6 @@ TEST_DISABLED.update(FILTEREDFS_PARITY)
 
 # Some tests fail on FilteredFS. We will fix these in follow-up diffs.
 FILTEREDFS_TEST_DISABLED = {
-    "thrift_test.ThriftTest": [
-        "test_pid_fetch_counts",
-        "test_unload_free_inodes",
-        "test_diff_revisions_hex",
-        "test_diff_revisions_with_reverted_file",
-        "test_diff_revisions",
-    ],
-    "glob_test.GlobTest": [
-        "test_glob_background",
-        "test_glob_multiple_commits",
-        "test_duplicate_file_multiple_commits",
-        "test_multiple_file_multiple_commits",
-        "test_glob_on_non_current_commit",
-        "test_search_root_with_specified_commits",
-        "test_prefetch_matching_files",
-        "test_simple_matching_commit",
-    ],
     "mount_test.MountTest": [
         "test_unmount_succeeds_while_dir_handle_is_open",
         "test_unmount_succeeds_while_file_handle_is_open",
