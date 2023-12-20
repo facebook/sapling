@@ -120,6 +120,8 @@ def get_requires_data(checkout: EdenCheckout) -> str:
     # the backing repository's dirstate.
     requires.discard("sqldirstate")
     requires.discard("treedirstate")
+    requires.discard("windowssymlinks")
+    requires.discard("edensparse")
 
     if checkout.get_config().enable_windows_symlinks:
         requires.add("windowssymlinks")
