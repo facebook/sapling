@@ -495,20 +495,28 @@ def _replicate_hg_test(
     if eden.config.HAVE_NFS:
         tree_variants.append(("TreeOnlyNFS", [testcase.NFSTestMixin]))
 
+    # Mix in FilteredHg tests if the build supports it.
+    scm_variants: MixinList = [("", [])]
+    if eden.config.HAVE_FILTEREDHG:
+        scm_variants.append(("FilteredHg", [FilteredTestMixin]))
+
     overlay_variants: MixinList = [("", [])]
     if sys.platform == "win32":
         overlay_variants.append(("InMemory", [InMemoryOverlayTestMixin]))
 
     for tree_label, tree_mixins in tree_variants:
         for overlay_label, overlay_mixins in overlay_variants:
+            for scm_label, scm_mixins in scm_variants:
 
-            class VariantHgRepoTest(*tree_mixins, *overlay_mixins, test_class):
-                pass
+                class VariantHgRepoTest(
+                    *tree_mixins, *overlay_mixins, *scm_mixins, test_class
+                ):
+                    pass
 
-            yield (
-                f"{tree_label}{overlay_label}",
-                typing.cast(Type[EdenHgTestCase], VariantHgRepoTest),
-            )
+                yield (
+                    f"{tree_label}{overlay_label}{scm_label}",
+                    typing.cast(Type[EdenHgTestCase], VariantHgRepoTest),
+                )
 
 
 def _replicate_filteredhg_test(
@@ -533,4 +541,9 @@ class InMemoryOverlayTestMixin:
     inode_catalog_type = "inmemory"
 
 
+class FilteredTestMixin:
+    backing_store_type = "filteredhg"
+
+
 hg_test = testcase.test_replicator(_replicate_hg_test)
+filteredhg_test = testcase.test_replicator(_replicate_filteredhg_test)

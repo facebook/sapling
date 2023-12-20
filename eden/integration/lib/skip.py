@@ -436,13 +436,24 @@ for (class_name, value_name) in TEST_DISABLED.items():
 TEST_DISABLED.update(FILTEREDFS_PARITY)
 
 # Any future FilteredHg skips should be added here
-FILTEREDFS_TEST_DISABLED = {}
+FILTEREDFS_TEST_DISABLED = {
+    "hg.doctor_test.DoctorTestTreeOnly": [
+        "test_eden_doctor_fixes_bad_dirstate_file",
+        "test_eden_doctor_fixes_valid_mismatched_parents",
+    ],
+    "hg.sparse_test.SparseTestTreeOnly": ["test_sparse"],
+    "hg.update_test.UpdateTestTreeOnly": [
+        "test_update_dir_to_file",
+        "test_mount_state_during_unmount_with_in_progress_checkout",
+    ],
+}
 for (testModule, disabled) in FILTEREDFS_TEST_DISABLED.items():
     # We should add skips for all combinations of FilteredHg mixins.
-    for fs_type in ["", "NFS"]:
+    other_mixins = ["", "NFS"] if sys.platform != "win32" else ["", "InMemory"]
+    for mixin in other_mixins:
         # We need to be careful that we don't overwrite any pre-existing lists
         # or bulk disables that were disabled by other criteria.
-        new_class_name = testModule + fs_type + "FilteredHg"
+        new_class_name = testModule + mixin + "FilteredHg"
         prev_disabled = TEST_DISABLED.get(new_class_name)
         if prev_disabled is None:
             # There are no previously disabled tests, we're free to bulk add

@@ -7,11 +7,15 @@
 import os
 from typing import Optional
 
-from eden.integration.hg.lib.hg_extension_test_base import FilteredHgTestCase
+from eden.integration.hg.lib.hg_extension_test_base import (
+    filteredhg_test,
+    FilteredHgTestCase,
+)
 
 from eden.integration.lib import hgrepo
 
 
+@filteredhg_test
 # pyre-ignore[13]: T62487924
 class FilteredFSBase(FilteredHgTestCase):
     """Exercise some fundamental operations with filters enabled/disabled."""
