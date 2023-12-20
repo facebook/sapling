@@ -1539,7 +1539,6 @@ def readsparseconfig(
 
     # Edensparse only supports v2 profiles
     if _isedensparse(repo):
-        metadata["version"] = []
         metadata["version"] = ["2"]
 
     metadata = {key: "\n".join(value).strip() for key, value in metadata.items()}
