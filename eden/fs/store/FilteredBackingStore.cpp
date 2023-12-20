@@ -426,7 +426,8 @@ ObjectId FilteredBackingStore::parseObjectId(folly::StringPiece objectId) {
 }
 
 std::string FilteredBackingStore::renderObjectId(const ObjectId& id) {
-  return backingStore_->renderObjectId(id);
+  auto filteredId = FilteredObjectId::fromObjectId(id);
+  return backingStore_->renderObjectId(filteredId.object());
 }
 
 std::optional<folly::StringPiece> FilteredBackingStore::getRepoName() {

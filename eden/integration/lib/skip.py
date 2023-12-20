@@ -459,13 +459,6 @@ FILTEREDFS_TEST_DISABLED = {
         "test_unmount_succeeds_while_dir_handle_is_open",
         "test_unmount_succeeds_while_file_handle_is_open",
     ],
-    "readdir_test.ReaddirTest": [
-        "test_get_attributes_directory",
-        "test_get_attributes",
-        "test_readdir",
-        "test_get_attributes_symlink",
-        "test_readdir_directory_symlink_and_other",
-    ],
     "config_test.ConfigTestDefault": ["test_periodic_reload"],
     "xattr_test.XattrTest": [
         "test_get_sha1_xattr",
