@@ -437,7 +437,6 @@ TEST_DISABLED.update(FILTEREDFS_PARITY)
 
 # Some tests fail on FilteredFS. We will fix these in follow-up diffs.
 FILTEREDFS_TEST_DISABLED = {
-    "info_test.InfoTest": ["test_relative_path"],
     "thrift_test.ThriftTest": [
         "test_pid_fetch_counts",
         "test_unload_free_inodes",

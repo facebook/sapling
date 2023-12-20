@@ -1498,6 +1498,9 @@ class EdenCheckout:
                 parent = f.read(bodyLength)
                 if len(parent) != bodyLength:
                     raise RuntimeError("SNAPSHOT file too short")
+                if self.get_config().scm_type == "filteredhg":
+                    hash_len, varint_len = util.decode_varint(parent)
+                    parent = parent[varint_len : hash_len + 1]
                 decoded_parent = parent.decode()
                 return SnapshotState(
                     working_copy_parent=decoded_parent,
@@ -1527,6 +1530,14 @@ class EdenCheckout:
                 checked_out_revision = f.read(checked_out_length)
                 if len(checked_out_revision) != checked_out_length:
                     raise RuntimeError("SNAPSHOT file too short")
+
+                if self.get_config().scm_type == "filteredhg":
+                    hash_len, varint_len = util.decode_varint(working_copy_parent)
+                    working_copy_parent = working_copy_parent[varint_len : hash_len + 1]
+                    hash_len, varint_len = util.decode_varint(checked_out_revision)
+                    checked_out_revision = checked_out_revision[
+                        varint_len : hash_len + 1
+                    ]
                 return SnapshotState(
                     working_copy_parent=working_copy_parent.decode(),
                     last_checkout_hash=checked_out_revision.decode(),
