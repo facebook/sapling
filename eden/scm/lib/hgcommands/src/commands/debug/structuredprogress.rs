@@ -15,6 +15,7 @@ use anyhow::bail;
 use anyhow::Result;
 use clidispatch::ReqCtx;
 use cliparser::define_flags;
+use progress_model::IoTimeSeries;
 use progress_model::ProgressBar;
 use progress_model::Registry;
 
@@ -40,6 +41,11 @@ struct Bar {
 
 pub fn run(ctx: ReqCtx<StructuredProgressOpts>, _config: &mut ConfigSet) -> Result<u8> {
     let bars = Bar::from_spec_list(&ctx.opts.layout)?.1;
+
+    // Add a test io time series so we can see how things look.
+    let time_series = IoTimeSeries::new("HTTP", "requests");
+    time_series.populate_test_samples(1000, 1000, 1);
+    Registry::main().register_io_time_series(&time_series);
 
     run_bars(bars).join().unwrap();
 

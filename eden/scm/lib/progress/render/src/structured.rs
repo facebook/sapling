@@ -31,7 +31,23 @@ const MIN_TOPIC_LENGTH: usize = 30;
 
 pub fn render(registry: &Registry, config: &RenderingConfig) -> Vec<Change> {
     let mut changes = ChangeSequence::new(config.term_width, config.term_height);
+
+    // Defer to simple rendering for non-progress bars for now.
+    // TODO: make rendering style match that of structured bars.
+    let mut non_progress = Vec::new();
+    crate::simple::render_cache_stats(&mut non_progress, &registry.list_cache_stats(), config);
+    crate::simple::render_time_series(&mut non_progress, &registry.list_io_time_series(), 0);
+    if !non_progress.is_empty() {
+        // Add empty line separating non-progress bars from progress bars.
+        // Maybe get rid of this when we unify styling.
+        non_progress.push(String::new());
+    }
+    for line in non_progress {
+        changes.add(format!("{line}\r\n"));
+    }
+
     render_progress_bars(&mut changes, &registry.list_progress_bar(), config);
+
     changes.consume()
 }
 
