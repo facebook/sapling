@@ -34,7 +34,7 @@ class BasicTestBase(testcase.EdenRepoTest):
         self.repo.commit("Initial commit.")
 
         self.expected_mount_entries = {".eden", "adir", "bdir", "hello", "slink"}
-        if self.repo.get_type() == "hg":
+        if self.repo.get_type() in ["hg", "filteredhg"]:
             self.expected_mount_entries.add(".hg")
 
 

@@ -210,7 +210,9 @@ class EdenTestCase(EdenTestCaseBase):
     def get_backing_dir(self, reponame: str, repo_type: str) -> Path:
         backing_dir_location = Path(self.repos_dir) / reponame
         return (
-            backing_dir_location if repo_type == "hg" else backing_dir_location / ".git"
+            backing_dir_location
+            if repo_type in ["hg", "filteredhg"]
+            else backing_dir_location / ".git"
         )
 
     def edenfs_logging_settings(self) -> Optional[Dict[str, str]]:
@@ -261,6 +263,7 @@ class EdenTestCase(EdenTestCaseBase):
         name: str,
         hgrc: Optional[configparser.ConfigParser] = None,
         init_configs: Optional[List[str]] = None,
+        filtered: bool = False,
     ) -> hgrepo.HgRepository:
         """Create an hg repo.
 
@@ -286,7 +289,10 @@ class EdenTestCase(EdenTestCaseBase):
             self.system_hgrc = system_hgrc_path
 
         repo = hgrepo.HgRepository(
-            repo_path, system_hgrc=self.system_hgrc, temp_mgr=self.temp_mgr
+            repo_path,
+            system_hgrc=self.system_hgrc,
+            temp_mgr=self.temp_mgr,
+            filtered=filtered,
         )
         repo.init(hgrc=hgrc, init_configs=init_configs)
 
@@ -488,7 +494,7 @@ class EdenRepoTest(EdenTestCase):
         """
         checkout_root = pathlib.Path(path if path is not None else self.mount)
         real_scm_type = scm_type if scm_type is not None else self.repo.get_type()
-        if real_scm_type == "hg":
+        if real_scm_type in ["hg", "filteredhg"]:
             expected_entries = expected_entries | {".hg"}
         actual_entries = set(os.listdir(checkout_root))
         self.assertEqual(
@@ -664,7 +670,7 @@ eden_repo_test = test_replicator(_replicate_eden_repo_test)
 class HgRepoTestMixin:
     repo_type: str = "hg"
 
-    def create_repo(self, name: str) -> repobase.Repository:
+    def create_repo(self, name: str, filtered: bool = False) -> repobase.Repository:
         # HgRepoTestMixin is always used in classes that derive from EdenRepoTest,
         # but it is difficult to make the type checkers aware of that.  We can't
         # add an abstract create_hg_repo() method to this class since the MRO would find
@@ -672,15 +678,15 @@ class HgRepoTestMixin:
         # breaking resolution of create_repo().
         # pyre-fixme[16]: `HgRepoTestMixin` has no attribute `create_hg_repo`.
         return self.create_hg_repo(
-            name, init_configs=["experimental.windows-symlinks=True"]
+            name, init_configs=["experimental.windows-symlinks=True"], filtered=filtered
         )
 
 
 class FilteredHgTestMixin(HgRepoTestMixin):
     backing_store_type: Optional[str] = "filteredhg"
 
-    def create_repo(self, name: str) -> repobase.Repository:
-        return super().create_repo(name)
+    def create_repo(self, name: str, filtered: bool = True) -> repobase.Repository:
+        return super().create_repo(name, filtered=filtered)
 
 
 class GitRepoTestMixin:

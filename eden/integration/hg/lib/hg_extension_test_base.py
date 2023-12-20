@@ -97,7 +97,11 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
         )
 
         # Now create the repository object that refers to the eden client
-        self.repo = hgrepo.HgRepository(self.mount, system_hgrc=self.system_hgrc)
+        self.repo = hgrepo.HgRepository(
+            self.mount,
+            system_hgrc=self.system_hgrc,
+            filtered=self.backing_store_type == "filteredhg",
+        )
 
     def edenfs_extra_config(self) -> Optional[Dict[str, List[str]]]:
         configs = super().edenfs_extra_config()
