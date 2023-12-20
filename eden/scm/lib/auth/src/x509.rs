@@ -106,8 +106,9 @@ pub fn check_certs(path: impl AsRef<Path>) -> Result<(), X509Error> {
 /// valid at a given time.
 fn certs_valid_at_time(pem_bytes: &[u8], time: DateTime<Utc>) -> Result<(), X509ErrorKind> {
     let certs = pem::parse_many(pem_bytes)
+        .unwrap()
         .into_iter()
-        .filter(|pem| pem.tag == "CERTIFICATE")
+        .filter(|pem| pem.tag() == "CERTIFICATE")
         .collect::<Vec<_>>();
 
     if certs.is_empty() {
@@ -117,7 +118,7 @@ fn certs_valid_at_time(pem_bytes: &[u8], time: DateTime<Utc>) -> Result<(), X509
     }
 
     for cert in certs {
-        cert_is_valid_at(&cert.contents, time)?;
+        cert_is_valid_at(cert.contents(), time)?;
     }
 
     Ok(())
@@ -208,12 +209,12 @@ mod tests {
     #[test]
     fn test_date_parsing() -> Result<()> {
         let pem = pem::parse(CERT_1)?;
-        let (not_before, not_after) = parse_valid_date_range(&pem.contents)?;
+        let (not_before, not_after) = parse_valid_date_range(pem.contents())?;
         assert_eq!(not_before, *CERT_1_NOT_BEFORE);
         assert_eq!(not_after, *CERT_1_NOT_AFTER);
 
         let pem = pem::parse(CERT_2)?;
-        let (not_before, not_after) = parse_valid_date_range(&pem.contents)?;
+        let (not_before, not_after) = parse_valid_date_range(pem.contents())?;
         assert_eq!(not_before, *CERT_2_NOT_BEFORE);
         assert_eq!(not_after, *CERT_2_NOT_AFTER);
 
