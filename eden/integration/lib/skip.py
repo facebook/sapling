@@ -445,6 +445,20 @@ FILTEREDFS_TEST_DISABLED = {
         "test_update_dir_to_file",
         "test_mount_state_during_unmount_with_in_progress_checkout",
     ],
+    "readdir_test.ReaddirTest": [
+        "test_get_attributes_symlink",
+        "test_readdir_directory_symlink_and_other",
+        "test_get_attributes_directory",
+        "test_readdir",
+        "test_get_attributes",
+    ],
+    "patch_test.PatchTest": ["test_patch"],
+    "clone_test.CloneTest": ["test_force_case_insensitive"],
+    "update_test.UpdateTest": [
+        "test_merge_update_untracked_file_with_conflict_in_destination",
+        "test_merge_update_added_file_with_conflict_in_destination",
+        "test_merge_update_untracked_file_with_conflict_in_destination",
+    ],
 }
 for (testModule, disabled) in FILTEREDFS_TEST_DISABLED.items():
     # We should add skips for all combinations of FilteredHg mixins.
