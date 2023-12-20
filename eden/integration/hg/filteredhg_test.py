@@ -39,6 +39,17 @@ description: Minimal filter for testing purposes
 [exclude]
 """
 
+    testFilterV2: str = """
+[metadata]
+version: 2
+[include]
+*
+[exclude]
+bdir
+[include]
+bdir/README.md
+"""
+
     initial_commit: str
 
     def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
@@ -50,6 +61,7 @@ description: Minimal filter for testing purposes
         repo.write_file("adir/file", "foo!\n")
         repo.write_file("bdir/test.sh", "#!/bin/bash\necho test\n", mode=0o755)
         repo.write_file("bdir/noexec.sh", "#!/bin/bash\necho test\n")
+        repo.write_file("bdir/README.md", "This is a README file.\n")
         repo.write_file("dir2/not_filtered", "I shouldn't be filtered")
         repo.symlink("slink", os.path.join("adir", "file"))
 
@@ -70,6 +82,7 @@ description: Minimal filter for testing purposes
         repo.write_file("a/nested_filter_file", self.testFilter1)
         repo.write_file("filters/null_filter", self.testFilterNull)
         repo.write_file("filters/metadata_only", self.testFilterOnlyMetadata)
+        repo.write_file("filters/v2", self.testFilterV2)
 
         self.initial_commit = repo.commit("Initial commit.")
 
@@ -178,6 +191,19 @@ description: Minimal filter for testing purposes
         # File reappears after disabling filter
         self.remove_active_filter()
         self.ensure_filtered_and_unfiltered(set(), initial_files)
+
+    def test_filters_follow_v2_rules(self) -> None:
+        initial_files = {"bdir", "bdir/README.md", "bdir/noexec.sh", "bdir/test.sh"}
+        filtered_files = initial_files.copy()
+
+        # Files exist initially
+        self.ensure_filtered_and_unfiltered(set(), initial_files)
+
+        # Files are omitted after enabling filter
+        self.set_active_filter("filters/v2")
+        self.ensure_filtered_and_unfiltered(
+            filtered_files, initial_files.difference(filtered_files)
+        )
 
     def test_entire_directory_is_omitted(self) -> None:
         initial_files = {
