@@ -21,6 +21,7 @@ import subprocess
 import sys
 import time
 import typing
+from io import BytesIO
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING, TypeVar
 
@@ -819,6 +820,36 @@ def encode_varint(number: int) -> bytes:
             buf += _varint_byte(towrite)
             break
     return buf
+
+
+# Adapted from https://github.com/fmoo/python-varint and
+# https://fburl.com/p8xrmnch
+def decode_varint(buf: bytes) -> typing.Tuple[int, int]:
+    """Read a varint from from `buf` bytes and return the number of bytes read"""
+    stream = BytesIO(buf)
+    shift = 0
+    result = 0
+    bytes_read = 0
+
+    def read_one_byte(stream: BytesIO):
+        """Reads a byte from the file (as an integer)
+
+        raises EOFError if the stream ends while reading bytes.
+        """
+        c = stream.read(1)
+        if c == b"":
+            raise EOFError("Unexpected EOF while reading varint bytes")
+        return ord(c)
+
+    while True:
+        bytes_read += 1
+        i = read_one_byte(stream)
+        result |= (i & 0x7F) << shift
+        shift += 7
+        if not (i & 0x80):
+            break
+
+    return result, bytes_read
 
 
 def create_filtered_rootid(root_id: str, filter: Optional[str] = None) -> bytes:
