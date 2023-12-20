@@ -35,6 +35,7 @@ rust_binary(
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
         "//eden/mononoke/common/scuba_ext:scuba_ext",
         "//eden/mononoke/derived_data:basename_suffix_skeleton_manifest",
+        "//eden/mononoke/derived_data:basename_suffix_skeleton_manifest_v3",
         "//eden/mononoke/derived_data:blame",
         "//eden/mononoke/derived_data:changeset_info",
         "//eden/mononoke/derived_data:deleted_manifest",
