@@ -237,7 +237,11 @@ def _isedensparse(repo):
     return "edensparse" in repo.requirements
 
 
-def _checksparse(repo) -> None:
+def _abortifnotsparse(repo) -> None:
+    """Aborts if the repo is not "sparse". There are two kinds of sparse repos:
+    1) non-eden-sparse (i.e legacy sparse)
+    2) edensparse (i.e. FilteredHg/FilteredFS)
+    """
     if "eden" in repo.requirements and "edensparse" not in repo.requirements:
         raise error.Abort(
             _(
@@ -248,6 +252,21 @@ def _checksparse(repo) -> None:
 
     if not hasattr(repo, "sparsematch"):
         raise error.Abort(_(f"this is not a {_getsparseflavor(repo)} repository"))
+
+
+def _abortifnotregularsparse(repo) -> None:
+    """Aborts if the repo is eden or edensparse. Only non-eden-sparse
+    (i.e legacy sparse) repos will avoid aborting.
+    """
+    _abortifnotsparse(repo)
+
+    if "edensparse" in repo.requirements:
+        raise error.Abort(
+            _(
+                "You're using an Edensparse repo and thus don't need sparse profile commands. "
+                "See `@prog@ help filteredfs` for more information."
+            )
+        )
 
 
 def _hassparse(repo):
@@ -455,7 +474,7 @@ def _setuplog(ui) -> None:
     def _logrevs(orig, repo, opts):
         revs = orig(repo, opts)
         if opts.get("sparse"):
-            _checksparse(repo)
+            _abortifnotsparse(repo)
 
             sparsematch = repo.sparsematch()
 
@@ -1952,7 +1971,7 @@ def sparse(ui, repo, *pats, **opts) -> None:
     See :prog:`help -e sparse` and :prog:`help sparse [subcommand]` to get
     additional information.
     """
-    _checksparse(repo)
+    _abortifnotregularsparse(repo)
 
     include = opts.get("include")
     exclude = opts.get("exclude")
@@ -2045,7 +2064,7 @@ subcmd = sparse.subcommand(
 
 
 def _showsubcmdlogic(ui, repo, opts) -> None:
-    _checksparse(repo)
+    _abortifnotsparse(repo)
     flavortext = _getsparseflavor(repo)
     if not repo.localvfs.exists("sparse"):
         if not ui.plain():
@@ -2132,6 +2151,7 @@ def _showsubcmdlogic(ui, repo, opts) -> None:
 @subcmd("show", commands.templateopts)
 def show(ui, repo, **opts) -> None:
     """show the currently enabled sparse profile"""
+    _abortifnotregularsparse(repo)
     _showsubcmdlogic(ui, repo, opts)
 
 
@@ -2383,7 +2403,7 @@ def _listprofiles(ui, repo, *pats, **opts) -> None:
     made available (all profiles are marked as 'inactive').
 
     """
-    _checksparse(repo)
+    _abortifnotregularsparse(repo)
 
     rev = scmutil.revsingle(repo, opts.get("rev")).hex()
     tocanon = functools.partial(pathutil.canonpath, repo.root, repo.getcwd())
@@ -2634,7 +2654,7 @@ def _listfilessubcmd(ui, repo, profile: Optional[str], *files, **opts) -> int:
     that match those patterns.
 
     """
-    _checksparse(repo)
+    _abortifnotregularsparse(repo)
 
     rev = opts.get("rev", ".")
     try:
@@ -2673,6 +2693,7 @@ def getcommonopts(opts) -> Dict[str, Any]:
 @subcmd("reset", _common_config_opts + commands.templateopts)
 def resetsubcmd(ui, repo, **opts) -> None:
     """disable all sparse profiles and convert to a full checkout"""
+    _abortifnotregularsparse(repo)
     commonopts = getcommonopts(opts)
     _config(ui, repo, [], opts, reset=True, **commonopts)
 
@@ -2680,6 +2701,7 @@ def resetsubcmd(ui, repo, **opts) -> None:
 @subcmd("disable|disableprofile", _common_config_opts, "[PROFILE]...")
 def disableprofilesubcmd(ui, repo, *pats, **opts) -> None:
     """disable a sparse profile"""
+    _abortifnotregularsparse(repo)
     commonopts = getcommonopts(opts)
     _config(ui, repo, pats, opts, disableprofile=True, **commonopts)
 
@@ -2701,6 +2723,7 @@ def normalizeprofile(repo, p):
 @subcmd("enable|enableprofile", _common_config_opts, "[PROFILE]...")
 def enableprofilesubcmd(ui, repo, *pats, **opts) -> None:
     """enable a sparse profile"""
+    _abortifnotregularsparse(repo)
     pats = [normalizeprofile(repo, p) for p in pats]
     _checknonexistingprofiles(ui, repo, pats)
     commonopts = getcommonopts(opts)
@@ -2714,6 +2737,7 @@ def switchprofilesubcmd(ui, repo, *pats, **opts) -> None:
     Disables all other profiles and stops including and excluding any additional
     files you have previously included or excluded.
     """
+    _abortifnotregularsparse(repo)
     _checknonexistingprofiles(ui, repo, pats)
     commonopts = getcommonopts(opts)
     _config(ui, repo, pats, opts, reset=True, enableprofile=True, **commonopts)
@@ -2722,6 +2746,7 @@ def switchprofilesubcmd(ui, repo, *pats, **opts) -> None:
 @subcmd("delete", _common_config_opts, "[RULE]...")
 def deletesubcmd(ui, repo, *pats, **opts) -> None:
     """delete an include or exclude rule (DEPRECATED)"""
+    _abortifnotregularsparse(repo)
     commonopts = getcommonopts(opts)
     _config(ui, repo, pats, opts, delete=True, **commonopts)
 
@@ -2729,6 +2754,7 @@ def deletesubcmd(ui, repo, *pats, **opts) -> None:
 @subcmd("exclude", _common_config_opts, "[RULE]...")
 def excludesubcmd(ui, repo, *pats, **opts) -> None:
     """exclude some additional files"""
+    _abortifnotregularsparse(repo)
     commonopts = getcommonopts(opts)
     _config(ui, repo, pats, opts, exclude=True, **commonopts)
 
@@ -2736,6 +2762,7 @@ def excludesubcmd(ui, repo, *pats, **opts) -> None:
 @subcmd("unexclude", _common_config_opts, "[RULE]...")
 def unexcludesubcmd(ui, repo, *pats, **opts) -> None:
     """stop excluding some additional files"""
+    _abortifnotregularsparse(repo)
     commonopts = getcommonopts(opts)
     _config(ui, repo, pats, opts, unexclude=True, **commonopts)
 
@@ -2743,6 +2770,7 @@ def unexcludesubcmd(ui, repo, *pats, **opts) -> None:
 @subcmd("include", _common_config_opts, "[RULE]...")
 def includesubcmd(ui, repo, *pats, **opts) -> None:
     """include some additional files"""
+    _abortifnotregularsparse(repo)
     commonopts = getcommonopts(opts)
     _config(ui, repo, pats, opts, include=True, **commonopts)
 
@@ -2750,6 +2778,7 @@ def includesubcmd(ui, repo, *pats, **opts) -> None:
 @subcmd("uninclude", _common_config_opts, "[RULE]...")
 def unincludesubcmd(ui, repo, *pats, **opts) -> None:
     """stop including some additional files"""
+    _abortifnotregularsparse(repo)
     commonopts = getcommonopts(opts)
     _config(ui, repo, pats, opts, uninclude=True, **commonopts)
 
@@ -2795,7 +2824,7 @@ def _refreshsubcmd(ui, repo, *pats, **opts) -> None:
 
     This is only necessary if .hg/sparse was changed by hand.
     """
-    _checksparse(repo)
+    _abortifnotregularsparse(repo)
 
     force = opts.get("force")
     with repo.wlock():
@@ -2833,7 +2862,7 @@ def _config(
     disableprofile: bool = False,
     force: bool = False,
 ) -> None:
-    _checksparse(repo)
+    _abortifnotsparse(repo)
 
     """
     Perform a sparse config update. Only one of the kwargs may be specified.
@@ -2963,7 +2992,7 @@ def _checknonexistingprofiles(ui, repo, profiles) -> None:
 
 
 def _import(ui, repo, files, opts, force: bool = False) -> None:
-    _checksparse(repo)
+    _abortifnotregularsparse(repo)
 
     with repo.wlock():
         # load union of current active profile
@@ -3033,7 +3062,7 @@ def _import(ui, repo, files, opts, force: bool = False) -> None:
 
 
 def _clear(ui, repo, files, force: bool = False) -> None:
-    _checksparse(repo)
+    _abortifnotregularsparse(repo)
 
     with repo.wlock():
         raw = ""
@@ -3089,7 +3118,7 @@ def _cwdlist(repo) -> None:
     """List the contents in the current directory. Annotate
     the files in the sparse profile.
     """
-    _checksparse(repo)
+    _abortifnotregularsparse(repo)
 
     ctx = repo["."]
     mf = ctx.manifest()
