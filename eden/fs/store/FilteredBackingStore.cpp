@@ -356,11 +356,18 @@ folly::SemiFuture<BackingStore::GetBlobResult> FilteredBackingStore::getBlob(
 folly::SemiFuture<folly::Unit> FilteredBackingStore::prefetchBlobs(
     ObjectIdRange ids,
     const ObjectFetchContextPtr& context) {
-  std::vector<ObjectId> nonFilteredIds;
-  std::transform(ids.begin(), ids.end(), nonFilteredIds.begin(), [](auto id) {
-    return FilteredObjectId::fromObjectId(id).object();
-  });
-  return backingStore_->prefetchBlobs(nonFilteredIds, context);
+  std::vector<ObjectId> unfilteredIds;
+  unfilteredIds.reserve(ids.size());
+  std::transform(
+      ids.begin(), ids.end(), std::back_inserter(unfilteredIds), [](auto& id) {
+        return FilteredObjectId::fromObjectId(id).object();
+      });
+  // prefetchBlobs() expects that the caller guarantees the ids live at least
+  // longer than this future takes to complete. Therefore, we ensure the
+  // lifetime of the newlly created unfilteredIds.
+  auto fut = backingStore_->prefetchBlobs(unfilteredIds, context);
+  return std::move(fut).deferEnsure(
+      [unfilteredIds = std::move(unfilteredIds)]() {});
 }
 
 void FilteredBackingStore::periodicManagementTask() {
