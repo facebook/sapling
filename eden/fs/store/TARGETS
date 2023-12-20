@@ -149,6 +149,7 @@ cpp_library(
     headers = FILTERED_BACKING_STORE_HEADERS,
     deps = [
         "//eden/fs/model:model",
+        "//eden/fs/utils:filter_utils",
         "//eden/fs/utils:immediate_future",
         "//folly:varint",
     ],

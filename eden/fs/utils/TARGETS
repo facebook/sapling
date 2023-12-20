@@ -185,6 +185,25 @@ cpp_library(
 )
 
 cpp_library(
+    name = "filter_utils",
+    srcs = [
+        "FilterUtils.cpp",
+    ],
+    headers = [
+        "FilterUtils.h",
+    ],
+    deps = [
+        ":throw",
+        "//folly:varint",
+        "//folly/logging:logging",
+    ],
+    exported_deps = [
+        "//eden/fs/model:model",
+        "//folly:range",
+    ],
+)
+
+cpp_library(
     name = "match",
     headers = ["Match.h"],
 )

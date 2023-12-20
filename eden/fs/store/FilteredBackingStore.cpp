@@ -17,6 +17,7 @@
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/filter/Filter.h"
 #include "eden/fs/store/filter/FilteredObjectId.h"
+#include "eden/fs/utils/FilterUtils.h"
 #include "eden/fs/utils/ImmediateFuture.h"
 
 namespace facebook::eden {
@@ -65,26 +66,6 @@ FilteredBackingStore::pathAffectedByFilterChange(
         // can guarantee that they're different.
         return ObjectComparison::Different;
       });
-}
-
-std::tuple<RootId, std::string> parseFilterIdFromRootId(const RootId& rootId) {
-  auto rootRange = folly::range(rootId.value());
-  auto expectedLength = folly::tryDecodeVarint(rootRange);
-  if (UNLIKELY(!expectedLength)) {
-    throwf<std::invalid_argument>(
-        "Could not decode varint; FilteredBackingStore expects a root ID in "
-        "the form of <hashLengthVarint><scmHash><filterId>, got {}",
-        rootId.value());
-  }
-  auto root = RootId{std::string{rootRange.begin(), expectedLength.value()}};
-  auto filterId = std::string{rootRange.begin() + expectedLength.value()};
-  XLOGF(
-      DBG7,
-      "Decoded Original RootId Length: {}, Original RootId: {}, FilterID: {}",
-      expectedLength.value(),
-      filterId,
-      root.value());
-  return {std::move(root), std::move(filterId)};
 }
 
 ObjectComparison FilteredBackingStore::compareObjectsById(
