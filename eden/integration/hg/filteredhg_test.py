@@ -20,7 +20,7 @@ from eden.integration.lib import hgrepo
 class FilteredFSBase(FilteredHgTestCase):
     """Exercise some fundamental operations with filters enabled/disabled."""
 
-    testFilterNull: str = ""
+    testFilterEmpty: str = ""
 
     testFilter1: str = """
 [include]
@@ -80,7 +80,7 @@ bdir/README.md
         # Filter files that determine what is filtered
         repo.write_file("top_level_filter", self.testFilter1)
         repo.write_file("a/nested_filter_file", self.testFilter1)
-        repo.write_file("filters/null_filter", self.testFilterNull)
+        repo.write_file("filters/empty_filter", self.testFilterEmpty)
         repo.write_file("filters/metadata_only", self.testFilterOnlyMetadata)
         repo.write_file("filters/v2", self.testFilterV2)
 
@@ -150,14 +150,17 @@ bdir/README.md
         self.assertEqual(self.read_active_filter(), self.testFilter1)
 
         # A filter that's empty is still valid
-        self.set_active_filter("filters/null_filter")
-        self.assertEqual(self.get_active_filter_path(), "filters/null_filter")
-        self.assertEqual(self.read_active_filter(), self.testFilterNull)
+        self.set_active_filter("filters/empty_filter")
+        self.assertEqual(self.get_active_filter_path(), "filters/empty_filter")
+        # If this filter is successfully turned on, then the repo will be empty
+        # (since v2 profiles allow empty [include]). Therefore we can't compare
+        # the filter contents.
 
         # Filters with only metadata are also valid
         self.set_active_filter("filters/metadata_only")
         self.assertEqual(self.get_active_filter_path(), "filters/metadata_only")
-        self.assertEqual(self.read_active_filter(), self.testFilterOnlyMetadata)
+        # As mentioned above, this filter results in an empty repo. Therefore
+        # no comparison can be done on the contents of the filter.
 
     def test_filter_disable(self) -> None:
         self.set_active_filter("top_level_filter")
@@ -194,7 +197,7 @@ bdir/README.md
 
     def test_filters_follow_v2_rules(self) -> None:
         initial_files = {"bdir", "bdir/README.md", "bdir/noexec.sh", "bdir/test.sh"}
-        filtered_files = initial_files.copy()
+        filtered_files = {"bdir/noexec.sh", "bdir/test.sh"}
 
         # Files exist initially
         self.ensure_filtered_and_unfiltered(set(), initial_files)

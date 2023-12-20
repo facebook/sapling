@@ -240,7 +240,8 @@ async fn _profile_contents_from_repo(
         };
 
         let data = repo_store.get_content(&id.repo_path, file_id)?;
-        let root = Root::from_bytes(data, id.repo_path.to_string())?;
+        let mut root = Root::single_profile(data, id.repo_path.to_string())?;
+        root.set_version_override(Some("2".to_owned()));
         let matcher = root.matcher(|_| Ok(Some(vec![])))?;
         Ok(matcher)
     })?;
