@@ -404,9 +404,8 @@ RootId FilteredBackingStore::parseRootId(folly::StringPiece rootId) {
 }
 
 std::string FilteredBackingStore::renderRootId(const RootId& rootId) {
-  auto [underlyingRootId, filterId] = parseFilterIdFromRootId(rootId);
-  return createFilteredRootId(
-      std::move(underlyingRootId).value(), std::move(filterId));
+  auto [underlyingRootId, _] = parseFilterIdFromRootId(rootId);
+  return backingStore_->renderRootId(underlyingRootId);
 }
 
 ObjectId FilteredBackingStore::parseObjectId(folly::StringPiece objectId) {
@@ -442,5 +441,4 @@ std::string FilteredBackingStore::createFilteredRootId(
       filterId);
   return buf;
 }
-
 } // namespace facebook::eden
