@@ -890,16 +890,57 @@ pub fn sparse_checkout(
     )?;
 
     // 2. Check if status is dirty
-    let status = wc.status(
-        sparse_matcher.clone(),
-        SystemTime::UNIX_EPOCH,
-        false,
-        repo.config(),
+    check_conflicts(
         io,
+        repo,
+        wc,
+        &plan,
+        &target_mf.read(),
+        sparse_matcher.clone(),
     )?;
 
+    // 3. Signal that an update is being performed
+
+    let updatestate_path = wc.dot_hg_path().join("updatestate");
+
+    util::file::atomic_write(&updatestate_path, |f| {
+        write!(f, "{}", target_commit.to_hex())
+    })?;
+
+    // 4. Execute the plan
+    let apply_result = plan.apply_store(repo.file_store()?.as_ref())?;
+
+    for (path, err) in apply_result.remove_failed {
+        let _ = write!(io.error(), "update failed to remove {}: {:#}!\n", path, err);
+    }
+
+    // 5. Update the treestate parents, dirstate
+    wc.set_parents(vec![target_commit], None)?;
+    record_updates(&plan, wc.vfs(), &mut wc.treestate().lock())?;
+    dirstate::flush(
+        wc.vfs().root(),
+        &mut wc.treestate().lock(),
+        repo.locker(),
+        None,
+        None,
+    )?;
+
+    util::file::unlink_if_exists(&updatestate_path)?;
+
+    Ok(plan.stats())
+}
+
+pub(crate) fn check_conflicts(
+    io: &IO,
+    repo: &mut Repo,
+    wc: &LockedWorkingCopy,
+    plan: &CheckoutPlan,
+    target_mf: &TreeManifest,
+    matcher: DynMatcher,
+) -> Result<()> {
+    let status = wc.status(matcher, SystemTime::UNIX_EPOCH, false, repo.config(), io)?;
     let unknown_conflicts = plan.check_unknown_files(
-        &*target_mf.read(),
+        target_mf,
         repo.file_store()?.as_ref(),
         &mut wc.treestate().lock(),
         &status,
@@ -924,34 +965,7 @@ pub fn sparse_checkout(
                 .join("\n "),
         );
     }
-
-    let updatestate_path = wc.dot_hg_path().join("updatestate");
-
-    util::file::atomic_write(&updatestate_path, |f| {
-        write!(f, "{}", target_commit.to_hex())
-    })?;
-
-    // 3. Execute the plan
-    let apply_result = plan.apply_store(repo.file_store()?.as_ref())?;
-
-    for (path, err) in apply_result.remove_failed {
-        let _ = write!(io.error(), "update failed to remove {}: {:#}!\n", path, err);
-    }
-
-    // 4. Update the treestate parents, dirstate
-    wc.set_parents(vec![target_commit], None)?;
-    record_updates(&plan, wc.vfs(), &mut wc.treestate().lock())?;
-    dirstate::flush(
-        wc.vfs().root(),
-        &mut wc.treestate().lock(),
-        repo.locker(),
-        None,
-        None,
-    )?;
-
-    util::file::unlink_if_exists(&updatestate_path)?;
-
-    Ok(plan.stats())
+    Ok(())
 }
 
 fn create_sparse_matchers(
