@@ -75,7 +75,7 @@ impl Builder {
             total: 0,
             unit: "".into(),
             parent: None,
-            adhoc: false,
+            adhoc: true,
         }
     }
 
@@ -116,11 +116,7 @@ impl Builder {
 
     pub fn active(self) -> ActiveProgressBar {
         let registry = self.registry.clone();
-        let bar = self
-            .thread_local_parent()
-            .register(true)
-            .adhoc(true)
-            .pending();
+        let bar = self.thread_local_parent().register(true).pending();
         ProgressBar::push_active(bar, &registry)
     }
 
@@ -193,6 +189,7 @@ impl ProgressBar {
             .total(total)
             .unit(unit)
             .thread_local_parent()
+            .adhoc(false)
             .pending()
     }
 

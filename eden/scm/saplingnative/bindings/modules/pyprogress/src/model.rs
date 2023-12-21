@@ -32,7 +32,6 @@ py_class!(pub class ProgressBar |py| {
             .topic(topic)
             .total(total)
             .unit(unit)
-            .adhoc(true)
             .thread_local_parent()
             .pending();
         ProgressBarModel::set_active(&bar, reg);
