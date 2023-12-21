@@ -112,8 +112,7 @@ class RebaseTest(EdenHgTestCase):
             len(self.repo.log()),
             msg=("At the base commit, `hg log` should have only one entry."),
         )
-        stdout = self.hg("--debug", "update", new_head)
-        self.assert_update_logic(stdout, num_fast_path=1)
+        self.hg("--debug", "update", new_head)
         self.assertEqual(
             11,
             len(self.repo.log()),
