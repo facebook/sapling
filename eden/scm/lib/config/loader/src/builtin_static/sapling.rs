@@ -429,6 +429,7 @@ sb(n)=first(sort(bookmark(), -rev), n)
 sba=sort(bookmark(), -rev)
 top=top()
 bottom=bottom()
+bot=bottom()
 next=next()
 prev=previous
 previous=previous()
