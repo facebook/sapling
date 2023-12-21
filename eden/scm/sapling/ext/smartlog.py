@@ -62,7 +62,6 @@ command = registrar.command(cmdtable)
 revsetpredicate = registrar.revsetpredicate()
 
 testedwith = "ships-with-fb-ext"
-commit_info = False
 
 # Remove unsupported --limit option.
 logopts = [opt for opt in commands.logopts if opt[1] != "limit"]
@@ -72,34 +71,6 @@ configitem = registrar.configitem(configtable)
 
 configitem("smartlog", "collapse-obsolete", default=True)
 configitem("smartlog", "max-commit-threshold", default=1000)
-
-
-def uisetup(ui):
-    def show(orig, self, ctx, *args):
-        res = orig(self, ctx, *args)
-
-        if commit_info and ctx == self.repo["."]:
-            changes = ctx.p1().status(ctx)
-            prefixes = ["M", "A", "R", "!", "?", "I", "C"]
-            labels = [
-                "status.modified",
-                "status.added",
-                "status.removed",
-                "status.deleted",
-                "status.unknown",
-                "status.ignored",
-                "status.copied",
-            ]
-            for prefix, label, change in zip(prefixes, labels, changes):
-                for fname in change:
-                    self.ui.write(
-                        self.ui.label(" {0} {1}\n".format(prefix, fname), label)
-                    )
-            self.ui.write("\n")
-        return res
-
-    extensions.wrapfunction(cmdutil.changeset_printer, "_show", show)
-    extensions.wrapfunction(cmdutil.changeset_templater, "_show", show)
 
 
 templatekeyword = registrar.templatekeyword()
@@ -485,14 +456,26 @@ def smartlog(ui, repo, *pats, **opts):
     Excludes:
 
     - All commits under master that aren't related to your commits
-    - Your local commits that are older than a specified date"""
-    return _smartlog(ui, repo, *pats, **opts)
+    - Your local commits that are older than a specified date
+
+    ``--commit-info`` shows status-like file changes for the current commit, or
+    all drafts when using ``--verbose``. Note this is not the working copy
+    ``status`` and only works with default templates.
+
+    ``--stat` shows ``diff --stat``-like file changes for all drafts.
+    """
+    overrides = {}
+    if opts.get("commit_info"):
+        if ui.verbose:
+            config = "'true'"
+        else:
+            config = "\"{ifeq(graphnode, '@', 'true')}\""
+        overrides[("templatealias", "sl_show_file_change_summary")] = config
+    with ui.configoverride(overrides):
+        return _smartlog(ui, repo, *pats, **opts)
 
 
 def getrevs(ui, repo, masterstring, **opts):
-    global commit_info
-    commit_info = opts.get("commit_info")
-
     headrevs = opts.get("rev")
     if headrevs:
         headspec = revsetlang.formatspec("%lr", headrevs)

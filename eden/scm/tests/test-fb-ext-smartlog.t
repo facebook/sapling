@@ -58,16 +58,40 @@ Basic test
 
 With commit info
   $ echo "hello" >c2 && hg ci --amend
-  $ hg smartlog -T '{node|short} {bookmarks} {desc}' --commit-info
-  @  05d10250273e feature2 d M c2
-  │   A d
+  $ USER=test HGRCPATH="$HGRCPATH;fb=static" hg smartlog -T '{sl}' --commit-info --config extensions.commitcloud=!
+    @  05d102502  1970-01-01 00:00  test  feature2*
+  ╭─╯  d
   │
-  o  38d85b506754 master c2
+  │     M c2
+  │     A d
+  │
+  o  38d85b506  1970-01-01 00:00  test  master public/38d85b50675416788125247211034703776317bd
+  ╷  c2
   ╷
-  ╷ o  49cdb4091aca feature1 b
-  ╭─╯
-  o  b68836a6e2ca  a2
+  ╷ o  49cdb4091  1970-01-01 00:00  test  feature1
+  ╭─╯  b
   │
+  o  b68836a6e  1970-01-01 00:00  test
+  │  a2
+  ~
+
+  $ USER=test HGRCPATH="$HGRCPATH;fb=static" hg smartlog -v -T '{sl}' --commit-info --config extensions.commitcloud=!
+    @  05d102502  1970-01-01 00:00  test  feature2*
+  ╭─╯  d
+  │
+  │     M c2
+  │     A d
+  │
+  o  38d85b506  1970-01-01 00:00  test  master public/38d85b50675416788125247211034703776317bd
+  ╷  c2
+  ╷
+  ╷ o  49cdb4091  1970-01-01 00:00  test  feature1
+  ╭─╯  b
+  │
+  │     A b
+  │
+  o  b68836a6e  1970-01-01 00:00  test
+  │  a2
   ~
 
 As a revset
