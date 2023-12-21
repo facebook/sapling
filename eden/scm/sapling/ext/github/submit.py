@@ -261,16 +261,25 @@ async def rewrite_pull_request_body(
         base = none_throws(partitions[index + 1][0].head_branch_name)
 
     head_commit_data = partition[0]
-    commit_msg = head_commit_data.get_msg()
+
+    pr = head_commit_data.pr
+    assert pr
+
+    title = None
+    if ui.configbool("github", "preserve-pull-request-description"):
+        commit_msg = pr.body
+        title = pr.title
+    else:
+        commit_msg = head_commit_data.get_msg()
+
     title, body = create_pull_request_title_and_body(
         commit_msg,
         pr_numbers_and_num_commits,
         index,
         repository,
+        title,
         reviewstack=ui.configbool("github", "pull-request-include-reviewstack"),
     )
-    pr = head_commit_data.pr
-    assert pr
 
     if pr.state != PullRequestState.OPEN:
         ui.status_err(

@@ -46,6 +46,7 @@ query ($owner: String!, $name: String!, $number: Int!) {
       headRefOid
       headRefName
       body
+      title
     }
   }
 }
