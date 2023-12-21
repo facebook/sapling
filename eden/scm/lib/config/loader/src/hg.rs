@@ -953,7 +953,6 @@ mod tests {
     use std::collections::BTreeMap;
     use std::io::Write;
 
-    use identity::RCPATH_SEP;
     use once_cell::sync::Lazy;
     use tempfile::TempDir;
     use testutil::envs::lock_env;
@@ -1093,7 +1092,7 @@ mod tests {
             dir.path().join("2.rc").display().to_string(),
             format!("user={}", dir.path().join("user.rc").display()),
         ]
-        .join(&RCPATH_SEP.to_string());
+        .join(";");
         env.set(*CONFIG_ENV_VAR, Some(&hgrcpath));
 
         let mut cfg = ConfigSet::new();

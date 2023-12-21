@@ -2735,7 +2735,7 @@ HGMERGE
 
 HGRCPATH
     A list of files to search for configuration files.
-    Item separator is ":" on Unix, ";" on Windows. If HGRCPATH
+    Item separator is ";" or ":" on Unix, ";" on Windows. If HGRCPATH
     is not set, platform default search path is used. If empty, only
     the current repository config is read.
 
