@@ -589,14 +589,30 @@ async fn bonsai_changeset_step<V: VisitOne>(
     checker: &Checker<V>,
     key: &ChangesetKey<ChangesetId>,
 ) -> Result<StepOutput, StepError> {
+    const BONSAI_CHANGESET_PARSE_ERROR: &str = "invalid Thrift structure 'BonsaiChangeset'";
     let bcs_id = &key.inner;
-
-    // Get the data, and add direct file data for this bonsai changeset
-    let bcs = bcs_id.load(ctx, repo.repo_blobstore()).await?;
-
     // Build edges, from mostly queue expansion to least
     let mut edges = vec![];
-
+    // Get the data, and add direct file data for this bonsai changeset
+    let bcs = match bcs_id.load(ctx, repo.repo_blobstore()).await {
+        Err(e) => match e {
+            LoadableError::Error(e) if e.to_string().contains(BONSAI_CHANGESET_PARSE_ERROR) => {
+                let mut scuba = ctx.scuba().clone();
+                scuba.add("changeset_key", key.inner.to_string());
+                scuba.add("repo", repo.repo_identity().name());
+                scuba.log_with_msg(
+                    "Invalid BonsaiChangeset",
+                    "Invalid BonsaiChangeset encountered by walker".to_string(),
+                );
+                return Ok(StepOutput::Done(
+                    checker.step_data(NodeType::Changeset, || NodeData::NotRequired),
+                    edges,
+                ));
+            }
+            other_error => Err(other_error),
+        },
+        bcs => bcs,
+    }?;
     // Expands to parents
     checker.add_edge(
         &mut edges,
