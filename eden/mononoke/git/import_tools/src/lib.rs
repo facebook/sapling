@@ -23,6 +23,7 @@ use anyhow::Error;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
+use futures::try_join;
 use futures::Stream;
 use futures::StreamExt;
 use futures::TryFutureExt;
@@ -67,6 +68,15 @@ pub const TAG_REF: &str = "tag";
 pub const BRANCH_REF_PREFIX: &str = "refs/heads/";
 pub const TAG_REF_PREFIX: &str = "refs/tags/";
 
+/// Enum that represents the types of Git object that are to be stored
+/// in Mononoke
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum GitObjectStorageType {
+    #[allow(dead_code)]
+    RawObjectsOnly,
+    PackfileItemsAndRawObjects,
+}
+
 // TODO: Try to produce copy-info?
 async fn find_file_changes<S, U>(
     ctx: &CoreContext,
@@ -74,6 +84,7 @@ async fn find_file_changes<S, U>(
     reader: &GitRepoReader,
     uploader: U,
     changes: S,
+    object_storage_type: GitObjectStorageType,
 ) -> Result<SortedVectorMap<NonRootMPath, U::Change>, Error>
 where
     S: Stream<Item = Result<BonsaiDiffFileChange<GitLeaf>, Error>>,
@@ -87,24 +98,48 @@ where
                     match change {
                         BonsaiDiffFileChange::Changed(path, ty, GitLeaf(oid))
                         | BonsaiDiffFileChange::ChangedReusedId(path, ty, GitLeaf(oid)) => {
-                            let git_bytes = if ty == FileType::GitSubmodule {
-                                // The OID for a submodule is a commit in
-                                // another repository, so there is no data to
+                            if ty == FileType::GitSubmodule {
+                                // The OID for a submodule is a commit in another repository, so there is no data to
                                 // store.
-                                Bytes::new()
+                                uploader
+                                    .upload_file(&ctx, &lfs, &path, ty, oid, Bytes::new())
+                                    .await
+                                    .map(|change| (path, change))
                             } else {
                                 let object = reader.get_object(&oid).await?;
                                 let blob = object
                                     .parsed
                                     .try_into_blob()
                                     .map_err(|_| format_err!("{} is not a blob", oid))?;
-                                Bytes::from(blob.data)
-                            };
-
-                            uploader
-                                .upload_file(&ctx, &lfs, &path, ty, oid, git_bytes)
-                                .await
-                                .map(|change| (path, change))
+                                if let GitObjectStorageType::PackfileItemsAndRawObjects =
+                                    object_storage_type
+                                {
+                                    let upload_packfile =
+                                        uploader.upload_packfile_base_item(&ctx, oid, object.raw);
+                                    let upload_git_blob = uploader.upload_file(
+                                        &ctx,
+                                        &lfs,
+                                        &path,
+                                        ty,
+                                        oid,
+                                        Bytes::from(blob.data),
+                                    );
+                                    let (_, change) = try_join!(upload_packfile, upload_git_blob)?;
+                                    anyhow::Ok((path, change))
+                                } else {
+                                    uploader
+                                        .upload_file(
+                                            &ctx,
+                                            &lfs,
+                                            &path,
+                                            ty,
+                                            oid,
+                                            Bytes::from(blob.data),
+                                        )
+                                        .await
+                                        .map(|change| (path, change))
+                                }
+                            }
                         }
                         BonsaiDiffFileChange::Deleted(path) => Ok((path, U::deleted())),
                     }
@@ -197,11 +232,23 @@ pub async fn upload_git_tag<Uploader: GitUploader>(
     let tag_bytes = read_raw_object(&reader, tag_id)
         .await
         .with_context(|| format_err!("Failed to fetch git tag {}", tag_id))?;
+    let raw_tag_bytes = tag_bytes.clone();
+    // Upload Packfile Item for the Git Tag
+    let upload_packfile = async {
+        uploader
+            .upload_packfile_base_item(ctx, *tag_id, tag_bytes)
+            .await
+            .with_context(|| format_err!("Failed to upload packfile item for git tag {}", tag_id))
+    };
     // Upload Git Tag
-    uploader
-        .upload_object(ctx, *tag_id, tag_bytes)
-        .await
-        .with_context(|| format_err!("Failed to upload raw git tag {}", tag_id,))
+    let upload_git_tag = async {
+        uploader
+            .upload_object(ctx, *tag_id, raw_tag_bytes)
+            .await
+            .with_context(|| format_err!("Failed to upload raw git tag {}", tag_id))
+    };
+    try_join!(upload_packfile, upload_git_tag)?;
+    Ok(())
 }
 
 pub async fn gitimport_acc<Uploader: GitUploader>(
@@ -266,16 +313,13 @@ pub async fn gitimport_acc<Uploader: GitUploader>(
             async move {
                 task::spawn({
                     async move {
-                        let extracted_commit = ExtractedCommit::new(&ctx, oid, &reader)
-                            .await
-                            .with_context(|| format!("While extracting {}", oid))?;
+                    let extracted_commit = ExtractedCommit::new(&ctx, oid, &reader)
+                        .await
+                        .with_context(|| format!("While extracting {}", oid))?;
 
-                        let diff = extracted_commit.diff(&ctx, &reader, submodules);
-                        let file_changes =
-                            find_file_changes(&ctx, &lfs, &reader, uploader, diff).await?;
-                        // TODO(rajshar): Store the Packfile Item corresponding to each Git blob that is present
-                        // in the diff of the commit (i.e file changed in this commit)
-                        Result::<_, Error>::Ok((extracted_commit, file_changes))
+                    let diff = extracted_commit.diff(&ctx, &reader, submodules);
+                    let file_changes = find_file_changes(&ctx, &lfs, &reader, uploader, diff, GitObjectStorageType::PackfileItemsAndRawObjects).await?;
+                    Result::<_, Error>::Ok((extracted_commit, file_changes))
                     }
                 })
                 .await?
@@ -323,28 +367,54 @@ pub async fn gitimport_acc<Uploader: GitUploader>(
                                         oid
                                     )
                                 })?;
-                            // Upload Git Tree
-                            uploader
-                                .upload_object(ctx, entry.0, tree_for_commit)
+                            let tree_bytes = tree_for_commit.clone();
+                            // Upload packfile base item for given tree object and the raw Git tree
+                            let packfile_item_upload = async {
+                                uploader
+                                .upload_packfile_base_item(ctx, entry.0, tree_for_commit)
                                 .await
                                 .with_context(|| {
                                     format_err!(
-                                        "Failed to upload raw git tree {} for commit {}",
+                                        "Failed to upload packfile item for git tree {} for commit {}",
                                         entry.0,
                                         oid
                                     )
-                                })?;
+                                })
+                            };
+                            let git_tree_upload = async {
+                                uploader.upload_object(ctx, entry.0, tree_bytes).await
+                                .with_context(|| {
+                                    format_err!("Failed to upload raw git tree {} for commit {}", entry.0, oid) 
+                                })
+                            };
+                            try_join!(packfile_item_upload, git_tree_upload)?;
                             anyhow::Ok(())
                         }
                     })
                     .try_buffer_unordered(100)
                     .try_collect()
                     .await?;
+                // Upload packfile base item for Git commit and the raw Git commit
+                let packfile_item_upload = async {
+                    uploader
+                        .upload_packfile_base_item(
+                            ctx,
+                            oid,
+                            extracted_commit.original_commit.clone(),
+                        )
+                        .await
+                        .with_context(|| {
+                            format_err!("Failed to upload packfile item for git commit {}", oid)
+                        })
+                };
+                let git_commit_upload = async {
+                    uploader
+                        .upload_object(ctx, oid, extracted_commit.original_commit.clone())
+                        .await
+                        .with_context(|| format_err!("Failed to upload raw git commit {}", oid))
+                };
+                try_join!(packfile_item_upload, git_commit_upload)?;
                 // Upload Git commit
-                uploader
-                    .upload_object(ctx, oid, extracted_commit.original_commit)
-                    .await
-                    .with_context(|| format_err!("Failed to upload raw git commit {}", oid))?;
                 let (int_cs, bcs_id) = uploader
                     .generate_changeset_for_commit(
                         ctx,
@@ -536,7 +606,15 @@ pub async fn import_tree_as_single_bonsai_changeset(
         .with_context(|| format!("While extracting {}", git_cs_id))?;
 
     let diff = extracted_commit.diff_root(ctx, &reader, prefs.submodules);
-    let file_changes = find_file_changes(ctx, &prefs.lfs, &reader, uploader.clone(), diff).await?;
+    let file_changes = find_file_changes(
+        ctx,
+        &prefs.lfs,
+        &reader,
+        uploader.clone(),
+        diff,
+        GitObjectStorageType::PackfileItemsAndRawObjects,
+    )
+    .await?;
 
     // Before generating the corresponding changeset at Mononoke end, upload the raw git commit.
     uploader

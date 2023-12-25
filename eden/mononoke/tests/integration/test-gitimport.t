@@ -50,6 +50,12 @@
   blob-repo0000.git_object.8ce3eae44760b500bf3f2c3922a95dcd3c908e9e
   blob-repo0000.git_object.cb2ef838eb24e4667fee3a8b89c930234ae6e4bb
 
+# Validate if creating the commit also uploaded the packfile items for the imported git objects
+  $ ls $TESTTMP/blobstore/blobs | grep "git_packfile_base_item"
+  blob-repo0000.git_packfile_base_item.433eb172726bc7b6d60e8d68efb0f0ef4e67a667
+  blob-repo0000.git_packfile_base_item.8ce3eae44760b500bf3f2c3922a95dcd3c908e9e
+  blob-repo0000.git_packfile_base_item.cb2ef838eb24e4667fee3a8b89c930234ae6e4bb
+
 # Validate if we imported the HEAD symref
   $ mononoke_newadmin git-symref -R repo get --symref-name HEAD
   The symbolic ref HEAD points to branch master
@@ -147,6 +153,17 @@
   blob-repo0000.git_object.cb2ef838eb24e4667fee3a8b89c930234ae6e4bb
   blob-repo0000.git_object.e8615d6f149b876be0a2f30a1c5bf0c42bf8e136
   blob-repo0000.git_object.fb02ed046a1e75fe2abb8763f7c715496ae36353
+
+# Generating bookmarks should upload the packfile base item for the git tag object to blobstore.
+  $ ls $TESTTMP/blobstore/blobs | grep "git_packfile_base_item"
+  blob-repo0000.git_packfile_base_item.433eb172726bc7b6d60e8d68efb0f0ef4e67a667
+  blob-repo0000.git_packfile_base_item.7327e6c9b533787eeb80877d557d50f39c480f54
+  blob-repo0000.git_packfile_base_item.8963e1f55d1346a07c3aec8c8fc72bf87d0452b1
+  blob-repo0000.git_packfile_base_item.8ce3eae44760b500bf3f2c3922a95dcd3c908e9e
+  blob-repo0000.git_packfile_base_item.cb2ef838eb24e4667fee3a8b89c930234ae6e4bb
+  blob-repo0000.git_packfile_base_item.e8615d6f149b876be0a2f30a1c5bf0c42bf8e136
+  blob-repo0000.git_packfile_base_item.f138820097c8ef62a012205db0b1701df516f6d5
+  blob-repo0000.git_packfile_base_item.fb02ed046a1e75fe2abb8763f7c715496ae36353
 
 # Cross reference with the tag blobs present in the git store
 # (There should be two, first_tag and empty_tag)
