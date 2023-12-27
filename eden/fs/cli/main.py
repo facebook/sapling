@@ -2396,30 +2396,32 @@ def create_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="edenfsctl", description="Manage EdenFS checkouts."
     )
+    global_opts = parser.add_argument_group("global options")
+
     # TODO: We should probably rename this argument to --state-dir.
     # This directory contains materialized file state and the list of managed checkouts,
     # but doesn't really contain configuration.
-    parser.add_argument(
+    global_opts.add_argument(
         "--config-dir",
         help="The path to the directory where EdenFS stores its internal state.",
     )
-    parser.add_argument(
+    global_opts.add_argument(
         "--etc-eden-dir",
         help="Path to directory that holds the system configuration files.",
     )
-    parser.add_argument(
+    global_opts.add_argument(
         "--home-dir", help="Path to directory where .edenrc config file is stored."
     )
-    parser.add_argument("--checkout-dir", help=argparse.SUPPRESS)
-    parser.add_argument(
+    global_opts.add_argument("--checkout-dir", help=argparse.SUPPRESS)
+    global_opts.add_argument(
         "--version", "-v", action="store_true", help="Print EdenFS version."
     )
-    parser.add_argument(
+    global_opts.add_argument(
         "--debug",
         action="store_true",
         help="Enable debug mode (more verbose logging, traceback, etc..)",
     )
-    parser.add_argument(
+    global_opts.add_argument(
         "--press-to-continue",
         action="store_true",
         help=argparse.SUPPRESS,

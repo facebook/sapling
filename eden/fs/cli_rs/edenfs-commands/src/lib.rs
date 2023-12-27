@@ -55,7 +55,8 @@ type ExitCode = i32;
 #[clap(
     name = "edenfsctl",
     disable_version_flag = true,
-    disable_help_flag = false
+    disable_help_flag = false,
+    next_help_heading = "GLOBAL OPTIONS"
 )]
 pub struct MainCommand {
     /// The path to the directory where edenfs stores its internal state.
