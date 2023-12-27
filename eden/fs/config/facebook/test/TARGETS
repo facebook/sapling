@@ -11,3 +11,11 @@ python_unittest(
         "//eden/fs/config/facebook:edenfs_config_manager_lib",
     ],
 )
+
+python_unittest(
+    name = "edenfs_config_util_test",
+    srcs = ["edenfs_config_util_test.py"],
+    deps = [
+        "//eden/fs/config/facebook:edenfs_config_util",
+    ],
+)
