@@ -59,22 +59,23 @@ type ExitCode = i32;
     next_help_heading = "GLOBAL OPTIONS"
 )]
 pub struct MainCommand {
-    /// The path to the directory where edenfs stores its internal state.
+    /// Path to directory where edenfs stores its internal state
     #[clap(global = true, long, parse(from_str = expand_path))]
     config_dir: Option<PathBuf>,
 
-    /// Path to directory that holds the system configuration files.
+    /// Path to directory that holds the system configuration files
     #[clap(global = true, long, parse(from_str = expand_path))]
     etc_eden_dir: Option<PathBuf>,
 
-    /// Path to directory where .edenrc config file is stored.
+    /// Path to directory where .edenrc config file is stored
     #[clap(global = true, long, parse(from_str = expand_path))]
     home_dir: Option<PathBuf>,
 
-    /// Path to directory within a checkout.
+    /// Path to directory within a checkout
     #[clap(global = true, long, parse(from_str = expand_path), hide = true)]
     checkout_dir: Option<PathBuf>,
 
+    /// Enable debug mode (more verbose logging, traceback, etc..)
     #[clap(global = true, long)]
     pub debug: bool,
 

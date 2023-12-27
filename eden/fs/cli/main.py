@@ -2403,18 +2403,18 @@ def create_parser() -> argparse.ArgumentParser:
     # but doesn't really contain configuration.
     global_opts.add_argument(
         "--config-dir",
-        help="The path to the directory where EdenFS stores its internal state.",
+        help="Path to directory where EdenFS stores its internal state",
     )
     global_opts.add_argument(
         "--etc-eden-dir",
-        help="Path to directory that holds the system configuration files.",
+        help="Path to directory that holds the system configuration files",
     )
     global_opts.add_argument(
-        "--home-dir", help="Path to directory where .edenrc config file is stored."
+        "--home-dir", help="Path to directory where .edenrc config file is stored"
     )
     global_opts.add_argument("--checkout-dir", help=argparse.SUPPRESS)
     global_opts.add_argument(
-        "--version", "-v", action="store_true", help="Print EdenFS version."
+        "--version", "-v", action="store_true", help="Print EdenFS version"
     )
     global_opts.add_argument(
         "--debug",
