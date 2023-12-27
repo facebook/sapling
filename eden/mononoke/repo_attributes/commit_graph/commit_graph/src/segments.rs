@@ -21,6 +21,8 @@ use commit_graph_types::segments::ChangesetSegmentParent;
 use commit_graph_types::segments::Location;
 use commit_graph_types::storage::CommitGraphStorage;
 use commit_graph_types::storage::Prefetch;
+use commit_graph_types::storage::PrefetchEdge;
+use commit_graph_types::storage::PrefetchTarget;
 use context::CoreContext;
 use futures::stream;
 use futures::StreamExt;
@@ -29,6 +31,7 @@ use futures_stats::TimedTryFutureExt;
 use itertools::Itertools;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
+use mononoke_types::FIRST_GENERATION;
 use slog::debug;
 use smallvec::smallvec;
 use smallvec::SmallVec;
@@ -874,8 +877,19 @@ impl CommitGraph {
 
         // Traverse the parents of the ancestor `count` - 1 times to get the rest
         // of the ancestors.
-        for _ in 1..count {
-            let ancestor_edges = self.storage.fetch_edges(ctx, ancestor).await?;
+        for index in 1..count {
+            let ancestor_edges = self
+                .storage
+                .fetch_many_edges(ctx, &[ancestor], Prefetch::Hint(PrefetchTarget {
+                    edge: PrefetchEdge::FirstParent,
+                    generation: FIRST_GENERATION,
+                    steps: count - index,
+                }))
+                .await?
+                .remove(&ancestor)
+                .ok_or_else(|| anyhow!("Missing changeset from commit graph storage: {} (locations_to_changeset_ids)", cs_id))?
+                .edges();
+
             ancestor = ancestor_edges
                 .parents
                 .into_iter()
