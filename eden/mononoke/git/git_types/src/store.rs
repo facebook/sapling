@@ -132,13 +132,14 @@ where
     Ok(object.into())
 }
 
-/// Free function for uploading packfile item for git base object
+/// Free function for uploading packfile item for git base object and
+/// returning the uploaded object
 pub async fn upload_packfile_base_item<B>(
     ctx: &CoreContext,
     blobstore: &B,
     git_hash: &gix_hash::oid,
     raw_content: Vec<u8>,
-) -> anyhow::Result<(), GitError>
+) -> anyhow::Result<GitPackfileBaseItem, GitError>
 where
     B: Blobstore + Clone,
 {
@@ -164,10 +165,36 @@ where
         .put(
             ctx,
             blobstore_key,
-            packfile_base_item.into_blobstore_bytes(),
+            packfile_base_item.clone().into_blobstore_bytes(),
         )
         .await
-        .map_err(|e| GitError::StorageFailure(git_hash.to_hex().to_string(), e.into()))
+        .map_err(|e| GitError::StorageFailure(git_hash.to_hex().to_string(), e.into()))?;
+    Ok(packfile_base_item)
+}
+
+/// Free function for fetching stored packfile item for base git if it exists.
+/// If the object doesn't exist, None is returned instead of an error.
+pub async fn fetch_packfile_base_item_if_exists<B>(
+    ctx: &CoreContext,
+    blobstore: &B,
+    git_hash: &gix_hash::oid,
+) -> anyhow::Result<Option<GitPackfileBaseItem>, GitError>
+where
+    B: Blobstore + Clone,
+{
+    let blobstore_key = format!(
+        "{}{}{}",
+        GIT_PACKFILE_BASE_ITEM_PREFIX,
+        SEPARATOR,
+        git_hash.to_hex()
+    );
+    blobstore
+        .get(ctx, &blobstore_key)
+        .await
+        .map_err(|e| GitError::StorageFailure(git_hash.to_hex().to_string(), e.into()))?
+        .map(|obj| GitPackfileBaseItem::from_encoded_bytes(obj.into_raw_bytes()))
+        .transpose()
+        .map_err(|_| GitError::InvalidPackfileItem(git_hash.to_hex().to_string()))
 }
 
 /// Free function for fetching stored packfile item for base git object
@@ -180,20 +207,9 @@ pub async fn fetch_packfile_base_item<B>(
 where
     B: Blobstore + Clone,
 {
-    let blobstore_key = format!(
-        "{}{}{}",
-        GIT_PACKFILE_BASE_ITEM_PREFIX,
-        SEPARATOR,
-        git_hash.to_hex()
-    );
-    let object_bytes = blobstore
-        .get(ctx, &blobstore_key)
-        .await
-        .map_err(|e| GitError::StorageFailure(git_hash.to_hex().to_string(), e.into()))?
-        .ok_or_else(|| GitError::NonExistentObject(git_hash.to_hex().to_string()))?
-        .into_raw_bytes();
-    GitPackfileBaseItem::from_encoded_bytes(object_bytes)
-        .map_err(|_| GitError::InvalidPackfileItem(git_hash.to_hex().to_string()))
+    fetch_packfile_base_item_if_exists(ctx, blobstore, git_hash)
+        .await?
+        .ok_or_else(|| GitError::NonExistentObject(git_hash.to_hex().to_string()))
 }
 
 /// Struct containing the information pertaining to stored chunks of raw instructions

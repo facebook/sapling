@@ -190,7 +190,8 @@ pub async fn upload_packfile_base_item<B>(
 where
     B: Blobstore + Clone,
 {
-    git_types::upload_packfile_base_item(ctx, blobstore, git_hash, raw_content).await
+    git_types::upload_packfile_base_item(ctx, blobstore, git_hash, raw_content).await?;
+    Ok(())
 }
 
 /// Free function for creating Mononoke counterpart of Git tree object

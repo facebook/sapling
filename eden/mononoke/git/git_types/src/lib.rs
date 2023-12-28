@@ -42,6 +42,8 @@ pub use crate::errors::GitError;
 pub use crate::store::fetch_delta_instructions;
 pub use crate::store::fetch_git_object;
 pub use crate::store::fetch_git_object_bytes;
+pub use crate::store::fetch_packfile_base_item;
+pub use crate::store::fetch_packfile_base_item_if_exists;
 pub use crate::store::upload_git_object;
 pub use crate::store::upload_packfile_base_item;
 pub use crate::tree::Tree;
