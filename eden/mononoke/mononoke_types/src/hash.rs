@@ -554,6 +554,10 @@ pub struct RichGitSha1 {
 }
 
 impl RichGitSha1 {
+    pub fn is_blob(&self) -> bool {
+        self.ty == "blob"
+    }
+
     pub fn from_bytes(bytes: impl AsRef<[u8]>, ty: &'static str, size: u64) -> Result<Self> {
         Ok(Self::from_sha1(GitSha1::from_bytes(bytes)?, ty, size))
     }

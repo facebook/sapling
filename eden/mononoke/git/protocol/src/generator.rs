@@ -409,7 +409,6 @@ async fn packfile_entry(
         let bytes = get_object_bytes(
             ctx,
             blobstore.clone(),
-            &entry.full,
             &entry.full.as_rich_git_sha1()?,
             git_types::HeaderState::Included,
         )

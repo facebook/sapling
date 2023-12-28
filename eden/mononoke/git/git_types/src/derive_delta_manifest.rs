@@ -142,43 +142,41 @@ pub enum HeaderState {
 pub async fn get_object_bytes(
     ctx: &CoreContext,
     blobstore: Arc<dyn Blobstore>,
-    entry: &ObjectEntry,
     sha: &RichGitSha1,
     header_state: HeaderState,
 ) -> Result<Bytes> {
-    match entry.kind {
+    let git_objectid = sha.sha1().to_object_id()?;
+    if sha.is_blob() {
         // Blobs are stored as regular content in Mononoke and can be accessed via GitSha1 alias
-        DeltaObjectKind::Blob => {
-            let fetch_key = sha.clone().into();
-            let (bytes_stream, num_bytes) = fetch_with_size(blobstore, ctx, &fetch_key)
-                .await
-                .map_err(|e| GitError::StorageFailure(sha.to_hex().to_string(), e.into()))?
-                .ok_or_else(|| GitError::NonExistentObject(sha.to_hex().to_string()))?;
-            // The blob object stored in the blobstore exists without the git header. Prepend the git blob header before retuning the bytes
-            let mut header_bytes = match header_state {
-                HeaderState::Included => sha.prefix(),
-                HeaderState::Excluded => vec![],
-            };
-            // We know the number of bytes we are going to write so reserve the buffer to avoid resizing
-            header_bytes.reserve(num_bytes as usize);
-            bytes_stream
-                .try_fold(header_bytes, |mut acc, bytes| async move {
-                    acc.append(&mut bytes.to_vec());
-                    anyhow::Ok(acc)
-                })
-                .await
-                .map(Bytes::from)
-        }
-        // Trees are stored directly as raw Git trees in Mononoke
-        DeltaObjectKind::Tree => {
-            let object = fetch_git_object(ctx, &blobstore, entry.oid.as_ref()).await?;
-            let mut object_bytes = match header_state {
-                HeaderState::Included => object.loose_header().into_vec(),
-                HeaderState::Excluded => vec![],
-            };
-            object.write_to(object_bytes.by_ref())?;
-            Ok(Bytes::from(object_bytes))
-        }
+        let fetch_key = sha.clone().into();
+        let (bytes_stream, num_bytes) = fetch_with_size(blobstore, ctx, &fetch_key)
+            .await
+            .map_err(|e| GitError::StorageFailure(sha.to_hex().to_string(), e.into()))?
+            .ok_or_else(|| GitError::NonExistentObject(sha.to_hex().to_string()))?;
+        // The blob object stored in the blobstore exists without the git header. Prepend the git blob header before retuning the bytes
+        let mut header_bytes = match header_state {
+            HeaderState::Included => sha.prefix(),
+            HeaderState::Excluded => vec![],
+        };
+        // We know the number of bytes we are going to write so reserve the buffer to avoid resizing
+        header_bytes.reserve(num_bytes as usize);
+        bytes_stream
+            .try_fold(header_bytes, |mut acc, bytes| async move {
+                acc.append(&mut bytes.to_vec());
+                anyhow::Ok(acc)
+            })
+            .await
+            .map(Bytes::from)
+    }
+    // Non-blob objects are stored directly as raw Git objects in Mononoke
+    else {
+        let object = fetch_git_object(ctx, &blobstore, git_objectid.as_ref()).await?;
+        let mut object_bytes = match header_state {
+            HeaderState::Included => object.loose_header().into_vec(),
+            HeaderState::Excluded => vec![],
+        };
+        object.write_to(object_bytes.by_ref())?;
+        Ok(Bytes::from(object_bytes))
     }
 }
 
@@ -210,8 +208,8 @@ async fn metadata_to_manifest_entry(
                         )
                     })?;
                 let origin = delta_metadata.origin;
-                let actual_object = get_object_bytes(&ctx, blobstore.clone(), &full_object_entry, metadata.actual.oid(), HeaderState::Excluded).await?;
-                let base_object = get_object_bytes(&ctx, blobstore.clone(), &base, delta_metadata.object.oid(), HeaderState::Excluded).await?;
+                let actual_object = get_object_bytes(&ctx, blobstore.clone(),metadata.actual.oid(), HeaderState::Excluded).await?;
+                let base_object = get_object_bytes(&ctx, blobstore.clone(), delta_metadata.object.oid(), HeaderState::Excluded).await?;
                 // Objects are only valid for deltas when they are trees OR UTF-8 encoded blobs
                 let actual_object_valid = full_object_entry.kind == DeltaObjectKind::Tree || from_utf8(&actual_object).is_ok();
                 let base_object_valid = base.kind == DeltaObjectKind::Tree || from_utf8(&base_object).is_ok();
