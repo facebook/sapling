@@ -491,61 +491,6 @@ class exactmatcher(basematcher):
         return "<exactmatcher files=%r>" % self._files
 
 
-class differencematcher(basematcher):
-    """Composes two matchers by matching if the first matches and the second
-    does not. Well, almost... If the user provides a pattern like "-X foo foo",
-    Mercurial actually does match "foo" against that. That's because exact
-    matches are treated specially. So, since this differencematcher is used for
-    excludes, it needs to special-case exact matching.
-
-    The second matcher's non-matching-attributes (root, cwd, bad, traversedir)
-    are ignored.
-
-    TODO: If we want to keep the behavior described above for exact matches, we
-    should consider instead treating the above case something like this:
-    union(exact(foo), difference(pattern(foo), include(foo)))
-    """
-
-    def __init__(self, m1, m2):
-        super(differencematcher, self).__init__(m1._root, m1._cwd)
-        self._m1 = m1
-        self._m2 = m2
-        self.bad = m1.bad
-        self.traversedir = m1.traversedir
-
-    def matchfn(self, f):
-        return self._m1(f) and (not self._m2(f) or self._m1.exact(f))
-
-    @propertycache
-    def _files(self):
-        if self.isexact():
-            return [f for f in self._m1.files() if self(f)]
-        # If m1 is not an exact matcher, we can't easily figure out the set of
-        # files, because its files() are not always files. For example, if
-        # m1 is "path:dir" and m2 is "rootfileins:.", we don't
-        # want to remove "dir" from the set even though it would match m2,
-        # because the "dir" in m1 may not be a file.
-        return self._m1.files()
-
-    def visitdir(self, dir):
-        dir = normalizerootdir(dir, "visitdir")
-        if not self._m2.visitdir(dir):
-            return self._m1.visitdir(dir)
-
-        if self._m2.visitdir(dir) == "all":
-            # There's a bug here: If m1 matches file 'dir/file' and m2 excludes
-            # 'dir' (recursively), we should still visit 'dir' due to the
-            # exception we have for exact matches.
-            return False
-        return bool(self._m1.visitdir(dir))
-
-    def isexact(self):
-        return self._m1.isexact()
-
-    def __repr__(self):
-        return "<differencematcher m1=%r, m2=%r>" % (self._m1, self._m2)
-
-
 def intersectmatchers(m1, m2):
     """Composes two matchers by matching if both of them match.
 
@@ -700,7 +645,7 @@ class xormatcher(basematcher):
         return True
 
     def __repr__(self):
-        return "<xormatcher matchers=%r>" % self._matchers
+        return "<xormatcher m1=%r m2=%r>" % (self.m1, self.m2)
 
 
 def patkind(pattern, default=None):
