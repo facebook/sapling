@@ -1626,6 +1626,13 @@ class Test(unittest.TestCase):
                     cleanup()
                     break
 
+                # defend against very large outputs
+                # 10_000_000 = 50_000 * 200 (assuming each line has 200 bytes)
+                if sum(len(s) for s in lines) > 10_000_000:
+                    log(f"Test command '{cmd}' outputs too large")
+                    cleanup()
+                    break
+
         except KeyboardInterrupt:
             vlog("# Handling keyboard interrupt")
             cleanup()
