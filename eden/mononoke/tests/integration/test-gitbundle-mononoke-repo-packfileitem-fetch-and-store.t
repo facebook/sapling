@@ -113,8 +113,17 @@
   * Bookmark: "tags/simple_tag": ChangesetId(Blake2(*)) (created) (glob)
   * Bookmark: "tags/tag_version": ChangesetId(Blake2(*)) (created) (glob)
 
-# Regenerate the Git repo out of the Mononoke repo
-  $ mononoke_newadmin git-bundle create from-repo -R repo --output-location "$BUNDLE_PATH"
+# Get the count of stored packfile items
+  $ ls "$TESTTMP"/blobstore/blobs/*git_packfile_base_item* | wc -l
+  39
+
+# Remove all the stored packfile items so that we can generate and store it when needed
+  $ rm -f "$TESTTMP"/blobstore/blobs/*git_packfile_base_item*
+
+# Regenerate the Git repo out of the Mononoke repo using stored packfile items and verify that it when the stored
+# packfile items are missing, the tool regenerates them
+  $ mononoke_newadmin git-bundle create from-repo -R repo --output-location "$BUNDLE_PATH" --packfile-item-inclusion fetch-and-store
+
 # Ensure that Git considers this a valid bundle
   $ cd $GIT_REPO
   $ git bundle verify $BUNDLE_PATH
@@ -132,11 +141,11 @@
   The bundle records a complete history.
 
 # Create a new empty folder for containing the repo
-  $ mkdir $TESTTMP/git_client_repo  
+  $ mkdir $TESTTMP/git_packfile_item_repo  
   $ cd "$TESTTMP"
-  $ git clone "$BUNDLE_PATH" git_client_repo
-  Cloning into 'git_client_repo'...
-  $ cd git_client_repo
+  $ git clone "$BUNDLE_PATH" git_packfile_item_repo
+  Cloning into 'git_packfile_item_repo'...
+  $ cd git_packfile_item_repo
 
 # Get the repository log and verify if its the same as earlier
   $ git log --pretty=format:"%h %an %s %D" > $TESTTMP/new_repo_log
@@ -147,3 +156,8 @@
 
 # Ensure that there are no differences between the set of objects by diffing both object list files
   $ diff -w $TESTTMP/new_object_list $TESTTMP/object_list
+
+# Verify that generating the bundle regenerated the needed packfile items. Note that the count will not be the same as
+# before since the bundle creator would use deltas where appropriate which would skip base packfile items
+  $ ls $TESTTMP/blobstore/blobs | grep "git_packfile_base_item" | wc -l
+  26

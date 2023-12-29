@@ -113,8 +113,8 @@
   * Bookmark: "tags/simple_tag": ChangesetId(Blake2(*)) (created) (glob)
   * Bookmark: "tags/tag_version": ChangesetId(Blake2(*)) (created) (glob)
 
-# Regenerate the Git repo out of the Mononoke repo
-  $ mononoke_newadmin git-bundle create from-repo -R repo --output-location "$BUNDLE_PATH"
+# Regenerate the Git repo out of the Mononoke repo using stored packfile items and verify that it works
+  $ mononoke_newadmin git-bundle create from-repo -R repo --output-location "$BUNDLE_PATH" --packfile-item-inclusion fetch-only
 # Ensure that Git considers this a valid bundle
   $ cd $GIT_REPO
   $ git bundle verify $BUNDLE_PATH
@@ -132,11 +132,11 @@
   The bundle records a complete history.
 
 # Create a new empty folder for containing the repo
-  $ mkdir $TESTTMP/git_client_repo  
+  $ mkdir $TESTTMP/git_packfile_item_repo  
   $ cd "$TESTTMP"
-  $ git clone "$BUNDLE_PATH" git_client_repo
-  Cloning into 'git_client_repo'...
-  $ cd git_client_repo
+  $ git clone "$BUNDLE_PATH" git_packfile_item_repo
+  Cloning into 'git_packfile_item_repo'...
+  $ cd git_packfile_item_repo
 
 # Get the repository log and verify if its the same as earlier
   $ git log --pretty=format:"%h %an %s %D" > $TESTTMP/new_repo_log
@@ -146,4 +146,4 @@
   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/new_object_list
 
 # Ensure that there are no differences between the set of objects by diffing both object list files
-  $ diff -w $TESTTMP/new_object_list $TESTTMP/object_list
+  $ diff -w $TESTTMP/new_object_list $TESTTMP/object_list 

@@ -96,10 +96,11 @@ impl DeltaInclusion {
 }
 
 /// Enum defining how packfile items for raw git objects be fetched
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(clap::ValueEnum, Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PackfileItemInclusion {
     // Generate the packfile item for raw git object regardless of whether
     // it already exists or not. Do not store the generated packfile item.
+    #[default]
     Generate,
     // Fetch the stored packfile item for the raw git object. If it doesn't
     // exist, error out
