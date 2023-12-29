@@ -21,7 +21,6 @@ futures = { version = "0.3.28", features = ["async-await", "compat"] }
 git_symbolic_refs = { version = "0.1.0", path = "../../git_symbolic_refs" }
 git_types = { version = "0.1.0", path = "../git_types" }
 gix-hash = "0.11"
-gix-object = "0.33"
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 packfile = { version = "0.1.0", path = "../packfile" }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }

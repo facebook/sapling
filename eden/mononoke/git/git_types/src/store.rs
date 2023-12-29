@@ -198,7 +198,6 @@ where
 }
 
 /// Free function for fetching stored packfile item for base git object
-#[allow(dead_code)]
 pub async fn fetch_packfile_base_item<B>(
     ctx: &CoreContext,
     blobstore: &B,

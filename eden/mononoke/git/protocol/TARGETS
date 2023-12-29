@@ -12,7 +12,6 @@ rust_library(
         "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:gix-hash",
-        "fbsource//third-party/rust:gix-object",
         "fbsource//third-party/rust:rustc-hash",
         "//eden/mononoke/blobrepo:repo_blobstore",
         "//eden/mononoke/blobstore:blobstore",

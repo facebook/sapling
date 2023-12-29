@@ -33,13 +33,22 @@ use crate::thrift;
 /// See: https://fburl.com/1yaui1um
 #[derive(Debug)]
 pub enum PackfileItem {
+    /// The base object representing a raw git type (e.g. commit, tree, tag or blob)
     Base(BaseObject),
+    /// The base object which already contains the encoded version of the raw git type
+    /// as expected by the packfile format
+    EncodedBase(output::Entry),
+    /// The delta object which represents a change between two objects identified by their hashes
     OidDelta(DeltaOidObject),
 }
 
 impl PackfileItem {
     pub fn new_base(object_bytes: Bytes) -> Result<Self> {
         BaseObject::new(object_bytes).map(Self::Base)
+    }
+
+    pub fn new_encoded_base(entry: output::Entry) -> Self {
+        Self::EncodedBase(entry)
     }
 
     pub fn new_delta(
@@ -63,16 +72,10 @@ impl TryFrom<PackfileItem> for output::Entry {
     fn try_from(value: PackfileItem) -> Result<Self> {
         match value {
             PackfileItem::Base(base) => base.try_into(),
+            PackfileItem::EncodedBase(entry) => Ok(entry),
             PackfileItem::OidDelta(oid_delta) => oid_delta.try_into(),
         }
     }
-}
-
-/// The type of the packfile item
-#[allow(dead_code)]
-pub enum PackfileItemType {
-    Base,
-    OidDelta,
 }
 
 /// Struct representing the DeltaOid variant of the packfile item. Used to express

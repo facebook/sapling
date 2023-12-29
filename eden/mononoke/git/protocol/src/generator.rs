@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::io::Write;
 use std::sync::Arc;
 
 use anyhow::Context;
@@ -21,6 +20,7 @@ use bookmarks::BookmarkPagination;
 use bookmarks::BookmarkPrefix;
 use bookmarks::BookmarksRef;
 use bookmarks::Freshness;
+use bytes::Bytes;
 use bytes::BytesMut;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
@@ -30,13 +30,17 @@ use futures::StreamExt;
 use futures::TryStreamExt;
 use git_symbolic_refs::GitSymbolicRefsRef;
 use git_types::fetch_delta_instructions;
-use git_types::fetch_git_object;
+use git_types::fetch_git_object_bytes;
+use git_types::fetch_packfile_base_item;
+use git_types::fetch_packfile_base_item_if_exists;
 use git_types::get_object_bytes;
+use git_types::upload_packfile_base_item;
 use git_types::DeltaInstructionChunkIdPrefix;
 use git_types::GitDeltaManifestEntry;
+use git_types::HeaderState;
 use git_types::RootGitDeltaManifestId;
 use gix_hash::ObjectId;
-use gix_object::WriteTo;
+use mononoke_types::hash::RichGitSha1;
 use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
 use packfile::types::PackfileItem;
@@ -49,6 +53,7 @@ use rustc_hash::FxHashSet;
 use crate::types::DeltaInclusion;
 use crate::types::PackItemStreamRequest;
 use crate::types::PackItemStreamResponse;
+use crate::types::PackfileItemInclusion;
 use crate::types::RequestedRefs;
 use crate::types::RequestedSymrefs;
 use crate::types::TagInclusion;
@@ -336,11 +341,139 @@ async fn include_symrefs(
     Ok(())
 }
 
+/// The type of identifier used for identifying the base git object
+/// for fetching from the blobstore
+enum ObjectIdentifierType {
+    /// A RichGitSha1 hash has information about the type and size of the object
+    /// and hence can be used as an identifier for all types of Git objects
+    AllObjects(RichGitSha1),
+    /// The ObjectId cannot provide type and size information and hence should be
+    /// used only when the object is NOT a blob
+    NonBlobObjects(ObjectId),
+}
+
+impl ObjectIdentifierType {
+    pub fn to_object_id(&self) -> Result<ObjectId> {
+        match self {
+            Self::AllObjects(sha) => Ok(sha.to_object_id()?),
+            Self::NonBlobObjects(oid) => Ok(*oid),
+        }
+    }
+}
+
+/// Fetch the raw content of the Git object based on the type of identifier provided
+async fn object_bytes(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    id: ObjectIdentifierType,
+) -> Result<Bytes> {
+    let blobstore = repo.repo_blobstore_arc();
+    let bytes = match id {
+        ObjectIdentifierType::AllObjects(sha) => {
+            // The object identifier has been passed along with size and type information. This means
+            // that it can be any type of Git object. We store Git blobs as file content and all other
+            // Git objects as raw git content. The get_object_bytes function fetches from the appropriate
+            // source depending on the type of the object.
+            get_object_bytes(ctx, blobstore.clone(), &sha, HeaderState::Included).await?
+        }
+        ObjectIdentifierType::NonBlobObjects(oid) => {
+            // The object identifier has only been passed with an ObjectId. This means that it must be a
+            // non-blob Git object that can be fetched directly from the blobstore.
+            fetch_git_object_bytes(ctx, &blobstore, oid.as_ref()).await?
+        }
+    };
+    Ok(bytes)
+}
+
+/// Fetch (or generate and fetch) the packfile item for the base git object
+/// based on the packfile_item_inclusion setting
+async fn base_packfile_item(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    id: ObjectIdentifierType,
+    packfile_item_inclusion: PackfileItemInclusion,
+) -> Result<PackfileItem> {
+    let blobstore = repo.repo_blobstore_arc();
+    let git_objectid = id.to_object_id()?;
+    match packfile_item_inclusion {
+        // Generate the packfile item based on the raw commit object
+        PackfileItemInclusion::Generate => {
+            let object_bytes = object_bytes(ctx, repo, id).await.with_context(|| {
+                format!(
+                    "Error in fetching raw git object bytes for object {:?} while generating packfile item",
+                    &git_objectid
+                )
+            })?;
+            let packfile_item = PackfileItem::new_base(object_bytes).with_context(|| {
+                format!(
+                    "Error in creating packfile item from git object bytes for {:?}",
+                    &git_objectid
+                )
+            })?;
+            anyhow::Ok(packfile_item)
+        }
+        // Return the stored packfile item if it exists, otherwise error out
+        PackfileItemInclusion::FetchOnly => {
+            let packfile_base_item =
+                fetch_packfile_base_item(ctx, &blobstore, git_objectid.as_ref())
+                    .await
+                    .with_context(|| {
+                        format!(
+                            "Error in fetching packfile item for git object {:?} in FetchOnly mode",
+                            &git_objectid
+                        )
+                    })?;
+            anyhow::Ok(PackfileItem::new_encoded_base(
+                packfile_base_item.try_into()?,
+            ))
+        }
+        // Return the stored packfile item if its exists, if it doesn't exist, generate it and store it
+        PackfileItemInclusion::FetchAndStore => {
+            let fetch_result = fetch_packfile_base_item_if_exists(
+                ctx,
+                &blobstore,
+                git_objectid.as_ref(),
+            )
+            .await
+            .with_context(|| {
+                format!(
+                    "Error in fetching packfile item for git object {:?} in FetchAndStore mode",
+                    &git_objectid
+                )
+            })?;
+            match fetch_result {
+                Some(packfile_base_item) => anyhow::Ok(PackfileItem::new_encoded_base(
+                    packfile_base_item.try_into()?,
+                )),
+                None => {
+                    let object_bytes = object_bytes(ctx, repo, id).await.with_context(|| {
+                        format!(
+                            "Error in fetching raw git object bytes for object {:?} while fetching-and-storing packfile item",
+                            &git_objectid
+                        )
+                    })?;
+                    let packfile_base_item = upload_packfile_base_item(
+                        ctx,
+                        &blobstore,
+                        git_objectid.as_ref(),
+                        object_bytes.to_vec(),
+                    )
+                    .await?;
+                    anyhow::Ok(PackfileItem::new_encoded_base(
+                        packfile_base_item.try_into()?,
+                    ))
+                }
+            }
+        }
+    }
+}
+
 /// Generate a PackfileEntry for the given changeset and its corresponding GitDeltaManifestEntry
 async fn packfile_entry(
     ctx: &CoreContext,
     repo: &impl Repo,
     delta_inclusion: DeltaInclusion,
+    packfile_item_inclusion: PackfileItemInclusion,
     changeset_id: ChangesetId,
     path: MPath,
     mut entry: GitDeltaManifestEntry,
@@ -406,21 +539,13 @@ async fn packfile_entry(
         anyhow::Ok(packfile_item)
     } else {
         // Use the full object instead
-        let bytes = get_object_bytes(
+        base_packfile_item(
             ctx,
-            blobstore.clone(),
-            &entry.full.as_rich_git_sha1()?,
-            git_types::HeaderState::Included,
+            repo,
+            ObjectIdentifierType::AllObjects(entry.full.as_rich_git_sha1()?),
+            packfile_item_inclusion,
         )
         .await
-        .context("Error in fetching git object bytes from byte stream")?;
-        let packfile_item = PackfileItem::new_base(bytes).with_context(|| {
-            format!(
-                "Error in creating packfile item from git object bytes for {:?}",
-                &entry.full.oid
-            )
-        })?;
-        anyhow::Ok(packfile_item)
     }
 }
 
@@ -429,6 +554,7 @@ async fn blob_and_tree_packfile_items<'a>(
     ctx: &'a CoreContext,
     repo: &'a impl Repo,
     delta_inclusion: DeltaInclusion,
+    packfile_item_inclusion: PackfileItemInclusion,
     changeset_id: ChangesetId,
     duplicated_objects: Arc<FxHashSet<ObjectId>>,
 ) -> Result<BoxStream<'a, Result<PackfileItem>>> {
@@ -457,7 +583,7 @@ async fn blob_and_tree_packfile_items<'a>(
         let mut entries = delta_manifest.into_subentries(ctx, &blobstore);
         while let Some((path, entry)) = entries.try_next().await? {
             let is_duplicated = duplicated_objects.contains(&entry.full.oid);
-            let packfile_item = packfile_entry(ctx, repo, delta_inclusion, changeset_id, path, entry, is_duplicated).await?;
+            let packfile_item = packfile_entry(ctx, repo, delta_inclusion, packfile_item_inclusion, changeset_id, path, entry, is_duplicated).await?;
             yield packfile_item
         }
     };
@@ -496,6 +622,7 @@ async fn blob_and_tree_packfile_stream<'a>(
     };
 
     let delta_inclusion = request.delta_inclusion;
+    let packfile_item_inclusion = request.packfile_item_inclusion;
     let duplicated_objects = Arc::new(duplicated_objects);
     // Get the packfile items corresponding to blob and tree objects in the repo. Where applicable, use delta to represent them
     // efficiently in the packfile/bundle
@@ -505,6 +632,7 @@ async fn blob_and_tree_packfile_stream<'a>(
                 ctx,
                 repo,
                 delta_inclusion,
+                packfile_item_inclusion,
                 changeset_id,
                 duplicated_objects.clone(),
             )
@@ -530,9 +658,9 @@ async fn commit_packfile_stream<'a>(
         )
         .await
         .context("Error in getting ancestors difference")?;
+    let packfile_item_inclusion = request.packfile_item_inclusion;
     let commit_stream = target_commits
         .and_then(move |changeset_id| async move {
-            let blobstore = repo.repo_blobstore_arc();
             let maybe_git_sha1 = repo
                 .bonsai_git_mapping()
                 .get_git_sha1_from_bonsai(ctx, changeset_id)
@@ -547,16 +675,13 @@ async fn commit_packfile_stream<'a>(
                 anyhow::anyhow!("Git Sha1 not found for changeset {:?}", changeset_id)
             })?;
             let git_objectid = git_sha1.to_object_id()?;
-            let object = fetch_git_object(ctx, &blobstore, git_objectid.as_ref()).await?;
-            let mut object_bytes = object.loose_header().into_vec();
-            object.write_to(object_bytes.by_ref())?;
-            let packfile_item = PackfileItem::new_base(object_bytes.into()).with_context(|| {
-                format!(
-                    "Error in creating packfile item from git object bytes for {:?}",
-                    &object
-                )
-            })?;
-            anyhow::Ok(packfile_item)
+            base_packfile_item(
+                ctx,
+                repo,
+                ObjectIdentifierType::NonBlobObjects(git_objectid), // Since we know its not a blob
+                packfile_item_inclusion,
+            )
+            .await
         })
         .boxed();
     anyhow::Ok(commit_stream)
@@ -568,6 +693,7 @@ async fn tag_packfile_stream<'a>(
     ctx: &'a CoreContext,
     repo: &'a impl Repo,
     bookmarks: &FxHashMap<BookmarkKey, ChangesetId>,
+    request: &PackItemStreamRequest,
 ) -> Result<(BoxStream<'a, Result<PackfileItem>>, usize)> {
     // Since we need the count of items, we would have to consume the stream either for counting or collecting the items.
     // This is fine, since unlike commits, blobs and trees there will only be thousands of tags in the worst case.
@@ -595,20 +721,17 @@ async fn tag_packfile_stream<'a>(
         .try_collect::<Vec<_>>()
         .await?;
     let tags_count = annotated_tags.len();
+    let packfile_item_inclusion = request.packfile_item_inclusion;
     let tag_stream = stream::iter(annotated_tags.into_iter().map(anyhow::Ok))
         .and_then(move |entry| async move {
-            let blobstore = repo.repo_blobstore_arc();
             let git_objectid = entry.tag_hash.to_object_id()?;
-            let object = fetch_git_object(ctx, &blobstore, git_objectid.as_ref()).await?;
-            let mut object_bytes = object.loose_header().into_vec();
-            object.write_to(object_bytes.by_ref())?;
-            let packfile_item = PackfileItem::new_base(object_bytes.into()).with_context(|| {
-                format!(
-                    "Error in creating packfile item from git object bytes for {:?}",
-                    &object
-                )
-            })?;
-            anyhow::Ok(packfile_item)
+            base_packfile_item(
+                ctx,
+                repo,
+                ObjectIdentifierType::NonBlobObjects(git_objectid), // Since we know its not a blob
+                packfile_item_inclusion,
+            )
+            .await
         })
         .boxed();
     anyhow::Ok((tag_stream, tags_count))
@@ -661,7 +784,7 @@ pub async fn generate_pack_item_stream<'a>(
 
     // STEP 5: Get the stream of tag packfile items to include in the pack/bundle. Note that we have not yet included the tag count in the
     // total object count so we will need the stream + count of elements in the stream
-    let (tag_stream, tags_count) = tag_packfile_stream(ctx, repo, &bookmarks)
+    let (tag_stream, tags_count) = tag_packfile_stream(ctx, repo, &bookmarks, &request)
         .await
         .context("Error while generating tag packfile item stream")?;
     // Include the tags in the object count since the tags will also be part of the packfile/bundle
