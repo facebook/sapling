@@ -95,6 +95,20 @@ impl DeltaInclusion {
     }
 }
 
+/// Enum defining how packfile items for raw git objects be fetched
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PackfileItemInclusion {
+    // Generate the packfile item for raw git object regardless of whether
+    // it already exists or not. Do not store the generated packfile item.
+    Generate,
+    // Fetch the stored packfile item for the raw git object. If it doesn't
+    // exist, error out
+    FetchOnly,
+    // If the packfile item for the raw git object already exists, use it. If
+    // it doesn't exist, generate it and store it
+    FetchAndStore,
+}
+
 /// The request parameters used to specify the constraints that need to be
 /// honored while generating the input PackfileItem stream
 #[derive(Debug, Clone)]
@@ -110,6 +124,8 @@ pub struct PackItemStreamRequest {
     pub delta_inclusion: DeltaInclusion,
     /// How annotated tags should be included in the pack
     pub tag_inclusion: TagInclusion,
+    /// How packfile items for raw git objects should be fetched
+    pub packfile_item_inclusion: PackfileItemInclusion,
 }
 
 impl PackItemStreamRequest {
@@ -119,6 +135,7 @@ impl PackItemStreamRequest {
         have_heads: Vec<ChangesetId>,
         delta_inclusion: DeltaInclusion,
         tag_inclusion: TagInclusion,
+        packfile_item_inclusion: PackfileItemInclusion,
     ) -> Self {
         Self {
             requested_symrefs,
@@ -126,16 +143,22 @@ impl PackItemStreamRequest {
             have_heads,
             delta_inclusion,
             tag_inclusion,
+            packfile_item_inclusion,
         }
     }
 
-    pub fn full_repo(delta_inclusion: DeltaInclusion, tag_inclusion: TagInclusion) -> Self {
+    pub fn full_repo(
+        delta_inclusion: DeltaInclusion,
+        tag_inclusion: TagInclusion,
+        packfile_item_inclusion: PackfileItemInclusion,
+    ) -> Self {
         Self {
             requested_symrefs: RequestedSymrefs::IncludeHead,
             requested_refs: RequestedRefs::Excluded(HashSet::new()),
             have_heads: vec![],
             delta_inclusion,
             tag_inclusion,
+            packfile_item_inclusion,
         }
     }
 }

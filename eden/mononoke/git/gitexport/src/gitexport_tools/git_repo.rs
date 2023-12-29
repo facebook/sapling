@@ -18,6 +18,7 @@ use protocol::generator::generate_pack_item_stream;
 use protocol::generator::Repo;
 use protocol::types::DeltaInclusion;
 use protocol::types::PackItemStreamRequest;
+use protocol::types::PackfileItemInclusion;
 use protocol::types::TagInclusion;
 use slog::info;
 
@@ -56,7 +57,11 @@ pub async fn create_git_repo_on_disk(
         form: DeltaForm::RefAndOffset,
         inclusion_threshold: 0.6,
     };
-    let request = PackItemStreamRequest::full_repo(delta_inclusion, TagInclusion::AsIs);
+    let request = PackItemStreamRequest::full_repo(
+        delta_inclusion,
+        TagInclusion::AsIs,
+        PackfileItemInclusion::Generate,
+    );
     let response = generate_pack_item_stream(ctx, repo, request)
         .await
         .context("Error in generating pack item stream")?;

@@ -30,6 +30,7 @@ use packfile::types::PackfileItem;
 use protocol::generator::generate_pack_item_stream;
 use protocol::types::DeltaInclusion;
 use protocol::types::PackItemStreamRequest;
+use protocol::types::PackfileItemInclusion;
 use protocol::types::RequestedRefs;
 use protocol::types::RequestedSymrefs;
 use protocol::types::TagInclusion;
@@ -164,6 +165,7 @@ pub async fn create_from_mononoke_repo(
         create_args.have_heads,
         delta_inclusion,
         TagInclusion::AsIs,
+        PackfileItemInclusion::Generate,
     );
     let response = generate_pack_item_stream(ctx, &repo, request)
         .await

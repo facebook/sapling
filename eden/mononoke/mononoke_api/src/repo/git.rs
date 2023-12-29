@@ -32,6 +32,7 @@ use packfile::pack::DeltaForm;
 use protocol::generator::generate_pack_item_stream;
 use protocol::types::DeltaInclusion;
 use protocol::types::PackItemStreamRequest;
+use protocol::types::PackfileItemInclusion;
 use protocol::types::RequestedRefs;
 use protocol::types::RequestedSymrefs;
 use protocol::types::TagInclusion;
@@ -350,6 +351,7 @@ pub async fn repo_stack_git_bundle(
         already_present,
         DeltaInclusion::standard(),
         TagInclusion::AsIs,
+        PackfileItemInclusion::Generate,
     );
     let response = generate_pack_item_stream(ctx, repo, request)
         .await
