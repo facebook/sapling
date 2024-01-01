@@ -45,14 +45,12 @@ rm_rf(`${textmateModule}/dist`);
 // Rebuild the textmate module.
 child_process.execSync('yarn', {cwd: textmateModule});
 child_process.execSync('yarn run tsc', {cwd: textmateModule});
-
+child_process.execSync('yarn run fix-imports', {cwd: textmateModule});
 const manifestFolder = 'src/generated/textmate';
 rm_rf(manifestFolder);
 mkdir_p(manifestFolder);
 const manifestPath = `${manifestFolder}/TextMateGrammarManifest.ts`;
-
-const node = 'node --experimental-specifier-resolution=node';
-child_process.execSync(`${node} ${textmateModule}/dist/index.js ${manifestPath} ${grammarsFolder}`);
+child_process.execSync(`node ${textmateModule}/dist/index.js ${manifestPath} ${grammarsFolder}`);
 
 fs.copyFileSync(
   '../node_modules/vscode-oniguruma/release/onig.wasm',

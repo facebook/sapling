@@ -1,1 +1,1 @@
-{"name":"Ignore","scopeName":"source.ignore","patterns":[{"match":"^#.*","name":"comment.line.number-sign.ignore"}]}
+{"generated":"@generated","name":"Ignore","scopeName":"source.ignore","patterns":[{"match":"^#.*","name":"comment.line.number-sign.ignore"}]}
