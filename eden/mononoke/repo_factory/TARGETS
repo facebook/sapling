@@ -44,7 +44,6 @@ rust_library(
         "//eden/mononoke/commit_rewriting/live_commit_sync_config:live_commit_sync_config",
         "//eden/mononoke/commit_rewriting/synced_commit_mapping:synced_commit_mapping",
         "//eden/mononoke/common/futures_watchdog:futures_watchdog",
-        "//eden/mononoke/common/rendezvous:rendezvous",
         "//eden/mononoke/common/rust/caching_ext:caching_ext",
         "//eden/mononoke/common/scuba_ext:scuba_ext",
         "//eden/mononoke/common/sql_construct:sql_construct",

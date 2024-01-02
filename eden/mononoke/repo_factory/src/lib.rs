@@ -137,7 +137,6 @@ use readonlyblob::ReadOnlyBlobstore;
 use redactedblobstore::ArcRedactionConfigBlobstore;
 use redactedblobstore::RedactedBlobs;
 use redactedblobstore::RedactionConfigBlobstore;
-use rendezvous::RendezVousOptions;
 use repo_blobstore::ArcRepoBlobstore;
 use repo_blobstore::ArcRepoBlobstoreUnlinkOps;
 use repo_blobstore::RepoBlobstore;
@@ -1615,7 +1614,7 @@ impl RepoFactory {
         let sql_storage = self
             .open_sql::<SqlCommitGraphStorageBuilder>(repo_config)
             .await?
-            .build(RendezVousOptions::default(), repo_identity.id());
+            .build(self.env.rendezvous_options, repo_identity.id());
 
         let maybe_cached_storage: Arc<dyn CommitGraphStorage> =
             if let Some(cache_handler_factory) = self.cache_handler_factory("commit_graph")? {
