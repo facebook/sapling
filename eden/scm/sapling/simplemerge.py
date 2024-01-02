@@ -397,7 +397,7 @@ class Merge3Text:
     def init_automerge_fields(self, ui):
         if not ui:
             return
-        self.automerge_mode = ui.config("automerge", "mode", "prompt")
+        self.automerge_mode = ui.config("automerge", "mode") or "reject"
         automerge_fns = self.automerge_fns
         automerge_algos = ui.configlist("automerge", "merge-algos")
         for name in automerge_algos:
