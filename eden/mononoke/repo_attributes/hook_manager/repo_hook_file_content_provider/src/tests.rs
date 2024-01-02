@@ -80,7 +80,7 @@ impl ChangesetHook for FindFilesChangesetHook {
                         "no master bookmark found",
                     )));
                 }
-                Err(err).map_err(Error::from)
+                Err(Error::from(err))
             }
         }
     }

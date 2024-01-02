@@ -189,8 +189,8 @@ pub async fn do_sync_diamond_merge(
     let (rewritten, version_for_merge) = create_rewritten_merge_commit(
         ctx.clone(),
         small_merge_cs_id,
-        &small_repo,
-        &large_repo,
+        small_repo,
+        large_repo,
         &syncers,
         small_root,
         onto_value,

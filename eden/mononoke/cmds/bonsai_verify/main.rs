@@ -400,7 +400,7 @@ fn subcommmand_hg_manifest_verify(
             .buffer_unordered(100)
             .try_for_each(|_| async { Ok(()) })
             .map_ok(move |_| {
-                let bad = bad.with(|bad| std::mem::take(bad));
+                let bad = bad.with(std::mem::take);
                 if bad.is_empty() {
                     println!()
                 } else {
