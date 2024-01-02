@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::time::Duration;
+
 use clap::Args;
 
 mod configurable;
@@ -24,13 +26,33 @@ pub use crate::rendez_vous_stats::RendezVousStats;
 
 #[derive(Copy, Clone, Debug)]
 pub struct RendezVousOptions {
+    /// How many requests are allowed to exist in-flight.  Batching does not
+    /// kick in until these are exhausted.
     pub free_connections: usize,
+
+    /// How long we wait before dispatching a small batch.
+    pub max_delay: Duration,
+
+    /// Number of keys after which we'll dispatch a full-size batch.
+    pub max_threshold: usize,
+}
+
+impl Default for RendezVousOptions {
+    fn default() -> Self {
+        Self {
+            free_connections: 5,
+            max_delay: Duration::from_millis(5),
+            max_threshold: 50,
+        }
+    }
 }
 
 impl RendezVousOptions {
     pub fn for_test() -> Self {
         Self {
             free_connections: 0,
+            max_delay: Duration::from_millis(0),
+            max_threshold: 0,
         }
     }
 }
@@ -47,6 +69,7 @@ impl From<RendezVousArgs> for RendezVousOptions {
     fn from(args: RendezVousArgs) -> Self {
         RendezVousOptions {
             free_connections: args.rendezvous_free_connections,
+            ..Default::default()
         }
     }
 }
@@ -73,10 +96,7 @@ mod demo {
 
         // Callers sharing a RendezVous instance will be eligible to have their calls batched
         // together.
-        let rdv = RendezVous::new(
-            ConfigurableRendezVousController::new_with_defaults(opts),
-            stats,
-        );
+        let rdv = RendezVous::new(ConfigurableRendezVousController::new(opts), stats);
 
         let out = rdv
             .dispatch(fb, hashset! { 1u64 }, || {

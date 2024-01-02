@@ -100,7 +100,7 @@ impl RendezVousConnection {
         Self {
             conn,
             fetch_single: RendezVous::new(
-                ConfigurableRendezVousController::new_with_defaults(opts),
+                ConfigurableRendezVousController::new(opts),
                 Arc::new(RendezVousStats::new(format!(
                     "commit_graph.fetch_single.{}",
                     name

@@ -71,7 +71,7 @@ impl RendezVousConnection {
         Self {
             conn,
             rdv: RendezVous::new(
-                ConfigurableRendezVousController::new_with_defaults(opts),
+                ConfigurableRendezVousController::new(opts),
                 Arc::new(RendezVousStats::new(format!("changesets.{}", name,))),
             ),
         }

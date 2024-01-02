@@ -893,7 +893,10 @@ fn parse_rendezvous_options(matches: &ArgMatches<'_>) -> Result<RendezVousOption
         .expect("A default is set, should never be None")
         .parse()
         .with_context(|| format!("Provided {} is not an integer", RENDEZVOUS_FREE_CONNECTIONS))?;
-    Ok(RendezVousOptions { free_connections })
+    Ok(RendezVousOptions {
+        free_connections,
+        ..Default::default()
+    })
 }
 
 fn parse_mononoke_megarepo_configs_options(

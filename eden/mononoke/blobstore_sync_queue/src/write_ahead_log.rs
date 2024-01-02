@@ -451,13 +451,11 @@ impl SqlShardedConstruct for SqlBlobstoreWal {
             // - It's fine to wait up to 5 secs to remove, though this likely won't happen.
             // - We're batching underlying requests at 10k
             delete_rendezvous: RendezVous::new(
-                ConfigurableRendezVousController::new(
-                    RendezVousOptions {
-                        free_connections: 1,
-                    },
-                    Duration::from_secs(5),
-                    DEL_CHUNK,
-                ),
+                ConfigurableRendezVousController::new(RendezVousOptions {
+                    free_connections: 1,
+                    max_delay: Duration::from_secs(5),
+                    max_threshold: DEL_CHUNK,
+                }),
                 Arc::new(RendezVousStats::new("wal_delete".to_owned())),
             ),
         }

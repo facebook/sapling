@@ -184,12 +184,7 @@ pub(super) async fn backfill(
         .await?
         .open::<SqlCommitGraphStorageBuilder>()
         .await?
-        .build(
-            RendezVousOptions {
-                free_connections: 5,
-            },
-            repo.repo_identity().id(),
-        );
+        .build(RendezVousOptions::default(), repo.repo_identity().id());
     let maybe_cached_sql_storage: Arc<dyn CommitGraphStorage> = match app.environment().caching {
         environment::Caching::Enabled(_) => {
             if let Some(cachelib_pool) = cachelib::get_volatile_pool("commit_graph")

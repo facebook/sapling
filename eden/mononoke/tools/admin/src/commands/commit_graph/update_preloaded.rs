@@ -100,12 +100,7 @@ pub(super) async fn update_preloaded(
         .await?
         .open::<SqlCommitGraphStorageBuilder>()
         .await?
-        .build(
-            RendezVousOptions {
-                free_connections: 5,
-            },
-            repo.repo_identity().id(),
-        );
+        .build(RendezVousOptions::default(), repo.repo_identity().id());
 
     let preloaded_edges = match args.rebuild {
         false => match repo.repo_blobstore().get(ctx, &args.blobstore_key).await? {

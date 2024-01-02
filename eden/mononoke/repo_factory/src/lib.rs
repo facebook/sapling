@@ -1615,12 +1615,7 @@ impl RepoFactory {
         let sql_storage = self
             .open_sql::<SqlCommitGraphStorageBuilder>(repo_config)
             .await?
-            .build(
-                RendezVousOptions {
-                    free_connections: 5,
-                },
-                repo_identity.id(),
-            );
+            .build(RendezVousOptions::default(), repo_identity.id());
 
         let maybe_cached_storage: Arc<dyn CommitGraphStorage> =
             if let Some(cache_handler_factory) = self.cache_handler_factory("commit_graph")? {

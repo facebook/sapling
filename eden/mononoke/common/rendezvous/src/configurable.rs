@@ -36,18 +36,12 @@ pub struct ConfigurableRendezVousController {
 }
 
 impl ConfigurableRendezVousController {
-    pub fn new(opts: RendezVousOptions, max_delay: Duration, max_threshold: usize) -> Self {
+    pub fn new(opts: RendezVousOptions) -> Self {
         Self {
             semaphore: Arc::new(Semaphore::new(opts.free_connections)),
-            max_delay,
-            max_threshold,
+            max_delay: opts.max_delay,
+            max_threshold: opts.max_threshold,
         }
-    }
-
-    /// Construct a configurable rendez-vous controller with default delay and
-    /// threshold.
-    pub fn new_with_defaults(opts: RendezVousOptions) -> Self {
-        Self::new(opts, Duration::from_millis(5), 50)
     }
 }
 

@@ -167,14 +167,14 @@ impl RendezVousConnection {
         Self {
             conn,
             bonsai: RendezVous::new(
-                ConfigurableRendezVousController::new_with_defaults(opts),
+                ConfigurableRendezVousController::new(opts),
                 Arc::new(RendezVousStats::new(format!(
                     "bonsai_hg_mapping.bonsai.{}",
                     name,
                 ))),
             ),
             hg: RendezVous::new(
-                ConfigurableRendezVousController::new_with_defaults(opts),
+                ConfigurableRendezVousController::new(opts),
                 Arc::new(RendezVousStats::new(format!(
                     "bonsai_hg_mapping.hg.{}",
                     name,
