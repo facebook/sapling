@@ -11,7 +11,7 @@ license = "GPLv2+"
 anyhow = "1.0.75"
 async-trait = "0.1.71"
 clap = { version = "3.2.25", features = ["derive", "env", "regex", "unicode", "wrap_help"] }
-colored = "1.9"
+colored = "2.1.0"
 comfy-table = "6.1.4"
 crossterm = { version = "0.27.0", features = ["event-stream"] }
 dirs = "2.0"
