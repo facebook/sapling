@@ -2406,7 +2406,7 @@ def parsedate(date):
     True
     >>> parsedate('yesterday ') == parsedate(
     ...     (datetime.date.today() - datetime.timedelta(days=1)
-    ...      ).strftime('%b %d'))
+    ...      ).strftime('%b %d %Y'))
     True
     >>> now, tz = makedate()
     >>> strnow, strtz = parsedate('now')
