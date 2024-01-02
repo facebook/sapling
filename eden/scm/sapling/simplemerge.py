@@ -90,6 +90,9 @@ class AutomergeMetrics:
         self.rejected = 0
         self.review_in_file = 0
 
+        # conflicts that can't be resolved by traditional merge algorithm
+        self.conflicts = 0
+
         # rebase metrics
         self.duration = 0
         self.has_exception = 0
@@ -687,6 +690,7 @@ def try_automerge_conflict(
     merged_res = m3.run_automerge(base_lines, a_lines, b_lines)
     is_enabled = automerge_enabled(ui, automerge_mode)
 
+    _automerge_metrics.conflicts += 1
     _automerge_metrics.enabled = int(is_enabled)
     _automerge_metrics.total += bool(merged_res)
 
