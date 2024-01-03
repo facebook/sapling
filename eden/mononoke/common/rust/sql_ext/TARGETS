@@ -28,6 +28,7 @@ rust_library(
         "fbsource//third-party/rust:twox-hash",
         "//common/rust/mysql:mysql_client",
         "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/justknobs_stub:justknobs",
         "//common/rust/shed/memcache_stub:memcache",
         "//common/rust/shed/sql:sql",
         "//common/rust/thrift/srclient:srclient",

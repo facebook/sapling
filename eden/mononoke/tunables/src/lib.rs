@@ -305,8 +305,6 @@ pub struct MononokeTunables {
 
     // Disable SQL queries being retried after admission control errors
     disable_sql_auto_retries: TunableBool,
-    // Disable SQL queries being cached using `cacheable` keyword
-    disable_sql_auto_cache: TunableBool,
     // Enable derivation on service per repo
     enable_remote_derivation: TunableBoolByRepo,
 

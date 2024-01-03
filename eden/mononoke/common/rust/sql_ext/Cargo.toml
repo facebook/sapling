@@ -19,6 +19,7 @@ caching_ext = { version = "0.1.0", path = "../caching_ext" }
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 itertools = "0.11.0"
+justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 maplit = "1.0"
 memcache = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mysql_async = "0.31.2"

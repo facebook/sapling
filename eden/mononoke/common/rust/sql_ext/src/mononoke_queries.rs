@@ -441,7 +441,7 @@ where
     T: Send + Abomonation + MemcacheEntity + Clone + 'static,
     Fut: Future<Output = Result<T>> + Send,
 {
-    if tunables().disable_sql_auto_cache().unwrap_or_default() {
+    if let Ok(true) = justknobs::eval("scm/mononoke:sql_disable_auto_cache", None, None) {
         return query_with_retry_no_cache(&do_query).await;
     }
     let fetch = || query_with_retry_no_cache(&do_query);
