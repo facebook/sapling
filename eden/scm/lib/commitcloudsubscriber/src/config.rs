@@ -60,17 +60,9 @@ mod defaults {
 
 #[derive(Debug, Deserialize)]
 pub struct CommitCloudConfig {
-    /// Server-Sent Events endpoint for real-time Commit Cloud Notifications
-    #[serde(default)]
-    pub notification_url: Option<String>,
-
     /// Endpoint for real-time polling of Commit Cloud Notifications
     #[serde(default)]
     pub polling_update_url: Option<String>,
-
-    /// Enable or disable polling of Commit Cloud Updates (via the endpoint above)
-    #[serde(default)]
-    pub polling_updates_enabled: bool,
 
     /// Path to the directory containing current connected subscribers
     /// This is an optional override, see logic for the default location

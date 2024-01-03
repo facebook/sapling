@@ -15,7 +15,6 @@ use std::time::Duration;
 
 use anyhow::bail;
 use anyhow::Result;
-use futures::stream::StreamExt;
 use log::debug;
 use log::error;
 use log::info;
@@ -24,8 +23,6 @@ use reqwest::header::CONNECTION;
 use reqwest::Client;
 use reqwest::Response;
 use reqwest::Url;
-use reqwest_eventsource::Event;
-use reqwest_eventsource::EventSource;
 use serde::Deserialize;
 use serde_json::Value;
 
@@ -75,14 +72,8 @@ pub struct Subscription {
 /// The serve function starts the service
 
 pub struct WorkspaceSubscriberService {
-    /// Server-Sent Events endpoint for Commit Cloud Notifications
-    pub(crate) notification_url: String,
-
     /// Endpoint for real-time polling of Commit Cloud Notifications
     pub(crate) polling_update_url: String,
-
-    /// Whether or not to poll for updates via the endpoint above
-    pub(crate) polling_updates_enabled: bool,
 
     /// OAuth token path (optional) for access to Commit Cloud SSE endpoint
     pub(crate) user_token_path: Option<PathBuf>,
@@ -103,13 +94,9 @@ pub struct WorkspaceSubscriberService {
 impl WorkspaceSubscriberService {
     pub fn new(config: &CommitCloudConfig) -> Result<WorkspaceSubscriberService> {
         Ok(WorkspaceSubscriberService {
-            notification_url: config.notification_url.clone().ok_or(
-                ErrorKind::CommitCloudConfigError("undefined 'notification_url'"),
-            )?,
             polling_update_url: config.polling_update_url.clone().ok_or(
                 ErrorKind::CommitCloudConfigError("undefined 'polling_update_url'"),
             )?,
-            polling_updates_enabled: config.polling_updates_enabled,
             user_token_path: config.user_token_path.clone(),
             connected_subscribers_path: config.connected_subscribers_path.clone().ok_or(
                 ErrorKind::CommitCloudConfigError("undefined 'connected_subscribers_path'"),
@@ -194,52 +181,17 @@ impl WorkspaceSubscriberService {
                         );
                         self.interrupt.store(false, Ordering::Relaxed);
 
-                        if self.polling_updates_enabled {
-                            let subscriptions = self.run_polling_updates()?;
-                            for subscription in subscriptions {
-                                let _ = subscription.await;
-                            }
-                        } else {
-                            // start subscription threads
-                            let access_token = util::read_or_generate_access_token(
-                                &self.user_token_path,
-                                util::CatTokenVerifier::Icebreaker,
-                            );
-                            if let Ok(access_token) = access_token {
-                                let subscriptions = self.run_subscriptions(access_token)?;
-                                for child in subscriptions {
-                                    let _ = child.await;
-                                }
-                            } else {
-                                info!("User is not authenticated with Commit Cloud yet");
-                                continue;
-                            }
+                        let subscriptions = self.run_polling_updates()?;
+                        for subscription in subscriptions {
+                            let _ = subscription.await;
                         }
                     }
                     Ok(CommitCloudStartSubscriptions) => {
                         info!("Starting subscriptions...");
                         self.interrupt.store(false, Ordering::Relaxed);
-
-                        if self.polling_updates_enabled {
-                            let subscriptions = self.run_polling_updates()?;
-                            for subscription in subscriptions {
-                                let _ = subscription.await;
-                            }
-                        } else {
-                            let access_token = util::read_or_generate_access_token(
-                                &self.user_token_path,
-                                util::CatTokenVerifier::Icebreaker,
-                            );
-                            // start subscription threads
-                            if let Ok(access_token) = access_token {
-                                let subscriptions = self.run_subscriptions(access_token)?;
-                                for subscription in subscriptions {
-                                    let _ = subscription.await;
-                                }
-                            } else {
-                                info!("User is not authenticated with Commit Cloud yet");
-                                continue;
-                            }
+                        let subscriptions = self.run_polling_updates()?;
+                        for subscription in subscriptions {
+                            let _ = subscription.await;
                         }
                     }
                     Err(mpsc::RecvTimeoutError::Timeout) => {
@@ -490,10 +442,7 @@ impl WorkspaceSubscriberService {
 
             while !interrupt.load(Ordering::Relaxed) {
                 if access_token.as_ref().is_none() {
-                    match util::read_or_generate_access_token(
-                        &user_token_path,
-                        util::CatTokenVerifier::InternGraph,
-                    ) {
+                    match util::read_or_generate_access_token(&user_token_path) {
                         Err(err) => {
                             error!(
                                 "{} Cancelling this task due to unexpected error with token creation: {}...",
@@ -551,121 +500,6 @@ impl WorkspaceSubscriberService {
                         // sleep longer before trying again
                         tokio::time::sleep(Duration::from_secs(POLLING_ERROR_DELAY_SEC)).await;
                     }
-                }
-            }
-        }))
-    }
-
-    /// This helper function reads the list of current connected subscribers
-    /// It starts all the requested subscriptions by creating a separate async task for each one
-    /// All tasks keep checking the interrupt flag and join gracefully if it is restart or stop
-
-    fn run_subscriptions(
-        &self,
-        access_token: util::Token,
-    ) -> Result<Vec<tokio::task::JoinHandle<()>>> {
-        util::read_subscriptions(&self.connected_subscribers_path)?
-            .into_iter()
-            .map(|(subscription, repo_roots)| {
-                self.run_subscription(access_token.clone(), subscription, repo_roots)
-            })
-            .collect::<Result<Vec<tokio::task::JoinHandle<()>>>>()
-    }
-
-    /// Helper function to run a single Icebreaker-based subscription
-
-    fn run_subscription(
-        &self,
-        access_token: util::Token,
-        subscription: Subscription,
-        repo_roots: Vec<PathBuf>,
-    ) -> Result<tokio::task::JoinHandle<()>> {
-        let mut notification_url = Url::parse(&self.notification_url)?;
-
-        let sid = format!("({} @ {})", subscription.repo_name, subscription.workspace);
-        info!("{} Subscribing to {}", sid, notification_url);
-
-        notification_url
-            .query_pairs_mut()
-            .append_pair("workspace", &subscription.workspace)
-            .append_pair("repo_name", &subscription.repo_name)
-            .append_pair("access_token", &access_token.token)
-            .append_pair("token_type", &access_token.token_type.to_string());
-
-        let mut es = EventSource::get(notification_url);
-
-        info!("{} Spawn a task to handle the subscription", sid);
-
-        let cloudsync_retries = self.cloudsync_retries;
-        let interrupt = self.interrupt.clone();
-
-        Ok(tokio::spawn(async move {
-            info!("{} Task started...", sid);
-
-            let fire = |reason: &'static str, version: Option<u64>| {
-                for repo_root in repo_roots.iter() {
-                    info!(
-                        "{} Fire CloudSyncTrigger in '{}' {}",
-                        sid,
-                        repo_root.display(),
-                        reason,
-                    );
-                    // log outputs, results and continue even if unsuccessful
-                    let _res = CloudSyncTrigger::fire(
-                        &sid,
-                        repo_root,
-                        cloudsync_retries,
-                        version,
-                        subscription.workspace.clone(),
-                        format!("scm_daemon: {}", reason),
-                    );
-                    if interrupt.load(Ordering::Relaxed) {
-                        break;
-                    }
-                }
-            };
-
-            fire("before starting subscription", None);
-            if interrupt.load(Ordering::Relaxed) {
-                return;
-            }
-
-            info!("{} Start listening to notifications", sid);
-
-            while !interrupt.load(Ordering::Relaxed) {
-                match tokio::time::timeout(Duration::from_millis(500), es.next()).await {
-                    Ok(Some(event)) => {
-                        let event =
-                            event.map_err(|e| ErrorKind::CommitCloudHttpError(format!("{}", e)));
-
-                        match event {
-                            Err(e) => {
-                                error!("{} Restarting subscriptions due to error: {}...", sid, e);
-                                interrupt.store(true, Ordering::Relaxed);
-                            }
-                            Ok(Event::Open) => {
-                                info!("{} EventSource connection open...", sid)
-                            }
-                            Ok(Event::Message(e)) => {
-                                let data = e.data;
-                                let notification = serde_json::from_str::<Notification>(&data);
-                                if let Err(e) = notification {
-                                    error!(
-                                        "{} Unable to decode json data in the event, reason: {}. Continue...",
-                                        sid, e
-                                    );
-                                    continue;
-                                }
-                                let notification = notification.unwrap();
-                                info!(
-                                    "{} Notification to sync version {} (full message: {})",
-                                    sid, notification.version, &data
-                                );
-                                fire("on new version notification", Some(notification.version));
-                            }
-                        }
-                    }
-                    _ => continue,
                 }
             }
         }))
