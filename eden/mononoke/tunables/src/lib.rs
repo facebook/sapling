@@ -303,8 +303,6 @@ pub struct MononokeTunables {
     // Override author check during squashing
     megarepo_override_author_check: TunableBoolByRepo,
 
-    // Disable SQL queries being retried after admission control errors
-    disable_sql_auto_retries: TunableBool,
     // Enable derivation on service per repo
     enable_remote_derivation: TunableBoolByRepo,
 
