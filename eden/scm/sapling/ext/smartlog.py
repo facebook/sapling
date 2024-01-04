@@ -540,6 +540,12 @@ def _smartlog(ui, repo, *pats, **opts):
                 if key == self.KEY_K:
                     if self.dag_index > 0:
                         self.dag_index -= 1
+                if key == self.KEY_RETURN:
+                    ui.pushbuffer()
+                    selected_ctx = self.revdag[self.dag_index][2]
+                    # Equivalent to `hg update selected_ctx`
+                    commands.update(ui, repo, selected_ctx.hex())
+                    ui.popbuffer()
 
         viewobj = interactivesmartlog(ui, repo)
         interactiveui.view(viewobj)
