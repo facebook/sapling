@@ -515,6 +515,7 @@ def _smartlog(ui, repo, *pats, **opts):
             dag_index = 0
             template = opts.get("template") or ""
             revdag, reserved = getdag(ui, repo, sorted(revs), masterrev, template)
+            status = ""
 
             def render(self):
                 ui = self.ui
@@ -529,6 +530,7 @@ def _smartlog(ui, repo, *pats, **opts):
                     reserved=self.reserved,
                     props={"highlighted_rev": self.revdag[self.dag_index][2].hex()},
                 )
+                ui.status(self.status)
                 return ui.popbuffer()
 
             def handlekeypress(self, key):
@@ -537,15 +539,20 @@ def _smartlog(ui, repo, *pats, **opts):
                 if key == self.KEY_J:
                     if self.dag_index < len(self.revdag) - 1:
                         self.dag_index += 1
+                    self.status = ""
                 if key == self.KEY_K:
                     if self.dag_index > 0:
                         self.dag_index -= 1
+                    self.status = ""
                 if key == self.KEY_RETURN:
-                    ui.pushbuffer()
+                    ui.pushbuffer(error=True)
                     selected_ctx = self.revdag[self.dag_index][2]
                     # Equivalent to `hg update selected_ctx`
-                    commands.update(ui, repo, selected_ctx.hex())
-                    ui.popbuffer()
+                    try:
+                        commands.update(ui, repo, selected_ctx.hex())
+                    except Exception as ex:
+                        ui.write_err(str(ex))
+                    self.status = ui.popbuffer()
 
         viewobj = interactivesmartlog(ui, repo)
         interactiveui.view(viewobj)
