@@ -56,6 +56,7 @@ if not pycompat.iswindows:
     from . import interactiveui
 else:
     interactiveui = None
+from . import rebase
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -497,13 +498,7 @@ def _smartlog(ui, repo, *pats, **opts):
     )
 
     masterrev = repo.anyrevs([masterstring], user=True).first()
-    revs = getrevs(ui, repo, masterstring, **opts)
-
-    if -1 in revs:
-        revs.remove(-1)
-
-    if len(revs) == 0:
-        return
+    template = opts.get("template") or ""
 
     if opts.get("interactive"):
         if interactiveui is None:
@@ -513,9 +508,21 @@ def _smartlog(ui, repo, *pats, **opts):
 
         class interactivesmartlog(interactiveui.viewframe):
             dag_index = 0
-            template = opts.get("template") or ""
+            revs = getrevs(ui, repo, masterstring, **opts)
+
+            if -1 in revs:
+                revs.remove(-1)
+            if len(revs) == 0:
+                super().finish()
+
             revdag, reserved = getdag(ui, repo, sorted(revs), masterrev, template)
             status = ""
+            rebase_source = None
+
+            # Compute new index of ctx in revdag
+            # TODO: Handle case where ctx is no longer in revdag. Currently should be impossible but could happen if we change what the selected_node is when rebasing.
+            def new_index(self, ctx):
+                return [node[2] for node in self.revdag].index(ctx)
 
             def render(self):
                 ui = self.ui
@@ -539,26 +546,53 @@ def _smartlog(ui, repo, *pats, **opts):
                 if key == self.KEY_J:
                     if self.dag_index < len(self.revdag) - 1:
                         self.dag_index += 1
-                    self.status = ""
                 if key == self.KEY_K:
                     if self.dag_index > 0:
                         self.dag_index -= 1
-                    self.status = ""
                 if key == self.KEY_RETURN:
                     ui.pushbuffer(error=True)
                     selected_ctx = self.revdag[self.dag_index][2]
-                    # Equivalent to `hg update selected_ctx`
                     try:
-                        commands.update(ui, repo, selected_ctx.hex())
+                        if self.rebase_source is None:
+                            # Equivalent to `hg update selected_ctx`
+                            commands.update(ui, repo, selected_ctx.hex())
+                        else:
+                            # Equivalent to `hg rebase -s self.rebase_source -d selected_ctx`
+                            rebase.rebase(
+                                ui,
+                                repo,
+                                source=self.rebase_source[2].hex(),
+                                dest=selected_ctx.hex(),
+                            )
+                            self.rebase_source = None
+                            self.revs = getrevs(ui, repo, masterstring, **opts)
+                            if -1 in self.revs:
+                                self.revs.remove(-1)
+                            if len(self.revs) == 0:
+                                self.finish()
+                            self.revdag, self.reserved = getdag(
+                                ui, repo, sorted(self.revs), masterrev, template
+                            )
+                            self.dag_index = self.new_index(selected_ctx)
                     except Exception as ex:
-                        ui.write_err(str(ex))
+                        ui.write_err("operation failed: %s\n" % ex)
                     self.status = ui.popbuffer()
+                if key == self.KEY_R:
+                    self.rebase_source = self.revdag[self.dag_index]
+                    self.status = _("rebasing from %s") % (self.rebase_source[2])
 
         viewobj = interactivesmartlog(ui, repo)
         interactiveui.view(viewobj)
         return
+
+    revs = getrevs(ui, repo, masterstring, **opts)
+
+    if -1 in revs:
+        revs.remove(-1)
+
+    if len(revs) == 0:
+        return
     # Print it!
-    template = opts.get("template") or ""
     revdag, reserved = getdag(ui, repo, sorted(revs), masterrev, template)
     displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
     ui.pager("smartlog")
