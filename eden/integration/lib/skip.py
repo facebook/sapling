@@ -459,6 +459,18 @@ FILTEREDFS_TEST_DISABLED = {
         "test_merge_update_added_file_with_conflict_in_destination",
         "test_merge_update_untracked_file_with_conflict_in_destination",
     ],
+    # These tests will behave the exact same on FilteredFS. Duplicating them can
+    # cause issues on macOS (too many APFS subvolumes), so we'll disable the
+    # FilteredHg variants for now.
+    "redirect_test.RedirectTest": [
+        "test_list",
+        "test_fixup_mounts_things",
+        "test_add_absolute_target",
+        "test_redirect_no_config_dir",
+        "test_unmount_unmounts_things",
+        "test_list_no_legacy_bind_mounts",
+        "test_disallow_bind_mount_outside_repo",
+    ],
 }
 for (testModule, disabled) in FILTEREDFS_TEST_DISABLED.items():
     # We should add skips for all combinations of FilteredHg mixins.
