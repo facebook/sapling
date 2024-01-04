@@ -166,6 +166,24 @@ describe('LineLog', () => {
     expect(Immutable.is(log1, log3)).toBeTruthy();
   });
 
+  it('provides human readable instructions', () => {
+    const log = logFromTextList(['a\n', 'b\n']);
+    // The instructions are internal details. For example, an
+    // optimization pass might remove unconditional jumps.
+    // Shall the output change, just update the test here.
+    expect(log.code.describeHumanReadableInstructions()).toEqual([
+      '0: J 1',
+      '1: JL 1 3',
+      '2: J 4',
+      '3: END',
+      '4: JL 2 6',
+      '5: LINE 2 "b"',
+      '6: JGE 2 3',
+      '7: LINE 1 "a"',
+      '8: J 3',
+    ]);
+  });
+
   describe('supports editing previous revisions', () => {
     it('edits stack bottom', () => {
       const textList = ['a\n', 'a\nb\n', 'z\na\nb\n'];

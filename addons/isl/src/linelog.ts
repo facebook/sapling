@@ -204,6 +204,14 @@ class Code implements ValueObject {
     return this.__hash;
   }
 
+  /**
+   * Dump instructions in a human readable format. Useful for debugging.
+   * Note: This exposes internal details which might change in the future.
+   */
+  describeHumanReadableInstructions(): string[] {
+    return this.instList.map((inst, i) => `${i}: ${describeInst(inst)}`).toArray();
+  }
+
   editChunk(
     aRev: Rev,
     a1: LineIdx,
@@ -825,6 +833,21 @@ const revRangeToSet = cached(
   },
   {cacheSize: 1000},
 );
+
+function describeInst(inst: Inst): string {
+  switch (inst.op) {
+    case Op.J:
+      return `J ${inst.pc}`;
+    case Op.JGE:
+      return `JGE ${inst.rev} ${inst.pc}`;
+    case Op.JL:
+      return `JL ${inst.rev} ${inst.pc}`;
+    case Op.LINE:
+      return `LINE ${inst.rev} ${JSON.stringify(inst.data.trimEnd())}`;
+    case Op.END:
+      return 'END';
+  }
+}
 
 export {LineLog, FlattenLine};
 export type {Rev, LineIdx, LineInfo};
