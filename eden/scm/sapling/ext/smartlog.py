@@ -84,7 +84,7 @@ def shelveenabled(repo, ctx, **args):
     return "shelve" in extensions.enabled().keys()
 
 
-def getdag(ui, repo, revs, master, template):
+def getdag(ui, repo, revs, masterstring, template):
 
     knownrevs = set(revs)
     gpcache = {}
@@ -107,9 +107,10 @@ def getdag(ui, repo, revs, master, template):
     if simplifygrandparents:
         rootnodes = cl.tonodes(revs)
 
+    masterrev = repo.anyrevs([masterstring], user=True).first()
     firstbranch = []
-    if master is not None:
-        firstbranch.append(master)
+    if masterrev is not None:
+        firstbranch.append(masterrev)
     revs = repo.revs("sort(%ld,topo,topo.firstbranch=%ld)", revs, firstbranch)
     ctxstream = revs.prefetchbytemplate(repo, template).iterctx()
 
@@ -501,7 +502,6 @@ def _smartlog(ui, repo, *pats, **opts):
         opts.get("master") or ui.config("smartlog", "master") or masterfallback
     )
 
-    masterrev = repo.anyrevs([masterstring], user=True).first()
     template = opts.get("template") or ""
     headrevs = opts.get("rev")
 
@@ -518,7 +518,7 @@ def _smartlog(ui, repo, *pats, **opts):
             if len(revs) == 0:
                 super().finish()
 
-            revdag, reserved = getdag(ui, repo, sorted(revs), masterrev, template)
+            revdag, reserved = getdag(ui, repo, sorted(revs), masterstring, template)
             status = ""
             rebase_source = None
 
@@ -572,7 +572,7 @@ def _smartlog(ui, repo, *pats, **opts):
                             if len(self.revs) == 0:
                                 self.finish()
                             self.revdag, self.reserved = getdag(
-                                ui, repo, sorted(self.revs), masterrev, template
+                                ui, repo, sorted(self.revs), masterstring, template
                             )
                             self.dag_index = self.new_index(selected_ctx)
                     except Exception as ex:
@@ -591,7 +591,7 @@ def _smartlog(ui, repo, *pats, **opts):
     if len(revs) == 0:
         return
     # Print it!
-    revdag, reserved = getdag(ui, repo, sorted(revs), masterrev, template)
+    revdag, reserved = getdag(ui, repo, sorted(revs), masterstring, template)
     displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
     ui.pager("smartlog")
     cmdutil.displaygraph(ui, repo, revdag, displayer, reserved=reserved)
