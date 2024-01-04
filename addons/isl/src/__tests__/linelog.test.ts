@@ -403,6 +403,10 @@ describe('LineLog', () => {
       return Math.floor(Math.random() * (max - min + 1) + min);
     }
 
+    function randBool(): boolean {
+      return Math.random() < 0.5;
+    }
+
     function* generateCases(
       endRev = 1000,
     ): Generator<[Immutable.List<string>, Rev, LineIdx, LineIdx, LineIdx, LineIdx, string[]]> {
@@ -416,7 +420,8 @@ describe('LineLog', () => {
         const b2 = randInt(b1, b1 + maxDeltaB);
         const bLines: string[] = [];
         for (let bIdx = b1; bIdx < b2; bIdx++) {
-          bLines.push(`${rev}:${bIdx}\n`);
+          const line = randBool() ? '\n' : `${rev}:${bIdx}\n`;
+          bLines.push(line);
         }
         lines = lines.splice(a1, a2 - a1, ...bLines);
         yield [lines, rev, a1, a2, b1, b2, bLines];
@@ -555,23 +560,9 @@ describe('LineLog', () => {
         it(`insert 3 functions in ${revOrder} order`, () => {
           testReorderInsertions(functionTexts, revOrder);
         });
-      });
 
-      it('insert 3 functions with new line join, in [1, 3, 2] order', () => {
-        // Similar to the test above, but with '\n' inserted between functions.
-        const abc = ['a', 'b', 'c'].map(charToFunction);
-        testReorderInsertions(abc, [1, 3, 2], {
-          join: '\n',
-          expectedDepMapOverride: [
-            [1, [0]],
-            [2, [0]],
-            [3, [2]], // FIXME: This is suboptimal.
-          ],
-          expectedTextOverride: [
-            charToFunction('a'),
-            charToFunction('a') /* FIXME: This is suboptimal */,
-            abc.join(''),
-          ],
+        it(`insert 3 functions with new line join, in ${revOrder} order`, () => {
+          testReorderInsertions(abcTexts, revOrder, {join: '\n'});
         });
       });
     });

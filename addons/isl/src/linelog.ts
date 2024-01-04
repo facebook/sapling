@@ -675,6 +675,10 @@ class LineLog extends SelfUpdate<LineLogRecord> {
    * `aLinesCache` is optional. If provided, then `editChunk` will skip a
    * `checkOutLines` call and modify `aLinesCache` *in place* to reflect
    * the edit. It is used by `recordText`.
+   *
+   * If `blockShift` is `true`, consider shifting the insertion lines
+   * to relax dependency for easier reordering. Check the comments
+   * in this function for details.
    */
   editChunk(
     aRev: Rev,
@@ -683,11 +687,94 @@ class LineLog extends SelfUpdate<LineLogRecord> {
     bRev: Rev,
     bLines: string[],
     aLinesCache?: LineInfo[],
+    blockShift = true,
   ): LineLog {
     const aLinesMutable = aLinesCache != null;
     const aLinesInfo: [LineInfo[], true] | [Readonly<LineInfo[]>, false] = aLinesMutable
       ? [aLinesCache, true]
       : [this.checkOutLines(aRev), false];
+
+    const bLen = bLines.length;
+    if (a1 === a2 && bLen > 0 && blockShift) {
+      // Attempt to shift the insertion chunk so the start of insertion aligns
+      // with another "start insertion". This might trigger the [OPT1]
+      // optimization in `code.editChunk`, avoid nested insertions and enable
+      // more flexible reordering.
+      //
+      // For example, we might get "Insert (rev 3)" below that forces a nested
+      // insertion block. However, if we shift the block and use the
+      // "Alternative Insert (rev 3)", we can use the [OPT1] optimization.
+      //
+      //   +----Insert (rev 1)
+      //   |    Line:  function a () {
+      //   |    Line:    return 'a';
+      //   |    Line:  }
+      //   +----
+      //   +----Insert (rev 2)
+      //   |                           ----+ Alternative Insert (rev 3)
+      //   |    Line:                      |
+      //   |+---Insert (rev 3)             |
+      //   ||   Line:  function b () {     |
+      //   ||   Line:    return 'b';       |
+      //   ||   Line:  }                   |
+      //   ||                          ----+
+      //   ||   Line:
+      //   |+---
+      //   |    Line:  function c () {
+      //   |    Line:    return 'c';
+      //   |    Line:  }
+      //   +----
+      //
+      // Block shifting works if the surrounding lines match, see:
+      //
+      //     A                                    A
+      //     B                                  +-------+
+      //   +-------+     is equivalent to       | B     |
+      //   | block |     === shift up   ==>     | block |
+      //   | B     |     <== shift down ===     +-------+
+      //   +-------+                              B
+      //     C                                    C
+
+      const aLines: Readonly<LineInfo[]> = aLinesInfo[0];
+      const canUseOpt1 = (a: LineIdx): boolean => {
+        const pc = aLines.at(a)?.pc;
+        // Check [OPT1] for how this works.
+        return pc != null && pc > 0 && this.code.get(pc - 1)?.op === Op.JL;
+      };
+      if (!canUseOpt1(a1)) {
+        const considerShift = (step: 'down' | 'up'): LineLog | undefined => {
+          let ai = a1;
+          let lines = [...bLines];
+          // Limit overhead.
+          const threshold = 10;
+          for (let i = 0; i < threshold; ++i) {
+            // Out of range?
+            if (step === 'up' ? ai === 0 : ai === aLines.length - 1) {
+              return undefined;
+            }
+            // Surrounding lines match?
+            const [aIdx, bIdx] = step === 'up' ? [ai - 1, -1] : [ai, 0];
+            const aData = aLines.at(aIdx)?.data;
+            const bData = lines.at(bIdx);
+            if (bData !== aData || bData == null) {
+              return undefined;
+            }
+            // Shift.
+            lines =
+              step === 'up' ? [bData].concat(lines.slice(0, -1)) : lines.slice(1).concat([bData]);
+            ai += step === 'up' ? -1 : 1;
+            // Good enough?
+            if (canUseOpt1(ai)) {
+              return this.editChunk(aRev, ai, ai, bRev, lines, aLinesCache, false);
+            }
+          }
+        };
+        const maybeShifted = considerShift('up') ?? considerShift('down');
+        if (maybeShifted != null) {
+          return maybeShifted;
+        }
+      }
+    }
     const newCode = this.code.editChunk(aRev, a1, a2, bRev, bLines, aLinesInfo);
     const newMaxRev = Math.max(bRev, this.maxRev);
     return new LineLog({code: newCode, maxRev: newMaxRev});
