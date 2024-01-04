@@ -175,9 +175,17 @@ export class FileStackState extends SelfUpdate<FileStackStateRecord> {
     return this.mapAllLines(editLine);
   }
 
-  /** Edit lines for all revisions using a callback. */
-  mapAllLines(editLineFunc: (line: FlattenLine, i: number) => FlattenLine): FileStackState {
-    const lines = this.convertToFlattenLines().map(editLineFunc);
+  /**
+   * Edit lines for all revisions using a callback.
+   * The return type can be an array (like flatMap), to insert or delete lines.
+   */
+  mapAllLines(
+    editLineFunc: (line: FlattenLine, i: number) => FlattenLine | FlattenLine[],
+  ): FileStackState {
+    const lines = this.convertToFlattenLines().flatMap((line, i) => {
+      const mapped = editLineFunc(line, i);
+      return Array.isArray(mapped) ? mapped : [mapped];
+    });
     return this.fromFlattenLines(lines, this.revLength);
   }
 

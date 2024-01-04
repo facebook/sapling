@@ -6,6 +6,7 @@
  */
 
 import type {TokenizedHunk} from '../../ComparisonView/SplitDiffView/syntaxHighlighting';
+import type {FlattenLine} from '../../linelog';
 import type {FileStackState, Rev} from '../fileStackState';
 import type {RangeInfo} from './TextEditable';
 
@@ -157,6 +158,7 @@ export function computeLinesForFileStackEditor(
 
       mutStack = mutStack.mapAllLines(line => {
         let newRevs = line.revs;
+        let extraLine: undefined | FlattenLine = undefined;
         if (line.revs.has(aRev)) {
           // This is a deletion.
           if (aIdxToMove.has(currentAIdx)) {
@@ -178,12 +180,18 @@ export function computeLinesForFileStackEditor(
               newRevs = newRevs.remove(bRev);
             } else {
               // Move insertion left - add it to aRev.
-              newRevs = newRevs.add(aRev);
+              // If it already exists in aRev (due to diff shifting), duplicate the line.
+              if (newRevs.has(aRev)) {
+                extraLine = line.set('revs', ImSet([aRev]));
+              } else {
+                newRevs = newRevs.add(aRev);
+              }
             }
           }
           currentBIdx += 1;
         }
-        return newRevs === line.revs ? line : line.set('revs', newRevs);
+        const newLine = newRevs === line.revs ? line : line.set('revs', newRevs);
+        return extraLine != null ? [extraLine, newLine] : [newLine];
       });
 
       if (needPatchARev) {
