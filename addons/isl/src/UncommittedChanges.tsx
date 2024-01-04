@@ -210,7 +210,7 @@ function SectionedFileList({filesByPrefix, ...rest}: SectionProps) {
       {Array.from(filesByPrefix.entries(), ([prefix, files]) => {
         const isCollapsed = collapsedSections.has(prefix);
         return (
-          <div className="file-tree-section">
+          <div className="file-tree-section" key={prefix}>
             <FileTreeFolderHeader
               isCollapsed={isCollapsed}
               toggleCollapsed={() =>
