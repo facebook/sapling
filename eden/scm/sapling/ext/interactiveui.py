@@ -20,20 +20,14 @@ if not pycompat.iswindows:
     import tty
 
 
-def upline(n: int = 1) -> None:
-    w = sys.stdout
-    # ANSI
-    # ESC[#A : up # lines
-    w.write("\033[%dA" % n)
-
-
 def clearline(n: int = 1) -> None:
     w = sys.stdout
     # ANSI
     # ESC[#A : up # lines
     # ESC[K : clear to end of line
+    w.write("\033[2K")
     for i in range(n):
-        w.write("\033[1A\033[K")
+        w.write("\033[1A\033[2K")
 
 
 # From:
@@ -157,14 +151,9 @@ def view(viewobj) -> None:
             break
         linecount = s.count("\n")
         s = viewobj.render()
-        newlinecount = s.count("\n")
-        if newlinecount < linecount:
-            clearline(linecount - newlinecount)
-            upline(newlinecount)
-        else:
-            upline(linecount)
+        clearline(linecount)
         slist = s.splitlines(True)
-        sys.stdout.write("".join("\033[K" + line for line in slist))
+        sys.stdout.write("".join("\r" + line for line in slist))
         sys.stdout.flush()
     # re-enable line wrapping
     # this is from curses.tigetstr('smam')
