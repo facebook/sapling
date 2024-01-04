@@ -495,6 +495,86 @@ def getrevs(ui, repo, masterstring, headrevs):
     return revs
 
 
+if interactiveui is not None:
+
+    class interactivesmartlog(interactiveui.viewframe):
+        def __init__(self, ui, repo, masterstring, headrevs, template, opts):
+            super().__init__(ui, repo)
+            self.masterstring = masterstring
+            self.template = template
+            self.headrevs = headrevs
+            self.opts = opts
+            self.dag_index = 0
+            self._compute_graph()
+            self.status = ""
+            self.rebase_source = None
+
+        # Compute new index of ctx in revdag
+        # TODO: Handle case where ctx is no longer in revdag. Currently should be impossible but could happen if we change what the selected_node is when rebasing.
+        def _new_index(self, ctx):
+            return [node[2] for node in self.revdag].index(ctx)
+
+        def _compute_graph(self):
+            revs = getrevs(self.ui, self.repo, self.masterstring, self.headrevs)
+            if len(revs) == 0:
+                self.finish()
+            self.revdag, self.reserved = getdag(
+                self.ui, self.repo, sorted(revs), self.masterstring, self.template
+            )
+
+        def render(self):
+            ui = self.ui
+            ui.pushbuffer()
+            # Print it!
+            displayer = cmdutil.show_changeset(
+                self.ui, self.repo, self.opts, buffered=True
+            )
+            cmdutil.displaygraph(
+                self.ui,
+                self.repo,
+                self.revdag,
+                displayer,
+                reserved=self.reserved,
+                props={"highlighted_rev": self.revdag[self.dag_index][2].hex()},
+            )
+            ui.status(self.status)
+            return ui.popbuffer()
+
+        def handlekeypress(self, key):
+            if key == self.KEY_Q:
+                self.finish()
+            if key == self.KEY_J:
+                if self.dag_index < len(self.revdag) - 1:
+                    self.dag_index += 1
+            if key == self.KEY_K:
+                if self.dag_index > 0:
+                    self.dag_index -= 1
+            if key == self.KEY_RETURN:
+                self.ui.pushbuffer(error=True)
+                selected_ctx = self.revdag[self.dag_index][2]
+                try:
+                    if self.rebase_source is None:
+                        # Equivalent to `hg update selected_ctx`
+                        commands.update(self.ui, self.repo, selected_ctx.hex())
+                    else:
+                        # Equivalent to `hg rebase -s self.rebase_source -d selected_ctx`
+                        rebase.rebase(
+                            self.ui,
+                            self.repo,
+                            source=self.rebase_source[2].hex(),
+                            dest=selected_ctx.hex(),
+                        )
+                        self.rebase_source = None
+                        self._compute_graph()
+                        self.dag_index = self._new_index(selected_ctx)
+                except Exception as ex:
+                    self.ui.write_err("operation failed: %s\n" % ex)
+                self.status = self.ui.popbuffer()
+            if key == self.KEY_R:
+                self.rebase_source = self.revdag[self.dag_index]
+                self.status = _("rebasing from %s") % (self.rebase_source[2])
+
+
 def _smartlog(ui, repo, *pats, **opts):
     masterfallback = "interestingmaster()"
 
@@ -511,78 +591,7 @@ def _smartlog(ui, repo, *pats, **opts):
 
         ui.write_err(_("warning: interactive mode is WIP\n"))
 
-        class interactivesmartlog(interactiveui.viewframe):
-            dag_index = 0
-            revs = getrevs(ui, repo, masterstring, headrevs)
-
-            if len(revs) == 0:
-                super().finish()
-
-            revdag, reserved = getdag(ui, repo, sorted(revs), masterstring, template)
-            status = ""
-            rebase_source = None
-
-            # Compute new index of ctx in revdag
-            # TODO: Handle case where ctx is no longer in revdag. Currently should be impossible but could happen if we change what the selected_node is when rebasing.
-            def new_index(self, ctx):
-                return [node[2] for node in self.revdag].index(ctx)
-
-            def render(self):
-                ui = self.ui
-                ui.pushbuffer()
-                # Print it!
-                displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
-                cmdutil.displaygraph(
-                    ui,
-                    repo,
-                    self.revdag,
-                    displayer,
-                    reserved=self.reserved,
-                    props={"highlighted_rev": self.revdag[self.dag_index][2].hex()},
-                )
-                ui.status(self.status)
-                return ui.popbuffer()
-
-            def handlekeypress(self, key):
-                if key == self.KEY_Q:
-                    self.finish()
-                if key == self.KEY_J:
-                    if self.dag_index < len(self.revdag) - 1:
-                        self.dag_index += 1
-                if key == self.KEY_K:
-                    if self.dag_index > 0:
-                        self.dag_index -= 1
-                if key == self.KEY_RETURN:
-                    ui.pushbuffer(error=True)
-                    selected_ctx = self.revdag[self.dag_index][2]
-                    try:
-                        if self.rebase_source is None:
-                            # Equivalent to `hg update selected_ctx`
-                            commands.update(ui, repo, selected_ctx.hex())
-                        else:
-                            # Equivalent to `hg rebase -s self.rebase_source -d selected_ctx`
-                            rebase.rebase(
-                                ui,
-                                repo,
-                                source=self.rebase_source[2].hex(),
-                                dest=selected_ctx.hex(),
-                            )
-                            self.rebase_source = None
-                            self.revs = getrevs(ui, repo, masterstring, headrevs)
-                            if len(self.revs) == 0:
-                                self.finish()
-                            self.revdag, self.reserved = getdag(
-                                ui, repo, sorted(self.revs), masterstring, template
-                            )
-                            self.dag_index = self.new_index(selected_ctx)
-                    except Exception as ex:
-                        ui.write_err("operation failed: %s\n" % ex)
-                    self.status = ui.popbuffer()
-                if key == self.KEY_R:
-                    self.rebase_source = self.revdag[self.dag_index]
-                    self.status = _("rebasing from %s") % (self.rebase_source[2])
-
-        viewobj = interactivesmartlog(ui, repo)
+        viewobj = interactivesmartlog(ui, repo, masterstring, headrevs, template, opts)
         interactiveui.view(viewobj)
         return
 
