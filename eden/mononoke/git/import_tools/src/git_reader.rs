@@ -223,8 +223,7 @@ async fn read_objects_task(
             // We have an object. Let's try and read it.
 
             // We need to read size bytes, and then send it on as an object to unblock our listener
-            let mut bytes = Vec::new();
-            bytes.resize(size, 0u8);
+            let mut bytes: Vec<u8> = vec![0; size];
             reader
                 .read_exact(&mut bytes)
                 .await

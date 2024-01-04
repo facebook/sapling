@@ -12,6 +12,7 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::fmt::Write;
 use std::sync::Arc;
 
 use anyhow::anyhow;
@@ -1405,8 +1406,10 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
                 "Missing changesets from sql commit graph storage: {}",
                 unfetched_ids
                     .into_iter()
-                    .map(|id| format!("{}, ", id))
-                    .collect::<String>()
+                    .fold(String::new(), |mut acc, cs_id| {
+                        let _ = write!(acc, "{}, ", cs_id);
+                        acc
+                    })
             );
         }
         Ok(edges)

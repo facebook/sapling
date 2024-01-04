@@ -8,6 +8,7 @@
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::fmt::Write;
 
 use anyhow::anyhow;
 use anyhow::Result;
@@ -141,8 +142,10 @@ impl CommitGraphStorage for InMemoryCommitGraphStorage {
                 "Missing changesets from in-memory commit graph storage: {}",
                 missing_changesets
                     .into_iter()
-                    .map(|cs_id| format!("{}, ", cs_id))
-                    .collect::<String>()
+                    .fold(String::new(), |mut acc, cs_id| {
+                        let _ = write!(acc, "{}, ", cs_id);
+                        acc
+                    })
             ))
         } else {
             Ok(edges)

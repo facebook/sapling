@@ -544,7 +544,7 @@ impl Convert for RawSegmentedChangelogConfig {
             default: Option<Duration>,
         ) -> Result<Option<Duration>> {
             match maybe_secs {
-                Some(secs) if secs == 0 => Ok(None),
+                Some(0) => Ok(None),
                 Some(secs) => Ok(Some(Duration::from_secs(secs.try_into()?))),
                 None => Ok(default),
             }

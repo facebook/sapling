@@ -267,8 +267,8 @@ pub async fn get_renamed_implicit_deletes<'a, I: IntoIterator<Item = ChangesetId
     // implicitly deleting existing directories.
     let paths_added: Vec<_> = file_changes
         .into_iter()
-        .filter(|&(mpath, file_change)| file_change.is_changed())
-        .map(|(mpath, file_change)| mpath.clone())
+        .filter(|&(_mpath, file_change)| file_change.is_changed())
+        .map(|(mpath, _file_change)| mpath.clone())
         .collect();
 
     let store = source_repo.repo_blobstore().clone();
