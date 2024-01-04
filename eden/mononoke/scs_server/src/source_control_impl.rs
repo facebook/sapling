@@ -945,6 +945,11 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             params: thrift::UploadGitObjectParams,
         ) -> Result<thrift::UploadGitObjectResponse, service::UploadGitObjectExn>;
 
+        async fn repo_upload_non_blob_git_object(
+            repo: thrift::RepoSpecifier,
+            params: thrift::RepoUploadNonBlobGitObjectParams,
+        ) -> Result<thrift::RepoUploadNonBlobGitObjectResponse, service::RepoUploadNonBlobGitObjectExn>;
+
         async fn create_git_tree(
             repo: thrift::RepoSpecifier,
             params: thrift::CreateGitTreeParams,
