@@ -294,6 +294,15 @@ elif sys.platform.startswith("darwin"):
         # S362020: Redirect tests leave behind garbage on macOS Sandcastle hosts
         TEST_DISABLED["redirect_test.RedirectTest"] = True
 
+    # Requires sudo. We don't have access to passwordless `sudo` on macOS
+    # Sandcastle hosts, so we should disable this test.
+    TEST_DISABLED["hg.storage_engine_test.FailsToOpenLocalStoreTestWithMounts"] = [
+        "test_restart_eden_with_local_store_that_fails_to_open"
+    ]
+    TEST_DISABLED["hg.storage_engine_test.FailsToOpenLocalStoreTest"] = [
+        "test_restart_eden_with_local_store_that_fails_to_open"
+    ]
+
 
 # Windows specific tests
 if sys.platform != "win32":
