@@ -30,10 +30,10 @@ use futures::StreamExt;
 use futures::TryStreamExt;
 use git_symbolic_refs::GitSymbolicRefsRef;
 use git_types::fetch_delta_instructions;
+use git_types::fetch_git_object_bytes;
 use git_types::fetch_non_blob_git_object_bytes;
 use git_types::fetch_packfile_base_item;
 use git_types::fetch_packfile_base_item_if_exists;
-use git_types::get_object_bytes;
 use git_types::upload_packfile_base_item;
 use git_types::DeltaInstructionChunkIdPrefix;
 use git_types::GitDeltaManifestEntry;
@@ -372,9 +372,9 @@ async fn object_bytes(
         ObjectIdentifierType::AllObjects(sha) => {
             // The object identifier has been passed along with size and type information. This means
             // that it can be any type of Git object. We store Git blobs as file content and all other
-            // Git objects as raw git content. The get_object_bytes function fetches from the appropriate
+            // Git objects as raw git content. The fetch_git_object_bytes function fetches from the appropriate
             // source depending on the type of the object.
-            get_object_bytes(ctx, blobstore.clone(), &sha, HeaderState::Included).await?
+            fetch_git_object_bytes(ctx, blobstore.clone(), &sha, HeaderState::Included).await?
         }
         ObjectIdentifierType::NonBlobObjects(oid) => {
             // The object identifier has only been passed with an ObjectId. This means that it must be a
