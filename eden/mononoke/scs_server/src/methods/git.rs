@@ -50,7 +50,7 @@ impl SourceControlServiceImpl {
         let git_hash = gix_hash::oid::try_from_bytes(&params.git_hash)
             .map_err(|_| GitError::InvalidHash(format!("{:x?}", params.git_hash)))?;
         repo_ctx
-            .upload_git_object(git_hash, params.raw_content)
+            .upload_non_blob_git_object(git_hash, params.raw_content)
             .await?;
         Ok(thrift::UploadGitObjectResponse {
             ..Default::default()

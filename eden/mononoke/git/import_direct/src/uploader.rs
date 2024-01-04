@@ -33,7 +33,7 @@ use import_tools::HGGIT_MARKER_EXTRA;
 use import_tools::HGGIT_MARKER_VALUE;
 use mononoke_api::repo::git::create_annotated_tag;
 use mononoke_api::repo::git::upload_packfile_base_item;
-use mononoke_api::repo::upload_git_object;
+use mononoke_api::repo::upload_non_blob_git_object;
 use mononoke_types::bonsai_changeset::BonsaiAnnotatedTag;
 use mononoke_types::bonsai_changeset::BonsaiAnnotatedTagTarget;
 use mononoke_types::hash;
@@ -249,7 +249,7 @@ where
         oid: ObjectId,
         git_bytes: Bytes,
     ) -> Result<(), Error> {
-        upload_git_object(ctx, self.inner.repo_blobstore(), &oid, git_bytes.to_vec())
+        upload_non_blob_git_object(ctx, self.inner.repo_blobstore(), &oid, git_bytes.to_vec())
             .await
             .map_err(|e| {
                 anyhow::anyhow!(

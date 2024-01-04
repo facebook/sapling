@@ -51,8 +51,9 @@ const GIT_OBJECT_PREFIX: &str = "git_object";
 const GIT_PACKFILE_BASE_ITEM_PREFIX: &str = "git_packfile_base_item";
 const SEPARATOR: &str = ".";
 
-/// Free function for uploading serialized git objects
-pub async fn upload_git_object<B>(
+/// Free function for uploading serialized git objects to blobstore.
+/// Supports all git object types except blobs.
+pub async fn upload_non_blob_git_object<B>(
     ctx: &CoreContext,
     blobstore: &B,
     git_hash: &gix_hash::oid,
@@ -95,8 +96,9 @@ where
     // TODO(rajshar): Create and upload PackfileItem corresponding to the stored git object
 }
 
-/// Free function for fetching the raw bytes of stored git objects
-pub async fn fetch_git_object_bytes<B>(
+/// Free function for fetching the raw bytes of stored git objects.
+/// Applies to all git object types except blobs.
+pub async fn fetch_non_blob_git_object_bytes<B>(
     ctx: &CoreContext,
     blobstore: &B,
     git_hash: &gix_hash::oid,
@@ -113,8 +115,9 @@ where
     Ok(object_bytes.into_raw_bytes())
 }
 
-/// Free function for fetching stored git objects
-pub async fn fetch_git_object<B>(
+/// Free function for fetching stored git objects. Applies to all git
+/// objects except blobs.
+pub async fn fetch_non_blob_git_object<B>(
     ctx: &CoreContext,
     blobstore: &B,
     git_hash: &gix_hash::oid,
@@ -122,7 +125,7 @@ pub async fn fetch_git_object<B>(
 where
     B: Blobstore + Clone,
 {
-    let raw_bytes = fetch_git_object_bytes(ctx, blobstore, git_hash).await?;
+    let raw_bytes = fetch_non_blob_git_object_bytes(ctx, blobstore, git_hash).await?;
     let object = gix_object::ObjectRef::from_loose(raw_bytes.as_ref()).map_err(|e| {
         GitError::InvalidContent(
             git_hash.to_hex().to_string(),

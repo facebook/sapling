@@ -93,13 +93,13 @@ impl RepoContext {
         Ok(())
     }
 
-    /// Upload serialized git objects
-    pub async fn upload_git_object(
+    /// Upload serialized git objects. Applies for all git object types except git blobs.
+    pub async fn upload_non_blob_git_object(
         &self,
         git_hash: &gix_hash::oid,
         raw_content: Vec<u8>,
     ) -> anyhow::Result<(), GitError> {
-        upload_git_object(
+        upload_non_blob_git_object(
             &self.ctx,
             self.inner_repo().repo_blobstore(),
             git_hash,
@@ -168,8 +168,9 @@ impl RepoContext {
     }
 }
 
-/// Free function for uploading serialized git objects
-pub async fn upload_git_object<B>(
+/// Free function for uploading serialized git objects. Applies to all
+/// git object types except git blobs.
+pub async fn upload_non_blob_git_object<B>(
     ctx: &CoreContext,
     blobstore: &B,
     git_hash: &gix_hash::oid,
@@ -178,7 +179,7 @@ pub async fn upload_git_object<B>(
 where
     B: Blobstore + Clone,
 {
-    git_types::upload_git_object(ctx, blobstore, git_hash, raw_content).await
+    git_types::upload_non_blob_git_object(ctx, blobstore, git_hash, raw_content).await
 }
 
 /// Free function for uploading packfile item for git base object

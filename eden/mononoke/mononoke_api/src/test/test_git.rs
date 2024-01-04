@@ -27,11 +27,11 @@ async fn init_repo(ctx: &CoreContext) -> Result<RepoContext> {
     Ok(repo_context)
 }
 
-/// upload_git_object tests
+/// upload_non_blob_git_object tests
 
 #[fbinit::test]
 /// Validate the basic git upload object functionality works.
-async fn basic_upload_git_object(fb: FacebookInit) -> Result<()> {
+async fn basic_upload_non_blob_git_object(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let repo_ctx = init_repo(&ctx).await?;
     let tag = Tag {
@@ -47,7 +47,7 @@ async fn basic_upload_git_object(fb: FacebookInit) -> Result<()> {
 
     let sha1_hash = hash_bytes(Sha1IncrementalHasher::new(), bytes.as_slice());
     let output = repo_ctx
-        .upload_git_object(gix_hash::oid::try_from_bytes(sha1_hash.as_ref())?, bytes)
+        .upload_non_blob_git_object(gix_hash::oid::try_from_bytes(sha1_hash.as_ref())?, bytes)
         .await;
     output.expect("Expected git object to be uploaded successfully");
     Ok(())
@@ -55,7 +55,7 @@ async fn basic_upload_git_object(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::test]
 /// Validate that we get an error while trying to upload a git blob through this method.
-async fn blob_upload_git_object(fb: FacebookInit) -> Result<()> {
+async fn blob_upload_non_blob_git_object(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let repo_ctx = init_repo(&ctx).await?;
     let blob = gix_object::Blob {
@@ -65,7 +65,7 @@ async fn blob_upload_git_object(fb: FacebookInit) -> Result<()> {
     blob.write_to(bytes.by_ref())?;
     let sha1_hash = hash_bytes(Sha1IncrementalHasher::new(), bytes.as_slice());
     let output = repo_ctx
-        .upload_git_object(gix_hash::oid::try_from_bytes(sha1_hash.as_ref())?, bytes)
+        .upload_non_blob_git_object(gix_hash::oid::try_from_bytes(sha1_hash.as_ref())?, bytes)
         .await;
     assert!(matches!(
         output.expect_err("Expected error during git object upload"),
@@ -76,7 +76,7 @@ async fn blob_upload_git_object(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::test]
 /// Validate that we get an error while trying to upload invalid git bytes with this method.
-async fn invalid_bytes_upload_git_object(fb: FacebookInit) -> Result<()> {
+async fn invalid_bytes_upload_non_blob_git_object(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let repo_ctx = init_repo(&ctx).await?;
     let tag = Tag {
@@ -92,7 +92,7 @@ async fn invalid_bytes_upload_git_object(fb: FacebookInit) -> Result<()> {
 
     let sha1_hash = hash_bytes(Sha1IncrementalHasher::new(), bytes.as_slice());
     let output = repo_ctx
-        .upload_git_object(gix_hash::oid::try_from_bytes(sha1_hash.as_ref())?, bytes)
+        .upload_non_blob_git_object(gix_hash::oid::try_from_bytes(sha1_hash.as_ref())?, bytes)
         .await;
     assert!(matches!(
         output.expect_err("Expected error during git object upload"),
@@ -103,7 +103,7 @@ async fn invalid_bytes_upload_git_object(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::test]
 /// Validate that we get an error while trying to upload a git object with incorrect hash.
-async fn invalid_hash_upload_git_object(fb: FacebookInit) -> Result<()> {
+async fn invalid_hash_upload_non_blob_git_object(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let repo_ctx = init_repo(&ctx).await?;
     let tag = Tag {
@@ -118,7 +118,7 @@ async fn invalid_hash_upload_git_object(fb: FacebookInit) -> Result<()> {
     tag.write_to(bytes.by_ref())?;
 
     let output = repo_ctx
-        .upload_git_object(&ObjectId::empty_tree(gix_hash::Kind::Sha1), bytes)
+        .upload_non_blob_git_object(&ObjectId::empty_tree(gix_hash::Kind::Sha1), bytes)
         .await;
     assert!(matches!(
         output.expect_err("Expected error during git object upload"),
@@ -129,7 +129,7 @@ async fn invalid_hash_upload_git_object(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::test]
 /// Validate that the git object stored in the blobstore is stored under the right key.
-async fn blobstore_check_upload_git_object(fb: FacebookInit) -> Result<()> {
+async fn blobstore_check_upload_non_blob_git_object(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let repo_ctx = init_repo(&ctx).await?;
     let tag = Tag {
@@ -146,7 +146,7 @@ async fn blobstore_check_upload_git_object(fb: FacebookInit) -> Result<()> {
     let sha1_hash = hash_bytes(Sha1IncrementalHasher::new(), bytes.as_slice());
     let blobstore_key = format!("git_object.{}", sha1_hash.to_hex());
     repo_ctx
-        .upload_git_object(gix_hash::oid::try_from_bytes(sha1_hash.as_ref())?, bytes)
+        .upload_non_blob_git_object(gix_hash::oid::try_from_bytes(sha1_hash.as_ref())?, bytes)
         .await?;
     let output = repo_ctx.repo_blobstore().get(&ctx, &blobstore_key).await?;
     output.expect("Expected git object to be uploaded successfully");
@@ -167,7 +167,9 @@ async fn basic_create_git_tree(fb: FacebookInit) -> Result<()> {
 
     let sha1_hash = hash_bytes(Sha1IncrementalHasher::new(), bytes.as_slice());
     let git_tree_hash = gix_hash::oid::try_from_bytes(sha1_hash.as_ref())?;
-    repo_ctx.upload_git_object(git_tree_hash, bytes).await?;
+    repo_ctx
+        .upload_non_blob_git_object(git_tree_hash, bytes)
+        .await?;
 
     let output = repo_ctx.create_git_tree(git_tree_hash).await;
     output.expect("Expected git tree to be created successfully");

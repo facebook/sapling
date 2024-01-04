@@ -30,7 +30,7 @@ use futures::StreamExt;
 use futures::TryStreamExt;
 use git_symbolic_refs::GitSymbolicRefsRef;
 use git_types::fetch_delta_instructions;
-use git_types::fetch_git_object_bytes;
+use git_types::fetch_non_blob_git_object_bytes;
 use git_types::fetch_packfile_base_item;
 use git_types::fetch_packfile_base_item_if_exists;
 use git_types::get_object_bytes;
@@ -379,7 +379,7 @@ async fn object_bytes(
         ObjectIdentifierType::NonBlobObjects(oid) => {
             // The object identifier has only been passed with an ObjectId. This means that it must be a
             // non-blob Git object that can be fetched directly from the blobstore.
-            fetch_git_object_bytes(ctx, &blobstore, oid.as_ref()).await?
+            fetch_non_blob_git_object_bytes(ctx, &blobstore, oid.as_ref()).await?
         }
     };
     Ok(bytes)

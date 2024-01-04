@@ -56,7 +56,7 @@ use crate::delta_manifest::GitDeltaManifestEntry;
 use crate::delta_manifest::GitDeltaManifestId;
 use crate::delta_manifest::ObjectDelta;
 use crate::delta_manifest::ObjectEntry;
-use crate::fetch_git_object;
+use crate::fetch_non_blob_git_object;
 use crate::mode;
 use crate::store::store_delta_instructions;
 use crate::DeltaObjectKind;
@@ -170,7 +170,7 @@ pub async fn get_object_bytes(
     }
     // Non-blob objects are stored directly as raw Git objects in Mononoke
     else {
-        let object = fetch_git_object(ctx, &blobstore, git_objectid.as_ref()).await?;
+        let object = fetch_non_blob_git_object(ctx, &blobstore, git_objectid.as_ref()).await?;
         let mut object_bytes = match header_state {
             HeaderState::Included => object.loose_header().into_vec(),
             HeaderState::Excluded => vec![],

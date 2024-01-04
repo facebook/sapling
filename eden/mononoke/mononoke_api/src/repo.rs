@@ -187,7 +187,7 @@ pub mod git;
 pub mod land_stack;
 pub mod move_bookmark;
 
-pub use git::upload_git_object;
+pub use git::upload_non_blob_git_object;
 
 define_stats! {
     prefix = "mononoke.api";
