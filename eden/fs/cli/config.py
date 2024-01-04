@@ -1913,4 +1913,6 @@ def load_toml_config(path: Path) -> TomlConfigDict:
     except FileNotFoundError:
         raise
     except Exception as e:
-        raise FileError(f"toml config is either missing or corrupted : {str(e)}")
+        raise FileError(
+            f"toml config file {str(path)} is either missing or corrupted: {str(e)}"
+        )

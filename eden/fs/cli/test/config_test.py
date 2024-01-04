@@ -9,6 +9,7 @@
 import configparser
 import io
 import os
+import re
 import sys
 import unittest
 from collections import namedtuple
@@ -182,9 +183,11 @@ class TomlConfigTest(EdenTestCaseBase):
         cfg = self.get_config()
         with self.assertLogs() as logs_assertion:
             cfg._loadConfig()
-        self.assertIn(
-            "toml config is either missing or corrupted",
-            "\n".join(logs_assertion.output),
+        self.assertTrue(
+            re.search(
+                "toml config file .* is either missing or corrupted",
+                "\n".join(logs_assertion.output),
+            )
         )
 
     def test_get_config_value_returns_default_if_section_is_missing(self) -> None:
