@@ -20,7 +20,6 @@ import {commitByHash} from '../serverAPIState';
 import {
   commitInfoViewCurrentCommits,
   commitMode,
-  editedCommitMessages,
   latestCommitMessageFieldsWithEdits,
 } from './CommitInfoState';
 import {getInnerTextareaForVSCodeTextArea} from './utils';

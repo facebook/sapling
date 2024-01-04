@@ -131,7 +131,7 @@ export function relativeDate(
   const delta = reference - input;
 
   // Use Intl.RelativeTimeFormat for non-en locales, if available.
-  if (getCurrentLanguage() != 'en' && typeof Intl !== undefined) {
+  if (getCurrentLanguage() != 'en' && typeof Intl !== 'undefined') {
     for (const unit of Object.keys(units) as Array<keyof typeof units>) {
       if (Math.abs(delta) > units[unit] || unit == 'minute') {
         return new Intl.RelativeTimeFormat(getCurrentLanguage(), {

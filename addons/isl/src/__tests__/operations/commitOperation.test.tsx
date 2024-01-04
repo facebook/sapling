@@ -54,8 +54,8 @@ describe('CommitOperation', () => {
     fireEvent.click(quickCommitButton as Element);
   };
 
-  const clickCheckboxForFile = async (inside: HTMLElement, fileName: string) => {
-    await act(async () => {
+  const clickCheckboxForFile = (inside: HTMLElement, fileName: string) => {
+    act(() => {
       const checkbox = within(within(inside).getByTestId(`changed-file-${fileName}`)).getByTestId(
         'file-selection-checkbox',
       );
@@ -83,9 +83,9 @@ describe('CommitOperation', () => {
     });
   });
 
-  it('runs commit with subset of files selected', async () => {
+  it('runs commit with subset of files selected', () => {
     const commitTree = screen.getByTestId('commit-tree-root');
-    await clickCheckboxForFile(commitTree, 'file2.txt');
+    clickCheckboxForFile(commitTree, 'file2.txt');
 
     clickQuickCommit();
 
@@ -107,9 +107,9 @@ describe('CommitOperation', () => {
     });
   });
 
-  it('changed files are shown in commit info view', async () => {
+  it('changed files are shown in commit info view', () => {
     const commitTree = screen.getByTestId('commit-tree-root');
-    await clickCheckboxForFile(commitTree, 'file2.txt');
+    clickCheckboxForFile(commitTree, 'file2.txt');
 
     const quickInput = screen.getByTestId('quick-commit-title');
 

@@ -19,7 +19,6 @@ import {
 } from '../testUtils';
 import {GeneratedStatus} from '../types';
 import {act, screen, render, waitFor, fireEvent, cleanup, within} from '@testing-library/react';
-import {wait} from '@testing-library/user-event/dist/utils';
 import fs from 'fs';
 import path from 'path';
 import {ComparisonType} from 'shared/Comparison';

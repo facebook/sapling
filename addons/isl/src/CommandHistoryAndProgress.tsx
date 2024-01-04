@@ -6,7 +6,7 @@
  */
 
 import type {Operation} from './operations/Operation';
-import type {CommandArg, ValidatedRepoInfo} from './types';
+import type {ValidatedRepoInfo} from './types';
 import type {ReactNode} from 'react';
 
 import {Delayed} from './Delayed';

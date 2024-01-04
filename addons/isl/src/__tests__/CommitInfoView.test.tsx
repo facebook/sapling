@@ -714,7 +714,7 @@ describe('CommitInfoView', () => {
             expect(amendMessageButton).toBeDisabled();
           });
 
-          it('shows amend message instead of amend when there are only message changes', async () => {
+          it('shows amend message instead of amend when there are only message changes', () => {
             act(() => {
               simulateUncommittedChangedFiles({
                 value: [{path: 'src/file1.js', status: 'M'}],

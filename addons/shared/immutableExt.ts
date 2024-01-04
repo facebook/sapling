@@ -20,7 +20,7 @@ export class SelfUpdate<T extends ValueObject> implements ValueObject {
   }
 
   equals(other: unknown): boolean {
-    if (!(other instanceof SelfUpdate<T>)) {
+    if (!(other instanceof SelfUpdate)) {
       return false;
     }
     if (this === other) {

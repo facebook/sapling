@@ -13,12 +13,11 @@ import {
   simulateCommits,
   closeCommitInfoSidebar,
   TEST_COMMIT_HISTORY,
-  COMMIT,
   expectMessageNOTSentToServer,
   openCommitInfoSidebar,
 } from '../testUtils';
 import {CommandRunner} from '../types';
-import {fireEvent, render, screen, within} from '@testing-library/react';
+import {fireEvent, render, screen} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {act} from 'react-dom/test-utils';
 
