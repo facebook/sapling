@@ -34,6 +34,7 @@ import type {LineIdx, Rev} from '../linelog';
 import {LineLog, executeCache} from '../linelog';
 import {describe, it, expect} from '@jest/globals';
 import * as Immutable from 'immutable';
+import {splitLines} from 'shared/diff';
 
 describe('LineLog', () => {
   it('can be empty', () => {
@@ -377,22 +378,127 @@ describe('LineLog', () => {
       expect(log.checkOut(2)).not.toBe('b\nc\n');
     });
 
-    it('can reorder changes', () => {
-      const log = logFromTextList(['b\n', 'b\nc\n', 'a\nb\nc\n']).remapRevs(
-        new Map([
-          [2, 3],
-          [3, 2],
-        ]),
-      );
-      expect(log.checkOut(1)).toBe('b\n');
-      expect(log.checkOut(2)).toBe('a\nb\n');
-      expect(log.checkOut(3)).toBe('a\nb\nc\n');
-      expect(log.checkOutLines(3)).toMatchObject([
-        {data: 'a\n', rev: 2},
-        {data: 'b\n', rev: 1},
-        {data: 'c\n', rev: 3},
-        {data: '', rev: 0},
-      ]);
+    describe('can reorder changes', () => {
+      const defaultSwap: [Rev, Rev] = [2, 3];
+
+      /** Follow the swap. For example, mapSwap(2, [2, 3]) is 3. */
+      const mapSwap = (rev: Rev, swap: [Rev, Rev] = defaultSwap) =>
+        rev === swap[0] ? swap[1] : rev === swap[1] ? swap[0] : rev;
+
+      /**
+       * Swap revs from revs to newRevs. All "line"s are added, by different revs.
+       * For example, when lines = ['a\n', 'b\n', 'c\n'], lineAddedOrder = [1, 3, 2],
+       * it means 'a' was added by rev 1, 'b' by rev 3, 'c' by rev 2, so the 3 revs
+       * are ['a\n', 'a\nc\n', 'a\nb\n'].
+       *
+       * By default, this test takes 3 revs and swap rev 2 and 3.
+       */
+      function testReorderInsertions(
+        lines: string[],
+        lineAddedOrder: Rev[],
+        opts?: {
+          swap?: [Rev, Rev] /* 2 revs to swap, default: [2, 3] */;
+          join?: string /* join character, default: '' */;
+          expectedDepMapOverride?: [Rev, Rev[]][] /* override the expected depMap */;
+          expectedTextOverride?: string[] /* override the expected texts after swapping */;
+        },
+      ) {
+        expect(lines.length).toBe(lineAddedOrder.length);
+        const revs = Array.from({length: lines.length}, (_, i) => i + 1); /* ex. [1, 2, 3] */
+        const swap = opts?.swap ?? defaultSwap;
+        const optJoin = opts?.join ?? '';
+        const getTexts = (revOrder: Rev[], join = optJoin): string[] => {
+          const revSet = new Set<Rev>();
+          return revOrder.map(rev => {
+            revSet.add(rev);
+            return lines.filter((_l, i) => revSet.has(lineAddedOrder[i])).join(join);
+          });
+        };
+        const texts = getTexts(revs);
+        const log = logFromTextList(texts);
+
+        // Nothing depends on each other.
+        expect(flattenDepMap(log.calculateDepMap())).toEqual(
+          opts?.expectedDepMapOverride ?? revs.map(r => [r, [0]]),
+        );
+
+        // Reorder.
+        const reorderedLog = log.remapRevs(new Map([swap, [swap[1], swap[0]]]));
+
+        // Check reorder result.
+        // Remove "join" for easier comparison.
+        const removeJoin = (text: string) =>
+          splitLines(text)
+            .filter(t => t !== optJoin)
+            .join('');
+        const reorderedRevs = revs.map(r => mapSwap(r, swap));
+        const expectedReorderedText = opts?.expectedTextOverride ?? getTexts(reorderedRevs, '');
+        revs.forEach((rev, i) => {
+          expect(removeJoin(reorderedLog.checkOut(rev))).toBe(expectedReorderedText[i]);
+        });
+
+        return reorderedLog;
+      }
+
+      const threeRevPermutations = [
+        [1, 2, 3],
+        [1, 3, 2],
+        [2, 1, 3],
+        [2, 3, 1],
+        [3, 1, 2],
+        [3, 2, 1],
+      ];
+
+      /** Make the test a bit more interesting with multi-line input. */
+      const charToFunction = (c: string): string => `function ${c} () {\n  return '${c}';\n}\n`;
+
+      const abcTexts = ['a\n', 'b\n', 'c\n'];
+      const functionTexts = ['a', 'b', 'c'].map(charToFunction);
+
+      threeRevPermutations.forEach(revOrder => {
+        const expectedDepMapOverride: [Rev, Rev[]][] | undefined =
+          revOrder.join('') === '231'
+            ? [
+                [1, [0]],
+                [2, [0]],
+                [3, [1]], // FIXME: This is suboptimal in 231 order.
+              ]
+            : undefined;
+
+        it(`insert 'a','b','c' in ${revOrder} order`, () => {
+          const log = testReorderInsertions(abcTexts, revOrder, {expectedDepMapOverride});
+          expect(log.checkOutLines(3)).toMatchObject([
+            {data: 'a\n', rev: mapSwap(revOrder[0])},
+            {data: 'b\n', rev: mapSwap(revOrder[1])},
+            {data: 'c\n', rev: mapSwap(revOrder[2])},
+            {data: '', rev: 0},
+          ]);
+        });
+
+        // FIXME: 231 order does not pass. See above.
+        const maybeIt = revOrder.join('') === '231' ? it.skip : it;
+        maybeIt(`insert 3 functions in ${revOrder} order`, () => {
+          testReorderInsertions(functionTexts, revOrder);
+        });
+      });
+
+      it('insert 3 functions with new line join, in [1, 3, 2] order', () => {
+        // Similar to the test above, but with '\n' inserted between functions.
+        const abc = ['a', 'b', 'c'].map(charToFunction);
+        testReorderInsertions(abc, [1, 3, 2], {
+          join: '\n',
+          expectedDepMapOverride: [
+            [1, [0]],
+            [2, [0]],
+            [3, [2]], // FIXME: This is suboptimal.
+          ],
+          expectedTextOverride: [
+            charToFunction('a'),
+            charToFunction('a') /* FIXME: This is suboptimal */,
+            abc.join(''),
+          ],
+        });
+      });
     });
 
     it('can merge changes', () => {
