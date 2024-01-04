@@ -139,6 +139,9 @@ def view(viewobj) -> None:
         raise error.Abort(_("interactive UI does not support Windows"))
     if viewobj.ui.pageractive:
         raise error.Abort(_("interactiveui doesn't work with pager"))
+    # Enter alternate screen
+    # TODO: Investigate portability - may only work for xterm
+    sys.stdout.write("\033[?1049h\033[H")
     # disable line wrapping
     # this is from curses.tigetstr('rmam')
     sys.stdout.write("\x1b[?7l")
@@ -159,3 +162,6 @@ def view(viewobj) -> None:
     # this is from curses.tigetstr('smam')
     sys.stdout.write("\x1b[?7h")
     sys.stdout.flush()
+
+    # Exit alternate screen
+    sys.stdout.write("\033[?1049l")
