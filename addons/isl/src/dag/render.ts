@@ -151,7 +151,7 @@ class Columns {
   }
 }
 
-enum AncestorType {
+export enum AncestorType {
   Ancestor = 'Ancestor',
   Parent = 'Parent',
   Anonymous = 'Anonymous',

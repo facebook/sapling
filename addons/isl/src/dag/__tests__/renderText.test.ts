@@ -7,7 +7,7 @@
 
 import type {Hash} from '../../types';
 
-import {Ancestor} from '../render';
+import {Ancestor, AncestorType} from '../render';
 import {TextRenderer} from '../renderText';
 
 /* Ported from fbcode/eden/scm/lib/renderdag/src/box_drawing.rs */
@@ -596,11 +596,11 @@ function render(fixture: TestFixture): string {
     // Convert parents from string to Ancestor[]
     const ancestors = parents.map(p => {
       if (p.startsWith('P:')) {
-        return new Ancestor({hash: p.substring(2), type: 'Parent'});
+        return new Ancestor({hash: p.substring(2), type: AncestorType.Parent});
       } else if (p.startsWith('A:')) {
-        return new Ancestor({hash: p.substring(2), type: 'Ancestor'});
+        return new Ancestor({hash: p.substring(2), type: AncestorType.Ancestor});
       } else {
-        return new Ancestor({type: 'Anonymous'});
+        return new Ancestor({hash: undefined, type: AncestorType.Anonymous});
       }
     });
     return renderer.nextRow(hash, ancestors, message.trimEnd() + '\n');
