@@ -1083,7 +1083,7 @@ def _simplemerge(ui, basectx, ctx, p1ctx, manifestbuilder):
             _("REV"),
         ),
         ("r", "rev", [], _("rebase these revisions"), _("REV")),
-        ("d", "dest", "", _("rebase onto the specified revision"), _("REV")),
+        ("d", "dest", [], _("rebase onto the specified revision"), _("REV")),
         ("", "collapse", False, _("collapse the rebased commits")),
         ("m", "message", "", _("use text as collapse commit message"), _("TEXT")),
         ("e", "edit", False, _("invoke editor on commit messages")),
@@ -1139,6 +1139,13 @@ def rebase(ui, repo, templ=None, **opts):
         can be used in ``--dest``. Destination would be calculated per source
         revision with ``SRC`` substituted by that single source revision and
         ``ALLSRC`` substituted by all source revisions.
+
+    If multiple ``--rev``s are specified, they can be paired with multiple
+    ``--dest``s. For example::
+
+        rebase -r A+B -d X -r C::E -d Y
+
+    will rebase ``A+B`` to ``X``, and rebase ``C::E`` to ``Y``.
 
     If commits that you are rebasing consist entirely of changes that are
     already present in the destination, those commits are not moved (in
@@ -1278,7 +1285,12 @@ def rebase(ui, repo, templ=None, **opts):
 def _origrebase(ui, repo, rbsrt, **opts):
     with repo.wlock(), repo.lock(), simplemerge.managed_merge_resource(ui, repo.name):
         # Validate input and define rebasing points
-        destf = opts.get("dest", None)
+        dests = opts.get("dest", [])
+        # Compatible with old code that expects --dest as a single flag
+        if dests is None:
+            dests = []
+        elif not isinstance(dests, list):
+            dests = [dests]
         srcf = opts.get("source", None)
         basef = opts.get("base", None)
         revf = opts.get("rev", [])
@@ -1312,7 +1324,7 @@ def _origrebase(ui, repo, rbsrt, **opts):
                 raise error.Abort(_("cannot use both abort and continue"))
             if rbsrt.collapsef:
                 raise error.Abort(_("cannot use collapse with continue or abort"))
-            if srcf or basef or destf:
+            if srcf or basef or dests:
                 raise error.Abort(
                     _("abort and continue do not allow specifying revisions")
                 )
@@ -1330,7 +1342,7 @@ def _origrebase(ui, repo, rbsrt, **opts):
                 ui,
                 repo,
                 rbsrt,
-                destf,
+                dests,
                 srcf,
                 basef,
                 revf,
@@ -1366,16 +1378,29 @@ def _definedestmap(
     ui,
     repo,
     rbsrt,
-    destf=None,
-    srcf=None,
-    basef=None,
-    revf=None,
-    keepf=None,
-    destspace=None,
+    dests,
+    srcf,
+    basef,
+    revf,
+    keepf,
+    destspace,
 ):
     """use revisions argument to define destmap {srcrev: destrev}"""
     if revf is None:
         revf = []
+
+    destlen = len(dests)
+    if destlen == 1:
+        destf = dests[0]
+    else:
+        destf = None
+    if destlen > 1:
+        if srcf or basef:
+            raise error.Abort(
+                _("multiple --dest requires --rev, not --base or --source")
+            )
+        elif len(revf) != destlen:
+            raise error.Abort(_("number of --dest does not match number of --rev"))
 
     # destspace is here to work around issues with `hg pull --rebase` see
     # issue5214 for details
@@ -1390,15 +1415,28 @@ def _definedestmap(
     if not rbsrt.inmemory:
         cmdutil.bailifchanged(repo)
 
-    if ui.configbool("commands", "rebase.requiredest") and not destf:
+    if ui.configbool("commands", "rebase.requiredest") and not dests:
         raise error.Abort(
             _("you must specify a destination"), hint=_("use: @prog@ rebase -d REV")
         )
 
     dest = None
+    destmap = None
 
     if revf:
-        rebaseset = scmutil.revrange(repo, revf)
+        if destlen > 1:
+            # Handles multiple --dest.
+            assert destlen == len(revf)
+            # Each rev resolves to a set. Their order should match dests.
+            revs_list = [scmutil.revrange(repo, [r]) for r in revf]
+            dest_list = [scmutil.revsingle(repo, r).rev() for r in dests]
+            destmap = {}
+            for rev_revs, dest_rev in zip(revs_list, dest_list):
+                for rev in rev_revs:
+                    destmap[rev] = dest_rev
+            rebaseset = smartset.baseset(destmap, repo=repo)
+        else:
+            rebaseset = scmutil.revrange(repo, revf)
         if not rebaseset:
             ui.status(_('empty "rev" revision set - nothing to rebase\n'))
             return None
@@ -1489,21 +1527,21 @@ def _definedestmap(
                 )
             return None
 
-    if not destf:
+    if not destf and not dests:
         dest = repo[_destrebase(repo, rebaseset, destspace=destspace)]
         destf = str(dest)
 
     allsrc = revsetlang.formatspec("%ld", rebaseset)
     alias = {"ALLSRC": allsrc}
 
-    if dest is None and not "SRC" in str(destf):
+    if dest is None and not "SRC" in str(destf) and destmap is None:
         try:
             # fast path: try to resolve dest without SRC alias
             dest = scmutil.revsingle(repo, destf, localalias=alias)
         except error.RepoLookupError:
             pass
 
-    if dest is None:
+    if dest is None and destmap is None:
         # multi-dest path: resolve dest for each SRC separately
         destmap = {}
         for r in rebaseset:

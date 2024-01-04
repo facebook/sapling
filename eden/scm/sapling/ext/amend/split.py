@@ -188,7 +188,7 @@ def split(ui, repo, *revs, **opts):
                 if bookactive is not None:
                     bookmarks.activate(repo, bookactive)
             if torebase:
-                rebaseopts = {"dest": "_destrestack(SRC)", "rev": torebase}
+                rebaseopts = {"dest": ["_destrestack(SRC)"], "rev": torebase}
                 rebase.rebase(ui, repo, **rebaseopts)
             unfi = repo
             with repo.transaction("post-split-hide"):

@@ -61,7 +61,7 @@ def restackonce(
     if rebaseopts is None:
         rebaseopts = {}
     rebaseopts["rev"] = descendants
-    rebaseopts["dest"] = rev
+    rebaseopts["dest"] = [rev]
     rebaseopts["noconflict"] = noconflict
 
     overrides = {

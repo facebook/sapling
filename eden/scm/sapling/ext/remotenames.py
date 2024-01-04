@@ -390,7 +390,7 @@ def exrebasecmd(orig, ui, repo, *pats, **opts):
     if not (cont or abort or dest or source or revs or base) and current:
         tracking = _readtracking(repo)
         if current in tracking:
-            opts["dest"] = tracking[current]
+            opts["dest"] = [tracking[current]]
 
     ret = orig(ui, repo, *pats, **opts)
     precachedistance(repo)

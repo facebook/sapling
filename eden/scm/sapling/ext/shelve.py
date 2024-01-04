@@ -891,7 +891,7 @@ def _rebaserestoredcommit(
             repo,
             **{
                 "rev": [shelvectx.hex()],
-                "dest": str(tmpwctx.hex()),
+                "dest": [tmpwctx.hex()],
                 "keep": False,
                 "tool": opts.get("tool", ""),
                 "extrafn": extrafn,

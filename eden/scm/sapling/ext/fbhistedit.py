@@ -359,8 +359,12 @@ def _rebase(orig, ui, repo, *pats, **opts):
 
     if contf or abortf:
         raise error.Abort("no interactive rebase in progress")
-    if destf:
-        dest = scmutil.revsingle(repo, destf)
+    if len(destf) == 1:
+        dest = scmutil.revsingle(repo, destf[0])
+    elif len(destf) > 1:
+        raise error.Abort(
+            "multiple --dest is incompatible with intereactive rebase (histedit)"
+        )
     else:
         raise error.Abort("you must specify a destination (-d) for the rebase")
 

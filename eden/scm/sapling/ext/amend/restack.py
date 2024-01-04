@@ -42,7 +42,7 @@ def restack(ui, repo, **rebaseopts):
 
             rebaseopts["rev"] = [ctx.hex() for ctx in repo.set("%ld", revs)]
 
-        rebaseopts["dest"] = "_destrestack(SRC)"
+        rebaseopts["dest"] = ["_destrestack(SRC)"]
 
         rebase.rebase(ui, repo, **rebaseopts)
 

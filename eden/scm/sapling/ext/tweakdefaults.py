@@ -516,15 +516,17 @@ def _rebase(orig, ui, repo, *pats, **opts):
     # Only fast-forward the bookmark if no source nodes were explicitly
     # specified.
     if not (opts.get("base") or opts.get("source") or opts.get("rev")):
-        dest = scmutil.revsingle(repo, opts.get("dest"))
-        common = dest.ancestor(prev)
-        if prev == common:
-            activebookmark = repo._activebookmark
-            result = hg.updatetotally(ui, repo, dest.node(), activebookmark)
-            if activebookmark:
-                with repo.wlock():
-                    bookmarks.update(repo, [prev.node()], dest.node())
-            return result
+        dests = opts.get("dest")
+        if dests and len(dests) == 1:
+            dest = scmutil.revsingle(repo, dests[0])
+            common = dest.ancestor(prev)
+            if prev == common:
+                activebookmark = repo._activebookmark
+                result = hg.updatetotally(ui, repo, dest.node(), activebookmark)
+                if activebookmark:
+                    with repo.wlock():
+                        bookmarks.update(repo, [prev.node()], dest.node())
+                return result
 
     return orig(ui, repo, *pats, **opts)
 
