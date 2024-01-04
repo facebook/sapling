@@ -228,6 +228,68 @@ class Code implements ValueObject {
     return this.instList.map((inst, i) => `${i}: ${describeInst(inst)}`).toArray();
   }
 
+  /**
+   * Dump lines with ASCII annotated insertions and deletions stacks.
+   */
+  describeHumanReadableInsDelStacks(): string[] {
+    // 1st Pass: Figure out the max stack depth, line length for padding.
+    let maxInsStackDepth = 0;
+    let maxDelStackDepth = 0;
+    let maxLineLength = 'Insert (rev: 1000)'.length;
+    this.visitWithInsDelStacks((insStack, delStack) => {
+      return {
+        onStackPush: () => {
+          maxInsStackDepth = Math.max(maxInsStackDepth, insStack.length + 1);
+          maxDelStackDepth = Math.max(maxDelStackDepth, delStack.length + 2);
+        },
+        onLine: line => {
+          maxLineLength = Math.max(maxLineLength, line.data.length + 'Line:  '.length);
+        },
+      };
+    });
+    // 2nd Pass: Render the instructions.
+    const result: string[] = [];
+    this.visitWithInsDelStacks((insStack, delStack) => {
+      const pushLine = (data: string, leftAdjust?: number, rightAdjust?: number) => {
+        const insDepth = insStack.length - 1 + (leftAdjust ?? 0);
+        const delDepth = delStack.length + (rightAdjust ?? 0);
+        const insPad = maxInsStackDepth - insDepth;
+        const delPad = maxDelStackDepth - delDepth;
+        const left =
+          '|'.repeat(insDepth) +
+          (leftAdjust == null ? ' '.repeat(insPad + 1) : `+${'-'.repeat(insPad)}`);
+        const right =
+          (rightAdjust == null ? ' '.repeat(delPad + 1) : `${'-'.repeat(delPad)}+`) +
+          '|'.repeat(delDepth);
+        const middle = data + ' '.repeat(maxLineLength - data.length);
+        result.push(left + middle + right);
+      };
+      return {
+        onStackPush: stack => {
+          const rev = stack.at(-1)?.rev ?? 0;
+          if (stack === insStack) {
+            // | | +------ Insert (rev x)  <- this line
+            // | | |       Line:  ....     <- following lines
+            pushLine(`Insert (rev ${rev})`, -1);
+          } else {
+            pushLine(`Delete (rev ${rev})`, undefined, -1);
+          }
+        },
+        onStackPop: stack => {
+          if (stack === insStack) {
+            pushLine('', 0);
+          } else {
+            pushLine('', undefined, 0);
+          }
+        },
+        onLine: line => {
+          pushLine(`Line:  ${line.data.trimEnd()}`);
+        },
+      };
+    });
+    return result;
+  }
+
   editChunk(
     aRev: Rev,
     a1: LineIdx,

@@ -184,6 +184,74 @@ describe('LineLog', () => {
     ]);
   });
 
+  describe('provides human readable insertion and deletion stacks', () => {
+    const show = (texts: string[]) =>
+      logFromTextList(texts).code.describeHumanReadableInsDelStacks();
+
+    it('interleaved insertion and deletion trees', () => {
+      // First 3 revs are from https://sapling-scm.com/docs/internals/linelog
+      expect(show(['a\nb\nc\n', 'a\nb\n1\n2\nc\n', 'a\n2\nc\n', 'c\n', ''])).toEqual([
+        '+----Insert (rev 1)         ',
+        '|    Delete (rev 4)    ----+',
+        '|    Line:  a              |',
+        '|    Delete (rev 3)    ---+|',
+        '|    Line:  b             ||',
+        '|+---Insert (rev 2)       ||',
+        '||   Line:  1             ||',
+        '||                     ---+|',
+        '||   Line:  2              |',
+        '|+---                      |',
+        '|                      ----+',
+        '|    Delete (rev 5)    ----+',
+        '|    Line:  c              |',
+        '|                      ----+',
+        '+----                       ',
+      ]);
+    });
+
+    it('insertions at the beginning and end are not nested', () => {
+      expect(show(['b\n', 'a\nb\n', 'a\nb\nc\n'])).toEqual([
+        '+---Insert (rev 2)       ',
+        '|   Line:  a             ',
+        '+---                     ',
+        '+---Insert (rev 1)       ',
+        '|   Line:  b             ',
+        '+---                     ',
+        '+---Insert (rev 3)       ',
+        '|   Line:  c             ',
+        '+---                     ',
+      ]);
+    });
+
+    it('insertion between old new revs is not nested', () => {
+      expect(show(['a\n', 'a\nc\n', 'a\nb\nc\n'])).toEqual([
+        '+---Insert (rev 1)       ',
+        '|   Line:  a             ',
+        '+---                     ',
+        '+---Insert (rev 3)       ',
+        '|   Line:  b             ',
+        '+---                     ',
+        '+---Insert (rev 2)       ',
+        '|   Line:  c             ',
+        '+---                     ',
+      ]);
+    });
+
+    it('insertion between new old revs is not nested', () => {
+      expect(show(['c\n', 'a\nc\n', 'a\nb\nc\n'])).toEqual([
+        '+----Insert (rev 2)       ',
+        '|    Line:  a             ',
+        '+----                     ',
+        '+----Insert (rev 1)       ',
+        '|+---Insert (rev 3)       ',
+        '||   Line:  b             ',
+        '|+---                     ',
+        '|    Line:  c             ',
+        '+----                     ',
+      ]);
+    });
+  });
+
   describe('supports editing previous revisions', () => {
     it('edits stack bottom', () => {
       const textList = ['a\n', 'a\nb\n', 'z\na\nb\n'];
