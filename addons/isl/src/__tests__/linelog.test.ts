@@ -208,9 +208,7 @@ describe('LineLog', () => {
           .map(c => `${c}\n`)
           .join('');
       const log = logFromTextList(textList.map(insertEOL));
-      const flatten = (depMap: Map<Rev, Set<Rev>>) =>
-        [...depMap.entries()].map(([rev, set]) => [rev, [...set].sort()]).sort();
-      return flatten(log.calculateDepMap());
+      return flattenDepMap(log.calculateDepMap());
     };
 
     expect(deps([])).toEqual([]);
@@ -430,4 +428,8 @@ function logFromTextList(textList: string[]): LineLog {
   let log = new LineLog();
   textList.forEach(text => (log = log.recordText(text)));
   return log;
+}
+
+function flattenDepMap(depMap: Map<Rev, Set<Rev>>): [Rev, Rev[]][] {
+  return [...depMap.entries()].map(([rev, set]) => [rev, [...set].sort()] as [Rev, Rev[]]).sort();
 }
