@@ -476,8 +476,7 @@ def smartlog(ui, repo, *pats, **opts):
         return _smartlog(ui, repo, *pats, **opts)
 
 
-def getrevs(ui, repo, masterstring, **opts):
-    headrevs = opts.get("rev")
+def getrevs(ui, repo, masterstring, headrevs):
     if headrevs:
         headspec = revsetlang.formatspec("%lr", headrevs)
     else:
@@ -487,7 +486,12 @@ def getrevs(ui, repo, masterstring, **opts):
         "smartlog(heads=%r, master=%r)", headspec, masterstring
     )
 
-    return set(repo.anyrevs([revstring], user=True))
+    revs = set(repo.anyrevs([revstring], user=True))
+
+    if -1 in revs:
+        revs.remove(-1)
+
+    return revs
 
 
 def _smartlog(ui, repo, *pats, **opts):
@@ -499,6 +503,7 @@ def _smartlog(ui, repo, *pats, **opts):
 
     masterrev = repo.anyrevs([masterstring], user=True).first()
     template = opts.get("template") or ""
+    headrevs = opts.get("rev")
 
     if opts.get("interactive"):
         if interactiveui is None:
@@ -508,10 +513,8 @@ def _smartlog(ui, repo, *pats, **opts):
 
         class interactivesmartlog(interactiveui.viewframe):
             dag_index = 0
-            revs = getrevs(ui, repo, masterstring, **opts)
+            revs = getrevs(ui, repo, masterstring, headrevs)
 
-            if -1 in revs:
-                revs.remove(-1)
             if len(revs) == 0:
                 super().finish()
 
@@ -565,9 +568,7 @@ def _smartlog(ui, repo, *pats, **opts):
                                 dest=selected_ctx.hex(),
                             )
                             self.rebase_source = None
-                            self.revs = getrevs(ui, repo, masterstring, **opts)
-                            if -1 in self.revs:
-                                self.revs.remove(-1)
+                            self.revs = getrevs(ui, repo, masterstring, headrevs)
                             if len(self.revs) == 0:
                                 self.finish()
                             self.revdag, self.reserved = getdag(
@@ -585,10 +586,7 @@ def _smartlog(ui, repo, *pats, **opts):
         interactiveui.view(viewobj)
         return
 
-    revs = getrevs(ui, repo, masterstring, **opts)
-
-    if -1 in revs:
-        revs.remove(-1)
+    revs = getrevs(ui, repo, masterstring, headrevs)
 
     if len(revs) == 0:
         return
