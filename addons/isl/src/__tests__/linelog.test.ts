@@ -239,15 +239,15 @@ describe('LineLog', () => {
 
     it('insertion between new old revs is not nested', () => {
       expect(show(['c\n', 'a\nc\n', 'a\nb\nc\n'])).toEqual([
-        '+----Insert (rev 2)       ',
-        '|    Line:  a             ',
-        '+----                     ',
-        '+----Insert (rev 1)       ',
-        '|+---Insert (rev 3)       ',
-        '||   Line:  b             ',
-        '|+---                     ',
-        '|    Line:  c             ',
-        '+----                     ',
+        '+---Insert (rev 2)       ',
+        '|   Line:  a             ',
+        '+---                     ',
+        '+---Insert (rev 3)       ',
+        '|   Line:  b             ',
+        '+---                     ',
+        '+---Insert (rev 1)       ',
+        '|   Line:  c             ',
+        '+---                     ',
       ]);
     });
   });
@@ -542,17 +542,8 @@ describe('LineLog', () => {
       const functionTexts = ['a', 'b', 'c'].map(charToFunction);
 
       threeRevPermutations.forEach(revOrder => {
-        const expectedDepMapOverride: [Rev, Rev[]][] | undefined =
-          revOrder.join('') === '231'
-            ? [
-                [1, [0]],
-                [2, [0]],
-                [3, [1]], // FIXME: This is suboptimal in 231 order.
-              ]
-            : undefined;
-
         it(`insert 'a','b','c' in ${revOrder} order`, () => {
-          const log = testReorderInsertions(abcTexts, revOrder, {expectedDepMapOverride});
+          const log = testReorderInsertions(abcTexts, revOrder);
           expect(log.checkOutLines(3)).toMatchObject([
             {data: 'a\n', rev: mapSwap(revOrder[0])},
             {data: 'b\n', rev: mapSwap(revOrder[1])},
@@ -561,9 +552,7 @@ describe('LineLog', () => {
           ]);
         });
 
-        // FIXME: 231 order does not pass. See above.
-        const maybeIt = revOrder.join('') === '231' ? it.skip : it;
-        maybeIt(`insert 3 functions in ${revOrder} order`, () => {
+        it(`insert 3 functions in ${revOrder} order`, () => {
           testReorderInsertions(functionTexts, revOrder);
         });
       });

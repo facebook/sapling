@@ -307,10 +307,10 @@ class Code implements ValueObject {
     // # Before             # After
     // # (pc): Instruction  # (pc): Instruction
     //       : ...                : ...
-    //     a1: <a1 Inst>      a1Pc: J start
-    //   a1+1: ...          a1Pc+1: ...
+    //   a1Pc: <a1Inst>       a1Pc: J start
+    // a1Pc+1: ...          a1Pc+1: ...
     //       : ...                : ...
-    //     a2: ...            a2Pc: ...
+    //   a2Pc: ...            a2Pc: ...
     //       : ...                : ...
     //    len: N/A           start: JL brev b2Pc      [1]
     //                            : LINE brev b1      [1]
@@ -318,7 +318,7 @@ class Code implements ValueObject {
     //                            : ...               [1]
     //                            : LINE brev b2-1    [1]
     //                        b2Pc: JGE brev a2Pc     [2]
-    //                            : <a1 Inst> (moved) [3]
+    //                            : <a1Inst> (moved)  [3]
     //                            : J a1Pc+1          [4]
     // [1]: Only present if `bLines` is not empty.
     // [2]: Only present if `a1 < a2`.
@@ -331,30 +331,37 @@ class Code implements ValueObject {
     // [3]: <a1 Inst> could be LINE or END.
     // [4]: As an optimization, this is only present if <a1 Inst> is not END.
     //
-    // As an optimization to make reorder less restrictive, we treat insertion
+    // Optimization [OPT1] to make reorder less restrictive, treat insertion
     // (a1 == a2) at the beginning of another insertion (<a1 Inst> is after a
-    // <JL>) specially by patching the <JL> instruction instead of <a1 Inst>
-    // and make sure the new <JL> (for this edit) is before the old <JL>.
-    // See the [*] lines below for differences with the above:
+    // <JL>) specially. Our goal is to avoid nested JLs. Instead of patching
+    // the a1Inst after the JL, we patch the JL (jlInst) so we can insert our
+    // new JL (for this edit) before the old JL (jlInst, being patched).
+    // Note this "JL followed by a1Inst" optimization needs to be applicable
+    // multiple times. To do that, we also move the a1Inst to right after the
+    // jlInst so the pattern "JL followed by a1Inst" can be recognized by the
+    // next editChunk to apply the same optimization.
     //
     // # Before             # After
     // # (pc): Instruction  # (pc): Instruction
     //       : ...                : ...
-    //       : <JL>         a1Pc-1: J start           [*]
-    //     a1: <a1 Inst>      a1Pc: ... (unchanged)   [*]
+    //       : <jlInst>     a1Pc-1: J start           [*]
+    //   a1Pc: <a1Inst>       a1Pc: NOP (J a1Pc+1)    [*]
     //       : ...                : ...
     //    len: N/A           start: JL brev b2Pc
-    //                            : ...
-    //                        b2Pc: <JL> (moved)      [*]
+    //                            : (bLines)
+    //                        b2Pc: <jlInst> (moved)  [*]
+    //                            : <a1Inst> (moved)
     //                            : J a1Pc            [*]
     const newInstList = this.instList.withMutations(origCode => {
       let code = origCode;
       const a1Pc = aLines[a1].pc;
+      // If `jlInst` is set, optimization [OPT1] is in effect.
       let jlInst = a1Pc > 0 && a1 === a2 ? code.get(a1Pc - 1) : undefined;
       if (jlInst?.op !== Op.JL) {
         jlInst = undefined;
       }
       if (bLines.length > 0) {
+        // [1]
         const b2Pc = start + bLines.length + 1;
         code = code.push(JL({rev: bRev, pc: b2Pc}) as Inst);
         bLines.forEach(line => {
@@ -363,25 +370,30 @@ class Code implements ValueObject {
         assert(b2Pc === code.size, 'bug: wrong pc');
       }
       if (a1 < a2) {
-        assert(jlInst === undefined, 'no deletions when jlInst is set');
+        assert(jlInst === undefined, 'OPT1 requires no deletion');
+        // [2]
         const a2Pc = aLines[a2 - 1].pc + 1;
         code = code.push(JGE({rev: bRev, pc: a2Pc}) as Inst);
       }
-      if (aLinesMutable && jlInst === undefined) {
-        aLines[a1] = {...aLines[a1], pc: code.size};
+      if (aLinesMutable) {
+        aLines[a1] = {...aLines[a1], pc: jlInst == null ? code.size : code.size + 1};
       }
+      const a1Inst = unwrap(code.get(a1Pc));
       if (jlInst === undefined) {
-        const a1Inst = unwrap(code.get(a1Pc));
+        // [3]
         code = code.push(a1Inst);
         if (a1Inst.op /* LINE or END */ !== Op.END) {
+          // [4]
           code = code.push(J({pc: a1Pc + 1}) as Inst);
         }
         code = code.set(a1Pc, J({pc: start}) as Inst);
       } else {
         code = code
           .push(jlInst)
+          .push(a1Inst)
           .push(J({pc: a1Pc}) as Inst)
-          .set(a1Pc - 1, J({pc: start}) as Inst);
+          .set(a1Pc - 1, J({pc: start}) as Inst)
+          .set(a1Pc, J({pc: a1Pc + 1}) as J);
       }
       return code;
     });
