@@ -63,6 +63,10 @@ const J = Record(
   },
   'J',
 );
+type J = RecordOf<{
+  op: Op.J;
+  pc: number;
+}>;
 
 /** JGE instruction. */
 const JGE = Record(
@@ -76,6 +80,11 @@ const JGE = Record(
   },
   'JGE',
 );
+type JGE = RecordOf<{
+  op: Op.JGE;
+  rev: Rev;
+  pc: number;
+}>;
 
 /** JL instruction. */
 const JL = Record(
@@ -89,6 +98,11 @@ const JL = Record(
   },
   'JL',
 );
+type JL = RecordOf<{
+  op: Op.JL;
+  rev: Rev;
+  pc: number;
+}>;
 
 /** LINE instruction. */
 const LINE = Record(
@@ -102,6 +116,11 @@ const LINE = Record(
   },
   'LINE',
 );
+type LINE = RecordOf<{
+  op: Op.LINE;
+  rev: Rev;
+  data: string;
+}>;
 
 /** END instruction. */
 const END = Record(
@@ -111,6 +130,9 @@ const END = Record(
   },
   'END',
 );
+type END = RecordOf<{
+  op: Op.END;
+}>;
 
 /** Program counter (offset to instructions). */
 type Pc = number;
@@ -122,16 +144,7 @@ type Rev = number;
 type LineIdx = number;
 
 /** Instruction. */
-type Inst = Readonly<
-  | {op: Op.J; pc: Pc}
-  | {op: Op.END}
-  | ((
-      | {op: Op.JGE; rev: Rev; pc: Pc}
-      | {op: Op.JL; rev: Rev; pc: Pc}
-      | {op: Op.LINE; rev: Rev; data: string}
-    ) &
-      Record<{rev: Rev}>)
->;
+type Inst = J | END | JGE | JL | LINE;
 
 /** Information about a line. Internal (`lines`) result of `LineLog.checkOut`. */
 interface LineInfo {
@@ -328,7 +341,8 @@ class Code implements ValueObject {
           if (newRev > newMaxRev) {
             newMaxRev = newRev;
           }
-          return c.set('rev', newRev);
+          // TypeScript cannot prove `c` has `rev`. Ideally it can figure out it automatically.
+          return (c as RecordOf<{rev: number}>).set('rev', newRev) as Inst;
         }
         return c;
       })
