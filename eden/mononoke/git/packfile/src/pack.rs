@@ -101,15 +101,26 @@ impl<T: AsyncWrite + Unpin> PackfileWriter<T> {
         &mut self,
         entries_stream: impl Stream<Item = Result<PackfileItem>>,
     ) -> Result<()> {
+        use futures::TryStreamExt;
         // Write the packfile header if applicable
         self.write_header().await?;
         let mut entries_stream = Box::pin(entries_stream.ready_chunks(self.concurrency));
         while let Some(entries) = entries_stream.next().await {
-            for entry in entries {
-                let entry = entry.context("Failure in getting packfile item entry")?;
-                let mut entry: Entry = entry
-                    .try_into()
-                    .context("Failure in converting PackfileItem to Entry")?;
+            let entries: Vec<_> = futures::stream::iter(entries)
+                .map_ok(|entry| async move {
+                    let entry: Entry = tokio::task::spawn_blocking(move || {
+                        entry
+                            .try_into()
+                            .context("Failure in converting PackfileItem to Entry")
+                    })
+                    .await??;
+                    anyhow::Ok(entry)
+                })
+                .try_buffered(self.concurrency)
+                .try_collect()
+                .await?;
+
+            for mut entry in entries {
                 // If the entry is already written to the packfile, skip writing it again
                 if self.object_id_with_index.contains_key(&entry.id) {
                     continue;

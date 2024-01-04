@@ -186,7 +186,7 @@ async fn object_count(
                 anyhow::Ok(objects)
             }
         })
-        .try_buffered(100)
+        .try_buffered(1000)
         .try_fold(
             (FxHashSet::default(), // The set of all unique objects to be included in the pack file
                   FxHashSet::default(), // The set of objects that have repeated atleast once
@@ -263,7 +263,7 @@ async fn refs_to_include(
             anyhow::Ok((ref_name, git_objectid))
         })
         .boxed()
-        .buffer_unordered(100)
+        .buffer_unordered(1000)
         .try_collect::<FxHashMap<_, _>>()
         .await
 }
@@ -583,11 +583,11 @@ async fn blob_and_tree_packfile_items<'a>(
         let mut entries = delta_manifest.into_subentries(ctx, &blobstore);
         while let Some((path, entry)) = entries.try_next().await? {
             let is_duplicated = duplicated_objects.contains(&entry.full.oid);
-            let packfile_item = packfile_entry(ctx, repo, delta_inclusion, packfile_item_inclusion, changeset_id, path, entry, is_duplicated).await?;
+            let packfile_item = packfile_entry(ctx, repo, delta_inclusion, packfile_item_inclusion, changeset_id, path, entry, is_duplicated);
             yield packfile_item
         }
     };
-    anyhow::Ok(objects_stream.boxed())
+    anyhow::Ok(objects_stream.try_buffered(200).boxed())
 }
 
 /// Create a stream of packfile items containing blob and tree objects that need to be included in the packfile/bundle.
@@ -627,7 +627,7 @@ async fn blob_and_tree_packfile_stream<'a>(
     // Get the packfile items corresponding to blob and tree objects in the repo. Where applicable, use delta to represent them
     // efficiently in the packfile/bundle
     let packfile_item_stream = target_commits
-        .and_then(move |changeset_id| {
+        .map_ok(move |changeset_id| {
             blob_and_tree_packfile_items(
                 ctx,
                 repo,
@@ -637,6 +637,7 @@ async fn blob_and_tree_packfile_stream<'a>(
                 duplicated_objects.clone(),
             )
         })
+        .try_buffered(200)
         .try_flatten()
         .boxed();
     Ok(packfile_item_stream)
@@ -660,7 +661,7 @@ async fn commit_packfile_stream<'a>(
         .context("Error in getting ancestors difference")?;
     let packfile_item_inclusion = request.packfile_item_inclusion;
     let commit_stream = target_commits
-        .and_then(move |changeset_id| async move {
+        .map_ok(move |changeset_id| async move {
             let maybe_git_sha1 = repo
                 .bonsai_git_mapping()
                 .get_git_sha1_from_bonsai(ctx, changeset_id)
@@ -683,6 +684,7 @@ async fn commit_packfile_stream<'a>(
             )
             .await
         })
+        .try_buffered(200)
         .boxed();
     anyhow::Ok(commit_stream)
 }
@@ -723,7 +725,7 @@ async fn tag_packfile_stream<'a>(
     let tags_count = annotated_tags.len();
     let packfile_item_inclusion = request.packfile_item_inclusion;
     let tag_stream = stream::iter(annotated_tags.into_iter().map(anyhow::Ok))
-        .and_then(move |entry| async move {
+        .map_ok(move |entry| async move {
             let git_objectid = entry.tag_hash.to_object_id()?;
             base_packfile_item(
                 ctx,
@@ -733,6 +735,7 @@ async fn tag_packfile_stream<'a>(
             )
             .await
         })
+        .try_buffered(200)
         .boxed();
     anyhow::Ok((tag_stream, tags_count))
 }
