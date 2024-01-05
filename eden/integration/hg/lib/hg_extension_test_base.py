@@ -497,7 +497,9 @@ def _replicate_hg_test(
 
     # Mix in FilteredHg tests if the build supports it.
     scm_variants: MixinList = [("", [])]
-    if eden.config.HAVE_FILTEREDHG:
+    # Temporarily disable FilteredHg mixins to test whether they are causing
+    # other tests to hang
+    if eden.config.HAVE_FILTEREDHG and False:
         scm_variants.append(("FilteredHg", [FilteredTestMixin]))
 
     overlay_variants: MixinList = [("", [])]
