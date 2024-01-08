@@ -44,6 +44,9 @@ use fixtures::ManyFilesDirs;
 use fixtures::TestRepoFixture;
 use futures::FutureExt;
 use futures::TryStreamExt;
+use justknobs::test_helpers::with_just_knobs_async;
+use justknobs::test_helpers::JustKnobsInMemory;
+use justknobs::test_helpers::KnobVal;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use live_commit_sync_config::TestLiveCommitSyncConfig;
 use live_commit_sync_config::TestLiveCommitSyncConfigSource;
@@ -77,8 +80,6 @@ use test_repo_factory::TestRepoFactory;
 use tests_utils::bookmark;
 use tests_utils::resolve_cs_id;
 use tests_utils::CreateCommitContext;
-use tunables::with_tunables_async;
-use tunables::MononokeTunables;
 
 fn mpath(p: &str) -> NonRootMPath {
     NonRootMPath::new(p).unwrap()
@@ -1456,12 +1457,11 @@ async fn test_disabled_sync(fb: FacebookInit) -> Result<(), Error> {
             .commit()
             .await?;
 
-    let tunables = MononokeTunables::default();
-    tunables.update_bools(&hashmap! {"xrepo_sync_disable_all_syncs".to_string() => true});
-
     // Disable sync - make sure it fails
-    let res = with_tunables_async(
-        tunables,
+    let res = with_just_knobs_async(
+        JustKnobsInMemory::new(hashmap![
+            "scm/mononoke:xrepo_sync_disable_all_syncs".to_string() => KnobVal::Bool(true)
+        ]),
         async {
             large_to_small_syncer
                 .sync_commit(
@@ -1533,12 +1533,11 @@ async fn test_disabled_sync_pushrebase(fb: FacebookInit) -> Result<(), Error> {
         .load(&ctx, small_repo.repo_blobstore())
         .await?;
 
-    let tunables = MononokeTunables::default();
-    tunables.update_bools(&hashmap! {"xrepo_sync_disable_all_syncs".to_string() => true});
-
     // Disable sync - make sure it fails
-    let res = with_tunables_async(
-        tunables,
+    let res = with_just_knobs_async(
+        JustKnobsInMemory::new(hashmap![
+            "scm/mononoke:xrepo_sync_disable_all_syncs".to_string() => KnobVal::Bool(true)
+        ]),
         async {
             let version =
                 get_version(&ctx, &small_to_large_syncer, small_repo_master_cs_id).await?;

@@ -1575,7 +1575,10 @@ where
         maybe_target_bcs_id: Option<ChangesetId>,
         version_name: CommitSyncConfigVersion,
     ) -> Result<(), Error> {
-        if tunables().xrepo_sync_disable_all_syncs().unwrap_or(false) {
+        let xrepo_sync_disable_all_syncs =
+            justknobs::eval("scm/mononoke:xrepo_sync_disable_all_syncs", None, None)
+                .unwrap_or_default();
+        if xrepo_sync_disable_all_syncs {
             return Err(ErrorKind::XRepoSyncDisabled.into());
         }
 
@@ -2156,10 +2159,10 @@ pub async fn update_mapping_with_version<'a, M: SyncedCommitMapping + Clone + 's
     syncer: &'a CommitSyncer<M, R>,
     version_name: &CommitSyncConfigVersion,
 ) -> Result<(), Error> {
-    if tunables()
-        .xrepo_sync_disable_all_syncs()
-        .unwrap_or_default()
-    {
+    let xrepo_sync_disable_all_syncs =
+        justknobs::eval("scm/mononoke:xrepo_sync_disable_all_syncs", None, None)
+            .unwrap_or_default();
+    if xrepo_sync_disable_all_syncs {
         return Err(ErrorKind::XRepoSyncDisabled.into());
     }
 

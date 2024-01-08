@@ -13,6 +13,7 @@ rust_library(
         ":cross_repo_sync_test_utils",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
+        "//common/rust/shed/justknobs_stub:justknobs",
         "//common/rust/shed/sql:sql",
         "//eden/mononoke/common/rust/sql_ext:sql_ext",
         "//eden/mononoke/common/sql_construct:sql_construct",
@@ -141,6 +142,7 @@ rust_unittest(
         ":cross_repo_sync_test_utils",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
+        "//common/rust/shed/justknobs_stub:justknobs",
         "//common/rust/shed/sorted_vector_map:sorted_vector_map",
         "//common/rust/shed/sql:sql",
         "//eden/mononoke/blobrepo:blobrepo",
@@ -164,6 +166,5 @@ rust_unittest(
         "//eden/mononoke/server/context:context",
         "//eden/mononoke/tests/fixtures:fixtures",
         "//eden/mononoke/tests/utils:tests_utils",
-        "//eden/mononoke/tunables:tunables",
     ],
 )

@@ -19,7 +19,6 @@ use mononoke_types::ChangesetId;
 use sql::Transaction;
 use synced_commit_mapping::add_many_in_txn;
 use synced_commit_mapping::SyncedCommitMappingEntry;
-use tunables::tunables;
 
 use crate::create_synced_commit_mapping_entry;
 use crate::CommitSyncRepos;
@@ -96,10 +95,10 @@ impl PushrebaseTransactionHook for CrossRepoSyncTransactionHook {
         _ctx: &CoreContext,
         txn: Transaction,
     ) -> Result<Transaction, BookmarkTransactionError> {
-        if tunables()
-            .xrepo_sync_disable_all_syncs()
-            .unwrap_or_default()
-        {
+        let xrepo_sync_disable_all_syncs =
+            justknobs::eval("scm/mononoke:xrepo_sync_disable_all_syncs", None, None)
+                .unwrap_or_default();
+        if xrepo_sync_disable_all_syncs {
             let e: Error = ErrorKind::XRepoSyncDisabled.into();
             return Err(e.into());
         }
