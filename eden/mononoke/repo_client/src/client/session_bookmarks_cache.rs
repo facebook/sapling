@@ -40,7 +40,6 @@ use futures_old::Future;
 use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mononoke_api::Repo;
-use tunables::tunables;
 
 // We'd like to give user a consistent view of thier bookmarks for the duration of the
 // whole Mononoke session. SessionBookmarkCache is used for that.
@@ -254,9 +253,12 @@ where
 
     fn get_warm_bookmark_cache(&self) -> Option<&Arc<dyn BookmarksCache + Send + Sync>> {
         if self.repo.repo_client_use_warm_bookmarks_cache() {
-            if !tunables()
-                .disable_repo_client_warm_bookmarks_cache()
-                .unwrap_or_default()
+            if !justknobs::eval(
+                "scm/mononoke:disable_repo_client_warm_bookmarks_cache",
+                None,
+                None,
+            )
+            .unwrap_or_default()
             {
                 return Some(self.repo.warm_bookmarks_cache());
             }
