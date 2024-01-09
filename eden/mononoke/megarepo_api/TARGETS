@@ -14,8 +14,8 @@ rust_library(
         "fbsource//third-party/rust:tokio",
         ":megarepo_error",
         "//common/rust/shed/fbinit:fbinit",
-        "//common/rust/thrift/srclient:srclient",
         "//configerator/configo/if:configo-rust",
+        "//configerator/configo/if:configo-rust-srclients",
     ],
 )
 
