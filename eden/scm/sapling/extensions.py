@@ -359,13 +359,25 @@ def load(ui, name, path):
         if "ext" in sys.modules:
             ui.develwarn("extension %s imported incorrect modules" % name)
 
-    _validatecmdtable(ui, getattr(mod, "cmdtable", {}))
+    # the '_getattr()' triggers module import when the demand importer is active
+    _validatecmdtable(ui, _getattr(mod, "cmdtable", {}))
 
     _extensions[shortname] = mod
     _order.append(shortname)
     for fn in _aftercallbacks.get(shortname, []):
         fn(loaded=True)
     return mod
+
+
+def _getattr(obj, name, default):
+    "getattr that verifies the name of AttributeError"
+    try:
+        return getattr(obj, name)
+    except AttributeError as e:
+        if e.name == name:
+            return default
+        else:
+            raise
 
 
 def _runuisetup(name, ui):
