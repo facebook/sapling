@@ -1502,39 +1502,9 @@ def debugignore(ui, repo, *files, **opts) -> None:
         # Show all the patterns
         ui.write("%s\n" % repr(ignore))
     else:
-        explain = getattr(ignore, "explain", None)
-
-        # The below code can be removed after hgignore is removed.
-        visitdir = ignore.visitdir
         m = scmutil.match(repo[None], pats=files)
         for f in m.files():
-            # The matcher supports "explain", use it.
-            if explain:
-                explanation = explain(f)
-                if explanation:
-                    ui.write(_x("%s\n") % explain(f))
-                    continue
-
-            nf = util.normpath(f)
-            ignored = None
-            if nf != ".":
-                if ignore(nf):
-                    ignored = nf
-                else:
-                    for p in util.finddirs(nf):
-                        if visitdir(p) == "all":
-                            ignored = p
-                            break
-            if ignored:
-                if ignored == nf:
-                    ui.write(_("%s is ignored\n") % m.uipath(f))
-                else:
-                    ui.write(
-                        _("%s is ignored because of containing folder %s\n")
-                        % (m.uipath(f), ignored)
-                    )
-            else:
-                ui.write(_("%s is not ignored\n") % m.uipath(f))
+            ui.write(_x("%s\n") % ignore.explain(f))
 
 
 @command(
@@ -1549,12 +1519,6 @@ def debugindex(ui, repo, file_=None, **opts) -> None:
     format = opts.get("format", 0)
     if format not in (0, 1):
         raise error.Abort(_("unknown format %d") % format)
-
-    generaldelta = r.version & revlog.FLAG_GENERALDELTA
-    if generaldelta:
-        basehdr = " delta"
-    else:
-        basehdr = "  base"
 
     if ui.debugflag:
         shortfn = hex
@@ -1580,10 +1544,6 @@ def debugindex(ui, repo, file_=None, **opts) -> None:
 
     for i in r:
         node = r.node(i)
-        if generaldelta:
-            base = r.deltaparent(i)
-        else:
-            base = r.chainbase(i)
         if format == 0:
             try:
                 pp = r.parents(node)

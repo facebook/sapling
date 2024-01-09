@@ -3194,14 +3194,10 @@ class ignorematcher(unionmatcher):
         super().__init__([origignorematcher, negativesparsematcher])
 
     def explain(self, f):
-        if self._origignore(f):
-            explain = getattr(self._origignore, "explain", None)
-            if explain:
-                return explain(f)
-        elif self._negativesparse(f):
+        if self._origignore(f) or not self._negativesparse(f):
+            return self._origignore.explain(f)
+        else:
             return "%s is not in sparse profile" % f
-
-        return None
 
 
 class negatematcher(matchmod.basematcher):

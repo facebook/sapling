@@ -357,7 +357,7 @@ _hg_clone_dest() {
 }
 
 _hg_add_help_topics=(
-    config dates diffs environment extensions filesets glossary hgignore
+    config dates diffs environment extensions filesets glossary
     merge-tools multirevs obsolescence patterns phases revisions revsets
     subrepos templating urls
 )

@@ -105,7 +105,6 @@ bundle2-exp=True
 changegroup3=True
 copytrace=off
 crecord=True
-disallowhgignorefileset=True
 evolution=obsolete
 fsmonitor.transaction_notify=True
 graphstyle.grandparent=|

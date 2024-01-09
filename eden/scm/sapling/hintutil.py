@@ -12,14 +12,6 @@ from .i18n import _
 
 
 hinttable = {
-    "hgignore-deprecate": lambda path: (
-        (
-            "hgignore format is being deprecated. "
-            "Consider updating %s to gitignore format. "
-            "Check fburl.com/gitignore to learn more."
-        )
-        % path
-    ),
     "branch-command-deprecate": lambda: _(
         "'@prog@ branch' command does not do what you want, and is being removed. "
         "It always prints 'default' for now. "

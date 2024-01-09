@@ -2342,10 +2342,6 @@ User interface controls.
     The template used to print changeset nodes in an ASCII revision graph.
     (default: ``{graphnode}``)
 
-``hgignore``
-    The hgignore feature is being deprecated. Use .gitignore instead.
-    Respect ``.hgignore`` at the root of a repo. (default: False)
-
 ``ignore``
     A file to read per-user ignore patterns from. This file should be
     in the same format as a repository-wide .gitignore file. Filenames

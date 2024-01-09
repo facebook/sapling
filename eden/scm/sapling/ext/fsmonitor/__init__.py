@@ -157,7 +157,7 @@ If set, wait for watchman to complete a full crawl before performing queries.
 # * fsmonitor will disable itself if any of the following extensions are
 #   enabled: largefiles, inotify, eol.
 # * fsmonitor will produce incorrect results if nested repos exist.
-#   *Workaround*: add nested repo paths to your `.hgignore`.
+#   *Workaround*: add nested repo paths to your `.gitignore`.
 #
 # The issues related to nested repos are probably not fundamental
 # ones. Patches to fix them are welcome.

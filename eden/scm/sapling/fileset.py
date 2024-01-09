@@ -317,19 +317,6 @@ def unresolved(mctx, x):
     return [f for f in mctx.subset if f in ms and ms[f] == "u"]
 
 
-@predicate("hgignore()")
-def hgignore(mctx, x):
-    """File that matches the active .hgignore pattern. (DEPRECATED)"""
-    # i18n: "hgignore" is a keyword
-    getargs(x, 0, 0, _("hgignore takes no arguments"))
-    repo = mctx.ctx.repo()
-    ui = repo.ui
-    if ui.configbool("experimental", "disallowhgignorefileset"):
-        raise error.Abort(_("hgignore() is deprecated. Use gitignore() instead."))
-    ignore = repo.dirstate._ignore
-    return mctx.matches(ignore)
-
-
 @predicate("gitignore()")
 def gitignore(mctx, x):
     """File that matches the active .gitignore pattern."""
