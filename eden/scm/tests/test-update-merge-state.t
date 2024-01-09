@@ -53,7 +53,7 @@ Python utility:
   M A
   
   # The repository is in an unfinished *update* state.
-  # Unresolved merge conflicts:
+  # Unresolved merge conflicts (1):
   # 
   #     A
   # 

@@ -81,7 +81,7 @@ Test graft state
   ? a.orig
   
   # The repository is in an unfinished *graft* state.
-  # Unresolved merge conflicts:
+  # Unresolved merge conflicts (1):
   # 
   #     a
   # 
@@ -112,7 +112,7 @@ Test unshelve state
   ? a.orig
   
   # The repository is in an unfinished *unshelve* state.
-  # Unresolved merge conflicts:
+  # Unresolved merge conflicts (1):
   # 
   #     a
   # 
@@ -143,7 +143,7 @@ Test rebase state
   ? a.orig
   
   # The repository is in an unfinished *rebase* state.
-  # Unresolved merge conflicts:
+  # Unresolved merge conflicts (1):
   # 
   #     a
   # 
@@ -201,7 +201,7 @@ Test conflicted merge state
   ? a.orig
   
   # The repository is in an unfinished *merge* state.
-  # Unresolved merge conflicts:
+  # Unresolved merge conflicts (1):
   # 
   #     a
   # 
@@ -218,7 +218,7 @@ Test if listed files have a relative path to current location
   ? ../../a.orig
   
   # The repository is in an unfinished *merge* state.
-  # Unresolved merge conflicts:
+  # Unresolved merge conflicts (1):
   # 
   #     ../../a
   # 

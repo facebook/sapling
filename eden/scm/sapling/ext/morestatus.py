@@ -59,13 +59,13 @@ def conflictsmsg(repo, ui):
         )
         msg = (
             _(
-                """Unresolved merge conflicts:
+                """Unresolved merge conflicts (%d):
 
 %s
 
 To mark files as resolved:  @prog@ resolve --mark FILE"""
             )
-            % mergeliststr
+            % (len(unresolvedlist), mergeliststr)
         )
     else:
         msg = _("No unresolved merge conflicts.")
