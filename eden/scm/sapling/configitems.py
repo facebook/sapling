@@ -559,8 +559,6 @@ coreconfigitem("worker", "backgroundclosethreadcount", default=4)
 coreconfigitem("worker", "enabled", default=True)
 coreconfigitem("worker", "numcpus", default=None)
 
-coreconfigitem("workingcopy", "rust-status", default=False)
-
 # Rebase related configuration moved to core because other extension are doing
 # strange things. For example, shelve import the extensions to reuse some bit
 # without formally loading it.

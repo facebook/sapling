@@ -241,7 +241,7 @@ class eden_dirstate(dirstate.dirstate):
         # avoid the filesystem stat call in self.normal() anyway.
         self.normal(f)
 
-    def _ruststatus(self, *args) -> scmutil.status:
+    def status(self, *args, **kwargs) -> scmutil.status:
         # If a transaction is currently in progress, make sure it has flushed
         # pending commit data to disk so that eden will be able to access it.
         #
@@ -253,4 +253,4 @@ class eden_dirstate(dirstate.dirstate):
         if txn is not None:
             txn.writepending()
 
-        return super()._ruststatus(*args)
+        return super().status(*args, **kwargs)

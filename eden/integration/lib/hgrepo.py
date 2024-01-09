@@ -241,8 +241,6 @@ class HgRepository(repobase.Repository):
         hgrc["remotefilelog"]["cachepath"] = cachepath
 
         # Use Rust status.
-        hgrc.setdefault("workingcopy", {})
-        hgrc["workingcopy"]["rust-status"] = "true"
         hgrc.setdefault("status", {})
         hgrc["status"]["use-rust"] = "true"
 

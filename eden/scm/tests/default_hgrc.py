@@ -28,10 +28,6 @@ update.check=linear
 [config]
 use-rust=True
 
-[workingcopy]
-use-rust=True
-rust-status=True
-
 [status]
 use-rust=True
 

@@ -7,9 +7,7 @@ from sapling.node import hex
 
 
 u = uimod.ui.load()
-u.setconfig("extensions", "treemanifest", "!")
 u.setconfig("devel", "segmented-changelog-rev-compat", "true")
-u.setconfig("workingcopy", "rust-status", False)
 
 repo = hg.repository(u, "test1", create=1)
 os.chdir("test1")
@@ -181,7 +179,7 @@ for i in ["1", "2", "3"]:
 with repo.wlock(), repo.lock(), repo.transaction("test"):
     with open(b"4", "wb") as f:
         f.write(b"4")
-    repo.dirstate.normal("4")
+    repo.dirstate.add("4")
     repo.commit("4")
     revsbefore = len(repo.changelog)
     repo.invalidate(clearfilecache=True)
