@@ -334,28 +334,27 @@ def wrappurge(orig, dirstate, match, findfiles, finddirs, includeignored):
     files = []
     dirs = []
     errors = []
-    usefastdirs = True
     if finddirs:
         try:
-            fastdirs = _finddirs(ui, dirstate._fs)
+            dirs = _finddirs(ui, dirstate._fs)
+            wvfs = dirstate._repo.wvfs
+            dirs = (
+                f
+                for f in sorted(dirs, reverse=True)
+                if (
+                    match(f)
+                    and not os.listdir(wvfs.join(f))
+                    and not dirstate._dirignore(f)
+                )
+            )
         except Exception:
             ui.debug("fsmonitor: fallback to core purge, " "query dirs failed")
-            usefastdirs = False
+            dirs = None
 
-    if findfiles or not usefastdirs:
-        files, dirs, errors = orig(
-            dirstate, match, findfiles, finddirs and not usefastdirs, False
-        )
-
-    if finddirs and usefastdirs:
-        wvfs = dirstate._repo.wvfs
-        dirs = (
-            f
-            for f in sorted(fastdirs, reverse=True)
-            if (
-                match(f) and not os.listdir(wvfs.join(f)) and not dirstate._dirignore(f)
-            )
-        )
+    if findfiles or dirs is None:
+        files, slowdirs, errors = orig(dirstate, match, findfiles, dirs is None, False)
+        if dirs is None:
+            dirs = slowdirs
 
     return files, dirs, errors
 
