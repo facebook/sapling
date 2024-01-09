@@ -600,11 +600,6 @@ edenapi.cert=$TEST_CERTDIR/${OVERRIDE_CLIENT_CERT:-client0}.crt
 edenapi.key=$TEST_CERTDIR/${OVERRIDE_CLIENT_CERT:-client0}.key
 edenapi.prefix=localhost
 edenapi.cacerts=$TEST_CERTDIR/root-ca.crt
-[workingcopy]
-use-rust=False
-rust-status=False
-[status]
-use-rust=False
 EOF
 }
 
@@ -1654,11 +1649,6 @@ reponame=$1
 cachepath=$TESTTMP/cachepath
 server=True
 shallowtrees=True
-[workingcopy]
-rust-status=False
-use-rust=False
-[status]
-use-rust=False
 EOF
 }
 

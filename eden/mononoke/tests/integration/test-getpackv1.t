@@ -66,8 +66,8 @@ Make sure that `hg update` succeeds after prefetching
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Create new commit that modifies A
-  $ hgmn up -q tip
-  $ echo AA > A && hg ci -m 'AA'
+  $ hgedenapi up -q tip
+  $ echo AA > A && hgedenapi ci -m 'AA'
   $ hgmn push -r . --to master_bookmark -q
 
 Go to repo3 and prefetch both revisions that modified file A.
@@ -88,7 +88,7 @@ Then make sure update succeeds
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     A
   
-  $ hg up --config paths.default=badpath 3
+  $ hgedenapi up --config paths.default=badpath 3
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat A
   AA
@@ -108,7 +108,7 @@ Rename a file and then prefetch it
   $ cd $TESTTMP/repo2
   $ hgmn up -q tip
   $ hg mv A AA
-  $ hg ci -m 'rename A to AA'
+  $ hgedenapi ci -m 'rename A to AA'
   $ hgmn push -r . --to master_bookmark
   pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
@@ -126,7 +126,7 @@ Rename a file and then prefetch it
   copyrev: bb3317de12b1232de9b883d9026c1ffa9291e3e6
   \x01 (esc)
   AA
-  $ hg up -q 4 --config paths.default=badpath
+  $ hgedenapi up -q 4 --config paths.default=badpath
   $ hg st --change . -C --config paths.default=badpath
   A AA
     A
@@ -135,7 +135,7 @@ Rename a file and then prefetch it
 Make sure the push succeeds - we had a problem when an incorrect delta was
 generated because copy metadata wasn't added
   $ echo B > AA
-  $ hg ci -m 'commit on top of a rename'
+  $ hgedenapi ci -m 'commit on top of a rename'
   $ hgmn push -r . --to master_bookmark --config extensions.remotenames=
   pushing rev 0ce8239858c4 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes

@@ -2,21 +2,11 @@
 #inprocess-hg-incompatible
 #require symlink windows
 
-#testcases ruststatus
-
   $ configure modernclient
   $ eagerepo
   $ enable sparse
   $ setconfig unsafe.filtersuspectsymlink=False
   $ setconfig commands.force-rust=clone
-
-#if ruststatus
-  $ setconfig workingcopy.use-rust=True
-  $ setconfig status.use-rust=True
-#else
-  $ setconfig workingcopy.use-rust=False
-  $ setconfig status.use-rust=False
-#endif
 
 Create a repo to be cloned
   $ newrepo origin

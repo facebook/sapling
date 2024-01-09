@@ -17,8 +17,6 @@
   > treemanifestserver=
   > [treemanifest]
   > server=True
-  > [workingcopy]
-  > rust-status=False
   > EOF
 
 # From blobimport fail real case

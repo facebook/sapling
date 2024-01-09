@@ -68,7 +68,7 @@ Test mutations on client 1
   DEBUG pull::httpgraph: edenapi fetched 1 graph nodes
   DEBUG pull::httpgraph: edenapi fetched graph with known 0 draft commits
   $ hgedenapi cloud join -q
-  $ mkcommit A
+  $ mkcommitedenapi A
   $ hg log -T{node} -r .
   929f2b9071cf032d9422b3cce9773cbe1c574822 (no-eol)
   $ hgedenapi cloud upload -q

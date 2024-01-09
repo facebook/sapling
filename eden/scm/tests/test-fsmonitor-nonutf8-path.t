@@ -1,15 +1,5 @@
 #require fsmonitor linux
 
-#testcases pythonstatus ruststatus
-
-#if pythonstatus
-  $ setconfig workingcopy.rust-status=false status.use-rust=false
-#endif
-
-#if ruststatus
-  $ setconfig status.use-rust=true
-#endif
-
   $ configure modernclient
   $ newclientrepo repo
 

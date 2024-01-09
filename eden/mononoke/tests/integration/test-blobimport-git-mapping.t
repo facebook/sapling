@@ -16,8 +16,6 @@
   > treemanifestserver=
   > [treemanifest]
   > server=True
-  > [workingcopy]
-  > rust-status=False
   > EOF
 
   $ touch file1

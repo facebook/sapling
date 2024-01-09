@@ -2,24 +2,9 @@
 
 #require diff
 
-#testcases pythonstatus ruststatus rustcommand scmstore
-
-#if pythonstatus
-  $ setconfig workingcopy.rust-status=false status.use-rust=false
-#endif
-
-#if rustcommand
-  $ setconfig status.use-rust=True
-#else
-  $ setconfig status.use-rust=False
-#endif
-
-#if ruststatus
-  $ setconfig status.use-rust=false workingcopy.rust-status=true
-#endif
+#testcases ruststatus scmstore
 
 #if scmstore
-  $ setconfig status.use-rust=false workingcopy.rust-status=false
   $ setconfig scmstore.auxindexedlog=true
   $ setconfig scmstore.status=true
 #endif

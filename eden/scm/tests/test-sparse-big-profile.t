@@ -7,5 +7,4 @@ Don't crash with lots of rules
 
   $ newclientrepo
   >>> open(".hg/sparse", "w").write("".join(f"path:foo_{i}\n" for i in range(10_000))) and None
-  $ hg status --config status.use-rust=false --config workingcopy.rust-status=false
   $ hg status

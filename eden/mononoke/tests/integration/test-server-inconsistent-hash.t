@@ -48,7 +48,7 @@
 
 # 4. Make a commit with corrupted file node, Change file node text
   $ echo "hello_world" > file
-  $ hg commit -Aqm "commit"
+  $ hgedenapi commit -Aqm "commit"
 
 Corrupt file contents via an extension:
   $ cat > $TESTTMP/corrupt.py <<EOF
