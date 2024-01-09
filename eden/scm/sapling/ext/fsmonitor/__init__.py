@@ -165,13 +165,11 @@ If set, wait for watchman to complete a full crawl before performing queries.
 from __future__ import absolute_import
 
 import os
-import weakref
 
 from sapling import error, extensions, filesystem, localrepo, pycompat, registrar, util
 from sapling.i18n import _
 
 from ..extlib import watchmanclient
-from . import state
 
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
@@ -205,19 +203,16 @@ configitem("fsmonitor", "wait-full-crawl", default=True)
 _incompatible_list = ["largefiles", "eol"]
 
 
-def _handleunavailable(ui, state, ex):
+def _handleunavailable(ui, ex):
     """Exception handler for Watchman interaction exceptions"""
     if isinstance(ex, watchmanclient.Unavailable):
         if ex.warn:
             ui.warn(str(ex) + "\n")
-        if ex.invalidate:
-            state.invalidate(reason="exception")
 
 
 def _finddirs(ui, fs):
     """Query watchman for all directories in the working copy"""
-    state = fs._fsmonitorstate
-    fs._watchmanclient.settimeout(state.timeout + 0.1)
+    fs._watchmanclient.settimeout(fs._timeout + 0.1)
     result = fs._watchmanclient.command(
         "query",
         {
@@ -234,7 +229,7 @@ def _finddirs(ui, fs):
                     ],
                 ],
             ],
-            "sync_timeout": int(state.timeout * 1000),
+            "sync_timeout": int(fs._timeout * 1000),
         },
     )
     return list(filter(lambda x: _isutf8(ui, x), result["files"]))
@@ -291,15 +286,6 @@ def makedirstate(repo, dirstate):
         def _fsmonitorinit(self, repo):
             self._fs = fsmonitorfilesystem(self._root, self, repo)
 
-        def rebuild(self, *args, **kwargs):
-            if not kwargs.get("exact"):
-                self._fs._fsmonitorstate.invalidate()
-            return super(fsmonitordirstate, self).rebuild(*args, **kwargs)
-
-        def invalidate(self, *args, **kwargs):
-            self._fs._fsmonitorstate.invalidate()
-            return super(fsmonitordirstate, self).invalidate(*args, **kwargs)
-
     dirstate.__class__ = fsmonitordirstate
     dirstate._fsmonitorinit(repo)
 
@@ -308,16 +294,15 @@ class fsmonitorfilesystem(filesystem.physicalfilesystem):
     def __init__(self, root, dirstate, repo):
         super(fsmonitorfilesystem, self).__init__(root, dirstate)
 
-        self._fsmonitorstate = repo._fsmonitorstate
+        self._mode = repo.ui.config("fsmonitor", "mode")
+        self._timeout = float(repo.ui.config("fsmonitor", "timeout"))
         self._watchmanclient = watchmanclient.getclientforrepo(repo)
-        self._repo = weakref.proxy(repo)
-        self._ui = repo.ui
 
 
 def wrapdirstate(orig, self):
     ds = orig(self)
     # only override the dirstate when Watchman is available for the repo
-    if hasattr(self, "_fsmonitorstate"):
+    if hasattr(self, "_fsmonitorok"):
         makedirstate(self, ds)
     return ds
 
@@ -367,17 +352,16 @@ def reposetup(ui, repo):
         return
 
     # Check if fsmonitor is explicitly disabled for this repository
-    fsmonitorstate = state.state(repo)
-    if fsmonitorstate.mode == "off":
+    if repo.ui.config("fsmonitor", "mode") == "off":
         return
 
     try:
         watchmanclient.createclientforrepo(repo)
     except Exception as ex:
-        _handleunavailable(ui, fsmonitorstate, ex)
+        _handleunavailable(ui, ex)
         return
 
-    repo._fsmonitorstate = fsmonitorstate
+    repo._fsmonitorok = True
 
     dirstate, cached = localrepo.isfilecached(repo, "dirstate")
     if cached:

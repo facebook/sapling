@@ -41,12 +41,11 @@ def getclientforrepo(repo):
 
 
 class Unavailable(Exception):
-    def __init__(self, msg, warn=True, invalidate=False):
+    def __init__(self, msg, warn=True):
         self.msg = msg
         self.warn = warn
         if self.msg == "timed out waiting for response":
             self.warn = False
-        self.invalidate = invalidate
 
     def __str__(self):
         if self.warn:
@@ -117,7 +116,7 @@ class client:
     def getcurrentclock(self):
         result = self.command("clock")
         if not hasattr(result, "clock"):
-            raise Unavailable("clock result is missing clock value", invalidate=True)
+            raise Unavailable("clock result is missing clock value")
         return result.clock
 
     def clearconnection(self):
