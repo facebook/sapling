@@ -80,13 +80,6 @@ class repocache(scmutil.filecache):
         return obj._opener.join(fname)
 
 
-class rootcache(scmutil.filecache):
-    """filecache for files in the repository root"""
-
-    def join(self, obj: "dirstate", fname: str) -> str:
-        return obj._join(fname)
-
-
 def _getfsnow(vfs: "vfs.abstractvfs") -> int:
     """Get "now" timestamp on filesystem"""
     tmpfd, tmpname = vfs.mkstemp()
@@ -194,31 +187,6 @@ class dirstate:
         # normally, so we don't have a try/finally here on purpose.
         self._parentwriters -= 1
 
-    def beginparentchange(self) -> None:
-        """Marks the beginning of a set of changes that involve changing
-        the dirstate parents. If there is an exception during this time,
-        the dirstate will not be written when the wlock is released. This
-        prevents writing an incoherent dirstate where the parent doesn't
-        match the contents.
-        """
-        self._ui.deprecwarn(
-            "beginparentchange is obsoleted by the " "parentchange context manager.",
-            "4.3",
-        )
-        self._parentwriters += 1
-
-    def endparentchange(self) -> None:
-        """Marks the end of a set of changes that involve changing the
-        dirstate parents. Once all parent changes have been marked done,
-        the wlock will be free to write the dirstate on release.
-        """
-        self._ui.deprecwarn(
-            "endparentchange is obsoleted by the " "parentchange context manager.",
-            "4.3",
-        )
-        if self._parentwriters > 0:
-            self._parentwriters -= 1
-
     def pendingparentchange(self) -> bool:
         """Returns true if the dirstate is in the middle of a set of changes
         that modify the dirstate parent.
@@ -242,7 +210,7 @@ class dirstate:
     def hasdir(self, d: str) -> bool:
         return self._map.hastrackeddir(d)
 
-    @rootcache(".hgignore")
+    @util.propertycache
     def _ignore(self) -> "matchmod.gitignorematcher":
         # gitignore
         globalignores = self._globalignorefiles()
@@ -400,8 +368,7 @@ class dirstate:
         """
         if self._parentwriters == 0:
             raise ValueError(
-                "cannot set dirstate parent without "
-                "calling dirstate.beginparentchange"
+                "cannot set dirstate parent without " "calling dirstate.parentchange"
             )
 
         self._dirty = True
@@ -653,24 +620,6 @@ class dirstate:
                 folded = util.fspath(normed, self._root)
             storemap[normed] = folded
 
-        return folded
-
-    def _normalizefile(
-        self,
-        path: str,
-        isknown: bool,
-        ignoremissing: bool = False,
-        exists: "Optional[bool]" = None,
-    ) -> str:
-        normed = util.normcase(path)
-        folded = self._map.filefoldmap.get(normed, None)
-        if folded is None:
-            if isknown:
-                folded = path
-            else:
-                folded = self._discoverpath(
-                    path, normed, ignoremissing, exists, self._map.filefoldmap
-                )
         return folded
 
     def _normalize(

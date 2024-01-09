@@ -647,12 +647,6 @@ def _setupdirstate(ui) -> None:
                 self.origignore = origignore
             return self.func
 
-        def __set__(self, obj, value):
-            return self.orig.__set__(obj, value)
-
-        def __delete__(self, obj):
-            return self.orig.__delete__(obj)
-
     replacefilecache(dirstate.dirstate, "_ignore", ignorewrapper)
 
     # dirstate.rebuild should not add non-matching files
