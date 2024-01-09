@@ -63,7 +63,6 @@ windows-symlinks=True
 fsmonitor=
 
 [fsmonitor]
-detectrace=True
 fallback-on-watchman-exception=false
 """
 

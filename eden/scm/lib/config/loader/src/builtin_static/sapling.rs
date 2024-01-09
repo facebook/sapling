@@ -191,7 +191,6 @@ use-symlink-atomic-write=False
 mode=on
 timeout=600
 track-ignore-files=False
-walk_on_invalidate=False
 warn-fresh-instance=True
 # TODO: T130638905 Update this
 sockpath=/opt/facebook/watchman/var/run/watchman/%i-state/sock

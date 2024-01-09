@@ -13,10 +13,6 @@ import os
 from sapling import pathutil
 
 
-_version = 4
-_versionformat = ">I"
-
-
 class state:
     def __init__(self, repo):
         self._vfs = repo.localvfs
@@ -30,7 +26,6 @@ class state:
         self._lastnonnormalcount = 0
 
         self.mode = self._ui.config("fsmonitor", "mode")
-        self.walk_on_invalidate = self._ui.configbool("fsmonitor", "walk_on_invalidate")
         self.timeout = float(self._ui.config("fsmonitor", "timeout"))
         self._repo = repo
         self._droplist = []
