@@ -355,7 +355,11 @@ async fn loop_forever<M: SyncedCommitMapping + Clone + 'static, R: CrossRepo>(
                 (large_repo_name.to_string(), small_repo_name.to_string()),
             );
         }
-        tokio::time::sleep(Duration::new(1, 0)).await;
+        tokio::time::sleep(Duration::from_millis(justknobs::get_as::<u64>(
+            "scm/mononoke:bookmarks_validator_sleep_ms",
+            None,
+        )?))
+        .await;
     }
 }
 
@@ -405,7 +409,8 @@ async fn validate<M: SyncedCommitMapping + Clone + 'static, R: CrossRepo>(
 
         // Check that large_bookmark actually pointed to a commit equivalent to small_cs_id
         // not so long ago.
-        let max_log_records: u32 = 100;
+        let max_log_records =
+            justknobs::get_as::<u32>("scm/mononoke:bookmarks_validator_max_log_records", None)?;
         let max_delay_secs: u32 = 300;
         let in_history = check_large_bookmark_history(
             ctx,

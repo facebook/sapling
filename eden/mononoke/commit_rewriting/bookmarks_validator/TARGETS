@@ -20,6 +20,7 @@ rust_binary(
         "fbsource//third-party/rust:tokio",
         "//common/rust/shed/cached_config:cached_config",
         "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/justknobs_stub:justknobs",
         "//common/rust/shed/stats:stats",
         "//configerator/structs/scm/mononoke/pushredirect:pushredirect_enable-rust",
         "//eden/mononoke/bookmarks:bookmarks",
