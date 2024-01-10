@@ -33,7 +33,10 @@ use futures::Stream;
 ///     // Use `.stream()` to extract the pure Rust stream object
 ///     // that implements `Stream`.
 ///     let stream = tstream.stream();
-///     let stream = stream.map_ok(|mut x| { x.reverse(); x });
+///     let stream = stream.map_ok(|mut x| {
+///         x.reverse();
+///         x
+///     });
 ///     Ok(stream.into())
 /// }
 /// ```

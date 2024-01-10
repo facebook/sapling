@@ -26,7 +26,6 @@ use crate::RevlogEntry;
 /// implemented at a higher level.
 ///
 /// ```text
-///
 ///     changelogi
 ///   +------------+
 ///   | ... | node | < rev 0  \

@@ -33,7 +33,6 @@ use futures::Stream;
 ///
 /// ## return value `impl Stream<Item = Result<Out, UErr>>`
 /// Stream of all `Out` values
-///
 pub fn bounded_traversal_stream<'caller, In, InsInit, Ins, Out, Unfold, UErr>(
     scheduled_max: usize,
     init: InsInit,

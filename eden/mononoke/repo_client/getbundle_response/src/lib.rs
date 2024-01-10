@@ -507,7 +507,6 @@ pub async fn find_new_draft_commits_and_derive_filenodes_for_public_roots(
 ///
 /// If `heads = [D, E, F]` and `common = [C]` then `new_draft_commits = [D, E]`,
 /// and new_public_heads = `[A, B]`.
-///
 async fn find_new_draft_commits_and_public_roots(
     ctx: &CoreContext,
     repo: &BlobRepo,
@@ -572,7 +571,6 @@ async fn find_new_draft_commits_and_public_roots(
 ///
 /// If `heads = [D, E, F]` then this will return
 /// `[(F, public), (E, draft), (D, draft), (B, public)]`
-///
 async fn find_phase_heads(
     ctx: &CoreContext,
     repo: &BlobRepo,

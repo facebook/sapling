@@ -272,9 +272,23 @@ pub struct Flag {
 /// let flag: Flag = (None, "quiet", "silence output", true, "").into();
 ///
 /// // Accept various types.
-/// let flag: Flag = (Some('r'), format!("rev"), format!("revisions"), "master", "TEMPLATE").into();
+/// let flag: Flag = (
+///     Some('r'),
+///     format!("rev"),
+///     format!("revisions"),
+///     "master",
+///     "TEMPLATE",
+/// )
+///     .into();
 /// let flag: Flag = (Some('r'), "rev", "revisions", &["master", "stable"][..], "").into();
-/// let flag: Flag = (None, format!("sleep"), format!("sleep few seconds (default: {})", 1), 1, "FOOBAR").into();
+/// let flag: Flag = (
+///     None,
+///     format!("sleep"),
+///     format!("sleep few seconds (default: {})", 1),
+///     1,
+///     "FOOBAR",
+/// )
+///     .into();
 /// ```
 impl<S, L, D, V, T> From<(S, L, D, V, T)> for Flag
 where
@@ -446,13 +460,15 @@ impl Parser {
     ///
     /// ```
     /// use std::env;
+    ///
     /// use cliparser::parser::*;
     ///
     /// let env_args: Vec<String> = env::args().collect();
     ///
-    /// let flags: Vec<Flag> = vec![
-    ///     ('q', "quiet", "silence the output", false, "")
-    /// ].into_iter().map(Into::into).collect();
+    /// let flags: Vec<Flag> = vec![('q', "quiet", "silence the output", false, "")]
+    ///     .into_iter()
+    ///     .map(Into::into)
+    ///     .collect();
     ///
     /// let parser = ParseOptions::new().flags(flags).into_parser();
     ///

@@ -15,7 +15,6 @@
 //! network byte order (big endian).
 //!
 //! ```text
-//!
 //! .datapack
 //!     The pack itself is a series of revision deltas with some basic header
 //!     information on each. A revision delta may be a fulltext, represented by
@@ -75,7 +74,6 @@
 //!                  <deltabase location: 4 byte signed int>
 //!                  <pack entry offset: 8 byte unsigned int>
 //!                  <pack entry size: 8 byte unsigned int>
-//!
 //! ```
 //! [1]: new in version 1.
 

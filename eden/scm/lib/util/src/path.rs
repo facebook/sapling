@@ -549,7 +549,6 @@ pub fn create_shared_dir_all(path: impl AsRef<Path>) -> anyhow::Result<()> {
 ///   expansion, meaning that if an environment variable is expanded into a
 ///   string starting with a tilde (`~`), the tilde will be expanded into the
 ///   user's home directory.
-///
 pub fn expand_path(path: impl AsRef<str>) -> PathBuf {
     expand_path_impl(path.as_ref(), |k| env::var(k).ok(), dirs::home_dir)
 }

@@ -222,7 +222,6 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
 
     /// List all Deleted Manifest paths recursively that were deleted and match specified paths
     /// and/or prefixes.
-    ///
     fn find_entries<'a>(
         &self,
         ctx: &'a CoreContext,
@@ -329,7 +328,6 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
     }
 
     /// Return Deleted Manifest entry for the given path
-    ///
     async fn find_entry(
         &self,
         ctx: &CoreContext,
@@ -345,7 +343,6 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
     }
 
     /// List all Deleted manifest entries recursively, that represent deleted paths.
-    ///
     fn list_all_entries<'a>(
         &self,
         ctx: &'a CoreContext,

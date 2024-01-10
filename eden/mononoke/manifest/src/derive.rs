@@ -235,7 +235,6 @@ where
 ///   - Mix of leaves/trees: all leaves are removed, recurse into the trees.
 /// 4. Current path have `Some(leaf)` change associated with it.
 ///   - _: all the trees are removed in favour of this leaf.
-///
 pub fn derive_manifest_inner<
     TreeId,
     LeafId,

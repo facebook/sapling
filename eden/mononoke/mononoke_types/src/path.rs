@@ -339,7 +339,6 @@ impl MPathElement {
 
     /// Returns whether this path element is a valid filename on Windows.
     /// ```text
-    ///
     /// Invalid filenames on Windows are:
     ///
     /// * Any filename containing a control character in the range 0-31, or

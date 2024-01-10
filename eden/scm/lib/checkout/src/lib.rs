@@ -632,7 +632,6 @@ impl CheckoutProgress {
     /// path and a trailing \0 character.
     ///
     ///   <40_char_hg_hash> <mtime_in_millis> <written_file_length> <file_path>\0
-    ///
     pub fn load(path: &Path, vfs: VFS) -> Result<Self> {
         let mut state: HashMap<RepoPathBuf, (HgId, u128, u64)> = HashMap::new();
 

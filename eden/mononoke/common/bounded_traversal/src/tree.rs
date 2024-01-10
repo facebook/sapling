@@ -45,7 +45,6 @@ use super::Iter;
 ///
 /// ## return value `impl Future<Output = Result<Out, Err>>`
 /// Result of running fold operation on the root of the tree.
-///
 pub fn bounded_traversal<'caller, Err, In, Ins, Out, OutCtx, Unfold, Fold>(
     scheduled_max: usize,
     init: In,

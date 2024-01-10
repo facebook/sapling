@@ -14,7 +14,6 @@
 //! It consists of two files, with the following format:
 //!
 //! ```text
-//!
 //! .histpack
 //!     The pack itself is a series of file revisions with some basic header
 //!     information on each.
@@ -78,7 +77,6 @@
 //!     filename = <filename len : 2 byte unsigned int><filename value> [1]
 //!     nodeindexentry = <hgid: 20 byte> [1]
 //!                      <pack file hgid offset: 8 byte unsigned int> [1]
-//!
 //! ```
 //! [1]: new in version 1.
 

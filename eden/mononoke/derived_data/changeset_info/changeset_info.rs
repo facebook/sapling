@@ -75,7 +75,6 @@ pub struct ChangesetInfo {
 /// to make fetching changesets faster if there is no need in the whole description.
 /// For example:
 ///     Handler((String /* title */, ChangesetMessageId /* message blob id */))
-///
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum ChangesetMessage {
     Message(String),

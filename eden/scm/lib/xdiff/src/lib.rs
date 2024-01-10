@@ -36,7 +36,8 @@ pub struct Hunk {
 ///
 /// # Example
 /// ```
-/// use xdiff::{diff_hunks, Hunk};
+/// use xdiff::diff_hunks;
+/// use xdiff::Hunk;
 /// let a = "a\n b\n c\n d\n";
 /// let b = "a\n c\n d\n e\n";
 /// let c = "a\n b\n c\n d\n e\n";

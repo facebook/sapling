@@ -20,9 +20,18 @@
 /// use pathmatcher::expand_curly_brackets;
 ///
 /// assert_eq!(expand_curly_brackets("foo"), vec!["foo"]);
-/// assert_eq!(expand_curly_brackets("foo{a,b,}"), vec!["fooa", "foob", "foo"]);
-/// assert_eq!(expand_curly_brackets("a{b,c{d,e}f}g"), vec!["abg", "acdfg", "acefg"]);
-/// assert_eq!(expand_curly_brackets("{a,b}{}{c,d}{{e}}"), vec!["ace", "ade", "bce", "bde"]);
+/// assert_eq!(
+///     expand_curly_brackets("foo{a,b,}"),
+///     vec!["fooa", "foob", "foo"]
+/// );
+/// assert_eq!(
+///     expand_curly_brackets("a{b,c{d,e}f}g"),
+///     vec!["abg", "acdfg", "acefg"]
+/// );
+/// assert_eq!(
+///     expand_curly_brackets("{a,b}{}{c,d}{{e}}"),
+///     vec!["ace", "ade", "bce", "bde"]
+/// );
 /// assert_eq!(expand_curly_brackets("\\{a\\}"), vec!["\\{a\\}"]);
 /// assert_eq!(expand_curly_brackets("[{a}]"), vec!["[{a}]"]);
 /// assert!(expand_curly_brackets("a}").is_empty());

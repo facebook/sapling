@@ -241,7 +241,6 @@ fn auxencode<E: AsRef<[u8]>>(elem: E, dotencode: bool) -> Vec<u8> {
 /// assert_eq(get_extension(b".foo"), b"");
 /// assert_eq(get_extension(b"bar.foo"), b".foo");
 /// assert_eq(get_extension(b"foo."), b".");
-///
 /// ```
 fn get_extension(basename: &[u8]) -> &[u8] {
     let idx = basename
@@ -263,7 +262,6 @@ fn get_extension(basename: &[u8]) -> &[u8] {
 /// let dirs = vec![Vec::from(&b"asdf"[..]), Vec::from("asdf")];
 /// let file = b"file.txt";
 /// assert_eq!(hashed_file(&dirs, Some(file)), Sha1::from(&b"asdf/asdf/file.txt"[..]));
-///
 /// ```
 fn hashed_file(dirs: &[&[u8]], file: &[u8]) -> Sha1 {
     let mut elements: Vec<_> = dirs.iter().map(|elem| direncode(elem)).collect();

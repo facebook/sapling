@@ -212,7 +212,12 @@ impl<T: FromConfigValue> FromConfigValue for Option<T> {
 ///
 /// assert_eq!(
 ///     parse_list("this,is \"a small\" ,test"),
-///     vec!["this".to_string(), "is".to_string(), "a small".to_string(), "test".to_string()]
+///     vec![
+///         "this".to_string(),
+///         "is".to_string(),
+///         "a small".to_string(),
+///         "test".to_string()
+///     ]
 /// );
 /// ```
 pub fn parse_list<B: AsRef<str>>(value: B) -> Vec<Text> {

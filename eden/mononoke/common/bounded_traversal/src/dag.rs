@@ -60,7 +60,6 @@ use super::Iter;
 /// ## return value `impl Future<Output = Result<Option<Out>, Err>>`
 /// Result of running fold operation on the root of the tree. `None` indiciate that cycle
 /// has been found.
-///
 pub fn bounded_traversal_dag<'caller, Err, In, Ins, Out, OutCtx, Unfold, Fold>(
     scheduled_max: usize,
     init: In,

@@ -120,7 +120,6 @@
 //! implemented by both the ssh and the edenapi remote store.
 //!
 //! The produced stores must implement the `HgIdDataStore` trait.
-//!
 
 mod contentstore;
 mod dataindex;

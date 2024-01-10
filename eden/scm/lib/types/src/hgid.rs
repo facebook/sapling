@@ -144,11 +144,13 @@ pub trait WriteHgIdExt {
     /// # Examples
     ///
     /// ```
-    /// use types::hgid::{HgId, WriteHgIdExt};
+    /// use types::hgid::HgId;
+    /// use types::hgid::WriteHgIdExt;
     /// let mut v = vec![];
     ///
     /// let n = HgId::null_id();
-    /// v.write_hgid(&n).expect("writing a hgid to a vec should work");
+    /// v.write_hgid(&n)
+    ///     .expect("writing a hgid to a vec should work");
     ///
     /// assert_eq!(v, vec![0; HgId::len()]);
     /// ```
@@ -168,11 +170,15 @@ pub trait ReadHgIdExt {
     ///
     /// ```
     /// use std::io::Cursor;
-    /// use types::hgid::{HgId, ReadHgIdExt};
+    ///
+    /// use types::hgid::HgId;
+    /// use types::hgid::ReadHgIdExt;
     /// let mut v = vec![0; HgId::len()];
     /// let mut c = Cursor::new(v);
     ///
-    /// let n = c.read_hgid().expect("reading a hgid from a vec should work");
+    /// let n = c
+    ///     .read_hgid()
+    ///     .expect("reading a hgid from a vec should work");
     ///
     /// assert_eq!(&n, HgId::null_id());
     /// ```

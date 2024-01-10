@@ -477,7 +477,6 @@ async fn get_export_paths_for_changeset<'a>(
 /// in `f` should NOT be exported.
 ///
 /// In this case, `export_path_infos` would be `[("new", "f", ("old", "D")]`.
-///
 fn build_multi_mover_for_changeset<'a>(
     logger: &'a Logger,
     export_paths: &'a [NonRootMPath],
