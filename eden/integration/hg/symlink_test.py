@@ -414,7 +414,7 @@ class SymlinkWindowsDisabledTest(EdenHgTestCase):
         with self.assertRaises(hgrepo.HgError) as context:
             self.repo.update(self.initial_commit)
         self.assertIn(
-            b"conflicting changes:\n  symlink2",
+            b"abort: 1 conflicting file changes:\n symlink2",
             context.exception.stderr,
         )
 

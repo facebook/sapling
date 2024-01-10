@@ -83,7 +83,7 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
 
     let is_eden = repo.requirements.contains("eden");
 
-    if (ctx.opts.clean != is_eden) || ctx.opts.check || ctx.opts.merge || !ctx.opts.date.is_empty()
+    if (ctx.opts.clean && !is_eden) || ctx.opts.check || ctx.opts.merge || !ctx.opts.date.is_empty()
     {
         tracing::debug!(target: "checkout_info", checkout_detail="unsupported_args");
         fallback!("one or more unsupported options in Rust checkout");
@@ -166,8 +166,15 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
 
     tracing::debug!(target: "checkout_info", checkout_mode="rust");
 
+    let checkout_mode = if ctx.opts.clean {
+        checkout::CheckoutMode::Force
+    } else if ctx.opts.merge {
+        checkout::CheckoutMode::Merge
+    } else {
+        checkout::CheckoutMode::NoConflict
+    };
     let _lock = repo.lock()?;
-    let update_result = checkout::checkout(ctx.io(), repo, &wc, target)?;
+    let update_result = checkout::checkout(ctx.io(), repo, &wc, target, checkout_mode)?;
 
     if !ctx.global_opts().quiet {
         if let Some((updated, removed)) = update_result {

@@ -246,7 +246,10 @@ class UpdateTest(EdenHgTestCase):
         # both the working copy and the destination.
         with self.assertRaises(hgrepo.HgError) as context:
             self.repo.update(new_commit)
-        self.assertIn(b"abort: conflicting changes", context.exception.stderr)
+        self.assertIn(
+            b"abort: 1 conflicting file changes:\n" b" bar/some_new_file.txt\n",
+            context.exception.stderr,
+        )
         self.assertEqual(
             base_commit,
             self.repo.get_head_hash(),
@@ -298,7 +301,11 @@ class UpdateTest(EdenHgTestCase):
         # now the update aborts because some_new_file has the different contents
         with self.assertRaises(hgrepo.HgError) as context:
             self.repo.update(new_commit)
-        self.assertIn(b"abort: conflicting changes", context.exception.stderr)
+        self.assertIn(
+            b"bar/some_new_file.txt: untracked file differs\n"
+            b"abort: untracked files in working directory differ from files in requested revision\n",
+            context.exception.stderr,
+        )
         self.assertEqual(
             base_commit,
             self.repo.get_head_hash(),
@@ -463,9 +470,8 @@ class UpdateTest(EdenHgTestCase):
         self.assertRegex(
             result.stderr.decode("utf-8"),
             re.compile(
-                "abort: conflicting changes:\n"
-                "  foo/new_file.txt\n"
-                "\\(commit or (goto|update) --clean to discard changes\\)\n",
+                "foo/new_file.txt: untracked file differs\n"
+                "abort: untracked files in working directory differ from files in requested revision\n",
                 re.MULTILINE,
             ),
         )
@@ -1055,6 +1061,8 @@ class UpdateCacheInvalidationTest(EdenHgTestCase):
             self.hg(
                 "config", "--local", "experimental.abort-on-eden-conflict-error", "True"
             )
+            # TODO(sggutier): Remove this once the Rust checkout becomes independent of status
+            self.repo.hg("config", "--local", "checkout.use-rust=false")
 
             if initial_state == PrjFsState.PLACEHOLDER:
                 # Stat file2 to populate a placeholder, making the file non-virtual.
