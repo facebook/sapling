@@ -531,6 +531,20 @@ if interactiveui is not None:
             displayer = cmdutil.show_changeset(
                 self.ui, self.repo, self.opts, buffered=True
             )
+
+            current_line = 0
+            selected_rows = None
+
+            def on_output(ctx, output):
+                nonlocal current_line
+                nonlocal selected_rows
+                height = output.count("\n")
+                selected_ctx = self.revdag[self.dag_index][2]
+                if ctx == selected_ctx:
+                    # start and end indices (inclusive)
+                    selected_rows = (current_line, current_line + height - 1)
+                current_line += height
+
             cmdutil.displaygraph(
                 self.ui,
                 self.repo,
@@ -538,9 +552,13 @@ if interactiveui is not None:
                 displayer,
                 reserved=self.reserved,
                 props={"highlighted_node": self.revdag[self.dag_index][2].hex()},
+                on_output=on_output,
             )
             ui.status(self.status)
-            return ui.popbuffer().splitlines(), None
+            output = ui.popbuffer().splitlines()
+            if selected_rows is None:
+                return output, None
+            return output, (selected_rows[1], interactiveui.Alignment.bottom)
 
         def handlekeypress(self, key):
             if key == self.KEY_Q:
