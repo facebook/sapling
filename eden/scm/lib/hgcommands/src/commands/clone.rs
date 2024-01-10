@@ -511,7 +511,9 @@ fn clone_metadata(
     let commit_graph_segments = capabilities
         .iter()
         .any(|cap| cap == COMMIT_GRAPH_SEGMENTS_CAPABILITY)
-        && config.get_or_default::<bool>("clone", "use-commit-graph")?;
+        && repo
+            .config()
+            .get_or_default::<bool>("clone", "use-commit-graph")?;
 
     let mut repo_needs_reload = false;
 
@@ -523,7 +525,7 @@ fn clone_metadata(
         let commits = repo.dag_commits()?;
         tracing::trace!("fetching lazy commit data and bookmarks");
         let bookmark_ids = exchange::clone(
-            config,
+            repo.config(),
             edenapi,
             &mut metalog.write(),
             &mut commits.write(),
@@ -531,7 +533,10 @@ fn clone_metadata(
         )?;
         logger.verbose(|| format!("Pulled bookmarks {:?}", bookmark_ids));
 
-        if config.get_or_default("devel", "segmented-changelog-rev-compat")? {
+        if repo
+            .config()
+            .get_or_default("devel", "segmented-changelog-rev-compat")?
+        {
             // "lazytext" (vs "lazy") is required for rev compat mode, so let's
             // migrate automatically. This migration only works for tests.
             migrate_to_lazytext(ctx, repo.config(), repo.path())?;
