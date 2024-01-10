@@ -62,9 +62,9 @@ def push(repo, dest, head_node, remote_bookmark, force=False, opargs=None):
             )
             commit_infos.append(line)
         if commit_infos:
-            ui.write("push commits debug info:\n" + "\n".join(commit_infos) + "\n")
+            ui.write(_("push commits debug info:\n") + "\n".join(commit_infos) + "\n")
         else:
-            ui.write(f"head commit {short(head_node)} is not a draft commit\n")
+            ui.write(_(f"head commit {short(head_node)} is not a draft commit\n"))
 
     # upload revs via EdenApi
 
