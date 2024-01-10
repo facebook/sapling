@@ -537,7 +537,7 @@ if interactiveui is not None:
                 self.revdag,
                 displayer,
                 reserved=self.reserved,
-                props={"highlighted_rev": self.revdag[self.dag_index][2].hex()},
+                props={"highlighted_node": self.revdag[self.dag_index][2].hex()},
             )
             ui.status(self.status)
             return ui.popbuffer().splitlines(), None
