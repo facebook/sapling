@@ -83,6 +83,7 @@ pub fn repo_matcher_with_overrides(
     Ok(Some((matcher, hasher.finish())))
 }
 
+#[tracing::instrument(skip_all)]
 pub fn build_matcher(
     prof: &sparse::Root,
     manifest: impl Manifest + Send + Sync + 'static,
@@ -95,8 +96,6 @@ pub fn build_matcher(
     prof.hash(hasher.lock().deref_mut());
 
     let matcher = prof.matcher(|path| {
-        let path = path;
-
         let file_id = {
             let manifest = manifest.clone();
             let repo_path = RepoPathBuf::from_string(path.clone())?;
@@ -129,6 +128,9 @@ pub fn build_matcher(
             bytes.append(&mut extra.to_string().into_bytes());
         }
         bytes.hash(hasher.lock().deref_mut());
+
+        tracing::debug!(path, size = bytes.len(), "fetched included profile");
+
         Ok(Some(bytes))
     })?;
 

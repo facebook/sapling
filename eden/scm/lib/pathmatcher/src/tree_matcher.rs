@@ -84,6 +84,7 @@ impl TreeMatcher {
     /// For example, both `/a/b` and `/a*/b*` do NOT match `/a/b/c/d`. Append
     /// `/**` to make rules recursive. The matcher works best if all rules end
     /// with `**`.
+    #[tracing::instrument(skip_all)]
     pub fn from_rules(
         rules: impl Iterator<Item = impl AsRef<str>>,
         case_sensitive: bool,
