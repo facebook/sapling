@@ -130,12 +130,7 @@ where
     D: Deserializer<'de>,
 {
     let s = bool::deserialize(deserializer)?;
-
-    if cfg!(target_os = "windows") {
-        Ok(true)
-    } else {
-        Ok(s)
-    }
+    Ok(s)
 }
 
 fn default_sqlite_overlay() -> bool {
