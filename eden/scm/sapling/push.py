@@ -14,6 +14,9 @@ from .node import bin, hex, nullhex, short
 
 MUTATION_KEYS = {"mutpred", "mutuser", "mutdate", "mutop", "mutsplit"}
 
+CFG_SECTION = "push"
+CFG_KEY_ENABLE_DEBUG_INFO = "enable_debug_info"
+
 
 def get_edenapi_for_dest(repo, _dest):
     """Get an EdenApi instance for the given destination."""
@@ -44,6 +47,24 @@ def push(repo, dest, head_node, remote_bookmark, force=False, opargs=None):
         raise error.UnsupportedEdenApiPush(
             _("merge commit is not supported by EdenApi push yet")
         )
+
+    if ui.configbool(CFG_SECTION, CFG_KEY_ENABLE_DEBUG_INFO):
+        commit_infos = []
+        for node in draft_nodes:
+            ctx = repo[node]
+            line = "  " + "|".join(
+                [
+                    str(ctx),
+                    ctx.phasestr(),
+                    ",".join(str(p) for p in ctx.parents()),
+                    ",".join(short(n) for n in ctx.mutationpredecessors()),
+                ]
+            )
+            commit_infos.append(line)
+        if commit_infos:
+            ui.write("push commits debug info:\n" + "\n".join(commit_infos) + "\n")
+        else:
+            ui.write(f"head commit {short(head_node)} is not a draft commit\n")
 
     # upload revs via EdenApi
 
