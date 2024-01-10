@@ -167,16 +167,16 @@ def view(viewobj) -> None:
     # this is from curses.tigetstr('rmam')
     sys.stdout.write("\x1b[?7l")
     sys.stdout.write("\033[?25l")  # hide cursor
-    while viewobj._active:
-        _write_output(viewobj)
-        output = getchar(sys.stdin.fileno())
-        viewobj.handlekeypress(output)
-
-    sys.stdout.write("\033[?25h")  # show cursor
-    # re-enable line wrapping
-    # this is from curses.tigetstr('smam')
-    sys.stdout.write("\x1b[?7h")
-    sys.stdout.flush()
-
-    # Exit alternate screen
-    sys.stdout.write("\033[?1049l")
+    try:
+        while viewobj._active:
+            _write_output(viewobj)
+            output = getchar(sys.stdin.fileno())
+            viewobj.handlekeypress(output)
+    finally:
+        sys.stdout.write("\033[?25h")  # show cursor
+        # re-enable line wrapping
+        # this is from curses.tigetstr('smam')
+        sys.stdout.write("\x1b[?7h")
+        sys.stdout.flush()
+        # Exit alternate screen
+        sys.stdout.write("\033[?1049l")
