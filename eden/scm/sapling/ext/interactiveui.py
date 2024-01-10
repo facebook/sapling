@@ -11,7 +11,7 @@ import os
 import sys
 from typing import Union
 
-from sapling import error, pycompat
+from sapling import error, pycompat, scmutil
 from sapling.i18n import _
 
 
@@ -20,14 +20,9 @@ if not pycompat.iswindows:
     import tty
 
 
-def clearline(n: int = 1) -> None:
-    w = sys.stdout
-    # ANSI
-    # ESC[#A : up # lines
-    # ESC[K : clear to end of line
-    w.write("\033[2K")
-    for i in range(n):
-        w.write("\033[1A\033[2K")
+def clearscreen():
+    sys.stdout.write("\033[2J")  # clear screen
+    sys.stdout.write("\033[;H")  # move cursor
 
 
 # From:
@@ -145,6 +140,7 @@ def view(viewobj) -> None:
     # disable line wrapping
     # this is from curses.tigetstr('rmam')
     sys.stdout.write("\x1b[?7l")
+    clearscreen()
     s = viewobj.render()
     sys.stdout.write(s)
     while viewobj._active:
@@ -152,9 +148,8 @@ def view(viewobj) -> None:
         viewobj.handlekeypress(output)
         if not viewobj._active:
             break
-        linecount = s.count("\n")
         s = viewobj.render()
-        clearline(linecount)
+        clearscreen()
         slist = s.splitlines(True)
         sys.stdout.write("".join("\r" + line for line in slist))
         sys.stdout.flush()
