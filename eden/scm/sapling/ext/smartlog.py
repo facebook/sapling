@@ -31,6 +31,8 @@ import datetime
 import re
 import time
 
+import bindings
+
 from sapling import (
     bookmarks,
     cmdutil,
@@ -573,6 +575,16 @@ if interactiveui is not None:
             if key == self.KEY_R:
                 self.rebase_source = self.revdag[self.dag_index]
                 self.status = _("rebasing from %s") % (self.rebase_source[2])
+            if key == self.KEY_S:
+                bindings.commands.run(
+                    util.hgcmd()
+                    + [
+                        "show",
+                        self.revdag[self.dag_index][2].hex(),
+                        "--config",
+                        "pager.interface=fullscreen",
+                    ]
+                )
 
 
 def _smartlog(ui, repo, *pats, **opts):
