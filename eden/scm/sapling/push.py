@@ -8,7 +8,7 @@ from typing import List, Optional, Tuple
 
 from . import edenapi_upload, error, hg, mutation, phases, scmutil
 from .bookmarks import readremotenames, saveremotenames
-from .i18n import _
+from .i18n import _, _n
 from .node import bin, hex, nullhex, short
 
 
@@ -133,14 +133,22 @@ def push_rebase(repo, dest, head_node, stack_nodes, remote_bookmark, opargs=None
     ui, edenapi = repo.ui, repo.edenapi
     bookmark = remote_bookmark
     wnode = repo["."].node()
-    ui.status(_("updating remote bookmark %s\n") % bookmark)
 
     # according to the Mononoke API (D23813368), base is the parent of the bottom of the stack
     # that is to be landed.
     # It's guaranteed there is only one base for a linear stack of draft nodes
     base = repo.dageval(lambda: parents(roots(stack_nodes))).last()
-
     pushvars = parse_pushvars(opargs.get("pushvars"))
+
+    ui.status(
+        _n(
+            "pushrebasing stack (%s, %s] (%d commit) to remote bookmark %s\n",
+            "pushrebasing stack (%s, %s] (%d commits) to remote bookmark %s\n",
+            len(stack_nodes),
+        )
+        % (short(base), short(head_node), len(stack_nodes), remote_bookmark)
+    )
+
     response = edenapi.landstack(bookmark, head=head_node, base=base, pushvars=pushvars)
 
     result = response["data"]

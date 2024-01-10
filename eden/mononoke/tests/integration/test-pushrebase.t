@@ -32,7 +32,7 @@ Pushrebase commit 1
   edenapi: queue 1 tree for upload
   edenapi: uploaded 1 tree
   edenapi: uploaded 1 changeset
-  updating remote bookmark master_bookmark
+  pushrebasing stack (426bada5c675, a0c9c5791058] (1 commit) to remote bookmark master_bookmark
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   updated remote bookmark master_bookmark to c2e526aacb51
 
@@ -85,7 +85,7 @@ Push rebase fails with conflict in the bottom of the stack
   edenapi: queue 1 tree for upload
   edenapi: uploaded 1 tree
   edenapi: uploaded 1 changeset
-  updating remote bookmark master_bookmark
+  pushrebasing stack (426bada5c675, 0c67ec8c24b9] (2 commits) to remote bookmark master_bookmark
   abort: Server error: Conflicts while pushrebasing: [PushrebaseConflict { left: NonRootMPath("1"), right: NonRootMPath("1") }]
   [255]
   $ hg hide -r ".^ + ." -q
@@ -102,7 +102,7 @@ Push rebase fails with conflict in the top of the stack
   edenapi: queue 2 trees for upload
   edenapi: uploaded 2 trees
   edenapi: uploaded 2 changesets
-  updating remote bookmark master_bookmark
+  pushrebasing stack (426bada5c675, 8d2ff619947e] (2 commits) to remote bookmark master_bookmark
   abort: Server error: Conflicts while pushrebasing: [PushrebaseConflict { left: NonRootMPath("1"), right: NonRootMPath("1") }]
   [255]
   $ hg hide -r ".^ + ." -q
@@ -120,7 +120,7 @@ Push stack
   edenapi: queue 2 trees for upload
   edenapi: uploaded 2 trees
   edenapi: uploaded 2 changesets
-  updating remote bookmark master_bookmark
+  pushrebasing stack (426bada5c675, 7a68f123d810] (2 commits) to remote bookmark master_bookmark
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   updated remote bookmark master_bookmark to 4f5a4463b24b
   $ hgmn up -q master_bookmark
@@ -154,7 +154,7 @@ Push fast-forward
   edenapi: queue 1 tree for upload
   edenapi: uploaded 1 tree
   edenapi: uploaded 1 changeset
-  updating remote bookmark master_bookmark
+  pushrebasing stack (4f5a4463b24b, 59e5396444cf] (1 commit) to remote bookmark master_bookmark
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   updated remote bookmark master_bookmark to 59e5396444cf
   $ log -r "all()"
@@ -449,7 +449,7 @@ Check that we can replace a file with a directory
   edenapi: queue 2 trees for upload
   edenapi: uploaded 2 trees
   edenapi: uploaded 1 changeset
-  updating remote bookmark newbook
+  pushrebasing stack (4899f9112d9b, 4e5fec14573f] (1 commit) to remote bookmark newbook
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   updated remote bookmark newbook to 4e5fec14573f
 
