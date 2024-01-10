@@ -41,7 +41,7 @@
 
 # Try to download without providing the mandatory client info header
   $ sslcurl_noclientinfo_test "${lfs_uri}/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d" -s
-  {"message:"Error: expected Client Info header but not provided..."} (no-eol)
+  {"message:"Error: X-Client-Info header not provided or wrong format (expected json)."} (no-eol)
 
 # Download over a variety of encodings
 

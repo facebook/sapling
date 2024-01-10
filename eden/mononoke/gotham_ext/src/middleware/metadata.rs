@@ -155,7 +155,10 @@ impl Middleware for MetadataMiddleware {
             if client_info.is_none()
                 && matches!(Uri::try_borrow_from(state), Some(uri) if !uri.path().ends_with("/health_check"))
             {
-                let msg = "Error: expected Client Info header but not provided...".to_string();
+                let msg = format!(
+                    "Error: {} header not provided or wrong format (expected json).",
+                    CLIENT_INFO_HEADER
+                );
                 error!(self.logger, "{}", &msg,);
                 let response = Response::builder()
                     .status(StatusCode::UNAUTHORIZED)
