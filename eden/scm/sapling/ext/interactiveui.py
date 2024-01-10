@@ -130,6 +130,13 @@ class viewframe:
         self._active = False
 
 
+def _write_output(viewobj):
+    clearscreen()
+    slist = viewobj.render()
+    sys.stdout.write("".join("\r" + line + "\n" for line in slist))
+    sys.stdout.flush()
+
+
 def view(viewobj) -> None:
     if pycompat.iswindows:
         raise error.Abort(_("interactive UI does not support Windows"))
@@ -141,18 +148,10 @@ def view(viewobj) -> None:
     # disable line wrapping
     # this is from curses.tigetstr('rmam')
     sys.stdout.write("\x1b[?7l")
-    clearscreen()
-    slist = viewobj.render()
-    sys.stdout.write("".join("\r" + line + "\n" for line in slist))
     while viewobj._active:
+        _write_output(viewobj)
         output = getchar(sys.stdin.fileno())
         viewobj.handlekeypress(output)
-        if not viewobj._active:
-            break
-        slist = viewobj.render()
-        clearscreen()
-        sys.stdout.write("".join("\r" + line + "\n" for line in slist))
-        sys.stdout.flush()
     # re-enable line wrapping
     # this is from curses.tigetstr('smam')
     sys.stdout.write("\x1b[?7h")
