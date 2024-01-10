@@ -944,7 +944,7 @@ def undo(ui, repo, **opts):
                 repo.ui.status(
                     _("<-: newer  " "->: older  " "q: abort  " "enter: confirm\n")
                 )
-                return ui.popbuffer()
+                return ui.popbuffer().splitlines()
 
             def handlekeypress(self, key):
                 if key == self.KEY_Q:

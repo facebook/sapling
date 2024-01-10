@@ -540,7 +540,7 @@ if interactiveui is not None:
                 props={"highlighted_rev": self.revdag[self.dag_index][2].hex()},
             )
             ui.status(self.status)
-            return ui.popbuffer()
+            return ui.popbuffer().splitlines()
 
         def handlekeypress(self, key):
             if key == self.KEY_Q:

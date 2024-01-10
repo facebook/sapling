@@ -118,7 +118,7 @@ class viewframe:
         repo.ui.disablepager()
 
     def render(self):
-        # returns string to print
+        # returns array of strings (rows) to print
         pass
 
     def handlekeypress(self, key):
@@ -142,17 +142,16 @@ def view(viewobj) -> None:
     # this is from curses.tigetstr('rmam')
     sys.stdout.write("\x1b[?7l")
     clearscreen()
-    s = viewobj.render()
-    sys.stdout.write(s)
+    slist = viewobj.render()
+    sys.stdout.write("".join("\r" + line + "\n" for line in slist))
     while viewobj._active:
         output = getchar(sys.stdin.fileno())
         viewobj.handlekeypress(output)
         if not viewobj._active:
             break
-        s = viewobj.render()
+        slist = viewobj.render()
         clearscreen()
-        slist = s.splitlines(True)
-        sys.stdout.write("".join("\r" + line for line in slist))
+        sys.stdout.write("".join("\r" + line + "\n" for line in slist))
         sys.stdout.flush()
     # re-enable line wrapping
     # this is from curses.tigetstr('smam')
