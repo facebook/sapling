@@ -9,6 +9,7 @@ from __future__ import absolute_import
 
 import os
 import sys
+from enum import Enum
 from typing import Union
 
 from sapling import error, pycompat, scmutil
@@ -98,6 +99,11 @@ def getchar(fd: int) -> Union[None, bytes, str]:
 # End of code from link
 
 
+class Alignment(Enum):
+    top = 1
+    bottom = 2
+
+
 class viewframe:
     # Useful Keycode Constants
     KEY_J = b"j"
@@ -118,7 +124,8 @@ class viewframe:
         repo.ui.disablepager()
 
     def render(self):
-        # returns array of strings (rows) to print
+        # returns list of strings (rows) to print, and an optional tuple of (index, position)
+        # Ensures that the row `index` is aligned to the `position` side of the screen if the list is longer than the screen height
         pass
 
     def handlekeypress(self, key):
@@ -131,9 +138,20 @@ class viewframe:
 
 
 def _write_output(viewobj):
+    screensize = scmutil.termsize(viewobj.ui)[1]
     clearscreen()
-    slist = viewobj.render()
-    sys.stdout.write("".join("\r" + line + "\n" for line in slist))
+    slist, alignment = viewobj.render()
+    if alignment is not None and len(slist) > screensize:
+        index, direction = alignment
+        if direction == Alignment.top:
+            end = min(len(slist), index + screensize)
+            start = min(index, end - screensize)
+        elif direction == Alignment.bottom:
+            start = max(0, index - screensize)
+            end = max(index, start + screensize)
+        slist = slist[start:end]
+
+    sys.stdout.write("\n".join("\r" + line for line in slist))
     sys.stdout.flush()
 
 
