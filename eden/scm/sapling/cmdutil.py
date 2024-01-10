@@ -3364,6 +3364,7 @@ def displaygraph(
     props=None,
     reserved=None,
     out=None,
+    on_output=None,
 ):
     props = props or {}
     formatnode = _graphnodeformatter(ui, displayer)
@@ -3432,6 +3433,8 @@ def displaygraph(
             out(nextrow)
         else:
             ui.write(encoding.unitolocal(nextrow))
+        if on_output is not None:
+            on_output(ctx, nextrow)
         displayer.flush(ctx)
 
     displayer.close()
