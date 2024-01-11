@@ -92,6 +92,7 @@ use futures::stream::TryStreamExt;
 use futures::try_join;
 use futures::Future;
 use git_symbolic_refs::GitSymbolicRefs;
+use git_types::MappedGitCommitId;
 use hook_manager::manager::HookManager;
 use hook_manager::manager::HookManagerArc;
 use itertools::Itertools;
@@ -899,6 +900,13 @@ impl RepoContext {
             .repo_derived_data()
             .config()
             .is_enabled(ChangesetInfo::NAME)
+    }
+
+    pub fn derive_gitcommit_enabled(&self) -> bool {
+        self.blob_repo()
+            .repo_derived_data()
+            .config()
+            .is_enabled(MappedGitCommitId::NAME)
     }
 
     pub fn derive_hgchangesets_enabled(&self) -> bool {

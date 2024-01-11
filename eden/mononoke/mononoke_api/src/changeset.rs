@@ -44,6 +44,7 @@ use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures_lazy_shared::LazyShared;
+use git_types::MappedGitCommitId;
 use hooks::CrossRepoPushSource;
 use hooks::HookOutcome;
 use hooks::PushAuthoredBy;
@@ -284,12 +285,17 @@ impl ChangesetContext {
 
     /// The git Sha1 for the changeset (if available).
     pub async fn git_sha1(&self) -> Result<Option<GitSha1>, MononokeError> {
-        Ok(self
+        let maybe_git_sha1 = self
             .repo()
             .blob_repo()
             .bonsai_git_mapping()
             .get_git_sha1_from_bonsai(self.ctx(), self.id)
-            .await?)
+            .await?;
+        if maybe_git_sha1.is_none() && self.repo().derive_gitcommit_enabled() {
+            let mapped_git_commit_id = self.derive::<MappedGitCommitId>().await?;
+            return Ok(Some(*mapped_git_commit_id.oid()));
+        }
+        Ok(maybe_git_sha1)
     }
 
     /// Derive a derivable data type for this changeset.
