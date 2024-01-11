@@ -810,11 +810,11 @@ struct RepoStackInfoParams {
 /// The parameter for the repo_stack_git_bundle_store method
 struct RepoStackGitBundleStoreParams {
   /// The changeset ID of the commit which is the head of the stack of draft commits
-  1: binary head;
+  1: CommitId head;
   /// The changeset ID of the base commit (public or draft) that serves as the base
   /// of the stack of commits and is present in the user repo, i.e. the repo that will
   /// unbundle this bundle, already has this commit
-  2: binary base;
+  2: CommitId base;
   /// The identity of the service making the repo_stack_git_bundle_store request.
   3: optional string service_identity;
 }

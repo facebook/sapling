@@ -604,8 +604,8 @@ impl AddScubaParams for thrift::CreateGitTagParams {
 
 impl AddScubaParams for thrift::RepoStackGitBundleStoreParams {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
-        scuba.add("head", hex(&self.head));
-        scuba.add("base", hex(&self.base));
+        scuba.add("head", self.head.to_string());
+        scuba.add("base", self.base.to_string());
     }
 }
 

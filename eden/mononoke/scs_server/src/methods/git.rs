@@ -12,6 +12,7 @@ use everstore_client::cpp_client::EverstoreCppClient;
 use everstore_client::write::WriteRequestOptionsBuilder;
 use everstore_client::EverstoreClient;
 use fbtypes::FBType;
+use futures_util::try_join;
 use git_types::GitError;
 use mononoke_api::errors::MononokeError;
 use mononoke_api::ChangesetId;
@@ -172,18 +173,10 @@ impl SourceControlServiceImpl {
             .await
             .with_context(|| format!("Error in opening repo using specifier {:?}", repo))?;
         // Parse the input as appropriate types
-        let base_changeset_id = ChangesetId::from_bytes(&params.base).map_err(|err| {
-            invalid_request(format!(
-                "Error in creating ChangesetId from base {:?}. Cause: {:#}",
-                params.base, err
-            ))
-        })?;
-        let head_changeset_id = ChangesetId::from_bytes(&params.head).map_err(|err| {
-            invalid_request(format!(
-                "Error in creating ChangesetId from head {:?}. Cause: {:#}",
-                params.head, err
-            ))
-        })?;
+        let (base_changeset_id, head_changeset_id) = try_join!(
+            self.changeset_id(&repo_ctx, &params.base),
+            self.changeset_id(&repo_ctx, &params.head),
+        )?;
 
         // Generate the bundle
         let bundle_content = repo_ctx
