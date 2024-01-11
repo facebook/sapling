@@ -122,20 +122,24 @@ impl WatchmanFileSystem {
             .resolve_root(CanonicalPath::canonicalize(self.inner.vfs.root())?)
             .await?;
 
-        let mut expr = None;
-        if !ignore_dirs.is_empty() {
-            expr = Some(Expr::Not(Box::new(Expr::Any(
-                ignore_dirs
-                    .into_iter()
-                    .map(|p| {
-                        Expr::DirName(DirNameTerm {
-                            path: p,
-                            depth: None,
-                        })
-                    })
-                    .collect(),
-            ))));
-        }
+        let mut not_exprs = vec![
+            // This files under nested ".hg" directories. Note that we don't have a good
+            // way to ignore regular files in the nested repo (e.g. we can ignore
+            // "dir/.hg/file", but not "dir/file".
+            Expr::Match(MatchTerm {
+                glob: format!("**/{}/**", self.inner.dot_dir),
+                wholename: true,
+                include_dot_files: true,
+                ..Default::default()
+            }),
+        ];
+
+        not_exprs.extend(ignore_dirs.into_iter().map(|p| {
+            Expr::DirName(DirNameTerm {
+                path: p,
+                depth: None,
+            })
+        }));
 
         // The crawl is done - display a generic "we're querying" spinner.
         let _bar = ProgressBar::new_adhoc("querying watchman", 0, "");
@@ -145,7 +149,7 @@ impl WatchmanFileSystem {
                 &resolved,
                 QueryRequestCommon {
                     since: config.clock,
-                    expression: expr,
+                    expression: Some(Expr::Not(Box::new(Expr::Any(not_exprs)))),
                     sync_timeout: config.sync_timeout.into(),
                     ..Default::default()
                 },

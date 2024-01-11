@@ -52,6 +52,7 @@ pub struct PhysicalFileSystem {
     pub(crate) store: ArcFileStore,
     pub(crate) treestate: Arc<Mutex<TreeState>>,
     pub(crate) locker: Arc<RepoLocker>,
+    pub(crate) dot_dir: String,
 }
 
 impl PhysicalFileSystem {
@@ -62,12 +63,14 @@ impl PhysicalFileSystem {
         treestate: Arc<Mutex<TreeState>>,
         locker: Arc<RepoLocker>,
     ) -> Result<Self> {
+        let ident = identity::must_sniff_dir(vfs.root())?;
         Ok(PhysicalFileSystem {
             vfs,
             tree_resolver,
             store,
             treestate,
             locker,
+            dot_dir: ident.dot_dir().to_string(),
         })
     }
 }
@@ -83,11 +86,9 @@ impl FileSystem for PhysicalFileSystem {
         config: &dyn Config,
         _io: &IO,
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChange>>>> {
-        let root = self.vfs.root().to_path_buf();
-        let ident = identity::must_sniff_dir(&root)?;
         let walker = Walker::new(
-            root,
-            ident.dot_dir().to_string(),
+            self.vfs.root().to_path_buf(),
+            self.dot_dir.clone(),
             ignore_dirs,
             matcher.clone(),
             false,
