@@ -8,7 +8,7 @@ from typing import List, Optional, Tuple
 
 from . import edenapi_upload, error, hg, mutation, phases, scmutil
 from .bookmarks import readremotenames, saveremotenames
-from .i18n import _, _n
+from .i18n import _, _n, _x
 from .node import bin, hex, nullhex, short
 
 
@@ -62,9 +62,9 @@ def push(repo, dest, head_node, remote_bookmark, force=False, opargs=None):
             )
             commit_infos.append(line)
         if commit_infos:
-            ui.write(_("push commits debug info:\n") + "\n".join(commit_infos) + "\n")
+            ui.write(_x("push commits debug info:\n%s\n") % "\n".join(commit_infos))
         else:
-            ui.write(_(f"head commit {short(head_node)} is not a draft commit\n"))
+            ui.write(_x("head commit %s is not a draft commit\n") % short(head_node))
 
     # upload revs via EdenApi
 
