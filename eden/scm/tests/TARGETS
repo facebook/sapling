@@ -91,7 +91,6 @@ python_unittest(
 python_unittest(
     name = "hg_run_py_tests",
     srcs = glob([
-        "backout/*.py",
         "clone/*.py",
         "diff/*.py",
         "dirsync/*.py",
