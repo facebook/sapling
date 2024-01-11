@@ -171,12 +171,6 @@ impl SourceControlServiceImpl {
             .repo_for_service(ctx, &repo, params.service_identity.clone())
             .await
             .with_context(|| format!("Error in opening repo using specifier {:?}", repo))?;
-        // Validate that the request sender has an internal service identity with the right permission.
-        repo_ctx
-            .authorization_context()
-            .require_git_import_operations(repo_ctx.ctx(), repo_ctx.inner_repo())
-            .await
-            .map_err(MononokeError::from)?;
         // Parse the input as appropriate types
         let base_changeset_id = ChangesetId::from_bytes(&params.base).map_err(|err| {
             invalid_request(format!(
