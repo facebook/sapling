@@ -373,10 +373,6 @@ pub fn make_config(dir: impl AsRef<Path>) -> BTreeMap<String, String> {
             "remotefilelog.cachepath",
             dir.as_ref().display().to_string(),
         ),
-        (
-            "remotefilelog.cachekey",
-            "cca::hg:rust_unittest".to_string(),
-        ),
     ]
     .iter()
     .map(|(k, v)| (k.to_string(), v.clone()))

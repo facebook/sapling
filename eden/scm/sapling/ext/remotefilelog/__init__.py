@@ -86,8 +86,6 @@ Configs:
 
     ``remotefilelog.userustpackstore`` use the Rust PackStore.
 
-    ``remotefilelog.cachekey`` cache key prefix to use.
-
     ``edenapi.url`` URL of the EdenAPI server.
 
     ``remotefilelog.http`` use HTTP (EdenAPI) instead of SSH to fetch data.
