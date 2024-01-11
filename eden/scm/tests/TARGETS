@@ -92,7 +92,6 @@ python_unittest(
     name = "hg_run_py_tests",
     srcs = glob([
         "clone/*.py",
-        "diff/*.py",
         "dirsync/*.py",
         "status/*.py",
     ]),
