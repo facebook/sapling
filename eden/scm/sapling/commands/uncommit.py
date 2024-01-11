@@ -224,6 +224,8 @@ def fixdirstate(repo, oldctx, newctx, status) -> None:
     )
     # Adjust the dirstate copies
     for dst, src in pycompat.iteritems(copies):
+        if dst not in newctx:
+            continue
         if src not in newctx or dst in newctx or ds[dst] != "a":
             src = None
         ds.copy(src, dst)
