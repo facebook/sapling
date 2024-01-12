@@ -170,6 +170,9 @@ impl VFS {
         {
             use std::os::unix::fs::OpenOptionsExt;
             options.custom_flags(libc::O_NOFOLLOW);
+
+            // This sets file mode if file is created during "open".
+            options.mode(Self::update_mode(util::file::apply_umask(0o666), exec));
         }
 
         let mut f = options.open(filepath)?;
@@ -179,9 +182,11 @@ impl VFS {
             let metadata = f.metadata()?;
             let mut permissions = metadata.permissions();
             let mode = Self::update_mode(permissions.mode(), exec);
-            permissions.set_mode(mode);
-            f.set_permissions(permissions)
-                .with_context(|| format!("Failed to set permissions on {:?}", filepath))?;
+            if mode != permissions.mode() {
+                permissions.set_mode(mode);
+                f.set_permissions(permissions)
+                    .with_context(|| format!("Failed to set permissions on {:?}", filepath))?;
+            }
         }
 
         f.write_all(content)
