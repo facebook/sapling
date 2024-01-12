@@ -204,10 +204,6 @@ impl Repo {
         self.locker.lock_store()
     }
 
-    pub fn ensure_locked(&self) -> Result<(), repolock::LockError> {
-        self.locker.ensure_store_locked()
-    }
-
     pub fn reload_requires(&mut self) -> Result<()> {
         self.requirements = Requirements::open(
             &self.dot_hg_path.join("requires"),

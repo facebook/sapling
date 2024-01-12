@@ -155,19 +155,8 @@ impl RepoLocker {
         ))
     }
 
-    pub fn ensure_store_locked(&self) -> Result<(), LockError> {
-        let inner = self.inner.lock();
-        if inner.store_lock.is_some() {
-            Ok(())
-        } else {
-            Err(LockError::NotHeld(
-                inner
-                    .store_path
-                    .join(STORE_NAME)
-                    .to_string_lossy()
-                    .to_string(),
-            ))
-        }
+    fn store_locked(&self) -> bool {
+        self.inner.lock().store_lock.is_some()
     }
 
     pub fn lock_working_copy(&self, wc_dot_hg: PathBuf) -> Result<LockedPath, LockError> {
@@ -191,18 +180,8 @@ impl RepoLocker {
         ))
     }
 
-    pub fn ensure_working_copy_locked(&self, wc_path: &Path) -> Result<(), LockError> {
-        let inner = self.inner.lock();
-        if inner.wc_locks.contains_key(wc_path) {
-            Ok(())
-        } else {
-            Err(LockError::NotHeld(
-                wc_path
-                    .join(WORKING_COPY_NAME)
-                    .to_string_lossy()
-                    .to_string(),
-            ))
-        }
+    fn working_copy_locked(&self, wc_path: &Path) -> bool {
+        self.inner.lock().wc_locks.contains_key(wc_path)
     }
 }
 
@@ -519,8 +498,6 @@ pub enum LockError {
     Io(#[from] io::Error),
     #[error("{0}")]
     OutOfOrder(String),
-    #[error("lock is not held: {0}")]
-    NotHeld(String),
 }
 
 #[derive(Debug)]
@@ -722,25 +699,23 @@ mod tests {
     }
 
     #[test]
-    fn test_ensure_lock() -> Result<()> {
+    fn test_is_locked() -> Result<()> {
         let store_tmp = tempfile::tempdir()?;
         let wc_tmp = tempfile::tempdir()?;
 
         let cfg = BTreeMap::<&str, &str>::new();
         let locker = RepoLocker::new(&cfg, store_tmp.path().to_path_buf())?;
 
-        locker
-            .ensure_working_copy_locked(wc_tmp.path())
-            .unwrap_err();
-        locker.ensure_store_locked().unwrap_err();
+        assert!(!locker.working_copy_locked(wc_tmp.path()));
+        assert!(!locker.store_locked());
 
         let _wlock = locker.lock_working_copy(wc_tmp.path().to_path_buf())?;
-        locker.ensure_working_copy_locked(wc_tmp.path()).unwrap();
-        locker.ensure_store_locked().unwrap_err();
+        assert!(locker.working_copy_locked(wc_tmp.path()));
+        assert!(!locker.store_locked());
 
         let _lock = locker.lock_store()?;
-        locker.ensure_working_copy_locked(wc_tmp.path()).unwrap();
-        locker.ensure_store_locked().unwrap();
+        assert!(locker.working_copy_locked(wc_tmp.path()));
+        assert!(locker.store_locked());
 
         Ok(())
     }
@@ -760,13 +735,13 @@ mod tests {
         let _lock2 = locker.lock_store()?;
 
         drop(_lock1);
-        assert!(locker.ensure_store_locked().is_ok());
+        assert!(locker.store_locked());
         drop(_lock2);
-        assert!(locker.ensure_store_locked().is_err());
+        assert!(!locker.store_locked());
         drop(_wclock1);
-        assert!(locker.ensure_working_copy_locked(wc_tmp.path()).is_ok());
+        assert!(locker.working_copy_locked(wc_tmp.path()));
         drop(_wclock2);
-        assert!(locker.ensure_working_copy_locked(wc_tmp.path()).is_err());
+        assert!(!locker.working_copy_locked(wc_tmp.path()));
 
         Ok(())
     }

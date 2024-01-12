@@ -244,10 +244,6 @@ impl WorkingCopy {
         })
     }
 
-    pub fn ensure_locked(&self) -> Result<(), repolock::LockError> {
-        self.locker.ensure_working_copy_locked(&self.dot_hg_path)
-    }
-
     pub fn treestate(&self) -> Arc<Mutex<TreeState>> {
         self.treestate.clone()
     }
@@ -582,8 +578,8 @@ impl WorkingCopy {
     }
 
     pub fn read_merge_state(&self) -> Result<Option<MergeState>> {
-        // Conceptually it seems like we want to ensure_locked() here, but in
-        // practice light weight operations such as status+morestatus read the
+        // Conceptually it seems like read_merge_state should be on LockedWorkingCopy.
+        // In practice, light weight operations such as status+morestatus read the
         // merge state without a lock, so we can't require a lock. The merge
         // state is written atomically so we won't see an incomplete merge
         // state, but if we read other state files without locking then things
