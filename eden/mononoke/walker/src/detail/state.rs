@@ -104,13 +104,16 @@ struct InternedId<K> {
 }
 
 // Can't auto-derive as dont want to make K Copy
+// Implementing it by hand allows us to omit this bound on the type parameter. See [the Rust
+// documentation](https://doc.rust-lang.org/core/marker/trait.Copy.html#how-can-i-implement-copy)
 impl<K> Copy for InternedId<K> {}
+
+// Can't auto-derive as dont want to make K Clone
+// Implementing it by hand allows us to omit this bound on the type parameter. See [the Rust
+// documentation](https://doc.rust-lang.org/core/clone/trait.Clone.html#how-can-i-implement-clone)
 impl<K> Clone for InternedId<K> {
     fn clone(&self) -> Self {
-        Self {
-            id: self.id,
-            _phantom: PhantomData,
-        }
+        *self
     }
 }
 
