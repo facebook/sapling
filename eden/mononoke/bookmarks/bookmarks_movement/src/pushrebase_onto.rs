@@ -261,6 +261,13 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
                     reason,
                 };
                 log_bookmark_operation(ctx, repo, &info).await;
+
+                // Marking the pushrebased changeset as public.
+                if kind.is_public() {
+                    repo.phases()
+                        .add_reachable_as_public(ctx, vec![outcome.head.clone()])
+                        .await?;
+                }
             }
             Err(err) => scuba_logger.log_with_msg("Pushrebase failed", Some(format!("{:#?}", err))),
         }
