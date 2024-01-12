@@ -189,17 +189,27 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
                     if normalized != path.as_byte_slice() {
                         let normalized = RepoPathBuf::from_utf8(normalized.into_owned())?;
 
-                        if ts_state
-                            .as_ref()
-                            .map_or(false, |s| s.state.intersects(StateFlags::EXIST_NEXT))
-                        {
-                            tracing::trace!(%path, %normalized, "normalizing path based in dirstate");
-                            path = normalized;
-                        } else {
-                            tracing::trace!(%path, %normalized, "not normalizing because !EXIST_NEXT");
-                            // We aren staying separate from normalized, so we mustn't use
-                            // it's tree state entry.
-                            ts_state = ts.get(&path)?.cloned();
+                        match &ts_state {
+                            None => {
+                                // File is not currently tracked. The normalized path can
+                                // diff if the file's path has a directory prefix that
+                                // matches case insensitively with something else in the
+                                // treestate. In that case, we should use the case from
+                                // the treestate to avoid unnecessary directory case
+                                // divergence in the treestate.
+                                tracing::trace!(%path, %normalized, "normalizing untracked file");
+                                path = normalized;
+                            }
+                            Some(s) if s.state.intersects(StateFlags::EXIST_NEXT) => {
+                                tracing::trace!(%path, %normalized, "normalizing path based on dirstate");
+                                path = normalized;
+                            }
+                            Some(_) => {
+                                tracing::trace!(%path, %normalized, "not normalizing because !EXIST_NEXT");
+                                // We are staying separate from the normalized entry, so we mustn't use
+                                // the normalized path's entry.
+                                ts_state = ts.get(&path)?.cloned();
+                            }
                         }
                     }
                     self.seen.insert(path.clone());

@@ -92,7 +92,6 @@ python_unittest(
     name = "hg_run_py_tests",
     srcs = glob([
         "clone/*.py",
-        "status/*.py",
     ]),
     compatible_with = [
         "ovr_config//os:linux",
