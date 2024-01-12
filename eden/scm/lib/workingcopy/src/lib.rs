@@ -12,7 +12,7 @@ mod errors;
 mod filechangedetector;
 pub mod filesystem;
 pub mod git;
-mod metadata;
+pub mod metadata;
 pub mod physicalfs;
 pub mod sparse;
 pub mod status;

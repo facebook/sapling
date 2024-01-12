@@ -50,6 +50,8 @@ use treestate::dirstate;
 use treestate::filestate::FileStateV2;
 use treestate::filestate::StateFlags;
 use treestate::treestate::TreeState;
+use types::hgid::MF_ADDED_NODE_ID;
+use types::hgid::MF_MODIFIED_NODE_ID;
 use types::hgid::NULL_ID;
 use types::HgId;
 use types::Key;
@@ -84,6 +86,7 @@ use status::Status;
 // Affects progress update frequency and thread count for small checkout.
 const VFS_BATCH_SIZE: usize = 128;
 
+#[derive(PartialEq)]
 pub enum CheckoutMode {
     Force,
     NoConflict,
@@ -852,7 +855,32 @@ pub fn checkout(
         return Ok(None);
     }
 
-    Ok(Some(sparse_checkout(io, repo, wc, target_commit)?))
+    Ok(Some(sparse_checkout(
+        io,
+        repo,
+        wc,
+        target_commit,
+        update_mode,
+    )?))
+}
+
+fn file_type(vfs: &VFS, path: &RepoPath) -> FileType {
+    match vfs.metadata(path) {
+        Err(err) => {
+            tracing::warn!(?err, %path, "error statting modified file");
+            FileType::Regular
+        }
+        Ok(md) => {
+            let md: workingcopy::metadata::Metadata = md.into();
+            if md.is_symlink(vfs) {
+                FileType::Symlink
+            } else if md.is_executable(vfs) {
+                FileType::Executable
+            } else {
+                FileType::Regular
+            }
+        }
+    }
 }
 
 pub fn sparse_checkout(
@@ -860,9 +888,8 @@ pub fn sparse_checkout(
     repo: &mut Repo,
     wc: &LockedWorkingCopy,
     target_commit: HgId,
+    update_mode: CheckoutMode,
 ) -> Result<(usize, usize)> {
-    wc.ensure_locked()?;
-
     let current_commit = wc.parents()?.into_iter().next().unwrap_or(NULL_ID);
 
     let tree_resolver = repo.tree_resolver()?;
@@ -871,6 +898,26 @@ pub fn sparse_checkout(
 
     let (sparse_matcher, sparse_change) =
         create_sparse_matchers(repo, wc.vfs(), &current_mf.read(), &target_mf.read())?;
+
+    // Overlay manifest with "status" info to include outstanding working copy changes.
+    let status = wc.status(
+        sparse_matcher.clone(),
+        SystemTime::UNIX_EPOCH,
+        false,
+        repo.config(),
+        io,
+    )?;
+
+    let mut current_mf = current_mf.write();
+
+    if update_mode == CheckoutMode::Force {
+        // With --clean, mix on our working copy changes so they are "undone" by
+        // the diff w/ target manifest.
+        overlay_working_changes(wc.vfs(), &mut current_mf, &status)?;
+
+        // --clean clears out any merge state
+        wc.clear_merge_state()?;
+    }
 
     let progress_path: Option<PathBuf> = if repo.config().get_or_default("checkout", "resumable")? {
         Some(wc.dot_hg_path().join("updateprogress"))
@@ -882,22 +929,17 @@ pub fn sparse_checkout(
     let plan = create_plan(
         wc.vfs(),
         repo.config(),
-        &current_mf.read(),
+        &current_mf,
         &target_mf.read(),
         &sparse_matcher,
         sparse_change,
         progress_path,
     )?;
 
-    // 2. Check if status is dirty
-    check_conflicts(
-        io,
-        repo,
-        wc,
-        &plan,
-        &target_mf.read(),
-        sparse_matcher.clone(),
-    )?;
+    if update_mode != CheckoutMode::Force {
+        // 2. Check if status is dirty
+        check_conflicts(io, repo, wc, &plan, &target_mf.read(), &status)?;
+    }
 
     // 3. Signal that an update is being performed
 
@@ -930,20 +972,47 @@ pub fn sparse_checkout(
     Ok(plan.stats())
 }
 
+// Apply outstanding working copy changes to the given manifest. This includes
+// the working copy changes in the diff between the working copy manifest and
+// the checkout target manifest.
+fn overlay_working_changes(vfs: &VFS, mf: &mut TreeManifest, status: &Status) -> Result<()> {
+    for (p, s) in status.iter() {
+        match s {
+            FileStatus::Deleted | FileStatus::Removed => mf.remove(p).map(|_| ())?,
+            FileStatus::Added => mf.insert(
+                p.to_owned(),
+                FileMetadata {
+                    hgid: MF_ADDED_NODE_ID,
+                    file_type: file_type(vfs, p),
+                },
+            )?,
+            FileStatus::Modified => mf.insert(
+                p.to_owned(),
+                FileMetadata {
+                    hgid: MF_MODIFIED_NODE_ID,
+                    file_type: file_type(vfs, p),
+                },
+            )?,
+            FileStatus::Unknown | FileStatus::Ignored | FileStatus::Clean => (),
+        }
+    }
+
+    Ok(())
+}
+
 pub(crate) fn check_conflicts(
     io: &IO,
     repo: &mut Repo,
     wc: &LockedWorkingCopy,
     plan: &CheckoutPlan,
     target_mf: &TreeManifest,
-    matcher: DynMatcher,
+    status: &Status,
 ) -> Result<()> {
-    let status = wc.status(matcher, SystemTime::UNIX_EPOCH, false, repo.config(), io)?;
     let unknown_conflicts = plan.check_unknown_files(
         target_mf,
         repo.file_store()?.as_ref(),
         &mut wc.treestate().lock(),
-        &status,
+        status,
     )?;
     if !unknown_conflicts.is_empty() {
         for unknown in unknown_conflicts {

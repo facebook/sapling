@@ -68,7 +68,6 @@ define_flags! {
 pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Result<u8> {
     // Missing features (in roughly priority order):
     // - edenfs checkout support
-    // - --clean support
     // - progressfile and --continue
     // - updatestate file maintaince
     // - Activating/deactivating bookmarks
@@ -81,10 +80,7 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
         fallback!("checkout.use-rust is False");
     }
 
-    let is_eden = repo.requirements.contains("eden");
-
-    if (ctx.opts.clean && !is_eden) || ctx.opts.check || ctx.opts.merge || !ctx.opts.date.is_empty()
-    {
+    if ctx.opts.check || ctx.opts.merge || !ctx.opts.date.is_empty() {
         tracing::debug!(target: "checkout_info", checkout_detail="unsupported_args");
         fallback!("one or more unsupported options in Rust checkout");
     }

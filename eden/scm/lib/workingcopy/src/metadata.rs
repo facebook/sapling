@@ -39,7 +39,7 @@ bitflags! {
 
 /// Metadata abstracts across the different places file metadata can come from.
 #[derive(Debug, Clone)]
-pub(crate) struct Metadata {
+pub struct Metadata {
     flags: MetadataFlags,
     size: u64,
     mtime: HgModifiedTime,

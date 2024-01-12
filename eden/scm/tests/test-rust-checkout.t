@@ -142,3 +142,71 @@ Various invalid arg combos:
   $ hg go
   abort: you must specify a destination to update to, for example "hg goto main".
   [255]
+
+--clean overwrites conflicts:
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > A   # A/foo = foo
+  >     # A/bar = bar
+  > B   # B/foo = baz
+  > EOS
+  $ hg go -q $B
+  $ echo diverged > foo
+  $ hg st
+  M foo
+  $ hg go $A
+  abort: 1 conflicting file changes:
+   foo
+  [255]
+
+  $ echo untracked > bar
+  $ hg st
+  M foo
+  ? bar
+  $ hg go $A
+  bar: untracked file differs
+  abort: untracked files in working directory differ from files in requested revision
+  [255]
+
+  $ hg go -q --clean $A
+  $ hg st
+  $ cat foo
+  foo (no-eol)
+  $ cat bar
+  bar (no-eol)
+
+--clean gets you out of merge state:
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > B   # B/foo = two
+  > |
+  > A   # A/foo = one
+  > EOS
+  $ hg go -q $A
+  $ echo diverged > foo
+  $ hg go --merge $B
+  merging foo
+  warning: 1 conflicts while merging foo! (edit, then use 'hg resolve --mark')
+  1 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges
+  [1]
+  $ hg go -qC $B
+  $ hg st
+  ? foo.orig
+  $ cat foo
+  two (no-eol)
+
+Non --clean keeps unconflicting changes:
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > B
+  > |
+  > A
+  > EOS
+  $ hg go -q $A
+  $ echo foo >> A
+  $ hg st
+  M A
+  $ hg go -q $B
+  $ hg st
+  M A
