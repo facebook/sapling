@@ -455,13 +455,6 @@ fn compute_default() -> Identity {
             }
         }
 
-        // Special case: for fbcode/eden/testlib/ tests the "current_exe"
-        // could be "python3.8". Use "hg" to maintain test compatibility.
-        // If we updated the tests, the special case can be dropped.
-        if file_name.starts_with("python") {
-            return (HG, "python");
-        }
-
         // Fallback to SL if current_exe does not provide information.
         (SL, "fallback")
     })();

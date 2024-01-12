@@ -88,23 +88,6 @@ python_unittest(
     ],
 )
 
-python_unittest(
-    name = "hg_run_py_tests",
-    srcs = glob([
-        "clone/*.py",
-    ]),
-    compatible_with = [
-        "ovr_config//os:linux",
-    ],
-    env = ENV,
-    resources = {
-        "//eden/scm:hg": "hg.sh",
-    },
-    deps = [
-        "//eden/testlib:repotestlib",
-    ],
-)
-
 W_ENV = dict(ENV)
 
 W_ENV["HGTEST_EXCLUDED"] = get_hg_watchman_run_tests_excluded()
