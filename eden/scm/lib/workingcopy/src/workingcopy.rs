@@ -631,4 +631,15 @@ impl<'a> LockedWorkingCopy<'a> {
         self.treestate.lock().set_parents(&mut parents.iter())?;
         self.filesystem.lock().set_parents(p1, p2, parent_tree_hash)
     }
+
+    pub fn clear_merge_state(&self) -> Result<()> {
+        let merge_state_dir = self.dot_hg_path().join("merge");
+        if util::file::exists(&merge_state_dir)
+            .context("clearing merge state")?
+            .is_some()
+        {
+            fs_err::remove_dir_all(&merge_state_dir)?;
+        }
+        Ok(())
+    }
 }

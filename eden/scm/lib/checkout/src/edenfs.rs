@@ -7,7 +7,6 @@
 
 use std::collections::HashMap;
 use std::fs::read_to_string;
-use std::fs::remove_dir_all;
 use std::io::Write;
 #[cfg(unix)]
 use std::os::unix::prelude::MetadataExt;
@@ -206,9 +205,9 @@ fn edenfs_force_checkout(
         edenfs_client::CheckoutMode::Force,
     )?;
     abort_on_eden_conflict_error(repo.config(), conflicts)?;
-    // Clear mergestate
-    let mergepath = wc.dot_hg_path().join("merge");
-    remove_dir_all(mergepath.as_path()).ok();
+
+    wc.clear_merge_state()?;
+
     // Tell EdenFS to forget about all changes in the working copy
     clear_edenfs_dirstate(wc)?;
 
