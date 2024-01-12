@@ -10,8 +10,6 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use manifest::Manifest;
-use manifest_tree::ReadTreeManifest;
-use manifest_tree::TreeManifest;
 use parking_lot::Mutex;
 use pathmatcher::DifferenceMatcher;
 use pathmatcher::DynMatcher;
@@ -20,22 +18,11 @@ use status::StatusBuilder;
 use tracing::trace;
 use treestate::filestate::StateFlags;
 use treestate::treestate::TreeState;
-use types::HgId;
 use types::RepoPathBuf;
 
 use crate::filesystem::PendingChange;
 use crate::util::walk_treestate;
 use crate::walker::WalkError;
-
-struct FakeTreeResolver {
-    pub manifest: TreeManifest,
-}
-
-impl ReadTreeManifest for FakeTreeResolver {
-    fn get(&self, _commit_id: &HgId) -> Result<TreeManifest> {
-        Ok(self.manifest.clone())
-    }
-}
 
 /// Compute the status of the working copy relative to the current commit.
 #[allow(unused_variables)]

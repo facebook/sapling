@@ -9,7 +9,6 @@ rust_library(
         "cargo_toml_config": {
             "dependencies_override": {
                 "dependencies": {
-                    "async-runtime": {"optional": True},
                     "edenfs-client": {"optional": True},
                     "hg-metrics": {"optional": True},
                     "manifest": {"features": ["for-tests"]},
@@ -21,7 +20,6 @@ rust_library(
             },
             "features": {
                 "eden": [
-                    "async-runtime",
                     "edenfs-client",
                     "hg-metrics",
                     "toml",
@@ -58,7 +56,6 @@ rust_library(
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:toml",
         "fbsource//third-party/rust:tracing",
-        "//eden/scm/lib/async-runtime:async-runtime",
         "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/edenfs-client:edenfs-client",
         "//eden/scm/lib/hg-metrics:hg-metrics",

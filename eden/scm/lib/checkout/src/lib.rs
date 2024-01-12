@@ -31,7 +31,6 @@ use manifest::FileMetadata;
 use manifest::FileType;
 use manifest::Manifest;
 use manifest_tree::Diff;
-use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
 use minibytes::Bytes;
 use parking_lot::Mutex;

@@ -598,6 +598,7 @@ impl TreeManifest {
 
 pub trait ReadTreeManifest {
     fn get(&self, commit_id: &HgId) -> Result<TreeManifest>;
+    fn get_root_id(&self, commit_id: &HgId) -> Result<HgId>;
 }
 
 /// The purpose of this function is to provide compatible behavior with the C++ implementation

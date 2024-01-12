@@ -23,6 +23,7 @@ use edenapi::Builder;
 use edenapi::EdenApi;
 use edenapi::EdenApiError;
 use fs_err as fs;
+use manifest_tree::ReadTreeManifest;
 use metalog::MetaLog;
 use once_cell::sync::Lazy;
 use once_cell::sync::OnceCell;
@@ -548,11 +549,11 @@ impl Repo {
         Some(store.clone())
     }
 
-    pub fn tree_resolver(&self) -> Result<TreeManifestResolver> {
-        Ok(TreeManifestResolver::new(
+    pub fn tree_resolver(&self) -> Result<Arc<dyn ReadTreeManifest + Send + Sync>> {
+        Ok(Arc::new(TreeManifestResolver::new(
             self.dag_commits()?,
             self.tree_store()?,
-        ))
+        )))
     }
 
     pub fn resolve_commit(
@@ -604,7 +605,7 @@ impl Repo {
         let file_store = self.file_store()?;
 
         tracing::trace!(target: "repo::workingcopy", "creating tree resolver");
-        let tree_resolver = Arc::new(self.tree_resolver()?);
+        let tree_resolver = self.tree_resolver()?;
         let has_requirement = |s: &str| self.requirements.contains(s);
 
         Ok(WorkingCopy::new(
@@ -617,12 +618,6 @@ impl Repo {
             &self.dot_hg_path,
             &has_requirement,
         )?)
-    }
-
-    pub async fn get_root_tree_id(&self, commit_id: HgId) -> Result<HgId> {
-        let commit_store = self.dag_commits()?.read().to_dyn_read_root_tree_ids();
-        let tree_ids = commit_store.read_root_tree_ids(vec![commit_id]).await?;
-        Ok(tree_ids[0].1)
     }
 
     /// Construct both file and tree store if they are backed by the same storage.

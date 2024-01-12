@@ -12,18 +12,16 @@ use std::str::FromStr;
 
 use anyhow::anyhow;
 use anyhow::Context;
-use async_runtime::spawn;
 use cxx::UniquePtr;
 use manifest::FileMetadata;
 use manifest::FsNodeMetadata;
 use manifest::Manifest;
-use manifest_tree::TreeManifest;
 use once_cell::sync::Lazy;
+use parking_lot::Mutex;
 use pathmatcher::DirectoryMatch;
 use repo::repo::Repo;
 use sparse::Matcher;
 use sparse::Root;
-use tokio::sync::Mutex;
 use types::HgId;
 use types::RepoPath;
 use types::RepoPathBuf;
@@ -160,12 +158,12 @@ impl From<DirectoryMatch> for ffi::FilterDirectoryMatch {
 // As mentioned below, we return the MercurialMatcher via a promise to circumvent some async
 // limitations in CXX. This function wraps the bulk of the Sparse logic and provides a single
 // place for returning result/error info via the MatcherPromise.
-async fn profile_contents_from_repo(
+fn profile_contents_from_repo(
     id: FilterId,
     abs_repo_path: PathBuf,
     promise: UniquePtr<MatcherPromise>,
 ) {
-    match _profile_contents_from_repo(id, abs_repo_path).await {
+    match _profile_contents_from_repo(id, abs_repo_path) {
         Ok(res) => {
             set_matcher_promise_result(promise, res);
         }
@@ -176,31 +174,29 @@ async fn profile_contents_from_repo(
 }
 
 // Fetches the content of a filter file and turns it into a MercurialMatcher
-async fn _profile_contents_from_repo(
+fn _profile_contents_from_repo(
     id: FilterId,
     abs_repo_path: PathBuf,
 ) -> Result<Box<MercurialMatcher>, anyhow::Error> {
-    let mut repo_hash = REPO_HASHMAP.lock().await;
-    if !repo_hash.contains_key(&abs_repo_path) {
+    let mut repo_map = REPO_HASHMAP.lock();
+    if !repo_map.contains_key(&abs_repo_path) {
         // Load the repo and store it for later use
         let repo = Repo::load(&abs_repo_path, &[], &[]).with_context(|| {
             anyhow!("failed to load Repo object for {}", abs_repo_path.display())
         })?;
-        repo_hash.insert(abs_repo_path.clone(), repo);
+        repo_map.insert(abs_repo_path.clone(), repo);
     }
-    let repo = repo_hash
-        .get_mut(&abs_repo_path)
-        .expect("repo to be loaded");
+    let repo = repo_map.get_mut(&abs_repo_path).context("loading repo")?;
 
     // Create the tree manifest for the root tree of the repo
-    let manifest_id = match repo.get_root_tree_id(id.hg_id).await {
+    let tree_manifest = match repo.tree_resolver()?.get(&id.hg_id) {
         Ok(manifest_id) => manifest_id,
         Err(e) => {
             // It's possible that the commit exists but was only recently
             // created. Invalidate the in-memory commit graph and force a read
             // from disk. Note: This can be slow, so only do it on error.
             repo.invalidate_all()?;
-            repo.get_root_tree_id(id.hg_id).await.with_context(|| {
+            repo.tree_resolver()?.get(&id.hg_id).with_context(|| {
                 anyhow!(
                     "Failed to get root tree id for commit {:?}: {:?}",
                     &id.hg_id,
@@ -210,14 +206,9 @@ async fn _profile_contents_from_repo(
         }
     };
 
-    let tree_store = repo
-        .tree_store()
-        .context("failed to get TreeStore from Repo object")?;
     let repo_store = repo
         .file_store()
         .context("failed to get FileStore from Repo object")?;
-
-    let tree_manifest = TreeManifest::durable(tree_store, manifest_id);
 
     // Get the metadata of the filter file and verify it's a valid file.
     let p = id.repo_path.clone();
@@ -249,8 +240,7 @@ async fn _profile_contents_from_repo(
 }
 
 // CXX doesn't allow async functions to be exposed to C++. This function wraps the bulk of the
-// Sparse Profile creation logic. We spawn a task to complete the async work, and then return the
-// value to C++ via a promise.
+// Sparse Profile creation logic.
 pub fn profile_from_filter_id(
     id: &str,
     checkout_path: &str,
@@ -273,10 +263,6 @@ pub fn profile_from_filter_id(
     // If we've already loaded a filter from this repo before, we can skip Repo
     // object creation. Otherwise, we need to pay the 1 time cost of creating
     // the Repo object.
-    spawn(profile_contents_from_repo(
-        filter_id,
-        abs_repo_path,
-        promise,
-    ));
+    profile_contents_from_repo(filter_id, abs_repo_path, promise);
     Ok(())
 }

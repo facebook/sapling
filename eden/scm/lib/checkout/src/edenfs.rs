@@ -16,13 +16,11 @@ use std::sync::Arc;
 use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
-use async_runtime::try_block_unless_interrupted as block_on;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use edenfs_client::CheckoutConflict;
 use io::IO;
 use manifest::Manifest;
-use manifest_tree::ReadTreeManifest;
 use pathmatcher::AlwaysMatcher;
 use repo::repo::Repo;
 use spawn_ext::CommandExt;
@@ -97,7 +95,7 @@ pub fn edenfs_checkout(
     checkout_mode: CheckoutMode,
 ) -> anyhow::Result<()> {
     // TODO (sggutier): try to unify these steps with the non-edenfs version of checkout
-    let target_commit_tree_hash = block_on(repo.get_root_tree_id(target_commit.clone()))?;
+    let target_commit_tree_hash = repo.tree_resolver()?.get_root_id(&target_commit)?;
 
     // Perform the actual checkout depending on the mode
     match checkout_mode {

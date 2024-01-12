@@ -18,6 +18,7 @@ use configmodel::Config;
 use configmodel::ConfigExt;
 use io::IO;
 use manifest_tree::ReadTreeManifest;
+use manifest_tree::TreeManifest;
 use parking_lot::Mutex;
 use pathmatcher::AlwaysMatcher;
 use pathmatcher::DynMatcher;
@@ -452,7 +453,7 @@ impl FileSystem for WatchmanFileSystem {
 
     fn sparse_matcher(
         &self,
-        manifests: &[Arc<manifest_tree::TreeManifest>],
+        manifests: &[Arc<TreeManifest>],
         dot_dir: &'static str,
     ) -> Result<Option<DynMatcher>> {
         self.inner.sparse_matcher(manifests, dot_dir)

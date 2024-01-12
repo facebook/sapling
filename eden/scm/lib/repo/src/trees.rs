@@ -7,18 +7,21 @@
 
 use std::sync::Arc;
 
+use anyhow::bail;
 use anyhow::Result;
 use commits_trait::DagCommits;
 use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
 use manifest_tree::TreeStore;
 use parking_lot::RwLock;
+use types::hgid;
 use types::HgId;
 
 pub struct TreeManifestResolver {
     dag_commits: Arc<RwLock<Box<dyn DagCommits + Send + 'static>>>,
     tree_store: Arc<dyn TreeStore>,
 }
+
 impl TreeManifestResolver {
     pub fn new(
         dag_commits: Arc<RwLock<Box<dyn DagCommits + Send + 'static>>>,
@@ -39,16 +42,26 @@ impl ReadTreeManifest for TreeManifestResolver {
             return Ok(TreeManifest::ephemeral(self.tree_store.clone()));
         }
 
+        Ok(TreeManifest::durable(
+            self.tree_store.clone(),
+            self.get_root_id(commit_id)?,
+        ))
+    }
+
+    fn get_root_id(&self, commit_id: &HgId) -> Result<HgId> {
+        if commit_id.is_null() {
+            // Special case: null commit's manifest node is null.
+            return Ok(hgid::NULL_ID);
+        }
+
         let commit_store = self.dag_commits.read().to_dyn_read_root_tree_ids();
         let tree_ids =
             async_runtime::block_on(commit_store.read_root_tree_ids(vec![commit_id.clone()]))?;
 
-        let mf = if tree_ids.is_empty() {
-            TreeManifest::ephemeral(self.tree_store.clone())
-        } else {
-            TreeManifest::durable(self.tree_store.clone(), tree_ids[0].1)
-        };
+        if tree_ids.is_empty() {
+            bail!("no root tree id for commit {commit_id}");
+        }
 
-        Ok(mf)
+        Ok(tree_ids[0].1)
     }
 }

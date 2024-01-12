@@ -19,7 +19,6 @@ use std::time::SystemTime;
 use anyhow::anyhow;
 use anyhow::Result;
 use arc_swap::ArcSwap;
-use async_runtime::block_on;
 use log::warn;
 use repo::repo::Repo;
 use storemodel::BoxIterator;
@@ -144,14 +143,14 @@ impl BackingStore {
     pub fn get_manifest(&self, node: &[u8]) -> Result<[u8; 20]> {
         let inner = self.maybe_reload();
         let hgid = HgId::from_slice(node)?;
-        let root_tree_id = match block_on(inner.repo.get_root_tree_id(hgid)) {
+        let root_tree_id = match inner.repo.tree_resolver()?.get_root_id(&hgid) {
             Ok(root_tree_id) => root_tree_id,
             Err(_e) => {
                 // This call may fail with a `NotFoundError` if the revision in question
                 // was added to the repository after we originally opened it. Invalidate
                 // the repository and try again, in case our cached repo data is just stale.
                 inner.repo.invalidate_all()?;
-                block_on(inner.repo.get_root_tree_id(hgid))?
+                inner.repo.tree_resolver()?.get_root_id(&hgid)?
             }
         };
         Ok(root_tree_id.into_byte_array())
