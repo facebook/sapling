@@ -266,6 +266,13 @@ impl TreeState {
     }
 
     pub fn get_keys_ignorecase<K: AsRef<[u8]>>(&mut self, path: K) -> Result<Vec<Key>> {
+        self.get_keys_ignorecase_with_prefix(path).map(|r| r.0)
+    }
+
+    fn get_keys_ignorecase_with_prefix<K: AsRef<[u8]>>(
+        &mut self,
+        path: K,
+    ) -> Result<(Vec<Key>, Option<Key>)> {
         fn map_lowercase(k: KeyRef) -> Result<Key> {
             let s = std::str::from_utf8(k);
             Ok(if let Ok(s) = s {
@@ -274,7 +281,7 @@ impl TreeState {
                 k.to_vec().into_boxed_slice()
             })
         }
-        self.get_filtered_key(
+        self.get_filtered_key_with_prefix(
             &map_lowercase(path.as_ref())?,
             &mut map_lowercase,
             FILTER_LOWERCASE,
@@ -297,8 +304,10 @@ impl TreeState {
             }
         }
 
+        let (keys, prefix) = self.get_keys_ignorecase_with_prefix(path)?;
+
         let mut best = None;
-        for key in self.get_keys_ignorecase(path)? {
+        for key in keys {
             let state = match self.get(&key)? {
                 None => continue,
                 Some(state) => state.clone(),
@@ -312,7 +321,10 @@ impl TreeState {
 
         match best {
             Some((path, state)) => Ok((path, Some(state))),
-            None => Ok((Cow::Borrowed(path), None)),
+            None => match prefix {
+                None => Ok((Cow::Borrowed(path), None)),
+                Some(prefix) => Ok((Cow::Owned([&prefix, &path[prefix.len()..]].concat()), None)),
+            },
         }
     }
 
@@ -429,6 +441,19 @@ impl TreeState {
         self.tree
             .get_filtered_key(&self.store, name, filter, filter_id)
             .map(|r| r.0)
+    }
+
+    fn get_filtered_key_with_prefix<F>(
+        &mut self,
+        name: KeyRef,
+        filter: &mut F,
+        filter_id: u64,
+    ) -> Result<(Vec<Key>, Option<Key>)>
+    where
+        F: FnMut(KeyRef) -> Result<Key>,
+    {
+        self.tree
+            .get_filtered_key(&self.store, name, filter, filter_id)
     }
 
     pub fn path_complete<FA, FV>(
@@ -932,6 +957,26 @@ mod tests {
 
         ts.flush()?;
         assert_eq!(ts.pending_change_count(), 0);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_normalize_untracked_file() -> Result<()> {
+        let dir = tempdir()?;
+
+        let mut ts = TreeState::new(dir.path(), false)?.0;
+
+        let mut rng = ChaChaRng::from_seed([0; 32]);
+        ts.insert("a/b/c/d", &rng.gen())?;
+
+        assert_eq!(ts.normalize_path(b"A").unwrap().as_ref(), b"A");
+        assert_eq!(ts.normalize_path(b"A/a").unwrap().as_ref(), b"a/a");
+        assert_eq!(ts.normalize_path(b"a/B/c/e").unwrap().as_ref(), b"a/b/c/e");
+        assert_eq!(
+            ts.normalize_path(b"a/B/x/Y/z").unwrap().as_ref(),
+            b"a/b/x/Y/z"
+        );
 
         Ok(())
     }
