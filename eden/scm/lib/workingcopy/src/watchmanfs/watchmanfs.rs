@@ -7,7 +7,6 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
@@ -16,7 +15,6 @@ use anyhow::anyhow;
 use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
-use io::IO;
 use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
 use parking_lot::Mutex;
@@ -27,6 +25,7 @@ use progress_model::ProgressBar;
 use repolock::RepoLocker;
 use serde::Deserialize;
 use serde::Serialize;
+use termlogger::TermLogger;
 use treestate::filestate::StateFlags;
 use treestate::treestate::TreeState;
 use types::path::ParseError;
@@ -169,7 +168,7 @@ impl WatchmanFileSystem {
         ignore_dirs: Vec<PathBuf>,
         include_ignored: bool,
         config: &dyn Config,
-        io: &IO,
+        lgr: &TermLogger,
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChange>>>> {
         let ts = &mut *self.inner.treestate.lock();
 
@@ -240,7 +239,7 @@ impl WatchmanFileSystem {
         let should_warn = config.get_or_default("fsmonitor", "warn-fresh-instance")?;
         if result.is_fresh_instance && should_warn {
             let _ = warn_about_fresh_instance(
-                io,
+                lgr,
                 parse_watchman_pid(prev_clock.as_ref()),
                 parse_watchman_pid(Some(&result.clock)),
             );
@@ -410,7 +409,7 @@ impl FileSystem for WatchmanFileSystem {
         ignore_dirs: Vec<PathBuf>,
         include_ignored: bool,
         config: &dyn Config,
-        io: &IO,
+        lgr: &TermLogger,
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChange>>>> {
         let result = self.pending_changes(
             matcher.clone(),
@@ -418,7 +417,7 @@ impl FileSystem for WatchmanFileSystem {
             ignore_dirs.clone(),
             include_ignored,
             config,
-            io,
+            lgr,
         );
 
         match result {
@@ -444,7 +443,7 @@ impl FileSystem for WatchmanFileSystem {
                     ignore_dirs,
                     include_ignored,
                     config,
-                    io,
+                    lgr,
                 )
             }
             Err(err) => Err(err),
@@ -460,28 +459,27 @@ impl FileSystem for WatchmanFileSystem {
     }
 }
 
-fn warn_about_fresh_instance(io: &IO, old_pid: Option<u32>, new_pid: Option<u32>) -> Result<()> {
-    let mut output = io.error();
+fn warn_about_fresh_instance(
+    lgr: &TermLogger,
+    old_pid: Option<u32>,
+    new_pid: Option<u32>,
+) -> Result<()> {
     match (old_pid, new_pid) {
         (Some(old_pid), Some(new_pid)) if old_pid != new_pid => {
-            writeln!(
-                &mut output,
+            lgr.warn(format!(
                 "warning: watchman has recently restarted (old pid {}, new pid {}) - operation will be slower than usual",
                 old_pid, new_pid
-            )?;
+            ));
         }
         (None, Some(new_pid)) => {
-            writeln!(
-                &mut output,
+            lgr.warn(format!(
                 "warning: watchman has recently started (pid {}) - operation will be slower than usual",
                 new_pid
-            )?;
+            ));
         }
         _ => {
-            writeln!(
-                &mut output,
-                "warning: watchman failed to catch up with file change events and requires a full scan - operation will be slower than usual"
-            )?;
+            lgr.warn(
+                "warning: watchman failed to catch up with file change events and requires a full scan - operation will be slower than usual");
         }
     }
 

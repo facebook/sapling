@@ -17,7 +17,6 @@ use configmodel::ConfigExt;
 #[cfg(feature = "eden")]
 use edenfs_client::EdenFsClient;
 use identity::Identity;
-use io::IO;
 use manifest::FileType;
 use manifest::Manifest;
 use manifest_tree::ReadTreeManifest;
@@ -37,6 +36,7 @@ use status::FileStatus;
 use status::Status;
 use status::StatusBuilder;
 use storemodel::FileStore;
+use termlogger::TermLogger;
 use treestate::dirstate::Dirstate;
 use treestate::dirstate::TreeStateFields;
 use treestate::filestate::StateFlags;
@@ -380,7 +380,7 @@ impl WorkingCopy {
         mut matcher: DynMatcher,
         include_ignored: bool,
         config: &dyn Config,
-        io: &IO,
+        lgr: &TermLogger,
     ) -> Result<Status> {
         let added_files = self.added_files()?;
 
@@ -449,7 +449,7 @@ impl WorkingCopy {
                 ignore_dirs,
                 include_ignored,
                 config,
-                io,
+                lgr,
             )?
             .filter_map(|result| match result {
                 Ok(change_type) => match matcher.matches_file(change_type.get_path()) {

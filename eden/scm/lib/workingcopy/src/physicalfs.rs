@@ -12,7 +12,6 @@ use std::sync::Arc;
 use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
-use io::IO;
 use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
 use parking_lot::Mutex;
@@ -20,6 +19,7 @@ use pathmatcher::DynMatcher;
 use pathmatcher::Matcher;
 use repolock::RepoLocker;
 use storemodel::FileStore;
+use termlogger::TermLogger;
 use treestate::filestate::StateFlags;
 use treestate::tree::VisitorResult;
 use treestate::treestate::TreeState;
@@ -81,7 +81,7 @@ impl FileSystem for PhysicalFileSystem {
         ignore_dirs: Vec<PathBuf>,
         include_ignored: bool,
         config: &dyn Config,
-        _io: &IO,
+        _lgr: &TermLogger,
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChange>>>> {
         let walker = Walker::new(
             self.vfs.root().to_path_buf(),

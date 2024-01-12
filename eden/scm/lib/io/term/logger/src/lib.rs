@@ -26,6 +26,14 @@ impl TermLogger {
         }
     }
 
+    pub fn null() -> Self {
+        TermLogger {
+            io: IO::null(),
+            quiet: false,
+            verbose: false,
+        }
+    }
+
     pub fn with_quiet(mut self, quiet: bool) -> Self {
         self.quiet = quiet;
         self
@@ -62,6 +70,10 @@ impl TermLogger {
 
     pub fn flush(&self) {
         let _ = self.io.flush();
+    }
+
+    pub fn io(&self) -> &IO {
+        &self.io
     }
 
     fn write(mut w: impl Write, msg: impl AsRef<str>) {

@@ -12,8 +12,8 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use configmodel::Config;
-use io::IO;
 use status::FileStatus;
+use termlogger::TermLogger;
 use types::hgid::NULL_ID;
 use types::RepoPathBuf;
 
@@ -45,9 +45,8 @@ impl Wait {
         let treestate_wait = treestate::Wait::from_dot_dir(dot_dir);
         let matcher = Arc::new(pathmatcher::AlwaysMatcher::new());
         let list_ignored = false;
-        let io = IO::null();
 
-        let status = wc.status(matcher, list_ignored, config, &io)?;
+        let status = wc.status(matcher, list_ignored, config, &TermLogger::null())?;
 
         // Collect metadata of all changed files.
         let vfs = wc.vfs();

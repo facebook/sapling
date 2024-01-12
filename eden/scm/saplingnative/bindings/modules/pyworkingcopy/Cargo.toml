@@ -20,6 +20,7 @@ pystatus = { version = "0.1.0", path = "../pystatus" }
 pytreestate = { version = "0.1.0", path = "../pytreestate" }
 repostate = { version = "0.1.0", path = "../../../../lib/workingcopy/repostate" }
 sparse = { version = "0.1.0", path = "../../../../lib/sparse" }
+termlogger = { version = "0.1.0", path = "../../../../lib/io/term/logger" }
 types = { version = "0.1.0", path = "../../../../lib/types" }
 workingcopy = { version = "0.1.0", path = "../../../../lib/workingcopy" }
 

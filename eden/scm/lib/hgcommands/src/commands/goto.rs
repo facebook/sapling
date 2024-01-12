@@ -170,7 +170,7 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
         checkout::CheckoutMode::NoConflict
     };
     let _lock = repo.lock()?;
-    let update_result = checkout::checkout(ctx.io(), repo, &wc, target, checkout_mode)?;
+    let update_result = checkout::checkout(&ctx.logger(), repo, &wc, target, checkout_mode)?;
 
     if !ctx.global_opts().quiet {
         if let Some((updated, removed)) = update_result {

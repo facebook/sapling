@@ -12,10 +12,10 @@ use std::time::Duration;
 use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
-use io::IO;
 use manifest_tree::TreeManifest;
 use pathmatcher::DynMatcher;
 use serde::Serialize;
+use termlogger::TermLogger;
 use types::HgId;
 use types::RepoPathBuf;
 
@@ -52,7 +52,7 @@ pub trait FileSystem {
         // include ignored files
         include_ignored: bool,
         config: &dyn Config,
-        io: &IO,
+        io: &TermLogger,
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChange>>>>;
 
     /// Block until potential "status" or "diff" change.

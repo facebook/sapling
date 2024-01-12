@@ -16,11 +16,11 @@ use configmodel::Config;
 use configmodel::ConfigExt;
 use edenfs_client::EdenFsClient;
 use edenfs_client::FileStatus;
-use io::IO;
 use manifest_tree::TreeManifest;
 use parking_lot::Mutex;
 use pathmatcher::DynMatcher;
 use storemodel::FileStore;
+use termlogger::TermLogger;
 use treestate::treestate::TreeState;
 use types::hgid::NULL_ID;
 use types::HgId;
@@ -65,7 +65,7 @@ impl FileSystem for EdenFileSystem {
         _ignore_dirs: Vec<PathBuf>,
         include_ignored: bool,
         _config: &dyn Config,
-        _io: &IO,
+        _lgr: &TermLogger,
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChange>>>> {
         let p1 = self
             .treestate

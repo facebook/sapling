@@ -37,6 +37,7 @@ rust_python_library(
         "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/cpython-ext:cpython-ext",
         "//eden/scm/lib/io:io",
+        "//eden/scm/lib/io/term/logger:termlogger",
         "//eden/scm/lib/manifest-tree:manifest-tree",
         "//eden/scm/lib/pathmatcher:pathmatcher",
         "//eden/scm/lib/progress/model:progress-model",

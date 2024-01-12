@@ -21,6 +21,7 @@ pypathmatcher = { version = "0.1.0", path = "../pypathmatcher" }
 pystatus = { version = "0.1.0", path = "../pystatus" }
 pytreestate = { version = "0.1.0", path = "../pytreestate" }
 storemodel = { version = "0.1.0", path = "../../../../lib/storemodel" }
+termlogger = { version = "0.1.0", path = "../../../../lib/io/term/logger" }
 vfs = { version = "0.1.0", path = "../../../../lib/vfs" }
 workingcopy = { version = "0.1.0", path = "../../../../lib/workingcopy", optional = true }
 

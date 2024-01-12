@@ -13,6 +13,7 @@ use cpython_ext::convert::ImplInto;
 use cpython_ext::ResultPyErrExt;
 use io::IO;
 use parking_lot::RwLock;
+use termlogger::TermLogger;
 use workingcopy::workingcopy::WorkingCopy;
 
 pub(crate) fn populate_module(py: Python, m: &PyModule) -> PyResult<()> {
@@ -32,6 +33,7 @@ fn eden_redirect_fixup(
     let io = IO::main().map_pyerr(py)?;
     let config = config.into();
     let wc = wc.into();
-    checkout::edenfs::edenfs_redirect_fixup(&io, &config, &wc.read()).map_pyerr(py)?;
+    checkout::edenfs::edenfs_redirect_fixup(&TermLogger::new(&io), &config, &wc.read())
+        .map_pyerr(py)?;
     Ok(PyNone)
 }

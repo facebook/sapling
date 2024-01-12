@@ -19,11 +19,11 @@ use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use edenfs_client::CheckoutConflict;
-use io::IO;
 use manifest::Manifest;
 use pathmatcher::AlwaysMatcher;
 use repo::repo::Repo;
 use spawn_ext::CommandExt;
+use termlogger::TermLogger;
 use treestate::filestate::StateFlags;
 use types::hgid::NULL_ID;
 use types::HgId;
@@ -88,7 +88,7 @@ fn actionmap_from_eden_conflicts(
 }
 
 pub fn edenfs_checkout(
-    io: &IO,
+    lgr: &TermLogger,
     repo: &mut Repo,
     wc: &LockedWorkingCopy,
     target_commit: HgId,
@@ -103,7 +103,7 @@ pub fn edenfs_checkout(
             edenfs_force_checkout(repo, wc, target_commit, target_commit_tree_hash)?
         }
         CheckoutMode::NoConflict => {
-            edenfs_noconflict_checkout(io, repo, wc, target_commit, target_commit_tree_hash)?
+            edenfs_noconflict_checkout(lgr, repo, wc, target_commit, target_commit_tree_hash)?
         }
         CheckoutMode::Merge => bail!("native merge checkout not yet supported for EdenFS"),
     };
@@ -115,7 +115,7 @@ pub fn edenfs_checkout(
     let updatestate_path = wc.dot_hg_path().join("updatestate");
     util::file::unlink_if_exists(updatestate_path)?;
     // Run EdenFS specific "hooks"
-    edenfs_redirect_fixup(io, repo.config(), wc)?;
+    edenfs_redirect_fixup(lgr, repo.config(), wc)?;
     Ok(())
 }
 
@@ -134,7 +134,7 @@ fn create_edenfs_plan(
 }
 
 fn edenfs_noconflict_checkout(
-    io: &IO,
+    lgr: &TermLogger,
     repo: &mut Repo,
     wc: &LockedWorkingCopy,
     target_commit: HgId,
@@ -153,9 +153,9 @@ fn edenfs_noconflict_checkout(
     )?;
     let plan = create_edenfs_plan(wc, repo.config(), &source_mf, &target_mf, conflicts)?;
 
-    let status = wc.status(Arc::new(AlwaysMatcher::new()), false, repo.config(), io)?;
+    let status = wc.status(Arc::new(AlwaysMatcher::new()), false, repo.config(), lgr)?;
 
-    check_conflicts(io, repo, wc, &plan, &target_mf, &status)?;
+    check_conflicts(lgr, repo, wc, &plan, &target_mf, &status)?;
 
     // Signal that an update is being performed
     let updatestate_path = wc.dot_hg_path().join("updatestate");
@@ -174,7 +174,7 @@ fn edenfs_noconflict_checkout(
     // Execute the plan, applying changes to conflicting-ish files
     let apply_result = plan.apply_store(repo.file_store()?.as_ref())?;
     for (path, err) in apply_result.remove_failed {
-        let _ = write!(io.error(), "update failed to remove {}: {:#}!\n", path, err);
+        lgr.warn(format!("update failed to remove {}: {:#}!\n", path, err));
     }
 
     Ok(())
@@ -236,7 +236,11 @@ fn clear_edenfs_dirstate(wc: &LockedWorkingCopy) -> anyhow::Result<()> {
 ///
 /// Otherwise, run in foreground. This is needed for automation that relies
 /// on `checkout HASH` to setup critical repo redirections.
-pub fn edenfs_redirect_fixup(io: &IO, config: &dyn Config, wc: &WorkingCopy) -> anyhow::Result<()> {
+pub fn edenfs_redirect_fixup(
+    lgr: &TermLogger,
+    config: &dyn Config,
+    wc: &WorkingCopy,
+) -> anyhow::Result<()> {
     let is_okay = match is_edenfs_redirect_okay(wc).unwrap_or(Some(false)) {
         Some(r) => r,
         None => return Ok(()),
@@ -249,9 +253,9 @@ pub fn edenfs_redirect_fixup(io: &IO, config: &dyn Config, wc: &WorkingCopy) -> 
     if is_okay {
         cmd.spawn_detached()?;
     } else {
-        io.disable_progress(true)?;
+        lgr.io().disable_progress(true)?;
         let status = cmd.status();
-        io.disable_progress(false)?;
+        lgr.io().disable_progress(false)?;
         status?;
     }
     Ok(())

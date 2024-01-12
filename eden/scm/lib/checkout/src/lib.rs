@@ -26,7 +26,6 @@ use atexit::AtExit;
 use crossbeam::channel;
 #[cfg(windows)]
 use fs_err as fs;
-use io::IO;
 use manifest::FileMetadata;
 use manifest::FileType;
 use manifest::Manifest;
@@ -42,6 +41,7 @@ use progress_model::ProgressBar;
 use progress_model::Registry;
 use repo::repo::Repo;
 use storemodel::FileStore;
+use termlogger::TermLogger;
 use tracing::debug;
 use tracing::instrument;
 use tracing::warn;
@@ -842,7 +842,7 @@ fn truncate_u64(f: &str, path: &RepoPath, v: u64) -> i32 {
 }
 
 pub fn checkout(
-    io: &IO,
+    lgr: &TermLogger,
     repo: &mut Repo,
     wc: &LockedWorkingCopy,
     target_commit: HgId,
@@ -850,12 +850,12 @@ pub fn checkout(
 ) -> Result<Option<(usize, usize)>> {
     #[cfg(feature = "eden")]
     if repo.requirements.contains("eden") {
-        edenfs::edenfs_checkout(io, repo, wc, target_commit, update_mode)?;
+        edenfs::edenfs_checkout(lgr, repo, wc, target_commit, update_mode)?;
         return Ok(None);
     }
 
     Ok(Some(filesystem_checkout(
-        io,
+        lgr,
         repo,
         wc,
         target_commit,
@@ -883,7 +883,7 @@ fn file_type(vfs: &VFS, path: &RepoPath) -> FileType {
 }
 
 pub fn filesystem_checkout(
-    io: &IO,
+    lgr: &TermLogger,
     repo: &mut Repo,
     wc: &LockedWorkingCopy,
     target_commit: HgId,
@@ -899,7 +899,7 @@ pub fn filesystem_checkout(
         create_sparse_matchers(repo, wc.vfs(), &current_mf, &target_mf)?;
 
     // Overlay manifest with "status" info to include outstanding working copy changes.
-    let status = wc.status(sparse_matcher.clone(), false, repo.config(), io)?;
+    let status = wc.status(sparse_matcher.clone(), false, repo.config(), lgr)?;
 
     if update_mode == CheckoutMode::Force {
         // With --clean, mix on our working copy changes so they are "undone" by
@@ -929,7 +929,7 @@ pub fn filesystem_checkout(
 
     if update_mode != CheckoutMode::Force {
         // 2. Check if status is dirty
-        check_conflicts(io, repo, wc, &plan, &target_mf, &status)?;
+        check_conflicts(lgr, repo, wc, &plan, &target_mf, &status)?;
     }
 
     // 3. Signal that an update is being performed
@@ -944,7 +944,7 @@ pub fn filesystem_checkout(
     let apply_result = plan.apply_store(repo.file_store()?.as_ref())?;
 
     for (path, err) in apply_result.remove_failed {
-        let _ = write!(io.error(), "update failed to remove {}: {:#}!\n", path, err);
+        lgr.warn(format!("update failed to remove {}: {:#}!\n", path, err));
     }
 
     // 5. Update the treestate parents, dirstate
@@ -992,7 +992,7 @@ fn overlay_working_changes(vfs: &VFS, mf: &mut TreeManifest, status: &Status) ->
 }
 
 pub(crate) fn check_conflicts(
-    io: &IO,
+    lgr: &TermLogger,
     repo: &mut Repo,
     wc: &LockedWorkingCopy,
     plan: &CheckoutPlan,
@@ -1007,7 +1007,7 @@ pub(crate) fn check_conflicts(
     )?;
     if !unknown_conflicts.is_empty() {
         for unknown in unknown_conflicts {
-            let _ = writeln!(io.error(), "{unknown}: untracked file differs");
+            lgr.warn(format!("{unknown}: untracked file differs"));
         }
         bail!("untracked files in working directory differ from files in requested revision");
     }

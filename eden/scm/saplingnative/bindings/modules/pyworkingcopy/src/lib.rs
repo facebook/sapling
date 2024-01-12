@@ -34,6 +34,7 @@ use repostate::command_state::Operation;
 use rsworkingcopy::walker::WalkError;
 use rsworkingcopy::walker::Walker;
 use rsworkingcopy::workingcopy::WorkingCopy;
+use termlogger::TermLogger;
 use types::HgId;
 
 #[cfg(not(feature = "eden"))]
@@ -125,7 +126,7 @@ py_class!(pub class workingcopy |py| {
         let config = config.get_cfg(py);
         pystatus::to_python_status(py,
             &py.allow_threads(|| {
-                wc.status(matcher, include_ignored, &config, &io)
+                wc.status(matcher, include_ignored, &config, &TermLogger::new(&io))
             }).map_pyerr(py)?
         )
     }
