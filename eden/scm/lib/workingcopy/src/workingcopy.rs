@@ -23,7 +23,6 @@ use manifest::Manifest;
 use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
 use parking_lot::Mutex;
-use parking_lot::RwLock;
 use pathmatcher::DifferenceMatcher;
 use pathmatcher::DynMatcher;
 use pathmatcher::GitignoreMatcher;
@@ -272,17 +271,19 @@ impl WorkingCopy {
     pub(crate) fn current_manifests(
         treestate: &TreeState,
         tree_resolver: &ArcReadTreeManifest,
-    ) -> Result<Vec<Arc<RwLock<TreeManifest>>>> {
+    ) -> Result<Vec<Arc<TreeManifest>>> {
         let mut parents = treestate.parents().peekable();
         if parents.peek_mut().is_some() {
-            parents.map(|p| tree_resolver.get(&p?)).collect()
+            parents
+                .map(|p| Ok(Arc::new(tree_resolver.get(&p?)?)))
+                .collect()
         } else {
             let null_commit = HgId::null_id().clone();
-            Ok(vec![
+            Ok(vec![Arc::new(
                 tree_resolver
                     .get(&null_commit)
                     .context("resolving null commit tree")?,
-            ])
+            )])
         }
     }
 
@@ -489,7 +490,7 @@ impl WorkingCopy {
                 }
             }));
 
-        let p1_manifest = &*manifests[0].read();
+        let p1_manifest = manifests[0].as_ref();
         let mut status_builder = compute_status(
             p1_manifest,
             self.treestate.clone(),

@@ -164,7 +164,7 @@ py_class!(pub class workingcopy |py| {
         let mut all_tree_matchers = Vec::new();
         for node in &*nodes {
             let mf = wc.tree_resolver().get(node).map_pyerr(py)?;
-            let matcher = rsworkingcopy::sparse::build_matcher(&prof, mf.read().clone(), wc.filestore(), &overrides).map_pyerr(py)?.0;
+            let matcher = rsworkingcopy::sparse::build_matcher(&prof, &mf, wc.filestore(), &overrides).map_pyerr(py)?.0;
             let tree_matchers = matcher.into_matchers();
             if tree_matchers.is_empty() {
                 return Ok(Vec::new());

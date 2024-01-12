@@ -452,7 +452,7 @@ impl FileSystem for WatchmanFileSystem {
 
     fn sparse_matcher(
         &self,
-        manifests: &[Arc<parking_lot::RwLock<manifest_tree::TreeManifest>>],
+        manifests: &[Arc<manifest_tree::TreeManifest>],
         dot_dir: &'static str,
     ) -> Result<Option<DynMatcher>> {
         self.inner.sparse_matcher(manifests, dot_dir)

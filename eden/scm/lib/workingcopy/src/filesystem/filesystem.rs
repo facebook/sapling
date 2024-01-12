@@ -14,7 +14,6 @@ use configmodel::Config;
 use configmodel::ConfigExt;
 use io::IO;
 use manifest_tree::TreeManifest;
-use parking_lot::RwLock;
 use pathmatcher::DynMatcher;
 use serde::Serialize;
 use types::HgId;
@@ -72,7 +71,7 @@ pub trait FileSystem {
 
     fn sparse_matcher(
         &self,
-        manifests: &[Arc<RwLock<TreeManifest>>],
+        manifests: &[Arc<TreeManifest>],
         dot_dir: &'static str,
     ) -> Result<Option<DynMatcher>>;
 

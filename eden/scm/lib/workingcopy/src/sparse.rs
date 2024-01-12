@@ -21,7 +21,6 @@ use manifest::FsNodeMetadata;
 use manifest::Manifest;
 use manifest_tree::TreeManifest;
 use parking_lot::Mutex;
-use parking_lot::RwLock;
 use pathmatcher::DynMatcher;
 use pathmatcher::ExactMatcher;
 use pathmatcher::UnionMatcher;
@@ -37,7 +36,7 @@ pub static MERGE_FILE_OVERRIDES: &str = "tempsparse";
 pub fn repo_matcher(
     vfs: &VFS,
     dot_path: &Path,
-    manifest: impl Manifest + Send + Sync + 'static,
+    manifest: &impl Manifest,
     store: Arc<dyn FileStore>,
 ) -> anyhow::Result<Option<(DynMatcher, u64)>> {
     repo_matcher_with_overrides(vfs, dot_path, manifest, store, &disk_overrides(dot_path)?)
@@ -46,7 +45,7 @@ pub fn repo_matcher(
 pub fn repo_matcher_with_overrides(
     vfs: &VFS,
     dot_path: &Path,
-    manifest: impl Manifest + Send + Sync + 'static,
+    manifest: &impl Manifest,
     store: Arc<dyn FileStore>,
     overrides: &HashMap<String, String>,
 ) -> anyhow::Result<Option<(DynMatcher, u64)>> {
@@ -86,18 +85,15 @@ pub fn repo_matcher_with_overrides(
 #[tracing::instrument(skip_all)]
 pub fn build_matcher(
     prof: &sparse::Root,
-    manifest: impl Manifest + Send + Sync + 'static,
+    manifest: &impl Manifest,
     store: Arc<dyn FileStore>,
     overrides: &HashMap<String, String>,
 ) -> anyhow::Result<(sparse::Matcher, DefaultHasher)> {
-    let manifest = Arc::new(manifest);
-
     let hasher = Mutex::new(DefaultHasher::new());
     prof.hash(hasher.lock().deref_mut());
 
     let matcher = prof.matcher(|path| {
         let file_id = {
-            let manifest = manifest.clone();
             let repo_path = RepoPathBuf::from_string(path.clone())?;
 
             // This might block.
@@ -189,7 +185,7 @@ pub fn disk_overrides(dot_path: &Path) -> anyhow::Result<HashMap<String, String>
 
 pub fn sparse_matcher(
     vfs: &VFS,
-    manifests: &[Arc<RwLock<TreeManifest>>],
+    manifests: &[Arc<TreeManifest>],
     store: Arc<dyn FileStore>,
     dot_dir: &Path,
 ) -> anyhow::Result<Option<DynMatcher>> {
@@ -200,7 +196,7 @@ pub fn sparse_matcher(
         if let Some((matcher, _hash)) = repo_matcher(
             vfs,
             &vfs.root().join(dot_dir),
-            manifest.read().clone(),
+            manifest.as_ref(),
             store.clone(),
         )? {
             sparse_matchers.push(matcher);
@@ -317,7 +313,7 @@ exc",
 
         let (matcher, _hash) = build_matcher(
             &sparse::Root::from_bytes(b"%include tools/sparse/base", "root".to_string())?,
-            commit.clone(),
+            &commit,
             Arc::new(commit.clone()),
             &config_overrides(&config),
         )?;
@@ -336,13 +332,8 @@ exc",
 
         fs_err::write(root_dir.path().join("sparse"), "%include tools/sparse/base")?;
 
-        let (matcher, _hash) = repo_matcher(
-            &vfs,
-            root_dir.path(),
-            commit.clone(),
-            Arc::new(commit.clone()),
-        )?
-        .unwrap();
+        let (matcher, _hash) =
+            repo_matcher(&vfs, root_dir.path(), &commit, Arc::new(commit.clone()))?.unwrap();
 
         assert!(matcher.matches_file("merge/a".try_into()?)?);
         assert!(matcher.matches_file("merge/b".try_into()?)?);
@@ -367,7 +358,7 @@ exc",
 
         let (_matcher, hash) = build_matcher(
             &sparse::Root::from_bytes(b"%include tools/sparse/base", "root".to_string())?,
-            commit.clone(),
+            &commit,
             Arc::new(commit.clone()),
             &config_overrides(&config),
         )?;
@@ -384,7 +375,7 @@ exc",
 
         let (_matcher, same_hash) = build_matcher(
             &sparse::Root::from_bytes(b"%include tools/sparse/base", "root".to_string())?,
-            commit.clone(),
+            &commit,
             Arc::new(commit.clone()),
             &config_overrides(&config),
         )?;
@@ -402,7 +393,7 @@ config_inc
 ",
                 "root".to_string(),
             )?,
-            commit.clone(),
+            &commit,
             Arc::new(commit.clone()),
             &config_overrides(&config),
         )?;
@@ -423,7 +414,7 @@ inc
 
         let (_matcher, different_hash_profile_change) = build_matcher(
             &sparse::Root::from_bytes(b"%include tools/sparse/base", "root".to_string())?,
-            commit.clone(),
+            &commit,
             Arc::new(commit.clone()),
             &config_overrides(&config),
         )?;

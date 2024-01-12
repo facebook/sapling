@@ -132,7 +132,7 @@ impl CheckoutState {
                     sparse::repo_matcher_with_overrides(
                         &vfs,
                         dot_path,
-                        target_mf.clone(),
+                        target_mf,
                         file_store.clone(),
                         &overrides,
                     )?

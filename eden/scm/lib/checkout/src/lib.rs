@@ -893,16 +893,14 @@ pub fn filesystem_checkout(
     let current_commit = wc.parents()?.into_iter().next().unwrap_or(NULL_ID);
 
     let tree_resolver = repo.tree_resolver()?;
-    let current_mf = tree_resolver.get(&current_commit)?;
+    let mut current_mf = tree_resolver.get(&current_commit)?;
     let target_mf = tree_resolver.get(&target_commit)?;
 
     let (sparse_matcher, sparse_change) =
-        create_sparse_matchers(repo, wc.vfs(), &current_mf.read(), &target_mf.read())?;
+        create_sparse_matchers(repo, wc.vfs(), &current_mf, &target_mf)?;
 
     // Overlay manifest with "status" info to include outstanding working copy changes.
     let status = wc.status(sparse_matcher.clone(), false, repo.config(), io)?;
-
-    let mut current_mf = current_mf.write();
 
     if update_mode == CheckoutMode::Force {
         // With --clean, mix on our working copy changes so they are "undone" by
@@ -924,7 +922,7 @@ pub fn filesystem_checkout(
         wc.vfs(),
         repo.config(),
         &current_mf,
-        &target_mf.read(),
+        &target_mf,
         &sparse_matcher,
         sparse_change,
         progress_path,
@@ -932,7 +930,7 @@ pub fn filesystem_checkout(
 
     if update_mode != CheckoutMode::Force {
         // 2. Check if status is dirty
-        check_conflicts(io, repo, wc, &plan, &target_mf.read(), &status)?;
+        check_conflicts(io, repo, wc, &plan, &target_mf, &status)?;
     }
 
     // 3. Signal that an update is being performed
@@ -1047,7 +1045,7 @@ fn create_sparse_matchers(
     let (current_sparse, current_hash) = sparse::repo_matcher_with_overrides(
         vfs,
         &dot_path,
-        current_mf.clone(),
+        current_mf,
         repo.file_store()?,
         &overrides,
     )?
@@ -1059,7 +1057,7 @@ fn create_sparse_matchers(
     let (target_sparse, target_hash) = sparse::repo_matcher_with_overrides(
         vfs,
         &dot_path,
-        target_mf.clone(),
+        target_mf,
         repo.file_store()?,
         &overrides,
     )?

@@ -153,17 +153,11 @@ fn edenfs_noconflict_checkout(
         target_commit_tree_hash,
         edenfs_client::CheckoutMode::DryRun,
     )?;
-    let plan = create_edenfs_plan(
-        wc,
-        repo.config(),
-        &*source_mf.read(),
-        &*target_mf.read(),
-        conflicts,
-    )?;
+    let plan = create_edenfs_plan(wc, repo.config(), &source_mf, &target_mf, conflicts)?;
 
     let status = wc.status(Arc::new(AlwaysMatcher::new()), false, repo.config(), io)?;
 
-    check_conflicts(io, repo, wc, &plan, &target_mf.read(), &status)?;
+    check_conflicts(io, repo, wc, &plan, &target_mf, &status)?;
 
     // Signal that an update is being performed
     let updatestate_path = wc.dot_hg_path().join("updatestate");

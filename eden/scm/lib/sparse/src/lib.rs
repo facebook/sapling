@@ -123,7 +123,7 @@ pub enum Error {
     GlobsetError(#[from] globset::Error),
 }
 
-#[cfg_attr(not(feature="async"), syncify([<B: ____>] => [], [B] => [anyhow::Result<Option<Vec<u8>>>]))]
+#[cfg_attr(not(feature="async"), syncify([<B: ____>] => [], [B] => [anyhow::Result<Option<Vec<u8>>>], [Send + Sync] => []))]
 impl Root {
     pub fn from_bytes(data: impl AsRef<[u8]>, source: String) -> Result<Self, io::Error> {
         Ok(Self {
@@ -274,7 +274,7 @@ impl Root {
     }
 }
 
-#[cfg_attr(not(feature="async"), syncify([B: ____>] => [>], [B] => [anyhow::Result<Option<Vec<u8>>>]))]
+#[cfg_attr(not(feature="async"), syncify([B: ____>] => [>], [B] => [anyhow::Result<Option<Vec<u8>>>], [Send + Sync] => []))]
 impl Profile {
     fn from_bytes(data: impl AsRef<[u8]>, source: String) -> Result<Self, io::Error> {
         let mut prof = Profile {

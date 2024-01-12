@@ -13,7 +13,6 @@ use manifest::Manifest;
 use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
 use parking_lot::Mutex;
-use parking_lot::RwLock;
 use pathmatcher::DifferenceMatcher;
 use pathmatcher::DynMatcher;
 use pathmatcher::ExactMatcher;
@@ -29,11 +28,11 @@ use crate::util::walk_treestate;
 use crate::walker::WalkError;
 
 struct FakeTreeResolver {
-    pub manifest: Arc<RwLock<TreeManifest>>,
+    pub manifest: TreeManifest,
 }
 
 impl ReadTreeManifest for FakeTreeResolver {
-    fn get(&self, _commit_id: &HgId) -> Result<Arc<RwLock<TreeManifest>>> {
+    fn get(&self, _commit_id: &HgId) -> Result<TreeManifest> {
         Ok(self.manifest.clone())
     }
 }

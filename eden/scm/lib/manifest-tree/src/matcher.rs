@@ -11,7 +11,6 @@ use anyhow::Result;
 use manifest::FsNodeMetadata::Directory;
 use manifest::FsNodeMetadata::File;
 use manifest::Manifest;
-use parking_lot::RwLock;
 use pathmatcher::DirectoryMatch;
 use pathmatcher::Matcher;
 use types::RepoPath;
@@ -19,12 +18,12 @@ use types::RepoPath;
 use crate::TreeManifest;
 
 pub struct ManifestMatcher {
-    manifest: Arc<RwLock<TreeManifest>>,
+    manifest: Arc<TreeManifest>,
     case_sensitive: bool,
 }
 
 impl ManifestMatcher {
-    pub fn new(manifest: Arc<RwLock<TreeManifest>>, case_sensitive: bool) -> Self {
+    pub fn new(manifest: Arc<TreeManifest>, case_sensitive: bool) -> Self {
         ManifestMatcher {
             manifest,
             case_sensitive,
@@ -34,11 +33,10 @@ impl ManifestMatcher {
 
 impl Matcher for ManifestMatcher {
     fn matches_directory(&self, path: &RepoPath) -> Result<DirectoryMatch> {
-        let manifest = self.manifest.read();
         let result = if self.case_sensitive {
-            manifest.get(path)?
+            self.manifest.get(path)?
         } else {
-            manifest.get_ignore_case(path)?
+            self.manifest.get_ignore_case(path)?
         };
         Ok(match result {
             Some(File(_)) => DirectoryMatch::Nothing,
@@ -48,11 +46,10 @@ impl Matcher for ManifestMatcher {
     }
 
     fn matches_file(&self, path: &RepoPath) -> Result<bool> {
-        let manifest = self.manifest.read();
         let result = if self.case_sensitive {
-            manifest.get(path)?
+            self.manifest.get(path)?
         } else {
-            manifest.get_ignore_case(path)?
+            self.manifest.get_ignore_case(path)?
         };
         Ok(match result {
             Some(File(_)) => true,

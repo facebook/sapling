@@ -11,7 +11,6 @@ use std::sync::Arc;
 use anyhow::Result;
 use manifest::Manifest;
 use manifest_tree::TreeManifest;
-use parking_lot::RwLock;
 use pathmatcher::ExactMatcher;
 use progress_model::ActiveProgressBar;
 use progress_model::ProgressBar;
@@ -67,7 +66,7 @@ pub(crate) struct FileChangeDetector {
     vfs: VFS,
     results: Vec<Result<ResolvedFileChangeResult>>,
     lookups: RepoPathMap<Metadata>,
-    manifest: Arc<RwLock<TreeManifest>>,
+    manifest: Arc<TreeManifest>,
     store: ArcFileStore,
     worker_count: usize,
     progress: ActiveProgressBar,
@@ -76,7 +75,7 @@ pub(crate) struct FileChangeDetector {
 impl FileChangeDetector {
     pub fn new(
         vfs: VFS,
-        manifest: Arc<RwLock<TreeManifest>>,
+        manifest: Arc<TreeManifest>,
         store: ArcFileStore,
         worker_count: Option<usize>,
     ) -> Self {
@@ -361,7 +360,6 @@ impl IntoIterator for FileChangeDetector {
         let matcher = ExactMatcher::new(self.lookups.keys(), self.vfs.case_sensitive());
         let keys = self
             .manifest
-            .read()
             .files(matcher)
             .filter_map(|result| {
                 let file = match result {

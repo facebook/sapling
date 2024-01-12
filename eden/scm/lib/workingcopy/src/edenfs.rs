@@ -19,7 +19,6 @@ use edenfs_client::FileStatus;
 use io::IO;
 use manifest_tree::TreeManifest;
 use parking_lot::Mutex;
-use parking_lot::RwLock;
 use pathmatcher::DynMatcher;
 use storemodel::FileStore;
 use treestate::treestate::TreeState;
@@ -129,7 +128,7 @@ impl FileSystem for EdenFileSystem {
 
     fn sparse_matcher(
         &self,
-        manifests: &[Arc<RwLock<TreeManifest>>],
+        manifests: &[Arc<TreeManifest>],
         dot_dir: &'static str,
     ) -> Result<Option<DynMatcher>> {
         crate::sparse::sparse_matcher(
