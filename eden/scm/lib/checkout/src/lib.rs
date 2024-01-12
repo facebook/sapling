@@ -855,7 +855,7 @@ pub fn checkout(
         return Ok(None);
     }
 
-    Ok(Some(sparse_checkout(
+    Ok(Some(filesystem_checkout(
         io,
         repo,
         wc,
@@ -883,7 +883,7 @@ fn file_type(vfs: &VFS, path: &RepoPath) -> FileType {
     }
 }
 
-pub fn sparse_checkout(
+pub fn filesystem_checkout(
     io: &IO,
     repo: &mut Repo,
     wc: &LockedWorkingCopy,
