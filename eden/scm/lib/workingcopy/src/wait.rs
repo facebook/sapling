@@ -10,7 +10,6 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
-use std::time::SystemTime;
 
 use configmodel::Config;
 use io::IO;
@@ -48,7 +47,7 @@ impl Wait {
         let list_ignored = false;
         let io = IO::null();
 
-        let status = wc.status(matcher, SystemTime::UNIX_EPOCH, list_ignored, config, &io)?;
+        let status = wc.status(matcher, list_ignored, config, &io)?;
 
         // Collect metadata of all changed files.
         let vfs = wc.vfs();

@@ -900,13 +900,7 @@ pub fn filesystem_checkout(
         create_sparse_matchers(repo, wc.vfs(), &current_mf.read(), &target_mf.read())?;
 
     // Overlay manifest with "status" info to include outstanding working copy changes.
-    let status = wc.status(
-        sparse_matcher.clone(),
-        SystemTime::UNIX_EPOCH,
-        false,
-        repo.config(),
-        io,
-    )?;
+    let status = wc.status(sparse_matcher.clone(), false, repo.config(), io)?;
 
     let mut current_mf = current_mf.write();
 

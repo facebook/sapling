@@ -8,7 +8,6 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
-use std::time::SystemTime;
 
 use anyhow::Result;
 use configmodel::Config;
@@ -53,7 +52,6 @@ pub trait FileSystem {
         ignore_dirs: Vec<PathBuf>,
         // include ignored files
         include_ignored: bool,
-        last_write: SystemTime,
         config: &dyn Config,
         io: &IO,
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChange>>>>;

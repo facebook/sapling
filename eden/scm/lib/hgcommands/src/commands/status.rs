@@ -8,7 +8,6 @@
 mod print;
 
 use std::sync::Arc;
-use std::time::SystemTime;
 
 use anyhow::Result;
 use clidispatch::fallback;
@@ -200,13 +199,7 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
 
     tracing::debug!(target: "status_info", status_mode="rust");
 
-    let status = wc.status(
-        matcher.clone(),
-        SystemTime::UNIX_EPOCH,
-        ignored,
-        repo.config(),
-        ctx.io(),
-    )?;
+    let status = wc.status(matcher.clone(), ignored, repo.config(), ctx.io())?;
 
     // This should be passed the "full" matcher including
     // ignores, sparse, etc., but in practice probably doesn't

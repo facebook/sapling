@@ -8,7 +8,6 @@
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::SystemTime;
 
 use anyhow::anyhow;
 use anyhow::Context;
@@ -382,7 +381,6 @@ impl WorkingCopy {
     pub fn status(
         &self,
         mut matcher: DynMatcher,
-        last_write: SystemTime,
         include_ignored: bool,
         config: &dyn Config,
         io: &IO,
@@ -453,7 +451,6 @@ impl WorkingCopy {
                 ignore_matcher,
                 ignore_dirs,
                 include_ignored,
-                last_write,
                 config,
                 io,
             )?

@@ -11,7 +11,6 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
-use std::time::SystemTime;
 
 use anyhow::anyhow;
 use anyhow::Result;
@@ -168,7 +167,6 @@ impl WatchmanFileSystem {
         ignore_matcher: DynMatcher,
         ignore_dirs: Vec<PathBuf>,
         include_ignored: bool,
-        last_write: SystemTime,
         config: &dyn Config,
         io: &IO,
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChange>>>> {
@@ -313,7 +311,6 @@ impl WatchmanFileSystem {
 
         let detector = FileChangeDetector::new(
             self.inner.vfs.clone(),
-            last_write.try_into()?,
             manifests[0].clone(),
             self.inner.store.clone(),
             config.get_opt("workingcopy", "worker-count")?,
@@ -411,7 +408,6 @@ impl FileSystem for WatchmanFileSystem {
         ignore_matcher: DynMatcher,
         ignore_dirs: Vec<PathBuf>,
         include_ignored: bool,
-        last_write: SystemTime,
         config: &dyn Config,
         io: &IO,
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChange>>>> {
@@ -420,7 +416,6 @@ impl FileSystem for WatchmanFileSystem {
             ignore_matcher.clone(),
             ignore_dirs.clone(),
             include_ignored,
-            last_write,
             config,
             io,
         );
@@ -447,7 +442,6 @@ impl FileSystem for WatchmanFileSystem {
                     ignore_matcher,
                     ignore_dirs,
                     include_ignored,
-                    last_write,
                     config,
                     io,
                 )

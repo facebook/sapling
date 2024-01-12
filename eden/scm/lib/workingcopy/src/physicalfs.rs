@@ -8,7 +8,6 @@
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::SystemTime;
 
 use anyhow::Result;
 use configmodel::Config;
@@ -82,7 +81,6 @@ impl FileSystem for PhysicalFileSystem {
         ignore_matcher: DynMatcher,
         ignore_dirs: Vec<PathBuf>,
         include_ignored: bool,
-        last_write: SystemTime,
         config: &dyn Config,
         _io: &IO,
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChange>>>> {
@@ -97,7 +95,6 @@ impl FileSystem for PhysicalFileSystem {
             WorkingCopy::current_manifests(&self.treestate.lock(), &self.tree_resolver)?;
         let file_change_detector = FileChangeDetector::new(
             self.vfs.clone(),
-            last_write.try_into()?,
             manifests[0].clone(),
             self.store.clone(),
             config.get_opt("workingcopy", "worker-count")?,

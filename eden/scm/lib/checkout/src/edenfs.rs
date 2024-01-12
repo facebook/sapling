@@ -12,7 +12,6 @@ use std::io::Write;
 use std::os::unix::prelude::MetadataExt;
 use std::process::Command;
 use std::sync::Arc;
-use std::time::SystemTime;
 
 use anyhow::bail;
 use anyhow::Context;
@@ -162,13 +161,7 @@ fn edenfs_noconflict_checkout(
         conflicts,
     )?;
 
-    let status = wc.status(
-        Arc::new(AlwaysMatcher::new()),
-        SystemTime::UNIX_EPOCH,
-        false,
-        repo.config(),
-        io,
-    )?;
+    let status = wc.status(Arc::new(AlwaysMatcher::new()), false, repo.config(), io)?;
 
     check_conflicts(io, repo, wc, &plan, &target_mf.read(), &status)?;
 

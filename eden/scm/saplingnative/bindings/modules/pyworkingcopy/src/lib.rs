@@ -13,10 +13,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
-use std::time::Duration;
-use std::time::SystemTime;
 
-use anyhow::anyhow;
 use anyhow::Error;
 use cpython::*;
 use cpython_ext::convert::Serde;
@@ -119,20 +116,16 @@ py_class!(pub class workingcopy |py| {
     def status(
         &self,
         pymatcher: Option<PyObject>,
-        lastwrite: u32,
         include_ignored: bool,
         config: &config,
     ) -> PyResult<PyObject> {
         let wc = self.inner(py).write();
         let matcher = extract_option_matcher(py, pymatcher)?;
-        let last_write = SystemTime::UNIX_EPOCH.checked_add(
-            Duration::from_secs(lastwrite.into())).ok_or_else(|| anyhow!("Failed to convert {} to SystemTime", lastwrite)
-        ).map_pyerr(py)?;
         let io = IO::main().map_pyerr(py)?;
         let config = config.get_cfg(py);
         pystatus::to_python_status(py,
             &py.allow_threads(|| {
-                wc.status(matcher, last_write, include_ignored, &config, &io)
+                wc.status(matcher, include_ignored, &config, &io)
             }).map_pyerr(py)?
         )
     }

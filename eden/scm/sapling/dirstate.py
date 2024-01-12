@@ -842,8 +842,21 @@ class dirstate:
         """Determine the status of the working copy relative to the
         dirstate and return a scmutil.status.
         """
+        if self._lastnormaltime > 0:
+            # This handles situations where, for example:
+            #   1. File "foo" is NEED_CHECK in treestate, but contents are clean.
+            #   2. "sl import" performs an update at time1 that marks "foo" as clean in-memory,
+            #      but doesn't write dirstate out yet.
+            #   3. "sl import" changes "foo" contents on disk with mtime time1.
+            #   4. "status" needs to list "foo" as modified even though mtime matches treestate.
+            #
+            # _lastnormaltime is set during step 2. We used to pass _lastnormaltime
+            # directly to workingcopy().status(), but now we re-use the invalidatemtime()
+            # mechanism to mark "foo" as NEED_CHECK.
+            self._map._tree.invalidatemtime(self._lastnormaltime)
+
         status = self._repo._rsrepo.workingcopy().status(
-            match, self._lastnormaltime, bool(ignored), self._ui._rcfg
+            match, bool(ignored), self._ui._rcfg
         )
 
         if not unknown:

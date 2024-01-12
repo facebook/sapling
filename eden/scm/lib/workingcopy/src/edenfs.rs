@@ -9,7 +9,6 @@ use std::cell::Cell;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
-use std::time::SystemTime;
 
 use anyhow::Context;
 use anyhow::Result;
@@ -66,7 +65,6 @@ impl FileSystem for EdenFileSystem {
         _ignore_matcher: DynMatcher,
         _ignore_dirs: Vec<PathBuf>,
         include_ignored: bool,
-        _last_write: SystemTime,
         _config: &dyn Config,
         _io: &IO,
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChange>>>> {
