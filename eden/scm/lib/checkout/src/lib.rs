@@ -846,21 +846,52 @@ pub fn checkout(
     repo: &mut Repo,
     wc: &LockedWorkingCopy,
     target_commit: HgId,
+    mut maybe_bookmark: Option<String>,
     update_mode: CheckoutMode,
 ) -> Result<Option<(usize, usize)>> {
-    #[cfg(feature = "eden")]
-    if repo.requirements.contains("eden") {
-        edenfs::edenfs_checkout(lgr, repo, wc, target_commit, update_mode)?;
-        return Ok(None);
+    let stats = if repo.requirements.contains("eden") {
+        #[cfg(feature = "eden")]
+        {
+            edenfs::edenfs_checkout(lgr, repo, wc, target_commit, update_mode)?;
+            None
+        }
+
+        #[cfg(not(feature = "eden"))]
+        bail!("checkout() called on eden working copy on non-eden build");
+    } else {
+        Some(filesystem_checkout(
+            lgr,
+            repo,
+            wc,
+            target_commit,
+            update_mode,
+        )?)
+    };
+
+    let local_bms = repo.local_bookmarks()?;
+    if !maybe_bookmark
+        .as_ref()
+        .is_some_and(|bm| local_bms.contains_key(bm))
+    {
+        maybe_bookmark = None;
     }
 
-    Ok(Some(filesystem_checkout(
-        lgr,
-        repo,
-        wc,
-        target_commit,
-        update_mode,
-    )?))
+    let current_bookmark = wc.active_bookmark()?;
+    if maybe_bookmark != current_bookmark {
+        match (&current_bookmark, &maybe_bookmark) {
+            // TODO: color bookmark name
+            (Some(old), Some(new)) => {
+                lgr.info(format!("(changing active bookmark from {old} to {new})"))
+            }
+            (None, Some(new)) => lgr.info(format!("(activating bookmark {new})")),
+            (Some(old), None) => lgr.info(format!("(leaving bookmark {old})")),
+            (None, None) => {}
+        }
+
+        wc.set_active_bookmark(maybe_bookmark)?;
+    }
+
+    Ok(stats)
 }
 
 fn file_type(vfs: &VFS, path: &RepoPath) -> FileType {

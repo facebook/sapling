@@ -82,6 +82,14 @@ pub fn unlink_if_exists(path: impl AsRef<Path>) -> io::Result<()> {
     }
 }
 
+pub fn read_to_string_if_exists(path: impl AsRef<Path>) -> io::Result<Option<String>> {
+    match std::fs::read_to_string(path.as_ref()) {
+        Ok(contents) => Ok(Some(contents)),
+        Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(None),
+        Err(err) => Err(err).path_context("error reading file", path.as_ref()),
+    }
+}
+
 #[cfg(test)]
 mod test {
     use anyhow::Result;

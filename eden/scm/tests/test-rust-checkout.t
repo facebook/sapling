@@ -210,3 +210,31 @@ Non --clean keeps unconflicting changes:
   $ hg go -q $B
   $ hg st
   M A
+
+Update active bookmark
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > B  # bookmark BOOK_B = B
+  > |
+  > A  # bookmark BOOK_A = A
+  > EOS
+  $ hg go -q BOOK_A --inactive
+  $ cat .hg/bookmarks.current
+  cat: .hg/bookmarks.current: $ENOENT$
+  [1]
+  $ hg go BOOK_B
+  (activating bookmark BOOK_B)
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cat .hg/bookmarks.current
+  BOOK_B (no-eol)
+  $ hg go BOOK_A
+  (changing active bookmark from BOOK_B to BOOK_A)
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ cat .hg/bookmarks.current
+  BOOK_A (no-eol)
+  $ hg go $B
+  (leaving bookmark BOOK_A)
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cat .hg/bookmarks.current
+  cat: .hg/bookmarks.current: $ENOENT$
+  [1]

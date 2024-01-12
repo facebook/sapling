@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -47,6 +48,9 @@ use types::repo::StorageFormat;
 use types::HgId;
 use types::RepoPath;
 use types::RepoPathBuf;
+use util::file::atomic_write;
+use util::file::read_to_string_if_exists;
+use util::file::unlink_if_exists;
 use vfs::VFS;
 
 #[cfg(feature = "eden")]
@@ -88,6 +92,8 @@ pub struct WorkingCopy {
     pub(crate) dot_hg_path: PathBuf,
     eden_client: Option<Arc<EdenFsClient>>,
 }
+
+const ACTIVE_BOOKMARK_FILE: &str = "bookmarks.current";
 
 impl WorkingCopy {
     pub fn new(
@@ -587,6 +593,12 @@ impl WorkingCopy {
 
         MergeState::read(&self.dot_hg_path().join("merge/state2"))
     }
+
+    pub fn active_bookmark(&self) -> Result<Option<String>> {
+        Ok(read_to_string_if_exists(
+            self.dot_hg_path.join(ACTIVE_BOOKMARK_FILE),
+        )?)
+    }
 }
 
 pub struct LockedWorkingCopy<'a> {
@@ -635,5 +647,13 @@ impl<'a> LockedWorkingCopy<'a> {
             fs_err::remove_dir_all(&merge_state_dir)?;
         }
         Ok(())
+    }
+
+    pub fn set_active_bookmark(&self, bm: Option<String>) -> Result<()> {
+        let active_path = self.dot_hg_path.join(ACTIVE_BOOKMARK_FILE);
+        match bm {
+            Some(bm) => Ok(atomic_write(&active_path, |f| write!(f, "{bm}")).map(|_f| ())?),
+            None => Ok(unlink_if_exists(&active_path)?),
+        }
     }
 }
