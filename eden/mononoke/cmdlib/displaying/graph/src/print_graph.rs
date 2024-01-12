@@ -138,7 +138,6 @@ where
 
     let mut to_visit: BinaryHeap<(Generation, ChangesetId)> =
         join_all(changesets.into_iter().map(|head| {
-            let ctx = ctx;
             let changeset_fetcher = &changeset_fetcher;
             async move {
                 Ok((
