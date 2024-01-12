@@ -707,7 +707,8 @@ where
     /// matches the name provided.  The name may contain a path, in which case the subdirectories
     /// of this node are also queried.
     ///
-    /// Returns a list of reversed vector of key references for each path element.
+    /// Returns a list of reversed vector of key references for each path element, and the
+    /// longest non-inclusive directory prefix.
     ///
     /// `filter_id` should be different for logically different `filter` functions. It is used for
     /// cache invalidation.
@@ -717,7 +718,7 @@ where
         name: KeyRef,
         filter: &mut F,
         filter_id: u64,
-    ) -> Result<Vec<Vec<Key>>>
+    ) -> Result<(Vec<Vec<Key>>, Vec<Key>)>
     where
         F: FnMut(KeyRef) -> Result<Key>,
     {
@@ -749,7 +750,10 @@ where
                 map: new_map,
             });
         }
+
         if let Some(path) = path {
+            let mut longest_prefix: Vec<Key> = Vec::new();
+
             let mut result = Vec::new();
             if let Some(mapped_elems) = self.filtered_keys.as_ref().unwrap().map.get(elem) {
                 let mut entries = self.entries.as_mut().unwrap();
@@ -758,28 +762,36 @@ where
                     if let Some(&mut NodeEntry::Directory(ref mut node)) =
                         entries.get_mut(mapped_elem)
                     {
-                        for mut mapped_path in
-                            node.get_filtered_key(store, path, filter, filter_id)?
-                        {
+                        let (mapped_paths, mut prefix) =
+                            node.get_filtered_key(store, path, filter, filter_id)?;
+
+                        if prefix.len() >= longest_prefix.len() {
+                            prefix.push(mapped_elem.clone());
+                            longest_prefix = prefix;
+                        }
+
+                        for mut mapped_path in mapped_paths {
                             mapped_path.push(mapped_elem.clone());
                             result.push(mapped_path);
                         }
                     }
                 }
             }
-            Ok(result)
+            Ok((result, longest_prefix))
         } else {
-            Ok(self
-                .filtered_keys
-                .as_ref()
-                .unwrap()
-                .map
-                .get(elem)
-                .cloned()
-                .unwrap_or_else(Vec::new)
-                .iter()
-                .map(|e| vec![trim_separator(e).to_vec().into_boxed_slice()])
-                .collect())
+            Ok((
+                self.filtered_keys
+                    .as_ref()
+                    .unwrap()
+                    .map
+                    .get(elem)
+                    .cloned()
+                    .unwrap_or_else(Vec::new)
+                    .iter()
+                    .map(|e| vec![trim_separator(e).to_vec().into_boxed_slice()])
+                    .collect(),
+                Vec::new(),
+            ))
         }
     }
 
@@ -1039,19 +1051,28 @@ where
         name: KeyRef,
         filter: &mut F,
         filter_id: u64,
-    ) -> Result<Vec<Key>>
+    ) -> Result<(Vec<Key>, Option<Key>)>
     where
         F: FnMut(KeyRef) -> Result<Key>,
     {
-        Ok(self
-            .root
-            .get_filtered_key(store, name, filter, filter_id)?
-            .iter_mut()
-            .map(|path| {
-                path.reverse();
-                path.concat().into_boxed_slice()
-            })
-            .collect())
+        let (mut keys, mut prefix) = self.root.get_filtered_key(store, name, filter, filter_id)?;
+
+        let prefix = if prefix.is_empty() {
+            None
+        } else {
+            prefix.reverse();
+            Some(prefix.concat().into_boxed_slice())
+        };
+
+        Ok((
+            keys.iter_mut()
+                .map(|path| {
+                    path.reverse();
+                    path.concat().into_boxed_slice()
+                })
+                .collect(),
+            prefix,
+        ))
     }
 
     pub fn path_complete<FA, FV>(
@@ -1314,21 +1335,24 @@ mod tests {
         // Look-up with normalized name should give non-normalized version.
         assert_eq!(
             t.get_filtered_key(&ms, b"dirA/subdirA/file1", &mut map_upper_a, 0)
-                .expect("should succeed"),
+                .expect("should succeed")
+                .0,
             vec![b"dirA/subdira/file1".to_vec().into_boxed_slice()]
         );
 
         // Look-up with non-normalized name should match nothing.
         assert_eq!(
             t.get_filtered_key(&ms, b"dirA/subdira/file1", &mut map_upper_a, 0)
-                .expect("should succeed"),
+                .expect("should succeed")
+                .0,
             vec![]
         );
 
         // Change filter function should invalid existing cache.
         assert_eq!(
             t.get_filtered_key(&ms, b"dirA/subdirA/file1", &mut map_noop, 1)
-                .unwrap(),
+                .unwrap()
+                .0,
             vec![]
         );
     }
@@ -1354,7 +1378,8 @@ mod tests {
 
         assert_eq!(
             t.get_filtered_key(&ms, b"A/A", &mut map_upper_a, 0)
-                .unwrap(),
+                .unwrap()
+                .0,
             vec![
                 b"A/A".to_vec().into_boxed_slice(),
                 b"A/a".to_vec().into_boxed_slice(),
@@ -1364,12 +1389,64 @@ mod tests {
 
         assert_eq!(
             t.get_filtered_key(&ms, b"A/A/A", &mut map_upper_a, 0)
-                .unwrap(),
+                .unwrap()
+                .0,
             vec![
                 b"A/A/a".to_vec().into_boxed_slice(),
                 b"A/a/A".to_vec().into_boxed_slice(),
                 b"a/a/A".to_vec().into_boxed_slice(),
             ]
         );
+    }
+
+    #[test]
+    fn filtered_keys_longest_prefix() -> Result<()> {
+        let mut t = Tree::new();
+        let ms = MapStore::new();
+        let state = FileState::new(b'a', 0, 0, 0);
+
+        t.add(&ms, b"a", &state)?;
+        t.add(&ms, b"A", &state)?;
+        t.add(&ms, b"a/A/a", &state)?;
+
+        fn map_lower(key: KeyRef) -> Result<Key> {
+            Ok(std::str::from_utf8(key)
+                .unwrap()
+                .to_lowercase()
+                .into_bytes()
+                .into_boxed_slice())
+        }
+
+        assert_eq!(t.get_filtered_key(&ms, b"a", &mut map_lower, 0)?.1, None);
+        assert_eq!(t.get_filtered_key(&ms, b"b", &mut map_lower, 0)?.1, None);
+        assert_eq!(t.get_filtered_key(&ms, b"A", &mut map_lower, 0)?.1, None);
+
+        assert_eq!(
+            t.get_filtered_key(&ms, b"a/b", &mut map_lower, 0)?.1,
+            Some(b"a/".to_vec().into_boxed_slice())
+        );
+
+        assert_eq!(t.get_filtered_key(&ms, b"a/", &mut map_lower, 0)?.1, None);
+        assert_eq!(
+            t.get_filtered_key(&ms, b"a/a/", &mut map_lower, 0)?.1,
+            Some(b"a/".to_vec().into_boxed_slice())
+        );
+
+        assert_eq!(
+            t.get_filtered_key(&ms, b"a/b/c", &mut map_lower, 0)?.1,
+            Some(b"a/".to_vec().into_boxed_slice())
+        );
+
+        assert_eq!(
+            t.get_filtered_key(&ms, b"a/a/b", &mut map_lower, 0)?.1,
+            Some(b"a/A/".to_vec().into_boxed_slice())
+        );
+
+        assert_eq!(
+            t.get_filtered_key(&ms, b"a/a/a/a", &mut map_lower, 0)?.1,
+            Some(b"a/A/".to_vec().into_boxed_slice())
+        );
+
+        Ok(())
     }
 }

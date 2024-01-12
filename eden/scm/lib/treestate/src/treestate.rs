@@ -428,6 +428,7 @@ impl TreeState {
     {
         self.tree
             .get_filtered_key(&self.store, name, filter, filter_id)
+            .map(|r| r.0)
     }
 
     pub fn path_complete<FA, FV>(
