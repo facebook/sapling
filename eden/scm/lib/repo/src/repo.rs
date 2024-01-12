@@ -69,10 +69,10 @@ pub struct Repo {
     metalog: Option<Arc<RwLock<MetaLog>>>,
     eden_api: OnceCell<Arc<dyn EdenApi>>,
     dag_commits: OnceCell<Arc<RwLock<Box<dyn DagCommits + Send + 'static>>>>,
-    file_store: Option<Arc<dyn FileStore>>,
-    file_scm_store: Option<Arc<scmstore::FileStore>>,
-    tree_store: Option<Arc<dyn TreeStore>>,
-    tree_scm_store: Option<Arc<scmstore::TreeStore>>,
+    file_store: OnceCell<Arc<dyn FileStore>>,
+    file_scm_store: OnceCell<Arc<scmstore::FileStore>>,
+    tree_store: OnceCell<Arc<dyn TreeStore>>,
+    tree_scm_store: OnceCell<Arc<scmstore::TreeStore>>,
     eager_store: Option<EagerRepoStore>,
     locker: Arc<RepoLocker>,
 }
@@ -190,10 +190,10 @@ impl Repo {
             metalog: None,
             eden_api: Default::default(),
             dag_commits: Default::default(),
-            file_store: None,
-            file_scm_store: None,
-            tree_store: None,
-            tree_scm_store: None,
+            file_store: Default::default(),
+            file_scm_store: Default::default(),
+            tree_store: Default::default(),
+            tree_scm_store: Default::default(),
             eager_store: None,
             locker,
         })
@@ -462,8 +462,8 @@ impl Repo {
         format
     }
 
-    pub fn file_store(&mut self) -> Result<Arc<dyn FileStore>> {
-        if let Some(fs) = &self.file_store {
+    pub fn file_store(&self) -> Result<Arc<dyn FileStore>> {
+        if let Some(fs) = self.file_store.get() {
             return Ok(Arc::clone(fs));
         }
 
@@ -494,11 +494,11 @@ impl Repo {
         let file_store = file_builder.build().context("when building FileStore")?;
 
         let fs = Arc::new(file_store);
-        self.file_scm_store = Some(fs.clone());
+        let _ = self.file_scm_store.set(fs.clone());
 
         let fs = Arc::new(ArcFileStore(fs));
 
-        self.file_store = Some(fs.clone());
+        let _ = self.file_store.set(fs.clone());
         tracing::trace!(target: "repo::file_store", "filestore created");
 
         Ok(fs)
@@ -506,11 +506,11 @@ impl Repo {
 
     // This should only be used to share stores with Python.
     pub fn file_scm_store(&self) -> Option<Arc<scmstore::FileStore>> {
-        self.file_scm_store.clone()
+        self.file_scm_store.get().cloned()
     }
 
-    pub fn tree_store(&mut self) -> Result<Arc<dyn TreeStore>> {
-        if let Some(ts) = &self.tree_store {
+    pub fn tree_store(&self) -> Result<Arc<dyn TreeStore>> {
+        if let Some(ts) = self.tree_store.get() {
             return Ok(ts.clone());
         }
 
@@ -531,24 +531,24 @@ impl Repo {
             tree_builder = tree_builder.override_edenapi(false);
         }
         let ts = Arc::new(tree_builder.build()?);
-        self.tree_scm_store = Some(ts.clone());
-        self.tree_store = Some(ts.clone());
+        let _ = self.tree_scm_store.set(ts.clone());
+        let _ = self.tree_store.set(ts.clone());
         Ok(ts)
     }
 
     // This should only be used to share stores with Python.
     pub fn tree_scm_store(&self) -> Option<Arc<scmstore::TreeStore>> {
-        self.tree_scm_store.clone()
+        self.tree_scm_store.get().cloned()
     }
 
     // This should only be used to share stores with Python.
     pub fn eager_store(&self) -> Option<EagerRepoStore> {
-        let store = self.file_store.as_ref()?;
+        let store = self.file_store.get()?;
         let store = store.maybe_as_any()?.downcast_ref::<EagerRepoStore>()?;
         Some(store.clone())
     }
 
-    pub fn tree_resolver(&mut self) -> Result<TreeManifestResolver> {
+    pub fn tree_resolver(&self) -> Result<TreeManifestResolver> {
         Ok(TreeManifestResolver::new(
             self.dag_commits()?,
             self.tree_store()?,
@@ -589,17 +589,17 @@ impl Repo {
     }
 
     pub fn invalidate_stores(&self) -> Result<()> {
-        if let Some(file_store) = &self.file_store {
+        if let Some(file_store) = self.file_store.get() {
             file_store.refresh()?;
         }
-        if let Some(tree_store) = &self.tree_store {
+        if let Some(tree_store) = self.tree_store.get() {
             tree_store.refresh()?;
         }
         Ok(())
     }
 
     #[cfg(feature = "wdir")]
-    pub fn working_copy(&mut self) -> Result<WorkingCopy, errors::InvalidWorkingCopy> {
+    pub fn working_copy(&self) -> Result<WorkingCopy, errors::InvalidWorkingCopy> {
         tracing::trace!(target: "repo::workingcopy", "creating file store");
         let file_store = self.file_store()?;
 
@@ -629,7 +629,7 @@ impl Repo {
     /// Return None if they are not backed by the same storage.
     /// Return Some((file_store, tree_store)) if they are constructed.
     fn try_construct_file_tree_store(
-        &mut self,
+        &self,
     ) -> Result<Option<(Arc<dyn FileStore>, Arc<dyn TreeStore>)>> {
         let info: &dyn StoreInfo = self;
         match factory::call_constructor::<_, Box<dyn StoreOutput>>(info) {
@@ -645,8 +645,8 @@ impl Repo {
             Ok(out) => {
                 let file_store = out.file_store();
                 let tree_store = out.tree_store();
-                self.file_store = Some(file_store.clone());
-                self.tree_store = Some(tree_store.clone());
+                let _ = self.file_store.set(file_store.clone());
+                let _ = self.tree_store.set(tree_store.clone());
                 Ok(Some((file_store, tree_store)))
             }
         }

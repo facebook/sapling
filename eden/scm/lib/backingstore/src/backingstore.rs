@@ -106,7 +106,7 @@ impl BackingStore {
         // Apply indexed log configs, which can affect edenfs behavior.
         indexedlog::config::configure(&config)?;
 
-        let mut repo = Repo::load_with_config(root, config.clone())?;
+        let repo = Repo::load_with_config(root, config.clone())?;
         let filestore = repo.file_store()?;
         let treestore = repo.tree_store()?;
 
