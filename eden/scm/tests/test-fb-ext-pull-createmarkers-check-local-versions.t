@@ -142,6 +142,15 @@ Test that commit hashes matching GraphQL are marked as landed
   marking D456 (524f3ad51d24) as abandoned
   marked 2 commits as landed
   marked 1 commit as abandoned
+  hiding 3 commits
+  (this is a dry-run, nothing was actually done)
+
+Don't hide commits when fbcodereview.hide-landed-commits=false:
+  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg debugmarklanded --verbose --dry-run --config fbcodereview.hide-landed-commits=false
+  marking D123 (a421db7622bf, d131c2d7408a) as landed as 23bffadc9066
+  marking D456 (524f3ad51d24) as abandoned
+  marked 2 commits as landed
+  marked 1 commit as abandoned
   (this is a dry-run, nothing was actually done)
 
 Setup amend local commit
@@ -153,6 +162,7 @@ Test that if the commit hash is changed, then it's no longer marked as landed.
   marking D456 (524f3ad51d24) as abandoned
   marked 1 commit as landed
   marked 1 commit as abandoned
+  hiding 2 commits
   (this is a dry-run, nothing was actually done)
 
 Test that original behavior of marking local commits as landed even if hashes don't match GraphQL preserves
@@ -162,6 +172,7 @@ Test that original behavior of marking local commits as landed even if hashes do
   marking D456 (524f3ad51d24) as abandoned
   marked 2 commits as landed
   marked 1 commit as abandoned
+  hiding 3 commits
   (this is a dry-run, nothing was actually done)
 
 Test that if there are non-obsoleted descendants for the abandoned commit, then it's no longer marked as abandoned.
@@ -171,4 +182,5 @@ Test that if there are non-obsoleted descendants for the abandoned commit, then 
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg debugmarklanded --verbose --dry-run
   marking D123 (3b86866eb2ba, a421db7622bf) as landed as 23bffadc9066
   marked 2 commits as landed
+  hiding 2 commits
   (this is a dry-run, nothing was actually done)
