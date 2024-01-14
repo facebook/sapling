@@ -138,9 +138,7 @@ def pull_cmd(ui, repo, *args, **opts):
     """import a pull request into your working copy
 
     The PULL_REQUEST can be specified as either a URL:
-
-        https://github.com/facebook/sapling/pull/321
-
+    `https://github.com/facebook/sapling/pull/321`
     or just the PR number within the GitHub repository identified by
     `sl config paths.default`.
     """
