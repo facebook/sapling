@@ -7,18 +7,17 @@ developers.
 Basic install:
 
 ```
-$ make            # see install targets
-$ make install    # do a system-wide install
-$ hg debuginstall # sanity-check setup
-$ hg              # see help
+$ make install-oss
+$ sl debuginstall # sanity-check setup
+$ sl --help       # see help
 ```
 
 
 Running without installing:
 
 ```
-$ make local      # build for inplace usage
-$ ./hg --version  # should show the latest version
+$ make oss        # build for inplace usage
+$ ./sl --version  # should show the latest version
 ```
 
 
