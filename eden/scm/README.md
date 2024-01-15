@@ -22,5 +22,5 @@ $ ./hg --version  # should show the latest version
 ```
 
 
-See <https://mercurial-scm.org/> for detailed installation instructions,
+See <https://sapling-scm.com/> for detailed installation instructions,
 platform-specific notes, and Sapling user information.
