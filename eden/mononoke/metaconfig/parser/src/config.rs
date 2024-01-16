@@ -223,6 +223,7 @@ fn parse_with_repo_definition(
         update_logging_config,
         commit_graph_config,
         deep_sharding_config,
+        everstore_local_path,
         ..
     } = named_repo_config;
 
@@ -380,6 +381,7 @@ fn parse_with_repo_definition(
         commit_graph_config,
         default_commit_identity_scheme,
         deep_sharding_config,
+        everstore_local_path,
     })
 }
 
@@ -1297,6 +1299,7 @@ mod test {
                     preloaded_commit_graph_blobstore_key: None,
                 },
                 deep_sharding_config: Some(ShardingModeConfig { status: hashmap!() }),
+                everstore_local_path: None,
             },
         );
 
@@ -1371,6 +1374,7 @@ mod test {
                 update_logging_config: UpdateLoggingConfig::default(),
                 commit_graph_config: CommitGraphConfig::default(),
                 deep_sharding_config: None,
+                everstore_local_path: None,
             },
         );
         assert_eq!(

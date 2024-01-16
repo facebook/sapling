@@ -228,6 +228,8 @@ pub struct RepoConfig {
     /// deep-sharded: In addition to requests, repo is also sharded, i.e. present
     /// on select servers.
     pub deep_sharding_config: Option<ShardingModeConfig>,
+    /// Local directory to write files to instead of uploading to everstore
+    pub everstore_local_path: Option<String>,
 }
 
 /// Config determining if the repo is deep sharded in the context of a service.

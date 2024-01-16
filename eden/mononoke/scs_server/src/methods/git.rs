@@ -5,10 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use bytes::Bytes;
 use context::CoreContext;
 use everstore_client::cpp_client::ClientOptionsBuilder;
 use everstore_client::cpp_client::EverstoreCppClient;
+use everstore_client::file_mock_client::EverstoreFileMockClient;
 use everstore_client::write::WriteRequestOptionsBuilder;
 use everstore_client::EverstoreClient;
 use fbtypes::FBType;
@@ -184,20 +187,30 @@ impl SourceControlServiceImpl {
             .await?;
 
         // Store the contents of the bundle in everstore
-        let client_options = ClientOptionsBuilder::default().build().map_err(|err| {
-            internal_error(format!(
-                "Error in building Everstore client options. Cause: {:#}",
-                err
-            ))
-        })?;
-        let client = EverstoreCppClient::from_options(repo_ctx.ctx().fb, &client_options).map_err(
-            |err| {
-                internal_error(format!(
-                    "Error in building Everstore client. Cause: {:#}",
-                    err
-                ))
-            },
-        )?;
+        // TODO(mitrandir): the everstore client should be a repo property and instantiated in the
+        // repo factory.
+        let client: Arc<dyn EverstoreClient + Send + Sync> =
+            match &repo_ctx.config().everstore_local_path {
+                None => {
+                    let client_options =
+                        ClientOptionsBuilder::default().build().map_err(|err| {
+                            internal_error(format!(
+                                "Error in building Everstore client options. Cause: {:#}",
+                                err
+                            ))
+                        })?;
+                    Arc::new(
+                        EverstoreCppClient::from_options(repo_ctx.ctx().fb, &client_options)
+                            .map_err(|err| {
+                                internal_error(format!(
+                                    "Error in building Everstore client. Cause: {:#}",
+                                    err
+                                ))
+                            })?,
+                    )
+                }
+                Some(path) => Arc::new(EverstoreFileMockClient::new(path.clone().into())),
+            };
         let fbtype = FBType::EVERSTORE_SOURCE_BUNDLE.0 as u32;
         let write_req_opts = WriteRequestOptionsBuilder::default()
             .fbtype(fbtype)
