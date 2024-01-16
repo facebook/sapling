@@ -2443,7 +2443,7 @@ fn find_free_span(covered: &IdSet, low: Id, reserve_size: u64, shrink_to_fit: bo
     loop {
         high = (low + reserve_size - 1).min(low.group().max_id());
         // Try to reserve id..=id+reserve_size-1
-        let reserved = IdSet::from_spans(vec![low..=high]);
+        let reserved = IdSet::from_single_span(IdSpan::new(low, high));
         let intersected = reserved.intersection(covered);
         if let Some(span) = intersected.iter_span_asc().next() {
             // Overlap with existing covered spans. Decrease `high` so it
