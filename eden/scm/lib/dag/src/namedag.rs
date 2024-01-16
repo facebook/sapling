@@ -806,11 +806,61 @@ where
             client_parents.into_iter().collect::<Result<Vec<Id>>>()?;
         }
 
-        // Prepare states used below.
-        let mut prepared_client_segments = PreparedFlatSegments::default();
-        let server_idmap = &clone_data.idmap;
-        let server_idmap_by_name: BTreeMap<&VertexName, Id> =
-            server_idmap.iter().map(|(&id, name)| (name, id)).collect();
+        // Prepare indexes and states used below.
+        /// Query server segments with some indexes.
+        struct ServerState<'a> {
+            seg_by_high: BTreeMap<Id, FlatSegment>,
+            idmap_by_name: BTreeMap<&'a VertexName, Id>,
+            idmap_by_id: &'a BTreeMap<Id, VertexName>,
+        }
+        let server = ServerState {
+            seg_by_high: clone_data
+                .flat_segments
+                .segments
+                .iter()
+                .map(|s| (s.high, s.clone()))
+                .collect(),
+            idmap_by_name: clone_data
+                .idmap
+                .iter()
+                .map(|(&id, name)| (name, id))
+                .collect(),
+            idmap_by_id: &clone_data.idmap,
+        };
+
+        impl<'a> ServerState<'a> {
+            /// Find the segment that contains the (server-side) Id.
+            fn seg_containing_id(&self, server_id: Id) -> Result<&FlatSegment> {
+                let seg = match self.seg_by_high.range(server_id..).next() {
+                    Some((_high, seg)) => {
+                        if seg.low <= server_id && seg.high >= server_id {
+                            Some(seg)
+                        } else {
+                            None
+                        }
+                    }
+                    None => None,
+                };
+                seg.ok_or_else(|| {
+                    DagError::Programming(format!(
+                        "server does not provide segment covering id {}",
+                        server_id
+                    ))
+                })
+            }
+
+            fn name_by_id(&self, id: Id) -> VertexName {
+                self.idmap_by_id
+                    .get(&id)
+                    .expect("IdMap should contain the `id`. It should be checked before.")
+                    .clone()
+            }
+
+            fn id_by_name(&self, name: &VertexName) -> Option<Id> {
+                self.idmap_by_name.get(name).copied()
+            }
+        }
+
         // `taken` is the union of `covered` and `reserved`, mainly used by `find_free_span`.
         let mut taken = {
             // Normally we would want `calculate_initial_reserved` here. But we calculate head
@@ -821,31 +871,8 @@ where
             new.dag().all_ids_in_groups(&[Group::MASTER])?
         };
 
-        // Index used by lookups.
-        let server_seg_by_high: BTreeMap<Id, &FlatSegment> = clone_data
-            .flat_segments
-            .segments
-            .iter()
-            .map(|s| (s.high, s))
-            .collect();
-        let find_server_seg_contains_server_id = |server_id: Id| -> Result<&FlatSegment> {
-            let seg = match server_seg_by_high.range(server_id..).next() {
-                Some((_high, &seg)) => {
-                    if seg.low <= server_id && seg.high >= server_id {
-                        Some(seg)
-                    } else {
-                        None
-                    }
-                }
-                None => None,
-            };
-            seg.ok_or_else(|| {
-                DagError::Programming(format!(
-                    "server does not provide segment covering id {}",
-                    server_id
-                ))
-            })
-        };
+        // Output. Remapped segments to insert.
+        let mut prepared_client_segments = PreparedFlatSegments::default();
 
         // Insert segments by visiting the heads following the `VertexOptions` order.
         //
@@ -864,13 +891,13 @@ where
         // Only the MASTER group supports laziness. So we only care about it.
         for (head, opts) in heads.vertex_options() {
             let mut stack: Vec<&FlatSegment> = vec![];
-            if let Some(&head_server_id) = server_idmap_by_name.get(&head) {
-                let head_server_seg = find_server_seg_contains_server_id(head_server_id)?;
+            if let Some(head_server_id) = server.id_by_name(&head) {
+                let head_server_seg = server.seg_containing_id(head_server_id)?;
                 stack.push(head_server_seg);
             }
 
             while let Some(server_seg) = stack.pop() {
-                let high_vertex = server_idmap[&server_seg.high].clone();
+                let high_vertex = server.name_by_id(server_seg.high);
                 let client_high_id = new
                     .map
                     .vertex_id_with_max_group(&high_vertex, Group::NON_MASTER)
@@ -896,7 +923,7 @@ where
 
                 let parent_server_ids = &server_seg.parents;
                 let parent_names: Vec<VertexName> = {
-                    let iter = parent_server_ids.iter().map(|id| server_idmap[id].clone());
+                    let iter = parent_server_ids.iter().map(|id| server.name_by_id(*id));
                     iter.collect()
                 };
 
@@ -934,7 +961,7 @@ where
                     // Insert missing parents.
                     // First parent, first insertion.
                     for &server_id in missng_parent_server_ids.iter().rev() {
-                        let parent_server_seg = find_server_seg_contains_server_id(server_id)?;
+                        let parent_server_seg = server.seg_containing_id(server_id)?;
                         stack.push(parent_server_seg);
                     }
                     continue;
@@ -951,7 +978,8 @@ where
 
                 // Map the server_seg.low..=server_seg.high to client span.low..=span.high.
                 // Insert to IdMap.
-                for (&server_id, name) in server_idmap.range(server_seg.low..=server_seg.high) {
+                for (&server_id, name) in server.idmap_by_id.range(server_seg.low..=server_seg.high)
+                {
                     let client_id = server_id + span.low.0 - server_seg.low.0;
                     if client_id.group() != Group::MASTER {
                         return Err(crate::Error::IdOverflow(Group::MASTER));
