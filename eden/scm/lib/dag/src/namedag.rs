@@ -927,14 +927,15 @@ where
         //
         // Only the MASTER group supports laziness. So we only care about it.
         for (head, opts) in heads.vertex_options() {
-            let mut stack: Vec<&FlatSegment> = vec![];
+            let mut stack: Vec<Id> = vec![];
             if let Some(head_server_id) = server.id_by_name(&head) {
-                let head_server_seg = server.seg_containing_id(head_server_id)?;
-                stack.push(head_server_seg);
+                let _head_server_seg = server.seg_containing_id(head_server_id)?;
+                stack.push(head_server_id);
             }
 
-            while let Some(server_seg) = stack.pop() {
-                let high_vertex = server.name_by_id(server_seg.high);
+            while let Some(server_high) = stack.pop() {
+                let server_seg = &server.seg_containing_id(server_high)?;
+                let high_vertex = server.name_by_id(server_high);
                 let client_high_id = new
                     .map
                     .vertex_id_with_max_group(&high_vertex, Group::NON_MASTER)
@@ -994,12 +995,11 @@ where
 
                 if !missng_parent_server_ids.is_empty() {
                     // Parents are not ready. Needs revisit this segment after inserting parents.
-                    stack.push(server_seg);
+                    stack.push(server_high);
                     // Insert missing parents.
                     // First parent, first insertion.
                     for &server_id in missng_parent_server_ids.iter().rev() {
-                        let parent_server_seg = server.seg_containing_id(server_id)?;
-                        stack.push(parent_server_seg);
+                        stack.push(server_id);
                     }
                     continue;
                 }
