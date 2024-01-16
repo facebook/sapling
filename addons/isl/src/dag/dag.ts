@@ -13,10 +13,12 @@ import type {RecordOf, List} from 'immutable';
 import {CommitPreview} from '../previews';
 import {BaseDag, type SortProps} from './base_dag';
 import {MutationDag} from './mutation_dag';
+import {Ancestor, AncestorType} from './render';
+import {TextRenderer} from './renderText';
 import {HashSet} from './set';
 import {Record, Map as ImMap, Set as ImSet} from 'immutable';
 import {SelfUpdate} from 'shared/immutableExt';
-import {notEmpty, splitOnce, unwrap} from 'shared/utils';
+import {group, notEmpty, splitOnce, unwrap} from 'shared/utils';
 
 /**
  * Main commit graph type used for preview calculation and queries.
@@ -434,6 +436,94 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
 
     // No match.
     return undefined;
+  }
+
+  /** Yield [Info, Ancestor[]] in order, to be used by the rendering logic. */
+  *dagWalkerForRendering(set?: SetLike): Iterable<['reserve', Hash] | ['row', [Info, Ancestor[]]]> {
+    // We want sortDesc, but want to reuse the comprehensive sortAsc compare logic.
+    // So we use sortAsc here, then reverse it.
+    const sorted =
+      set === undefined
+        ? this.sortAsc(this, {gap: false}).reverse()
+        : this.sortAsc(HashSet.fromHashes(set)).reverse();
+    const renderSet = new Set<Hash>(sorted);
+    // Reserve a column for the public branch.
+    for (const hash of sorted) {
+      if (this.get(hash)?.phase === 'public') {
+        yield ['reserve', hash];
+        break;
+      }
+    }
+    // Render row by row. The main complexity is to figure out the "ancestors",
+    // especially when the provided `set` is a subset of the dag.
+    for (const hash of sorted) {
+      const info = unwrap(this.get(hash));
+      const parents: Hash[] = info?.parents ?? [];
+      // directParents: solid edges
+      // indirectParents: dashed edges
+      // anonymousParents: ----"~"
+      const {directParents, indirectParents, anonymousParents} = group(parents, p => {
+        if (renderSet.has(p)) {
+          return 'directParents';
+        } else if (this.has(p)) {
+          return 'indirectParents';
+        } else {
+          return 'anonymousParents';
+        }
+      });
+      let typedParents: Ancestor[] = (directParents ?? []).map(p => {
+        // We use 'info.ancestors' to fake ancestors as directParents.
+        // Convert them to real ancestors so dashed lines are used.
+        const type = info?.ancestors?.includes(p) ? AncestorType.Ancestor : AncestorType.Parent;
+        return new Ancestor({type, hash: p});
+      });
+      if (anonymousParents != null && anonymousParents.length > 0 && info.ancestors == null) {
+        typedParents.push(new Ancestor({type: AncestorType.Anonymous, hash: undefined}));
+      }
+      if (indirectParents != null && indirectParents.length > 0) {
+        // Indirect parents might connect to "renderSet". Calculate it.
+        // This can be expensive.
+        // PERF: This is currently a dumb implementation and can probably be optimized.
+        const grandParents = this.heads(
+          this.ancestors(this.ancestors(indirectParents).intersect(renderSet)),
+        );
+        // Exclude duplication with faked grand parents, since they are already in typedParents.
+        const newGrandParents = grandParents.subtract(directParents);
+        typedParents = typedParents.concat(
+          newGrandParents.toArray().map(p => new Ancestor({type: AncestorType.Ancestor, hash: p})),
+        );
+      }
+      if (parents.length > 0 && typedParents.length === 0) {
+        // The commit has parents but typedParents is empty (ex. (::indirect & renderSet) is empty).
+        // Add an anonymous parent to indicate the commit is not a root.
+        typedParents.push(new Ancestor({type: AncestorType.Anonymous, hash: undefined}));
+      }
+      yield ['row', [info, typedParents]];
+    }
+  }
+
+  /**
+   * Render the dag in ASCII for debugging purpose.
+   * If `set` is provided, only render a subset of the graph.
+   */
+  renderAscii(set?: SetLike): string {
+    const renderer = new TextRenderer();
+    const renderedRows = ['\n'];
+    for (const [kind, data] of this.dagWalkerForRendering(set)) {
+      if (kind === 'reserve') {
+        renderer.reserve(data);
+      } else {
+        const [info, typedParents] = data;
+        const {hash, title, author, date} = info;
+        const message =
+          [hash, title, author, date.valueOf() < 1000 ? '' : date.toISOString()]
+            .join(' ')
+            .trimEnd() + '\n';
+        const glyph = info?.isHead ? '@' : info?.successorInfo == null ? 'o' : 'x';
+        renderedRows.push(renderer.nextRow(info.hash, typedParents, message, glyph));
+      }
+    }
+    return renderedRows.join('').trimEnd();
   }
 }
 
