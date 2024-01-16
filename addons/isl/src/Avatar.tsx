@@ -91,3 +91,33 @@ export function Avatar({username}: {username: string}) {
     </div>
   );
 }
+
+/** Render as a SVG pattern */
+export function AvatarPattern({
+  username,
+  size,
+  id,
+  fallbackFill,
+}: {
+  username: string;
+  size: number;
+  id: string;
+  fallbackFill: string;
+}) {
+  const storage = useRecoilValueLoadable(avatars);
+  const img = storage.valueMaybe()?.get(username);
+  return (
+    <defs>
+      <pattern
+        id={id}
+        patternUnits="userSpaceOnUse"
+        width={size}
+        height={size}
+        x={-size / 2}
+        y={-size / 2}>
+        <rect width={size} height={size} fill={fallbackFill} strokeWidth={0} />
+        <image href={img} width={size} height={size} />
+      </pattern>
+    </defs>
+  );
+}
