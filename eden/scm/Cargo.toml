@@ -157,6 +157,7 @@ members = [
   "saplingnative/bindings/modules/pyblackbox",
   "saplingnative/bindings/modules/pybytes",
   "saplingnative/bindings/modules/pycats",
+  "saplingnative/bindings/modules/pycbor",
   "saplingnative/bindings/modules/pycext",
   "saplingnative/bindings/modules/pycheckout",
   "saplingnative/bindings/modules/pyclientinfo",

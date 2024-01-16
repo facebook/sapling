@@ -34,6 +34,7 @@ rust_python_library(
         "//eden/scm/saplingnative/bindings/modules/pyblackbox:pyblackbox",
         "//eden/scm/saplingnative/bindings/modules/pybytes:pybytes",
         "//eden/scm/saplingnative/bindings/modules/pycats:pycats",
+        "//eden/scm/saplingnative/bindings/modules/pycbor:pycbor",
         "//eden/scm/saplingnative/bindings/modules/pycext:pycext",
         "//eden/scm/saplingnative/bindings/modules/pycheckout:pycheckout",
         "//eden/scm/saplingnative/bindings/modules/pyclientinfo:pyclientinfo",

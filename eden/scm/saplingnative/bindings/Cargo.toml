@@ -14,6 +14,7 @@ pyauth = { version = "0.1.0", path = "modules/pyauth" }
 pyblackbox = { version = "0.1.0", path = "modules/pyblackbox" }
 pybytes = { version = "0.1.0", path = "modules/pybytes" }
 pycats = { version = "0.1.0", path = "modules/pycats" }
+pycbor = { version = "0.1.0", path = "modules/pycbor" }
 pycext = { version = "0.1.0", path = "modules/pycext" }
 pycheckout = { version = "0.1.0", path = "modules/pycheckout" }
 pyclientinfo = { version = "0.1.0", path = "modules/pyclientinfo" }

@@ -42,6 +42,7 @@ pub(crate) fn populate_module(py: Python<'_>, module: &PyModule) -> PyResult<PyN
             blackbox,
             bytes,
             cats,
+            cbor,
             cext,
             checkout,
             clientinfo,
