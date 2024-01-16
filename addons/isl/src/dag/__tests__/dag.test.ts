@@ -528,6 +528,7 @@ describe('Dag', () => {
       "
       o  c
       │
+      :
       o  a"
     `);
     // [b, d] subset: indents "d" (draft), and "b" has an "~".
@@ -536,6 +537,7 @@ describe('Dag', () => {
         o  d
         │
       ╭─╯
+      :
       o  b
       │
       │

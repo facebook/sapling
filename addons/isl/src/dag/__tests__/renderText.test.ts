@@ -289,21 +289,25 @@ describe('renderText', () => {
       ╭─╯
       o  F
       │
-      ╷ o  X
-      ╷ │
-      ╭─╯
+      :
+      │ o  X
+      │ │
+      ├─╯
       │ o  W
       │ │
       ├─╯
       o  E
       │
+      :
       o    D
       │
       ├─╮
+      │ :
       │ o  C
       │ │
-      o ╷  B
-      │ ╷
+      │ :
+      o │  B
+      │ │
       ├─╯
       o  A"
     `);
@@ -691,11 +695,12 @@ describe('renderText', () => {
             o  E
             │
       ╭─┬─┬─┤
-      ╷ o │ ╷  D
-      ╷ │ │ ╷
-      ╭─┴─╮ ╷
-      │   o ╷  C
-      │   │ ╷
+      : │ │ :
+      │ o │ │  D
+      │ │ │ │
+      ╭─┴─╮ │
+      │   o │  C
+      │   │ │
       │   ├─╯
       o   │  B
       │   │
@@ -707,7 +712,7 @@ describe('renderText', () => {
             o  E
             │  # top pad
       ╭─┬─┬─┤  # link line
-      ╷ │ │ ╷  # pad line
+      : │ │ :  # pad line
       --------------------
         o      D
         │      # top pad

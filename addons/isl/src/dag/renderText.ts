@@ -17,7 +17,7 @@ const GLYPHYS = {
   SPACE: '  ',
   HORIZONTAL: '──',
   PARENT: '│ ',
-  ANCESTOR: '╷ ',
+  ANCESTOR: ': ',
   MERGE_LEFT: '╯ ',
   MERGE_RIGHT: '╰─',
   MERGE_BOTH: '┴─',
@@ -219,7 +219,11 @@ export class TextRenderer {
       pushWithMessageLine([...basePadLine], '# pad line');
       out.push('-'.repeat(20) + '\n');
     } else {
-      for (const msg of messageIter) {
+      const messageRest = [...messageIter];
+      if (messageRest.length === 0 && basePadLine.includes(toGlyph(PadLine.Ancestor))) {
+        messageRest.push('');
+      }
+      for (const msg of messageRest) {
         const padLine: string[] = [...basePadLine];
         pushWithMessageLine(padLine, msg);
         needExtraPadLine = false;

@@ -127,6 +127,16 @@ class Columns {
     return columns.length - 1;
   }
 
+  convertAncestorToParent() {
+    const columns = this.inner;
+    for (let i = 0; i < columns.length; i++) {
+      const {type, hash} = columns[i];
+      if (type === ColumnType.Ancestor && hash != null) {
+        columns[i] = new Column({type: ColumnType.Parent, hash});
+      }
+    }
+  }
+
   reset(): void {
     let columns = this.inner;
     columns = columns.map(column => column.reset());
@@ -628,6 +638,9 @@ export class Renderer {
         linkBoth(i, orValue);
       }
     }
+
+    // Only show ":" once per branch.
+    this.columns.convertAncestorToParent();
 
     // Now that we have assigned all the columns, reset their state.
     this.columns.reset();
