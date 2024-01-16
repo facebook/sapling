@@ -11,6 +11,7 @@ import React, {useRef, useLayoutEffect} from 'react';
 type ReorderGroupProps = {
   children: React.ReactElement[];
   animationDuration?: number;
+  animationMinPixel?: number;
 };
 
 type PreviousState = {
@@ -40,14 +41,15 @@ const emptyPreviousState: Readonly<PreviousState> = {
 export const AnimatedReorderGroup: React.FC<ReorderGroupProps> = ({
   children,
   animationDuration,
+  animationMinPixel,
   ...props
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const previousStateRef = useRef<Readonly<PreviousState>>(emptyPreviousState);
 
   useLayoutEffect(() => {
-    updatePreviousState(containerRef, previousStateRef, true, animationDuration);
-  }, [children, animationDuration]);
+    updatePreviousState(containerRef, previousStateRef, true, animationDuration, animationMinPixel);
+  }, [children, animationDuration, animationMinPixel]);
 
   // Try to get the rects of old children right before rendering new children
   // and calling the LayoutEffect callback. This captures position changes
@@ -76,6 +78,7 @@ function updatePreviousState(
   previousStateRef: React.MutableRefObject<Readonly<PreviousState>>,
   animate = false,
   animationDuration = 200,
+  animationMinPixel = 5,
 ) {
   const elements = scanElements(containerRef);
   const idList: Array<string> = [];
@@ -93,10 +96,12 @@ function updatePreviousState(
         // Animate from old to the new (current) rect.
         const dx = oldBox.left - newBox.left;
         const dy = oldBox.top - newBox.top;
-        element.animate(
-          [{transform: `translate(${dx}px,${dy}px)`}, {transform: 'translate(0,0)'}],
-          {duration: animationDuration, easing: 'ease-out'},
-        );
+        if (Math.abs(dx) + Math.abs(dy) > animationMinPixel) {
+          element.animate(
+            [{transform: `translate(${dx}px,${dy}px)`}, {transform: 'translate(0,0)'}],
+            {duration: animationDuration, easing: 'ease-out'},
+          );
+        }
       }
     }
     rectMap.set(reorderId, newBox);
