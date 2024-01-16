@@ -299,6 +299,41 @@ async fn test_pull_remap() {
 }
 
 #[tokio::test]
+async fn test_pull_split() {
+    // Check that the client can split server segments for defragmentation purpose.
+    // This just tests the basic feature.
+    let mut server = TestDag::new();
+    server.drawdag(
+        r#"
+        A1..A9--B1..B9--D  B5-D  C5-D
+               \      /
+                C1..C9
+    "#,
+        &["D"],
+    );
+    let data = server.export_pull_data("", "D").await.unwrap();
+
+    // Import only the B5 branch without importing the segment containing B5 (head: B9).
+    let mut client = server.client().await;
+    client.import_pull_data(data.clone(), "B5").await.unwrap();
+    assert!(!client.contains_vertex_locally("B9"));
+    // There is only one flat segment.
+    assert_eq!(
+        client.dump_state().await,
+        "<spans [A1:B5+0:13]>\nLv0: RH0-13[]\n0->A1 8->A9 13->B5"
+    );
+
+    // Import only the C5 branch without importing the segment containing C5 (head: C9).
+    let mut client = server.client().await;
+    client.import_pull_data(data, "C5").await.unwrap();
+    assert!(!client.contains_vertex_locally("C9"));
+    assert_eq!(
+        client.dump_state().await,
+        "<spans [A1:C5+0:13]>\nLv0: RH0-13[]\n0->A1 8->A9 9->C1 13->C5"
+    );
+}
+
+#[tokio::test]
 async fn test_pull_overlap() {
     let mut server = TestDag::new();
     server.drawdag("A-B-C-D-E-F", &["F"]);

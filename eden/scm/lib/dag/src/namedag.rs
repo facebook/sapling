@@ -813,7 +813,7 @@ where
             idmap_by_name: BTreeMap<&'a VertexName, Id>,
             idmap_by_id: &'a BTreeMap<Id, VertexName>,
         }
-        let server = ServerState {
+        let mut server = ServerState {
             seg_by_high: clone_data
                 .flat_segments
                 .segments
@@ -934,7 +934,14 @@ where
             }
 
             while let Some(server_high) = stack.pop() {
-                let server_seg = &server.seg_containing_id(server_high)?;
+                let mut server_seg = server.seg_containing_id(server_high)?;
+                if server_high < server_seg.high {
+                    // Split the segment for more efficient high level segments.
+                    let seg_high = server_seg.high;
+                    server.split_seg(seg_high, server_high);
+                    server_seg = server.seg_containing_id(server_high)?;
+                    assert_eq!(server_high, server_seg.high);
+                }
                 let high_vertex = server.name_by_id(server_high);
                 let client_high_id = new
                     .map
