@@ -1,0 +1,27 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.render-dag,
+.render-dag-row-left-side {
+  display: flex;
+  flex-direction: column;
+}
+
+.render-dag-row,
+.render-dag-row-left-side-line {
+  display: flex;
+  flex-direction: row;
+  flex-grow: 0;
+}
+
+.render-dag-row-left-side-line.pad-line1 {
+  flex-grow: 1;
+}
+
+.render-dag-row-right-side {
+  flex-grow: 1;
+}
