@@ -33,21 +33,34 @@ pub fn convert_to_remote(config: &dyn Config, bookmark: &str) -> Result<String> 
 }
 
 /// Download initial commit data via fast pull endpoint. Returns hash of bookmarks, if any.
-#[instrument(skip_all, fields(?bookmarks))]
+///
+/// The order of `bookmark_names` matters. The first bookmark is more optimized, and
+/// should usually be the main branch.
+#[instrument(skip_all, fields(?bookmark_names))]
 pub fn clone(
     config: &dyn Config,
     edenapi: Arc<dyn EdenApi>,
     metalog: &mut MetaLog,
     commits: &mut Box<dyn DagCommits + Send + 'static>,
-    bookmarks: Vec<String>,
+    bookmark_names: Vec<String>,
 ) -> Result<BTreeMap<String, HgId>> {
-    let bookmarks = block_on(edenapi.bookmarks(bookmarks))?.map_err(|e| e.tag_network())?;
+    // The "bookmarks" API result is unordered.
+    let bookmarks =
+        block_on(edenapi.bookmarks(bookmark_names.clone()))?.map_err(|e| e.tag_network())?;
     let bookmarks = bookmarks
         .into_iter()
         .filter_map(|bm| bm.hgid.map(|id| (bm.bookmark, id)))
         .collect::<BTreeMap<String, HgId>>();
 
-    let heads = bookmarks.values().cloned().collect();
+    // Preserve the order.
+    let heads: Vec<HgId> = bookmark_names
+        .iter()
+        .filter_map(|name| bookmarks.get(name).cloned())
+        .collect();
+    let head_vertexes: Vec<VertexName> = heads
+        .iter()
+        .map(|h| VertexName::copy_from(h.as_ref()))
+        .collect();
     let clone_data = if config.get_or_default::<bool>("clone", "use-commit-graph")? {
         let segments =
             block_on(edenapi.commit_graph_segments(heads, vec![]))?.map_err(|e| e.tag_network())?;
@@ -57,7 +70,15 @@ pub fn clone(
             .map_err(|e| e.tag_network())?
             .convert_vertex(|n| VertexName::copy_from(&n.into_byte_array()))
     };
-    block_on(commits.import_clone_data(clone_data))??;
+
+    if config.get_or_default::<bool>("clone", "use-import-clone")? {
+        block_on(commits.import_clone_data(clone_data))??;
+    } else {
+        // All lazy heads should be in the MASTER group.
+        let mut head_opts =
+            VertexListWithOptions::from(head_vertexes).with_highest_group(Group::MASTER);
+        block_on(commits.import_pull_data(clone_data, &head_opts))??;
+    }
 
     let all = block_on(commits.all())??;
     let tip = block_on(all.first())??;
