@@ -59,7 +59,7 @@ function storeCachedAvatars(avatars: Map<string, string>) {
 
 const avatars = selector<Map<string, string>>({
   key: 'avatars',
-  get: async ({get}) => {
+  get: ({get}) => {
     const authors = get(uniqueAuthors);
 
     const found = getCachedAvatars(authors);
@@ -71,11 +71,14 @@ const avatars = selector<Map<string, string>>({
       type: 'fetchAvatars',
       authors,
     });
-    const result = await serverAPI.nextMessageMatching('fetchedAvatars', () => true);
 
-    storeCachedAvatars(result.avatars);
+    return (async () => {
+      const result = await serverAPI.nextMessageMatching('fetchedAvatars', () => true);
 
-    return result.avatars;
+      storeCachedAvatars(result.avatars);
+
+      return result.avatars;
+    })();
   },
 });
 
