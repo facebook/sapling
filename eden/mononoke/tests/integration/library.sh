@@ -941,13 +941,16 @@ function setup_mononoke_repo_config {
   local reponame="$1"
   local reponame_urlencoded
   reponame_urlencoded="$(urlencode encode "$reponame")"
+  everstore_local_path="$TESTTMP/everstore_${reponame_urlencoded}"
   local storageconfig="$2"
   mkdir -p "repos/$reponame_urlencoded"
   mkdir -p "repo_definitions/$reponame_urlencoded"
   mkdir -p "$TESTTMP/monsql"
   mkdir -p "$TESTTMP/$reponame_urlencoded"
+  mkdir -p "$everstore_local_path"
   cat > "repos/$reponame_urlencoded/server.toml" <<CONFIG
 hash_validation_percentage=100
+everstore_local_path="$everstore_local_path"
 CONFIG
 
   cat > "repo_definitions/$reponame_urlencoded/server.toml" <<CONFIG
