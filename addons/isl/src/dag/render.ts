@@ -352,10 +352,12 @@ export enum PadLine {
  *
  * ```plain
  *   o      F                     // node line
+ *   │      very long message 0   // top pad line (repeatable)
+ *   │      very long message 0   // top pad line
  *   ├─┬─╮  very long message 1   // link line
  *   │ │ │  very long message 2   // term line
  *   │ │ ~  very long message 3   // term line
- *   │ │                          // pad line
+ *   │ │                          // pad line (repeatable)
  *   │ │    very long message 4   // pad line
  * ```
  */
@@ -364,6 +366,8 @@ export type GraphRow = {
   merge: boolean;
   /**  The node columns for this row */
   nodeLine: Array<NodeLine>;
+  /** The pad columns before the link columns. They are optional to render. */
+  topPadLines: Array<PadLine>;
   /** The link columns for this row, if a link row is necessary */
   linkLine?: Array<LinkLine>;
   /**
@@ -419,6 +423,10 @@ export class Renderer {
     const nodeLine: NodeLine[] = this.columns.inner.map(c => c.toNodeLine());
     nodeLine[column] = NodeLine.Node;
 
+    // Build the initial pad line before the link line.
+    const topPadLines: PadLine[] = this.columns.inner.map(c => c.toPadLine());
+    topPadLines[column] = isRoot ? PadLine.Blank : PadLine.Parent;
+
     // Build the initial link line.
     const linkLine: LinkLine[] = this.columns.inner.map(c => c.toLinkLine());
     let needLinkLine = false;
@@ -456,6 +464,7 @@ export class Renderer {
       // There are no empty columns left. Make a new column.
       parentColumns.set(this.columns.inner.length, p);
       nodeLine.push(NodeLine.Blank);
+      topPadLines.push(PadLine.Blank);
       padLines.push(PadLine.Blank);
       linkLine.push(LinkLine.empty());
       termLine.push(false);
@@ -560,6 +569,7 @@ export class Renderer {
       hash,
       merge,
       nodeLine,
+      topPadLines,
       linkLine: optionalLinkLine,
       termLine: optionalTermLine,
       padLines,

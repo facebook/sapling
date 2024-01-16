@@ -83,6 +83,13 @@ export class TextRenderer {
     });
     pushWithMessageLine(outNodeLine);
 
+    // Render the top pad lines.
+    const outTopPadLine: string[] = [];
+    for (const entry of line.topPadLines) {
+      outTopPadLine.push(toGlyph(entry));
+    }
+    pushWithMessageLine(outTopPadLine);
+
     // Render the link line.
     const linkLine = line.linkLine;
     if (linkLine != null) {

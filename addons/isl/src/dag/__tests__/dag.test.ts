@@ -510,10 +510,12 @@ describe('Dag', () => {
     expect(dag.renderAscii()).toMatchInlineSnapshot(`
       "
         o  d
+        │
       ╭─╯
       o  c
       │
       o    b
+      │
       ├─╮
       o │  a
         │
@@ -525,15 +527,17 @@ describe('Dag', () => {
     expect(dag.renderAscii(['a', 'c'])).toMatchInlineSnapshot(`
       "
       o  c
-      ╷
+      │
       o  a"
     `);
     // [b, d] subset: indents "d" (draft), and "b" has an "~".
     expect(dag.renderAscii(['b', 'd'])).toMatchInlineSnapshot(`
       "
         o  d
+        │
       ╭─╯
       o  b
+      │
       │
       ~"
     `);

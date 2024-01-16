@@ -285,20 +285,25 @@ describe('renderText', () => {
         o  Z
         │
         o  Y
+        │
       ╭─╯
       o  F
-      ╷
+      │
       ╷ o  X
+      ╷ │
       ╭─╯
       │ o  W
+      │ │
       ├─╯
       o  E
-      ╷
+      │
       o    D
+      │
       ├─╮
       │ o  C
-      │ ╷
+      │ │
       o ╷  B
+      │ ╷
       ├─╯
       o  A"
     `);
@@ -321,8 +326,10 @@ describe('renderText', () => {
       o  W
       │
       o    V
+      │
       ├─╮
       │ o    U
+      │ │
       │ ├─╮
       │ │ o  T
       │ │ │
@@ -331,34 +338,42 @@ describe('renderText', () => {
       o   │  R
       │   │
       o   │  Q
+      │   │
       ├─╮ │
       │ o │    P
+      │ │ │
       │ ├───╮
       │ │ │ o  O
       │ │ │ │
       │ │ │ o    N
+      │ │ │ │
       │ │ │ ├─╮
       │ o │ │ │  M
       │ │ │ │ │
       │ o │ │ │  L
       │ │ │ │ │
       o │ │ │ │  K
+      │ │ │ │ │
       ├───────╯
       o │ │ │  J
       │ │ │ │
       o │ │ │  I
+      │ │ │ │
       ├─╯ │ │
       o   │ │  H
       │   │ │
       o   │ │  G
+      │   │ │
       ├─────╮
       │   │ o  F
+      │   │ │
       │   ├─╯
       │   o  E
       │   │
       o   │  D
       │   │
       o   │  C
+      │   │
       ├───╯
       o  B
       │
@@ -370,24 +385,33 @@ describe('renderText', () => {
     expect(render(TEST_DIFFERENT_ORDERS1)).toMatchInlineSnapshot(`
       "
       o    K
+      │
       ├─╮
       │ o    J
+      │ │
       │ ├─╮
       │ │ o    I
+      │ │ │
       │ │ ├─╮
       │ │ │ o    H
+      │ │ │ │
       │ │ │ ├─╮
       │ │ │ │ o    G
+      │ │ │ │ │
       │ │ │ │ ├─╮
       o │ │ │ │ │  F
       │ │ │ │ │ │
       │ o │ │ │ │  E
+      │ │ │ │ │ │
       ├─╯ │ │ │ │
       │   o │ │ │  D
+      │   │ │ │ │
       ├───╯ │ │ │
       │     o │ │  C
+      │     │ │ │
       ├─────╯ │ │
       │       o │  B
+      │       │ │
       ├───────╯ │
       │         o  Z
       │
@@ -399,26 +423,35 @@ describe('renderText', () => {
     expect(render(TEST_DIFFERENT_ORDERS2)).toMatchInlineSnapshot(`
       "
       o    K
+      │
       ├─╮
       │ o    J
+      │ │
       │ ├─╮
       │ │ o    I
+      │ │ │
       │ │ ├─╮
       │ │ │ o    H
+      │ │ │ │
       │ │ │ ├─╮
       │ │ │ │ o    G
+      │ │ │ │ │
       │ │ │ │ ├─╮
       │ │ │ │ │ o  Z
       │ │ │ │ │
       │ │ │ │ o  B
       │ │ │ │ │
       │ │ │ o │  C
+      │ │ │ │ │
       │ │ │ ├─╯
       │ │ o │  D
+      │ │ │ │
       │ │ ├─╯
       │ o │  E
+      │ │ │
       │ ├─╯
       o │  F
+      │ │
       ├─╯
       o  A"
     `);
@@ -428,26 +461,35 @@ describe('renderText', () => {
     expect(render(TEST_DIFFERENT_ORDERS3)).toMatchInlineSnapshot(`
       "
       o    K
+      │
       ├─╮
       │ o  J
       │ │
       o │    F
+      │ │
       ├───╮
       │ │ o  I
+      │ │ │
       │ ├─╯
       o │    E
+      │ │
       ├───╮
       │ │ o  H
+      │ │ │
       │ ├─╯
       o │    D
+      │ │
       ├───╮
       │ │ o  G
+      │ │ │
       │ ├─╯
       o │    C
+      │ │
       ├───╮
       │ │ o  Z
       │ │
       o │  B
+      │ │
       ├─╯
       o  A"
     `);
@@ -457,26 +499,35 @@ describe('renderText', () => {
     expect(render(TEST_DIFFERENT_ORDERS4)).toMatchInlineSnapshot(`
       "
       o    K
+      │
       ├─╮
       o │  F
       │ │
       │ o    J
+      │ │
       │ ├─╮
       │ o │  E
+      │ │ │
       ├─╯ │
       │   o  I
+      │   │
       │ ╭─┤
       │ │ o  D
+      │ │ │
       ├───╯
       │ o    H
+      │ │
       │ ├─╮
       │ o │  C
+      │ │ │
       ├─╯ │
       │   o  G
+      │   │
       │ ╭─┤
       │ o │  Z
       │   │
       │   o  B
+      │   │
       ├───╯
       o  A"
     `);
@@ -486,10 +537,10 @@ describe('renderText', () => {
     expect(render(TEST_LONG_MESSAGES)).toMatchInlineSnapshot(`
       "
       o      F
-      ├─┬─╮  very long message 1
-      │ │ │  very long message 2
-      │ │ ~  very long message 3
-      │ │
+      │      very long message 1
+      ├─┬─╮  very long message 2
+      │ │ │  very long message 3
+      │ │ ~
       │ │    very long message 4
       │ │    very long message 5
       │ │    very long message 6
@@ -499,16 +550,16 @@ describe('renderText', () => {
       │ o  D
       │ │
       o │  C
-      ├─╯  long message 1
-      │    long message 2
+      │ │  long message 1
+      ├─╯  long message 2
       │    long message 3
       │
       o  B
       │
       o  A
       │  long message 1
-      ~  long message 2
-         long message 3"
+      │  long message 2
+      ~  long message 3"
     `);
   });
 
@@ -516,22 +567,29 @@ describe('renderText', () => {
     expect(render(TEST_OCTOPUS_BRANCH_AND_MERGE)).toMatchInlineSnapshot(`
       "
       o      J
+      │
       ├─┬─╮
       │ │ o  I
       │ │ │
       │ o │      H
+      │ │ │
       ╭─┼─┬─┬─╮
       │ │ │ │ o  G
       │ │ │ │ │
       │ │ │ o │  E
+      │ │ │ │ │
       │ │ │ ├─╯
       │ │ o │  D
+      │ │ │ │
       │ │ ├─╮
       │ o │ │  C
+      │ │ │ │
       │ ├───╯
       o │ │  F
+      │ │ │
       ├─╯ │
       o   │  B
+      │   │
       ├───╯
       o  A"
     `);
@@ -545,12 +603,15 @@ describe('renderText', () => {
         o  Y
         │
         o  X
+        │
       ╭─╯
       │ o  W
+      │ │
       ├─╯
       o  G
       │
       o    F
+      │
       ├─╮
       │ o  E
       │ │
@@ -568,12 +629,16 @@ describe('renderText', () => {
     expect(render(TEST_SPLIT_PARENTS)).toMatchInlineSnapshot(`
       "
             o  E
+            │
       ╭─┬─┬─┤
       ╷ o │ ╷  D
+      ╷ │ │ ╷
       ╭─┴─╮ ╷
       │   o ╷  C
+      │   │ ╷
       │   ├─╯
       o   │  B
+      │   │
       ├───╯
       o  A"
     `);
@@ -585,8 +650,10 @@ describe('renderText', () => {
         o  K
         │
         │ o  J
+        │ │
         ├─╯
         o    I
+        │
       ╭─┼─╮
       │ │ │
       │ ~ │
@@ -594,14 +661,17 @@ describe('renderText', () => {
       o   │  E
       │   │
       │   o  H
+      │   │
       ├───╯
       o  D
+      │
       │
       ~
 
       o  C
       │
       o  B
+      │
       │
       ~"
     `);
