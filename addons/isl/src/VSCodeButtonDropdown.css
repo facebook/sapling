@@ -8,7 +8,7 @@
 .vscode-button-dropdown {
   --chevron-width: 20px;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   position: relative;
 }
 .vscode-button-dropdown-chevron {
@@ -41,12 +41,9 @@
 
   cursor: pointer;
   width: 24px;
-  border: none;
   border-radius: 0px 2px 2px 0px; /* meet with button */
   outline: none;
-  padding: 4px;
   outline-offset: 2px;
-  height: 26px;
   vertical-align: bottom;
   appearance: none;
   line-height: 0;
@@ -64,12 +61,14 @@ body[data-vscode-theme-id='Default Dark Modern'] .vscode-button-dropdown select 
 .vscode-button-dropdown .codicon.codicon-chevron-down {
   color: var(--button-secondary-foreground);
   position: absolute;
+  top: calc(50% - 0.5em);
   right: calc(var(--halfpad) - 1px);
   pointer-events: none;
 }
 
 .vscode-button-dropdown vscode-button {
-  border-radius: 2px 0 0 2px;
+  border-bottom-right-radius: 0px;
+  border-top-right-radius: 0px;
 }
 
 .vscode-button-dropdown select:focus {
