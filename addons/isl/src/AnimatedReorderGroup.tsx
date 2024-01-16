@@ -48,7 +48,15 @@ export const AnimatedReorderGroup: React.FC<ReorderGroupProps> = ({
   const previousStateRef = useRef<Readonly<PreviousState>>(emptyPreviousState);
 
   useLayoutEffect(() => {
-    updatePreviousState(containerRef, previousStateRef, true, animationDuration, animationMinPixel);
+    const preferReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const animate = !preferReducedMotion;
+    updatePreviousState(
+      containerRef,
+      previousStateRef,
+      animate,
+      animationDuration,
+      animationMinPixel,
+    );
   }, [children, animationDuration, animationMinPixel]);
 
   // Try to get the rects of old children right before rendering new children
