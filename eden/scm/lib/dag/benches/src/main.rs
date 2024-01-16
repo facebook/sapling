@@ -10,9 +10,19 @@ mod inprocess_iddag_serde;
 mod segment_sizes;
 mod spanset;
 
+use minibench::bench_enabled;
+
 fn main() {
-    dag_ops::main();
-    inprocess_iddag_serde::main();
-    spanset::main();
-    segment_sizes::main();
+    if bench_enabled("dag_ops") {
+        dag_ops::main();
+    }
+    if bench_enabled("inprocess_iddag_serde") {
+        inprocess_iddag_serde::main();
+    }
+    if bench_enabled("spanset") {
+        spanset::main();
+    }
+    if bench_enabled("segment_sizes") {
+        segment_sizes::main();
+    }
 }
