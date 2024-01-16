@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {DagCommitInfo} from './dag/dag';
 import type {CommitInfo, SuccessorInfo} from './types';
 import type {Snapshot} from 'recoil';
 import type {ContextMenuItem} from 'shared/ContextMenu';
@@ -109,10 +110,12 @@ export const Commit = memo(
     commit,
     previewType,
     hasChildren,
+    bodyOnly = false,
   }: {
-    commit: CommitInfo;
+    commit: DagCommitInfo | CommitInfo;
     previewType?: CommitPreview;
     hasChildren: boolean;
+    bodyOnly?: boolean;
   }) => {
     const setDrawerState = useSetRecoilState(islDrawerState);
     const isPublic = commit.phase === 'public';
@@ -207,7 +210,7 @@ export const Commit = memo(
         }
       }
       if (!isPublic && !actionsPrevented) {
-        items.push({type: 'divider'});
+        bodyOnly || items.push({type: 'divider'});
         if (isAmendToAllowedForCommit(commit, snapshot)) {
           items.push({
             label: <T>Amend changes to here</T>,
@@ -326,6 +329,14 @@ export const Commit = memo(
       );
     }
 
+    if (bodyOnly && (commit as DagCommitInfo).isYouAreHere) {
+      return (
+        <div className="head-commit-info">
+          <UncommittedChanges place="main" />
+        </div>
+      );
+    }
+
     return (
       <div
         className={
@@ -333,11 +344,12 @@ export const Commit = memo(
           (commit.isHead ? ' head-commit' : '') +
           (commit.successorInfo != null ? ' obsolete' : '') +
           (isHighlighted ? ' highlighted' : '') +
-          (isPublic || hasChildren ? '' : ' topmost')
+          (isPublic || hasChildren || bodyOnly ? '' : ' topmost')
         }
         onContextMenu={contextMenu}
         data-testid={`commit-${commit.hash}`}>
         {!isNonActionable &&
+        !bodyOnly &&
         (commit.isHead || previewType === CommitPreview.GOTO_PREVIOUS_LOCATION) ? (
           <HeadCommitInfo commit={commit} previewType={previewType} hasChildren={hasChildren} />
         ) : null}
@@ -353,7 +365,7 @@ export const Commit = memo(
             draggable={!isPublic && isDraggablePreview(previewType)}
             onClick={onClickToSelect}
             onDoubleClick={onDoubleClickToShowDrawer}>
-            <Avatar username={commit.author} />
+            {bodyOnly || <Avatar username={commit.author} />}
             {isPublic ? null : (
               <span className="commit-title">
                 <span>{title}</span>

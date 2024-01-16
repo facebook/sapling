@@ -307,3 +307,21 @@
   font-size: 90%;
   background-color: var(--hover-darken);
 }
+
+.render-dag.commit-tree-root {
+  margin-left: calc(1.5 * var(--pad));
+  margin-top: calc(2px + var(--halfpad));
+}
+
+.render-dag .commit {
+  top: calc(-2px - var(--halfpad));
+}
+
+.render-dag .selected-commit-background {
+  width: calc(100% + var(--halfpad));
+  left: calc(0px - var(--halfpad));
+}
+
+.render-dag .head-commit-info {
+  margin-left: var(--halfpad);
+}
