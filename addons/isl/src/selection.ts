@@ -14,7 +14,7 @@ import {useSelectAllCommitsShortcut} from './SelectAllCommits';
 import {latestSuccessorUnlessExplicitlyObsolete, successionTracker} from './SuccessionTracker';
 import {islDrawerState} from './drawerState';
 import {HideOperation} from './operations/HideOperation';
-import {dagWithPreviews, treeWithPreviews} from './previews';
+import {dagWithPreviews} from './previews';
 import {latestDag, operationBeingPreviewed} from './serverAPIState';
 import {firstOfIterable} from './utils';
 import {atom, selector, useRecoilCallback, useRecoilValue} from 'recoil';
@@ -172,22 +172,9 @@ export function useCommitSelection(hash: string): {
 export const linearizedCommitHistory = selector({
   key: 'linearizedCommitHistory',
   get: ({get}) => {
-    const {trees} = get(treeWithPreviews);
-
-    const toProcess = [...trees];
-    const accum = [];
-
-    while (toProcess.length > 0) {
-      const next = toProcess.pop();
-      if (!next) {
-        break;
-      }
-
-      accum.push(next.info);
-      toProcess.push(...next.children);
-    }
-
-    return accum;
+    const dag = get(dagWithPreviews);
+    const sorted: Hash[] = dag.sortAsc(dag, {gap: false});
+    return dag.getBatch(sorted);
   },
 });
 
