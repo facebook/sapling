@@ -268,7 +268,7 @@ impl ChangesetKey<HgChangesetId> {
 
 bitflags! {
     /// Some derived data needs unodes as precondition, flags represent what is available in a compact way
-    #[derive(Default)]
+    #[derive(Default, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Clone, Copy)]
     pub struct UnodeFlags: u8 {
         const NONE = 0b00000000;
         const BLAME = 0b00000001;

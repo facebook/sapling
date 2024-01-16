@@ -53,6 +53,7 @@ bitflags! {
     /// | untracked | no       | no       | no         | no      |
     /// | ignored   | no       | no       | no         | yes     |
     #[cfg_attr(test, derive(Default))]
+    #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Clone, Copy)]
     pub struct StateFlags: u16 {
         /// Exist in the first working parent.
         const EXIST_P1 = 1;
@@ -84,7 +85,7 @@ bitflags! {
 
 impl StateFlags {
     pub fn to_bits(self) -> u16 {
-        self.bits
+        self.bits()
     }
 }
 

@@ -71,6 +71,7 @@ pub struct IdSegment {
 // only 1 byte overhead.
 
 bitflags! {
+    #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Clone, Copy)]
     pub struct SegmentFlags: u8 {
         /// This segment has roots (i.e. there is at least one id in
         /// `low..=high`, `parents(id)` is empty).
@@ -327,7 +328,7 @@ mod tests {
         );
         assert_eq!(
             describe_segment_bytes(&seg.0),
-            r#"# 02: Flags = ONLY_HEAD
+            r#"# 02: Flags = SegmentFlags(ONLY_HEAD)
 # 03: Level = 3
 # 00 00 00 00 00 00 00 ca: High = 202
 # 65: Delta = 101 (Low = 101)

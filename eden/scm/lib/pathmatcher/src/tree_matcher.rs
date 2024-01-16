@@ -23,6 +23,7 @@ use crate::DirectoryMatch;
 use crate::Matcher;
 
 bitflags! {
+    #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Clone, Copy)]
     struct RuleFlags: u8 {
         // A negative rule.
         const NEGATIVE = 1;

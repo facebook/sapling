@@ -62,6 +62,7 @@ pub struct MutationStore {
 }
 
 bitflags! {
+    #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Clone, Copy)]
     pub struct DagFlags: u8 {
         /// Include successors.
         const SUCCESSORS = 0b1;

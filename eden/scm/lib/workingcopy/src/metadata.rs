@@ -27,6 +27,7 @@ pub(crate) struct File {
 }
 
 bitflags! {
+    #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Clone, Copy)]
     pub(crate) struct MetadataFlags: u8 {
         const IS_SYMLINK = 1 << 0;
         const IS_EXEC = 1 << 1;

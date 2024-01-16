@@ -938,7 +938,7 @@ mod tests {
             describe_indexedlog_entry(bytes),
             r#"# f0: MAGIC_REWRITE_LAST_FLAT
 # 00 00 00 00 00 00 00 00 05: Previous index Level = 0, Head = 5
-# 01: Flags = HAS_ROOT
+# 01: Flags = SegmentFlags(HAS_ROOT)
 # 00: Level = 0
 # 00 00 00 00 00 00 00 0a: High = 10
 # 0a: Delta = 10 (Low = 0)
@@ -952,7 +952,7 @@ mod tests {
             describe_indexedlog_entry(bytes),
             r#"# f1: MAGIC_REMOVE_SEGMENT
 # 00: Max Level = 0
-# 01: Flags = HAS_ROOT
+# 01: Flags = SegmentFlags(HAS_ROOT)
 # 00: Level = 0
 # 00 00 00 00 00 00 00 0a: High = 10
 # 0a: Delta = 10 (Low = 0)

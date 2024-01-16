@@ -210,8 +210,8 @@ pub enum PadLine {
 
 bitflags! {
     /// A column in a linking row.
-    #[derive(Default)]
     #[cfg_attr(feature = "serialize", derive(Serialize))]
+    #[derive(Default, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Clone, Copy)]
     pub struct LinkLine: u16 {
         /// This cell contains a horizontal line that connects to a parent.
         const HORIZ_PARENT = 0b0_0000_0000_0001;
@@ -258,15 +258,15 @@ bitflags! {
         /// line, and other nodes that are also connected vertically.
         const CHILD = 0b1_0000_0000_0000;
 
-        const HORIZONTAL = Self::HORIZ_PARENT.bits | Self::HORIZ_ANCESTOR.bits;
-        const VERTICAL = Self::VERT_PARENT.bits | Self::VERT_ANCESTOR.bits;
-        const LEFT_FORK = Self::LEFT_FORK_PARENT.bits | Self::LEFT_FORK_ANCESTOR.bits;
-        const RIGHT_FORK = Self::RIGHT_FORK_PARENT.bits | Self::RIGHT_FORK_ANCESTOR.bits;
-        const LEFT_MERGE = Self::LEFT_MERGE_PARENT.bits | Self::LEFT_MERGE_ANCESTOR.bits;
-        const RIGHT_MERGE = Self::RIGHT_MERGE_PARENT.bits | Self::RIGHT_MERGE_ANCESTOR.bits;
-        const ANY_MERGE = Self::LEFT_MERGE.bits | Self::RIGHT_MERGE.bits;
-        const ANY_FORK = Self::LEFT_FORK.bits | Self::RIGHT_FORK.bits;
-        const ANY_FORK_OR_MERGE = Self::ANY_MERGE.bits | Self::ANY_FORK.bits;
+        const HORIZONTAL = Self::HORIZ_PARENT.bits() | Self::HORIZ_ANCESTOR.bits();
+        const VERTICAL = Self::VERT_PARENT.bits() | Self::VERT_ANCESTOR.bits();
+        const LEFT_FORK = Self::LEFT_FORK_PARENT.bits() | Self::LEFT_FORK_ANCESTOR.bits();
+        const RIGHT_FORK = Self::RIGHT_FORK_PARENT.bits() | Self::RIGHT_FORK_ANCESTOR.bits();
+        const LEFT_MERGE = Self::LEFT_MERGE_PARENT.bits() | Self::LEFT_MERGE_ANCESTOR.bits();
+        const RIGHT_MERGE = Self::RIGHT_MERGE_PARENT.bits() | Self::RIGHT_MERGE_ANCESTOR.bits();
+        const ANY_MERGE = Self::LEFT_MERGE.bits() | Self::RIGHT_MERGE.bits();
+        const ANY_FORK = Self::LEFT_FORK.bits() | Self::RIGHT_FORK.bits();
+        const ANY_FORK_OR_MERGE = Self::ANY_MERGE.bits() | Self::ANY_FORK.bits();
     }
 }
 

@@ -1000,35 +1000,35 @@ pub(crate) mod tests {
         assert_eq!(
             hints_ops(&partial, &empty),
             [
-                "- Hints(ID_ASC)",
-                "  Hints(EMPTY | ID_DESC | ID_ASC | TOPO_DESC | ANCESTORS)",
-                "& Hints(EMPTY | ID_DESC | ID_ASC | TOPO_DESC | ANCESTORS)",
-                "  Hints(EMPTY | ID_DESC | ID_ASC | TOPO_DESC | ANCESTORS)",
-                "| Hints(ID_ASC)",
-                "  Hints(ID_ASC)"
+                "- Hints(Flags(ID_ASC))",
+                "  Hints(Flags(EMPTY | ID_DESC | ID_ASC | TOPO_DESC | ANCESTORS))",
+                "& Hints(Flags(EMPTY | ID_DESC | ID_ASC | TOPO_DESC | ANCESTORS))",
+                "  Hints(Flags(EMPTY | ID_DESC | ID_ASC | TOPO_DESC | ANCESTORS))",
+                "| Hints(Flags(ID_ASC))",
+                "  Hints(Flags(ID_ASC))"
             ]
         );
         // Fast paths are not used for "|" because there is no dag associated.
         assert_eq!(
             hints_ops(&partial, &full),
             [
-                "- Hints(ID_ASC)",
-                "  Hints(ID_DESC)",
-                "& Hints(ID_ASC)",
-                "  Hints(ID_ASC)",
-                "| Hints((empty))",
-                "  Hints((empty))"
+                "- Hints(Flags(ID_ASC))",
+                "  Hints(Flags(ID_DESC))",
+                "& Hints(Flags(ID_ASC))",
+                "  Hints(Flags(ID_ASC))",
+                "| Hints(Flags(0x0))",
+                "  Hints(Flags(0x0))"
             ]
         );
         assert_eq!(
             hints_ops(&empty, &full),
             [
-                "- Hints(EMPTY | ID_DESC | ID_ASC | TOPO_DESC | ANCESTORS)",
-                "  Hints(FULL | ID_DESC | ANCESTORS)",
-                "& Hints(EMPTY | ID_DESC | ID_ASC | TOPO_DESC | ANCESTORS)",
-                "  Hints(EMPTY | ID_DESC | ID_ASC | TOPO_DESC | ANCESTORS)",
-                "| Hints(FULL | ID_DESC | ANCESTORS)",
-                "  Hints(FULL | ID_DESC | ANCESTORS)"
+                "- Hints(Flags(EMPTY | ID_DESC | ID_ASC | TOPO_DESC | ANCESTORS))",
+                "  Hints(Flags(FULL | ID_DESC | ANCESTORS))",
+                "& Hints(Flags(EMPTY | ID_DESC | ID_ASC | TOPO_DESC | ANCESTORS))",
+                "  Hints(Flags(EMPTY | ID_DESC | ID_ASC | TOPO_DESC | ANCESTORS))",
+                "| Hints(Flags(FULL | ID_DESC | ANCESTORS))",
+                "  Hints(Flags(FULL | ID_DESC | ANCESTORS))"
             ]
         );
     }
@@ -1111,12 +1111,12 @@ pub(crate) mod tests {
         assert_eq!(
             hints_ops(&bc, &ad),
             [
-                "- Hints(ID_DESC, 20..)",
-                "  Hints(ID_ASC, ..=40)",
-                "& Hints(ID_DESC, 20..=40)",
-                "  Hints(ID_ASC, 20..=40)",
-                "| Hints((empty))",
-                "  Hints((empty))"
+                "- Hints(Flags(ID_DESC), 20..)",
+                "  Hints(Flags(ID_ASC), ..=40)",
+                "& Hints(Flags(ID_DESC), 20..=40)",
+                "  Hints(Flags(ID_ASC), 20..=40)",
+                "| Hints(Flags(0x0))",
+                "  Hints(Flags(0x0))"
             ]
         );
 
@@ -1125,12 +1125,12 @@ pub(crate) mod tests {
         assert_eq!(
             hints_ops(&bc, &ad),
             [
-                "- Hints(ID_DESC, 20..=30)",
-                "  Hints(ID_ASC, 10..=40)",
-                "& Hints(ID_DESC, 20..=30)",
-                "  Hints(ID_ASC, 20..=30)",
-                "| Hints((empty))",
-                "  Hints((empty))"
+                "- Hints(Flags(ID_DESC), 20..=30)",
+                "  Hints(Flags(ID_ASC), 10..=40)",
+                "& Hints(Flags(ID_DESC), 20..=30)",
+                "  Hints(Flags(ID_ASC), 20..=30)",
+                "| Hints(Flags(0x0))",
+                "  Hints(Flags(0x0))"
             ]
         );
     }
@@ -1144,12 +1144,12 @@ pub(crate) mod tests {
         assert_eq!(
             hints_ops(&a, &b),
             [
-                "- Hints((empty))",
-                "  Hints((empty))",
-                "& Hints((empty))",
-                "  Hints((empty))",
-                "| Hints((empty))",
-                "  Hints((empty))"
+                "- Hints(Flags(0x0))",
+                "  Hints(Flags(0x0))",
+                "& Hints(Flags(0x0))",
+                "  Hints(Flags(0x0))",
+                "| Hints(Flags(0x0))",
+                "  Hints(Flags(0x0))"
             ]
         );
 
@@ -1157,12 +1157,12 @@ pub(crate) mod tests {
         assert_eq!(
             hints_ops(&a, &b),
             [
-                "- Hints((empty))",
-                "  Hints((empty))",
-                "& Hints(ANCESTORS)",
-                "  Hints(ANCESTORS)",
-                "| Hints(ANCESTORS)",
-                "  Hints(ANCESTORS)"
+                "- Hints(Flags(0x0))",
+                "  Hints(Flags(0x0))",
+                "& Hints(Flags(ANCESTORS))",
+                "  Hints(Flags(ANCESTORS))",
+                "| Hints(Flags(ANCESTORS))",
+                "  Hints(Flags(ANCESTORS))"
             ]
         );
     }
