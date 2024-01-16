@@ -211,7 +211,7 @@ export const latestUncommittedChangesTimestamp = selector<number>({
 
 /**
  * Lookup a commit by hash, *WITHOUT PREVIEWS*.
- * Generally, you'd want to look up WITH previews, which you can use treeWithPreviews for.
+ * Generally, you'd want to look up WITH previews, which you can use dagWithPreviews for.
  */
 export const commitByHash = selectorFamily<CommitInfo | undefined, string>({
   key: 'commitByHash',
@@ -385,7 +385,7 @@ export const commitsShownRange = atom<number | undefined>({
 
 /**
  * Latest head commit from original data from the server, without any previews.
- * Prefer using `treeWithPreviews.headCommit`, since it includes optimistic state
+ * Prefer using `dagWithPreviews.resolve('.')`, since it includes optimistic state
  * and previews.
  */
 export const latestHeadCommit = selector<CommitInfo | undefined>({
