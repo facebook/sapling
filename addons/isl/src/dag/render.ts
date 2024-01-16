@@ -373,6 +373,10 @@ export type GraphRow = {
   termLine?: Array<boolean>;
   /** Pad columns */
   padLines: Array<PadLine>;
+  /** True if the node is a head (no children, uses a new column) */
+  isHead: boolean;
+  /** True if the node is a root (no parents) */
+  isRoot: boolean;
 };
 
 export class Renderer {
@@ -401,8 +405,11 @@ export class Renderer {
    */
   nextRow(hash: Hash, parents: Array<Ancestor>): GraphRow {
     // Find a column for this node.
-    const column: number =
-      this.columns.find(hash) ?? this.columns.firstEmpty() ?? this.columns.newEmpty();
+    const existingColumn = this.columns.find(hash);
+    const column: number = existingColumn ?? this.columns.firstEmpty() ?? this.columns.newEmpty();
+    const isHead = existingColumn == null;
+    const isRoot = parents.length === 0;
+
     this.columns.inner[column] = Column.empty();
 
     // This row is for a merge if there are multiple parents.
@@ -556,6 +563,8 @@ export class Renderer {
       linkLine: optionalLinkLine,
       termLine: optionalTermLine,
       padLines,
+      isHead,
+      isRoot,
     };
   }
 }
