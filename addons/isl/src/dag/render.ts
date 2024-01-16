@@ -377,10 +377,36 @@ export type GraphRow = {
   termLine?: Array<boolean>;
   /** Pad columns */
   padLines: Array<PadLine>;
+
   /** True if the node is a head (no children, uses a new column) */
   isHead: boolean;
   /** True if the node is a root (no parents) */
   isRoot: boolean;
+
+  /**
+   * Column that contains the "node" above the link line.
+   * nodeLine[nodeColumn] should be NodeLine.Node.
+   */
+  nodeColumn: number;
+
+  /**
+   * Parent columns reachable from "node" below the link line.
+   */
+  parentColumns: number[];
+
+  /**
+   * A subset of LinkLine that comes from "node". For example:
+   *
+   *   │ o   // node line
+   *   ├─╯   // link line
+   *
+   * The `fromNodeValue` LinkLine looks like:
+   *
+   *   ╭─╯
+   *
+   * Note "├" is changed to "╭".
+   */
+  linkLineFromNode?: Array<LinkLine>;
 };
 
 export class Renderer {
@@ -429,7 +455,20 @@ export class Renderer {
 
     // Build the initial link line.
     const linkLine: LinkLine[] = this.columns.inner.map(c => c.toLinkLine());
+    const linkLineFromNode: LinkLine[] = this.columns.inner.map(_c => LinkLine.empty());
+    linkLineFromNode[column] = linkLine[column];
     let needLinkLine = false;
+
+    // Update linkLine[i] and linkLineFromNode[i] to include `bits`.
+    const linkBoth = (i: number, bits: number) => {
+      if (bits < 0) {
+        linkLine[i] = LinkLine.from(bits);
+        linkLineFromNode[i] = LinkLine.from(bits);
+      } else {
+        linkLine[i] = linkLine[i].or(bits);
+        linkLineFromNode[i] = linkLineFromNode[i].or(bits);
+      }
+    };
 
     // Build the initial term line.
     const termLine: boolean[] = this.columns.inner.map(_c => false);
@@ -467,6 +506,7 @@ export class Renderer {
       topPadLines.push(PadLine.Blank);
       padLines.push(PadLine.Blank);
       linkLine.push(LinkLine.empty());
+      linkLineFromNode.push(LinkLine.empty());
       termLine.push(false);
       this.columns.inner.push(p.toColumn());
     }
@@ -480,6 +520,31 @@ export class Renderer {
     }
 
     // Check if we can move the parent to the current column.
+    //
+    //   Before             After
+    //   ├─╮                ├─╮
+    //   │ o  C             │ o  C
+    //   o ╷  B             o ╷  B
+    //   ╰─╮                ├─╯
+    //     o  A             o  A
+    //
+    //   o      J           o      J
+    //   ├─┬─╮              ├─┬─╮
+    //   │ │ o  I           │ │ o  I
+    //   │ o │      H       │ o │      H
+    //   ╭─┼─┬─┬─╮          ╭─┼─┬─┬─╮
+    //   │ │ │ │ o  G       │ │ │ │ o  G
+    //   │ │ │ o │  E       │ │ │ o │  E
+    //   │ │ │ ╰─┤          │ │ │ ├─╯
+    //   │ │ o   │  D       │ │ o │  D
+    //   │ │ ├───╮          │ │ ├─╮
+    //   │ o │   │  C       │ o │ │  C
+    //   │ ╰─────┤          │ ├───╯
+    //   o   │   │  F       o │ │  F
+    //   ╰───────┤          ├─╯ │
+    //       │   o  B       o   │  B
+    //       ├───╯          ├───╯
+    //       o  A           o  A
     if (parents.length === 1) {
       const [[parentColumn, parentAncestor]] = parentColumns.entries();
       if (parentColumn != null && parentColumn > column) {
@@ -492,6 +557,12 @@ export class Renderer {
         // Generate a line from this column to the old
         // parent column.   We need to continue with the style
         // that was being used for the parent column.
+        //
+        //          old parent
+        //     o    v
+        //     ╭────╯
+        //     ^
+        //     new parent (moved here, nodeColumn)
         const wasDirect = linkLine.at(parentColumn)?.contains(LinkLine.VERT_PARENT);
         linkLine[column] = linkLine[column].or(
           wasDirect ? LinkLine.RIGHT_FORK_PARENT : LinkLine.RIGHT_FORK_ANCESTOR,
@@ -514,24 +585,24 @@ export class Renderer {
       // If the parents extend beyond the columns adjacent to the node, draw a horizontal
       // ancestor line between the two outermost ancestors.
       for (const i of bounds.range()) {
-        linkLine[i] = linkLine[i].or(bounds.horizontalLine(i).value);
+        linkBoth(i, bounds.horizontalLine(i).value);
         needLinkLine = true;
       }
       // If there is a parent or ancestor to the right of the node
       // column, the node merges from the right.
       if (bounds.maxParent > column) {
-        linkLine[column] = linkLine[column].or(LinkLine.RIGHT_MERGE_PARENT);
+        linkBoth(column, LinkLine.RIGHT_MERGE_PARENT);
         needLinkLine = true;
       } else if (bounds.maxAncestor > column) {
-        linkLine[column] = linkLine[column].or(LinkLine.RIGHT_MERGE_ANCESTOR);
+        linkBoth(column, LinkLine.RIGHT_MERGE_ANCESTOR);
         needLinkLine = true;
       }
       // If there is a parent or ancestor to the left of the node column, the node merges from the left.
       if (bounds.minParent < column) {
-        linkLine[column] = linkLine[column].or(LinkLine.LEFT_MERGE_PARENT);
+        linkBoth(column, LinkLine.LEFT_MERGE_PARENT);
         needLinkLine = true;
       } else if (bounds.minAncestor < column) {
-        linkLine[column] = linkLine[column].or(LinkLine.LEFT_MERGE_ANCESTOR);
+        linkBoth(column, LinkLine.LEFT_MERGE_ANCESTOR);
         needLinkLine = true;
       }
       // Each parent or ancestor forks towards the node column.
@@ -554,7 +625,7 @@ export class Renderer {
             LinkLine.from(LinkLine.LEFT_FORK_ANCESTOR),
           ).value;
         }
-        linkLine[i] = linkLine[i].or(orValue);
+        linkBoth(i, orValue);
       }
     }
 
@@ -575,6 +646,9 @@ export class Renderer {
       padLines,
       isHead,
       isRoot,
+      nodeColumn: column,
+      parentColumns: [...parentColumns.keys()].sort((a, b) => a - b),
+      linkLineFromNode: needLinkLine ? linkLineFromNode : undefined,
     };
   }
 }

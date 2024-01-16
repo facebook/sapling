@@ -531,6 +531,66 @@ describe('renderText', () => {
       ├───╯
       o  A"
     `);
+    expect(render(TEST_DIFFERENT_ORDERS4, true)).toMatchInlineSnapshot(`
+      "
+      o    K
+      │    # top pad
+      ├─╮  # link line
+      │ │  # pad line
+      --------------------
+      o    F
+      │    # top pad
+      │    # pad line
+      --------------------
+        o    J
+        │    # top pad
+        ├─╮  # link line
+        │ │  # pad line
+      --------------------
+        o    E
+        │    # top pad
+      ╭─╯    # link line
+      │      # pad line
+      --------------------
+          o  I
+          │  # top pad
+        ╭─┤  # link line
+        │ │  # pad line
+      --------------------
+          o  D
+          │  # top pad
+      ╭───╯  # link line
+      │      # pad line
+      --------------------
+        o    H
+        │    # top pad
+        ├─╮  # link line
+        │ │  # pad line
+      --------------------
+        o    C
+        │    # top pad
+      ╭─╯    # link line
+      │      # pad line
+      --------------------
+          o  G
+          │  # top pad
+        ╭─┤  # link line
+        │ │  # pad line
+      --------------------
+        o    Z
+             # top pad
+             # pad line
+      --------------------
+          o  B
+          │  # top pad
+      ╭───╯  # link line
+      │      # pad line
+      --------------------
+      o  A
+         # top pad
+         # pad line
+      --------------------"
+    `);
   });
 
   it('renders TEST_LONG_MESSAGES', () => {
@@ -642,6 +702,33 @@ describe('renderText', () => {
       ├───╯
       o  A"
     `);
+    expect(render(TEST_SPLIT_PARENTS, true)).toMatchInlineSnapshot(`
+      "
+            o  E
+            │  # top pad
+      ╭─┬─┬─┤  # link line
+      ╷ │ │ ╷  # pad line
+      --------------------
+        o      D
+        │      # top pad
+      ╭─┴─╮    # link line
+      │   │    # pad line
+      --------------------
+          o    C
+          │    # top pad
+          │    # link line
+          │    # pad line
+      --------------------
+      o      B
+      │      # top pad
+      │      # link line
+      │      # pad line
+      --------------------
+      o  A
+         # top pad
+         # pad line
+      --------------------"
+    `);
   });
 
   it('renders TEST_TERMINATIONS', () => {
@@ -678,9 +765,9 @@ describe('renderText', () => {
   });
 });
 
-function render(fixture: TestFixture): string {
+function render(fixture: TestFixture, debugLinkLineFromNode = false): string {
   const {rows, reserve} = fixture;
-  const renderer = new TextRenderer();
+  const renderer = new TextRenderer({debugLinkLineFromNode});
   if (reserve != null) {
     for (const h of reserve) {
       renderer.reserve(h);

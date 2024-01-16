@@ -35,7 +35,7 @@ export class TextRenderer {
   private inner: Renderer;
   private extraPadLine: string | undefined = undefined;
 
-  constructor() {
+  constructor(private config?: {debugLinkLineFromNode: boolean}) {
     this.inner = new Renderer();
   }
 
@@ -44,6 +44,7 @@ export class TextRenderer {
   }
 
   nextRow(hash: Hash, parents: Array<Ancestor>, message: string, glyph = 'o'): string {
+    const {debugLinkLineFromNode = false} = this.config ?? {};
     const line = this.inner.nextRow(hash, parents);
     const out: string[] = [];
 
@@ -69,8 +70,10 @@ export class TextRenderer {
 
     // Render the node line.
     const outNodeLine: string[] = [];
-    line.nodeLine.forEach(entry => {
-      if (entry === NodeLine.Node) {
+    line.nodeLine.forEach((entry, i) => {
+      if (debugLinkLineFromNode && i !== line.nodeColumn) {
+        outNodeLine.push(GLYPHYS.SPACE);
+      } else if (entry === NodeLine.Node) {
         outNodeLine.push(glyph);
         outNodeLine.push(' ');
       } else if (entry === NodeLine.Parent) {
@@ -85,13 +88,17 @@ export class TextRenderer {
 
     // Render the top pad lines.
     const outTopPadLine: string[] = [];
-    for (const entry of line.topPadLines) {
-      outTopPadLine.push(toGlyph(entry));
-    }
-    pushWithMessageLine(outTopPadLine);
+    line.topPadLines.forEach((entry, i) => {
+      if (debugLinkLineFromNode && i !== line.nodeColumn) {
+        outTopPadLine.push(GLYPHYS.SPACE);
+      } else {
+        outTopPadLine.push(toGlyph(entry));
+      }
+    });
+    pushWithMessageLine(outTopPadLine, debugLinkLineFromNode ? '# top pad' : undefined);
 
     // Render the link line.
-    const linkLine = line.linkLine;
+    const linkLine = debugLinkLineFromNode ? line.linkLineFromNode : line.linkLine;
     if (linkLine != null) {
       const outLinkLine = [];
       for (const cur of linkLine) {
@@ -168,7 +175,17 @@ export class TextRenderer {
           outLinkLine.push(GLYPHYS.SPACE);
         }
       }
-      pushWithMessageLine(outLinkLine);
+      pushWithMessageLine(outLinkLine, debugLinkLineFromNode ? '# link line' : undefined);
+    }
+
+    // Patch the "padLines" for debugLinkLineFromNode.
+    const {padLines} = line;
+    if (debugLinkLineFromNode) {
+      padLines.forEach((padLine, i) => {
+        if (!line.parentColumns.includes(i)) {
+          padLines[i] = PadLine.Blank;
+        }
+      });
     }
 
     // Render the term lines.
@@ -182,10 +199,10 @@ export class TextRenderer {
           if (term) {
             termLineOut.push(termStr);
           } else {
-            termLineOut.push(toGlyph(line.padLines.at(i)));
+            termLineOut.push(toGlyph(padLines.at(i)));
           }
         });
-        pushWithMessageLine(termLineOut);
+        pushWithMessageLine(termLineOut, debugLinkLineFromNode ? '# term line' : undefined);
       });
       needExtraPadLine = true;
     }
@@ -193,14 +210,20 @@ export class TextRenderer {
     // Render the pad lines for long messages.
     // basePadLine is the pad line columns, without text messages.
     const basePadLine: string[] = [];
-    for (const entry of line.padLines) {
+    for (const entry of padLines) {
       basePadLine.push(toGlyph(entry));
     }
 
-    for (const msg of messageIter) {
-      const padLine: string[] = [...basePadLine];
-      pushWithMessageLine(padLine, msg);
-      needExtraPadLine = false;
+    if (debugLinkLineFromNode) {
+      // For debugLinkLineFromNode, show the pad line for investigation.
+      pushWithMessageLine([...basePadLine], '# pad line');
+      out.push('-'.repeat(20) + '\n');
+    } else {
+      for (const msg of messageIter) {
+        const padLine: string[] = [...basePadLine];
+        pushWithMessageLine(padLine, msg);
+        needExtraPadLine = false;
+      }
     }
 
     if (needExtraPadLine) {
