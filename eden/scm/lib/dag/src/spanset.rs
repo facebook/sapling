@@ -256,7 +256,7 @@ impl From<Id> for Span {
 
 impl<T: Into<Span>> From<T> for SpanSet {
     fn from(span: T) -> SpanSet {
-        SpanSet::from_sorted_spans(std::iter::once(span.into()))
+        SpanSet::from_single_span(span.into())
     }
 }
 
@@ -288,6 +288,12 @@ impl SpanSet {
         #[cfg(debug_assertions)]
         result.validate();
         result
+    }
+
+    /// Construct a [`SpanSet`] that contains a single span.
+    pub fn from_single_span(span: Span) -> Self {
+        let spans: VecDeque<_> = std::iter::once(span).collect();
+        Self { spans }
     }
 
     /// Construct a [`SpanSet`] containing given spans.
