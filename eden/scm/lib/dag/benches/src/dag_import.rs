@@ -59,6 +59,17 @@ pub fn main() {
 }
 
 fn example_clone_data() -> CloneData<Vertex> {
+    // To dump production clonedata for testing, run:
+    //
+    //   export CLONEDATA=/tmp/CLONEDATA
+    //   sl dbsh -c "open(os.getenv('CLONEDATA'),'wb').write(b.cbor.dumps(api.pulllazy([],list(repo.nodes('master'))).export()))"
+    if let Ok(path) = std::env::var("CLONEDATA") {
+        eprintln!("Using CLONEDATA={}", &path);
+        let data = std::fs::read(path).unwrap();
+        let data: CloneData<Vertex> = serde_cbor::from_slice(&data).unwrap();
+        return data;
+    }
+
     let segments = bindag::parse_bindag_segments(bindag::MOZILLA);
     let segments = segments
         .into_iter()

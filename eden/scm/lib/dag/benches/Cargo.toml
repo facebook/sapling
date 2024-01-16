@@ -12,4 +12,5 @@ dag = { version = "0.1.0", path = ".." }
 mincode = { version = "0.1.0", path = "../../mincode" }
 minibench = { version = "0.1.0", path = "../../minibench" }
 nonblocking = { version = "0.1.0", path = "../../nonblocking" }
+serde_cbor = "0.11"
 tempfile = "3.8"

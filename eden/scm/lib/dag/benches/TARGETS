@@ -17,6 +17,7 @@ rust_binary(
     },
     crate_root = "src/main.rs",
     deps = [
+        "fbsource//third-party/rust:serde_cbor",
         "fbsource//third-party/rust:tempfile",
         "//eden/scm/lib/dag:dag",
         "//eden/scm/lib/dag/bindag:bindag",
