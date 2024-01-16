@@ -8,6 +8,7 @@
 import type {Dag, DagCommitInfo} from './dag/dag';
 import type {HashSet} from './dag/set';
 
+import {AnimatedReorderGroup} from './AnimatedReorderGroup';
 import {AvatarPattern} from './Avatar';
 import {InlineBadge} from './InlineBadge';
 import {LinkLine, NodeLine, PadLine, Renderer} from './dag/render';
@@ -236,7 +237,7 @@ export function RenderDag(props: RenderDagProps) {
       //   +------+---------+
       if (isIrregular) {
         renderedRows.push(
-          <div className="render-dag-row" key={'top:' + info.hash}>
+          <div className="render-dag-row" data-reorder-id={'.'} key={'top:' + info.hash}>
             <div className="render-dag-row-left-side">{nodeLinePart}</div>
           </div>,
         );
@@ -244,7 +245,7 @@ export function RenderDag(props: RenderDagProps) {
 
       const rightSide = <div className="render-dag-row-right-side">{renderCommit?.(info)}</div>;
       renderedRows.push(
-        <div className="render-dag-row" key={info.hash}>
+        <div className="render-dag-row" data-reorder-id={info.hash} key={info.hash}>
           {leftSide}
           {rightSide}
         </div>,
@@ -255,7 +256,7 @@ export function RenderDag(props: RenderDagProps) {
   const fullClassName = ((className ?? '') + ' render-dag').trimStart();
   return (
     <div className={fullClassName} {...restProps}>
-      {renderedRows}
+      <AnimatedReorderGroup animationDuration={100}>{renderedRows}</AnimatedReorderGroup>
     </div>
   );
 }
