@@ -280,7 +280,8 @@ export const TEST_TERMINATIONS: TestFixture = {
 
 describe('renderText', () => {
   it('renders TEST_ANCESTORS', () => {
-    expect(render(TEST_ANCESTORS)).toBe(`
+    expect(render(TEST_ANCESTORS)).toMatchInlineSnapshot(`
+      "
         o  Z
         │
         o  Y
@@ -299,20 +300,24 @@ describe('renderText', () => {
       │ ╷
       o ╷  B
       ├─╯
-      o  A`);
+      o  A"
+    `);
   });
 
   it('renders TEST_BASIC', () => {
-    expect(render(TEST_BASIC)).toBe(`
+    expect(render(TEST_BASIC)).toMatchInlineSnapshot(`
+      "
       o  C
       │
       o  B
       │
-      o  A`);
+      o  A"
+    `);
   });
 
   it('renders TEST_BRANCHES_AND_MERGES', () => {
-    expect(render(TEST_BRANCHES_AND_MERGES)).toBe(`
+    expect(render(TEST_BRANCHES_AND_MERGES)).toMatchInlineSnapshot(`
+      "
       o  W
       │
       o    V
@@ -357,11 +362,13 @@ describe('renderText', () => {
       ├───╯
       o  B
       │
-      o  A`);
+      o  A"
+    `);
   });
 
   it('renders TEST_DIFFERENT_ORDERS1', () => {
-    expect(render(TEST_DIFFERENT_ORDERS1)).toBe(`
+    expect(render(TEST_DIFFERENT_ORDERS1)).toMatchInlineSnapshot(`
+      "
       o    K
       ├─╮
       │ o    J
@@ -384,11 +391,13 @@ describe('renderText', () => {
       ├───────╯ │
       │         o  Z
       │
-      o  A`);
+      o  A"
+    `);
   });
 
   it('renders TEST_DIFFERENT_ORDERS2', () => {
-    expect(render(TEST_DIFFERENT_ORDERS2)).toBe(`
+    expect(render(TEST_DIFFERENT_ORDERS2)).toMatchInlineSnapshot(`
+      "
       o    K
       ├─╮
       │ o    J
@@ -411,11 +420,13 @@ describe('renderText', () => {
       │ ├─╯
       o │  F
       ├─╯
-      o  A`);
+      o  A"
+    `);
   });
 
   it('renders TEST_DIFFERENT_ORDERS3', () => {
-    expect(render(TEST_DIFFERENT_ORDERS3)).toBe(`
+    expect(render(TEST_DIFFERENT_ORDERS3)).toMatchInlineSnapshot(`
+      "
       o    K
       ├─╮
       │ o  J
@@ -438,11 +449,13 @@ describe('renderText', () => {
       │ │
       o │  B
       ├─╯
-      o  A`);
+      o  A"
+    `);
   });
 
   it('renders TEST_DIFFERENT_ORDERS4', () => {
-    expect(render(TEST_DIFFERENT_ORDERS4)).toBe(`
+    expect(render(TEST_DIFFERENT_ORDERS4)).toMatchInlineSnapshot(`
+      "
       o    K
       ├─╮
       o │  F
@@ -465,11 +478,13 @@ describe('renderText', () => {
       │   │
       │   o  B
       ├───╯
-      o  A`);
+      o  A"
+    `);
   });
 
   it('renders TEST_LONG_MESSAGES', () => {
-    expect(render(TEST_LONG_MESSAGES)).toBe(`
+    expect(render(TEST_LONG_MESSAGES)).toMatchInlineSnapshot(`
+      "
       o      F
       ├─┬─╮  very long message 1
       │ │ │  very long message 2
@@ -493,11 +508,13 @@ describe('renderText', () => {
       o  A
       │  long message 1
       ~  long message 2
-         long message 3`);
+         long message 3"
+    `);
   });
 
   it('renders TEST_OCTOPUS_BRANCH_AND_MERGE', () => {
-    expect(render(TEST_OCTOPUS_BRANCH_AND_MERGE)).toBe(`
+    expect(render(TEST_OCTOPUS_BRANCH_AND_MERGE)).toMatchInlineSnapshot(`
+      "
       o      J
       ├─┬─╮
       │ │ o  I
@@ -516,11 +533,13 @@ describe('renderText', () => {
       ├─╯ │
       o   │  B
       ├───╯
-      o  A`);
+      o  A"
+    `);
   });
 
   it('renders TEST_RESERVED_COLUMN', () => {
-    expect(render(TEST_RESERVED_COLUMN)).toBe(`
+    expect(render(TEST_RESERVED_COLUMN)).toMatchInlineSnapshot(`
+      "
         o  Z
         │
         o  Y
@@ -541,11 +560,13 @@ describe('renderText', () => {
       │
       o  B
       │
-      o  A`);
+      o  A"
+    `);
   });
 
   it('renders TEST_SPLIT_PARENTS', () => {
-    expect(render(TEST_SPLIT_PARENTS)).toBe(`
+    expect(render(TEST_SPLIT_PARENTS)).toMatchInlineSnapshot(`
+      "
             o  E
       ╭─┬─┬─┤
       ╷ o │ ╷  D
@@ -554,11 +575,13 @@ describe('renderText', () => {
       │   ├─╯
       o   │  B
       ├───╯
-      o  A`);
+      o  A"
+    `);
   });
 
   it('renders TEST_TERMINATIONS', () => {
-    expect(render(TEST_TERMINATIONS)).toBe(`
+    expect(render(TEST_TERMINATIONS)).toMatchInlineSnapshot(`
+      "
         o  K
         │
         │ o  J
@@ -580,7 +603,8 @@ describe('renderText', () => {
       │
       o  B
       │
-      ~`);
+      ~"
+    `);
   });
 });
 
@@ -605,7 +629,5 @@ function render(fixture: TestFixture): string {
     });
     return renderer.nextRow(hash, ancestors, message.trimEnd() + '\n');
   });
-  const lines = rendered.join('').split('\n');
-  const indended = lines.map(line => (line.length > 0 ? '      ' + line : ''));
-  return '\n' + indended.join('\n').trimEnd();
+  return '\n' + rendered.join('').trimEnd();
 }
