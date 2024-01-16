@@ -71,6 +71,7 @@ export interface Platform {
   theme?: {
     getTheme(): ThemeColor;
     onDidChangeTheme(callback: (theme: ThemeColor) => unknown): Disposable;
+    resetCSS?: string;
   };
 }
 

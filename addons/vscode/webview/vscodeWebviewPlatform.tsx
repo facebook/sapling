@@ -59,6 +59,7 @@ export const vscodeWebviewPlatform: Platform = {
 
   theme: {
     getTheme,
+    resetCSS: '',
     onDidChangeTheme(callback: (theme: ThemeColor) => unknown) {
       let lastValue = getTheme();
       // VS Code sets the theme inside the webview by adding a class to `document.body`.
