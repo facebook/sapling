@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+mod dag_import;
 mod dag_ops;
 mod inprocess_iddag_serde;
 mod segment_sizes;
@@ -15,6 +16,11 @@ use minibench::bench_enabled;
 fn main() {
     if bench_enabled("dag_ops") {
         dag_ops::main();
+    }
+    if bench_enabled(
+        "dag_import/clone_clone_data dag_import/import_clone_data dag_import/import_pull_data",
+    ) {
+        dag_import::main();
     }
     if bench_enabled("inprocess_iddag_serde") {
         inprocess_iddag_serde::main();
