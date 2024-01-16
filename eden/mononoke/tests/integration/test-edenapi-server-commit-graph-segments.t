@@ -69,12 +69,6 @@ Ensure we can clone the repo using the commit graph segments endpoint
   │ │ │
   │ │ o    d09c6f0ee66a G
   │ │ ├─╮
-  o │ │ │  abdf5b2a1b92 J
-  │ │ │ │
-  o │ │ │  163d712b1fc1 I
-  │ │ │ │
-  o │ │ │  26641f81ab7f H
-  │ │ │ │
   │ │ │ o  74dbcd84493a D
   │ │ │ │
   │ │ │ o  d3b399ca8757 C
@@ -84,6 +78,12 @@ Ensure we can clone the repo using the commit graph segments endpoint
   │ o │ │  7d1d79d931b8 K
   │ ├─╯ │
   │ o   │  d6e9a5359dcb F
+  │ │   │
+  o │   │  abdf5b2a1b92 J
+  │ │   │
+  o │   │  163d712b1fc1 I
+  │ │   │
+  o │   │  26641f81ab7f H
   ├─╯   │
   o     │  a66a30bed387 E
   ├─────╯
@@ -215,13 +215,13 @@ Since hash-to-location is still using the server-side segmented changelog, we mu
   │
   o    d728ac072e76 W
   ├─╮
-  │ o  cc84bc524e27 T
+  │ o  f42c7fb75580 V
   │ │
-  │ o  8036723dc80d S
+  │ o  f4c65fda5311 U
   │ │
-  o │  f42c7fb75580 V
+  o │  cc84bc524e27 T
   │ │
-  o │  f4c65fda5311 U
+  o │  8036723dc80d S
   ├─╯
   o  abaf42d51402 R
   │
@@ -237,12 +237,6 @@ Since hash-to-location is still using the server-side segmented changelog, we mu
   │ │ │
   │ │ o    d09c6f0ee66a G
   │ │ ├─╮
-  o │ │ │  abdf5b2a1b92 J
-  │ │ │ │
-  o │ │ │  163d712b1fc1 I
-  │ │ │ │
-  o │ │ │  26641f81ab7f H
-  │ │ │ │
   │ │ │ o  74dbcd84493a D
   │ │ │ │
   │ │ │ o  d3b399ca8757 C
@@ -252,6 +246,12 @@ Since hash-to-location is still using the server-side segmented changelog, we mu
   │ o │ │  7d1d79d931b8 K
   │ ├─╯ │
   │ o   │  d6e9a5359dcb F
+  │ │   │
+  o │   │  abdf5b2a1b92 J
+  │ │   │
+  o │   │  163d712b1fc1 I
+  │ │   │
+  o │   │  26641f81ab7f H
   ├─╯   │
   o     │  a66a30bed387 E
   ├─────╯
