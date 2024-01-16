@@ -29,6 +29,7 @@ use crate::protocol::RemoteIdConvertProtocol;
 #[cfg(feature = "render")]
 use crate::render::render_namedag;
 use crate::tests::DrawDag;
+use crate::CloneData;
 use crate::Group;
 use crate::Level;
 use crate::NameDag;
@@ -254,17 +255,36 @@ impl TestDag {
         new_master: impl Into<Set>,
     ) -> Result<()> {
         self.set_remote(server);
+        let old_master = old_master.into();
         let new_master = new_master.into();
-        let missing = server
-            .dag
-            .only(new_master.clone(), old_master.into())
+        let pull_data = server
+            .export_pull_data(old_master.clone(), new_master.clone())
             .await?;
-        let data = server.dag.export_pull_data(&missing).await?;
-        debug!("pull_ff data: {:?}", &data);
-        use crate::nameset::SyncNameSetQuery;
-        let heads_vec = new_master.iter()?.collect::<Result<Vec<_>>>()?;
-        let heads = VertexListWithOptions::from(heads_vec).with_highest_group(Group::MASTER);
-        self.dag.import_pull_data(data, &heads).await?;
+        let head_opts = to_head_opts(new_master);
+        self.import_pull_data(pull_data, head_opts).await?;
+        Ok(())
+    }
+
+    /// Generate the "pull data". This is intended to be called from a "server".
+    pub async fn export_pull_data(
+        &self,
+        common: impl Into<Set>,
+        heads: impl Into<Set>,
+    ) -> Result<CloneData<Vertex>> {
+        let missing = self.dag.only(heads.into(), common.into()).await?;
+        let data = self.dag.export_pull_data(&missing).await?;
+        debug!("export_pull_data: {:?}", &data);
+        Ok(data)
+    }
+
+    /// Imports the "pull data". This is intended to be called from a "client".
+    pub async fn import_pull_data(
+        &mut self,
+        pull_data: CloneData<Vertex>,
+        head_opts: impl Into<VertexListWithOptions>,
+    ) -> Result<()> {
+        let head_opts = head_opts.into();
+        self.dag.import_pull_data(pull_data, &head_opts).await?;
         Ok(())
     }
 
@@ -449,4 +469,25 @@ fn get_heads_and_parents_func_from_ascii(text: &str) -> (Vec<Vertex>, DrawDag) {
     let dag = DrawDag::from(text);
     let heads = dag.heads();
     (heads, dag)
+}
+
+#[cfg(test)]
+impl From<&'static str> for VertexListWithOptions {
+    fn from(names: &str) -> Self {
+        let set = Set::from(names);
+        set.into()
+    }
+}
+
+#[cfg(test)]
+impl From<Set> for VertexListWithOptions {
+    fn from(names: Set) -> Self {
+        to_head_opts(names)
+    }
+}
+
+fn to_head_opts(set: Set) -> VertexListWithOptions {
+    use crate::nameset::SyncNameSetQuery;
+    let heads_vec = set.iter().unwrap().collect::<Result<Vec<_>>>().unwrap();
+    VertexListWithOptions::from(heads_vec).with_highest_group(Group::MASTER)
 }
