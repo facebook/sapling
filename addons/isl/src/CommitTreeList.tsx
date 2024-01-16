@@ -13,12 +13,15 @@ import serverAPI from './ClientToServerAPI';
 import {Commit} from './Commit';
 import {Center, LargeSpinner} from './ComponentUtils';
 import {ErrorNotice} from './ErrorNotice';
+import {RenderDag} from './RenderDag';
 import {StackActions} from './StackActions';
 import {Tooltip, DOCUMENTATION_DELAY} from './Tooltip';
 import {pageVisibility} from './codeReview/CodeReviewInfo';
+import {YOU_ARE_HERE_VIRTUAL_COMMIT} from './dag/virtualCommit';
 import {T, t} from './i18n';
 import {CreateEmptyInitialCommitOperation} from './operations/CreateEmptyInitialCommitOperation';
-import {treeWithPreviews, useMarkOperationsCompleted} from './previews';
+import {persistAtomToConfigEffect} from './persistAtomToConfigEffect';
+import {dagWithPreviews, treeWithPreviews, useMarkOperationsCompleted} from './previews';
 import {isNarrowCommitTree} from './responsive';
 import {useArrowKeysToChangeSelection, useBackspaceToHideSelected} from './selection';
 import {
@@ -31,11 +34,63 @@ import {
 import {MaybeEditStackModal} from './stackEdit/ui/EditStackModal';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {ErrorShortMessages} from 'isl-server/src/constants';
-import {useRecoilState, useRecoilValue} from 'recoil';
+import {atom, useRecoilState, useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 import {notEmpty} from 'shared/utils';
 
 import './CommitTreeList.css';
+
+enum GraphRendererConfig {
+  Tree = 0,
+  Dag = 1,
+  Both = 2,
+}
+
+const configGraphRenderer = atom<GraphRendererConfig>({
+  key: 'configGraphRenderer',
+  default: 0,
+  effects: [persistAtomToConfigEffect('isl.experimental-graph-renderer')],
+});
+
+type DagCommitListProps = {
+  isNarrow: boolean;
+};
+
+function DagCommitList(props: DagCommitListProps) {
+  const {isNarrow} = props;
+
+  let dag = useRecoilValue(dagWithPreviews);
+  // Insert a virtual "You are here" as a child of ".".
+  const dot = dag.resolve('.');
+  if (dot != null) {
+    dag = dag.add([
+      {
+        ...YOU_ARE_HERE_VIRTUAL_COMMIT,
+        parents: [dot.hash],
+      },
+    ]);
+  }
+
+  return (
+    <RenderDag
+      dag={dag}
+      className={'commit-tree-root ' + (isNarrow ? ' commit-tree-narrow' : '')}
+      renderCommit={info => {
+        return (
+          <>
+            <Commit
+              commit={info}
+              key={info.hash}
+              previewType={info.previewType}
+              hasChildren={dag.children(info.hash).size > 0}
+              bodyOnly={true}
+            />
+          </>
+        );
+      }}
+    />
+  );
+}
 
 export function CommitTreeList() {
   // Make sure we trigger subscription to changes to uncommitted changes *before* we have a tree to render,
@@ -44,6 +99,7 @@ export function CommitTreeList() {
   // Or should we queue/cache messages?
   useRecoilState(latestUncommittedChangesData);
   useRecoilState(pageVisibility);
+  const renderer = useRecoilValue(configGraphRenderer);
 
   useMarkOperationsCompleted();
 
@@ -61,7 +117,8 @@ export function CommitTreeList() {
   ) : (
     <>
       {fetchError ? <CommitFetchError error={fetchError} /> : null}
-      {trees.length === 0 ? null : (
+      {renderer >= 1 && <DagCommitList isNarrow={isNarrow} />}
+      {trees.length === 0 || renderer === 1 ? null : (
         <div
           className={
             'commit-tree-root commit-group with-vertical-line' +

@@ -473,7 +473,9 @@ export type ConfigName =
   | 'isl.render-compact'
   | 'isl.download-commit-should-goto'
   | 'isl.download-commit-rebase-type'
-  | 'isl.experimental-features';
+  | 'isl.experimental-features'
+  // which graph renderer to use (0: tree; 1: dag; 2: show both).
+  | 'isl.experimental-graph-renderer';
 
 /** local storage keys written by ISL */
 export type LocalStorageName =
