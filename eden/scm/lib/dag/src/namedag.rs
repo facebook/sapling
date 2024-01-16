@@ -2438,9 +2438,12 @@ fn update_reserved(reserved: &mut IdSet, covered: &IdSet, low: Id, reserve_size:
 /// `reserve_size` cannot be 0.
 fn find_free_span(covered: &IdSet, low: Id, reserve_size: u64, shrink_to_fit: bool) -> IdSpan {
     assert!(reserve_size > 0);
+    let original_low = low;
     let mut low = low;
     let mut high;
+    let mut count = 0;
     loop {
+        count += 1;
         high = (low + reserve_size - 1).min(low.group().max_id());
         // Try to reserve id..=id+reserve_size-1
         let reserved = IdSet::from_single_span(IdSpan::new(low, high));
@@ -2475,6 +2478,16 @@ fn find_free_span(covered: &IdSet, low: Id, reserve_size: u64, shrink_to_fit: bo
             }
         }
         break;
+    }
+    if count >= 4096 {
+        tracing::warn!(
+            target: "dag::perf",
+            count=count,
+            low=?original_low,
+            reserve_size=reserve_size,
+            covered=?covered,
+            "PERF: find_free_span took too long",
+        );
     }
     let span = IdSpan::new(low, high);
     if !shrink_to_fit {
