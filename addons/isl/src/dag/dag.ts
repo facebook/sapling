@@ -604,7 +604,13 @@ type DagExt = {
   ancestors?: Hash[];
 };
 
-type Info = CommitInfo & WithPreviewType & DagExt;
+/** Extra properties for rendering. */
+type RenderExt = {
+  /** If true, this is a virtual "You are here" commit. */
+  isYouAreHere?: boolean;
+};
+
+type Info = CommitInfo & WithPreviewType & DagExt & RenderExt;
 type NameMap = ImMap<string, ImSet<HashPriRecord>>;
 
 type CommitDagProps = {
@@ -689,3 +695,6 @@ const sortAscCompare = (a: Info, b: Info) => {
   // Always break ties even if timestamp is the same.
   return a.hash < b.hash ? 1 : -1;
 };
+
+/** CommitInfo extended with some extra fields. */
+export type DagCommitInfo = Info;
