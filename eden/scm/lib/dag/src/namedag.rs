@@ -849,6 +849,43 @@ where
                 })
             }
 
+            /// Split a server segment from `[ low --  middle -- high ]` to
+            /// `[ low -- middle ] [ middle + 1 -- high ]`.
+            fn split_seg(&mut self, high: Id, middle: Id) {
+                // This is useful when "middle" is a "parent" of another segment, like:
+                //    seg 1 (server): 100 -- 115 -- 120
+                //    seg 2 (server):                    121 -- 130, parents: [115]
+                // While the task is to ensure seg 2's head H is present, we can split seg 1:
+                //    seg 1a (server): 110 -- 115
+                //    seg 1b (server):            116 -- 120, parents: [115]
+                //    seg 2  (server):                       121 -- 130 (H), parents: [115]
+                // Then remap and insert seg 1a and seg 2 first to complete the "H" goal:
+                //    seg 1a (client): 10 -- 15
+                //    seg 2  (client):          16 -- 20 (H), parents: [15]
+                // The 10 ... 20 range is now continuous and friendly to merge to high-level
+                // segments. The rest of seg 1, seg 1b (server) can be picked up later when
+                // visiting from other heads.
+                let seg = self
+                    .seg_by_high
+                    .remove(&high)
+                    .expect("bug: invalid high passed to split_seg");
+                assert!(seg.low <= middle);
+                assert!(seg.high > middle);
+                assert!(self.idmap_by_id.contains_key(&middle));
+                let seg1 = FlatSegment {
+                    low: seg.low,
+                    high: middle,
+                    parents: seg.parents,
+                };
+                let seg2 = FlatSegment {
+                    low: middle + 1,
+                    high: seg.high,
+                    parents: vec![middle],
+                };
+                self.seg_by_high.insert(seg1.high, seg1);
+                self.seg_by_high.insert(seg2.high, seg2);
+            }
+
             fn name_by_id(&self, id: Id) -> VertexName {
                 self.idmap_by_id
                     .get(&id)
