@@ -639,19 +639,50 @@ export const REBASE_SUCC_PREFIX = 'OPTIMISTIC_REBASE_SUCC:';
 
 /** Default 'compare' function for sortAsc. */
 const sortAscCompare = (a: Info, b: Info) => {
-  // Consider phase. Public first.
+  // Consider phase. Public last. For example, when sorting this dag
+  // (used by tests):
+  //
+  // ```plain
+  //   o  z Commit Z author 2024-01-03T21:10:04.674Z
+  //   │
+  //   o  y Commit Y author 2024-01-03T21:10:04.674Z
+  //   │
+  //   o  x Commit X author 2024-01-03T21:10:04.674Z
+  // ╭─╯
+  // o    2 another public branch author 2024-01-03T21:10:04.674Z
+  // ├─╮
+  // ╷ │
+  // ╷ ~
+  // ╷
+  // ╷ @  e Commit E author 2024-01-03T21:10:04.674Z
+  // ╷ │
+  // ╷ o  d Commit D author 2024-01-03T21:10:04.674Z
+  // ╷ │
+  // ╷ o  c Commit C author 2024-01-03T21:10:04.674Z
+  // ╷ │
+  // ╷ o  b Commit B author 2024-01-03T21:10:04.674Z
+  // ╷ │
+  // ╷ o  a Commit A author 2024-01-03T21:10:04.674Z
+  // ╭─╯
+  // o  1 some public base author 2024-01-03T21:10:04.674Z
+  // │
+  // ~
+  // ```
+  //
+  // The desired order is [1, a, b, c, d, e, 2, x, y, z] that matches
+  // the reversed rendering order. 'a' (draft) is before '2' (public).
   if (a.phase !== b.phase) {
-    return a.phase === 'public' ? -1 : 1;
+    return a.phase === 'public' ? 1 : -1;
   }
   // Consider seqNumber (insertion order during preview calculation).
   if (a.seqNumber != null && b.seqNumber != null) {
-    const seqDelta = a.seqNumber - b.seqNumber;
+    const seqDelta = b.seqNumber - a.seqNumber;
     if (seqDelta !== 0) {
       return seqDelta;
     }
   }
   // Sort by date.
-  const timeDelta = b.date.getTime() - a.date.getTime();
+  const timeDelta = a.date.getTime() - b.date.getTime();
   if (timeDelta !== 0) {
     return timeDelta;
   }
