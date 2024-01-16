@@ -2444,6 +2444,13 @@ fn find_free_span(covered: &IdSet, low: Id, reserve_size: u64, shrink_to_fit: bo
     let mut count = 0;
     loop {
         count += 1;
+        // First, bump 'low' to not overlap with a conflicted `span`.
+        //   [----covered_span----]
+        //      ^                  ^
+        //      original_low       bump to here
+        if let Some(span) = covered.span_contains(low) {
+            low = span.high + 1;
+        }
         high = (low + reserve_size - 1).min(low.group().max_id());
         // Try to reserve id..=id+reserve_size-1
         let reserved = IdSet::from_single_span(IdSpan::new(low, high));
