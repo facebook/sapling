@@ -7,6 +7,8 @@
 
 import type {Hash} from '../types';
 
+import {assert} from '../utils';
+
 /* eslint no-bitwise: 0 */
 /* Translated from fbcode/eden/scm/lib/renderdag/src/render.rs */
 
@@ -419,6 +421,14 @@ export type GraphRow = {
   linkLineFromNode?: Array<LinkLine>;
 };
 
+type NextRowOptions = {
+  /**
+   * Ensure this node uses the last (right-most) column.
+   * Only works for heads, i.e. nodes without children.
+   */
+  forceLastColumn?: boolean;
+};
+
 export class Renderer {
   private columns: Columns = new Columns();
 
@@ -443,10 +453,21 @@ export class Renderer {
    * Render the next row.
    * Main logic of the renderer.
    */
-  nextRow(hash: Hash, parents: Array<Ancestor>): GraphRow {
+  nextRow(hash: Hash, parents: Array<Ancestor>, opts?: NextRowOptions): GraphRow {
+    const {forceLastColumn = false} = opts ?? {};
+
     // Find a column for this node.
     const existingColumn = this.columns.find(hash);
-    const column: number = existingColumn ?? this.columns.firstEmpty() ?? this.columns.newEmpty();
+    let column: number;
+    if (forceLastColumn) {
+      assert(
+        existingColumn == null,
+        'requireLastColumn should only apply to heads (ex. "You are here")',
+      );
+      column = this.columns.newEmpty();
+    } else {
+      column = existingColumn ?? this.columns.firstEmpty() ?? this.columns.newEmpty();
+    }
     const isHead = existingColumn == null;
     const isRoot = parents.length === 0;
 

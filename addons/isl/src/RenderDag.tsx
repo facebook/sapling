@@ -95,7 +95,8 @@ export function RenderDag(props: RenderDagProps) {
       renderer.reserve(item);
     } else {
       const [info, typedParents] = item;
-      const row = renderer.nextRow(info.hash, typedParents);
+      const forceLastColumn = info.isYouAreHere;
+      const row = renderer.nextRow(info.hash, typedParents, {forceLastColumn});
       // Layout per row:
       //
       //   +-node--+ +-commit--------------+
