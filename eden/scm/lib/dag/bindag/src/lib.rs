@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+// See D16294467 for the "bindag" format specification.
+
 use std::ops::Deref;
 use std::ops::Range;
 
@@ -30,6 +32,7 @@ pub struct ParentRevs([usize; 2]);
 
 impl ParentRevs {
     const NONE: usize = usize::max_value();
+    const EMPTY: Self = Self([Self::NONE; 2]);
 }
 
 impl From<Vec<usize>> for ParentRevs {
@@ -136,4 +139,64 @@ pub fn slice_parents(parents: Vec<ParentRevs>, range: Range<usize>) -> Vec<Paren
         result.push(new_parents.into())
     }
     result
+}
+
+/// Compact form of segments (no allocation).
+#[derive(Copy, Clone)]
+pub struct CompactSegment {
+    pub low: usize,
+    pub high: usize,
+    pub parents: ParentRevs,
+}
+
+/// Parse bindag and return "CompactSegment".
+pub fn parse_bindag_segments(bindag: &[u8]) -> Vec<CompactSegment> {
+    let mut segments = Vec::new();
+    let mut cur = std::io::Cursor::new(bindag);
+    let mut read_next = move || -> Result<usize, _> { cur.read_vlq() };
+
+    let mut next_id = 0;
+
+    while let Ok(i) = read_next() {
+        let low = next_id;
+        let mut high = low;
+        let mut parents = ParentRevs::EMPTY;
+        match i {
+            0 => {
+                // no parents
+            }
+            1 => {
+                // 1 specified parent
+                let p1 = next_id - read_next().unwrap() - 1;
+                parents.0[0] = p1;
+            }
+            2 => {
+                // 2 specified parents
+                let p1 = next_id - read_next().unwrap() - 1;
+                let p2 = next_id - read_next().unwrap() - 1;
+                parents.0 = [p1, p2];
+            }
+            3 => {
+                // 2 parents, p2 specified
+                let p1 = next_id - 1;
+                let p2 = next_id - read_next().unwrap() - 1;
+                parents.0 = [p1, p2];
+            }
+            4 => {
+                // 2 parents, p1 specified
+                let p1 = next_id - read_next().unwrap() - 1;
+                let p2 = next_id - 1;
+                parents.0 = [p1, p2];
+            }
+            _ => {
+                // n commits (5: 1 commit)
+                high += i - 5;
+                parents.0[0] = low - 1;
+            }
+        }
+        next_id = high + 1;
+        segments.push(CompactSegment { low, high, parents });
+    }
+
+    segments
 }
