@@ -9,6 +9,7 @@ license = "GPL-2.0-only"
 [dependencies]
 bindag = { version = "0.1.0", path = "../bindag" }
 dag = { version = "0.1.0", path = ".." }
+dev-logger = { version = "0.1.0", path = "../../dev-logger" }
 mincode = { version = "0.1.0", path = "../../mincode" }
 minibench = { version = "0.1.0", path = "../../minibench" }
 nonblocking = { version = "0.1.0", path = "../../nonblocking" }

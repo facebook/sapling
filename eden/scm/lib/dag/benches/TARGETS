@@ -21,6 +21,7 @@ rust_binary(
         "fbsource//third-party/rust:tempfile",
         "//eden/scm/lib/dag:dag",
         "//eden/scm/lib/dag/bindag:bindag",
+        "//eden/scm/lib/dev-logger:dev-logger",
         "//eden/scm/lib/mincode:mincode",
         "//eden/scm/lib/minibench:minibench",
         "//eden/scm/lib/nonblocking:nonblocking",

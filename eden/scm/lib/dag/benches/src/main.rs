@@ -32,3 +32,6 @@ fn main() {
         segment_sizes::main();
     }
 }
+
+// Supports turning on tracing via LOG=...
+dev_logger::init!();
