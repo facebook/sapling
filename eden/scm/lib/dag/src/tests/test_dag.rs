@@ -250,18 +250,20 @@ impl TestDag {
     pub async fn pull_ff_master(
         &mut self,
         server: &Self,
-        old_master: impl Into<Vertex>,
-        new_master: impl Into<Vertex>,
+        old_master: impl Into<Set>,
+        new_master: impl Into<Set>,
     ) -> Result<()> {
         self.set_remote(server);
         let new_master = new_master.into();
         let missing = server
             .dag
-            .only(new_master.clone().into(), old_master.into().into())
+            .only(new_master.clone(), old_master.into())
             .await?;
         let data = server.dag.export_pull_data(&missing).await?;
         debug!("pull_ff data: {:?}", &data);
-        let heads = VertexListWithOptions::from(vec![new_master]).with_highest_group(Group::MASTER);
+        use crate::nameset::SyncNameSetQuery;
+        let heads_vec = new_master.iter()?.collect::<Result<Vec<_>>>()?;
+        let heads = VertexListWithOptions::from(heads_vec).with_highest_group(Group::MASTER);
         self.dag.import_pull_data(data, &heads).await?;
         Ok(())
     }
