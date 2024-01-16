@@ -2452,6 +2452,10 @@ fn find_free_span(covered: &IdSet, low: Id, reserve_size: u64, shrink_to_fit: bo
             low = span.high + 1;
         }
         high = (low + reserve_size - 1).min(low.group().max_id());
+        if reserve_size <= 1 && !covered.contains(low) {
+            // No need to go through complex (maybe O(N)) logic below.
+            break;
+        }
         // Try to reserve id..=id+reserve_size-1
         let reserved = IdSet::from_single_span(IdSpan::new(low, high));
         let intersected = reserved.intersection(covered);
