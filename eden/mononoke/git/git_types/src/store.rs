@@ -195,6 +195,24 @@ pub async fn fetch_git_object_bytes(
     }
 }
 
+/// Free function for fetching stored git objects. Applies to all git
+/// objects.
+#[allow(dead_code)]
+pub async fn fetch_git_object(
+    ctx: &CoreContext,
+    blobstore: Arc<dyn Blobstore>,
+    sha: &RichGitSha1,
+) -> anyhow::Result<gix_object::Object> {
+    let raw_bytes = fetch_git_object_bytes(ctx, blobstore, sha, HeaderState::Included).await?;
+    let object = gix_object::ObjectRef::from_loose(raw_bytes.as_ref()).map_err(|e| {
+        GitError::InvalidContent(
+            sha.to_hex().to_string(),
+            anyhow::anyhow!(e.to_string()).into(),
+        )
+    })?;
+    Ok(object.into())
+}
+
 /// Free function for uploading packfile item for git base object and
 /// returning the uploaded object
 pub async fn upload_packfile_base_item<B>(
