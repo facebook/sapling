@@ -7,7 +7,6 @@ cpp_library(
     srcs = ["HgBackingStore.cpp"],
     headers = ["HgBackingStore.h"],
     deps = [
-        ":hg_import_py_error",
         ":hg_import_request",
         ":hg_proxy_hash",
         "//eden/fs/config:config",
@@ -40,18 +39,6 @@ cpp_library(
         "//folly:executor",
         "//folly:range",
         "//folly:synchronized",
-    ],
-)
-
-cpp_library(
-    name = "hg_import_py_error",
-    srcs = ["HgImportPyError.cpp"],
-    headers = ["HgImportPyError.h"],
-    deps = [
-        "//folly:conv",
-    ],
-    exported_deps = [
-        "//folly:range",
     ],
 )
 

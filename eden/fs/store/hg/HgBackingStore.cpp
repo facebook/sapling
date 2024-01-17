@@ -32,7 +32,6 @@
 #include "eden/fs/store/SerializedBlobMetadata.h"
 #include "eden/fs/store/StoreResult.h"
 #include "eden/fs/store/hg/HgDatapackStore.h"
-#include "eden/fs/store/hg/HgImportPyError.h"
 #include "eden/fs/store/hg/HgImportRequest.h"
 #include "eden/fs/store/hg/HgProxyHash.h"
 #include "eden/fs/telemetry/EdenStats.h"

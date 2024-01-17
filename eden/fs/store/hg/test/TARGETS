@@ -8,7 +8,6 @@ cpp_unittest(
     name = "test",
     srcs = glob(
         ["*Test.cpp"],
-        exclude = ["HgImportTest.cpp"],
     ),
     args = [
         # Require all tests to set hgPath and not default to system hg.

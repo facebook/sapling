@@ -21,8 +21,6 @@ target_link_libraries(
     ${RE2_LIBRARY}
 )
 
-# TODO(jdelliot): re-enable eden_store_hg_test in subsquent diffs.
-# Breaks in this diff due to duplicated symbols (FLAG_hgPath)
-# if (NOT WIN32)
-#  add_subdirectory(test)
-# endif()
+if (NOT WIN32)
+ add_subdirectory(test)
+endif()
