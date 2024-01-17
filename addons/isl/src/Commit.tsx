@@ -465,7 +465,7 @@ function ConfirmCombineButtons() {
 
 function CommitDate({date}: {date: Date}) {
   return (
-    <span className="commit-date">
+    <span className="commit-date" title={date.toLocaleString()}>
       <RelativeDate date={date} useShortVariant />
     </span>
   );
