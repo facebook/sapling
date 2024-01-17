@@ -16,7 +16,6 @@
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/hg/HgDatapackStore.h"
 #include "eden/fs/store/hg/HgImportRequest.h"
-#include "eden/fs/store/hg/HgImporter.h"
 #include "eden/fs/store/hg/HgProxyHash.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/testharness/HgRepo.h"
@@ -67,7 +66,6 @@ struct HgDatapackStoreTest : TestRepo, ::testing::Test {
   EdenStatsPtr stats{makeRefPtr<EdenStats>()};
 
   HgDatapackStore::Options options{testOptions()};
-  HgImporter importer{repo.path(), stats.copy()};
 
   std::shared_ptr<TestConfigSource> testConfigSource{
       std::make_shared<TestConfigSource>(ConfigSourceType::SystemConfig)};

@@ -21,7 +21,6 @@
 #include "eden/fs/store/FilteredBackingStore.h"
 #include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/filter/HgSparseFilter.h"
-#include "eden/fs/store/hg/HgImporter.h"
 #include "eden/fs/store/hg/HgQueuedBackingStore.h"
 #include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/testharness/FakeFilter.h"
@@ -114,14 +113,12 @@ struct HgFilteredBackingStoreTest : TestRepo, ::testing::Test {
   EdenStatsPtr stats{makeRefPtr<EdenStats>()};
   std::shared_ptr<MemoryLocalStore> localStore{
       std::make_shared<MemoryLocalStore>(stats.copy())};
-  HgImporter importer{repo.path(), stats.copy()};
 
   std::shared_ptr<FilteredBackingStore> filteredStoreFFI_;
 
   FaultInjector faultInjector{/*enabled=*/false};
   std::unique_ptr<HgBackingStore> backingStore{std::make_unique<HgBackingStore>(
       repo.path(),
-      &importer,
       edenConfig,
       localStore,
       stats.copy(),

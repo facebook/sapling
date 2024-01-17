@@ -34,7 +34,6 @@
 #include "eden/fs/store/hg/HgDatapackStore.h"
 #include "eden/fs/store/hg/HgImportPyError.h"
 #include "eden/fs/store/hg/HgImportRequest.h"
-#include "eden/fs/store/hg/HgImporter.h"
 #include "eden/fs/store/hg/HgProxyHash.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/LogEvent.h"
@@ -72,9 +71,6 @@ DEFINE_bool(
 namespace facebook::eden {
 
 namespace {
-// Thread local HgImporter. This is only initialized on HgImporter threads.
-static folly::ThreadLocalPtr<Importer> threadLocalImporter;
-
 ObjectId hashFromRootId(const RootId& root) {
   return ObjectId::fromHex(root.value());
 }
@@ -93,39 +89,8 @@ class HgImporterThreadFactory : public folly::InitThreadFactory {
             std::make_shared<folly::NamedThreadFactory>("HgImporter"),
             [repository = AbsolutePath{repository},
              stats = std::move(stats),
-             logger] {
-              threadLocalImporter.reset(
-                  new HgImporterManager(repository, stats.copy(), logger));
-            },
-            [] {
-              if (folly::kIsWindows) {
-                // TODO(T125334969): On Windows, the ThreadLocalPtr doesn't
-                // appear to release its resources when the thread dies, so
-                // let's do it manually here.
-                threadLocalImporter.reset();
-              }
-            }) {}
-};
-
-/**
- * An inline executor that, while it exists, keeps a thread-local HgImporter
- * instance.
- */
-class HgImporterTestExecutor : public folly::InlineExecutor {
- public:
-  explicit HgImporterTestExecutor(Importer* importer) : importer_{importer} {}
-
-  void add(folly::Func f) override {
-    // This is an InlineExecutor, so we may run on an arbitrary thread.
-    threadLocalImporter.reset(importer_);
-    SCOPE_EXIT {
-      threadLocalImporter.release();
-    };
-    folly::InlineExecutor::add(std::move(f));
-  }
-
- private:
-  Importer* importer_;
+             logger] {},
+            [] {}) {}
 };
 
 HgDatapackStore::Options computeOptions() {
@@ -189,14 +154,13 @@ HgBackingStore::HgBackingStore(
  */
 HgBackingStore::HgBackingStore(
     AbsolutePathPiece repository,
-    HgImporter* importer,
     std::shared_ptr<ReloadableConfig> config,
     std::shared_ptr<LocalStore> localStore,
     EdenStatsPtr stats,
     FaultInjector* FOLLY_NONNULL faultInjector)
     : localStore_{std::move(localStore)},
       stats_{std::move(stats)},
-      importThreadPool_{std::make_unique<HgImporterTestExecutor>(importer)},
+      importThreadPool_{std::make_unique<folly::InlineExecutor>()},
       config_(std::move(config)),
       serverThreadPool_{importThreadPool_.get()},
       logger_(nullptr),

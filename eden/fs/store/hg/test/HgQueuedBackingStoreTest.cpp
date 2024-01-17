@@ -14,8 +14,8 @@
 #include "eden/fs/model/TestOps.h"
 #include "eden/fs/store/BackingStoreLogger.h"
 #include "eden/fs/store/MemoryLocalStore.h"
-#include "eden/fs/store/hg/HgImporter.h"
 #include "eden/fs/store/hg/HgQueuedBackingStore.h"
+#include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/testharness/HgRepo.h"
 #include "eden/fs/utils/FaultInjector.h"
@@ -56,12 +56,10 @@ struct HgQueuedBackingStoreTest : TestRepo, ::testing::Test {
   EdenStatsPtr stats{makeRefPtr<EdenStats>()};
   std::shared_ptr<MemoryLocalStore> localStore{
       std::make_shared<MemoryLocalStore>(stats.copy())};
-  HgImporter importer{repo.path(), stats.copy()};
 
   FaultInjector faultInjector{/*enabled=*/false};
   std::unique_ptr<HgBackingStore> backingStore{std::make_unique<HgBackingStore>(
       repo.path(),
-      &importer,
       edenConfig,
       localStore,
       stats.copy(),

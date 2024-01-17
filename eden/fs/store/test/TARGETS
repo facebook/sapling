@@ -34,7 +34,6 @@ cpp_unittest(
         "//eden/fs/store:filtered_backing_store",
         "//eden/fs/store:store",
         "//eden/fs/store/filter:hg_sparse_filter",
-        "//eden/fs/store/hg:hg_importer",
         "//eden/fs/store/hg:hg_queued_backing_store",
         "//eden/fs/telemetry:structured_logger",
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",

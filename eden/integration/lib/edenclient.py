@@ -285,8 +285,6 @@ class EdenFS:
             "2",
             "--local_storage_engine_unsafe",
             self._storage_engine,
-            "--hgPath",
-            FindExe.HG_REAL,
         ]
 
         privhelper = FindExe.EDEN_PRIVHELPER

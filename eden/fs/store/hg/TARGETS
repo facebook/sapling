@@ -9,7 +9,6 @@ cpp_library(
     deps = [
         ":hg_import_py_error",
         ":hg_import_request",
-        ":hg_importer",
         ":hg_proxy_hash",
         "//eden/fs/config:config",
         "//eden/fs/model:model",
@@ -88,43 +87,6 @@ cpp_library(
         "//folly:try",
         "//folly/container:f14_hash",
         "//folly/futures:core",
-    ],
-)
-
-cpp_library(
-    name = "hg_importer",
-    srcs = ["HgImporter.cpp"],
-    headers = ["HgImporter.h"],
-    deps = [
-        ":hg_import_py_error",
-        ":hg_proxy_hash",
-        "//eden/fs/model:model",
-        "//eden/fs/telemetry:structured_logger",
-        "//folly:conv",
-        "//folly:dynamic",
-        "//folly:file_util",
-        "//folly:utility",
-        "//folly/container:array",
-        "//folly/experimental:env_util",
-        "//folly/futures:core",
-        "//folly/io:iobuf",
-        "//folly/lang:bits",
-        "//folly/logging:logging",
-        "//folly/portability:unistd",
-    ],
-    exported_deps = [
-        "//eden/fs:config",
-        "//eden/fs/model:model-fwd",
-        "//eden/fs/telemetry:log_info",
-        "//eden/fs/telemetry:telemetry",
-        "//eden/fs/utils:path",
-        "//eden/fs/utils:process",
-        "//folly:range",
-        "//folly/portability:gflags",
-        "//folly/portability:iovec",
-    ],
-    external_deps = [
-        ("boost", None, "boost_filesystem"),
     ],
 )
 

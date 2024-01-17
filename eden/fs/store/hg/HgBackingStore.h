@@ -24,7 +24,6 @@
 
 namespace facebook::eden {
 
-class HgImporter;
 struct ImporterOptions;
 class EdenStats;
 class LocalStore;
@@ -61,7 +60,6 @@ class HgBackingStore {
    */
   HgBackingStore(
       AbsolutePathPiece repository,
-      HgImporter* importer,
       std::shared_ptr<ReloadableConfig> config,
       std::shared_ptr<LocalStore> localStore,
       EdenStatsPtr,

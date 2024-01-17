@@ -252,7 +252,6 @@ cpp_library(
         "HgRepo.h",
     ],
     deps = [
-        "//eden/fs/store/hg:hg_importer",
         "//eden/fs/utils:file_utils",
         "//folly:exception",
         "//folly:file",
@@ -267,6 +266,7 @@ cpp_library(
         "//eden/fs/model:model",
         "//eden/fs/utils:path",
         "//eden/fs/utils:process",
+        "//folly/portability:gflags",
     ],
 )
 
