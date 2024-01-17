@@ -390,24 +390,17 @@ struct NfsCrawlDetected {
 };
 
 struct FetchMiss {
-  enum MissSource : uint8_t { BackingStore = 0, HgImporter = 1 };
   enum MissType : uint8_t { Tree = 0, Blob = 1, BlobMetadata = 2 };
 
   static constexpr const char* type = "fetch_miss";
 
   std::string_view repo_source;
-  MissSource miss_source;
   MissType miss_type;
   std::string reason;
   bool retry;
 
   void populate(DynamicEvent& event) const {
     event.addString("repo_source", std::string(repo_source));
-    if (miss_source == BackingStore) {
-      event.addString("miss_source", "backingstore");
-    } else {
-      event.addString("miss_source", "hgimporter");
-    }
     if (miss_type == Tree) {
       event.addString("miss_type", "tree");
     } else if (miss_type == Blob) {

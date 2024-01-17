@@ -292,7 +292,6 @@ folly::Future<TreePtr> HgBackingStore::fetchTreeFromImporter(
                  if (logger_) {
                    logger_->logEvent(FetchMiss{
                        datapackStore_.getRepoName(),
-                       FetchMiss::BackingStore,
                        FetchMiss::Tree,
                        tree.exception().what().toStdString(),
                        true});
@@ -539,7 +538,6 @@ SemiFuture<BlobPtr> HgBackingStore::fetchBlobFromHgImporter(
                  if (logger_) {
                    logger_->logEvent(FetchMiss{
                        datapackStore_.getRepoName(),
-                       FetchMiss::BackingStore,
                        FetchMiss::Blob,
                        blob.exception().what().toStdString(),
                        true});
