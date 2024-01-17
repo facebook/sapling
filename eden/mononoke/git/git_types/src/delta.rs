@@ -845,6 +845,43 @@ mod test {
         Ok(())
     }
 
+    /// Tests that the delta generated is valid under the following conditions:
+    /// 1. The chunk size used is > 1
+    /// 2. The target object is larger than the base object with differences in the middle
+    /// of the file
+    /// 3. The last chunks of content for the target object can be generated using
+    /// data instructions from the target object
+    /// 4. The diffing algorithm produces final data instruction with base object range
+    /// Lb..Lb where Lb is the total number of chunks for the base object
+    #[fbinit::test]
+    #[should_panic]
+    async fn test_end_of_base_object_range_delta_application() {
+        const BASE_OBJECT: &str = include_str!("../test_data/base_object.txt");
+        const TARGET_OBJECT: &str = include_str!("../test_data/target_object.txt");
+        let base_object = Bytes::from(BASE_OBJECT.as_bytes());
+        let target_object = Bytes::from(TARGET_OBJECT.as_bytes());
+
+        let delta_instructions = DeltaInstructions::generate(
+            base_object.clone(),
+            target_object.clone(),
+            Algorithm::Myers,
+        )
+        .unwrap();
+        let mut encoded_instructions = Vec::new();
+        delta_instructions
+            .write_instructions(&mut encoded_instructions)
+            .await
+            .unwrap();
+        let mut recreated_new_object = Vec::new();
+        apply(
+            base_object.as_ref(),
+            &mut recreated_new_object,
+            encoded_instructions.as_ref(),
+        );
+        // Validate that the recreated_new_object matches the original new_object
+        assert_eq!(target_object, Bytes::from(recreated_new_object));
+    }
+
     #[fbinit::test]
     async fn test_very_large_string_delta_application() -> Result<()> {
         // Create a 50 MB string with random characters

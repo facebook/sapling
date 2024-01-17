@@ -4,7 +4,10 @@ oncall("mononoke")
 
 rust_library(
     name = "git_types",
-    srcs = glob(["src/**/*.rs"]),
+    srcs = glob([
+        "src/**/*.rs",
+        "test_data/**/*.txt",
+    ]),
     test_deps = [
         "fbsource//third-party/rust:async-compression",
         "fbsource//third-party/rust:futures-util",
