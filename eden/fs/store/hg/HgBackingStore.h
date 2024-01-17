@@ -162,8 +162,8 @@ class HgBackingStore {
 
   std::shared_ptr<LocalStore> localStore_;
   EdenStatsPtr stats_;
-  // A set of threads owning HgImporter instances
-  std::unique_ptr<folly::Executor> importThreadPool_;
+  // A set of threads processing Sapling retry requests.
+  std::unique_ptr<folly::Executor> retryThreadPool_;
   std::shared_ptr<ReloadableConfig> config_;
   // The main server thread pool; we push the Futures back into
   // this pool to run their completion code to avoid clogging

@@ -76,16 +76,16 @@ ObjectId hashFromRootId(const RootId& root) {
 
 /**
  * Thread factory that sets thread name and initializes a thread local
- * HgImporter.
+ * Sapling retry state.
  */
-class HgImporterThreadFactory : public folly::InitThreadFactory {
+class SaplingRetryThreadFactory : public folly::InitThreadFactory {
  public:
-  HgImporterThreadFactory(
+  SaplingRetryThreadFactory(
       AbsolutePathPiece repository,
       EdenStatsPtr stats,
       std::shared_ptr<StructuredLogger> logger)
       : folly::InitThreadFactory(
-            std::make_shared<folly::NamedThreadFactory>("HgImporter"),
+            std::make_shared<folly::NamedThreadFactory>("SaplingRetry"),
             [repository = AbsolutePath{repository},
              stats = std::move(stats),
              logger] {},
@@ -116,23 +116,23 @@ HgBackingStore::HgBackingStore(
     FaultInjector* FOLLY_NONNULL faultInjector)
     : localStore_(std::move(localStore)),
       stats_(stats.copy()),
-      importThreadPool_(make_unique<folly::CPUThreadPoolExecutor>(
+      retryThreadPool_(make_unique<folly::CPUThreadPoolExecutor>(
           FLAGS_num_hg_import_threads,
           /* Eden performance will degrade when, for example, a status operation
            * causes a large number of import requests to be scheduled before a
            * lightweight operation needs to check the RocksDB cache. In that
            * case, the RocksDB threads can end up all busy inserting work into
-           * the importer queue, preventing future requests that would hit cache
+           * the retry queue, preventing future requests that would hit cache
            * from succeeding.
            *
-           * Thus, make the import queue unbounded.
+           * Thus, make the retry queue unbounded.
            *
            * In the long term, we'll want a more comprehensive approach to
            * bounding the parallelism of scheduled work.
            */
           make_unique<folly::UnboundedBlockingQueue<
               folly::CPUThreadPoolExecutor::CPUTask>>(),
-          std::make_shared<HgImporterThreadFactory>(
+          std::make_shared<SaplingRetryThreadFactory>(
               repository,
               stats.copy(),
               logger))),
@@ -159,9 +159,9 @@ HgBackingStore::HgBackingStore(
     FaultInjector* FOLLY_NONNULL faultInjector)
     : localStore_{std::move(localStore)},
       stats_{std::move(stats)},
-      importThreadPool_{std::make_unique<folly::InlineExecutor>()},
+      retryThreadPool_{std::make_unique<folly::InlineExecutor>()},
       config_(std::move(config)),
-      serverThreadPool_{importThreadPool_.get()},
+      serverThreadPool_{retryThreadPool_.get()},
       logger_(nullptr),
       datapackStore_(
           repository,
@@ -259,7 +259,7 @@ folly::Future<TreePtr> HgBackingStore::fetchTreeFromImporter(
     RelativePath path,
     std::shared_ptr<LocalStore::WriteBatch> writeBatch) {
   return folly::via(
-             importThreadPool_.get(),
+             retryThreadPool_.get(),
              [this,
               path,
               manifestNode,
@@ -272,7 +272,7 @@ folly::Future<TreePtr> HgBackingStore::fetchTreeFromImporter(
                // NOTE: In the future we plan to update
                // SaplingNativeBackingStore (and HgDatapackStore) to provide and
                // asynchronous interface enabling us to perform our retries
-               // there. In the meantime we use importThreadPool_ for these
+               // there. In the meantime we use retryThreadPool_ for these
                // longer-running retry requests to avoid starving
                // serverThreadPool_.
 
@@ -509,7 +509,7 @@ folly::Future<TreePtr> HgBackingStore::importTreeManifestImpl(
 SemiFuture<BlobPtr> HgBackingStore::fetchBlobFromHgImporter(
     HgProxyHash hgInfo) {
   return folly::via(
-             importThreadPool_.get(),
+             retryThreadPool_.get(),
              [this,
               hgInfo = std::move(hgInfo),
               &liveImportBlobWatches = liveImportBlobWatches_] {
@@ -519,7 +519,7 @@ SemiFuture<BlobPtr> HgBackingStore::fetchBlobFromHgImporter(
                // NOTE: In the future we plan to update
                // SaplingNativeBackingStore (and HgDatapackStore) to provide and
                // asynchronous interface enabling us to perform our retries
-               // there. In the meantime we use importThreadPool_ for these
+               // there. In the meantime we use retryThreadPool_ for these
                // longer-running retry requests to avoid starving
                // serverThreadPool_.
 
