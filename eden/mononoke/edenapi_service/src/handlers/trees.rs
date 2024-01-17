@@ -62,8 +62,7 @@ use crate::utils::custom_cbor_stream;
 use crate::utils::get_repo;
 use crate::utils::parse_wire_request;
 
-/// XXX: These numbers were chosen arbitrarily.
-const MAX_CONCURRENT_TREE_FETCHES_PER_REQUEST: usize = 10;
+const MAX_CONCURRENT_TREE_FETCHES_PER_REQUEST: usize = 32;
 const MAX_CONCURRENT_METADATA_FETCHES_PER_TREE_FETCH: usize = 100;
 const MAX_CONCURRENT_UPLOAD_TREES_PER_REQUEST: usize = 100;
 const LARGE_TREE_METADATA_LIMIT: usize = 25000;
