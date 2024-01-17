@@ -255,68 +255,6 @@ void HgImporter::stopHelperProcess() {
   }
 }
 
-BlobPtr HgImporter::importFileContents(
-    RelativePathPiece path,
-    Hash20 blobHash) {
-  XLOG(DBG5) << "requesting file contents of '" << path << "', "
-             << blobHash.toString();
-
-  // Ask the import helper process for the file contents
-  auto requestID = sendFileRequest(path, blobHash);
-
-  // Read the response.  The response body contains the file contents,
-  // which is exactly what we want to return.
-  //
-  // Note: For now we expect to receive the entire contents in a single chunk.
-  // In the future we might want to consider if it is more efficient to receive
-  // the body data in fixed-size chunks, particularly for very large files.
-  auto header = readChunkHeader(requestID, "CMD_CAT_FILE");
-  if (header.dataLength < sizeof(uint64_t)) {
-    auto msg = fmt::format(
-        "CMD_CAT_FILE response for blob {} ({}, {}) "
-        "from debugedenimporthelper is too "
-        "short for body length field: length = {}",
-        blobHash,
-        path,
-        blobHash,
-        header.dataLength);
-    XLOG(ERR) << msg;
-    throw std::runtime_error(std::move(msg));
-  }
-  auto buf = IOBuf(IOBuf::CREATE, header.dataLength);
-
-  readFromHelper(
-      buf.writableTail(), header.dataLength, "CMD_CAT_FILE response body");
-  buf.append(header.dataLength);
-
-  // The last 8 bytes of the response are the body length.
-  // Ensure that this looks correct, and advance the buffer past this data to
-  // the start of the actual response body.
-  //
-  // This data doesn't really need to be present in the response.  It is only
-  // here so we can double-check that the response data appears valid.
-  buf.trimEnd(sizeof(uint64_t));
-  uint64_t bodyLength;
-  memcpy(&bodyLength, buf.tail(), sizeof(uint64_t));
-  bodyLength = Endian::big(bodyLength);
-  if (bodyLength != header.dataLength - sizeof(uint64_t)) {
-    auto msg = fmt::format(
-        "inconsistent body length received when importing blob {} ({}, {}): "
-        "bodyLength={} responseLength={}",
-        blobHash,
-        path,
-        blobHash,
-        bodyLength,
-        header.dataLength);
-    XLOG(ERR) << msg;
-    throw std::runtime_error(std::move(msg));
-  }
-
-  XLOG(DBG4) << "imported blob " << blobHash << " (" << path << ", " << blobHash
-             << "); length=" << bodyLength;
-  return std::make_shared<BlobPtr::element_type>(std::move(buf));
-}
-
 std::unique_ptr<IOBuf> HgImporter::fetchTree(
     RelativePathPiece path,
     Hash20 pathManifestNode) {
@@ -422,32 +360,6 @@ HgImporter::ChunkHeader HgImporter::readChunkHeader(
   XLOG(WARNING) << "error received from hg helper process: " << errorType
                 << ": " << message;
   throw HgImportPyError(errorType, message);
-}
-
-HgImporter::TransactionID HgImporter::sendFileRequest(
-    RelativePathPiece path,
-    Hash20 revHash) {
-  stats_->increment(&HgImporterStats::catFile);
-
-  auto txnID = nextRequestID_++;
-  ChunkHeader header;
-  header.command = Endian::big<uint32_t>(CMD_CAT_FILE);
-  header.requestID = Endian::big<uint32_t>(txnID);
-  header.flags = 0;
-  std::string_view pathStr = path.view();
-  header.dataLength = Endian::big<uint32_t>(
-      folly::to_narrow(Hash20::RAW_SIZE + pathStr.size()));
-
-  std::array<struct iovec, 3> iov;
-  iov[0].iov_base = &header;
-  iov[0].iov_len = sizeof(header);
-  iov[1].iov_base = const_cast<uint8_t*>(revHash.getBytes().data());
-  iov[1].iov_len = Hash20::RAW_SIZE;
-  iov[2].iov_base = const_cast<char*>(pathStr.data());
-  iov[2].iov_len = pathStr.size();
-  writeToHelper(iov, "CMD_CAT_FILE");
-
-  return txnID;
 }
 
 HgImporter::TransactionID HgImporter::sendFetchTreeRequest(
@@ -576,16 +488,6 @@ auto HgImporterManager::retryOnError(Fn&& fn, FetchMiss::MissType missType) {
         true});
     throw;
   }
-}
-
-BlobPtr HgImporterManager::importFileContents(
-    RelativePathPiece path,
-    Hash20 blobHash) {
-  return retryOnError(
-      [=](HgImporter* importer) {
-        return importer->importFileContents(path, blobHash);
-      },
-      FetchMiss::Blob);
 }
 
 std::unique_ptr<IOBuf> HgImporterManager::fetchTree(

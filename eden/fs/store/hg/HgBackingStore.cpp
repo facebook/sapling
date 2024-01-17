@@ -628,20 +628,8 @@ SemiFuture<BlobPtr> HgBackingStore::fetchBlobFromHgImporter(
                if (blob.hasValue()) {
                  stats_->increment(&HgBackingStoreStats::fetchBlobRetrySuccess);
                  result = blob.value();
-               } else if (config_->getEdenConfig()
-                              ->hgImporterFetchFallback.getValue()) {
-                 // Fall back to importer
-                 Importer& importer = getThreadLocalImporter();
-                 result = importer.importFileContents(
-                     hgInfo.path(), hgInfo.revHash());
-
-                 if (result.hasValue()) {
-                   stats_->increment(&HgBackingStoreStats::importBlobSuccess);
-                 } else {
-                   stats_->increment(&HgBackingStoreStats::importBlobFailure);
-                 }
                } else {
-                 // No fallback to importer, record miss and return error
+                 // Record miss and return error
                  if (logger_) {
                    logger_->logEvent(FetchMiss{
                        datapackStore_.getRepoName(),

@@ -56,39 +56,6 @@ class HgImportTest : public ::testing::Test {
 #define EXPECT_BLOB_EQ(blob, data) \
   EXPECT_EQ((blob)->getContents().clone()->moveToFbString(), (data))
 
-TEST_F(HgImportTest, importTest) {
-  if (!testEnvironmentSupportsHg()) {
-    GTEST_SKIP();
-  }
-
-  // Set up the initial commit
-  repo_.mkdir("foo");
-  StringPiece barData = "this is a test file\n";
-  RelativePathPiece filePath{"foo/bar.txt"};
-  repo_.writeFile(filePath, barData);
-  repo_.hg("add", "foo");
-  auto commit1 = repo_.commit("Initial commit");
-
-  // Import the root tree
-  HgImporter importer(repo_.path(), stats_.copy());
-
-  auto output = repo_.hg("manifest", "--debug");
-  auto fileHash = output.substr(0, 40);
-
-  auto blob = importer.importFileContents(filePath, Hash20{fileHash});
-  EXPECT_BLOB_EQ(blob, barData);
-
-  // Test importing objects that do not exist
-  Hash20 noSuchHash = makeTestHash20("123");
-  EXPECT_THROW(
-      importer.importFileContents(filePath, noSuchHash), std::exception);
-
-  EXPECT_THROW(
-      importer.importFileContents(
-          RelativePathPiece{"hello"}, Hash20{commit1.value()}),
-      std::exception);
-}
-
 // TODO(T33797958): Check hg_importer_helper's exit code on Windows (in
 // HgImportTest).
 #ifndef _WIN32
