@@ -301,6 +301,14 @@ impl std::fmt::Debug for DeltaInstruction {
     }
 }
 
+/// The kind of object used in delta instructions
+pub enum ObjectKind {
+    /// Object is used as base
+    Base,
+    /// Object is used as target generated through base
+    Target,
+}
+
 /// List of instructions which when applied in order form a
 /// complete new object based on delta of a base object
 #[derive(Clone, Hash, Eq, PartialEq)]
@@ -313,7 +321,6 @@ pub struct DeltaInstructions {
     instructions: Vec<DeltaInstruction>,
 }
 
-#[allow(dead_code)]
 impl DeltaInstructions {
     // Generate set of DeltaInstructions for the given base and new object by diffing them
     // using the provided diff algorithm
@@ -353,6 +360,24 @@ impl DeltaInstructions {
             instruction.write(out).await?;
         }
         Ok(())
+    }
+
+    /// Given the chunk-based range in the base or target object, return the equivalent
+    /// byte level range by multiplying the offset
+    pub fn object_byte_range(&self, range: Range<u32>, kind: ObjectKind) -> Range<u32> {
+        let (chunk_size, object_len) = match kind {
+            ObjectKind::Base => (
+                self.base_object_chunk_size as u32,
+                self.base_object.len() as u32,
+            ),
+            ObjectKind::Target => (
+                self.new_object_chunk_size as u32,
+                self.new_object.len() as u32,
+            ),
+        };
+        let range_start = std::cmp::min(range.start * chunk_size, object_len);
+        let range_end = std::cmp::min(range.end * chunk_size, object_len);
+        range_start..range_end
     }
 }
 
@@ -453,15 +478,8 @@ impl Sink for FallibleDeltaInstructions {
                 // The before and after ranges are essentially chunk indices where each
                 // chunk can be `chunk_size` bytes long. To get the actual byte level index,
                 // we need to multiply the `chunk_size` with the chunk index
-                let base_object_offset = delta_instructions.base_object_chunk_size as u32;
-                let base_object_len = delta_instructions.base_object.len() as u32;
-                let before = (before.start * base_object_offset)
-                    ..(std::cmp::min(before.end * base_object_offset, base_object_len));
-
-                let new_object_offset = delta_instructions.new_object_chunk_size as u32;
-                let new_object_len = delta_instructions.new_object.len() as u32;
-                let after = (after.start * new_object_offset)
-                    ..(std::cmp::min(after.end * new_object_offset, new_object_len));
+                let before = delta_instructions.object_byte_range(before, ObjectKind::Base);
+                let after = delta_instructions.object_byte_range(after, ObjectKind::Target);
                 let processed_till = delta_instructions.processed_till.clone();
                 // Every change detected by the algorithm would be represented as a Data instruction since
                 // the changed part of the content cannot be copied from the base object. The data instruction
@@ -854,8 +872,7 @@ mod test {
     /// 4. The diffing algorithm produces final data instruction with base object range
     /// Lb..Lb where Lb is the total number of chunks for the base object
     #[fbinit::test]
-    #[should_panic]
-    async fn test_end_of_base_object_range_delta_application() {
+    async fn test_end_of_base_object_range_delta_application() -> Result<()> {
         const BASE_OBJECT: &str = include_str!("../test_data/base_object.txt");
         const TARGET_OBJECT: &str = include_str!("../test_data/target_object.txt");
         let base_object = Bytes::from(BASE_OBJECT.as_bytes());
@@ -865,13 +882,12 @@ mod test {
             base_object.clone(),
             target_object.clone(),
             Algorithm::Myers,
-        )
-        .unwrap();
+        )?;
+
         let mut encoded_instructions = Vec::new();
         delta_instructions
             .write_instructions(&mut encoded_instructions)
-            .await
-            .unwrap();
+            .await?;
         let mut recreated_new_object = Vec::new();
         apply(
             base_object.as_ref(),
@@ -880,6 +896,7 @@ mod test {
         );
         // Validate that the recreated_new_object matches the original new_object
         assert_eq!(target_object, Bytes::from(recreated_new_object));
+        Ok(())
     }
 
     #[fbinit::test]
