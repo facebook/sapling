@@ -348,7 +348,7 @@ struct LocalStoreStats : StatsGroup<LocalStoreStats> {
  * Terminology:
  *   get = entire lookup process, including both Sapling disk hits and fetches
  *   fetch = includes asynchronous retrieval from Mononoke
- *   import = fall back on hg debugedenimporthelper process
+ *   import = fall back process
  */
 struct HgBackingStoreStats : StatsGroup<HgBackingStoreStats> {
   Duration getTree{"store.hg.get_tree_us"};
