@@ -10,6 +10,10 @@ body {
   overflow: hidden;
 }
 
+html .vscode-high-contrast {
+  --selected-commit-border: 1px solid var(--vscode-button-border);
+}
+
 .webview-view .isl-root {
   --background: var(--vscode-sidebar-background);
   outline: 1px solid var(--vscode-panel-border);
@@ -28,4 +32,9 @@ body[data-vscode-theme-id='Default Light Modern'] .commit-rows vscode-tag::part(
 body[data-vscode-theme-id='Default Dark Modern'] .commit-rows vscode-tag::part(control) {
   background-color: var(--vscode-tab-unfocusedHoverBackground);
   color: var(--vscode-tab-activeForeground);
+}
+
+body[data-vscode-theme-kind='vscode-high-contrast'] .inline-badge.badge-primary {
+  background-color: var(--background);
+  outline: 1px solid var(--vscode-button-border);
 }

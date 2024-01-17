@@ -281,6 +281,7 @@
 
 .selected-commit-background {
   background-color: var(--selected-commit-background);
+  border: var(--selected-commit-border);
   width: calc(100% + 3.5 * var(--pad));
   position: absolute;
   height: 100%;
