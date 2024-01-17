@@ -161,12 +161,6 @@ class HgBackingStore {
       ObjectId edenTreeID,
       RelativePath path,
       std::shared_ptr<LocalStore::WriteBatch> writeBatch);
-  TreePtr processTree(
-      std::unique_ptr<folly::IOBuf> content,
-      const Hash20& manifestNode,
-      const ObjectId& edenTreeID,
-      RelativePathPiece path,
-      LocalStore::WriteBatch* writeBatch);
 
   std::shared_ptr<LocalStore> localStore_;
   EdenStatsPtr stats_;

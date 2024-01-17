@@ -75,16 +75,6 @@ namespace {
 // Thread local HgImporter. This is only initialized on HgImporter threads.
 static folly::ThreadLocalPtr<Importer> threadLocalImporter;
 
-/**
- * Checks that the thread local HgImporter is present and returns it.
- */
-Importer& getThreadLocalImporter() {
-  if (!threadLocalImporter) {
-    EDEN_BUG() << "Attempting to get HgImporter from non-HgImporter thread";
-  }
-  return *threadLocalImporter;
-}
-
 ObjectId hashFromRootId(const RootId& root) {
   return ObjectId::fromHex(root.value());
 }
@@ -313,7 +303,6 @@ folly::Future<TreePtr> HgBackingStore::fetchTreeFromImporter(
               edenTreeID,
               writeBatch,
               &liveImportTreeWatches = liveImportTreeWatches_] {
-               Importer& importer = getThreadLocalImporter();
                folly::stop_watch<std::chrono::milliseconds> watch;
                RequestMetricsScope queueTracker{&liveImportTreeWatches};
 
@@ -335,23 +324,8 @@ folly::Future<TreePtr> HgBackingStore::fetchTreeFromImporter(
                if (tree.hasValue()) {
                  stats_->increment(&HgBackingStoreStats::fetchTreeRetrySuccess);
                  result = tree.value();
-               } else if (config_->getEdenConfig()
-                              ->hgImporterFetchFallback.getValue()) {
-                 // Fall back to importer
-                 auto serializedTree = importer.fetchTree(path, manifestNode);
-                 if (serializedTree) {
-                   stats_->increment(&HgBackingStoreStats::importTreeSuccess);
-                 } else {
-                   stats_->increment(&HgBackingStoreStats::importTreeFailure);
-                 }
-                 result = processTree(
-                     std::move(serializedTree),
-                     manifestNode,
-                     edenTreeID,
-                     path,
-                     writeBatch.get());
                } else {
-                 // No fallback to importer, record miss and return error
+                 // Record miss and return error
                  if (logger_) {
                    logger_->logEvent(FetchMiss{
                        datapackStore_.getRepoName(),
@@ -483,37 +457,6 @@ class Manifest {
 };
 
 } // namespace
-
-TreePtr HgBackingStore::processTree(
-    std::unique_ptr<IOBuf> content,
-    const Hash20& manifestNode,
-    const ObjectId& edenTreeID,
-    RelativePathPiece path,
-    LocalStore::WriteBatch* writeBatch) {
-  auto manifest = Manifest(std::move(content));
-  Tree::container entries{kPathMapDefaultCaseSensitive};
-  auto hgObjectIdFormat = config_->getEdenConfig()->hgObjectIdFormat.getValue();
-  const auto filteredPaths =
-      config_->getEdenConfig()->hgFilteredPaths.getValue();
-
-  for (auto& entry : manifest) {
-    XLOG(DBG9) << "tree: " << manifestNode << " " << entry.name
-               << " node: " << entry.node << " flag: " << entry.type;
-
-    auto relPath = path + entry.name;
-    if (filteredPaths->count(relPath) == 0) {
-      auto proxyHash =
-          HgProxyHash::store(relPath, entry.node, hgObjectIdFormat);
-
-      entries.emplace(entry.name, proxyHash, entry.type);
-    }
-  }
-
-  writeBatch->flush();
-
-  return std::make_shared<TreePtr::element_type>(
-      std::move(entries), edenTreeID);
-}
 
 ImmediateFuture<folly::Unit> HgBackingStore::importTreeManifestForRoot(
     const RootId& rootId,

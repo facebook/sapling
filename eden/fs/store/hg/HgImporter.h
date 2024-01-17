@@ -57,16 +57,6 @@ struct ImporterOptions {
 class Importer {
  public:
   virtual ~Importer() = default;
-
-  /**
-   * Import tree and store it in the datapack
-   *
-   * In the case where CMD_CAT_TREE is used, a valid IOBuf is return,
-   * otherwise, nullptr is returned.
-   */
-  virtual std::unique_ptr<folly::IOBuf> fetchTree(
-      RelativePathPiece path,
-      Hash20 pathManifestNode) = 0;
 };
 
 /**
@@ -100,10 +90,6 @@ class HgImporter : public Importer {
   virtual ~HgImporter();
 
   ProcessStatus debugStopHelperProcess();
-
-  std::unique_ptr<folly::IOBuf> fetchTree(
-      RelativePathPiece path,
-      Hash20 pathManifestNode) override;
 
   const ImporterOptions& getOptions() const;
 
@@ -204,24 +190,9 @@ class HgImporter : public Importer {
     writeToHelper(iov.data(), iov.size(), context);
   }
 
-  /**
-   * Send a request to the helper process asking it to prefetch data for trees
-   * under the specified path, at the specified manifest node for the given
-   * path.
-   */
-  TransactionID sendFetchTreeRequest(
-      CommandType cmd,
-      RelativePathPiece path,
-      Hash20 pathManifestNode,
-      folly::StringPiece context);
-
   SpawnedProcess helper_;
   EdenStatsPtr const stats_;
   ImporterOptions options_;
-  uint32_t nextRequestID_{0};
-
-  // How many trees were fetched since the last time we logged?
-  uint64_t treeRequestsSinceLog_{0};
 
   /**
    * The input and output file descriptors to the helper subprocess.
@@ -255,10 +226,6 @@ class HgImporterManager : public Importer {
       EdenStatsPtr,
       std::shared_ptr<StructuredLogger> logger,
       std::optional<AbsolutePath> importHelperScript = std::nullopt);
-
-  std::unique_ptr<folly::IOBuf> fetchTree(
-      RelativePathPiece path,
-      Hash20 pathManifestNode) override;
 
  private:
   template <typename Fn>

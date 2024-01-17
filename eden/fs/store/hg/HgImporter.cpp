@@ -255,64 +255,6 @@ void HgImporter::stopHelperProcess() {
   }
 }
 
-std::unique_ptr<IOBuf> HgImporter::fetchTree(
-    RelativePathPiece path,
-    Hash20 pathManifestNode) {
-  // Ask the hg_import_helper script to fetch data for this tree
-  static constexpr auto getNumRequestsSinceLastLog =
-      [](uint64_t& treeRequestsSinceLog) {
-        uint64_t numRequests = 0;
-        std::swap(numRequests, treeRequestsSinceLog);
-        return numRequests;
-      };
-  XLOG_EVERY_MS(DBG1, 1000)
-      << "fetching data for tree \"" << path << "\" at manifest node "
-      << pathManifestNode << ". "
-      << getNumRequestsSinceLastLog(treeRequestsSinceLog_)
-      << " trees fetched since last log";
-  treeRequestsSinceLog_++;
-
-  auto requestID = sendFetchTreeRequest(
-      CMD_CAT_TREE, path, pathManifestNode, "CMD_CAT_TREE");
-
-  ChunkHeader header;
-  header = readChunkHeader(requestID, "CMD_CAT_TREE");
-
-  auto buf = IOBuf::create(header.dataLength);
-
-  readFromHelper(
-      buf->writableTail(), header.dataLength, "CMD_CAT_TREE response body");
-  buf->append(header.dataLength);
-
-  // The last 8 bytes of the response are the body length.
-  // Ensure that this looks correct, and advance the buffer past this data to
-  // the start of the actual response body.
-  //
-  // This data doesn't really need to be present in the response.  It is only
-  // here so we can double-check that the response data appears valid.
-  buf->trimEnd(sizeof(uint64_t));
-  uint64_t bodyLength;
-  memcpy(&bodyLength, buf->tail(), sizeof(uint64_t));
-  bodyLength = Endian::big(bodyLength);
-  if (bodyLength != header.dataLength - sizeof(uint64_t)) {
-    auto msg = fmt::format(
-        "inconsistent body length received when importing tree {} ({}, {}): "
-        "bodyLength={} responseLength={}",
-        pathManifestNode,
-        path,
-        pathManifestNode,
-        bodyLength,
-        header.dataLength);
-    XLOG(ERR) << msg;
-    throw std::runtime_error(std::move(msg));
-  }
-
-  XLOG(DBG4) << "imported tree " << pathManifestNode << " (" << path << ", "
-             << pathManifestNode << "); length=" << bodyLength;
-
-  return buf;
-}
-
 HgImporter::ChunkHeader HgImporter::readChunkHeader(
     TransactionID txnID,
     StringPiece cmdName) {
@@ -360,34 +302,6 @@ HgImporter::ChunkHeader HgImporter::readChunkHeader(
   XLOG(WARNING) << "error received from hg helper process: " << errorType
                 << ": " << message;
   throw HgImportPyError(errorType, message);
-}
-
-HgImporter::TransactionID HgImporter::sendFetchTreeRequest(
-    CommandType cmd,
-    RelativePathPiece path,
-    Hash20 pathManifestNode,
-    StringPiece context) {
-  stats_->increment(&HgImporterStats::fetchTree);
-
-  auto txnID = nextRequestID_++;
-  ChunkHeader header;
-  header.command = Endian::big<uint32_t>(cmd);
-  header.requestID = Endian::big<uint32_t>(txnID);
-  header.flags = 0;
-  std::string_view pathStr = path.view();
-  header.dataLength = Endian::big<uint32_t>(
-      folly::to_narrow(Hash20::RAW_SIZE + pathStr.size()));
-
-  std::array<struct iovec, 3> iov;
-  iov[0].iov_base = &header;
-  iov[0].iov_len = sizeof(header);
-  iov[1].iov_base = const_cast<uint8_t*>(pathManifestNode.getBytes().data());
-  iov[1].iov_len = Hash20::RAW_SIZE;
-  iov[2].iov_base = const_cast<char*>(pathStr.data());
-  iov[2].iov_len = pathStr.size();
-  writeToHelper(iov, context);
-
-  return txnID;
 }
 
 void HgImporter::readFromHelper(void* buf, uint32_t size, StringPiece context) {
@@ -488,16 +402,6 @@ auto HgImporterManager::retryOnError(Fn&& fn, FetchMiss::MissType missType) {
         true});
     throw;
   }
-}
-
-std::unique_ptr<IOBuf> HgImporterManager::fetchTree(
-    RelativePathPiece path,
-    Hash20 pathManifestNode) {
-  return retryOnError(
-      [&](HgImporter* importer) {
-        return importer->fetchTree(path, pathManifestNode);
-      },
-      FetchMiss::Tree);
 }
 
 HgImporter* HgImporterManager::getImporter() {
