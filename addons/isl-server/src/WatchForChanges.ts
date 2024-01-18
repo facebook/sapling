@@ -15,6 +15,9 @@ import path from 'path';
 import {debounce} from 'shared/debounce';
 
 const DEFAULT_POLL_INTERVAL = 5 * ONE_MINUTE_MS;
+// When the page is hidden, aggressively reduce polling.
+const HIDDEN_POLL_INTERVAL = 60 * ONE_MINUTE_MS;
+// When visible or focused, poll frequently
 const VISIBLE_POLL_INTERVAL = 1 * ONE_MINUTE_MS;
 const FOCUSED_POLL_INTERVAL = 0.25 * ONE_MINUTE_MS;
 const ON_FOCUS_REFETCH_THROTTLE = 10_000;
@@ -75,6 +78,11 @@ export class WatchForChanges {
         desiredNextTickTime = FOCUSED_POLL_INTERVAL;
       } else if (this.pageFocusTracker.hasVisiblePage()) {
         desiredNextTickTime = VISIBLE_POLL_INTERVAL;
+      }
+    } else {
+      // if watchman is working normally, and we're not visible, don't poll nearly as often
+      if (!this.pageFocusTracker.hasPageWithFocus() && !this.pageFocusTracker.hasVisiblePage()) {
+        desiredNextTickTime = HIDDEN_POLL_INTERVAL;
       }
     }
 
