@@ -8,6 +8,8 @@
 import type {ReactNode} from 'react';
 import type {SetterOrUpdater} from 'recoil';
 
+import {t} from './i18n';
+import platform from './platform';
 import {List} from 'immutable';
 import {DefaultValue, atom, useRecoilState} from 'recoil';
 
@@ -41,6 +43,12 @@ class UseToast {
       }
       return nextValue.push({message, disapparAt: hideAt, key: key ?? hideAt.getTime().toString()});
     });
+  }
+
+  /** Show "Copied <text>" toast. Existing "copied' toast will be replaced. */
+  copyAndShowToast(text: string) {
+    platform.clipboardCopy(text);
+    this.show(t('Copied $text', {replace: {$text: text}}), {key: 'copied'});
   }
 
   /** List all toasts to display. */
