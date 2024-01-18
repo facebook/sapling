@@ -22,10 +22,7 @@
   $ git init -q
   $ echo "this is file1" > file1
   $ git add file1
-  $ git commit -am "Add file1"
-  [master (root-commit) 8ce3eae] Add file1
-   1 file changed, 1 insertion(+)
-   create mode 100644 file1
+  $ git commit -qam "Add file1"
   $ git tag -a -m"new tag" first_tag
   $ cd "$TESTTMP"
   $ git clone "$GIT_REPO_ORIGIN"
@@ -50,6 +47,36 @@
   blob-repo0000.git_object.8ce3eae44760b500bf3f2c3922a95dcd3c908e9e
   blob-repo0000.git_object.cb2ef838eb24e4667fee3a8b89c930234ae6e4bb
 
+# Validate that we are able to view the git objects stored in mononoke store
+  $ mononoke_newadmin git-objects -R repo fetch --id 8ce3eae44760b500bf3f2c3922a95dcd3c908e9e
+  The object is a Git Commit
+  
+  Commit {
+      tree: Sha1(cb2ef838eb24e4667fee3a8b89c930234ae6e4bb),
+      parents: [],
+      author: Signature {
+          name: "mononoke",
+          email: "mononoke@mononoke",
+          time: Time {
+              seconds: 946684800,
+              offset: 0,
+              sign: Plus,
+          },
+      },
+      committer: Signature {
+          name: "mononoke",
+          email: "mononoke@mononoke",
+          time: Time {
+              seconds: 946684800,
+              offset: 0,
+              sign: Plus,
+          },
+      },
+      encoding: None,
+      message: "Add file1\n",
+      extra_headers: [],
+  }
+
 # Validate if creating the commit also uploaded the packfile items for the imported git objects
   $ ls $TESTTMP/blobstore/blobs | grep "git_packfile_base_item"
   blob-repo0000.git_packfile_base_item.433eb172726bc7b6d60e8d68efb0f0ef4e67a667
@@ -70,10 +97,7 @@
   $ cd "$GIT_REPO"
   $ echo "this is file2" > file2
   $ git add file2
-  $ git commit -am "Add file2"
-  [master e8615d6] Add file2
-   1 file changed, 1 insertion(+)
-   create mode 100644 file2
+  $ git commit -qam "Add file2"
 
 # Test missing-for-commit flag (against partially imported repo history)
   $ cd "$TESTTMP"

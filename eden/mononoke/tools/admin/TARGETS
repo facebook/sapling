@@ -46,6 +46,7 @@ rust_binary(
         "fbsource//third-party/rust:flate2",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:gix-hash",
+        "fbsource//third-party/rust:gix-object",
         "fbsource//third-party/rust:itertools",
         "fbsource//third-party/rust:prettytable-rs",
         "fbsource//third-party/rust:regex",

@@ -38,6 +38,7 @@ pub use crate::delta_manifest::GitDeltaManifestEntry;
 pub use crate::derive_delta_manifest::RootGitDeltaManifestId;
 pub use crate::errors::GitError;
 pub use crate::store::fetch_delta_instructions;
+pub use crate::store::fetch_git_object;
 pub use crate::store::fetch_git_object_bytes;
 pub use crate::store::fetch_non_blob_git_object;
 pub use crate::store::fetch_non_blob_git_object_bytes;
