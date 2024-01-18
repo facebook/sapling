@@ -9,7 +9,7 @@ import {prefersReducedMotion} from './mediaQuery';
 import deepEqual from 'fast-deep-equal';
 import React, {useRef, useLayoutEffect} from 'react';
 
-type ReorderGroupProps = {
+type ReorderGroupProps = React.HTMLAttributes<HTMLDivElement> & {
   children: React.ReactElement[];
   animationDuration?: number;
   animationMinPixel?: number;
