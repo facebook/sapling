@@ -80,7 +80,6 @@ pub fn expand_aliases<S: ToString>(
 /// Suppose `foo-bar` is a defined command, then the following
 /// arguments can all be used to run the `foo-bar` command:
 /// - `["foo-bar"]`
-/// - `["foo", "--bar"]`
 /// - `["foo", "bar"]`  (only if `foo` does not match)
 ///
 /// Return the command name (For example, `"foo-bar"`), and the number of
@@ -96,10 +95,7 @@ pub fn find_command_name(
     let mut candidate = String::new();
 
     for (i, arg) in args.iter().enumerate().take(3) {
-        if arg.starts_with("--") {
-            // Turn ["foo", "--bar"] into "foo-bar".
-            candidate += &arg[1..];
-        } else if best_match.is_none() {
+        if best_match.is_none() {
             // Turn ["foo", "bar"] into "foo-bar", if "foo" does not already match.
             if i > 0 {
                 candidate += "-";
@@ -243,7 +239,7 @@ fn expand_shell_alias_args(command_args: &[String], shell_alias: &str) -> Vec<St
 ///
 /// * `arg` - The command prefix to expand.
 ///
-/// If there is an exact match the argument is returned as-is.  
+/// If there is an exact match the argument is returned as-is.
 /// If there is no match the argument is returned as-is.
 ///
 /// Commands with negative isize are considered as "debug" commands and treated
