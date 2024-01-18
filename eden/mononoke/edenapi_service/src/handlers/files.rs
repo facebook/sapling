@@ -63,6 +63,7 @@ use crate::middleware::RequestContext;
 use crate::utils::cbor_stream_filtered_errors;
 use crate::utils::get_repo;
 
+// The size is optimized for the batching settings in EdenFs.
 const MAX_CONCURRENT_FILE_FETCHES_PER_REQUEST: usize = 32;
 
 const MAX_CONCURRENT_UPLOAD_FILENODES_PER_REQUEST: usize = 1000;
