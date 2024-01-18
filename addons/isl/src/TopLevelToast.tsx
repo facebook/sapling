@@ -24,9 +24,5 @@ export function TopLevelToast() {
     );
   });
 
-  return (
-    <div className="toast-container">
-      <AnimatedReorderGroup>{toastDivs}</AnimatedReorderGroup>
-    </div>
-  );
+  return <AnimatedReorderGroup className="toast-container">{toastDivs}</AnimatedReorderGroup>;
 }

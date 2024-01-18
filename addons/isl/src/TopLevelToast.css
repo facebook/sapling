@@ -7,15 +7,19 @@
 
 .toast-container {
   position: fixed;
+  display: flex;
   bottom: calc(var(--pad) * 3);
-  left: 50%;
+  left: 0;
+  width: 100%;
   z-index: 1001;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
 }
 
 .tooltip.toast {
-  position: inherit;
+  position: relative;
   margin-bottom: var(--pad);
-  transform: translateX(-50%);
   cursor: default;
-  width: fit-content;
+  pointer-events: auto;
 }
