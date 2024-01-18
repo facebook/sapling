@@ -74,7 +74,7 @@ describe('CommitOperation', () => {
           'commit',
           '--addremove',
           '--message',
-          `Temporary Commit at ${new Date().toLocaleString()}`,
+          expect.stringContaining(`Temporary Commit at`),
         ],
         id: expect.anything(),
         runner: CommandRunner.Sapling,
