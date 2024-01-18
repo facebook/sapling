@@ -7,7 +7,7 @@ authors = ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
 edition = "2021"
 
 [dependencies]
-cpython = { version = "0.7.1", optional = true, default-features = false }
+cpython = { version = "0.7.1", features = ["python3-sys"], optional = true, default-features = false }
 indexmap = { version = "2.1.0", features = ["arbitrary", "rayon", "serde"] }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 shlex = "1.0"

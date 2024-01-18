@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.75"
 async-runtime = { version = "0.1.0", path = "../async-runtime" }
-cpython = { version = "0.7.1", default-features = false }
+cpython = { version = "0.7.1", features = ["python3-sys"], default-features = false }
 cpython_ext = { version = "0.1.0", path = "../cpython-ext" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 itertools = "0.11.0"

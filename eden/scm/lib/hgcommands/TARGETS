@@ -18,7 +18,7 @@ rust_python_library(
                     "cliparser": {"features": ["python"]},
                     "constructors": {"features": ["git"]},
                     "cpython": {
-                        "features": [],
+                        "features": ["python3-sys"],
                         "git": None,
                         "rev": None,
                     },

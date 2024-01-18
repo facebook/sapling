@@ -21,7 +21,7 @@ commandserver = { version = "0.1.0", path = "../commandserver" }
 configloader = { version = "0.1.0", path = "../config/loader" }
 configmodel = { version = "0.1.0", path = "../config/model" }
 constructors = { version = "0.1.0", path = "../constructors", features = ["git"] }
-cpython = { version = "0.7.1", default-features = false }
+cpython = { version = "0.7.1", features = ["python3-sys"], default-features = false }
 cpython_ext = { version = "0.1.0", path = "../cpython-ext" }
 ctrlc = { version = "3.1", features = ["termination"] }
 dag = { version = "0.1.0", path = "../dag" }

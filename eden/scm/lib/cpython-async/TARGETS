@@ -11,7 +11,7 @@ rust_python_library(
             "dependencies_override": {
                 "dependencies": {
                     "cpython": {
-                        "features": [],
+                        "features": ["python3-sys"],
                         "git": None,
                         "rev": None,
                     },
