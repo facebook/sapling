@@ -20,6 +20,7 @@ import {ISLCommandContext, useCommand} from './ISLShortcuts';
 import {TooltipRootContainer} from './Tooltip';
 import {TopBar} from './TopBar';
 import {TopLevelErrors} from './TopLevelErrors';
+import {TopLevelToast} from './TopLevelToast';
 import {tracker} from './analytics';
 import {islDrawerState} from './drawerState';
 import {GettingStartedModal} from './gettingStarted/GettingStartedModal';
@@ -56,6 +57,7 @@ export default function App() {
                 <ComparisonViewModal />
                 <ModalContainer />
                 <ContextMenus />
+                <TopLevelToast />
               </ErrorBoundary>
             </ISLCommandContext>
           </ISLRoot>
