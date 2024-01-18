@@ -118,7 +118,8 @@ def main():
 # Takes a command table maping of `alias` and `raw_info` and converts it
 # into a json object to represent the serialized version of that object.
 def serialize_command_info_as_json(name: str, alias: str, raw_info) -> Dict:
-    aliases = alias.split("|")
+    # skip hidden aliases, see D51380742 for more info
+    aliases = alias.split("||", 1)[0].split("|")
     description_obj, python_args, *_ = raw_info
     command = extract_command(
         name, aliases=aliases, description_obj=description_obj, python_args=python_args
