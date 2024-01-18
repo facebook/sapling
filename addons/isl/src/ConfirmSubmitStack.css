@@ -10,7 +10,14 @@
   flex-direction: column;
   gap: var(--pad);
   padding: calc(var(--pad)) calc(2 * var(--pad));
+  max-height: 50vh;
 }
+
 .confirm-submit-stack-content .commit-list {
-  padding-inline: calc(2 * var(--pad));
+  overflow-y: auto;
+  margin-bottom: var(--pad);
+}
+
+.confirm-submit-stack-content .commit-list .commit {
+  margin-left: calc(3 * var(--pad));
 }

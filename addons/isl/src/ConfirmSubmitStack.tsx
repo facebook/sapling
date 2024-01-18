@@ -10,6 +10,7 @@ import type {MutableRefObject} from 'react';
 import type {Snapshot} from 'recoil';
 
 import {Commit} from './Commit';
+import {SeeMoreContainer} from './CommitInfoView/SeeMoreContainer';
 import {FlexSpacer} from './ComponentUtils';
 import {Tooltip} from './Tooltip';
 import {VSCodeCheckbox} from './VSCodeCheckbox';
