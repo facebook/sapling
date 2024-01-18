@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {prefersReducedMotion} from './mediaQuery';
 import deepEqual from 'fast-deep-equal';
 import React, {useRef, useLayoutEffect} from 'react';
 
@@ -48,8 +49,7 @@ export const AnimatedReorderGroup: React.FC<ReorderGroupProps> = ({
   const previousStateRef = useRef<Readonly<PreviousState>>(emptyPreviousState);
 
   useLayoutEffect(() => {
-    const preferReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const animate = !preferReducedMotion;
+    const animate = !prefersReducedMotion();
     updatePreviousState(
       containerRef,
       previousStateRef,
