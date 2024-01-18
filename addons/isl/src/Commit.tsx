@@ -34,7 +34,6 @@ import {getAmendToOperation, isAmendToAllowedForCommit} from './operationUtils';
 import {GotoOperation} from './operations/GotoOperation';
 import {HideOperation} from './operations/HideOperation';
 import {RebaseOperation} from './operations/RebaseOperation';
-import platform from './platform';
 import {CommitPreview, uncommittedChangesWithPreviews} from './previews';
 import {RelativeDate} from './relativeDate';
 import {isNarrowCommitTree} from './responsive';
@@ -51,6 +50,7 @@ import {
 import {useConfirmUnsavedEditsBeforeSplit} from './stackEdit/ui/ConfirmUnsavedEditsBeforeSplit';
 import {SplitButton} from './stackEdit/ui/SplitButton';
 import {editingStackIntentionHashes} from './stackEdit/ui/stackEditState';
+import {useToast} from './toast';
 import {succeedableRevset} from './types';
 import {short} from './utils';
 import {VSCodeButton, VSCodeTag} from '@vscode/webview-ui-toolkit/react';
@@ -135,6 +135,9 @@ export const Commit = memo(
 
     const [title] = useRecoilValue(latestCommitMessage(commit.hash));
 
+    const toast = useToast();
+    const clipboardCopy = (text: string) => toast.copyAndShowToast(text);
+
     const isNonActionable = previewType === CommitPreview.NON_ACTIONABLE_COMMIT;
 
     function onDoubleClickToShowDrawer() {
@@ -177,13 +180,13 @@ export const Commit = memo(
       const items: Array<ContextMenuItem> = [
         {
           label: <T replace={{$hash: short(commit?.hash)}}>Copy Commit Hash "$hash"</T>,
-          onClick: () => platform.clipboardCopy(commit.hash),
+          onClick: () => clipboardCopy(commit.hash),
         },
       ];
       if (!isPublic && commit.diffId != null) {
         items.push({
           label: <T replace={{$number: commit.diffId}}>Copy Diff Number "$number"</T>,
-          onClick: () => platform.clipboardCopy(commit.diffId ?? ''),
+          onClick: () => clipboardCopy(commit.diffId ?? ''),
         });
       }
       if (!isPublic) {
