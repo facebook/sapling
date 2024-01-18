@@ -7,7 +7,7 @@
 
 import {findParentWithClassName} from './utils';
 import {getZoomLevel} from './zoom';
-import {useEffect, useRef, useState} from 'react';
+import {useEffect, useRef} from 'react';
 import {atom, useRecoilState, useSetRecoilState} from 'recoil';
 
 import './ContextMenu.css';
@@ -50,9 +50,6 @@ const contextMenuState = atom<null | ContextMenuData>({
 
 export function ContextMenus() {
   const [state, setState] = useRecoilState(contextMenuState);
-
-  // after you click on an item, flash it as selected, then fade out tooltip
-  const [acceptedSuggestion, setAcceptedSuggestion] = useState<null | number>(null);
 
   const ref = useRef<HTMLDivElement>(null);
 
@@ -119,9 +116,7 @@ export function ContextMenus() {
   return (
     <div
       ref={ref}
-      className={
-        'context-menu-container' + (acceptedSuggestion != null ? ' context-menu-fadeout' : '')
-      }
+      className={'context-menu-container'}
       data-testid="context-menu-container"
       style={position}>
       {topOrBottom === 'top' ? (
@@ -136,25 +131,14 @@ export function ContextMenus() {
           ) : (
             <div
               key={i}
-              onClick={
+              onClick={() => {
                 // don't allow double-clicking to run the action twice
-                acceptedSuggestion != null
-                  ? undefined
-                  : () => {
-                      item.onClick?.();
-                      setAcceptedSuggestion(i);
-                      setTimeout(() => {
-                        setState(null);
-                        setAcceptedSuggestion(null);
-                      }, 300);
-                    }
-              }
-              className={
-                'context-menu-item' +
-                (acceptedSuggestion != null && acceptedSuggestion === i
-                  ? ' context-menu-item-selected'
-                  : '')
-              }>
+                if (state != null) {
+                  item.onClick?.();
+                  setState(null);
+                }
+              }}
+              className={'context-menu-item'}>
               {item.label}
             </div>
           ),
