@@ -14,6 +14,7 @@ mod gitlfs;
 use std::collections::BTreeMap;
 use std::path::Path;
 use std::process::Stdio;
+use std::str;
 use std::sync::RwLock;
 
 use anyhow::bail;
@@ -384,7 +385,7 @@ pub async fn gitimport_acc<Uploader: GitUploader>(
                             let git_tree_upload = async {
                                 uploader.upload_object(ctx, entry.0, tree_bytes).await
                                 .with_context(|| {
-                                    format_err!("Failed to upload raw git tree {} for commit {}", entry.0, oid) 
+                                    format_err!("Failed to upload raw git tree {} for commit {}", entry.0, oid)
                                 })
                             };
                             try_join!(packfile_item_upload, git_tree_upload)?;
@@ -527,6 +528,33 @@ pub async fn read_symref(
         },
     };
     Ok(symref_entry)
+}
+
+/// Resolve git rev using `git rev-parse --verfify`
+pub async fn resolve_rev(
+    rev: &str,
+    path: &Path,
+    prefs: &GitimportPreferences,
+) -> Result<Option<ObjectId>, Error> {
+    let output = Command::new(&prefs.git_command_path)
+        .current_dir(path)
+        .env_clear()
+        .kill_on_drop(false)
+        .stdout(Stdio::piped())
+        .arg("rev-parse")
+        .arg("--verify")
+        .arg("--end-of-options")
+        .arg(rev)
+        .output()
+        .await
+        .with_context(|| format!("failed to run git with {:?}", prefs.git_command_path))?;
+    if !output.status.success() {
+        return Ok(None);
+    }
+    let oid_str = str::from_utf8(&output.stdout)?;
+    let oid_str = oid_str.trim();
+    let oid: ObjectId = oid_str.parse().context("reading refs")?;
+    Ok(Some(oid))
 }
 
 pub async fn read_git_refs(
