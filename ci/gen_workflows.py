@@ -37,6 +37,8 @@ UBUNTU_DEPS = [
     "g++",
     # This is needed for dpkg-name.
     "dpkg-dev",
+    "gettext",
+    "locales",
 ]
 
 MACOS_RELEASES = {
@@ -116,6 +118,7 @@ RUN echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesourc
 # Now we can install the bulk of the packages:
 RUN apt-get -y update
 RUN apt-get -y install {' '.join(full_deps)}
+RUN locale-gen en_US.UTF-8
 
 # Unfortunately, we cannot `apt install cargo` because at the time of this
 # writing, it installs a version of cargo that is too old (1.59). Specifically,

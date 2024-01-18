@@ -1,0 +1,22 @@
+{
+	"name": "Sapling",
+	"build": {
+		"context": "..",
+		"dockerfile": "../.github/workflows/sapling-cli-ubuntu-22.04.Dockerfile"
+	},
+	"updateContentCommand": "ln -sf /workspaces/sapling/eden/scm/sl /usr/local/bin/sl",
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-azuretools.vscode-docker",
+				"ms-python.python",
+				"rust-lang.rust-analyzer"
+			],
+			"settings": {
+				"rust-analyzer.linkedProjects": [
+					"/workspaces/sapling/eden/scm/Cargo.toml"
+				]
+			}
+		}
+	}
+}

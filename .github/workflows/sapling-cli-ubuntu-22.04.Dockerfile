@@ -18,7 +18,8 @@ RUN echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesourc
 
 # Now we can install the bulk of the packages:
 RUN apt-get -y update
-RUN apt-get -y install nodejs pkg-config libssl-dev cython3 make g++ dpkg-dev python3.10 python3.10-dev python3.10-distutils
+RUN apt-get -y install nodejs pkg-config libssl-dev cython3 make g++ dpkg-dev gettext locales python3.10 python3.10-dev python3.10-distutils
+RUN locale-gen en_US.UTF-8
 
 # Unfortunately, we cannot `apt install cargo` because at the time of this
 # writing, it installs a version of cargo that is too old (1.59). Specifically,
