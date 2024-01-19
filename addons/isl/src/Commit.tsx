@@ -13,7 +13,7 @@ import type {ContextMenuItem} from 'shared/ContextMenu';
 import {globalRecoil} from './AccessGlobalRecoil';
 import {Avatar} from './Avatar';
 import {BranchIndicator} from './BranchIndicator';
-import {hasUnsavedEditedCommitMessage} from './CommitInfoView/CommitInfoState';
+import {commitMode, hasUnsavedEditedCommitMessage} from './CommitInfoView/CommitInfoState';
 import {currentComparisonMode} from './ComparisonView/atoms';
 import {highlightedCommits} from './HighlightedCommits';
 import {InlineBadge} from './InlineBadge';
@@ -117,7 +117,6 @@ export const Commit = memo(
     hasChildren: boolean;
     bodyOnly?: boolean;
   }) => {
-    const setDrawerState = useSetRecoilState(islDrawerState);
     const isPublic = commit.phase === 'public';
 
     const handlePreviewedOperation = useRunPreviewedOperation();
@@ -140,20 +139,29 @@ export const Commit = memo(
 
     const isNonActionable = previewType === CommitPreview.NON_ACTIONABLE_COMMIT;
 
-    function onDoubleClickToShowDrawer() {
-      // Select the commit if it was deselected.
-      if (!isSelected) {
-        overrideSelection([commit.hash]);
-      }
-      // Show the drawer.
-      setDrawerState(state => ({
-        ...state,
-        right: {
-          ...state.right,
-          collapsed: false,
+    const onDoubleClickToShowDrawer = useRecoilCallback(
+      ({set}) =>
+        () => {
+          // Select the commit if it was deselected.
+          if (!isSelected) {
+            overrideSelection([commit.hash]);
+          }
+          // Show the drawer.
+          set(islDrawerState, state => ({
+            ...state,
+            right: {
+              ...state.right,
+              collapsed: false,
+            },
+          }));
+          if (commit.isHead) {
+            // if we happened to be in commit mode, swap to amend mode so you see the details instead
+            set(commitMode, 'amend');
+          }
         },
-      }));
-    }
+      [overrideSelection, isSelected, commit.hash, commit.isHead],
+    );
+
     const setOperationBeingPreviewed = useSetRecoilState(operationBeingPreviewed);
 
     const viewChangesCallback = useRecoilCallback(({set}) => () => {

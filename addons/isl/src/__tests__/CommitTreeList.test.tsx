@@ -16,6 +16,7 @@ import {
   closeCommitInfoSidebar,
   simulateRepoConnected,
   commitInfoIsOpen,
+  openCommitInfoSidebar,
 } from '../testUtils';
 import {CommandRunner} from '../types';
 import {fireEvent, render, screen, waitFor, within} from '@testing-library/react';
@@ -315,6 +316,30 @@ describe('CommitTreeList', () => {
       expect(openButton).toBeInTheDocument();
       // screen reader accessible
       expect(screen.getByLabelText('Open commit "Commit B"')).toBeInTheDocument();
+      fireEvent.click(openButton);
+      expect(commitInfoIsOpen()).toBeTruthy();
+      expect(CommitInfoTestUtils.withinCommitInfo().getByText('Commit B')).toBeInTheDocument();
+    });
+
+    it('sets to amend mode when clicking open button', () => {
+      act(() => {
+        simulateCommits({
+          value: [
+            COMMIT('1', 'some public base', '0', {phase: 'public'}),
+            COMMIT('a', 'Commit A', '1', {isHead: true}),
+            COMMIT('b', 'Commit B', '1'),
+          ],
+        });
+      });
+      act(() => {
+        openCommitInfoSidebar();
+      });
+      CommitInfoTestUtils.clickCommitMode();
+
+      const openButton = within(screen.getByTestId('commit-b')).getByTestId(
+        'open-commit-info-button',
+      );
+      expect(openButton).toBeInTheDocument();
       fireEvent.click(openButton);
       expect(commitInfoIsOpen()).toBeTruthy();
       expect(CommitInfoTestUtils.withinCommitInfo().getByText('Commit B')).toBeInTheDocument();
