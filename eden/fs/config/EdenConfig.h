@@ -1330,6 +1330,13 @@ class EdenConfig : private ConfigSettingManager {
       {},
       this};
 
+  // [rage]
+  /**
+   * The tool that will be used to upload eden rages. Only currently used in the
+   * CLI.
+   */
+  ConfigSetting<std::string> rageReporter{"rage:reporter", "", this};
+
   // [hash]
   /**
    * The key to use for blake3 hash computation.
