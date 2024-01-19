@@ -71,7 +71,8 @@ def clearscreen():
 # Note: some changes have been made from the source code
 
 
-def getchar(fd: int) -> Union[None, bytes, str]:
+def getchar() -> Union[None, bytes, str]:
+    fd = sys.stdin.fileno()
     if not os.isatty(fd):
         # TODO: figure out tests
         return None
@@ -155,7 +156,7 @@ def _write_output(viewobj):
     sys.stdout.flush()
 
 
-def view(viewobj) -> None:
+def view(viewobj, readinput=getchar) -> None:
     if pycompat.iswindows:
         raise error.Abort(_("interactive UI does not support Windows"))
     if viewobj.ui.pageractive:
@@ -170,7 +171,7 @@ def view(viewobj) -> None:
     try:
         while viewobj._active:
             _write_output(viewobj)
-            output = getchar(sys.stdin.fileno())
+            output = readinput()
             viewobj.handlekeypress(output)
     finally:
         sys.stdout.write("\033[?25h")  # show cursor
