@@ -13,7 +13,7 @@ from enum import Enum
 from typing import Union
 
 from sapling import error, pycompat, scmutil, util
-from sapling.i18n import _
+from sapling.i18n import _, _x
 
 
 if not pycompat.iswindows:
@@ -21,12 +21,12 @@ if not pycompat.iswindows:
     import tty
 
 
-def clearscreen():
+def clearscreen(out):
     if util.istest():
-        sys.stdout.write("===== Screen Refresh =====\n")
+        out.write(_x("===== Screen Refresh =====\n"))
     else:
-        sys.stdout.write("\033[2J")  # clear screen
-        sys.stdout.write("\033[;H")  # move cursor
+        out.write(_x("\033[2J"))  # clear screen
+        out.write(_x("\033[;H"))  # move cursor
 
 
 # From:
@@ -143,7 +143,7 @@ class viewframe:
 
 def _write_output(viewobj):
     screensize = scmutil.termsize(viewobj.ui)[1]
-    clearscreen()
+    clearscreen(viewobj.ui)
     slist, alignment = viewobj.render()
     if alignment is not None and len(slist) > screensize:
         index, direction = alignment
@@ -156,10 +156,10 @@ def _write_output(viewobj):
         slist = slist[start:end]
 
     if util.istest():
-        sys.stdout.write("\n".join(slist))
+        viewobj.ui.write("\n".join(slist))
     else:
-        sys.stdout.write("\n".join("\r" + line for line in slist))
-    sys.stdout.flush()
+        viewobj.ui.write("\n".join("\r" + line for line in slist))
+    viewobj.ui.flush()
 
 
 def view(viewobj, readinput=getchar) -> None:
@@ -170,11 +170,11 @@ def view(viewobj, readinput=getchar) -> None:
     # Enter alternate screen
     # TODO: Investigate portability - may only work for xterm
     if not util.istest():
-        sys.stdout.write("\033[?1049h\033[H")
+        viewobj.ui.write(_x("\033[?1049h\033[H"))
         # disable line wrapping
         # this is from curses.tigetstr('rmam')
-        sys.stdout.write("\x1b[?7l")
-        sys.stdout.write("\033[?25l")  # hide cursor
+        viewobj.ui.write(_x("\x1b[?7l"))
+        viewobj.ui.write(_x("\033[?25l"))  # hide cursor
     try:
         while viewobj._active:
             _write_output(viewobj)
@@ -182,10 +182,10 @@ def view(viewobj, readinput=getchar) -> None:
             viewobj.handlekeypress(output)
     finally:
         if not util.istest():
-            sys.stdout.write("\033[?25h")  # show cursor
+            viewobj.ui.write(_x("\033[?25h"))  # show cursor
             # re-enable line wrapping
             # this is from curses.tigetstr('smam')
-            sys.stdout.write("\x1b[?7h")
-            sys.stdout.flush()
+            viewobj.ui.write(_x("\x1b[?7h"))
+            viewobj.ui.flush()
             # Exit alternate screen
-            sys.stdout.write("\033[?1049l")
+            viewobj.ui.write(_x("\033[?1049l"))
