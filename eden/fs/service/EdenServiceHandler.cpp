@@ -74,7 +74,7 @@
 #include "eden/fs/store/PathLoader.h"
 #include "eden/fs/store/ScmStatusDiffCallback.h"
 #include "eden/fs/store/TreeCache.h"
-#include "eden/fs/store/filter/WatchmanGlobFilter.h"
+#include "eden/fs/store/filter/GlobFilter.h"
 #include "eden/fs/store/hg/HgQueuedBackingStore.h"
 #include "eden/fs/telemetry/SessionInfo.h"
 #include "eden/fs/telemetry/TaskTrace.h"
@@ -1674,16 +1674,16 @@ void sumUncommitedChanges(
     const JournalDeltaRange& range,
     const folly::Synchronized<ThriftStreamPublisherOwner<ChangedFileResult>>&
         publisher,
-    const std::optional<WatchmanGlobFilter>& filter) {
+    std::optional<std::reference_wrapper<GlobFilter>> filter) {
   for (auto& entry : range.changedFilesInOverlay) {
     const auto& changeInfo = entry.second;
 
     // the path is filtered don't consider it
-    if (filter.has_value()) {
+    if (filter) {
       // TODO(T167750650): This .get() will block Thrift threads and could lead
       // to Queue Timeouts. Instead of calling .get(), we should chain futures
       // together.
-      if (filter.value()
+      if (filter->get()
               .getFilterCoverageForPath(entry.first, folly::StringPiece(""))
               .get() == FilterCoverage::RECURSIVELY_FILTERED) {
         continue;
@@ -1703,11 +1703,11 @@ void sumUncommitedChanges(
   }
 
   for (const auto& name : range.uncleanPaths) {
-    if (filter.has_value()) {
+    if (filter) {
       // TODO(T167750650): This .get() will block Thrift threads and could lead
       // to Queue Timeouts. Instead of calling .get(), we should chain futures
       // together.
-      if (filter.value()
+      if (filter->get()
               .getFilterCoverageForPath(name, folly::StringPiece(""))
               .get() == FilterCoverage::RECURSIVELY_FILTERED) {
         continue;
@@ -1961,11 +1961,11 @@ EdenServiceHandler::streamSelectedChangesSince(
 
   auto caseSensitivity =
       mountHandle.getEdenMount().getCheckoutConfig()->getCaseSensitive();
-  std::unique_ptr<WatchmanGlobFilter> filter =
-      std::make_unique<WatchmanGlobFilter>(
-          params->get_filter().get_globs(), caseSensitivity);
+  auto filter =
+      std::make_unique<GlobFilter>(params->get_globs(), caseSensitivity);
 
-  sumUncommitedChanges(*summed, *sharedPublisherLock, *filter);
+  sumUncommitedChanges(
+      *summed, *sharedPublisherLock, std::reference_wrapper(*filter));
 
   if (summed->snapshotTransitions.size() > 1) {
     // create filtered backing store

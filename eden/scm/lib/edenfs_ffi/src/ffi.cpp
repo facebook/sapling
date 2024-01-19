@@ -25,4 +25,19 @@ void set_matcher_promise_error(
       std::runtime_error(std::move(error).c_str()));
   return;
 }
+
+void set_matcher_result(
+    std::shared_ptr<MatcherWrapper> wrapper,
+    rust::Box<::facebook::eden::MercurialMatcher> matcher) {
+  wrapper->matcher_ =
+      std::make_unique<rust::Box<MercurialMatcher>>(std::move(matcher));
+  return;
+}
+
+void set_matcher_error(
+    std::shared_ptr<MatcherWrapper> wrapper,
+    rust::String error) {
+  wrapper->error_ = std::move(error);
+  return;
+}
 } // namespace facebook::eden

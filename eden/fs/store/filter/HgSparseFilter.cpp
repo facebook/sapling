@@ -25,7 +25,7 @@ FilterCoverage determineFilterCoverage(
     const rust::Box<facebook::eden::MercurialMatcher>& matcher,
     std::string_view path) {
   auto rustPath = rust::Str{path.data(), path.size()};
-  auto res = matcher->is_recursively_unfiltered(rustPath);
+  auto res = matcher->matches_directory(rustPath);
   switch (res) {
     case FilterDirectoryMatch::RecursivelyUnfiltered:
       return FilterCoverage::RECURSIVELY_UNFILTERED;

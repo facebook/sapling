@@ -15,7 +15,7 @@
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/TreeCache.h"
-#include "eden/fs/store/filter/WatchmanGlobFilter.h"
+#include "eden/fs/store/filter/GlobFilter.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
@@ -23,12 +23,11 @@
 using namespace facebook::eden;
 using namespace std::literals::chrono_literals;
 
-TEST(WatchmanGlobFilterTest, testGlobbingNotExists) {
+TEST(GlobFilterTest, testGlobbingNotExists) {
   std::vector<std::string> globs = {"tree1/**/*.cpp", "*.cpp", "*.rs"};
 
   auto executor = folly::ManualExecutor{};
-  auto filter =
-      std::make_shared<WatchmanGlobFilter>(globs, CaseSensitivity::Sensitive);
+  auto filter = std::make_shared<GlobFilter>(globs, CaseSensitivity::Sensitive);
   auto pass =
       filter
           ->getFilterCoverageForPath(
@@ -40,12 +39,11 @@ TEST(WatchmanGlobFilterTest, testGlobbingNotExists) {
   EXPECT_EQ(std::move(pass).get(0ms), FilterCoverage::RECURSIVELY_FILTERED);
 }
 
-TEST(WatchmanGlobFilterTest, testGlobbingExists) {
+TEST(GlobFilterTest, testGlobbingExists) {
   std::vector<std::string> globs = {"*.rs"};
 
   auto executor = folly::ManualExecutor{};
-  auto filter =
-      std::make_shared<WatchmanGlobFilter>(globs, CaseSensitivity::Sensitive);
+  auto filter = std::make_shared<GlobFilter>(globs, CaseSensitivity::Sensitive);
   auto pass = filter
                   ->getFilterCoverageForPath(
                       RelativePathPiece{"content2.rs"}, folly::StringPiece(""))
@@ -56,13 +54,12 @@ TEST(WatchmanGlobFilterTest, testGlobbingExists) {
   EXPECT_EQ(std::move(pass).get(0ms), FilterCoverage::UNFILTERED);
 }
 
-TEST(WatchmanGlobFilterTest, testAnother) {
+TEST(GlobFilterTest, testAnother) {
   std::vector<std::string> globs = {"tree3/README"};
 
   auto executor = folly::ManualExecutor{};
 
-  auto filter =
-      std::make_shared<WatchmanGlobFilter>(globs, CaseSensitivity::Sensitive);
+  auto filter = std::make_shared<GlobFilter>(globs, CaseSensitivity::Sensitive);
   auto pass = filter
                   ->getFilterCoverageForPath(
                       RelativePathPiece{"tree3/README"}, folly::StringPiece(""))
@@ -73,13 +70,12 @@ TEST(WatchmanGlobFilterTest, testAnother) {
   EXPECT_EQ(std::move(pass).get(0ms), FilterCoverage::UNFILTERED);
 }
 
-TEST(WatchmanGlobFilterTest, testGlobs) {
+TEST(GlobFilterTest, testGlobs) {
   std::vector<std::string> globs = {"**/README"};
 
   auto executor = folly::ManualExecutor{};
 
-  auto filter =
-      std::make_shared<WatchmanGlobFilter>(globs, CaseSensitivity::Sensitive);
+  auto filter = std::make_shared<GlobFilter>(globs, CaseSensitivity::Sensitive);
   auto pass = filter
                   ->getFilterCoverageForPath(
                       RelativePathPiece{"tree3/README"}, folly::StringPiece(""))
@@ -88,4 +84,46 @@ TEST(WatchmanGlobFilterTest, testGlobs) {
   executor.drain();
 
   EXPECT_EQ(std::move(pass).get(0ms), FilterCoverage::UNFILTERED);
+}
+
+TEST(GlobFilterTest, testComplexGlobs) {
+  std::vector<std::string> globs = {"a/b/**/README"};
+
+  auto executor = folly::ManualExecutor{};
+
+  auto filter = std::make_shared<GlobFilter>(globs, CaseSensitivity::Sensitive);
+  auto pass = filter
+                  ->getFilterCoverageForPath(
+                      RelativePathPiece{"a/b/c"}, folly::StringPiece(""))
+                  .semi()
+                  .via(folly::Executor::getKeepAliveToken(executor));
+  executor.drain();
+
+  EXPECT_EQ(std::move(pass).get(), FilterCoverage::UNFILTERED);
+
+  auto notPass = filter
+                     ->getFilterCoverageForPath(
+                         RelativePathPiece{"a/c/b.cpp"}, folly::StringPiece(""))
+                     .semi()
+                     .via(folly::Executor::getKeepAliveToken(executor));
+
+  executor.drain();
+
+  EXPECT_EQ(std::move(notPass).get(), FilterCoverage::RECURSIVELY_FILTERED);
+}
+
+TEST(GlobFilterTest, testFiltered) {
+  std::vector<std::string> globs = {"a/b/**/README"};
+
+  auto executor = folly::ManualExecutor{};
+
+  auto filter = std::make_shared<GlobFilter>(globs, CaseSensitivity::Sensitive);
+  auto pass = filter
+                  ->getFilterCoverageForPath(
+                      RelativePathPiece{"a/d/c"}, folly::StringPiece(""))
+                  .semi()
+                  .via(folly::Executor::getKeepAliveToken(executor));
+  executor.drain();
+
+  EXPECT_EQ(std::move(pass).get(), FilterCoverage::RECURSIVELY_FILTERED);
 }

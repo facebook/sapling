@@ -19,20 +19,30 @@ cpp_library(
 
 cpp_library(
     name = "filters",
-    srcs = ["WatchmanGlobFilter.cpp"],
     headers = [
         "Filter.h",
-        "WatchmanGlobFilter.h",
-    ],
-    deps = [
-        "//eden/fs/utils:glob",
     ],
     exported_deps = [
-        "//eden/fs/utils:case_sensitivity",
         "//eden/fs/utils:immediate_future",
-        "//eden/fs/utils:matcher",
         "//eden/fs/utils:path",
         "//folly:range",
+    ],
+)
+
+cpp_library(
+    name = "glob_filter",
+    srcs = ["GlobFilter.cpp"],
+    headers = ["GlobFilter.h"],
+    deps = [
+        "//eden/fs/utils:immediate_future",
+    ],
+    exported_deps = [
+        ":filters",
+        "//eden/fs/utils:case_sensitivity",
+        "//eden/fs/utils:eden_error",
+        "//eden/scm/lib/edenfs_ffi:edenfs_ffi",  # @manual
+        "//eden/scm/lib/edenfs_ffi:edenfs_ffi-wrapper",  # @manual
+        "//eden/scm/lib/edenfs_ffi:edenfs_ffi@header",  # @manual
     ],
 )
 

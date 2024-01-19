@@ -12,6 +12,7 @@ use std::str::FromStr;
 
 use anyhow::anyhow;
 use anyhow::Context;
+use cxx::SharedPtr;
 use cxx::UniquePtr;
 use manifest::FileMetadata;
 use manifest::FsNodeMetadata;
@@ -19,16 +20,19 @@ use manifest::Manifest;
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use pathmatcher::DirectoryMatch;
+use pathmatcher::TreeMatcher;
 use repo::repo::Repo;
-use sparse::Matcher;
 use sparse::Root;
 use types::HgId;
 use types::RepoPath;
 use types::RepoPathBuf;
 
+use crate::ffi::set_matcher_error;
 use crate::ffi::set_matcher_promise_error;
 use crate::ffi::set_matcher_promise_result;
+use crate::ffi::set_matcher_result;
 use crate::ffi::MatcherPromise;
+use crate::ffi::MatcherWrapper;
 
 static REPO_HASHMAP: Lazy<Mutex<HashMap<PathBuf, Repo>>> = Lazy::new(|| Mutex::new(HashMap::new()));
 
@@ -72,12 +76,12 @@ impl FromStr for FilterId {
 // Therefore, MercurialMatcher simply serves as a wrapper around the actual Matcher object that's
 // passed to C++ and back to Rust
 pub struct MercurialMatcher {
-    matcher: Matcher,
+    matcher: Box<dyn pathmatcher::Matcher>,
 }
 
 impl MercurialMatcher {
     // Returns true if the given path and all of its children are unfiltered
-    fn is_recursively_unfiltered(
+    fn matches_directory(
         self: &MercurialMatcher,
         path: &str,
     ) -> Result<ffi::FilterDirectoryMatch, anyhow::Error> {
@@ -85,8 +89,13 @@ impl MercurialMatcher {
         // This is tricky -- a filter file defines which files should be *excluded* from the repo.
         // The filtered files are put in the [exclude] section of the file. So, if something is
         // recursively unfiltered, then it means that there are no exclude patterns that match it.
-        let res = pathmatcher::Matcher::matches_directory(&self.matcher, repo_path)?;
+        let res = self.matcher.matches_directory(repo_path)?;
         Ok(res.into())
+    }
+
+    fn matches_file(self: &MercurialMatcher, path: &str) -> Result<bool, anyhow::Error> {
+        let repo_path = RepoPath::from_str(path)?;
+        self.matcher.matches_file(repo_path)
     }
 }
 
@@ -113,6 +122,9 @@ mod ffi {
         type MatcherPromise;
 
         #[namespace = "facebook::eden"]
+        type MatcherWrapper;
+
+        #[namespace = "facebook::eden"]
         fn set_matcher_promise_result(
             promise: UniquePtr<MatcherPromise>,
             value: Box<MercurialMatcher>,
@@ -120,6 +132,12 @@ mod ffi {
 
         #[namespace = "facebook::eden"]
         fn set_matcher_promise_error(promise: UniquePtr<MatcherPromise>, error: String);
+
+        #[namespace = "facebook::eden"]
+        fn set_matcher_result(wrapper: SharedPtr<MatcherWrapper>, value: Box<MercurialMatcher>);
+
+        #[namespace = "facebook::eden"]
+        fn set_matcher_error(wrapper: SharedPtr<MatcherWrapper>, error: String);
     }
 
     #[namespace = "facebook::eden"]
@@ -138,10 +156,16 @@ mod ffi {
         ) -> Result<()>;
 
         // Returns true if the given path and all of its children are unfiltered.
-        fn is_recursively_unfiltered(
-            self: &MercurialMatcher,
-            path: &str,
-        ) -> Result<FilterDirectoryMatch>;
+        fn matches_directory(self: &MercurialMatcher, path: &str) -> Result<FilterDirectoryMatch>;
+
+        // Returns true if the given path is unfiltered.
+        fn matches_file(self: &MercurialMatcher, path: &str) -> Result<bool>;
+
+        fn create_tree_matcher(
+            globs: Vec<String>,
+            case_sensitive: bool,
+            matcher_wrapper: SharedPtr<MatcherWrapper>,
+        ) -> Result<()>;
     }
 }
 
@@ -153,6 +177,22 @@ impl From<DirectoryMatch> for ffi::FilterDirectoryMatch {
             DirectoryMatch::ShouldTraverse => Self::Unfiltered,
         }
     }
+}
+
+fn create_tree_matcher(
+    globs: Vec<String>,
+    case_sensitive: bool,
+    matcher_wrapper: SharedPtr<MatcherWrapper>,
+) -> Result<(), anyhow::Error> {
+    let matcher = TreeMatcher::from_rules(globs.iter(), case_sensitive)?;
+    let mercurial_matcher = Ok(Box::new(MercurialMatcher {
+        matcher: Box::new(matcher),
+    }));
+    match mercurial_matcher {
+        Ok(m) => set_matcher_result(matcher_wrapper, m),
+        Err(e) => set_matcher_error(matcher_wrapper, e),
+    };
+    Ok(())
 }
 
 // As mentioned below, we return the MercurialMatcher via a promise to circumvent some async
@@ -236,7 +276,9 @@ fn _profile_contents_from_repo(
         let matcher = root.matcher(|_| Ok(Some(vec![])))?;
         Ok(matcher)
     })?;
-    Ok(Box::new(MercurialMatcher { matcher }))
+    Ok(Box::new(MercurialMatcher {
+        matcher: Box::new(matcher),
+    }))
 }
 
 // CXX doesn't allow async functions to be exposed to C++. This function wraps the bulk of the

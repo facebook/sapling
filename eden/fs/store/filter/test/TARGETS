@@ -14,7 +14,7 @@ cpp_unittest(
         "//eden/fs/store:backing_store_interface",
         "//eden/fs/store:store",
         "//eden/fs/store/filter:filtered_object_id",
-        "//eden/fs/store/filter:filters",
+        "//eden/fs/store/filter:glob_filter",
         "//eden/fs/telemetry:structured_logger",
         "//eden/fs/telemetry:telemetry",
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
