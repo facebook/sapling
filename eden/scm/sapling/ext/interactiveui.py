@@ -12,7 +12,7 @@ import sys
 from enum import Enum
 from typing import Union
 
-from sapling import error, pycompat, scmutil
+from sapling import error, pycompat, scmutil, util
 from sapling.i18n import _
 
 
@@ -22,8 +22,11 @@ if not pycompat.iswindows:
 
 
 def clearscreen():
-    sys.stdout.write("\033[2J")  # clear screen
-    sys.stdout.write("\033[;H")  # move cursor
+    if util.istest():
+        sys.stdout.write("===== Screen Refresh =====\n")
+    else:
+        sys.stdout.write("\033[2J")  # clear screen
+        sys.stdout.write("\033[;H")  # move cursor
 
 
 # From:
@@ -152,7 +155,10 @@ def _write_output(viewobj):
             end = max(index, start + screensize)
         slist = slist[start:end]
 
-    sys.stdout.write("\n".join("\r" + line for line in slist))
+    if util.istest():
+        sys.stdout.write("\n".join(slist))
+    else:
+        sys.stdout.write("\n".join("\r" + line for line in slist))
     sys.stdout.flush()
 
 
@@ -163,21 +169,23 @@ def view(viewobj, readinput=getchar) -> None:
         raise error.Abort(_("interactiveui doesn't work with pager"))
     # Enter alternate screen
     # TODO: Investigate portability - may only work for xterm
-    sys.stdout.write("\033[?1049h\033[H")
-    # disable line wrapping
-    # this is from curses.tigetstr('rmam')
-    sys.stdout.write("\x1b[?7l")
-    sys.stdout.write("\033[?25l")  # hide cursor
+    if not util.istest():
+        sys.stdout.write("\033[?1049h\033[H")
+        # disable line wrapping
+        # this is from curses.tigetstr('rmam')
+        sys.stdout.write("\x1b[?7l")
+        sys.stdout.write("\033[?25l")  # hide cursor
     try:
         while viewobj._active:
             _write_output(viewobj)
             output = readinput()
             viewobj.handlekeypress(output)
     finally:
-        sys.stdout.write("\033[?25h")  # show cursor
-        # re-enable line wrapping
-        # this is from curses.tigetstr('smam')
-        sys.stdout.write("\x1b[?7h")
-        sys.stdout.flush()
-        # Exit alternate screen
-        sys.stdout.write("\033[?1049l")
+        if not util.istest():
+            sys.stdout.write("\033[?25h")  # show cursor
+            # re-enable line wrapping
+            # this is from curses.tigetstr('smam')
+            sys.stdout.write("\x1b[?7h")
+            sys.stdout.flush()
+            # Exit alternate screen
+            sys.stdout.write("\033[?1049l")
