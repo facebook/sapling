@@ -170,7 +170,7 @@ In addition to reviewing pull requests on github.com, you may also want to try [
 
 To view a GitHub pull request on ReviewStack, take the original URL:
 
-> https://github.com/facebook/react/pull/25506
+> [https://github.com/facebook/react/pull/25506 ](https://github.com/facebook/react/pull/25506)
 
 and replace the `github.com` domain with `reviewstack.dev`:
 

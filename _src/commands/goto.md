@@ -2,9 +2,9 @@
 sidebar_position: 16
 ---
 
-## goto | go |  | up | update | co | checkout
+## goto | go
 <!--
-  @generated SignedSource<<f0fa7e427ac68f6a595cb20d63a77bb1>>
+  @generated SignedSource<<7ba813598d26b0590214f02c97628aca>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 

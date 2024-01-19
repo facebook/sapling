@@ -3,9 +3,7 @@
     "name": "absorb",
     "aliases": [
       "absorb",
-      "ab",
-      "",
-      "sf"
+      "ab"
     ],
     "doc": "intelligently integrate pending changes into current stack\n\n    Attempt to amend each pending change to the proper commit in your\n    stack. Absorb does not write to the working copy.\n\n    If absorb cannot find an unambiguous commit to amend for a change, that\n    change will be left in the working copy, untouched. The unabsorbed\n    changes can be observed by :prog:`status` or :prog:`diff` afterwards.\n\n    Commits outside the revset `::. and not public() and not merge()` will\n    not be changed.\n\n    Commits that become empty after applying the changes will be deleted.\n\n    By default, absorb will show what it plans to do and prompt for\n    confirmation.  If you are confident that the changes will be absorbed\n    to the correct place, run :prog:`absorb -a` to apply the changes\n    immediately.\n\n    Returns 0 if anything was absorbed, 1 if nothing was absorbed.\n    ",
     "args": [
@@ -1193,12 +1191,7 @@
     "name": "goto",
     "aliases": [
       "goto",
-      "go",
-      "",
-      "up",
-      "update",
-      "co",
-      "checkout"
+      "go"
     ],
     "doc": "update working copy to a given commit\n\nUpdate your working copy to the given destination commit. More\nprecisely, make the destination commit the current commit and update the\ncontents of all files in your working copy to match their state in the\ndestination commit.\n\nBy default, if you attempt to go to a commit while you have pending\nchanges, and the destination commit is not an ancestor or descendant of\nthe current commit, the checkout will abort. However, if the destination\ncommit is an ancestor or descendant of the current commit, the pending\nchanges will be merged with the destination.\n\nUse one of the following flags to modify this behavior::\n\n    --check: abort if there are pending changes\n\n    --clean: permanently discard any pending changes (use with caution)\n\n    --merge: always attempt to merge the pending changes into the destination\n\nIf merge conflicts occur during update, @Product@ enters an unfinished\nmerge state. If this happens, fix the conflicts manually and then run\n:prog:`commit` to exit the unfinished merge state and save your changes\nin a new commit. Alternatively, run :prog:`goto --clean` to discard your\npending changes.\n\nSpecify null as the destination commit to get an empty working copy\n(sometimes known as a bare repository).\n\nReturns 0 on success, 1 if there are unresolved files.",
     "args": [

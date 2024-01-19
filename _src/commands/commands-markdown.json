@@ -3,9 +3,7 @@
     "name": "absorb",
     "aliases": [
       "absorb",
-      "ab",
-      "",
-      "sf"
+      "ab"
     ],
     "doc": "\n**intelligently integrate pending changes into current stack**\n\nAttempt to amend each pending change to the proper commit in your\nstack. Absorb does not write to the working copy.\n\nIf absorb cannot find an unambiguous commit to amend for a change, that\nchange will be left in the working copy, untouched. The unabsorbed\nchanges can be observed by `sl status` or `sl diff` afterwards.\n\nCommits outside the revset `::. and not public() and not merge()` will\nnot be changed.\n\nCommits that become empty after applying the changes will be deleted.\n\nBy default, absorb will show what it plans to do and prompt for\nconfirmation.  If you are confident that the changes will be absorbed\nto the correct place, run `sl absorb -a` to apply the changes\nimmediately.\n\nReturns 0 if anything was absorbed, 1 if nothing was absorbed.\n",
     "args": [
@@ -1193,12 +1191,7 @@
     "name": "goto",
     "aliases": [
       "goto",
-      "go",
-      "",
-      "up",
-      "update",
-      "co",
-      "checkout"
+      "go"
     ],
     "doc": "\n**update working copy to a given commit**\n\nUpdate your working copy to the given destination commit. More\nprecisely, make the destination commit the current commit and update the\ncontents of all files in your working copy to match their state in the\ndestination commit.\n\nBy default, if you attempt to go to a commit while you have pending\nchanges, and the destination commit is not an ancestor or descendant of\nthe current commit, the checkout will abort. However, if the destination\ncommit is an ancestor or descendant of the current commit, the pending\nchanges will be merged with the destination.\n\nUse one of the following flags to modify this behavior:\n\n```\n--check: abort if there are pending changes\n```\n\n```\n--clean: permanently discard any pending changes (use with caution)\n```\n\n```\n--merge: always attempt to merge the pending changes into the destination\n```\n\nIf merge conflicts occur during update, Sapling enters an unfinished\nmerge state. If this happens, fix the conflicts manually and then run\n`sl commit` to exit the unfinished merge state and save your changes\nin a new commit. Alternatively, run `sl goto --clean` to discard your\npending changes.\n\nSpecify null as the destination commit to get an empty working copy\n(sometimes known as a bare repository).\n\nReturns 0 on success, 1 if there are unresolved files.\n",
     "args": [
