@@ -1,5 +1,7 @@
 load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
 
+oncall("source_control")
+
 thrift_library(
     name = "qps_config",
     languages = [

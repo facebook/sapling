@@ -1,6 +1,8 @@
 load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
 load("//common/automock:automock.bzl", "thrift_plugin_automock")
 
+oncall("source_control")
+
 thrift_library(
     name = "megarepo_configs",
     languages = [
