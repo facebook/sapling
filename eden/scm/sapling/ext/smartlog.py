@@ -622,7 +622,23 @@ def _smartlog(ui, repo, *pats, **opts):
         ui.write_err(_("warning: interactive mode is WIP\n"))
 
         viewobj = interactivesmartlog(ui, repo, masterstring, headrevs, template, opts)
-        interactiveui.view(viewobj)
+        if util.istest():
+            input_str = ui.fin.readline()
+            index = 0
+
+            def getchar():
+                nonlocal input_str
+                nonlocal index
+                # Automatically quit at end of input
+                if index >= len(input_str):
+                    return b"q"
+                ch = input_str[index]
+                index += 1
+                return ch
+
+            interactiveui.view(viewobj, getchar)
+        else:
+            interactiveui.view(viewobj)
         return
 
     revs = getrevs(ui, repo, masterstring, headrevs)
