@@ -563,10 +563,10 @@ if interactiveui is not None:
         def handlekeypress(self, key):
             if key == self.KEY_Q:
                 self.finish()
-            if key == self.KEY_J:
+            if key == self.KEY_J or key == self.KEY_DOWN:
                 if self.dag_index < len(self.revdag) - 1:
                     self.dag_index += 1
-            if key == self.KEY_K:
+            if key == self.KEY_K or key == self.KEY_UP:
                 if self.dag_index > 0:
                     self.dag_index -= 1
             if key == self.KEY_RETURN:

@@ -116,6 +116,8 @@ class viewframe:
     KEY_R = b"r"
     KEY_S = b"s"
     KEY_RETURN = b"\r"
+    KEY_UP = b"\x1b[A"
+    KEY_DOWN = b"\x1b[B"
     KEY_RIGHT = b"\x1b[C"
     KEY_LEFT = b"\x1b[D"
 
