@@ -84,6 +84,7 @@
           },
           "output": {
             "contents": "<<<<<<< working copy: 13124abb51b9 b - test: second version, b\nSecond conflicted version, F1\n=======\nFirst conflicted version, F1\n>>>>>>> merge rev:    6dd692b7db4a a - test: first version, a\n",
+            "contents:merge3": "<<<<<<< dest\nSecond conflicted version, F1\n||||||| base\nUnconflicted base, F1\n=======\nFirst conflicted version, F1\n>>>>>>> source\n",
             "exists": true,
             "isexec": false,
             "issymlink": false,
@@ -112,6 +113,7 @@
           },
           "output": {
             "contents": "<<<<<<< working copy: 13124abb51b9 b - test: second version, b\nSecond conflicted version, F2\n=======\nFirst conflicted version, F2\n>>>>>>> merge rev:    6dd692b7db4a a - test: first version, a\n",
+            "contents:merge3": "<<<<<<< dest\nSecond conflicted version, F2\n||||||| base\nUnconflicted base, F2\n=======\nFirst conflicted version, F2\n>>>>>>> source\n",
             "exists": true,
             "isexec": false,
             "issymlink": false,
@@ -156,6 +158,7 @@
           },
           "output": {
             "contents": "<<<<<<< working copy: 13124abb51b9 b - test: second version, b\nSecond conflicted version, F2\n=======\nFirst conflicted version, F2\n>>>>>>> merge rev:    6dd692b7db4a a - test: first version, a\n",
+            "contents:merge3": "<<<<<<< dest\nSecond conflicted version, F2\n||||||| base\nUnconflicted base, F2\n=======\nFirst conflicted version, F2\n>>>>>>> source\n",
             "exists": true,
             "isexec": false,
             "issymlink": false,
@@ -268,6 +271,7 @@ tldr: Since we can premerge, the working copy is backed up to an origfile.
           },
           "output": {
             "contents": "<<<<<<< working copy: fd7d10c36158 - test: dest\nsome local changes\n=======\nother change\n>>>>>>> merge rev:    9b65ba2922f0 - test: source\n",
+            "contents:merge3": "<<<<<<< dest\nsome local changes\n||||||| base\nbase\n=======\nother change\n>>>>>>> source\n",
             "exists": true,
             "isexec": false,
             "issymlink": false,
@@ -1246,6 +1250,7 @@ mergestate (like shelve):
           },
           "output": {
             "contents": "<<<<<<< dest (rebasing onto):    488e1b7e7341 b - test: b\nb=======\nstate\n>>>>>>> source (being rebased):  b0582bede31d - test: shelve changes to: c\n",
+            "contents:merge3": "<<<<<<< dest\nb||||||| base\n=======\nstate\n>>>>>>> source\n",
             "exists": true,
             "isexec": false,
             "issymlink": false,

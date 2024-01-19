@@ -19,6 +19,10 @@ This commit adds `--tool=internal:dumpjson`. It prints, for each conflict, the
 flags), and where the user/tool should write a resolved version (i.e., the
 working copy) as JSON. The user will then resolve the conflicts at their leisure
 and run `hg resolve --mark`.
+
+It also supports `:merge3` style contents in the output, except for some
+sepcial cases. For instance, merge tools don't support symlinks, delete/update
+conflicts.
 """
 
 from __future__ import absolute_import
@@ -38,6 +42,7 @@ from sapling import (
 from sapling.filemerge import absentfilectx
 from sapling.i18n import _
 from sapling.node import bin
+from sapling.simplemerge import Merge3Text, render_merge3
 
 
 testedwith = "ships-with-fb-ext"
@@ -281,10 +286,39 @@ def _summarize(repo, workingfilectx, otherctx, basectx) -> Dict[str, Any]:
 
     output["path"] = repo.wjoin(workingfilectx.path())
 
+    base = flags(basectx)
+    other = flags(otherctx)
+
+    gen_contents_with_conflict_styles(repo, output, base, local, other)
+
     return {
-        "base": flags(basectx),
+        "base": base,
         "local": local,
-        "other": flags(otherctx),
+        "other": other,
         "output": output,
         "path": workingfilectx.path(),
     }
+
+
+def gen_contents_with_conflict_styles(repo, output, base, local, other):
+    if local["issymlink"] or other["issymlink"]:
+        # symlinks are not supported by merge tools
+        return
+    try:
+        basetext = base["contents"].encode("utf8")
+        desttext = local["contents"].encode("utf8")
+        srctext = other["contents"].encode("utf8")
+    except AttributeError:
+        # "contents" might be None for delete/update conflict
+        return
+
+    m3 = Merge3Text(basetext, desttext, srctext, repo.ui)
+
+    # we can extend this to other conflict styles in the future
+    conflict_renders = [
+        ("merge3", render_merge3),
+    ]
+    for name, conflict_render in conflict_renders:
+        lines = conflict_render(m3, b"dest", b"source", b"base")[0]
+        contents = _decodeutf8ornone(b"".join(lines))
+        output[f"contents:{name}"] = contents
