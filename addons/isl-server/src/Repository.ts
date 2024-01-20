@@ -1281,7 +1281,8 @@ export function parseCommitInfoOutput(logger: Logger, output: string): SmartlogC
         closestPredecessors: splitLine(lines[FIELD_INDEX.cloesestPredecessors], ','),
         description: lines
           .slice(FIELD_INDEX.description + 1 /* first field of description is title; skip it */)
-          .join('\n'),
+          .join('\n')
+          .trim(),
         diffId: lines[FIELD_INDEX.diffId] != '' ? lines[FIELD_INDEX.diffId] : undefined,
         stableCommitMetadata:
           lines[FIELD_INDEX.stableCommitMetadata] != ''
