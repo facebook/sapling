@@ -182,6 +182,17 @@ describe('Dag', () => {
       expect(dag.isAncestor('a', 'c')).toBe(true);
       expect(dag.isAncestor('c', 'a')).toBe(true);
     });
+
+    it('preserves order for ancestors() or descendants()', () => {
+      // a--b--c
+      const dag = new BaseDag().add([
+        {...info, hash: 'a', parents: []},
+        {...info, hash: 'b', parents: ['a']},
+        {...info, hash: 'c', parents: ['b']},
+      ]);
+      expect(dag.ancestors('c').toArray()).toEqual(['c', 'b', 'a']);
+      expect(dag.descendants('a').toArray()).toEqual(['a', 'b', 'c']);
+    });
   });
 
   describe('sort', () => {
