@@ -134,7 +134,7 @@ export function RenderDag(props: RenderDagProps) {
       //  other lines ...
 
       // Also check fbcode/eden/website/src/components/RenderDag.js
-      const {linkLine, termLine, nodeLine, topPadLines, padLines, isHead, isRoot} = row;
+      const {linkLine, termLine, nodeLine, postNodeLine, ancestryLine, isHead, isRoot} = row;
 
       // By default, the glyph "o" is rendered in a fixed size "Tile".
       // With 'replace-tile' the glyph can define its own rendered element
@@ -173,7 +173,7 @@ export function RenderDag(props: RenderDagProps) {
 
       const padLine1Part = (
         <div className="render-dag-row-left-side-line pad-line1">
-          {topPadLines.map((l, i) => {
+          {postNodeLine.map((l, i) => {
             // scaleY decides the min-height. It might be a config option.
             const c = i === row.nodeColumn ? color : undefined;
             return <PadTile key={i} line={l} scaleY={0.5} stretchY={true} color={c} />;
@@ -193,23 +193,23 @@ export function RenderDag(props: RenderDagProps) {
         <>
           <div className="render-dag-row-left-side-line term-line-pad">
             {termLine.map((isTerm, i) => {
-              const line = isTerm ? PadLine.Ancestor : padLines.at(i) ?? PadLine.Blank;
+              const line = isTerm ? PadLine.Ancestor : ancestryLine.at(i) ?? PadLine.Blank;
               return <PadTile key={i} line={line} />;
             })}
           </div>
           <div className="render-dag-row-left-side-line term-line-term">
             {termLine.map((isTerm, i) => {
-              const line = padLines.at(i) ?? PadLine.Blank;
+              const line = ancestryLine.at(i) ?? PadLine.Blank;
               return isTerm ? <TermTile key={i} /> : <PadTile key={i} line={line} />;
             })}
           </div>
         </>
       );
 
-      const hasAncestorPad = padLines.some(l => l === PadLine.Ancestor);
+      const hasAncestorPad = ancestryLine.some(l => l === PadLine.Ancestor);
       const padLine2Part = hasAncestorPad && (
         <div className="render-dag-row-left-side-line pad-line2">
-          {padLines.map((l, i) => (
+          {ancestryLine.map((l, i) => (
             <PadTile key={i} line={l} color={row.parentColumns.includes(i) ? color : undefined} />
           ))}
         </div>

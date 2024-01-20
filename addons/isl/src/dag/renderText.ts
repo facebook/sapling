@@ -88,7 +88,7 @@ export class TextRenderer {
 
     // Render the top pad lines.
     const outTopPadLine: string[] = [];
-    line.topPadLines.forEach((entry, i) => {
+    line.postNodeLine.forEach((entry, i) => {
       if (debugLinkLineFromNode && i !== line.nodeColumn) {
         outTopPadLine.push(GLYPHYS.SPACE);
       } else {
@@ -179,7 +179,7 @@ export class TextRenderer {
     }
 
     // Patch the "padLines" for debugLinkLineFromNode.
-    const {padLines} = line;
+    const {ancestryLine: padLines} = line;
     if (debugLinkLineFromNode) {
       padLines.forEach((padLine, i) => {
         if (!line.parentColumns.includes(i)) {
