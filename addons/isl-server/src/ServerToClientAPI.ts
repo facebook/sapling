@@ -838,7 +838,7 @@ export default class ServerToClientAPI {
         .replace(repo.IGNORE_COMMIT_MESSAGE_LINES_REGEX, '')
         .replace(/^<Replace this line with a title. Use 1 line only, 67 chars or less>/, '');
 
-      if (customTemplate?.trim() !== '') {
+      if (customTemplate && customTemplate?.trim() !== '') {
         template = customTemplate as string;
 
         this.tracker.track('UseCustomCommitMessageTemplate');

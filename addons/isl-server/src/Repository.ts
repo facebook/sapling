@@ -177,7 +177,7 @@ const CHANGED_FILES_TEMPLATE = [...Object.values(CHANGED_FILES_FIELDS), COMMIT_E
  * Prefer using `RepositoryCache.getOrCreate()` to access and dispose `Repository`s.
  */
 export class Repository {
-  public IGNORE_COMMIT_MESSAGE_LINES_REGEX = /^((?:HG|SL):.*)/gm;
+  public IGNORE_COMMIT_MESSAGE_LINES_REGEX = /^((?:HG|SL):.*)\n?/gm;
 
   private mergeConflicts: MergeConflicts | undefined = undefined;
   private uncommittedChanges: FetchedUncommittedChanges | null = null;
