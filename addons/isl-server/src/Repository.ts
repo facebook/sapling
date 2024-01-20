@@ -1208,7 +1208,7 @@ function getExecParams(
     env: {
       ...options_?.env,
       ...env,
-      LANG: 'en_US.utf-8', // make sure to use unicode if user hasn't set LANG themselves
+      LANG: 'C.UTF-8', // make sure to use unicode if user hasn't set LANG themselves
       // TODO: remove when SL_ENCODING is used everywhere
       HGENCODING: 'UTF-8',
       SL_ENCODING: 'UTF-8',
