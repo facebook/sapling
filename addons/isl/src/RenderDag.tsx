@@ -137,7 +137,9 @@ export function RenderDag(props: RenderDagProps) {
       //
       //    ┌──Row2──────────────────────────────┐
       //    │┌─Left──────────┐┌Right────────────┐│
-      //    ││┌Term─────────┐││                 ││
+      //    ││┌PostNode*────┐││                 ││
+      //    │││ | |         │││                 ││
+      //    ││├Term─────────┤││                 ││
       //    │││ | |         │││ (extras)        ││
       //    │││ | ~         │││                 ││
       //    ││├Link─────────┤││                 ││
@@ -145,9 +147,6 @@ export function RenderDag(props: RenderDagProps) {
       //    │││ | |         │││                 ││
       //    ││├Ancestry─────┤││                 ││
       //    │││ : |         │││                 ││
-      //    ││├PostAncestry*┤││                 ││
-      //    │││ | |         │││                 ││
-      //    ││└─────────────┘││                 ││
       //    │└───────────────┘└─────────────────┘│
       //    └────────────────────────────────────┘
       //
@@ -273,19 +272,6 @@ export function RenderDag(props: RenderDagProps) {
           ))}
         </div>
       ) : null;
-      const postAncestryLinePart = commitExtrasPart && (
-        <div className="render-dag-row-left-side-line post-ancestry-line grow">
-          {row.postAncestryLine.map((l, i) => (
-            <PadTile
-              key={i}
-              line={l}
-              scaleY={0.2}
-              stretchY={true}
-              color={row.parentColumns.includes(i) ? color : undefined}
-            />
-          ))}
-        </div>
-      );
 
       // Put parts together.
 
@@ -323,10 +309,10 @@ export function RenderDag(props: RenderDagProps) {
         pushRow(
           `${info.hash}:row2`,
           <>
+            {commitExtrasPart && postNodeLinePart}
             {linkLinePart}
             {termLinePart}
             {ancestryLinePart}
-            {postAncestryLinePart}
           </>,
           commitExtrasPart,
         );
