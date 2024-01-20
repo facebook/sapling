@@ -91,11 +91,8 @@ def getchar() -> Union[None, bytes, str]:
         if ch is None:
             ch = ""
     # pyre-fixme[61]: `ch` is undefined, or not always defined.
-    if ch == "\x03":
-        raise KeyboardInterrupt()
-    # pyre-fixme[61]: `ch` is undefined, or not always defined.
-    if ch == "\x04":
-        raise EOFError()
+    if ch == b"\x03" or ch == b"\x04":
+        return None
     # pyre-fixme[61]: `ch` is undefined, or not always defined.
     return ch
 
@@ -181,6 +178,8 @@ def view(viewobj, readinput=getchar) -> None:
         while viewobj._active:
             _write_output(viewobj)
             output = readinput()
+            if output is None:
+                break
             viewobj.handlekeypress(output)
     finally:
         if not util.istest():
