@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {CommitTreeWithPreviews} from '../getCommitTree';
 import type {Operation} from '../operations/Operation';
+import type {Dag} from '../previews';
 import type {CommitInfo, DiffId, DiffSummary, Hash} from '../types';
 import type {SyncStatus} from './syncStatus';
 import type {ReactNode} from 'react';
@@ -64,7 +64,8 @@ export interface UICodeReviewProvider {
   supportsUpdateMessage: boolean;
 
   getSupportedStackActions(
-    tree: CommitTreeWithPreviews,
+    hash: Hash,
+    dag: Dag,
     diffSummaries: Map<string, DiffSummary>,
   ): {
     resubmittableStack?: Array<CommitInfo>;

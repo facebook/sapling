@@ -47,6 +47,7 @@ export function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.Reac
   const dag = useRecoilValue(dagWithPreviews);
   const runOperation = useRunOperation();
   const syncStatusMap = useRecoilValue(syncStatusAtom);
+  const hash = tree.info.hash;
 
   // buttons at the bottom of the stack
   const actions = [];
@@ -62,13 +63,15 @@ export function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.Reac
   const showCleanupButton =
     reviewProvider == null || diffMap?.value == null
       ? false
-      : isStackEligibleForCleanup(tree.info.hash, dag, diffMap.value, reviewProvider);
+      : isStackEligibleForCleanup(hash, dag, diffMap.value, reviewProvider);
 
   const confirmShouldSubmit = useShowConfirmSubmitStack();
   const contextMenu = useContextMenu(() => moreActions);
   if (reviewProvider !== null && !isStackEditingActivated) {
     const reviewActions =
-      diffMap.value == null ? {} : reviewProvider?.getSupportedStackActions(tree, diffMap.value);
+      diffMap.value == null
+        ? {}
+        : reviewProvider?.getSupportedStackActions(hash, dag, diffMap.value);
     const resubmittableStack = reviewActions?.resubmittableStack;
     const submittableStack = reviewActions?.submittableStack;
     const MIN_STACK_SIZE_TO_SUGGEST_SUBMIT = 2; // don't show "submit stack" on single commits... they're not really "stacks".
