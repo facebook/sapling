@@ -122,6 +122,7 @@ class viewframe:
     def __init__(self, ui, repo):
         self.ui = ui
         self.repo = repo
+        self.status = ""
         self._active = True
         ui.disablepager()
         repo.ui.disablepager()
@@ -142,22 +143,26 @@ class viewframe:
 
 def _write_output(viewobj):
     screensize = scmutil.termsize(viewobj.ui)[1]
+    statuslines = viewobj.status.splitlines()
+    statussize = len(statuslines)
+    logsize = screensize - statussize
     clearscreen(viewobj.ui)
-    slist, alignment = viewobj.render()
-    if alignment is not None and len(slist) > screensize:
+    lines, alignment = viewobj.render()
+    if alignment is not None and len(lines) > logsize:
         index, direction = alignment
         if direction == Alignment.top:
-            end = min(len(slist), index + screensize)
-            start = min(index, end - screensize)
+            end = min(len(lines), index + logsize)
+            start = min(index, end - logsize)
         elif direction == Alignment.bottom:
-            start = max(0, index - screensize)
-            end = max(index, start + screensize)
-        slist = slist[start:end]
+            start = max(0, index - logsize)
+            end = max(index, start + logsize)
+        lines = lines[start:end]
 
+    lines += statuslines
     if util.istest():
-        viewobj.ui.write("\n".join(slist))
+        viewobj.ui.write("\n".join(lines))
     else:
-        viewobj.ui.write("\n".join("\r" + line for line in slist))
+        viewobj.ui.write("\n".join("\r" + line for line in lines))
     viewobj.ui.flush()
 
 

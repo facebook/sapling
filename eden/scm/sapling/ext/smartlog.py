@@ -554,7 +554,6 @@ if interactiveui is not None:
                 props={"highlighted_node": self.revdag[self.dag_index][2].hex()},
                 on_output=on_output,
             )
-            ui.status(self.status)
             output = ui.popbuffer().splitlines()
             if selected_rows is None:
                 return output, None
