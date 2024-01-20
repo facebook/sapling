@@ -314,10 +314,6 @@
   margin-top: calc(2px + var(--halfpad));
 }
 
-.render-dag .commit {
-  top: calc(-2px - var(--halfpad));
-}
-
 .render-dag .selected-commit-background {
   width: calc(100% + var(--halfpad));
   left: calc(0px - var(--halfpad));

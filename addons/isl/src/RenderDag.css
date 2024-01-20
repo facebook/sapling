@@ -18,7 +18,7 @@
   flex-grow: 0;
 }
 
-.render-dag-row-left-side-line.pad-line1 {
+.render-dag-row-left-side-line.grow {
   flex-grow: 1;
 }
 
