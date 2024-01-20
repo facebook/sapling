@@ -915,6 +915,22 @@ def sleep(args: List[str]):
     time.sleep(duration)
 
 
+@command
+def pp(stdin: BinaryIO):
+    """pretty print a string"""
+    import json
+
+    data = stdin.read()
+    # we can extend it to support other formats
+    try:
+        obj = json.loads(data)
+    except Exception as e:
+        raise RuntimeError(f"invalid JSON: {e}")
+
+    s = json.dumps(obj, indent=2)
+    return f"{s}\n"
+
+
 def _lookup_python(name):
     """lookup Python variable name from the Python stack"""
     f = sys._getframe(1)
