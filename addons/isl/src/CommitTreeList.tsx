@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {DagCommitInfo} from './dag/dag';
 import type {CommitTree, CommitTreeWithPreviews} from './getCommitTree';
 import type {Hash} from './types';
 
@@ -71,23 +72,23 @@ function DagCommitList(props: DagCommitListProps) {
     ]);
   }
 
+  const renderCommit = (info: DagCommitInfo) => {
+    return (
+      <Commit
+        commit={info}
+        key={info.hash}
+        previewType={info.previewType}
+        hasChildren={dag.children(info.hash).size > 0}
+        bodyOnly={true}
+      />
+    );
+  };
+
   return (
     <RenderDag
       dag={dag}
       className={'commit-tree-root ' + (isNarrow ? ' commit-tree-narrow' : '')}
-      renderCommit={info => {
-        return (
-          <>
-            <Commit
-              commit={info}
-              key={info.hash}
-              previewType={info.previewType}
-              hasChildren={dag.children(info.hash).size > 0}
-              bodyOnly={true}
-            />
-          </>
-        );
-      }}
+      renderCommit={renderCommit}
     />
   );
 }
