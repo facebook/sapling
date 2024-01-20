@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {DagCommitInfo} from './dag/dag';
 import type {Hash} from './types';
 
 import {globalRecoil} from './AccessGlobalRecoil';
@@ -17,7 +18,6 @@ import {showSuggestedRebaseForStack, SuggestedRebaseButton} from './SuggestedReb
 import {Tooltip, DOCUMENTATION_DELAY} from './Tooltip';
 import {codeReviewProvider, allDiffSummaries} from './codeReview/CodeReviewInfo';
 import {SyncStatus, syncStatusAtom} from './codeReview/syncStatus';
-import {type CommitTreeWithPreviews, walkTreePostorder, isTreeLinear} from './getCommitTree';
 import {T, t} from './i18n';
 import {IconStack} from './icons/IconStack';
 import {dagWithPreviews} from './previews';
@@ -30,7 +30,6 @@ import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useRecoilValue, useRecoilState} from 'recoil';
 import {type ContextMenuItem, useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
-import {generatorContains} from 'shared/utils';
 
 import './StackActions.css';
 
@@ -38,35 +37,43 @@ import './StackActions.css';
  * Actions at the bottom of a stack of commits that acts on the whole stack,
  * like submitting, hiding, editing the stack.
  */
-export function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.ReactElement | null {
+export function StackActions({hash}: {hash: Hash}): React.ReactElement | null {
   const reviewProvider = useRecoilValue(codeReviewProvider);
   const diffMap = useRecoilValue(allDiffSummaries);
   const stackHashes = useRecoilValue(editingStackIntentionHashes)[1];
   const loadingState = useRecoilValue(loadingStackState);
-  const suggestedRebase = useRecoilValue(showSuggestedRebaseForStack(tree.info.hash));
+  const suggestedRebase = useRecoilValue(showSuggestedRebaseForStack(hash));
   const dag = useRecoilValue(dagWithPreviews);
   const runOperation = useRunOperation();
   const syncStatusMap = useRecoilValue(syncStatusAtom);
-  const hash = tree.info.hash;
 
   // buttons at the bottom of the stack
   const actions = [];
   // additional actions hidden behind [...] menu.
   // Non-empty only when actions is non-empty.
   const moreActions: Array<ContextMenuItem> = [];
+  const confirmShouldSubmit = useShowConfirmSubmitStack();
+  const contextMenu = useContextMenu(() => moreActions);
 
   const isStackEditingActivated =
     stackHashes.size > 0 &&
     loadingState.state === 'hasValue' &&
-    generatorContains(walkTreePostorder([tree]), v => stackHashes.has(v.info.hash));
+    dag
+      .descendants(hash)
+      .toSeq()
+      .some(h => stackHashes.has(h));
 
   const showCleanupButton =
     reviewProvider == null || diffMap?.value == null
       ? false
       : isStackEligibleForCleanup(hash, dag, diffMap.value, reviewProvider);
 
-  const confirmShouldSubmit = useShowConfirmSubmitStack();
-  const contextMenu = useContextMenu(() => moreActions);
+  const info = dag.get(hash);
+
+  if (info == null) {
+    return null;
+  }
+
   if (reviewProvider !== null && !isStackEditingActivated) {
     const reviewActions =
       diffMap.value == null
@@ -123,7 +130,7 @@ export function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.Reac
           <HighlightCommitsWhileHovering toHighlight={resubmittableStack}>
             <OperationDisabledButton
               // Use the diffId in the key so that only this "resubmit stack" button shows the spinner.
-              contextKey={`resubmit-stack-on-${tree.info.diffId}`}
+              contextKey={`resubmit-stack-on-${info.diffId}`}
               appearance="icon"
               icon={icon}
               runOperation={async () => {
@@ -180,10 +187,7 @@ export function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.Reac
       // Parent is close, but if you had multiple stacks rebased to the same public commit,
       // all those stacks would render the same key and show the same spinner.
       // So parent hash + title heuristic lets us almost always show the spinner for only this stack.
-      const contextKey = `submit-stack-on-${tree.info.parents[0]}-${tree.info.title.replace(
-        / /g,
-        '_',
-      )}`;
+      const contextKey = `submit-stack-on-${info.parents.at(0)}-${info.title.replace(/ /g, '_')}`;
 
       const tooltip = t(
         willShowConfirmationModal
@@ -218,19 +222,16 @@ export function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.Reac
     }
   }
 
-  if (tree.children.length > 0) {
-    actions.push(<StackEditButton key="edit-stack" tree={tree} />);
+  const hasChildren = dag.childHashes(hash).size > 0;
+  if (hasChildren) {
+    actions.push(<StackEditButton key="edit-stack" info={info} />);
   }
 
   if (showCleanupButton) {
-    actions.push(
-      <CleanupButton key="cleanup" commit={tree.info} hasChildren={tree.children.length > 0} />,
-    );
+    actions.push(<CleanupButton key="cleanup" commit={info} hasChildren={hasChildren} />);
     // cleanup button implies no need to rebase this stack
   } else if (suggestedRebase) {
-    actions.push(
-      <SuggestedRebaseButton key="suggested-rebase" source={succeedableRevset(tree.info.hash)} />,
-    );
+    actions.push(<SuggestedRebaseButton key="suggested-rebase" source={succeedableRevset(hash)} />);
   }
 
   if (actions.length === 0) {
@@ -250,18 +251,20 @@ export function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.Reac
   );
 }
 
-function StackEditButton({tree}: {tree: CommitTreeWithPreviews}): React.ReactElement | null {
+function StackEditButton({info}: {info: DagCommitInfo}): React.ReactElement | null {
   const uncommitted = useRecoilValue(latestUncommittedChangesData);
+  const dag = useRecoilValue(dagWithPreviews);
   const [[, stackHashes], setStackIntentionHashes] = useRecoilState(editingStackIntentionHashes);
   const loadingState = useRecoilValue(loadingStackState);
 
-  const stackCommits = [...walkTreePostorder([tree])].map(t => t.info);
-  const isEditing = stackHashes.size > 0 && stackCommits.some(c => stackHashes.has(c.hash));
+  const set = dag.descendants(info.hash);
+  const stackCommits = dag.getBatch(set.toArray());
+  const isEditing = stackHashes.size > 0 && set.toSeq().some(h => stackHashes.has(h));
 
-  const isPreview = tree.previewType != null;
+  const isPreview = info.previewType != null;
   const isLoading = isEditing && loadingState.state === 'loading';
   const isError = isEditing && loadingState.state === 'hasError';
-  const isLinear = isTreeLinear(tree);
+  const isLinear = dag.merge(set).size === 0 && dag.heads(set).size === 1;
   const isDirty = stackCommits.some(c => c.isHead) && uncommitted.files.length > 0;
   const hasPublic = stackCommits.some(c => c.phase === 'public');
   const obsoleted = stackCommits.filter(c => c.successorInfo != null);
@@ -303,7 +306,7 @@ function StackEditButton({tree}: {tree: CommitTreeWithPreviews}): React.ReactEle
             if (!(await confirmUnsavedEditsBeforeSplit(stackCommits, 'edit_stack'))) {
               return;
             }
-            setStackIntentionHashes(['general', new Set<Hash>(stackCommits.map(c => c.hash))]);
+            setStackIntentionHashes(['general', new Set<Hash>(set)]);
           }}>
           {icon}
           <T>Edit stack</T>

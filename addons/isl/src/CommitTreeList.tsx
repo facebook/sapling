@@ -199,7 +199,7 @@ function SubTree({tree, depth}: {tree: CommitTreeWithPreviews; depth: number}): 
   const isPublic = info.phase === 'public';
 
   const stackActions =
-    !isPublic && depth === 1 ? <StackActions key="stack-actions" tree={tree} /> : null;
+    !isPublic && depth === 1 ? <StackActions key="stack-actions" hash={info.hash} /> : null;
 
   const renderedChildren = (children ?? [])
     .map(tree => <SubTree key={`tree-${tree.info.hash}`} tree={tree} depth={depth + 1} />)
