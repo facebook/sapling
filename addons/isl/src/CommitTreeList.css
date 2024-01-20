@@ -32,7 +32,6 @@
   flex-direction: row;
   gap: var(--pad);
   align-items: center;
-  margin-top: var(--pad);
   margin-top: var(--halfpad);
 }
 
@@ -320,6 +319,12 @@
 }
 
 .render-dag .head-commit-info {
+  margin-left: var(--halfpad);
+}
+
+.render-dag,
+.commit-tree-stack-actions {
+  margin-bottom: var(--pad);
   margin-left: var(--halfpad);
 }
 

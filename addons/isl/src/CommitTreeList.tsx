@@ -93,6 +93,9 @@ function DagCommitList(props: DagCommitListProps) {
     ) {
       // Root (no parents) in the displayed DAG, but not root in the full DAG.
       return <FetchingAdditionalCommitsRow />;
+    } else if (info.phase === 'draft' && dag.draft(dag.parents(info.hash)).size === 0) {
+      // Draft but parents are not drafts. Likely a stack root. Show stack buttons.
+      return <StackActions hash={info.hash} />;
     }
     return null;
   };
