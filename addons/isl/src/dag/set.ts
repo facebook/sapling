@@ -73,6 +73,11 @@ export class HashSet extends SelfUpdate<ImSet<Hash>> {
     return this.set.has(hash);
   }
 
+  /** Reverse the order of the set. */
+  reverse(): HashSet {
+    return new HashSet(this.inner.reverse());
+  }
+
   /** Convert to sorted array. Mainly for testing. */
   toSortedArray(): Array<Hash> {
     return this.set.toArray().sort();

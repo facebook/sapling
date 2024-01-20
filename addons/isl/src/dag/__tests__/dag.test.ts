@@ -191,6 +191,7 @@ describe('Dag', () => {
         {...info, hash: 'c', parents: ['b']},
       ]);
       expect(dag.ancestors('c').toArray()).toEqual(['c', 'b', 'a']);
+      expect(dag.ancestors('c').reverse().toArray()).toEqual(['a', 'b', 'c']);
       expect(dag.descendants('a').toArray()).toEqual(['a', 'b', 'c']);
     });
   });
