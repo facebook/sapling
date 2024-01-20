@@ -50,7 +50,7 @@ export type RenderDagProps = {
  * - 'replace-tile': Replace the <Tile /> with the rendered result. Size decided by the
  *   rendered result. Can be other elements not just svg. Useful for "You are here".
  */
-type RenderGlyphResult = ['inside-tile', JSX.Element] | ['replace-tile', JSX.Element];
+export type RenderGlyphResult = ['inside-tile', JSX.Element] | ['replace-tile', JSX.Element];
 
 /**
  * Renders a dag. Calculate and render the edges, aka. the left side:

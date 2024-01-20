@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {RenderGlyphResult} from './RenderDag';
 import type {DagCommitInfo} from './dag/dag';
 import type {ExtendedGraphRow} from './dag/render';
 import type {CommitTree, CommitTreeWithPreviews} from './getCommitTree';
@@ -15,7 +16,8 @@ import serverAPI from './ClientToServerAPI';
 import {Commit} from './Commit';
 import {Center, LargeSpinner} from './ComponentUtils';
 import {ErrorNotice} from './ErrorNotice';
-import {RenderDag} from './RenderDag';
+import {highlightedCommits} from './HighlightedCommits';
+import {RenderDag, defaultRenderGlyph} from './RenderDag';
 import {StackActions} from './StackActions';
 import {Tooltip, DOCUMENTATION_DELAY} from './Tooltip';
 import {pageVisibility} from './codeReview/CodeReviewInfo';
@@ -62,6 +64,8 @@ function DagCommitList(props: DagCommitListProps) {
   const {isNarrow} = props;
 
   let dag = useRecoilValue(dagWithPreviews);
+  const highlighted = useRecoilValue(highlightedCommits);
+
   // Insert a virtual "You are here" as a child of ".".
   const dot = dag.resolve('.');
   if (dot != null) {
@@ -100,12 +104,38 @@ function DagCommitList(props: DagCommitListProps) {
     return null;
   };
 
+  const renderGlyph = (info: DagCommitInfo): RenderGlyphResult => {
+    const [glyphPosition, defaultGlyph] = defaultRenderGlyph(info);
+    let glyph = defaultGlyph;
+    // Consider highlight info.
+    if (glyphPosition === 'inside-tile') {
+      const hilightCircle = highlighted.has(info.hash) ? (
+        <circle
+          cx={0}
+          cy={0}
+          r={8}
+          fill="transparent"
+          stroke="var(--focus-border)"
+          strokeWidth={4}
+        />
+      ) : null;
+      glyph = (
+        <>
+          {hilightCircle}
+          {glyph}
+        </>
+      );
+    }
+    return [glyphPosition, glyph];
+  };
+
   return (
     <RenderDag
       dag={dag}
       className={'commit-tree-root ' + (isNarrow ? ' commit-tree-narrow' : '')}
       renderCommit={renderCommit}
       renderCommitExtras={renderCommitExtras}
+      renderGlyph={renderGlyph}
     />
   );
 }
