@@ -19,7 +19,6 @@
   > EOF
 
   $ hg sl -i < transcript
-  warning: interactive mode is WIP
   ===== Screen Refresh =====
   o  f4016ed9f (Not backed up)  1970-01-01 00:00  test  d
   │  d

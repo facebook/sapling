@@ -619,8 +619,6 @@ def _smartlog(ui, repo, *pats, **opts):
         if interactiveui is None:
             raise error.Abort(_("interactive ui is not supported on Windows"))
 
-        ui.write_err(_("warning: interactive mode is WIP\n"))
-
         viewobj = interactivesmartlog(ui, repo, masterstring, headrevs, template, opts)
         if util.istest():
             input_str = ui.fin.readline()

@@ -21,7 +21,6 @@
   > EOF
 
   $ hg sl -i --config ui.color=debug < transcript
-  warning: interactive mode is WIP
   ===== Screen Refresh =====
   o  [sl.highlighted|[sl.draft|f4016ed9f] [sl.backupfail|(Not backed up)]  [sl.date|1970-01-01 00:00]  [sl.user|test]  [sl.book|d]
   │  [sl.desc|d]
