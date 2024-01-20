@@ -6,6 +6,7 @@
  */
 
 import type {DagCommitInfo} from './dag/dag';
+import type {ExtendedGraphRow} from './dag/render';
 import type {CommitTree, CommitTreeWithPreviews} from './getCommitTree';
 import type {Hash} from './types';
 
@@ -84,11 +85,24 @@ function DagCommitList(props: DagCommitListProps) {
     );
   };
 
+  const renderCommitExtras = (info: DagCommitInfo, row: ExtendedGraphRow) => {
+    if (
+      row.termLine != null &&
+      dag.parents(info.hash).size === 0 &&
+      (info.parents.length > 0 || (info.ancestors?.length ?? 0) > 0)
+    ) {
+      // Root (no parents) in the displayed DAG, but not root in the full DAG.
+      return <FetchingAdditionalCommitsRow />;
+    }
+    return null;
+  };
+
   return (
     <RenderDag
       dag={dag}
       className={'commit-tree-root ' + (isNarrow ? ' commit-tree-narrow' : '')}
       renderCommit={renderCommit}
+      renderCommitExtras={renderCommitExtras}
     />
   );
 }
@@ -246,6 +260,15 @@ function MainLineEllipsis({children}: {children?: React.ReactNode}) {
     <div className="commit-ellipsis">
       <Icon icon="kebab-vertical" />
       <div className="commit-ellipsis-children">{children}</div>
+    </div>
+  );
+}
+
+function FetchingAdditionalCommitsRow() {
+  return (
+    <div className="fetch-additional-commits-row">
+      <FetchingAdditionalCommitsButton />
+      <FetchingAdditionalCommitsIndicator />
     </div>
   );
 }

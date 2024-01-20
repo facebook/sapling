@@ -322,3 +322,11 @@
 .render-dag .head-commit-info {
   margin-left: var(--halfpad);
 }
+
+.fetch-additional-commits-row {
+  display: flex;
+  align-items: center;
+  margin: var(--halfpad);
+  position: relative;
+  min-height: var(--vscode-icon-button-height);
+}
