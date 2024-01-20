@@ -517,7 +517,8 @@ export class Renderer {
     } else {
       column = existingColumn ?? this.columns.firstEmpty() ?? this.columns.newEmpty();
     }
-    const isHead = existingColumn == null;
+    const isHead =
+      existingColumn == null || this.columns.inner.at(existingColumn)?.type === ColumnType.Reserved;
     const isRoot = parents.length === 0;
 
     this.columns.inner[column] = Column.empty();
