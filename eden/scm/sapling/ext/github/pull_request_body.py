@@ -67,7 +67,10 @@ def create_pull_request_title_and_body(
     """
     owner, name = repository.get_upstream_owner_and_name()
     pr = pr_numbers_and_num_commits[pr_numbers_index][0]
-    title = title if title is not None else firstline(commit_msg)
+
+    if title is None:
+        title = firstline(commit_msg)
+        body = commit_msg[len(title)+1:]
     body = _strip_stack_information(commit_msg)
     extra = []
     if len(pr_numbers_and_num_commits) > 1:
