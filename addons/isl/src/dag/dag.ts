@@ -215,13 +215,14 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
 
   /**
    * Return a set with obsoleted commit stacks "collpased"
-   * (i.e. only keep the heads and roots).
+   * (i.e. only keep the roots and draft parents).
    */
   @cached()
   collapseObsolete(set?: SetLike): HashSet {
     const all = set === undefined ? this.all() : HashSet.fromHashes(set);
     const obsolete = this.obsolete(all);
-    const toHide = obsolete.subtract(this.heads(obsolete)).subtract(this.roots(obsolete));
+    const toKeep = this.parents(this.draft(all).subtract(obsolete)).union(this.roots(obsolete));
+    const toHide = obsolete.subtract(toKeep);
     return all.subtract(toHide);
   }
 
