@@ -17,6 +17,7 @@ import {Ancestor, AncestorType} from './render';
 import {TextRenderer} from './renderText';
 import {HashSet} from './set';
 import {Record, Map as ImMap, Set as ImSet} from 'immutable';
+import {cached} from 'shared/LRU';
 import {SelfUpdate} from 'shared/immutableExt';
 import {group, notEmpty, splitOnce, unwrap} from 'shared/utils';
 
@@ -195,6 +196,23 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
 
   filter(predicate: (commit: Readonly<Info>) => boolean, set?: SetLike): HashSet {
     return this.commitDag.filter(predicate, set);
+  }
+
+  @cached()
+  all(): HashSet {
+    return HashSet.fromHashes(this);
+  }
+
+  /**
+   * Return a set with obsoleted commit stacks "collpased"
+   * (i.e. only keep the heads and roots).
+   */
+  @cached()
+  collapseObsolete(set?: SetLike): HashSet {
+    const all = set === undefined ? this.all() : HashSet.fromHashes(set);
+    const obsolete = this.obsolete(all);
+    const toHide = obsolete.subtract(this.heads(obsolete)).subtract(this.roots(obsolete));
+    return all.subtract(toHide);
   }
 
   // Sort

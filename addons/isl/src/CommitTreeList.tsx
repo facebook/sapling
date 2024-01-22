@@ -8,6 +8,7 @@
 import type {RenderGlyphResult} from './RenderDag';
 import type {Dag, DagCommitInfo} from './dag/dag';
 import type {ExtendedGraphRow} from './dag/render';
+import type {HashSet} from './dag/set';
 import type {CommitTree, CommitTreeWithPreviews} from './getCommitTree';
 import type {Hash} from './types';
 
@@ -21,7 +22,6 @@ import {RenderDag, defaultRenderGlyph} from './RenderDag';
 import {StackActions} from './StackActions';
 import {Tooltip, DOCUMENTATION_DELAY} from './Tooltip';
 import {pageVisibility} from './codeReview/CodeReviewInfo';
-import {HashSet} from './dag/set';
 import {YOU_ARE_HERE_VIRTUAL_COMMIT} from './dag/virtualCommit';
 import {T, t} from './i18n';
 import {CreateEmptyInitialCommitOperation} from './operations/CreateEmptyInitialCommitOperation';
@@ -145,10 +145,7 @@ function DagCommitList(props: DagCommitListProps) {
 }
 
 function getRenderSubset(dag: Dag): HashSet {
-  const obsolete = dag.obsolete();
-  const all = HashSet.fromHashes(dag);
-  const toHide = obsolete.subtract(dag.heads(obsolete).union(dag.roots(obsolete)));
-  return all.subtract(toHide);
+  return dag.collapseObsolete();
 }
 
 export function CommitTreeList() {
