@@ -10,6 +10,7 @@ import type {CommitCloudSyncState, Hash, Result} from './types';
 import serverAPI from './ClientToServerAPI';
 import {Commit} from './Commit';
 import {FlexSpacer} from './ComponentUtils';
+import {EducationInfoTip} from './Education';
 import {ErrorNotice, InlineErrorBadge} from './ErrorNotice';
 import {Subtle} from './Subtle';
 import {Tooltip} from './Tooltip';
@@ -86,12 +87,9 @@ export function CommitCloudInfo() {
       <div className="dropdown-fields-header commit-cloud-header">
         <Icon icon="cloud" size="M" />
         <strong role="heading">{<T>Commit Cloud</T>}</strong>
-        <Tooltip
-          title={t(
-            'Commit Cloud backs up your draft commits automatically across all your devices.',
-          )}>
-          <Icon icon="info" />
-        </Tooltip>
+        <EducationInfoTip>
+          <T>Commit Cloud backs up your draft commits automatically across all your devices.</T>
+        </EducationInfoTip>
         {isLoading && <Icon icon="loading" />}
       </div>
 
