@@ -14,8 +14,10 @@ import {DropdownField, DropdownFields} from '../DropdownFields';
 import {InlineErrorBadge} from '../ErrorNotice';
 import {Subtle} from '../Subtle';
 import {Tooltip} from '../Tooltip';
+import {DagCommitInfo} from '../dag/dagCommitInfo';
 import {useHeartbeat} from '../heartbeat';
 import {t, T} from '../i18n';
+import {dagWithPreviews} from '../previews';
 import {RelativeDate} from '../relativeDate';
 import {
   latestCommitsData,
@@ -25,7 +27,7 @@ import {
 } from '../serverAPIState';
 import {getAllRecoilStateJson} from './getAllRecoilStateJson';
 import {VSCodeBadge, VSCodeButton, VSCodeCheckbox} from '@vscode/webview-ui-toolkit/react';
-import {useState} from 'react';
+import {useState, useCallback, useEffect} from 'react';
 import {atom, useRecoilCallback, useRecoilState, useRecoilValue} from 'recoil';
 
 import './DebugToolsMenu.css';
@@ -45,6 +47,9 @@ export default function DebugToolsMenu() {
       </Subtle>
       <DropdownField title={<T>Performance</T>}>
         <DebugPerfInfo />
+      </DropdownField>
+      <DropdownField title={<T>Commit graph</T>}>
+        <DebugDagInfo />
       </DropdownField>
       <DropdownField title={<T>Internal Recoil State</T>}>
         <InternalState />
@@ -165,6 +170,56 @@ function FetchDurationInfo(
           </Tooltip>
         </Subtle>
       )}
+    </div>
+  );
+}
+
+function useMeasureDuration(slowOperation: () => void): number | null {
+  const [measured, setMeasured] = useState<null | number>(null);
+  useEffect(() => {
+    requestIdleCallback(() => {
+      const startTime = performance.now();
+      slowOperation();
+      const endTime = performance.now();
+      setMeasured(endTime - startTime);
+    });
+    return () => setMeasured(null);
+  }, [slowOperation]);
+  return measured;
+}
+
+function DebugDagInfo() {
+  const dag = useRecoilValue(dagWithPreviews);
+  const dagRenderBenchmark = useCallback(() => {
+    // Slightly change the dag to invalidate its caches.
+    const noise = performance.now();
+    const newDag = dag.add([DagCommitInfo.fromCommitInfo({hash: `dummy-${noise}`, parents: []})]);
+    newDag.renderToRows(newDag.collapseObsolete());
+  }, [dag]);
+
+  const dagSize = dag.all().size;
+  const dagDisplayedSize = dag.collapseObsolete().size;
+  const dagSortMs = useMeasureDuration(dagRenderBenchmark);
+
+  return (
+    <div>
+      <T>Size: </T>
+      {dagSize}
+      <br />
+      <T>Displayed: </T>
+      {dagDisplayedSize}
+      <br />
+      <>
+        <T>Render calculation: </T>
+        {dagSortMs == null ? (
+          <T>(Measuring)</T>
+        ) : (
+          <>
+            {dagSortMs.toFixed(1)} <T>ms</T>
+          </>
+        )}
+        <br />
+      </>
     </div>
   );
 }
