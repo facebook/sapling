@@ -37,6 +37,7 @@ import type {
   ShelvedChange,
   CommitCloudSyncState,
   Hash,
+  ConfigName,
 } from 'isl/src/types';
 import type {Comparison} from 'shared/Comparison';
 
@@ -49,7 +50,7 @@ import {GitHubCodeReviewProvider} from './github/githubCodeReviewProvider';
 import {isGithubEnterprise} from './github/queryGraphQL';
 import {handleAbortSignalOnProcess, isExecaError, serializeAsyncCall} from './utils';
 import execa from 'execa';
-import {CommitCloudBackupStatus, CommandRunner} from 'isl/src/types';
+import {allConfigNames, CommitCloudBackupStatus, CommandRunner} from 'isl/src/types';
 import os from 'os';
 import path from 'path';
 import {revsetArgsForComparison} from 'shared/Comparison';
@@ -214,6 +215,9 @@ export class Repository {
    * Default: 10 seconds. Can be set by the `isl.hold-off-refresh-ms` setting.
    */
   public configHoldOffRefreshMs = 10000;
+
+  public knownConfigs: ReadonlyMap<ConfigName, string> | undefined = undefined;
+  private configRateLimiter = new RateLimiter(1);
 
   private currentVisibleCommitRangeIndex = 0;
   private visibleCommitRanges: Array<number | undefined> = [
@@ -452,18 +456,21 @@ export class Repository {
    * Throws if `command` is not found.
    */
   static async getRepoInfo(command: string, logger: Logger, cwd: string): Promise<RepoInfo> {
-    const [repoRoot, dotdir, pathsDefault, pullRequestDomain, preferredSubmitCommand] =
-      await Promise.all([
-        findRoot(command, logger, cwd).catch((err: Error) => err),
-        findDotDir(command, logger, cwd),
-        // TODO: This should actually use expanded paths, since the config won't handle custom schemes.
-        // However, `sl debugexpandpaths` is currently too slow and impacts startup time.
-        getConfig(command, logger, cwd, 'paths.default').then(value => value ?? ''),
-        getConfig(command, logger, cwd, 'github.pull_request_domain'),
-        getConfig(command, logger, cwd, 'github.preferred_submit_command').then(
-          value => value || undefined,
-        ),
-      ]);
+    const [repoRoot, dotdir, configs] = await Promise.all([
+      findRoot(command, logger, cwd).catch((err: Error) => err),
+      findDotDir(command, logger, cwd),
+      // TODO: This should actually use expanded paths, since the config won't handle custom schemes.
+      // However, `sl debugexpandpaths` is currently too slow and impacts startup time.
+      getConfigs(command, logger, cwd, [
+        'paths.default',
+        'github.pull_request_domain',
+        'github.preferred_submit_command',
+      ]),
+    ]);
+    const pathsDefault = configs.get('paths.default') ?? '';
+    const pullRequestDomain = configs.get('github.pull_request_domain');
+    const preferredSubmitCommand = configs.get('github.preferred_submit_command');
+
     if (repoRoot instanceof Error) {
       return {type: 'invalidCommand', command};
     }
@@ -1042,17 +1049,37 @@ export class Repository {
     );
   }
 
-  public getConfig(configName: string): Promise<string | undefined> {
-    return getConfig(this.info.command, this.logger, this.info.repoRoot, configName);
+  /** Read a config. The config name must be part of `allConfigNames`. */
+  public async getConfig(configName: ConfigName): Promise<string | undefined> {
+    return (await this.getKnownConfigs()).get(configName);
   }
+
+  /** Load all "known" configs. Cached on `this`. */
+  public getKnownConfigs(): Promise<ReadonlyMap<ConfigName, string | undefined>> {
+    if (this.knownConfigs != null) {
+      return Promise.resolve(this.knownConfigs);
+    }
+    return this.configRateLimiter.enqueueRun(async () => {
+      if (this.knownConfigs == null) {
+        // Fetch all configs using one command.
+        const knownConfig = new Map<ConfigName, string>(
+          await getConfigs<ConfigName>(
+            this.info.command,
+            this.logger,
+            this.info.repoRoot,
+            allConfigNames,
+          ),
+        );
+        this.knownConfigs = knownConfig;
+      }
+      return this.knownConfigs;
+    });
+  }
+
   public setConfig(level: ConfigLevel, configName: string, configValue: string): Promise<void> {
-    return setConfig(
-      this.info.command,
-      this.logger,
-      this.info.repoRoot,
-      level,
-      configName,
-      configValue,
+    // Attempt to avoid racy config read/write.
+    return this.configRateLimiter.enqueueRun(() =>
+      setConfig(this.info.command, this.logger, this.info.repoRoot, level, configName, configValue),
     );
   }
 
@@ -1156,19 +1183,50 @@ async function findDotDir(
   }
 }
 
-async function getConfig(
+/**
+ * Read multiple configs.
+ * Return a Map from config name to config value for present configs.
+ * Missing configs will not be returned.
+ * Errors are silenced.
+ */
+async function getConfigs<T extends string>(
   command: string,
   logger: Logger,
   cwd: string,
-  configName: string,
-): Promise<string | undefined> {
-  try {
-    return (await runCommand(command, ['config', configName], logger, cwd)).stdout.trim();
-  } catch {
-    // `config` exits with status 1 if config is not set. This is not an error.
-    return undefined;
+  configNames: ReadonlyArray<T>,
+): Promise<Map<T, string>> {
+  if (configOverride !== undefined) {
+    // Use the override to answer config questions.
+    const configMap = new Map(
+      configNames.flatMap(name => {
+        const value = configOverride?.get(name);
+        return value === undefined ? [] : [[name, value]];
+      }),
+    );
+    return configMap;
   }
+  const configMap: Map<T, string> = new Map();
+  try {
+    // config command does not support multiple configs yet, but supports multiple sections.
+    // (such limitation makes sense for non-JSON output, which can be ambigious)
+    const sections = new Set<string>(configNames.flatMap(name => name.split('.').at(0) ?? []));
+    const result = await runCommand(
+      command,
+      ['config', '-Tjson'].concat([...sections]),
+      logger,
+      cwd,
+    );
+    const configs: [{name: T; value: string}] = JSON.parse(result.stdout);
+    for (const config of configs) {
+      configMap.set(config.name, config.value);
+    }
+  } catch (e) {
+    logger.error(`failed to read configs from ${cwd}: ${e}`);
+  }
+  logger.info(`loaded configs from ${cwd}:`, configMap);
+  return configMap;
 }
+
 type ConfigLevel = 'user' | 'system' | 'local';
 async function setConfig(
   command: string,
@@ -1453,4 +1511,26 @@ function computeNewConflicts(
   }
 
   return conflicts;
+}
+
+/**
+ * By default, detect "jest" and enable config override to avoid shelling out.
+ * See also `getConfigs`.
+ */
+let configOverride: undefined | Map<string, string> =
+  typeof jest === 'undefined' ? undefined : new Map();
+
+/**
+ * Set the "knownConfig" used by new repos.
+ * This is useful in tests and prevents shelling out to config commands.
+ */
+export function setConfigOverrideForTests(configs: Iterable<[string, string]>, override = true) {
+  if (override) {
+    configOverride = new Map(configs);
+  } else {
+    configOverride ??= new Map();
+    for (const [key, value] of configs) {
+      configOverride.set(key, value);
+    }
+  }
 }

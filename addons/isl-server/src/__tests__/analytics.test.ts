@@ -9,7 +9,7 @@ import type {ServerSideTracker} from '../analytics/serverSideTracker';
 import type {FullTrackData} from '../analytics/types';
 import type {ServerPlatform} from '../serverPlatform';
 
-import {Repository} from '../Repository';
+import {Repository, setConfigOverrideForTests} from '../Repository';
 import {makeServerSideTracker} from '../analytics/serverSideTracker';
 import * as execa from 'execa';
 import {mockLogger} from 'shared/testUtils';
@@ -111,9 +111,11 @@ describe('track', () => {
 
   it('allows setting repository', () => {
     // No need to call the actual command lines to test tracking
+    setConfigOverrideForTests([
+      ['path.default', 'https://github.com/facebook/sapling.git'],
+      ['github.pull_request_domain', 'github.com'],
+    ]);
     const execaSpy = mockExeca([
-      [/^sl config paths.default/, {stdout: 'https://github.com/facebook/sapling.git'}],
-      [/^sl config github.pull_request_domain/, {stdout: 'github.com'}],
       [/^sl root --dotdir/, {stdout: '/path/to/myRepo/.sl'}],
       [/^sl root/, {stdout: '/path/to/myRepo'}],
       [

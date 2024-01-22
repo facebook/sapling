@@ -9,7 +9,12 @@ import type {ResolveCommandConflictOutput} from '../Repository';
 import type {ServerPlatform} from '../serverPlatform';
 import type {MergeConflicts, ValidatedRepoInfo} from 'isl/src/types';
 
-import {absolutePathForFileInRepo, extractRepoInfoFromUrl, Repository} from '../Repository';
+import {
+  absolutePathForFileInRepo,
+  extractRepoInfoFromUrl,
+  setConfigOverrideForTests,
+  Repository,
+} from '../Repository';
 import {makeServerSideTracker} from '../analytics/serverSideTracker';
 import * as execa from 'execa';
 import os from 'os';
@@ -71,6 +76,10 @@ function processExitError(code: number, message: string): execa.ExecaError {
   return err;
 }
 
+function setPathsDefault(path: string) {
+  setConfigOverrideForTests([['paths.default', path]], false);
+}
+
 describe('Repository', () => {
   it('setting command name', async () => {
     const execaSpy = mockExeca([]);
@@ -83,11 +92,9 @@ describe('Repository', () => {
   });
 
   describe('extracting github repo info', () => {
-    let currentMockPathsDefault: string;
     beforeEach(() => {
+      setConfigOverrideForTests([['github.pull_request_domain', 'github.com']]);
       mockExeca([
-        [/^sl config paths.default/, () => ({stdout: currentMockPathsDefault})],
-        [/^sl config github.pull_request_domain/, {stdout: 'github.com'}],
         [/^sl root --dotdir/, {stdout: '/path/to/myRepo/.sl'}],
         [/^sl root/, {stdout: '/path/to/myRepo'}],
         [
@@ -99,7 +106,7 @@ describe('Repository', () => {
     });
 
     it('extracting github repo info', async () => {
-      currentMockPathsDefault = 'https://github.com/myUsername/myRepo.git';
+      setPathsDefault('https://github.com/myUsername/myRepo.git');
       const info = (await Repository.getRepoInfo(
         'sl',
         mockLogger,
@@ -122,7 +129,7 @@ describe('Repository', () => {
     });
 
     it('extracting github enterprise repo info', async () => {
-      currentMockPathsDefault = 'https://ghe.myCompany.com/myUsername/myRepo.git';
+      setPathsDefault('https://ghe.myCompany.com/myUsername/myRepo.git');
       const info = (await Repository.getRepoInfo(
         'sl',
         mockLogger,
@@ -145,7 +152,7 @@ describe('Repository', () => {
     });
 
     it('handles non-github-enterprise unknown code review providers', async () => {
-      currentMockPathsDefault = 'https://gitlab.myCompany.com/myUsername/myRepo.git';
+      setPathsDefault('https://gitlab.myCompany.com/myUsername/myRepo.git');
       const info = (await Repository.getRepoInfo(
         'sl',
         mockLogger,
@@ -167,7 +174,7 @@ describe('Repository', () => {
   });
 
   it('applies isl.hold-off-refresh-ms config', async () => {
-    mockExeca([[/^sl config isl\.hold-off-refresh-ms/, {stdout: '12345'}]]);
+    setConfigOverrideForTests([['isl.hold-off-refresh-ms', '12345']], false);
     const info = (await Repository.getRepoInfo(
       'sl',
       mockLogger,
@@ -179,9 +186,9 @@ describe('Repository', () => {
   });
 
   it('extracting repo info', async () => {
+    setConfigOverrideForTests([]);
+    setPathsDefault('mononoke://0.0.0.0/fbsource');
     mockExeca([
-      [/^sl config paths.default/, {stdout: 'mononoke://0.0.0.0/fbsource'}],
-      [/^sl config github.pull_request_domain/, new Error('')],
       [/^sl root --dotdir/, {stdout: '/path/to/myRepo/.sl'}],
       [/^sl root/, {stdout: '/path/to/myRepo'}],
     ]);
