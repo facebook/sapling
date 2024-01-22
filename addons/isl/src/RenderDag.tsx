@@ -11,7 +11,7 @@ import type {HashSet} from './dag/set';
 
 import {AnimatedReorderGroup} from './AnimatedReorderGroup';
 import {AvatarPattern} from './Avatar';
-import {highlightedCommits} from './HighlightedCommits';
+import {isHighlightedCommit} from './HighlightedCommits';
 import {InlineBadge} from './InlineBadge';
 import {LinkLine, NodeLine, PadLine} from './dag/render';
 import deepEqual from 'fast-deep-equal';
@@ -536,7 +536,7 @@ function linkLineToEdges(linkLine: LinkLine, color?: string, colorLine?: LinkLin
 const YOU_ARE_HERE_COLOR = 'var(--button-primary-hover-background)';
 
 function RegularGlyphInner({info}: {info: DagCommitInfo}) {
-  const highlighted = useRecoilValue(highlightedCommits);
+  const highlighted = useRecoilValue(isHighlightedCommit(info.hash));
   const stroke = info.isHead ? YOU_ARE_HERE_COLOR : 'var(--foreground)';
   const r = (defaultTileWidth * 7) / 20;
   const strokeWidth = defaultStrokeWidth * 0.9;
@@ -549,7 +549,7 @@ function RegularGlyphInner({info}: {info: DagCommitInfo}) {
     fill = `url(#${id})`;
   }
   // Highlighted circle.
-  const hilightCircle = highlighted.has(info.hash) ? (
+  const hilightCircle = highlighted ? (
     <circle cx={0} cy={0} r={8} fill="transparent" stroke="var(--focus-border)" strokeWidth={4} />
   ) : null;
 

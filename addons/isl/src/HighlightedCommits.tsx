@@ -8,11 +8,21 @@
 import type {CommitInfo, Hash} from './types';
 
 import {useEffect, useState} from 'react';
-import {atom, useSetRecoilState} from 'recoil';
+import {atom, selectorFamily, useSetRecoilState} from 'recoil';
 
 export const highlightedCommits = atom<Set<Hash>>({
   key: 'highlightedCommits',
   default: new Set(),
+});
+
+export const isHighlightedCommit = selectorFamily({
+  key: 'isHighlightedCommit',
+  get:
+    (key: string) =>
+    ({get}) => {
+      const highlighted = get(highlightedCommits);
+      return highlighted.has(key);
+    },
 });
 
 export function HighlightCommitsWhileHovering({

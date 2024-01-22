@@ -15,7 +15,7 @@ import {Avatar} from './Avatar';
 import {BranchIndicator} from './BranchIndicator';
 import {commitMode, hasUnsavedEditedCommitMessage} from './CommitInfoView/CommitInfoState';
 import {currentComparisonMode} from './ComparisonView/atoms';
-import {highlightedCommits} from './HighlightedCommits';
+import {isHighlightedCommit} from './HighlightedCommits';
 import {InlineBadge} from './InlineBadge';
 import {Subtle} from './Subtle';
 import {latestSuccessorUnlessExplicitlyObsolete} from './SuccessionTracker';
@@ -123,7 +123,7 @@ export const Commit = memo(
     const runOperation = useRunOperation();
     const setEditStackIntentionHashes = useSetRecoilState(editingStackIntentionHashes);
 
-    const isHighlighted = useRecoilValue(highlightedCommits).has(commit.hash);
+    const isHighlighted = useRecoilValue(isHighlightedCommit(bodyOnly ? '' : commit.hash));
 
     const inlineProgress = useRecoilValue(inlineProgressByHash(commit.hash));
 
