@@ -155,7 +155,7 @@ function DivRow(
   );
 }
 
-function DagRow(props: {row: ExtendedGraphRow; info: DagCommitInfo} & RenderFunctionProps) {
+function DagRowInner(props: {row: ExtendedGraphRow; info: DagCommitInfo} & RenderFunctionProps) {
   const {row, info, renderGlyph = defaultRenderGlyph, renderCommit, renderCommitExtras} = props;
   // Layout per commit:
   //
@@ -364,6 +364,16 @@ function DagRow(props: {row: ExtendedGraphRow; info: DagCommitInfo} & RenderFunc
     </>
   );
 }
+
+const DagRow = React.memo(DagRowInner, (prevProps, nextProps) => {
+  return (
+    nextProps.info.equals(prevProps.info) &&
+    prevProps.row.valueOf() === nextProps.row.valueOf() &&
+    prevProps.renderCommit === nextProps.renderCommit &&
+    prevProps.renderCommitExtras === nextProps.renderCommitExtras &&
+    prevProps.renderGlyph === nextProps.renderGlyph
+  );
+});
 
 export type TileProps = {
   /** Width. Default: defaultTileWidth. */
