@@ -70,7 +70,7 @@ import {
   uncommittedChangesFetchError,
   useRunOperation,
 } from './serverAPIState';
-import {useToast} from './toast';
+import {useShowToast} from './toast';
 import {succeedableRevset, GeneratedStatus} from './types';
 import {usePromise} from './usePromise';
 import {
@@ -460,7 +460,7 @@ export function File({
   place?: Place;
   generatedStatus?: GeneratedStatus;
 }) {
-  const toast = useToast();
+  const toast = useShowToast();
   const clipboardCopy = (text: string) => toast.copyAndShowToast(text);
 
   // Renamed files are files which have a copy field, where that path was also removed.

@@ -11,16 +11,16 @@ import type {SetterOrUpdater} from 'recoil';
 import {t} from './i18n';
 import platform from './platform';
 import {List} from 'immutable';
-import {DefaultValue, atom, useRecoilState} from 'recoil';
+import {DefaultValue, atom, useSetRecoilState} from 'recoil';
 
-export function useToast(): UseToast {
-  const [queue, setQueue] = useRecoilState(toastQueueAtom);
-  return new UseToast(queue, setQueue);
+export function useShowToast(): UseShowToast {
+  const setQueue = useSetRecoilState(toastQueueAtom);
+  return new UseShowToast(setQueue);
 }
 
-/** Features related to toasts. */
-class UseToast {
-  constructor(private queue: ToastQueue, private setQueue: SetterOrUpdater<ToastQueue>) {}
+/** Features related to showing toasts. */
+class UseShowToast {
+  constructor(private setQueue: SetterOrUpdater<ToastQueue>) {}
 
   /**
    * Push a toast. It will be displayed immediately and auto hides after a timeout.
@@ -50,12 +50,6 @@ class UseToast {
     platform.clipboardCopy(text);
     this.show(t('Copied $text', {replace: {$text: text}}), {key: 'copied'});
   }
-
-  /** List all toasts to display. */
-  list(): List<ToastProps> {
-    return this.queue;
-  }
-
   /** Hide toasts with the given key. */
   hide(keys: Iterable<string>) {
     const keySet = new Set(keys);
@@ -77,7 +71,7 @@ const DEFAULT_DURATION_MS = 2000;
 
 type ToastQueue = List<ToastProps>;
 
-const toastQueueAtom = atom<ToastQueue>({
+export const toastQueueAtom = atom<ToastQueue>({
   key: 'toastQueueAtom',
   default: List<ToastProps>(),
   effects: [

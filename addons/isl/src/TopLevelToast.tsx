@@ -6,16 +6,17 @@
  */
 
 import {AnimatedReorderGroup} from './AnimatedReorderGroup';
-import {useToast} from './toast';
+import {toastQueueAtom, useShowToast} from './toast';
+import {useRecoilValue} from 'recoil';
 
 import './TopLevelToast.css';
 import './Tooltip.css';
 
 export function TopLevelToast() {
-  const toast = useToast();
-  const toasts = toast.list().toArray();
+  const toast = useShowToast();
+  const toastQueue = useRecoilValue(toastQueueAtom);
 
-  const toastDivs = toasts.map(t => {
+  const toastDivs = toastQueue.toArray().map(t => {
     const handleClick = () => toast.hide([t.key]);
     return (
       <div className="toast tooltip" key={t.key} data-reorder-id={t.key} onClick={handleClick}>

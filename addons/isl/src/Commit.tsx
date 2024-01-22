@@ -50,7 +50,7 @@ import {
 import {useConfirmUnsavedEditsBeforeSplit} from './stackEdit/ui/ConfirmUnsavedEditsBeforeSplit';
 import {SplitButton} from './stackEdit/ui/SplitButton';
 import {editingStackIntentionHashes} from './stackEdit/ui/stackEditState';
-import {useToast} from './toast';
+import {useShowToast} from './toast';
 import {succeedableRevset} from './types';
 import {short} from './utils';
 import {VSCodeButton, VSCodeTag} from '@vscode/webview-ui-toolkit/react';
@@ -134,7 +134,7 @@ export const Commit = memo(
 
     const title = useRecoilValue(latestCommitMessageTitle(commit.hash));
 
-    const toast = useToast();
+    const toast = useShowToast();
     const clipboardCopy = (text: string) => toast.copyAndShowToast(text);
 
     const isNonActionable = previewType === CommitPreview.NON_ACTIONABLE_COMMIT;
