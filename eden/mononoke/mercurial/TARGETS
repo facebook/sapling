@@ -85,7 +85,6 @@ rust_library(
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/mononoke_types/if:mononoke_types-thrift-rust",
         "//eden/mononoke/server/context:context",
-        "//eden/mononoke/tunables:tunables",
         "//eden/scm/lib/edenapi/types:edenapi_types",
         "//eden/scm/lib/types:types",
         "//thrift/lib/rust:fbthrift",

@@ -32,7 +32,6 @@ use mononoke_types::ContentId;
 use mononoke_types::NonRootMPath;
 use stats::prelude::*;
 use tokio::time::timeout;
-use tunables::tunables;
 
 use crate::HgFileNodeId;
 
@@ -102,23 +101,15 @@ pub async fn lookup_filenode_id<B: Blobstore>(
     blobstore: &B,
     key: FileNodeIdPointer,
 ) -> Result<Option<HgFileNodeId>> {
-    let filenode_lookup_timeout_ms = tunables().filenode_lookup_timeout_ms().unwrap_or_default();
+    let filenode_lookup_timeout_ms: u64 = 1000;
     let fut = blobstore.get(ctx, &key.0);
-    let blob = if filenode_lookup_timeout_ms > 0 {
-        let maybe_timed_out = timeout(
-            Duration::from_millis(filenode_lookup_timeout_ms as u64),
-            fut,
-        )
-        .await;
-        match maybe_timed_out {
-            Ok(blob) => blob?,
-            Err(_) => {
-                STATS::timeout.add_value(1);
-                return Ok(None);
-            }
+    let maybe_timed_out = timeout(Duration::from_millis(filenode_lookup_timeout_ms), fut).await;
+    let blob = match maybe_timed_out {
+        Ok(blob) => blob?,
+        Err(_) => {
+            STATS::timeout.add_value(1);
+            return Ok(None);
         }
-    } else {
-        fut.await?
     };
 
     Ok(blob.and_then(|blob| HgFileNodeId::from_bytes(blob.as_raw_bytes()).ok()))
