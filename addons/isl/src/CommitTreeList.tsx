@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {RenderGlyphResult} from './RenderDag';
 import type {Dag, DagCommitInfo} from './dag/dag';
 import type {ExtendedGraphRow} from './dag/render';
 import type {HashSet} from './dag/set';
@@ -16,7 +17,8 @@ import serverAPI from './ClientToServerAPI';
 import {Commit} from './Commit';
 import {Center, LargeSpinner} from './ComponentUtils';
 import {ErrorNotice} from './ErrorNotice';
-import {RenderDag} from './RenderDag';
+import {isHighlightedCommit} from './HighlightedCommits';
+import {RegularGlyph, RenderDag, YouAreHereGlyph} from './RenderDag';
 import {StackActions} from './StackActions';
 import {Tooltip, DOCUMENTATION_DELAY} from './Tooltip';
 import {pageVisibility} from './codeReview/CodeReviewInfo';
@@ -90,6 +92,7 @@ function DagCommitList(props: DagCommitListProps) {
       className={'commit-tree-root ' + (isNarrow ? ' commit-tree-narrow' : '')}
       renderCommit={renderCommit}
       renderCommitExtras={renderCommitExtras}
+      renderGlyph={renderGlyph}
     />
   );
 }
@@ -107,6 +110,14 @@ function renderCommitExtras(info: DagCommitInfo, row: ExtendedGraphRow) {
     return <MaybeStackActions hash={info.hash} />;
   }
   return null;
+}
+
+function renderGlyph(info: DagCommitInfo): RenderGlyphResult {
+  if (info.isYouAreHere) {
+    return ['replace-tile', <YouAreHereGlyph info={info} />];
+  } else {
+    return ['inside-tile', <HighlightedGlyph info={info} />];
+  }
 }
 
 const dagHasChildren = selectorFamily({
@@ -160,6 +171,21 @@ function MaybeFetchingAdditionalCommitsRow({hash}: {hash: Hash}) {
 function MaybeStackActions({hash}: {hash: Hash}) {
   const isDraftStackRoot = useRecoilValue(dagIsDraftStackRoot(hash));
   return isDraftStackRoot ? <StackActions hash={hash} /> : null;
+}
+
+function HighlightedGlyph({info}: {info: DagCommitInfo}) {
+  const highlighted = useRecoilValue(isHighlightedCommit(info.hash));
+
+  const hilightCircle = highlighted ? (
+    <circle cx={0} cy={0} r={8} fill="transparent" stroke="var(--focus-border)" strokeWidth={4} />
+  ) : null;
+
+  return (
+    <>
+      {hilightCircle}
+      <RegularGlyph info={info} />
+    </>
+  );
 }
 
 function getRenderSubset(dag: Dag): HashSet {

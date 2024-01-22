@@ -11,12 +11,10 @@ import type {HashSet} from './dag/set';
 
 import {AnimatedReorderGroup} from './AnimatedReorderGroup';
 import {AvatarPattern} from './Avatar';
-import {isHighlightedCommit} from './HighlightedCommits';
 import {InlineBadge} from './InlineBadge';
 import {LinkLine, NodeLine, PadLine} from './dag/render';
 import deepEqual from 'fast-deep-equal';
 import React from 'react';
-import {useRecoilValue} from 'recoil';
 
 import './RenderDag.css';
 
@@ -103,6 +101,10 @@ export type RenderGlyphResult = ['inside-tile', JSX.Element] | ['replace-tile', 
  * a blue badge instead.
  *
  * See `DagListProps` for customization options.
+ *
+ * This component is intended to be used in multiple places,
+ * ex. the main dag, "mutation dag", context-menu sub-dag, etc.
+ * So it should avoid depending on Recoil states.
  */
 export function RenderDag(props: RenderDagProps) {
   const {
@@ -552,7 +554,6 @@ function linkLineToEdges(linkLine: LinkLine, color?: string, colorLine?: LinkLin
 const YOU_ARE_HERE_COLOR = 'var(--button-primary-hover-background)';
 
 function RegularGlyphInner({info}: {info: DagCommitInfo}) {
-  const highlighted = useRecoilValue(isHighlightedCommit(info.hash));
   const stroke = info.isHead ? YOU_ARE_HERE_COLOR : 'var(--foreground)';
   const r = (defaultTileWidth * 7) / 20;
   const strokeWidth = defaultStrokeWidth * 0.9;
@@ -564,35 +565,33 @@ function RegularGlyphInner({info}: {info: DagCommitInfo}) {
     pattern = <AvatarPattern size={r * 2} username={info.author} id={id} fallbackFill={fill} />;
     fill = `url(#${id})`;
   }
-  // Highlighted circle.
-  const hilightCircle = highlighted ? (
-    <circle cx={0} cy={0} r={8} fill="transparent" stroke="var(--focus-border)" strokeWidth={4} />
-  ) : null;
 
   return (
     <>
       {pattern}
-      {hilightCircle}
       <circle cx={0} cy={0} r={r} fill={fill} stroke={stroke} strokeWidth={strokeWidth} />
     </>
   );
 }
 
-const RegularGlyph = React.memo(RegularGlyphInner, (prevProps, nextProps) => {
+export const RegularGlyph = React.memo(RegularGlyphInner, (prevProps, nextProps) => {
   const prevInfo = prevProps.info;
   const nextInfo = nextProps.info;
   return prevInfo === nextInfo || prevInfo.hash === nextInfo.hash;
 });
 
+export function YouAreHereGlyph({info}: {info: DagCommitInfo}) {
+  // Render info.description in a rounded blue box.
+  return (
+    <div className="you-are-here-container" style={{marginLeft: -defaultStrokeWidth * 1.5}}>
+      <InlineBadge kind="primary">{info.description}</InlineBadge>
+    </div>
+  );
+}
+
 export function defaultRenderGlyph(info: DagCommitInfo): RenderGlyphResult {
   if (info.isYouAreHere) {
-    // Render info.description in a rounded blue box.
-    const outer = (
-      <div className="you-are-here-container" style={{marginLeft: -defaultStrokeWidth * 1.5}}>
-        <InlineBadge kind="primary">{info.description}</InlineBadge>
-      </div>
-    );
-    return ['replace-tile', outer];
+    return ['replace-tile', <YouAreHereGlyph info={info} />];
   } else {
     return ['inside-tile', <RegularGlyph info={info} />];
   }
