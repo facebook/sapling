@@ -120,6 +120,7 @@ export const Commit = memo(
     bodyOnly?: boolean;
   }) => {
     const isPublic = commit.phase === 'public';
+    const isObsoleted = commit.successorInfo != null;
 
     const handlePreviewedOperation = useRunPreviewedOperation();
     const runOperation = useRunOperation();
@@ -230,19 +231,21 @@ export const Commit = memo(
             onClick: () => runOperation(getAmendToOperation(commit, snapshot)),
           });
         }
-        items.push({
-          label: hasUncommittedChanges ? (
-            <span className="context-menu-disabled-option">
-              <T>Split... </T>
-              <Subtle>
-                <T>(disabled due to uncommitted changes)</T>
-              </Subtle>
-            </span>
-          ) : (
-            <T>Split...</T>
-          ),
-          onClick: hasUncommittedChanges ? () => null : handleSplit,
-        });
+        if (!isObsoleted) {
+          items.push({
+            label: hasUncommittedChanges ? (
+              <span className="context-menu-disabled-option">
+                <T>Split... </T>
+                <Subtle>
+                  <T>(disabled due to uncommitted changes)</T>
+                </Subtle>
+              </span>
+            ) : (
+              <T>Split...</T>
+            ),
+            onClick: hasUncommittedChanges ? () => null : handleSplit,
+          });
+        }
         items.push({
           label: hasChildren ? <T>Hide Commit and Descendants</T> : <T>Hide Commit</T>,
           onClick: () =>
