@@ -15,6 +15,8 @@ import {Avatar} from './Avatar';
 import {BranchIndicator} from './BranchIndicator';
 import {commitMode, hasUnsavedEditedCommitMessage} from './CommitInfoView/CommitInfoState';
 import {currentComparisonMode} from './ComparisonView/atoms';
+import {FlexRow} from './ComponentUtils';
+import {EducationInfoTip} from './Education';
 import {HighlightCommitsWhileHovering, isHighlightedCommit} from './HighlightedCommits';
 import {InlineBadge} from './InlineBadge';
 import {Subtle} from './Subtle';
@@ -756,6 +758,7 @@ function hasUncommittedChanges(snapshot: Snapshot): boolean {
 }
 
 export function SuccessorInfoToDisplay({successorInfo}: {successorInfo: SuccessorInfo}) {
+  const successorType = successorInfo.type;
   const inner: JSX.Element = {
     pushrebase: <T>Landed as a newer commit</T>,
     land: <T>Landed as a newer commit</T>,
@@ -764,10 +767,51 @@ export function SuccessorInfoToDisplay({successorInfo}: {successorInfo: Successo
     split: <T>Split as a newer commit</T>,
     fold: <T>Folded as a newer commit</T>,
     histedit: <T>Histedited as a newer commit</T>,
-  }[successorInfo.type] ?? <T>Rewritten as a newer commit</T>;
+  }[successorType] ?? <T>Rewritten as a newer commit</T>;
+  const isSuccessorPublic = successorType === 'land' || successorType === 'pushrebase';
   return (
-    <HighlightCommitsWhileHovering toHighlight={[successorInfo.hash]}>
-      {inner}
-    </HighlightCommitsWhileHovering>
+    <FlexRow style={{gap: 'var(--halfpad)'}}>
+      <HighlightCommitsWhileHovering toHighlight={[successorInfo.hash]}>
+        {inner}
+      </HighlightCommitsWhileHovering>
+      <EducationInfoTip>
+        <ObsoleteTip isSuccessorPublic={isSuccessorPublic} />
+      </EducationInfoTip>
+    </FlexRow>
   );
 }
+
+function ObsoleteTipInner(props: {isSuccessorPublic?: boolean}) {
+  const tips: string[] = props.isSuccessorPublic
+    ? [
+        t('Avoid editing (e.g., amend, rebase) this obsoleted commit. It cannot be landed again.'),
+        t(
+          'The new commit was landed in a public branch and became immutable. It cannot be edited or hidden.',
+        ),
+        t('If you want to make changes, create a new commit.'),
+      ]
+    : [
+        t(
+          'Avoid editing (e.g., amend, rebase) this obsoleted commit. You should use the new commit instead.',
+        ),
+        t(
+          'If you do edit, there will be multiple new versions. They look like duplications and there is no easy way to de-duplicate (e.g. merge all edits back into one commit).',
+        ),
+        t(
+          'To revert to this obsoleted commit, simply hide the new one. It will remove the "obsoleted" status.',
+        ),
+      ];
+
+  return (
+    <div style={{maxWidth: '60vw'}}>
+      <T>This commit is "obsoleted" because a newer version exists.</T>
+      <ul>
+        {tips.map((tip, i) => (
+          <li key={i}>{tip}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+const ObsoleteTip = React.memo(ObsoleteTipInner);
