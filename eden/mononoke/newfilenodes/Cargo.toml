@@ -33,12 +33,10 @@ stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust
 thiserror = "1.0.49"
 time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
-tunables = { version = "0.1.0", path = "../tunables" }
 vec1 = { version = "1", features = ["serde"] }
 
 [dev-dependencies]
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-maplit = "1.0"
 mercurial_types-mocks = { version = "0.1.0", path = "../mercurial/types/mocks" }
 mononoke_types-mocks = { version = "0.1.0", path = "../mononoke_types/mocks" }

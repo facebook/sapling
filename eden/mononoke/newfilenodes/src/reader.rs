@@ -35,7 +35,6 @@ use sql_ext::mononoke_queries;
 use stats::prelude::*;
 use thiserror::Error;
 use tokio::time::timeout;
-use tunables::tunables;
 use vec1::Vec1;
 
 use crate::connections::AcquireReason;
@@ -387,11 +386,6 @@ async fn select_filenode_from_sql(
     filenode: HgFileNodeId,
     recorder: &PerfCounterRecorder<'_>,
 ) -> Result<FilenodeResult<Option<FilenodeInfo>>, ErrorKind> {
-    if tunables().filenodes_disabled().unwrap_or_default() {
-        STATS::gets_disabled.add_value(1);
-        return Ok(FilenodeResult::Disabled);
-    }
-
     let partial = select_partial_filenode(connections, repo_id, pwh, filenode, recorder).await?;
 
     let partial = match partial {
@@ -468,11 +462,6 @@ async fn select_history_from_sql(
     recorder: &PerfCounterRecorder<'_>,
     limit: Option<u64>,
 ) -> Result<FilenodeResult<FilenodeRange>> {
-    if tunables().filenodes_disabled().unwrap_or_default() {
-        STATS::range_gets_disabled.add_value(1);
-        return Ok(FilenodeResult::Disabled);
-    }
-
     let maybe_partial = select_partial_history(connections, repo_id, pwh, recorder, limit).await?;
     if let Some(partial) = maybe_partial {
         let history = FilenodeRange::Filenodes(

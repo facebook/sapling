@@ -13,9 +13,7 @@ use context::CoreContext;
 use fbinit::FacebookInit;
 use filenodes::FilenodeInfo;
 use filenodes::FilenodeRange;
-use filenodes::FilenodeResult;
 use filenodes::PreparedFilenode;
-use maplit::hashmap;
 use mercurial_types::HgFileNodeId;
 use mercurial_types_mocks::nodehash::ONES_CSID;
 use mercurial_types_mocks::nodehash::ONES_FNID;
@@ -30,8 +28,6 @@ use mononoke_types_mocks::repo::REPO_ONE;
 use mononoke_types_mocks::repo::REPO_ZERO;
 use sql::Connection;
 use sql_ext::mononoke_queries;
-use tunables::with_tunables;
-use tunables::MononokeTunables;
 use vec1::vec1;
 use vec1::Vec1;
 
@@ -143,7 +139,6 @@ async fn read_copy_info(fb: FacebookInit) -> Result<(), Error> {
 
     Ok(())
 }
-
 #[fbinit::test]
 async fn test_repo_ids(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
@@ -996,145 +991,6 @@ filenodes_tests!(uncached_sharded_test, create_sharded, no_caching);
 
 filenodes_tests!(cached_unsharded_test, create_unsharded, with_caching);
 filenodes_tests!(cached_sharded_test, create_sharded, with_caching);
-
-#[fbinit::test]
-fn get_all_filenodes_maybe_stale_with_disabled(fb: FacebookInit) -> Result<(), Error> {
-    let runtime = tokio::runtime::Builder::new_current_thread()
-        .enable_io()
-        .enable_time()
-        .build()?;
-    let ctx = CoreContext::test_mock(fb);
-
-    let (mut reader, writer) = build_reader_writer(create_sharded()?);
-    with_caching(&mut reader);
-    let reader = Arc::new(reader);
-
-    runtime.block_on(do_add_filenodes(
-        &ctx,
-        &writer,
-        vec![
-            root_first_filenode(),
-            root_second_filenode(),
-            root_merge_filenode(),
-        ],
-        REPO_ZERO,
-    ))?;
-
-    runtime.block_on(do_add_filenodes(
-        &ctx,
-        &writer,
-        vec![file_a_first_filenode(), file_b_first_filenode()],
-        REPO_ZERO,
-    ))?;
-
-    let tunables = MononokeTunables::default();
-    tunables.update_bools(&hashmap! {"filenodes_disabled".to_string() => true});
-    let res = with_tunables(tunables, || {
-        runtime.block_on(reader.clone().get_all_filenodes_for_path(
-            &ctx,
-            REPO_ZERO,
-            &RepoPath::RootPath,
-            None,
-        ))
-    })?;
-
-    if let FilenodeResult::Present(_) = res {
-        panic!("expected FilenodeResult::Disabled");
-    }
-
-    let root_filenodes = vec![
-        root_first_filenode().info,
-        root_second_filenode().info,
-        root_merge_filenode().info,
-    ];
-
-    runtime.block_on(assert_all_filenodes(
-        &ctx,
-        reader.clone(),
-        &RepoPath::RootPath,
-        REPO_ZERO,
-        &root_filenodes,
-        None,
-    ))?;
-
-    // All filenodes are cached now, even with filenodes_disabled = true
-    // all filenodes should be returned
-    let tunables = MononokeTunables::default();
-    tunables.update_bools(&hashmap! {"filenodes_disabled".to_string() => true});
-    with_tunables(tunables, || {
-        runtime.block_on(assert_all_filenodes(
-            &ctx,
-            reader,
-            &RepoPath::RootPath,
-            REPO_ZERO,
-            &root_filenodes,
-            None,
-        ))
-    })?;
-    Ok(())
-}
-
-#[fbinit::test]
-fn test_get_filenode_with_disabled(fb: FacebookInit) -> Result<(), Error> {
-    let runtime = tokio::runtime::Builder::new_current_thread()
-        .enable_io()
-        .enable_time()
-        .build()?;
-    let ctx = CoreContext::test_mock(fb);
-
-    let (mut reader, writer) = build_reader_writer(create_sharded()?);
-    with_caching(&mut reader);
-    let reader = Arc::new(reader);
-
-    runtime.block_on(do_add_filenodes(
-        &ctx,
-        &writer,
-        vec![root_first_filenode()],
-        REPO_ZERO,
-    ))?;
-
-    let payload_info = root_first_filenode().info;
-
-    let tunables = MononokeTunables::default();
-    tunables.update_bools(&hashmap! {"filenodes_disabled".to_string() => true});
-    let res = with_tunables(tunables, || {
-        runtime.block_on(reader.clone().get_filenode(
-            &ctx,
-            REPO_ZERO,
-            &RepoPath::RootPath,
-            payload_info.filenode,
-        ))
-    })?;
-
-    if let FilenodeResult::Present(_) = res {
-        panic!("expected FilenodeResult::Disabled");
-    }
-
-    runtime.block_on(assert_filenode(
-        &ctx,
-        reader.clone(),
-        &RepoPath::root(),
-        ONES_FNID,
-        REPO_ZERO,
-        root_first_filenode().info,
-    ))?;
-
-    // The filenode are cached now, even with filenodes_disabled = true
-    // all filenodes should be returned
-    let tunables = MononokeTunables::default();
-    tunables.update_bools(&hashmap! {"filenodes_disabled".to_string() => true});
-    with_tunables(tunables, || {
-        runtime.block_on(assert_filenode(
-            &ctx,
-            reader,
-            &RepoPath::root(),
-            ONES_FNID,
-            REPO_ZERO,
-            root_first_filenode().info,
-        ))
-    })?;
-    Ok(())
-}
 
 #[fbinit::test]
 async fn test_all_filenodes_caching(fb: FacebookInit) -> Result<(), Error> {
