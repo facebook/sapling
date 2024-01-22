@@ -11,6 +11,11 @@
   flex-direction: column;
 }
 
+.render-dag-row-group {
+  display: flex;
+  flex-direction: column;
+}
+
 .render-dag-row,
 .render-dag-row-left-side-line {
   display: flex;

@@ -146,15 +146,14 @@ export function RenderDag(props: RenderDagProps) {
 
 function DivRow(
   props: {
-    id: string;
     left?: JSX.Element | null;
     right?: JSX.Element | null;
   } & React.HTMLAttributes<HTMLDivElement> & {['data-commit-hash']?: string},
 ) {
-  const {className, id, left, right, ...restProps} = props ?? {};
+  const {className, left, right, ...restProps} = props ?? {};
   const fullClassName = `render-dag-row ${className ?? ''}`;
   return (
-    <div {...restProps} className={fullClassName} data-reorder-id={id}>
+    <div {...restProps} className={fullClassName}>
       <div className="render-dag-row-left-side">{left}</div>
       <div className="render-dag-row-right-side">{right}</div>
     </div>
@@ -323,8 +322,8 @@ function DagRowInner(props: {row: ExtendedGraphRow; info: DagCommitInfo} & Rende
   let row1: JSX.Element | null = null;
   let row2: JSX.Element | null = null;
   if (isIrregular) {
-    row0 = <DivRow id={`${info.hash}:row0`} left={nodeLinePart} />;
-    row1 = <DivRow id={`${info.hash}:row1`} left={postNodeLinePart} right={commitPart} />;
+    row0 = <DivRow left={nodeLinePart} />;
+    row1 = <DivRow left={postNodeLinePart} right={commitPart} />;
   } else {
     const left = (
       <>
@@ -335,7 +334,6 @@ function DagRowInner(props: {row: ExtendedGraphRow; info: DagCommitInfo} & Rende
     );
     row1 = (
       <DivRow
-        id={`${info.hash}:row1`}
         left={left}
         right={commitPart}
         className="render-dag-row-commit"
@@ -359,15 +357,15 @@ function DagRowInner(props: {row: ExtendedGraphRow; info: DagCommitInfo} & Rende
         {ancestryLinePart}
       </>
     );
-    row2 = <DivRow id={`${info.hash}:row2`} left={left} right={commitExtrasPart} />;
+    row2 = <DivRow left={left} right={commitExtrasPart} />;
   }
 
   return (
-    <>
+    <div className="render-dag-row-group" data-reorder-id={info.hash}>
       {row0}
       {row1}
       {row2}
-    </>
+    </div>
   );
 }
 
