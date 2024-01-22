@@ -66,7 +66,6 @@ rust_library(
         "//eden/mononoke/permission_checker:permission_checker",
         "//eden/mononoke/repo_attributes/hook_manager/hook_manager:hook_manager",
         "//eden/mononoke/server/context:context",
-        "//eden/mononoke/tunables:tunables",
         "//employee/if:thrift-rust",
         "//employee/if:thrift-rust-srclients",
         "//infrasec/authorization/if:if-aclchecker-rust",
