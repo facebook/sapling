@@ -21,6 +21,7 @@ bonsai_svnrev_mapping = { version = "0.1.0", path = "../../bonsai_svnrev_mapping
 bonsai_tag_mapping = { version = "0.1.0", path = "../../bonsai_tag_mapping" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 bookmarks_movement = { version = "0.1.0", path = "../../bookmarks/bookmarks_movement" }
+borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 bounded_traversal = { version = "0.1.0", path = "../../common/bounded_traversal" }
 buffered_commit_graph_storage = { version = "0.1.0", path = "../../repo_attributes/commit_graph/buffered_commit_graph_storage" }
 bulkops = { version = "0.1.0", path = "../../bulkops" }

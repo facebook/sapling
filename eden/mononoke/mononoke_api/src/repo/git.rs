@@ -364,7 +364,7 @@ pub async fn repo_stack_git_bundle(
         })?;
     let base_git_commit = get_git_commit(ctx, repo, base).await?;
     // Ensure that the base commit is included as a prerequisite
-    let prereqs: Option<Vec<ObjectId>> = Some(vec![base_git_commit]);
+    let prereqs = vec![base_git_commit];
     // Convert the included ref into symref since JF expects only symrefs
     let refs_to_include = response
         .included_refs

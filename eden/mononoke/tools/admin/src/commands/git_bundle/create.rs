@@ -12,6 +12,7 @@ use std::str::FromStr;
 
 use anyhow::Context;
 use anyhow::Result;
+use borrowed::borrowed;
 use bytes::Bytes;
 use clap::Args;
 use context::CoreContext;
@@ -165,7 +166,7 @@ pub async fn create_from_mononoke_repo(
     let request = PackItemStreamRequest::new(
         RequestedSymrefs::IncludeHead,
         requested_refs,
-        create_args.have_heads,
+        create_args.have_heads.clone(),
         delta_inclusion,
         TagInclusion::AsIs,
         create_args.packfile_item_inclusion,
@@ -173,8 +174,22 @@ pub async fn create_from_mononoke_repo(
     let response = generate_pack_item_stream(ctx, &repo, request)
         .await
         .context("Error in generating pack item stream")?;
-    // Since this is a full clone
-    let prereqs: Option<Vec<ObjectId>> = None;
+    let prereqs = stream::iter(create_args.have_heads.into_iter())
+        .map(|bonsai| {
+            borrowed!(ctx, repo);
+            async move {
+                let git_sha1 = repo
+                    .bonsai_git_mapping
+                    .get_git_sha1_from_bonsai(ctx, bonsai)
+                    .await
+                    .with_context(|| format!("Error in getting git sha1 for changeset {}", bonsai))?
+                    .ok_or_else(|| anyhow::anyhow!("No git sha1 found for changeset {}", bonsai))?;
+                git_sha1.to_object_id()
+            }
+        })
+        .buffered(100)
+        .try_collect::<Vec<_>>()
+        .await?;
     // Create the bundle writer with the header pre-written
     let mut writer = BundleWriter::new_with_header(
         output_file,
@@ -259,7 +274,7 @@ async fn create_from_on_disk_repo(path: PathBuf, output_file: tokio::fs::File) -
     let mut writer = BundleWriter::new_with_header(
         output_file,
         refs_to_include.into_iter().collect(),
-        None,
+        Vec::new(),
         object_count as u32,
         1000,
         DeltaForm::RefAndOffset,

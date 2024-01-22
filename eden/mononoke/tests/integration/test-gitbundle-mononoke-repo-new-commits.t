@@ -114,7 +114,8 @@
   * (glob)
   * (glob)
   * (glob)
-  The bundle records a complete history.
+  The bundle requires this ref:
+  e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 
 
 # Apply the bundle on the existing Git repo
   $ cd $TESTTMP/git_client_repo  

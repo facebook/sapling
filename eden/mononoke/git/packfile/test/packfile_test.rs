@@ -362,7 +362,7 @@ async fn validate_basic_bundle_generation() -> anyhow::Result<()> {
     let mut bundle_writer = BundleWriter::new_with_header(
         Vec::new(),
         refs,
-        None,
+        Vec::new(),
         3,
         concurrency,
         DeltaForm::RefAndOffset,
@@ -393,7 +393,7 @@ async fn validate_staggered_bundle_generation() -> anyhow::Result<()> {
     let mut bundle_writer = BundleWriter::new_with_header(
         Vec::new(),
         refs,
-        None,
+        Vec::new(),
         3,
         concurrency,
         DeltaForm::RefAndOffset,
