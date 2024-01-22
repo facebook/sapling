@@ -52,6 +52,7 @@ rust_library(
         "fbsource//third-party/rust:tokio",
         "//common/rust/identity:identity_ext",
         "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/justknobs_stub:justknobs",
         "//common/rust/shed/stats:stats",
         "//configerator/structs/infrasec/if:acl-rust",
         "//crypto/keychain_service:if-rust",

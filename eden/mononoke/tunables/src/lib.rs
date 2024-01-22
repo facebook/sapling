@@ -101,8 +101,6 @@ pub struct MononokeTunables {
     // with removing it, but this tunable can be used as a quick killswitch to
     // enable them again.
     sql_lag_monitoring_blocklist: TunableVecOfStrings,
-    // If set, the hook won't be created at all
-    disable_check_write_permissions_hook: TunableBool,
     // If set, the check result will be discarded for user identities
     log_only_for_users_in_cwp_hook: TunableBool,
     // If set, the check result will be discarded for service identities

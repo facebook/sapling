@@ -25,6 +25,7 @@ hyper = { version = "0.14.26", features = ["client", "http1", "http2", "stream"]
 hyper-tls = "0.5"
 ipnetwork = "0.20.0"
 itertools = "0.11.0"
+justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 lazy_static = "1.4"
 manifest = { version = "0.1.0", path = "../manifest" }
 maplit = "1.0"
