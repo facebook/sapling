@@ -14,8 +14,7 @@ import {t, T} from './i18n';
 import {PullOperation} from './operations/PullOperation';
 import {persistAtomToConfigEffect} from './persistAtomToConfigEffect';
 import {uncommittedChangesWithPreviews, useMostRecentPendingOperation} from './previews';
-import {relativeDate, RelativeDate} from './relativeDate';
-import {latestCommits, useRunOperation} from './serverAPIState';
+import {useRunOperation} from './serverAPIState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {atom, useRecoilState, useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
@@ -47,11 +46,6 @@ export type PullButtonOption = {
 
 export function PullButton() {
   const runOperation = useRunOperation();
-  // no need to use previews here, we only need the latest commits to find the last pull timestamp.
-  const commits = useRecoilValue(latestCommits);
-  // assuming master is getting updated frequently, last pull time should equal the newest commit in the history.
-  const lastSync =
-    commits.length === 0 ? null : Math.max(...commits.map(info => info.date.valueOf()));
 
   const pullButtonOptions: Array<PullButtonOption> = [];
   pullButtonOptions.push(DEFAULT_PULL_BUTTON, ...(Internal.additionalPullOptions ?? []));
@@ -70,12 +64,6 @@ export function PullButton() {
 
   let tooltip =
     currentChoice.tooltip +
-    (lastSync == null
-      ? ''
-      : '\n\n' +
-        t('Latest fetched commit is $date old', {
-          replace: {$date: relativeDate(lastSync, {useRelativeForm: true})},
-        })) +
     (disabledFromUncommittedChanges == false
       ? ''
       : '\n\n' + t('Disabled due to uncommitted changes.'));
@@ -109,7 +97,6 @@ export function PullButton() {
             <T>Pull</T>
           </VSCodeButton>
         )}
-        {lastSync && <RelativeDate date={lastSync} useShortVariant />}
       </div>
     </Tooltip>
   );
