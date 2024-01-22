@@ -39,7 +39,7 @@ import {
 import {MaybeEditStackModal} from './stackEdit/ui/EditStackModal';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {ErrorShortMessages} from 'isl-server/src/constants';
-import {atom, useRecoilState, useRecoilValue} from 'recoil';
+import {atom, selector, useRecoilState, useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 import {notEmpty} from 'shared/utils';
 
@@ -61,22 +61,29 @@ type DagCommitListProps = {
   isNarrow: boolean;
 };
 
+const dagWithYouAreHere = selector<Dag>({
+  key: 'dagWithYouAreHere',
+  get: ({get}) => {
+    let dag = get(dagWithPreviews);
+    // Insert a virtual "You are here" as a child of ".".
+    const dot = dag.resolve('.');
+    if (dot != null) {
+      dag = dag.add([
+        {
+          ...YOU_ARE_HERE_VIRTUAL_COMMIT,
+          parents: [dot.hash],
+        },
+      ]);
+    }
+    return dag;
+  },
+});
+
 function DagCommitList(props: DagCommitListProps) {
   const {isNarrow} = props;
 
-  let dag = useRecoilValue(dagWithPreviews);
+  const dag = useRecoilValue(dagWithYouAreHere);
   const highlighted = useRecoilValue(highlightedCommits);
-
-  // Insert a virtual "You are here" as a child of ".".
-  const dot = dag.resolve('.');
-  if (dot != null) {
-    dag = dag.add([
-      {
-        ...YOU_ARE_HERE_VIRTUAL_COMMIT,
-        parents: [dot.hash],
-      },
-    ]);
-  }
 
   const renderCommit = (info: DagCommitInfo) => {
     return (
