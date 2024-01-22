@@ -345,16 +345,16 @@ export class LinkLine {
 }
 
 export enum NodeLine {
-  Blank,
-  Ancestor,
-  Parent,
-  Node,
+  Blank = 0,
+  Ancestor = 1,
+  Parent = 2,
+  Node = 3,
 }
 
 export enum PadLine {
-  Blank,
-  Ancestor,
-  Parent,
+  Blank = 0,
+  Ancestor = 1,
+  Parent = 2,
 }
 
 type GraphRow = {
@@ -437,6 +437,8 @@ export type ExtendedGraphRow = GraphRow & {
   postNodeLine: Array<PadLine>;
   /** The columns after ancestryLine. Repeatable. */
   postAncestryLine: Array<PadLine>;
+  /** Str to test equality. */
+  valueOf(): string;
 };
 
 function nodeToPadLine(node: NodeLine, useBlank: boolean): PadLine {
@@ -453,6 +455,19 @@ function nodeToPadLine(node: NodeLine, useBlank: boolean): PadLine {
 }
 
 function extendGraphRow(row: GraphRow): ExtendedGraphRow {
+  // Single string that includes all states of the row.
+  // Useful to test equality.
+  const rowStr = [
+    row.hash,
+    row.nodeLine.join(''),
+    row.linkLine?.map(l => l.value.toString(16)).join('') ?? '',
+    row.termLine?.map(l => (l ? '1' : '0')).join('') ?? '',
+    row.ancestryLine?.join('') ?? '',
+    row.parentColumns.join(','),
+    row.isHead ? 'h' : '',
+    row.isRoot ? 'r' : '',
+  ].join(';');
+
   return {
     ...row,
     get hasIndirectAncestor() {
@@ -466,6 +481,9 @@ function extendGraphRow(row: GraphRow): ExtendedGraphRow {
     },
     get postAncestryLine() {
       return row.ancestryLine.map(l => (l === PadLine.Ancestor ? PadLine.Parent : l));
+    },
+    valueOf(): string {
+      return rowStr;
     },
   };
 }
