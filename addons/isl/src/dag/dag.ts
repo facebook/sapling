@@ -7,13 +7,14 @@
 
 import type {WithPreviewType} from '../previews';
 import type {CommitInfo, Hash} from '../types';
+import type {ExtendedGraphRow} from './render';
 import type {SetLike} from './set';
 import type {RecordOf, List} from 'immutable';
 
 import {CommitPreview} from '../previews';
 import {BaseDag, type SortProps} from './base_dag';
 import {MutationDag} from './mutation_dag';
-import {Ancestor, AncestorType} from './render';
+import {Ancestor, AncestorType, Renderer} from './render';
 import {TextRenderer} from './renderText';
 import {HashSet} from './set';
 import {Record, Map as ImMap, Set as ImSet} from 'immutable';
@@ -456,7 +457,29 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
     return undefined;
   }
 
-  /** Yield [Info, Ancestor[]] in order, to be used by the rendering logic. */
+  /** Render `set` into `ExtendedGraphRow`s. */
+  @cached()
+  renderToRows(set?: SetLike): ReadonlyArray<[DagCommitInfo, ExtendedGraphRow]> {
+    const renderer = new Renderer();
+    const rows: Array<[DagCommitInfo, ExtendedGraphRow]> = [];
+    for (const [type, item] of this.dagWalkerForRendering(set)) {
+      if (type === 'row') {
+        const [info, typedParents] = item;
+        const forceLastColumn = info.isYouAreHere;
+        const row = renderer.nextRow(info.hash, typedParents, {forceLastColumn});
+        rows.push([info, row]);
+      } else if (type === 'reserve') {
+        renderer.reserve(item);
+      }
+    }
+    return rows;
+  }
+
+  /**
+   * Yield [Info, Ancestor[]] in order, to be used by the rendering logic.
+   * This returns a generator. To walk through the entire DAG it can be slow.
+   * Use `dagWalkerForRendering` if you want a cached version.
+   */
   *dagWalkerForRendering(set?: SetLike): Iterable<['reserve', Hash] | ['row', [Info, Ancestor[]]]> {
     // We want sortDesc, but want to reuse the comprehensive sortAsc compare logic.
     // So we use sortAsc here, then reverse it.

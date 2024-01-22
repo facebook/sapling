@@ -12,7 +12,7 @@ import type {HashSet} from './dag/set';
 import {AnimatedReorderGroup} from './AnimatedReorderGroup';
 import {AvatarPattern} from './Avatar';
 import {InlineBadge} from './InlineBadge';
-import {LinkLine, NodeLine, PadLine, Renderer} from './dag/render';
+import {LinkLine, NodeLine, PadLine} from './dag/render';
 import deepEqual from 'fast-deep-equal';
 import React from 'react';
 
@@ -94,7 +94,6 @@ export function RenderDag(props: RenderDagProps) {
     ...restProps
   } = props;
 
-  const renderer = new Renderer();
   const renderedRows: Array<JSX.Element> = [];
   const pushRow = (
     key: string,
@@ -112,211 +111,204 @@ export function RenderDag(props: RenderDagProps) {
     );
   };
 
-  for (const [type, item] of dag.dagWalkerForRendering(subset)) {
-    if (type === 'reserve') {
-      renderer.reserve(item);
+  for (const [info, row] of dag.renderToRows(subset)) {
+    // Layout per commit:
+    //
+    // Each (regular) commit is rendered in 2 rows:
+    //
+    //    ┌──Row1──────────────────────────────┐
+    //    │┌─Left──────────┐┌Right────────────┐│
+    //    ││┌PreNode*─────┐││                 ││
+    //    │││ | |         │││ (commit body)   ││
+    //    ││├Node─────────┤││                 ││
+    //    │││ o |         │││                 ││
+    //    ││├PostNode*────┤││                 ││
+    //    │││ | |         │││                 ││
+    //    ││└─────────────┘││                 ││
+    //    │└───────────────┘└─────────────────┘│
+    //    └────────────────────────────────────┘
+    //
+    //    ┌──Row2──────────────────────────────┐
+    //    │┌─Left──────────┐┌Right────────────┐│
+    //    ││┌PostNode*────┐││                 ││
+    //    │││ | |         │││                 ││
+    //    ││├Term─────────┤││                 ││
+    //    │││ | |         │││ (extras)        ││
+    //    │││ | ~         │││                 ││
+    //    ││├Link─────────┤││                 ││
+    //    │││ |\          │││                 ││
+    //    │││ | |         │││                 ││
+    //    ││├Ancestry─────┤││                 ││
+    //    │││ : |         │││                 ││
+    //    │└───────────────┘└─────────────────┘│
+    //    └────────────────────────────────────┘
+    //
+    // Note:
+    // - Row1 is used to highlight selection. The "node" line should be
+    //   at the center once selected.
+    // - The "*" lines (PreNode, PostNode, PostAncestry) have a stretch
+    //   height based on the right-side content.
+    // - Row2 can be hidden if there is no link line, no ":" ancestry,
+    //   and no "extras".
+    //
+    // Example of "You Are here" special case. "Row1" is split to two
+    // rows: "Row0" and "Row1":
+    //
+    //    ┌──Row0──────────────────────────────┐
+    //    │┌─Left─────────────┐                │
+    //    ││┌Node────────────┐│                │
+    //    │││ | (YouAreHere) ││                │
+    //    ││└────────────────┘│                │
+    //    │└──────────────────┘                │
+    //    └────────────────────────────────────┘
+    //    ┌──Row1──────────────────────────────┐
+    //    │┌─Left──────────┐┌Right────────────┐│
+    //    ││┌PostNode*────┐││                 ││
+    //    │││ | |         │││ (commit body)   ││
+    //    ││└─────────────┘││                 ││
+    //    │└───────────────┘└─────────────────┘│
+    //    └────────────────────────────────────┘
+    //
+    // Note:
+    // - Row0's "left" side can have a larger width, to fit the
+    //   "irregular" "(YouAreHere)" element.
+    // - Row2 is the same in this special case.
+    //
+    // Also check fbcode/eden/website/src/components/RenderDag.js
+    const {linkLine, termLine, nodeLine, ancestryLine, isHead, isRoot, hasIndirectAncestor} = row;
+
+    // By default, the glyph "o" is rendered in a fixed size "Tile".
+    // With 'replace-tile' the glyph can define its own rendered element
+    // (of dynamic size).
+    //
+    // 'replace-tile' also moves the "commit" element to the right of
+    // pad line, not node line.
+    const [glyphPosition, glyph] = renderGlyph(info);
+    const isIrregular = glyphPosition === 'replace-tile';
+    // isYouAreHere practically matches isIrregular but we treat them as
+    // separate concepts. isYouAreHere affects colors, and isIrregular
+    // affects layout.
+    const color = info.isYouAreHere ? YOU_ARE_HERE_COLOR : undefined;
+    const nodeLinePart = (
+      <div className="render-dag-row-left-side-line node-line">
+        {nodeLine.map((l, i) => {
+          if (isIrregular && l === NodeLine.Node) {
+            return <React.Fragment key={i}>{glyph}</React.Fragment>;
+          }
+          // Need stretchY if "glyph" is not "Tile" and has a dynamic height.
+          return (
+            <NodeTile
+              key={i}
+              line={l}
+              isHead={isHead}
+              isRoot={isRoot}
+              aboveNodeColor={info.isHead ? YOU_ARE_HERE_COLOR : undefined}
+              stretchY={isIrregular && l != NodeLine.Node}
+              scaleY={isIrregular ? 0.5 : 1}
+              glyph={glyph}
+            />
+          );
+        })}
+      </div>
+    );
+
+    const preNodeLinePart = (
+      <div className="render-dag-row-left-side-line pre-node-line grow">
+        {row.preNodeLine.map((l, i) => {
+          const c = i === row.nodeColumn ? (info.isHead ? YOU_ARE_HERE_COLOR : color) : undefined;
+          return <PadTile key={i} line={l} scaleY={0.1} stretchY={true} color={c} />;
+        })}
+      </div>
+    );
+
+    const postNodeLinePart = (
+      <div className="render-dag-row-left-side-line post-node-line grow">
+        {row.postNodeLine.map((l, i) => {
+          const c = i === row.nodeColumn ? color : undefined;
+          return <PadTile key={i} line={l} scaleY={0.1} stretchY={true} color={c} />;
+        })}
+      </div>
+    );
+
+    const linkLinePart = linkLine && (
+      <div className="render-dag-row-left-side-line link-line">
+        {linkLine.map((l, i) => (
+          <LinkTile key={i} line={l} color={color} colorLine={row.linkLineFromNode?.[i]} />
+        ))}
+      </div>
+    );
+
+    const termLinePart = termLine && (
+      <>
+        <div className="render-dag-row-left-side-line term-line-pad">
+          {termLine.map((isTerm, i) => {
+            const line = isTerm ? PadLine.Ancestor : ancestryLine.at(i) ?? PadLine.Blank;
+            return <PadTile key={i} scaleY={0.5} line={line} />;
+          })}
+        </div>
+        <div className="render-dag-row-left-side-line term-line-term">
+          {termLine.map((isTerm, i) => {
+            const line = ancestryLine.at(i) ?? PadLine.Blank;
+            return isTerm ? <TermTile key={i} /> : <PadTile key={i} line={line} />;
+          })}
+        </div>
+      </>
+    );
+
+    const commitPart = renderCommit?.(info);
+    const commitExtrasPart = renderCommitExtras?.(info, row);
+
+    const ancestryLinePart = hasIndirectAncestor ? (
+      <div className="render-dag-row-left-side-line ancestry-line">
+        {ancestryLine.map((l, i) => (
+          <PadTile key={i} line={l} color={row.parentColumns.includes(i) ? color : undefined} />
+        ))}
+      </div>
+    ) : null;
+
+    // Put parts together.
+
+    if (isIrregular) {
+      // assume there are only one irregular row, same key for animation.
+      // row0
+      pushRow(`${info.hash}:row0`, nodeLinePart);
+      // row1
+      pushRow(`${info.hash}:row1`, postNodeLinePart, commitPart);
     } else {
-      const [info, typedParents] = item;
-      const forceLastColumn = info.isYouAreHere;
-      const row = renderer.nextRow(info.hash, typedParents, {forceLastColumn});
-      // Layout per commit:
-      //
-      // Each (regular) commit is rendered in 2 rows:
-      //
-      //    ┌──Row1──────────────────────────────┐
-      //    │┌─Left──────────┐┌Right────────────┐│
-      //    ││┌PreNode*─────┐││                 ││
-      //    │││ | |         │││ (commit body)   ││
-      //    ││├Node─────────┤││                 ││
-      //    │││ o |         │││                 ││
-      //    ││├PostNode*────┤││                 ││
-      //    │││ | |         │││                 ││
-      //    ││└─────────────┘││                 ││
-      //    │└───────────────┘└─────────────────┘│
-      //    └────────────────────────────────────┘
-      //
-      //    ┌──Row2──────────────────────────────┐
-      //    │┌─Left──────────┐┌Right────────────┐│
-      //    ││┌PostNode*────┐││                 ││
-      //    │││ | |         │││                 ││
-      //    ││├Term─────────┤││                 ││
-      //    │││ | |         │││ (extras)        ││
-      //    │││ | ~         │││                 ││
-      //    ││├Link─────────┤││                 ││
-      //    │││ |\          │││                 ││
-      //    │││ | |         │││                 ││
-      //    ││├Ancestry─────┤││                 ││
-      //    │││ : |         │││                 ││
-      //    │└───────────────┘└─────────────────┘│
-      //    └────────────────────────────────────┘
-      //
-      // Note:
-      // - Row1 is used to highlight selection. The "node" line should be
-      //   at the center once selected.
-      // - The "*" lines (PreNode, PostNode, PostAncestry) have a stretch
-      //   height based on the right-side content.
-      // - Row2 can be hidden if there is no link line, no ":" ancestry,
-      //   and no "extras".
-      //
-      // Example of "You Are here" special case. "Row1" is split to two
-      // rows: "Row0" and "Row1":
-      //
-      //    ┌──Row0──────────────────────────────┐
-      //    │┌─Left─────────────┐                │
-      //    ││┌Node────────────┐│                │
-      //    │││ | (YouAreHere) ││                │
-      //    ││└────────────────┘│                │
-      //    │└──────────────────┘                │
-      //    └────────────────────────────────────┘
-      //    ┌──Row1──────────────────────────────┐
-      //    │┌─Left──────────┐┌Right────────────┐│
-      //    ││┌PostNode*────┐││                 ││
-      //    │││ | |         │││ (commit body)   ││
-      //    ││└─────────────┘││                 ││
-      //    │└───────────────┘└─────────────────┘│
-      //    └────────────────────────────────────┘
-      //
-      // Note:
-      // - Row0's "left" side can have a larger width, to fit the
-      //   "irregular" "(YouAreHere)" element.
-      // - Row2 is the same in this special case.
-      //
-      // Also check fbcode/eden/website/src/components/RenderDag.js
-      const {linkLine, termLine, nodeLine, ancestryLine, isHead, isRoot, hasIndirectAncestor} = row;
-
-      // By default, the glyph "o" is rendered in a fixed size "Tile".
-      // With 'replace-tile' the glyph can define its own rendered element
-      // (of dynamic size).
-      //
-      // 'replace-tile' also moves the "commit" element to the right of
-      // pad line, not node line.
-      const [glyphPosition, glyph] = renderGlyph(info);
-      const isIrregular = glyphPosition === 'replace-tile';
-      // isYouAreHere practically matches isIrregular but we treat them as
-      // separate concepts. isYouAreHere affects colors, and isIrregular
-      // affects layout.
-      const color = info.isYouAreHere ? YOU_ARE_HERE_COLOR : undefined;
-      const nodeLinePart = (
-        <div className="render-dag-row-left-side-line node-line">
-          {nodeLine.map((l, i) => {
-            if (isIrregular && l === NodeLine.Node) {
-              return <React.Fragment key={i}>{glyph}</React.Fragment>;
-            }
-            // Need stretchY if "glyph" is not "Tile" and has a dynamic height.
-            return (
-              <NodeTile
-                key={i}
-                line={l}
-                isHead={isHead}
-                isRoot={isRoot}
-                aboveNodeColor={info.isHead ? YOU_ARE_HERE_COLOR : undefined}
-                stretchY={isIrregular && l != NodeLine.Node}
-                scaleY={isIrregular ? 0.5 : 1}
-                glyph={glyph}
-              />
-            );
-          })}
-        </div>
-      );
-
-      const preNodeLinePart = (
-        <div className="render-dag-row-left-side-line pre-node-line grow">
-          {row.preNodeLine.map((l, i) => {
-            const c = i === row.nodeColumn ? (info.isHead ? YOU_ARE_HERE_COLOR : color) : undefined;
-            return <PadTile key={i} line={l} scaleY={0.1} stretchY={true} color={c} />;
-          })}
-        </div>
-      );
-
-      const postNodeLinePart = (
-        <div className="render-dag-row-left-side-line post-node-line grow">
-          {row.postNodeLine.map((l, i) => {
-            const c = i === row.nodeColumn ? color : undefined;
-            return <PadTile key={i} line={l} scaleY={0.1} stretchY={true} color={c} />;
-          })}
-        </div>
-      );
-
-      const linkLinePart = linkLine && (
-        <div className="render-dag-row-left-side-line link-line">
-          {linkLine.map((l, i) => (
-            <LinkTile key={i} line={l} color={color} colorLine={row.linkLineFromNode?.[i]} />
-          ))}
-        </div>
-      );
-
-      const termLinePart = termLine && (
+      // row1
+      pushRow(
+        `${info.hash}:row1`,
         <>
-          <div className="render-dag-row-left-side-line term-line-pad">
-            {termLine.map((isTerm, i) => {
-              const line = isTerm ? PadLine.Ancestor : ancestryLine.at(i) ?? PadLine.Blank;
-              return <PadTile key={i} scaleY={0.5} line={line} />;
-            })}
-          </div>
-          <div className="render-dag-row-left-side-line term-line-term">
-            {termLine.map((isTerm, i) => {
-              const line = ancestryLine.at(i) ?? PadLine.Blank;
-              return isTerm ? <TermTile key={i} /> : <PadTile key={i} line={line} />;
-            })}
-          </div>
-        </>
+          {preNodeLinePart}
+          {nodeLinePart}
+          {postNodeLinePart}
+        </>,
+        commitPart,
+        {
+          className: 'render-dag-row-commit',
+          'data-commit-hash': info.hash,
+        },
       );
+    }
 
-      const commitPart = renderCommit?.(info);
-      const commitExtrasPart = renderCommitExtras?.(info, row);
-
-      const ancestryLinePart = hasIndirectAncestor ? (
-        <div className="render-dag-row-left-side-line ancestry-line">
-          {ancestryLine.map((l, i) => (
-            <PadTile key={i} line={l} color={row.parentColumns.includes(i) ? color : undefined} />
-          ))}
-        </div>
-      ) : null;
-
-      // Put parts together.
-
-      if (isIrregular) {
-        // assume there are only one irregular row, same key for animation.
-        // row0
-        pushRow(`${info.hash}:row0`, nodeLinePart);
-        // row1
-        pushRow(`${info.hash}:row1`, postNodeLinePart, commitPart);
-      } else {
-        // row1
-        pushRow(
-          `${info.hash}:row1`,
-          <>
-            {preNodeLinePart}
-            {nodeLinePart}
-            {postNodeLinePart}
-          </>,
-          commitPart,
-          {
-            className: 'render-dag-row-commit',
-            'data-commit-hash': info.hash,
-          },
-        );
-      }
-
-      // row2
-      if (
-        linkLinePart != null ||
-        termLinePart != null ||
-        ancestryLinePart != null ||
-        postNodeLinePart != null ||
-        commitExtrasPart != null
-      ) {
-        pushRow(
-          `${info.hash}:row2`,
-          <>
-            {commitExtrasPart && postNodeLinePart}
-            {linkLinePart}
-            {termLinePart}
-            {ancestryLinePart}
-          </>,
-          commitExtrasPart,
-        );
-      }
+    // row2
+    if (
+      linkLinePart != null ||
+      termLinePart != null ||
+      ancestryLinePart != null ||
+      postNodeLinePart != null ||
+      commitExtrasPart != null
+    ) {
+      pushRow(
+        `${info.hash}:row2`,
+        <>
+          {commitExtrasPart && postNodeLinePart}
+          {linkLinePart}
+          {termLinePart}
+          {ancestryLinePart}
+        </>,
+        commitExtrasPart,
+      );
     }
   }
 
