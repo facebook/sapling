@@ -15,7 +15,7 @@ import {Avatar} from './Avatar';
 import {BranchIndicator} from './BranchIndicator';
 import {commitMode, hasUnsavedEditedCommitMessage} from './CommitInfoView/CommitInfoState';
 import {currentComparisonMode} from './ComparisonView/atoms';
-import {isHighlightedCommit} from './HighlightedCommits';
+import {HighlightCommitsWhileHovering, isHighlightedCommit} from './HighlightedCommits';
 import {InlineBadge} from './InlineBadge';
 import {Subtle} from './Subtle';
 import {latestSuccessorUnlessExplicitlyObsolete} from './SuccessionTracker';
@@ -744,21 +744,18 @@ function hasUncommittedChanges(snapshot: Snapshot): boolean {
 }
 
 export function SuccessorInfoToDisplay({successorInfo}: {successorInfo: SuccessorInfo}) {
-  switch (successorInfo.type) {
-    case 'land':
-    case 'pushrebase':
-      return <T>Landed as a newer commit</T>;
-    case 'amend':
-      return <T>Amended as a newer commit</T>;
-    case 'rebase':
-      return <T>Rebased as a newer commit</T>;
-    case 'split':
-      return <T>Split as a newer commit</T>;
-    case 'fold':
-      return <T>Folded as a newer commit</T>;
-    case 'histedit':
-      return <T>Histedited as a newer commit</T>;
-    default:
-      return <T>Rewritten as a newer commit</T>;
-  }
+  const inner: JSX.Element = {
+    pushrebase: <T>Landed as a newer commit</T>,
+    land: <T>Landed as a newer commit</T>,
+    amend: <T>Amended as a newer commit</T>,
+    rebase: <T>Rebased as a newer commit</T>,
+    split: <T>Split as a newer commit</T>,
+    fold: <T>Folded as a newer commit</T>,
+    histedit: <T>Histedited as a newer commit</T>,
+  }[successorInfo.type] ?? <T>Rewritten as a newer commit</T>;
+  return (
+    <HighlightCommitsWhileHovering toHighlight={[successorInfo.hash]}>
+      {inner}
+    </HighlightCommitsWhileHovering>
+  );
 }
