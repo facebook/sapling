@@ -23,7 +23,7 @@ import {Tooltip} from './Tooltip';
 import {UncommitButton} from './UncommitButton';
 import {UncommittedChanges} from './UncommittedChanges';
 import {tracker} from './analytics';
-import {codeReviewProvider, latestCommitMessage} from './codeReview/CodeReviewInfo';
+import {codeReviewProvider, latestCommitMessageTitle} from './codeReview/CodeReviewInfo';
 import {DiffInfo} from './codeReview/DiffBadge';
 import {SyncStatus, syncStatusAtom} from './codeReview/syncStatus';
 import {islDrawerState} from './drawerState';
@@ -132,7 +132,7 @@ export const Commit = memo(
 
     const isNarrow = useRecoilValue(isNarrowCommitTree);
 
-    const [title] = useRecoilValue(latestCommitMessage(commit.hash));
+    const title = useRecoilValue(latestCommitMessageTitle(commit.hash));
 
     const toast = useToast();
     const clipboardCopy = (text: string) => toast.copyAndShowToast(text);
