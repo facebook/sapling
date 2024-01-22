@@ -619,7 +619,7 @@ function RegularGlyphInner({info}: {info: DagCommitInfo}) {
 export const RegularGlyph = React.memo(RegularGlyphInner, (prevProps, nextProps) => {
   const prevInfo = prevProps.info;
   const nextInfo = nextProps.info;
-  return prevInfo === nextInfo || prevInfo.hash === nextInfo.hash;
+  return nextInfo.equals(prevInfo);
 });
 
 export function YouAreHereGlyph({info}: {info: DagCommitInfo}) {
