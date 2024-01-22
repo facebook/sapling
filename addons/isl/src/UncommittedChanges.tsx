@@ -721,6 +721,8 @@ export function UncommittedChanges({place}: {place: Place}) {
     runOperation(operation);
   };
 
+  const canAmend = headCommit && headCommit.phase !== 'public' && headCommit.successorInfo == null;
+
   return (
     <div className="uncommitted-changes">
       {conflicts != null ? (
@@ -898,7 +900,7 @@ export function UncommittedChanges({place}: {place: Place}) {
               </VSCodeButton>
             </Tooltip>
           </div>
-          {headCommit?.phase === 'public' ? null : (
+          {canAmend && (
             <div className="button-row">
               <VSCodeButton
                 appearance="icon"
