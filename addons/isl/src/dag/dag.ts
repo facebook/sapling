@@ -179,10 +179,12 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
     return this.commitDag.range(roots, heads);
   }
 
+  @cached()
   roots(set: SetLike): HashSet {
     return this.commitDag.roots(set);
   }
 
+  @cached()
   heads(set: SetLike): HashSet {
     return this.commitDag.heads(set);
   }
