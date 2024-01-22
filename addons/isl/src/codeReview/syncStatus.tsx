@@ -9,7 +9,7 @@ import type {Hash} from '../types';
 
 import {latestCommits} from '../serverAPIState';
 import {allDiffSummaries, codeReviewProvider} from './CodeReviewInfo';
-import {selector} from 'recoil';
+import {selector, selectorFamily} from 'recoil';
 
 export enum SyncStatus {
   InSync = 'inSync',
@@ -31,4 +31,14 @@ export const syncStatusAtom = selector<undefined | Map<Hash, SyncStatus>>({
     }
     return provider.getSyncStatuses(commits, summaries.value);
   },
+});
+
+export const syncStatusByHash = selectorFamily<SyncStatus | undefined, Hash>({
+  key: 'syncStatusByHash',
+  get:
+    (hash: Hash) =>
+    ({get}) => {
+      const syncStatus = get(syncStatusAtom);
+      return syncStatus?.get(hash);
+    },
 });

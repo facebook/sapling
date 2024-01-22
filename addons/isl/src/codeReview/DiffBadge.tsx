@@ -23,7 +23,7 @@ import {useRunOperation} from '../serverAPIState';
 import {exactRevset} from '../types';
 import {diffSummary, codeReviewProvider} from './CodeReviewInfo';
 import {openerUrlForDiffUrl} from './github/GitHubUrlOpener';
-import {SyncStatus, syncStatusAtom} from './syncStatus';
+import {SyncStatus, syncStatusByHash} from './syncStatus';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useState, Component, Suspense} from 'react';
 import {atom, useRecoilValue} from 'recoil';
@@ -101,7 +101,7 @@ function DiffInfoInner({
   hideActions: boolean;
 }) {
   const diffInfoResult = useRecoilValue(diffSummary(diffId));
-  const syncStatuses = useRecoilValue(syncStatusAtom);
+  const syncStatus = useRecoilValue(syncStatusByHash(commit.hash));
   if (diffInfoResult.error) {
     return <DiffLoadError number={provider.formatDiffNumber(diffId)} provider={provider} />;
   }
@@ -109,7 +109,6 @@ function DiffInfoInner({
     return <DiffSpinner diffId={diffId} provider={provider} />;
   }
   const info = diffInfoResult.value;
-  const syncStatus = syncStatuses?.get(commit.hash);
   return (
     <div
       className={`diff-info ${provider.name}-diff-info`}
