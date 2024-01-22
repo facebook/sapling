@@ -365,7 +365,7 @@ function nullableWithinContains(set?: SetLike): (h: Hash) => boolean {
 /** Minimal fields needed to be used in commit graph structures. */
 export interface HashWithParents {
   hash: Hash;
-  parents: Hash[];
+  parents: ReadonlyArray<Hash>;
   // TODO: We might want "ancestors" to express distant parent relationships.
   // However, sl does not yet have a way to expose that information.
 }

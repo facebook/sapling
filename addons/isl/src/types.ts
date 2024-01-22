@@ -155,16 +155,16 @@ export type CommitInfo = {
    * could be 2 or more parents. The initial commit (and initial commits of
    * other merged-in repos) have no parents.
    */
-  parents: Hash[];
+  parents: ReadonlyArray<Hash>;
   phase: CommitPhaseType;
   isHead: boolean;
   author: string;
   date: Date;
   description: string;
-  bookmarks: Array<string>;
-  remoteBookmarks: Array<string>;
+  bookmarks: ReadonlyArray<string>;
+  remoteBookmarks: ReadonlyArray<string>;
   /** if this commit is obsolete, it is succeeded by another commit */
-  successorInfo?: SuccessorInfo;
+  successorInfo?: Readonly<SuccessorInfo>;
   /**
    * Closest predecessors (not all recursive predecessors, which can be a long
    * chain and hurt performance). Useful to deal with optimistic states where
@@ -174,13 +174,13 @@ export type CommitInfo = {
    * Most of the time a commit only has one predecessor. In case of a fold
    * there are multiple predecessors.
    */
-  closestPredecessors?: Hash[];
+  closestPredecessors?: ReadonlyArray<Hash>;
   /** only a subset of the total files for this commit */
-  filesSample: Array<ChangedFile>;
+  filesSample: ReadonlyArray<ChangedFile>;
   totalFileCount: number;
   /** @see {@link DiffId} */
   diffId?: DiffId;
-  stableCommitMetadata?: Array<StableCommitMetadata>;
+  stableCommitMetadata?: ReadonlyArray<StableCommitMetadata>;
 };
 export type SuccessorInfo = {
   hash: string;

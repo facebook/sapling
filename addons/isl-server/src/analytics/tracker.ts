@@ -103,7 +103,7 @@ export class Tracker<T> {
    * Record an analytics event `eventName`.
    * Optionally provide additional fields, like arbitrary JSON `extras`.
    */
-  public track(eventName: TrackEventName, data?: TrackData): void {
+  public track(eventName: TrackEventName, data?: Readonly<TrackData>): void {
     return this.trackData({...data, eventName});
   }
 

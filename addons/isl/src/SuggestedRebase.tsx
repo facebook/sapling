@@ -164,7 +164,7 @@ export function SuggestedRebaseButton({
   );
 }
 
-function firstNonEmptySublist(...lists: Array<Array<string> | undefined>) {
+function firstNonEmptySublist(...lists: Array<ReadonlyArray<string> | undefined>) {
   for (const list of lists) {
     if (list != null && list.length > 0) {
       return list.join(', ');

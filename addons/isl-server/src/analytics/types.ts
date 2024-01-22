@@ -10,7 +10,7 @@ import type {TrackErrorName, TrackEventName} from './eventNames';
 type JSONSerializableObject = {[key: string]: JSONSerializable};
 type JSONSerializable =
   | JSONSerializableObject
-  | Array<JSONSerializable>
+  | ReadonlyArray<JSONSerializable>
   | string
   | number
   | boolean

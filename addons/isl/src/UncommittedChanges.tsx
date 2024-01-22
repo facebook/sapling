@@ -245,7 +245,7 @@ function SectionedFileList({filesByPrefix, ...rest}: SectionProps) {
  * In either case, a banner is shown to warn that not all files are shown.
  */
 export function ChangedFiles(props: {
-  filesSubset: Array<ChangedFile>;
+  filesSubset: ReadonlyArray<ChangedFile>;
   totalFiles: number;
   comparison: Comparison;
   selection?: UseUncommittedSelection;

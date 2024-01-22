@@ -501,7 +501,7 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
     // especially when the provided `set` is a subset of the dag.
     for (const hash of sorted) {
       const info = unwrap(this.get(hash));
-      const parents: Hash[] = info?.parents ?? [];
+      const parents: ReadonlyArray<Hash> = info?.parents ?? [];
       // directParents: solid edges
       // indirectParents: dashed edges
       // anonymousParents: ----"~"

@@ -169,7 +169,7 @@ export function partition<T>(a: Array<T>, predicate: (item: T) => boolean): [Arr
  * For example, partition([1, 2, 3], n => n % 2 === 0) returns [[2], [1, 3]]
  */
 export function group<ArrayType, BucketType extends string | number>(
-  a: Array<ArrayType>,
+  a: ReadonlyArray<ArrayType>,
   bucket: (item: ArrayType) => BucketType,
 ): Record<BucketType, Array<ArrayType> | undefined> {
   const result = {} as Record<BucketType, Array<ArrayType>>;
