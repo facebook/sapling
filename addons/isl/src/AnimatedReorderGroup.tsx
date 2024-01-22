@@ -91,6 +91,7 @@ function updatePreviousState(
   const elements = scanElements(containerRef);
   const idList: Array<string> = [];
   const rectMap = new Map<string, DOMRect>();
+  const toAnimate: Array<[HTMLElement, number, number]> = [];
   elements.forEach(element => {
     const reorderId = element.getAttribute('data-reorder-id');
     if (reorderId == null || reorderId === '') {
@@ -105,15 +106,23 @@ function updatePreviousState(
         const dx = oldBox.left - newBox.left;
         const dy = oldBox.top - newBox.top;
         if (Math.abs(dx) + Math.abs(dy) > animationMinPixel) {
-          element.animate(
-            [{transform: `translate(${dx}px,${dy}px)`}, {transform: 'translate(0,0)'}],
-            {duration: animationDuration, easing: 'ease-out'},
-          );
+          toAnimate.push([element, dx, dy]);
         }
       }
     }
     rectMap.set(reorderId, newBox);
   });
+
+  if (toAnimate.length > 0) {
+    requestAnimationFrame(() => {
+      toAnimate.forEach(([element, dx, dy]) => {
+        element.animate(
+          [{transform: `translate(${dx}px,${dy}px)`}, {transform: 'translate(0,0)'}],
+          {duration: animationDuration, easing: 'ease-out'},
+        );
+      });
+    });
+  }
 
   if (!animate && !deepEqual(idList, previousStateRef.current.idList)) {
     // If animate is false, we want to get the rects of the old children.
