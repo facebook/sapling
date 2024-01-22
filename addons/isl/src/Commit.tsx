@@ -331,7 +331,7 @@ export const Commit = memo(
     if (!isPublic && !actionsPrevented && commit.isHead) {
       commitActions.push(<UncommitButton key="uncommit" />);
     }
-    if (!isPublic && !actionsPrevented && commit.isHead) {
+    if (!isPublic && !actionsPrevented && commit.isHead && !isObsoleted) {
       commitActions.push(<SplitButton key="split" commit={commit} />);
     }
 
