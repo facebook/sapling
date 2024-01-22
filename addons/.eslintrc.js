@@ -113,6 +113,7 @@ module.exports = {
 
     // Custom rules
     'rulesdir/recoil-key-matches-variable': 'error',
+    'rulesdir/recoil-maybe-use-family': 'error',
 
     // WARNINGS
     'require-await': 'warn',
