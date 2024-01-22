@@ -117,7 +117,12 @@ export function RenderDag(props: RenderDagProps) {
     ...restProps
   } = props;
 
-  const renderedRows: Array<JSX.Element> = dag.renderToRows(subset).map(([info, row]) => {
+  const rows = dag.renderToRows(subset);
+  const authors = new Set<string>(
+    rows.flatMap(([info]) => (info.phase === 'draft' && info.author.length > 0 ? info.author : [])),
+  );
+
+  const renderedRows: Array<JSX.Element> = rows.map(([info, row]) => {
     return (
       <DagRow
         key={info.hash}
@@ -133,6 +138,7 @@ export function RenderDag(props: RenderDagProps) {
   const fullClassName = ((className ?? '') + ' render-dag').trimStart();
   return (
     <div className={fullClassName} {...restProps}>
+      <SvgPattenList authors={authors} />
       <AnimatedReorderGroup animationDuration={100}>{renderedRows}</AnimatedReorderGroup>
     </div>
   );
@@ -561,27 +567,53 @@ function linkLineToEdges(linkLine: LinkLine, color?: string, colorLine?: LinkLin
   return edges;
 }
 
+// Svg patterns for avatar backgrounds. Those patterns are referred later by `RegularGlyph`.
+function SvgPattenList(props: {authors: Iterable<string>}) {
+  return (
+    <svg className="render-dag-svg-patterns" viewBox={`-10 -10 20 20`}>
+      <defs>
+        {[...props.authors].map(author => (
+          <SvgPattern author={author} key={author} />
+        ))}
+      </defs>
+    </svg>
+  );
+}
+
+function authorToSvgPatternId(author: string) {
+  return 'avatar-pattern-' + author.replace(/[^A-Z0-9a-z]/g, '_');
+}
+
+function SvgPatternInner(props: {author: string}) {
+  const {author} = props;
+  const id = authorToSvgPatternId(author);
+  return (
+    <AvatarPattern
+      size={DEFAULT_GLYPH_RADIUS * 2}
+      username={author}
+      id={id}
+      fallbackFill="var(--foreground)"
+    />
+  );
+}
+
+const SvgPattern = React.memo(SvgPatternInner);
+
 const YOU_ARE_HERE_COLOR = 'var(--button-primary-hover-background)';
+const DEFAULT_GLYPH_RADIUS = (defaultTileWidth * 7) / 20;
 
 function RegularGlyphInner({info}: {info: DagCommitInfo}) {
   const stroke = info.isHead ? YOU_ARE_HERE_COLOR : 'var(--foreground)';
-  const r = (defaultTileWidth * 7) / 20;
+  const r = DEFAULT_GLYPH_RADIUS;
   const strokeWidth = defaultStrokeWidth * 0.9;
   let fill = info.successorInfo == null ? 'var(--foreground)' : 'var(--background)';
-  let pattern: null | JSX.Element = null;
   // Avatar for draft commits.
   if (info.phase === 'draft' && info.author.length > 0) {
-    const id = 'avatar-pattern-' + info.hash.replace(/[^A-Z0-9a-z]/g, '_');
-    pattern = <AvatarPattern size={r * 2} username={info.author} id={id} fallbackFill={fill} />;
+    const id = authorToSvgPatternId(info.author);
     fill = `url(#${id})`;
   }
 
-  return (
-    <>
-      {pattern}
-      <circle cx={0} cy={0} r={r} fill={fill} stroke={stroke} strokeWidth={strokeWidth} />
-    </>
-  );
+  return <circle cx={0} cy={0} r={r} fill={fill} stroke={stroke} strokeWidth={strokeWidth} />;
 }
 
 export const RegularGlyph = React.memo(RegularGlyphInner, (prevProps, nextProps) => {

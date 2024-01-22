@@ -25,3 +25,10 @@
 .render-dag-row-right-side {
   flex-grow: 1;
 }
+
+.render-dag-svg-patterns {
+  /* Cannot use 'display: none' - it ignores the svg pattern definitions */
+  opacity: 0;
+  height: 0;
+  width: 0;
+}

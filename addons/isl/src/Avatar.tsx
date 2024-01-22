@@ -110,17 +110,15 @@ export function AvatarPattern({
   const storage = useRecoilValueLoadable(avatars);
   const img = storage.valueMaybe()?.get(username);
   return (
-    <defs>
-      <pattern
-        id={id}
-        patternUnits="userSpaceOnUse"
-        width={size}
-        height={size}
-        x={-size / 2}
-        y={-size / 2}>
-        <rect width={size} height={size} fill={fallbackFill} strokeWidth={0} />
-        <image href={img} width={size} height={size} />
-      </pattern>
-    </defs>
+    <pattern
+      id={id}
+      patternUnits="userSpaceOnUse"
+      width={size}
+      height={size}
+      x={-size / 2}
+      y={-size / 2}>
+      <rect width={size} height={size} fill={fallbackFill} strokeWidth={0} />
+      <image href={img} width={size} height={size} />
+    </pattern>
   );
 }
