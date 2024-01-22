@@ -293,7 +293,7 @@ function DagRowInner(props: {row: ExtendedGraphRow; info: DagCommitInfo} & Rende
       <div className="render-dag-row-left-side-line term-line-pad">
         {termLine.map((isTerm, i) => {
           const line = isTerm ? PadLine.Ancestor : ancestryLine.at(i) ?? PadLine.Blank;
-          return <PadTile key={i} scaleY={0.5} line={line} />;
+          return <PadTile key={i} scaleY={0.25} line={line} />;
         })}
       </div>
       <div className="render-dag-row-left-side-line term-line-term">
@@ -311,7 +311,13 @@ function DagRowInner(props: {row: ExtendedGraphRow; info: DagCommitInfo} & Rende
   const ancestryLinePart = hasIndirectAncestor ? (
     <div className="render-dag-row-left-side-line ancestry-line">
       {ancestryLine.map((l, i) => (
-        <PadTile key={i} line={l} color={row.parentColumns.includes(i) ? color : undefined} />
+        <PadTile
+          key={i}
+          scaleY={0.6}
+          strokeDashArray="0,2,3,0"
+          line={l}
+          color={row.parentColumns.includes(i) ? color : undefined}
+        />
       ))}
     </div>
   ) : null;
@@ -397,6 +403,8 @@ export type TileProps = {
   children?: React.ReactNode;
   /** Line width. Default: strokeWidth. */
   strokeWidth?: number;
+  /** Dash array. Default: '3,2'. */
+  strokeDashArray?: string;
 };
 
 /**
@@ -433,6 +441,7 @@ function TileInner(props: TileProps) {
     width = defaultTileWidth,
     edges = [],
     strokeWidth = defaultStrokeWidth,
+    strokeDashArray = '3,2',
     stretchY = false,
   } = props;
   const preserveAspectRatio = stretchY || scaleY < 1 ? 'none' : undefined;
@@ -440,7 +449,7 @@ function TileInner(props: TileProps) {
   const style = stretchY ? {height: '100%', minHeight: height} : {};
   const paths = edges.map(({x1 = 0, y1 = 0, x2 = 0, y2 = 0, flag = 0, color}, i): JSX.Element => {
     const sY = stretchY ? scaleY * 1.05 : scaleY;
-    const strokeDasharray = flag & EdgeFlag.Dash ? '3,2' : undefined;
+    const dashArray = flag & EdgeFlag.Dash ? strokeDashArray : undefined;
     let d;
     if (flag & EdgeFlag.IntersectGap) {
       // This vertical line intercects with a horizonal line visually but it does not mean
@@ -453,7 +462,7 @@ function TileInner(props: TileProps) {
       // Curved line (towards center).
       d = `M ${x1} ${y1 * sY} Q 0 0 ${x2} ${y2 * sY}`;
     }
-    return <path d={d} key={i} strokeDasharray={strokeDasharray} stroke={color} />;
+    return <path d={d} key={i} strokeDasharray={dashArray} stroke={color} />;
   });
   return (
     <svg
