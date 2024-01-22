@@ -47,9 +47,13 @@ export const AnimatedReorderGroup: React.FC<ReorderGroupProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const previousStateRef = useRef<Readonly<PreviousState>>(emptyPreviousState);
+  const reducedMotion = prefersReducedMotion();
 
   useLayoutEffect(() => {
-    const animate = !prefersReducedMotion();
+    if (reducedMotion) {
+      return;
+    }
+    const animate = true;
     updatePreviousState(
       containerRef,
       previousStateRef,
@@ -57,13 +61,15 @@ export const AnimatedReorderGroup: React.FC<ReorderGroupProps> = ({
       animationDuration,
       animationMinPixel,
     );
-  }, [children, animationDuration, animationMinPixel]);
+  }, [children, animationDuration, animationMinPixel, reducedMotion]);
 
   // Try to get the rects of old children right before rendering new children
   // and calling the LayoutEffect callback. This captures position changes
   // since the last useLayoutEffect. The position changes might be caused by
   // scrolling or resizing the window.
-  updatePreviousState(containerRef, previousStateRef, false, animationDuration);
+  if (!reducedMotion) {
+    updatePreviousState(containerRef, previousStateRef, false, animationDuration);
+  }
 
   return (
     <div {...props} ref={containerRef}>
