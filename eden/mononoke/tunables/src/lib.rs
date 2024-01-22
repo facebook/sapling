@@ -101,8 +101,6 @@ pub struct MononokeTunables {
     // with removing it, but this tunable can be used as a quick killswitch to
     // enable them again.
     sql_lag_monitoring_blocklist: TunableVecOfStrings,
-    // If set, the check result will be discarded for service identities
-    log_only_for_services_in_cwp_hook: TunableBool,
     // If set, the wireproto implementation will only log the repo write ACL
     // check result.
     log_only_wireproto_write_acl: TunableBool,
