@@ -80,7 +80,6 @@ pub type TunableVecOfStringsByRepo = ArcSwap<HashMap<String, Vec<String>>>;
 pub struct MononokeTunables {
     filenodes_disabled: TunableBool,
     warm_bookmark_cache_poll_interval_ms: TunableI64,
-    disable_repo_client_warm_bookmarks_cache: TunableBool,
     xrepo_sync_disable_all_syncs: TunableBool,
     xrepo_disable_commit_sync_lease: TunableBool,
     allow_change_xrepo_mapping_extra: TunableBool,
