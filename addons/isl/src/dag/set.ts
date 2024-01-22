@@ -96,5 +96,17 @@ export class HashSet extends SelfUpdate<ImSet<Hash>> {
   }
 }
 
+export function arrayFromHashes(hashes: SetLike): Array<Hash> {
+  if (hashes == null) {
+    return [];
+  } else if (hashes instanceof HashSet) {
+    return hashes.toArray();
+  } else if (typeof hashes === 'string') {
+    return [hashes];
+  } else {
+    return [...hashes];
+  }
+}
+
 /** A convenient type that converts to HashSet. `null` converts to an empty set. */
 export type SetLike = HashSet | ImSet<Hash> | Iterable<Hash> | Hash | null | undefined;

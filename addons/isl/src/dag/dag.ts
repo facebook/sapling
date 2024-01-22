@@ -16,7 +16,7 @@ import {DagCommitInfo} from './dagCommitInfo';
 import {MutationDag} from './mutation_dag';
 import {Ancestor, AncestorType, Renderer} from './render';
 import {TextRenderer} from './renderText';
-import {HashSet} from './set';
+import {arrayFromHashes, HashSet} from './set';
 import {List, Record, Map as ImMap, Set as ImSet} from 'immutable';
 import {cached} from 'shared/LRU';
 import {SelfUpdate} from 'shared/immutableExt';
@@ -227,7 +227,35 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
 
   // Sort
 
+  // sortAsc all commits, with the default compare function.
+  @cached()
+  defaultSortAscIndex(): ReadonlyMap<Hash, number> {
+    return new Map(
+      this.commitDag
+        .sortAsc(this.all(), {compare: sortAscCompare, gap: false})
+        .map((h, i) => [h, i]),
+    );
+  }
+
   sortAsc(set: SetLike, props?: SortProps<DagCommitInfo>): Array<Hash> {
+    if (props?.compare == null) {
+      // If no custom compare function, use the sortAsc index to answer subset
+      // sortAsc, which can be slow to calculate otherwise.
+      const index = this.defaultSortAscIndex();
+      if (set === undefined) {
+        return [...index.keys()];
+      }
+      const hashes = arrayFromHashes(set === undefined ? this.all() : set);
+      return hashes.sort((a, b) => {
+        const aIdx = index.get(a);
+        const bIdx = index.get(b);
+        if (aIdx == null || bIdx == null) {
+          throw new Error(`Commit ${a} or ${b} is not in the dag.`);
+        }
+        return aIdx - bIdx;
+      });
+    }
+    // Otherwise, fallback to sortAsc.
     return this.commitDag.sortAsc(set, {compare: sortAscCompare, ...props});
   }
 
