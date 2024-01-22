@@ -422,6 +422,18 @@ export const Commit = memo(
       </div>
     );
   },
+  (prevProps, nextProps) => {
+    const prevCommit = prevProps.commit;
+    const nextCommit = nextProps.commit;
+    const commitEqual =
+      'equals' in nextCommit ? nextCommit.equals(prevCommit) : nextCommit === prevCommit;
+    return (
+      commitEqual &&
+      nextProps.previewType === prevProps.previewType &&
+      nextProps.bodyOnly === prevProps.bodyOnly &&
+      nextProps.hasChildren === prevProps.hasChildren
+    );
+  },
 );
 
 function OpenCommitInfoButton({
