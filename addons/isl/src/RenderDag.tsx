@@ -569,8 +569,8 @@ function linkLineToEdges(linkLine: LinkLine, color?: string, colorLine?: LinkLin
   considerEdge(LinkLine.HORIZ_PARENT, LinkLine.HORIZ_ANCESTOR, {x1: -10, x2: 10});
   considerEdge(LinkLine.LEFT_MERGE_PARENT, LinkLine.LEFT_MERGE_ANCESTOR, {x1: -10, y2: -10});
   considerEdge(LinkLine.RIGHT_MERGE_PARENT, LinkLine.RIGHT_MERGE_ANCESTOR, {x1: 10, y2: -10});
-  considerEdge(LinkLine.LEFT_FORK_PARENT, LinkLine.LEFT_FORK_ANCESTOR, {x1: -10, y2: 10});
-  considerEdge(LinkLine.RIGHT_FORK_PARENT, LinkLine.RIGHT_FORK_ANCESTOR, {x1: 10, y2: 10});
+  considerEdge(LinkLine.LEFT_FORK_PARENT | LinkLine.LEFT_FORK_ANCESTOR, 0, {x1: -10, y2: 10});
+  considerEdge(LinkLine.RIGHT_FORK_PARENT | LinkLine.RIGHT_FORK_ANCESTOR, 0, {x1: 10, y2: 10});
   return edges;
 }
 
