@@ -133,7 +133,7 @@ type CacheOpts<This> = {
 
   /**
    * If set, and cache is not set, create cache of the given size.
-   * Default value: 10.
+   * Default value: 200.
    */
   cacheSize?: number;
 
@@ -214,7 +214,7 @@ export function clearTrackedCache() {
 }
 
 function cachedFunction<T, F extends AnyFunction<T>>(func: F, opts?: CacheOpts<T>): F & WithCache {
-  const cache: LRUWithStats = opts?.cache ?? new LRU(opts?.cacheSize ?? 10);
+  const cache: LRUWithStats = opts?.cache ?? new LRU(opts?.cacheSize ?? 200);
   const audit = opts?.audit ?? false;
   const getExtraKeys = opts?.getExtraKeys;
   const track = opts?.track ?? true;
