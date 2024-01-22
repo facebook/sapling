@@ -33,6 +33,7 @@ import {initialParams} from './urlParams';
 import {short} from './utils';
 import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD} from 'isl-server/src/constants';
 import {selectorFamily, atom, DefaultValue, selector, useRecoilCallback} from 'recoil';
+import {reuseEqualObjects} from 'shared/deepEqualExt';
 import {defer, randomId} from 'shared/utils';
 
 const repositoryData = atom<{info: RepoInfo | undefined; cwd: string | undefined}>({
@@ -186,15 +187,19 @@ export const latestCommitsData = atom<{
   default: {fetchStartTimestamp: 0, fetchCompletedTimestamp: 0, commits: []},
   effects: [
     subscriptionEffect('smartlogCommits', (data, {setSelf}) => {
-      setSelf(last => ({
-        ...data,
-        commits:
-          data.commits.value ??
-          // leave existing files in place if there was no error
-          (last instanceof DefaultValue ? [] : last.commits) ??
-          [],
-        error: data.commits.error,
-      }));
+      setSelf(last => {
+        let commits = last instanceof DefaultValue ? [] : last.commits;
+        const newCommits = data.commits.value;
+        if (newCommits != null) {
+          // leave existing commits in place if there was no erro
+          commits = reuseEqualObjects(commits, newCommits, c => c.hash);
+        }
+        return {
+          ...data,
+          commits,
+          error: data.commits.error,
+        };
+      });
       if (data.commits.value) {
         successionTracker.findNewSuccessionsFromCommits(data.commits.value);
       }
