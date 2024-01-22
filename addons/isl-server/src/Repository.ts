@@ -1261,27 +1261,32 @@ function getExecParams(
   if (EXCLUDE_FROM_BLACKBOX_COMMANDS.has(commandName)) {
     args.push('--config', 'extensions.blackbox=!');
   }
+  const newEnv = {
+    ...options_?.env,
+    ...env,
+    // TODO: remove when SL_ENCODING is used everywhere
+    HGENCODING: 'UTF-8',
+    SL_ENCODING: 'UTF-8',
+    // override any custom aliases a user has defined.
+    SL_AUTOMATION: 'true',
+    SL_AUTOMATION_EXCEPT: 'phrevset', // allow looking up diff numbers even in plain mode
+    // Prevent user-specified merge tools from attempting to
+    // open interactive editors.
+    HGMERGE: ':merge3',
+    SL_MERGE: ':merge3',
+    EDITOR: undefined,
+    VISUAL: undefined,
+    HGUSER: undefined,
+    HGEDITOR: undefined,
+  } as unknown as NodeJS.ProcessEnv;
+  let langEnv = newEnv.LANG ?? process.env.LANG;
+  if (langEnv === undefined || !langEnv.toUpperCase().endsWith('UTF-8')) {
+    langEnv = 'C.UTF-8';
+  }
+  newEnv.LANG = langEnv;
   const options: execa.Options = {
     ...options_,
-    env: {
-      ...options_?.env,
-      ...env,
-      LANG: 'en_US.utf-8', // make sure to use unicode if user hasn't set LANG themselves
-      // TODO: remove when SL_ENCODING is used everywhere
-      HGENCODING: 'UTF-8',
-      SL_ENCODING: 'UTF-8',
-      // override any custom aliases a user has defined.
-      SL_AUTOMATION: 'true',
-      SL_AUTOMATION_EXCEPT: 'phrevset', // allow looking up diff numbers even in plain mode
-      // Prevent user-specified merge tools from attempting to
-      // open interactive editors.
-      HGMERGE: ':merge3',
-      SL_MERGE: ':merge3',
-      EDITOR: undefined,
-      VISUAL: undefined,
-      HGUSER: undefined,
-      HGEDITOR: undefined,
-    } as unknown as NodeJS.ProcessEnv,
+    env: newEnv,
     cwd,
   };
 
