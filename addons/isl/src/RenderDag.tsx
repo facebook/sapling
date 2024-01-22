@@ -606,14 +606,35 @@ function RegularGlyphInner({info}: {info: DagCommitInfo}) {
   const stroke = info.isHead ? YOU_ARE_HERE_COLOR : 'var(--foreground)';
   const r = DEFAULT_GLYPH_RADIUS;
   const strokeWidth = defaultStrokeWidth * 0.9;
-  let fill = info.successorInfo == null ? 'var(--foreground)' : 'var(--background)';
-  // Avatar for draft commits.
-  if (info.phase === 'draft' && info.author.length > 0) {
-    const id = authorToSvgPatternId(info.author);
-    fill = `url(#${id})`;
+  const isObsoleted = info.successorInfo != null;
+  let fill = 'var(--foreground)';
+  let extraSvgElement = null;
+  if (info.phase === 'draft') {
+    if (isObsoleted) {
+      // "/" inside the circle (similar to "x" in CLI) to indicate "obsoleted".
+      fill = 'var(--background)';
+      const pos = r / Math.sqrt(2) - strokeWidth;
+      extraSvgElement = (
+        <path
+          d={`M ${-pos} ${pos} L ${pos} ${-pos}`}
+          stroke={stroke}
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+        />
+      );
+    } else if (info.author.length > 0) {
+      // Avatar for draft, non-obsoleted commits.
+      const id = authorToSvgPatternId(info.author);
+      fill = `url(#${id})`;
+    }
   }
 
-  return <circle cx={0} cy={0} r={r} fill={fill} stroke={stroke} strokeWidth={strokeWidth} />;
+  return (
+    <>
+      <circle cx={0} cy={0} r={r} fill={fill} stroke={stroke} strokeWidth={strokeWidth} />
+      {extraSvgElement}
+    </>
+  );
 }
 
 export const RegularGlyph = React.memo(RegularGlyphInner, (prevProps, nextProps) => {
