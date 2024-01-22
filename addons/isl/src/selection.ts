@@ -17,7 +17,7 @@ import {HideOperation} from './operations/HideOperation';
 import {dagWithPreviews} from './previews';
 import {latestDag, operationBeingPreviewed} from './serverAPIState';
 import {firstOfIterable} from './utils';
-import {atom, selector, useRecoilCallback, useRecoilValue} from 'recoil';
+import {atom, selector, selectorFamily, useRecoilCallback, useRecoilValue} from 'recoil';
 
 /**
  * See {@link selectedCommitInfos}
@@ -41,6 +41,14 @@ export const selectedCommits = atom<Set<Hash>>({
       });
     },
   ],
+});
+
+export const isCommitSelected = selectorFamily({
+  key: 'isCommitSelected',
+  get:
+    (hash: Hash) =>
+    ({get}) =>
+      get(selectedCommits).has(hash),
 });
 
 const previouslySelectedCommit = atom<undefined | string>({
@@ -74,7 +82,7 @@ export function useCommitSelection(hash: string): {
   ) => unknown;
   overrideSelection: (newSelected: Array<Hash>) => void;
 } {
-  const selected = useRecoilValue(selectedCommits);
+  const isSelected = useRecoilValue(isCommitSelected(hash));
   const onClickToSelect = useRecoilCallback(
     ({set, snapshot}) =>
       (e: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>) => {
@@ -155,7 +163,7 @@ export function useCommitSelection(hash: string): {
     [hash],
   );
 
-  return {isSelected: selected.has(hash), onClickToSelect, overrideSelection};
+  return {isSelected, onClickToSelect, overrideSelection};
 }
 
 /**
