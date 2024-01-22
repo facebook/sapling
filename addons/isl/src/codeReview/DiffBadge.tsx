@@ -121,7 +121,8 @@ function DiffInfoInner({
       )}
       <DiffComments diff={info} />
       <DiffNumber>{provider.formatDiffNumber(diffId)}</DiffNumber>
-      {hideActions === true ? null : syncStatus === SyncStatus.RemoteIsNewer ? (
+      {hideActions === true || commit.successorInfo != null ? null : syncStatus ===
+        SyncStatus.RemoteIsNewer ? (
         <DownloadNewVersionButton diffId={diffId} provider={provider} />
       ) : syncStatus === SyncStatus.LocalIsNewer ? (
         <ResubmitSyncButton commit={commit} provider={provider} />
