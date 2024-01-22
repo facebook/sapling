@@ -146,6 +146,12 @@ type CacheOpts<This> = {
    * with a fresh recalculation and throws on mismatch.
    */
   audit?: boolean;
+
+  /**
+   * Track the `cache` so it can be cleared by `clearTrackedCache`.
+   * Default: true.
+   */
+  track?: boolean;
 };
 
 type DecoratorFunc = (target: unknown, propertyKey: string, descriptor: PropertyDescriptor) => void;
@@ -193,10 +199,28 @@ export function cached<T, F extends AnyFunction<T>>(
   }
 }
 
+const trackedCaches = new Set<WeakRef<LRUWithStats>>();
+
+/** Clear tracked LRU caches. By default, `@cached` */
+export function clearTrackedCache() {
+  for (const weakRef of trackedCaches) {
+    const cache = weakRef.deref();
+    if (cache === undefined) {
+      trackedCaches.delete(weakRef);
+    } else {
+      cache.clear();
+    }
+  }
+}
+
 function cachedFunction<T, F extends AnyFunction<T>>(func: F, opts?: CacheOpts<T>): F & WithCache {
   const cache: LRUWithStats = opts?.cache ?? new LRU(opts?.cacheSize ?? 10);
   const audit = opts?.audit ?? false;
   const getExtraKeys = opts?.getExtraKeys;
+  const track = opts?.track ?? true;
+  if (track) {
+    trackedCaches.add(new WeakRef(cache));
+  }
   const cachedFunc = function (this: T, ...args: Parameters<F>): ReturnType<F> {
     const stats = cache.stats;
     if (!args.every(isCachable)) {

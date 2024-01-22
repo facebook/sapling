@@ -7,7 +7,7 @@
 
 import type {LRUWithStats} from '../LRU';
 
-import {cached, LRU} from '../LRU';
+import {cached, LRU, clearTrackedCache} from '../LRU';
 import {SelfUpdate} from '../immutableExt';
 import {List, Record} from 'immutable';
 
@@ -344,6 +344,37 @@ describe('cached()', () => {
       const obj = new Impure();
       expect(obj.inc(1)).toBe(2);
       expect(() => obj.inc(1)).toThrow();
+    });
+
+    it('can clear cache', () => {
+      let fCalled = 0;
+      let gCalled = 0;
+
+      class A {
+        @cached({track: true})
+        f() {
+          fCalled += 1;
+          return 1;
+        }
+        @cached({track: false})
+        g() {
+          gCalled += 1;
+          return 1;
+        }
+      }
+
+      const a = new A();
+      a.f();
+      a.f();
+      a.g();
+      a.g();
+      expect(fCalled).toBe(1);
+      expect(gCalled).toBe(1);
+      clearTrackedCache();
+      a.f();
+      a.g();
+      expect(fCalled).toBe(2);
+      expect(gCalled).toBe(1);
     });
   });
 });
