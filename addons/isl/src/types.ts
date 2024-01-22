@@ -460,22 +460,25 @@ export type ClientToServerMessageWithPayload = {
 
 export type SubscriptionKind = 'uncommittedChanges' | 'smartlogCommits' | 'mergeConflicts';
 
-/** sl configs written by ISL */
-export type ConfigName =
+export const allConfigNames = [
   // these config names are for compatibility.
-  | 'isl.submitAsDraft'
-  | 'isl.changedFilesDisplayType'
-  | 'isl.hasShownGettingStarted'
+  'isl.submitAsDraft',
+  'isl.changedFilesDisplayType',
+  'isl.hasShownGettingStarted',
   // sapling config prefers foo-bar naming.
-  | 'isl.pull-button-choice'
-  | 'isl.show-stack-submit-confirmation'
-  | 'isl.show-diff-number'
-  | 'isl.render-compact'
-  | 'isl.download-commit-should-goto'
-  | 'isl.download-commit-rebase-type'
-  | 'isl.experimental-features'
+  'isl.pull-button-choice',
+  'isl.show-stack-submit-confirmation',
+  'isl.show-diff-number',
+  'isl.render-compact',
+  'isl.download-commit-should-goto',
+  'isl.download-commit-rebase-type',
+  'isl.experimental-features',
   // which graph renderer to use (0: tree; 1: dag; 2: show both).
-  | 'isl.experimental-graph-renderer';
+  'isl.experimental-graph-renderer',
+] as const;
+
+/** sl configs written by ISL */
+export type ConfigName = (typeof allConfigNames)[number];
 
 /** local storage keys written by ISL */
 export type LocalStorageName =
