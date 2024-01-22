@@ -26,6 +26,7 @@ import {
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
+import {clearTrackedCache} from 'shared/LRU';
 
 import './TopBar.css';
 
@@ -73,6 +74,7 @@ function RefreshButton() {
           tracker.track('ClickedRefresh');
           clearOptimisticState();
           serverAPI.postMessage({type: 'refresh'});
+          clearTrackedCache();
         }}
         data-testid="refresh-button">
         <Icon icon="refresh" />

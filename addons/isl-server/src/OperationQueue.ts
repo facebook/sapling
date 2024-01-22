@@ -13,6 +13,7 @@ import type {
   RunnableOperation,
 } from 'isl/src/types';
 
+import {clearTrackedCache} from 'shared/LRU';
 import {newAbortController} from 'shared/compat';
 
 /**
@@ -109,6 +110,9 @@ export class OperationQueue {
           cwd,
         );
       }
+    } else {
+      // Attempt to free some memory.
+      clearTrackedCache();
     }
   }
 

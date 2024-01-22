@@ -25,6 +25,7 @@ import {commitByHash, repositoryInfo} from '../serverAPIState';
 import {firstLine} from '../utils';
 import {GithubUICodeReviewProvider} from './github/github';
 import {atom, DefaultValue, selector, selectorFamily} from 'recoil';
+import {clearTrackedCache} from 'shared/LRU';
 import {debounce} from 'shared/debounce';
 import {unwrap} from 'shared/utils';
 
@@ -197,7 +198,13 @@ export const pageVisibility = atom<PageVisibility>({
   effects: [
     ({setSelf}) => {
       const handleVisibilityChange = () => {
-        setSelf(document.hasFocus() ? 'focused' : document.visibilityState);
+        const newValue = document.hasFocus() ? 'focused' : document.visibilityState;
+        setSelf(oldValue => {
+          if (oldValue !== newValue && newValue === 'hidden') {
+            clearTrackedCache();
+          }
+          return newValue;
+        });
       };
 
       window.addEventListener('focus', handleVisibilityChange);
