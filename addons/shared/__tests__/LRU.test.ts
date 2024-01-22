@@ -248,6 +248,19 @@ describe('cached()', () => {
       expect(max(1, 2, v => v)).toBe(2);
       expect(stats).toMatchObject({skip: 3});
     });
+
+    it('can audit results', () => {
+      let n = 0;
+      const inc = cached(
+        (rhs: number): number => {
+          n += 1;
+          return n + rhs;
+        },
+        {audit: true},
+      );
+      expect(inc(1)).toBe(2);
+      expect(() => inc(1)).toThrow();
+    });
   });
 
   describe('for class methods', () => {
@@ -317,6 +330,20 @@ describe('cached()', () => {
       expect(p3).not.toBe(p1);
       expect(p3.offset(1, 2)).toMatchObject([31, 42]);
       expect(stats).toMatchObject({miss: 2, hit: 5});
+    });
+
+    it('can audit results', () => {
+      let n = 0;
+      class Impure {
+        @cached({audit: true})
+        inc(rhs: number): number {
+          n += 1;
+          return n + rhs;
+        }
+      }
+      const obj = new Impure();
+      expect(obj.inc(1)).toBe(2);
+      expect(() => obj.inc(1)).toThrow();
     });
   });
 });
