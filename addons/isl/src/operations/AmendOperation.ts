@@ -96,7 +96,7 @@ export class AmendOperation extends Operation {
       const description = this.message.slice(title.length);
       // TODO: we should also update `filesSample` after amending.
       // These files are visible in the commit info view during optimistic state.
-      return c && {...c, title, description};
+      return c?.merge({title, description});
     });
   }
 }

@@ -68,12 +68,7 @@ const dagWithYouAreHere = selector<Dag>({
     // Insert a virtual "You are here" as a child of ".".
     const dot = dag.resolve('.');
     if (dot != null) {
-      dag = dag.add([
-        {
-          ...YOU_ARE_HERE_VIRTUAL_COMMIT,
-          parents: [dot.hash],
-        },
-      ]);
+      dag = dag.add([YOU_ARE_HERE_VIRTUAL_COMMIT.set('parents', [dot.hash])]);
     }
     return dag;
   },
@@ -102,7 +97,7 @@ function renderCommit(info: DagCommitInfo) {
 }
 
 function renderCommitExtras(info: DagCommitInfo, row: ExtendedGraphRow) {
-  if (row.termLine != null && (info.parents.length > 0 || (info.ancestors?.length ?? 0) > 0)) {
+  if (row.termLine != null && (info.parents.length > 0 || (info.ancestors?.size ?? 0) > 0)) {
     // Root (no parents) in the displayed DAG, but not root in the full DAG.
     return <MaybeFetchingAdditionalCommitsRow hash={info.hash} />;
   } else if (info.phase === 'draft') {

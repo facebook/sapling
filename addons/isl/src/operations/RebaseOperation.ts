@@ -5,8 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Dag, WithPreviewType} from '../previews';
-import type {CommitInfo, ExactRevset, Hash, SucceedableRevset} from '../types';
+import type {DagCommitInfo} from '../dag/dagCommitInfo';
+import type {Dag} from '../previews';
+import type {ExactRevset, Hash, SucceedableRevset} from '../types';
 
 import {latestSuccessor} from '../SuccessionTracker';
 import {t} from '../i18n';
@@ -57,29 +58,25 @@ export class RebaseOperation extends Operation {
         return [];
       }
       const isRoot = info.hash === srcHash;
-      const newInfo: CommitInfo & WithPreviewType = {
-        ...info,
+      const newInfo: DagCommitInfo = info.merge({
         parents: isRoot ? [destHash] : info.parents,
         date,
         seqNumber: undefined,
         previewType: isRoot ? CommitPreview.REBASE_ROOT : CommitPreview.REBASE_DESCENDANT,
-      };
+      });
       return [newInfo];
     });
     // Rewrite REBASE_OLD commits to use fake hash so they won't conflict with
     // the rebased commits. Insert new commits with the original hash so they
     // can be interacted.
     return dag
-      .replaceWith(src, (h, c) => {
-        return (
-          c && {
-            ...c,
-            hash: rewriteHash(h),
-            parents: c.parents.map(rewriteHash),
-            previewType: CommitPreview.REBASE_OLD,
-          }
-        );
-      })
+      .replaceWith(src, (h, c) =>
+        c?.merge({
+          hash: rewriteHash(h),
+          parents: c.parents.map(rewriteHash),
+          previewType: CommitPreview.REBASE_OLD,
+        }),
+      )
       .add(newCommits);
   }
 

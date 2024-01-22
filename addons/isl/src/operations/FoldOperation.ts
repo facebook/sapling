@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Dag, WithPreviewType} from '../previews';
+import type {Dag} from '../previews';
 import type {CommitInfo} from '../types';
 
 import {CommitPreview} from '../previews';
@@ -71,8 +71,7 @@ export class FoldOperation extends Operation {
         if (h !== top && c == null) {
           return undefined;
         }
-        return {
-          ...c,
+        return c?.merge({
           date: new Date(),
           hash,
           bookmarks,
@@ -80,10 +79,13 @@ export class FoldOperation extends Operation {
           description: this.newDescription,
           previewType: isPreview ? CommitPreview.FOLD_PREVIEW : CommitPreview.FOLD,
           parents,
-        } as CommitInfo & WithPreviewType;
+        });
       })
       .replaceWith(dag.children(top), (_h, c) => {
-        return c && {...c, parents: c.parents.map(p => (p === top ? hash : p))};
+        return c?.set(
+          'parents',
+          c.parents.map(p => (p === top ? hash : p)),
+        );
       });
   }
 }

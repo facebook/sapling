@@ -42,7 +42,7 @@ export class UncommitOperation extends Operation {
       if (h === hash) {
         return undefined;
       } else {
-        return c && {...c, isHead: true};
+        return c?.set('isHead', true);
       }
     });
   }

@@ -134,7 +134,7 @@ export function latestSuccessor(ctx: Dag, oldRevset: SucceedableRevset | ExactRe
  * so that you don't suddenly act on a seemingly unrelated commit.
  */
 export function latestSuccessorUnlessExplicitlyObsolete(
-  commit: CommitInfo,
+  commit: Readonly<CommitInfo>,
 ): SucceedableRevset | ExactRevset {
   if (commit.successorInfo?.type != null) {
     return exactRevset(commit.hash);

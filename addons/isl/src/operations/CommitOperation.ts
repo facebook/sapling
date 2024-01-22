@@ -11,17 +11,11 @@ import type {
   Dag,
   UncommittedChangesPreviewContext,
 } from '../previews';
-import type {
-  ChangedFile,
-  CommandArg,
-  CommitInfo,
-  Hash,
-  RepoRelativePath,
-  UncommittedChanges,
-} from '../types';
+import type {ChangedFile, CommandArg, Hash, RepoRelativePath, UncommittedChanges} from '../types';
 import type {ImportStack} from 'shared/types/stack';
 
 import {globalRecoil} from '../AccessGlobalRecoil';
+import {DagCommitInfo} from '../dag/dagCommitInfo';
 import {t} from '../i18n';
 import {uncommittedChangesWithPreviews} from '../previews';
 import {Operation} from './Operation';
@@ -123,7 +117,7 @@ export class CommitOperation extends Operation {
     // and update bookmarks accordingly.
     const hash = `OPTIMISTIC_COMMIT_${base}`;
     const description = this.message.slice(title.length);
-    const info: CommitInfo = {
+    const info = DagCommitInfo.fromCommitInfo({
       author: baseInfo?.author ?? '',
       description,
       title,
@@ -136,11 +130,11 @@ export class CommitOperation extends Operation {
       filesSample: this.optimisticChangedFiles,
       totalFileCount: this.optimisticChangedFiles.length,
       date: new Date(),
-    };
+    });
 
     return dag.replaceWith([base, hash], (h, _c) => {
       if (h === base) {
-        return {...baseInfo, isHead: false};
+        return baseInfo?.set('isHead', false);
       } else {
         return info;
       }

@@ -26,7 +26,7 @@ import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 import serverAPI from './ClientToServerAPI';
 import messageBus from './MessageBus';
 import {latestSuccessorsMap, successionTracker} from './SuccessionTracker';
-import {Dag} from './dag/dag';
+import {Dag, DagCommitInfo} from './dag/dag';
 import {persistAtomToConfigEffect} from './persistAtomToConfigEffect';
 import {clearOnCwdChange} from './recoilUtils';
 import {initialParams} from './urlParams';
@@ -241,7 +241,9 @@ export const latestDag = selector<Dag>({
     const commits = get(latestCommits);
     const successorMap = get(latestSuccessorsMap);
     const commitDag = undefined; // will be populated from `commits`
-    const dag = Dag.fromDag(commitDag, successorMap).add(commits).forceConnectPublic();
+    const dag = Dag.fromDag(commitDag, successorMap)
+      .add(commits.map(c => DagCommitInfo.fromCommitInfo(c)))
+      .forceConnectPublic();
     return dag;
   },
 });

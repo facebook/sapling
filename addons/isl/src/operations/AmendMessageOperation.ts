@@ -32,7 +32,7 @@ export class AmendMessageOperation extends Operation {
       }
       const [title] = this.message.split(/\n+/, 1);
       const description = this.message.slice(title.length);
-      return {...c, title, description};
+      return c?.merge({title, description});
     });
   }
 }

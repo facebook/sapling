@@ -8,7 +8,7 @@
 import type {Hash} from '../../types';
 
 import App from '../../App';
-import {Dag} from '../../dag/dag';
+import {Dag, DagCommitInfo} from '../../dag/dag';
 import {RebaseOperation} from '../../operations/RebaseOperation';
 import {CommitPreview} from '../../previews';
 import {ignoreRTL} from '../../testQueries';
@@ -189,7 +189,7 @@ describe('rebase operation', () => {
   });
 
   it('handles partial rebase in optimistic dag', () => {
-    const dag = new Dag().add(TEST_COMMIT_HISTORY);
+    const dag = new Dag().add(TEST_COMMIT_HISTORY.map(c => DagCommitInfo.fromCommitInfo(c)));
 
     const type = 'succeedable-revset';
     // Rebase a-b-c-d-e to z

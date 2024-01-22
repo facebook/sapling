@@ -27,7 +27,7 @@ export class HideOperation extends Operation {
     const toHide = dag.descendants(hash);
     return dag.replaceWith(toHide, (h, c) => {
       const previewType = h === hash ? CommitPreview.HIDDEN_ROOT : CommitPreview.HIDDEN_DESCENDANT;
-      return c && {...c, previewType};
+      return c?.merge({previewType});
     });
   }
 
@@ -46,7 +46,7 @@ export class HideOperation extends Operation {
     return dag
       .remove(toHide)
       .replaceWith(newHead, (_h, c) => {
-        return c && {...c, isHead: true, previewType: CommitPreview.GOTO_DESTINATION};
+        return c?.merge({isHead: true, previewType: CommitPreview.GOTO_DESTINATION});
       })
       .cleanup(toCleanup);
   }

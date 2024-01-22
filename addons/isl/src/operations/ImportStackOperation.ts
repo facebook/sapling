@@ -5,11 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Dag, WithPreviewType} from '../previews';
-import type {CommitInfo} from '../types';
+import type {Dag} from '../previews';
 import type {Hash} from 'shared/types/common';
 import type {ExportStack, ImportCommit, ImportStack, Mark} from 'shared/types/stack';
 
+import {DagCommitInfo} from '../dag/dagCommitInfo';
 import {HashSet} from '../dag/set';
 import {t} from '../i18n';
 import {CommitPreview} from '../previews';
@@ -96,7 +96,7 @@ export class ImportStackOperation extends Operation {
     return newDag;
   }
 
-  private previewStack(dag: Dag): Array<CommitInfo & WithPreviewType> {
+  private previewStack(dag: Dag): Array<DagCommitInfo> {
     let parents = this.firstParent ? [this.firstParent] : [];
     const usedHashes = new Set<Hash>();
     return this.commits.map(commit => {
@@ -109,7 +109,7 @@ export class ImportStackOperation extends Operation {
       }
       usedHashes.add(hash);
       // Use existing CommitInfo as the "base" to build a new CommitInfo.
-      const info: CommitInfo & WithPreviewType = {
+      const info = DagCommitInfo.fromCommitInfo({
         // "Default". Might be replaced by existingInfo.
         bookmarks: [],
         remoteBookmarks: [],
@@ -128,7 +128,7 @@ export class ImportStackOperation extends Operation {
         totalFileCount: Object.keys(commit.files).length,
         closestPredecessors: commit.predecessors,
         previewType: CommitPreview.STACK_EDIT_DESCENDANT,
-      };
+      });
       parents = [info.hash];
       return info;
     });

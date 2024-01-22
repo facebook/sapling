@@ -5,11 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {DagCommitInfo} from './dag';
-
 import {t} from '../i18n';
+import {DagCommitInfo} from './dagCommitInfo';
 
-export const YOU_ARE_HERE_VIRTUAL_COMMIT: DagCommitInfo = {
+export const YOU_ARE_HERE_VIRTUAL_COMMIT: DagCommitInfo = DagCommitInfo.fromCommitInfo({
   hash: 'YOU_ARE_HERE',
   title: '',
   parents: [],
@@ -23,4 +22,4 @@ export const YOU_ARE_HERE_VIRTUAL_COMMIT: DagCommitInfo = {
   filesSample: [],
   totalFileCount: 0,
   isYouAreHere: true,
-};
+});

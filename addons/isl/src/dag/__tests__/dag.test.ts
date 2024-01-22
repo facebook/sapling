@@ -5,11 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {CommitInfo, Hash, SuccessorInfo} from '../../types';
+import type {CommitInfo, CommitPhaseType, Hash, SuccessorInfo} from '../../types';
 import type {SetLike} from '../set';
 
 import {BaseDag} from '../base_dag';
-import {Dag, REBASE_SUCC_PREFIX} from '../dag';
+import {Dag, DagCommitInfo, REBASE_SUCC_PREFIX} from '../dag';
+
+const toInfo = (info: Partial<CommitInfo>): DagCommitInfo => DagCommitInfo.fromCommitInfo(info);
+const DRAFT: CommitPhaseType = 'draft';
+const PUBLIC: CommitPhaseType = 'public';
 
 describe('Dag', () => {
   // Dummy info.
@@ -18,7 +22,7 @@ describe('Dag', () => {
     title: '',
     hash: '',
     parents: [],
-    phase: 'draft',
+    phase: DRAFT,
     isHead: false,
     author: '',
     date,
@@ -66,16 +70,20 @@ describe('Dag', () => {
 
     it('supports replaceWith()', () => {
       const dag = new Dag()
-        .add([
-          {...info, hash: 'a', parents: ['z']},
-          {...info, hash: 'b', parents: ['a']},
-          {...info, hash: 'c', parents: ['b', 'a']},
-        ])
-        .replaceWith(['c', 'd'], (h, _c) => ({
-          ...info,
-          hash: h,
-          parents: ['b'],
-        })).commitDag;
+        .add(
+          [
+            {...info, hash: 'a', parents: ['z']},
+            {...info, hash: 'b', parents: ['a']},
+            {...info, hash: 'c', parents: ['b', 'a']},
+          ].map(toInfo),
+        )
+        .replaceWith(['c', 'd'], (h, _c) =>
+          toInfo({
+            ...info,
+            hash: h,
+            parents: ['b'],
+          }),
+        ).commitDag;
       expect(dag.parentHashes('c')).toEqual(['b']);
       expect(dag.parentHashes('d')).toEqual(['b']);
       expect(dag.childHashes('a').toArray()).toEqual(['b']);
@@ -89,15 +97,17 @@ describe('Dag', () => {
      *     \   /
      *      D-E--G
      */
-    const dag = new Dag().add([
-      {...info, hash: 'a', parents: []},
-      {...info, hash: 'b', parents: ['a']},
-      {...info, hash: 'c', parents: ['b']},
-      {...info, hash: 'd', parents: ['b']},
-      {...info, hash: 'e', parents: ['d']},
-      {...info, hash: 'f', parents: ['c', 'e']},
-      {...info, hash: 'g', parents: ['e']},
-    ]);
+    const dag = new Dag().add(
+      [
+        {...info, hash: 'a', parents: []},
+        {...info, hash: 'b', parents: ['a']},
+        {...info, hash: 'c', parents: ['b']},
+        {...info, hash: 'd', parents: ['b']},
+        {...info, hash: 'e', parents: ['d']},
+        {...info, hash: 'f', parents: ['c', 'e']},
+        {...info, hash: 'g', parents: ['e']},
+      ].map(toInfo),
+    );
 
     it('parents()', () => {
       expect(dag.parents('f').toSortedArray()).toEqual(['c', 'e']);
@@ -254,14 +264,16 @@ describe('Dag', () => {
   });
 
   describe('resolve', () => {
-    const dag = new Dag().add([
-      {...info, hash: 'abc'},
-      {...info, hash: 'abd', bookmarks: ['foo', 'bar']},
-      {...info, hash: 'acc', remoteBookmarks: ['remote/foo', 'remote/main']},
-      {...info, hash: 'add', isHead: true},
-      {...info, hash: 'aee', remoteBookmarks: ['remote/bar'], bookmarks: ['baz']},
-      {...info, hash: 'aff'},
-    ]);
+    const dag = new Dag().add(
+      [
+        {...info, hash: 'abc'},
+        {...info, hash: 'abd', bookmarks: ['foo', 'bar']},
+        {...info, hash: 'acc', remoteBookmarks: ['remote/foo', 'remote/main']},
+        {...info, hash: 'add', isHead: true},
+        {...info, hash: 'aee', remoteBookmarks: ['remote/bar'], bookmarks: ['baz']},
+        {...info, hash: 'aff'},
+      ].map(toInfo),
+    );
 
     it('supports "."', () => {
       expect(dag.resolve('.')?.hash).toBe('add');
@@ -296,11 +308,13 @@ describe('Dag', () => {
     });
 
     it('considers priorities between bookmarks and hashes', () => {
-      const dag = new Dag().add([
-        {...info, hash: 'foo'},
-        {...info, hash: 'bar', bookmarks: ['foo']},
-        {...info, hash: 'baz', bookmarks: ['fo']},
-      ]);
+      const dag = new Dag().add(
+        [
+          {...info, hash: 'foo'},
+          {...info, hash: 'bar', bookmarks: ['foo']},
+          {...info, hash: 'baz', bookmarks: ['fo']},
+        ].map(toInfo),
+      );
       // full hash > bookmark
       expect(dag.resolve('foo')?.hash).toBe('foo');
       // bookmark > prefix
@@ -309,7 +323,7 @@ describe('Dag', () => {
 
     it('moves "." with edits', () => {
       const dag1 = dag.replaceWith(['add', 'abc'], (h, c) => {
-        return c && {...c, isHead: h === 'abc'};
+        return c?.set('isHead', h === 'abc');
       });
       expect(dag1.remove('abc').resolve('.')?.hash).toBe(undefined);
     });
@@ -331,13 +345,15 @@ describe('Dag', () => {
     // mutation: a-->a1-->a2-->a3
     // dag: a1  a2 b.
     const dag = new Dag()
-      .add([
-        {...info, hash: 'a', successorInfo: {hash: 'a1', type: ''}},
-        {...info, hash: 'a1'},
-        {...info, hash: 'a2', closestPredecessors: ['a1']},
-        {...info, hash: 'a3', closestPredecessors: ['a2']},
-        {...info, hash: 'b'},
-      ])
+      .add(
+        [
+          {...info, hash: 'a', successorInfo: {hash: 'a1', type: ''}},
+          {...info, hash: 'a1'},
+          {...info, hash: 'a2', closestPredecessors: ['a1']},
+          {...info, hash: 'a3', closestPredecessors: ['a2']},
+          {...info, hash: 'b'},
+        ].map(toInfo),
+      )
       .remove(['a', 'a3']);
 
     it('followSuccessors()', () => {
@@ -355,12 +371,14 @@ describe('Dag', () => {
       // mutation: a->b a->c a->d
       // dag: a  b--d--c.
       const dag = new Dag()
-        .add([
-          {...info, hash: 'a'},
-          {...info, hash: 'b', closestPredecessors: ['a']},
-          {...info, hash: 'c', closestPredecessors: ['a'], parents: ['d']},
-          {...info, hash: 'd', closestPredecessors: ['a'], parents: ['b']},
-        ])
+        .add(
+          [
+            {...info, hash: 'a'},
+            {...info, hash: 'b', closestPredecessors: ['a']},
+            {...info, hash: 'c', closestPredecessors: ['a'], parents: ['d']},
+            {...info, hash: 'd', closestPredecessors: ['a'], parents: ['b']},
+          ].map(toInfo),
+        )
         .remove(['a']);
       // not ['d'] or ['b', 'c', 'd']
       expect(dag.followSuccessors('a').toSortedArray()).toEqual(['c']);
@@ -372,11 +390,13 @@ describe('Dag', () => {
 
     it('can break linear stack', () => {
       // a--b--c   rebase -r c -d a
-      let dag = new Dag().add([
-        {...info, hash: 'a', parents: []},
-        {...info, hash: 'b', parents: ['a']},
-        {...info, hash: 'c', parents: ['b']},
-      ]);
+      let dag = new Dag().add(
+        [
+          {...info, hash: 'a', parents: []},
+          {...info, hash: 'b', parents: ['a']},
+          {...info, hash: 'c', parents: ['b']},
+        ].map(toInfo),
+      );
       dag = dag.rebase(['c'], 'a');
       expect(dag.parentHashes('c')).toEqual(['a']);
     });
@@ -385,14 +405,16 @@ describe('Dag', () => {
       // a--------b            rebase -r c+d+e+f -d b
       //  \        \           e f should not be touched.
       //   c--d     e--f
-      let dag = new Dag().add([
-        {...info, hash: 'a', parents: [], phase: 'public'},
-        {...info, hash: 'b', parents: ['a'], phase: 'public'},
-        {...info, hash: 'c', parents: ['a'], phase: 'draft'},
-        {...info, hash: 'd', parents: ['c'], phase: 'draft'},
-        {...info, hash: 'e', parents: ['b'], phase: 'draft'},
-        {...info, hash: 'f', parents: ['e'], phase: 'draft'},
-      ]);
+      let dag = new Dag().add(
+        [
+          {...info, hash: 'a', parents: [], phase: PUBLIC},
+          {...info, hash: 'b', parents: ['a'], phase: PUBLIC},
+          {...info, hash: 'c', parents: ['a'], phase: DRAFT},
+          {...info, hash: 'd', parents: ['c'], phase: DRAFT},
+          {...info, hash: 'e', parents: ['b'], phase: DRAFT},
+          {...info, hash: 'f', parents: ['e'], phase: DRAFT},
+        ].map(toInfo),
+      );
       dag = dag.rebase(['c', 'd', 'e', 'f'], 'b');
 
       // e and f should not be touched
@@ -413,11 +435,13 @@ describe('Dag', () => {
     it('handles orphaned commits', () => {
       // a--b  z; rebase -r a -d z; result:
       // a(pred)--b  z--a(succ).
-      let dag = new Dag().add([
-        {...info, hash: 'z', parents: [], phase: 'public'},
-        {...info, hash: 'a', parents: [], phase: 'draft'},
-        {...info, hash: 'b', parents: ['a'], phase: 'draft'},
-      ]);
+      let dag = new Dag().add(
+        [
+          {...info, hash: 'z', parents: [], phase: PUBLIC},
+          {...info, hash: 'a', parents: [], phase: DRAFT},
+          {...info, hash: 'b', parents: ['a'], phase: DRAFT},
+        ].map(toInfo),
+      );
       dag = dag.rebase(['a'], 'z');
 
       // check z--a(succ)
@@ -434,15 +458,17 @@ describe('Dag', () => {
     it('handles non-continous selection', () => {
       // a--b--c--d--e--f  z; rebase b+c+e+f to z; result:
       // a--b(pred)--c(pred)--d; z--b(succ)--c(succ)--e--f
-      let dag = new Dag().add([
-        {...info, hash: 'a', parents: []},
-        {...info, hash: 'b', parents: ['a']},
-        {...info, hash: 'c', parents: ['b']},
-        {...info, hash: 'd', parents: ['c']}, // not rebasing
-        {...info, hash: 'e', parents: ['d']},
-        {...info, hash: 'f', parents: ['e']},
-        {...info, hash: 'z', parents: []},
-      ]);
+      let dag = new Dag().add(
+        [
+          {...info, hash: 'a', parents: []},
+          {...info, hash: 'b', parents: ['a']},
+          {...info, hash: 'c', parents: ['b']},
+          {...info, hash: 'd', parents: ['c']}, // not rebasing
+          {...info, hash: 'e', parents: ['d']},
+          {...info, hash: 'f', parents: ['e']},
+          {...info, hash: 'z', parents: []},
+        ].map(toInfo),
+      );
       dag = dag.rebase(['b', 'c', 'e', 'f'], 'z');
 
       // check z--b(succ)--c(succ)--e--f
@@ -474,15 +500,17 @@ describe('Dag', () => {
       //   -d--e-      b is head
       // z             check: c, d, e are removed
       const successorInfo: SuccessorInfo = {hash: 'z', type: 'rewrite'};
-      let dag = new Dag().add([
-        {...info, hash: 'z', parents: [], phase: 'public'},
-        {...info, hash: 'a', parents: [], phase: 'draft'},
-        {...info, hash: 'b', parents: ['a'], phase: 'draft', date, successorInfo, isHead: true},
-        {...info, hash: 'c', parents: ['b'], phase: 'draft', date, successorInfo},
-        {...info, hash: 'd', parents: ['a'], phase: 'draft', date, successorInfo},
-        {...info, hash: 'e', parents: ['d'], phase: 'draft', date, successorInfo},
-        {...info, hash: 'f', parents: ['c', 'e'], phase: 'draft', date},
-      ]);
+      let dag = new Dag().add(
+        [
+          {...info, hash: 'z', parents: [], phase: PUBLIC},
+          {...info, hash: 'a', parents: [], phase: DRAFT},
+          {...info, hash: 'b', parents: ['a'], phase: DRAFT, date, successorInfo, isHead: true},
+          {...info, hash: 'c', parents: ['b'], phase: DRAFT, date, successorInfo},
+          {...info, hash: 'd', parents: ['a'], phase: DRAFT, date, successorInfo},
+          {...info, hash: 'e', parents: ['d'], phase: DRAFT, date, successorInfo},
+          {...info, hash: 'f', parents: ['c', 'e'], phase: DRAFT, date},
+        ].map(toInfo),
+      );
       dag = dag.rebase(['f'], 'z');
       expect(['b', 'c', 'd', 'e'].filter(h => dag.has(h))).toEqual(['b']);
     });
@@ -493,12 +521,14 @@ describe('Dag', () => {
     //             \
     //              w
     const dag = new Dag()
-      .add([
-        {...info, hash: 'z', phase: 'public', date: new Date(1)},
-        {...info, hash: 'x', phase: 'public', date: new Date(2)},
-        {...info, hash: 'y', phase: 'public', date: new Date(3)},
-        {...info, hash: 'w', phase: 'public', date: new Date(3), parents: ['z']},
-      ])
+      .add(
+        [
+          {...info, hash: 'z', phase: PUBLIC, date: new Date(1)},
+          {...info, hash: 'x', phase: PUBLIC, date: new Date(2)},
+          {...info, hash: 'y', phase: PUBLIC, date: new Date(3)},
+          {...info, hash: 'w', phase: PUBLIC, date: new Date(3), parents: ['z']},
+        ].map(toInfo),
+      )
       .forceConnectPublic();
     expect(dag.children('z').toSortedArray()).toEqual(['w', 'x']);
     expect(dag.children('x').toSortedArray()).toEqual(['y']);
@@ -511,13 +541,15 @@ describe('Dag', () => {
     // a--b--c
     //   /    \
     //  z      d
-    const dag = new Dag().add([
-      {...info, phase: 'public', hash: 'a', parents: []},
-      {...info, phase: 'public', hash: 'z', parents: []},
-      {...info, phase: 'public', hash: 'b', parents: ['a', 'z']},
-      {...info, phase: 'public', hash: 'c', parents: ['b']},
-      {...info, phase: 'draft', hash: 'd', parents: ['c']},
-    ]);
+    const dag = new Dag().add(
+      [
+        {...info, phase: PUBLIC, hash: 'a', parents: []},
+        {...info, phase: PUBLIC, hash: 'z', parents: []},
+        {...info, phase: PUBLIC, hash: 'b', parents: ['a', 'z']},
+        {...info, phase: PUBLIC, hash: 'c', parents: ['b']},
+        {...info, phase: DRAFT, hash: 'd', parents: ['c']},
+      ].map(toInfo),
+    );
 
     expect(dag.renderAscii()).toMatchInlineSnapshot(`
       "

@@ -7,7 +7,7 @@
 
 import type {CommitInfo} from '../types';
 
-import {Dag} from '../dag/dag';
+import {Dag, DagCommitInfo} from '../dag/dag';
 import {getFoldableRange} from '../fold';
 import {COMMIT} from '../testUtils';
 
@@ -22,7 +22,8 @@ describe('fold', () => {
     ];
     const [, CC, CB, CA] = COMMITS;
 
-    const makeDag = (commits: CommitInfo[]) => new Dag().add(commits);
+    const makeDag = (commits: CommitInfo[]) =>
+      new Dag().add(commits.map(c => DagCommitInfo.fromCommitInfo(c)));
     const DAG = makeDag(COMMITS);
 
     it('get correct selection', () => {
