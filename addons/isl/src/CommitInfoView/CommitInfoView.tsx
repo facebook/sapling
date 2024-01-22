@@ -213,7 +213,9 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
   const isOptimistic =
     useRecoilValue(commitByHash(commit.hash)) == null && !isCommitMode && !isFoldPreview;
 
-  const isPublic = mode === 'amend' && commit.phase === 'public';
+  const isPublic = commit.phase === 'public';
+  const isObsoleted = commit.successorInfo != null;
+  const isAmendDisabled = mode === 'amend' && (isPublic || isObsoleted);
 
   const fieldsBeingEdited = useRecoilValue(unsavedFieldsBeingEdited(hashOrHead));
 
@@ -321,7 +323,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
                 field={field}
                 content={parsedFields[field.key as keyof CommitMessageFields]}
                 autofocus={topmostEditedField === field.key}
-                readonly={isOptimistic || isPublic}
+                readonly={isOptimistic || isAmendDisabled || isObsoleted}
                 isBeingEdited={fieldsBeingEdited[field.key]}
                 startEditingField={() => startEditingField(field.key)}
                 editedField={editedFieldValue}
@@ -343,7 +345,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
             );
           })}
         <VSCodeDivider />
-        {commit.isHead && !isPublic ? (
+        {commit.isHead && !isAmendDisabled ? (
           <Section data-testid="changes-to-amend">
             <SmallCapsTitle>
               {isCommitMode ? <T>Changes to Commit</T> : <T>Changes to Amend</T>}
@@ -386,7 +388,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
           </Section>
         )}
       </div>
-      {!isPublic && (
+      {!isAmendDisabled && (
         <div className="commit-info-view-toolbar-bottom">
           {isFoldPreview ? (
             <FoldPreviewActions />

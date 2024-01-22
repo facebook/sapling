@@ -1464,23 +1464,7 @@ describe('CommitInfoView', () => {
       });
     });
 
-    describe('Public commits in amend mode', () => {
-      beforeEach(() => {
-        act(() => {
-          simulateCommits({
-            value: [
-              COMMIT('1', 'some public base', '0', {phase: 'public', isHead: true}),
-              COMMIT('a', 'My Commit', '1'),
-              COMMIT('b', 'Head Commit', 'a'),
-            ],
-          });
-        });
-      });
-
-      it('shows public label', () => {
-        expect(withinCommitInfo().getByText('Public')).toBeInTheDocument();
-      });
-
+    function expectAmendDisabled() {
       it('does not allow submitting', () => {
         expect(withinCommitInfo().queryByText('Submit')).not.toBeInTheDocument();
       });
@@ -1499,6 +1483,45 @@ describe('CommitInfoView', () => {
         expectIsNOTEditingTitle();
         expectIsNOTEditingDescription();
       });
+    }
+
+    describe('Public commits in amend mode', () => {
+      beforeEach(() => {
+        act(() => {
+          simulateCommits({
+            value: [
+              COMMIT('1', 'some public base', '0', {phase: 'public', isHead: true}),
+              COMMIT('a', 'My Commit', '1'),
+              COMMIT('b', 'Head Commit', 'a'),
+            ],
+          });
+        });
+      });
+
+      it('shows public label', () => {
+        expect(withinCommitInfo().getByText('Public')).toBeInTheDocument();
+      });
+
+      expectAmendDisabled();
+    });
+
+    describe('Obsoleted commits in amend mode', () => {
+      beforeEach(() => {
+        act(() => {
+          simulateCommits({
+            value: [
+              COMMIT('1', 'some public base', '0', {phase: 'public'}),
+              COMMIT('a', 'My Commit V1', '1', {
+                successorInfo: {hash: 'b', type: 'amend'},
+                isHead: true,
+              }),
+              COMMIT('b', 'Head Commit', '1'),
+            ],
+          });
+        });
+      });
+
+      expectAmendDisabled();
     });
   });
 });
