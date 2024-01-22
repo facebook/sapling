@@ -47,6 +47,12 @@ export function DiffInfo({commit, hideActions}: {commit: CommitInfo; hideActions
   if (repo == null || diffId == null) {
     return null;
   }
+  // Do not show diff info (and "Ship It" button) if there are successors.
+  // Users should look at the diff info and buttons from the successor commit instead.
+  // But the diff number can still be useful so show it.
+  if (commit.successorInfo != null) {
+    return <DiffNumber>{repo.formatDiffNumber(diffId)}</DiffNumber>;
+  }
   return (
     <DiffErrorBoundary provider={repo} diffId={diffId}>
       <Suspense fallback={<DiffSpinner diffId={diffId} provider={repo} />}>
@@ -120,8 +126,7 @@ function DiffInfoInner({
       )}
       <DiffComments diff={info} />
       <DiffNumber>{provider.formatDiffNumber(diffId)}</DiffNumber>
-      {hideActions === true || commit.successorInfo != null ? null : syncStatus ===
-        SyncStatus.RemoteIsNewer ? (
+      {hideActions === true ? null : syncStatus === SyncStatus.RemoteIsNewer ? (
         <DownloadNewVersionButton diffId={diffId} provider={provider} />
       ) : syncStatus === SyncStatus.LocalIsNewer ? (
         <ResubmitSyncButton commit={commit} provider={provider} />
