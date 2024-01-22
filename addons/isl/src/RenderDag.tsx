@@ -35,10 +35,22 @@ export type RenderDagProps = {
   RenderFunctionProps;
 
 type RenderFunctionProps = {
-  /** How to render a commit. */
+  /**
+   * How to render a commit.
+   *
+   * To avoid re-rendering, pass a "static" (ex. not a closure) function,
+   * then use hooks (ex. recoil selector) to trigger re-rendering inside
+   * the static function.
+   */
   renderCommit?: (info: DagCommitInfo) => JSX.Element;
 
-  /** How to render extra stuff below a commit. */
+  /**
+   * How to render extra stuff below a commit. Default: nothing.
+   *
+   * To avoid re-rendering, pass a "static" (ex. not a closure) function,
+   * then use hooks (ex. recoil selector) to trigger re-rendering inside
+   * the static function.
+   */
   renderCommitExtras?: (info: DagCommitInfo, row: ExtendedGraphRow) => null | JSX.Element;
 
   /**
@@ -46,6 +58,10 @@ type RenderFunctionProps = {
    * This should return an SVG element.
    * The SVG viewbox is (-10,-10) to (10,10) (20px * 20px).
    * Default: defaultRenderGlyphSvg, draw a circle.
+   *
+   * To avoid re-rendering, pass a "static" (ex. not a closure) function,
+   * then use hooks (ex. recoil selector) to trigger re-rendering inside
+   * the static function.
    */
   renderGlyph?: (info: DagCommitInfo) => RenderGlyphResult;
 };

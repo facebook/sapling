@@ -37,7 +37,7 @@ import {
 import {MaybeEditStackModal} from './stackEdit/ui/EditStackModal';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {ErrorShortMessages} from 'isl-server/src/constants';
-import {atom, selector, useRecoilState, useRecoilValue} from 'recoil';
+import {atom, selector, selectorFamily, useRecoilState, useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 import {notEmpty} from 'shared/utils';
 
@@ -81,34 +81,6 @@ function DagCommitList(props: DagCommitListProps) {
   const {isNarrow} = props;
 
   const dag = useRecoilValue(dagWithYouAreHere);
-
-  const renderCommit = (info: DagCommitInfo) => {
-    return (
-      <Commit
-        commit={info}
-        key={info.hash}
-        previewType={info.previewType}
-        hasChildren={dag.children(info.hash).size > 0}
-        bodyOnly={true}
-      />
-    );
-  };
-
-  const renderCommitExtras = (info: DagCommitInfo, row: ExtendedGraphRow) => {
-    if (
-      row.termLine != null &&
-      dag.parents(info.hash).size === 0 &&
-      (info.parents.length > 0 || (info.ancestors?.length ?? 0) > 0)
-    ) {
-      // Root (no parents) in the displayed DAG, but not root in the full DAG.
-      return <FetchingAdditionalCommitsRow />;
-    } else if (info.phase === 'draft' && dag.draft(dag.parents(info.hash)).size === 0) {
-      // Draft but parents are not drafts. Likely a stack root. Show stack buttons.
-      return <StackActions hash={info.hash} />;
-    }
-    return null;
-  };
-
   const subset = getRenderSubset(dag);
 
   return (
@@ -120,6 +92,74 @@ function DagCommitList(props: DagCommitListProps) {
       renderCommitExtras={renderCommitExtras}
     />
   );
+}
+
+function renderCommit(info: DagCommitInfo) {
+  return <DagCommitBody info={info} />;
+}
+
+function renderCommitExtras(info: DagCommitInfo, row: ExtendedGraphRow) {
+  if (row.termLine != null && (info.parents.length > 0 || (info.ancestors?.length ?? 0) > 0)) {
+    // Root (no parents) in the displayed DAG, but not root in the full DAG.
+    return <MaybeFetchingAdditionalCommitsRow hash={info.hash} />;
+  } else if (info.phase === 'draft') {
+    // Draft but parents are not drafts. Likely a stack root. Show stack buttons.
+    return <MaybeStackActions hash={info.hash} />;
+  }
+  return null;
+}
+
+const dagHasChildren = selectorFamily({
+  key: 'dagHasChildren',
+  get:
+    (key: string) =>
+    ({get}) => {
+      const dag = get(dagWithPreviews);
+      return dag.children(key).size > 0;
+    },
+});
+
+function DagCommitBody({info}: {info: DagCommitInfo}) {
+  const hasChildren = useRecoilValue(dagHasChildren(info.hash));
+  return (
+    <Commit
+      commit={info}
+      key={info.hash}
+      previewType={info.previewType}
+      hasChildren={hasChildren}
+      bodyOnly={true}
+    />
+  );
+}
+
+const dagHasParents = selectorFamily({
+  key: 'dagHasParents',
+  get:
+    (key: string) =>
+    ({get}) => {
+      const dag = get(dagWithPreviews);
+      return dag.parents(key).size > 0;
+    },
+});
+
+const dagIsDraftStackRoot = selectorFamily({
+  key: 'dagIsDraftStackRoot',
+  get:
+    (key: string) =>
+    ({get}) => {
+      const dag = get(dagWithPreviews);
+      return dag.draft(dag.parents(key)).size === 0;
+    },
+});
+
+function MaybeFetchingAdditionalCommitsRow({hash}: {hash: Hash}) {
+  const hasParents = useRecoilValue(dagHasParents(hash));
+  return hasParents ? null : <FetchingAdditionalCommitsRow />;
+}
+
+function MaybeStackActions({hash}: {hash: Hash}) {
+  const isDraftStackRoot = useRecoilValue(dagIsDraftStackRoot(hash));
+  return isDraftStackRoot ? <StackActions hash={hash} /> : null;
 }
 
 function getRenderSubset(dag: Dag): HashSet {
