@@ -703,6 +703,10 @@ function DraggableCommit({
           setDragDisabledMessage(t('Cannot drag to rebase with uncommitted changes.'));
           event.preventDefault();
         }
+        if (commit.successorInfo != null) {
+          setDragDisabledMessage(t('Cannot rebase obsoleted commits.'));
+          event.preventDefault();
+        }
 
         commitBeingDragged = commit;
         event.dataTransfer.dropEffect = 'none';
