@@ -90,8 +90,6 @@ pub struct MononokeTunables {
     warm_bookmark_cache_logging_sampling_pct: TunableI64,
     // Control whether the BYPASS_READONLY pushvar is restricted by an ACL
     enforce_bypass_readonly_acl: TunableBool,
-    // Boolean to batch requests sent to Land Service
-    batching_to_land_service: TunableBool,
     // Which region writes should be done to, in order to minimise latency.
     // This should align with underlying storage (SQL/Manifold) write regions.
     // Notice writes still work from any region, and this field is not necessarily
