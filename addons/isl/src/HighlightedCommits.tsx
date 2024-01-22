@@ -30,7 +30,7 @@ export function HighlightCommitsWhileHovering({
   children,
   ...rest
 }: {
-  toHighlight: Array<CommitInfo>;
+  toHighlight: Array<CommitInfo | Hash>;
   children: React.ReactNode;
 } & React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement>) {
   const setHighlighted = useSetRecoilState(highlightedCommits);
@@ -49,7 +49,13 @@ export function HighlightCommitsWhileHovering({
     <div
       {...rest}
       onMouseOver={() => {
-        setHighlighted(new Set(toHighlight.map(commit => commit.hash)));
+        setHighlighted(
+          new Set(
+            toHighlight.map(commitOrHash =>
+              typeof commitOrHash === 'string' ? commitOrHash : commitOrHash.hash,
+            ),
+          ),
+        );
         setIsSourceOfHighlight(true);
       }}
       onMouseOut={() => {
