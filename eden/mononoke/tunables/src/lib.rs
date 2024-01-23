@@ -99,9 +99,6 @@ pub struct MononokeTunables {
     // with removing it, but this tunable can be used as a quick killswitch to
     // enable them again.
     sql_lag_monitoring_blocklist: TunableVecOfStrings,
-    // If set, the wireproto implementation will only log the repo write ACL
-    // check result.
-    log_only_wireproto_write_acl: TunableBool,
     // If set the `draft` ACL action will be checked and logged on draft access
     // Unless `enforce_draft_acl` is set `read` action will still be used for
     // granting access.
