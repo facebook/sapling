@@ -6,7 +6,7 @@
  */
 
 import type {ConfigName} from './types';
-import type {WritableAtom} from 'jotai';
+import type {WritableAtom, Atom} from 'jotai';
 import type {Json} from 'shared/typeUtils';
 
 import serverAPI from './ClientToServerAPI';
@@ -14,10 +14,31 @@ import {atom, getDefaultStore} from 'jotai';
 
 const store = getDefaultStore();
 
+/** Define a read-write atom backed by a config. */
 export function configBackedAtom<T extends Json>(
   name: ConfigName,
   defaultValue: T,
-): WritableAtom<T, [T], void> {
+  readonly?: false,
+): WritableAtom<T, [T], void>;
+
+/**
+ * Define a read-only atom backed by a config.
+ *
+ * This can be useful for staged rollout features
+ * where the config is not supposed to be set by the user.
+ * (user config will override the staged rollout config)
+ */
+export function configBackedAtom<T extends Json>(
+  name: ConfigName,
+  defaultValue: T,
+  readonly: true,
+): Atom<T>;
+
+export function configBackedAtom<T extends Json>(
+  name: ConfigName,
+  defaultValue: T,
+  readonly = false,
+): WritableAtom<T, [T], void> | Atom<T> {
   // https://jotai.org/docs/guides/persistence
   const primitiveAtom = atom<T>(defaultValue);
 
@@ -36,19 +57,21 @@ export function configBackedAtom<T extends Json>(
     });
   });
 
-  return atom<T, [T], void>(
-    get => get(primitiveAtom),
-    (_get, set, newValue) => {
-      set(primitiveAtom, newValue);
-      const strValue = JSON.stringify(newValue);
-      if (strValue !== lastStrValue) {
-        lastStrValue = strValue;
-        serverAPI.postMessage({
-          type: 'setConfig',
-          name,
-          value: strValue,
-        });
-      }
-    },
-  );
+  return readonly
+    ? atom<T>(get => get(primitiveAtom))
+    : atom<T, [T], void>(
+        get => get(primitiveAtom),
+        (_get, set, newValue) => {
+          set(primitiveAtom, newValue);
+          const strValue = JSON.stringify(newValue);
+          if (strValue !== lastStrValue) {
+            lastStrValue = strValue;
+            serverAPI.postMessage({
+              type: 'setConfig',
+              name,
+              value: strValue,
+            });
+          }
+        },
+      );
 }

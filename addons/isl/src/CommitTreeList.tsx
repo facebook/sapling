@@ -24,8 +24,8 @@ import {Tooltip, DOCUMENTATION_DELAY} from './Tooltip';
 import {pageVisibility} from './codeReview/CodeReviewInfo';
 import {YOU_ARE_HERE_VIRTUAL_COMMIT} from './dag/virtualCommit';
 import {T, t} from './i18n';
+import {configBackedAtom} from './jotaiUtils';
 import {CreateEmptyInitialCommitOperation} from './operations/CreateEmptyInitialCommitOperation';
-import {persistAtomToConfigEffect} from './persistAtomToConfigEffect';
 import {dagWithPreviews, treeWithPreviews, useMarkOperationsCompleted} from './previews';
 import {isNarrowCommitTree} from './responsive';
 import {useArrowKeysToChangeSelection, useBackspaceToHideSelected} from './selection';
@@ -39,7 +39,8 @@ import {
 import {MaybeEditStackModal} from './stackEdit/ui/EditStackModal';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {ErrorShortMessages} from 'isl-server/src/constants';
-import {atom, selector, selectorFamily, useRecoilState, useRecoilValue} from 'recoil';
+import {useAtomValue} from 'jotai';
+import {selector, selectorFamily, useRecoilState, useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 import {notEmpty} from 'shared/utils';
 
@@ -51,11 +52,11 @@ enum GraphRendererConfig {
   Both = 2,
 }
 
-const configGraphRenderer = atom<GraphRendererConfig>({
-  key: 'configGraphRenderer',
-  default: 0,
-  effects: [persistAtomToConfigEffect('isl.experimental-graph-renderer')],
-});
+const configGraphRenderer = configBackedAtom<GraphRendererConfig>(
+  'isl.experimental-graph-renderer',
+  GraphRendererConfig.Tree,
+  true,
+);
 
 type DagCommitListProps = {
   isNarrow: boolean;
@@ -194,7 +195,7 @@ export function CommitTreeList() {
   // Or should we queue/cache messages?
   useRecoilState(latestUncommittedChangesData);
   useRecoilState(pageVisibility);
-  const renderer = useRecoilValue(configGraphRenderer);
+  const renderer = useAtomValue(configGraphRenderer);
 
   useMarkOperationsCompleted();
 
