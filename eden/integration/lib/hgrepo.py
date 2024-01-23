@@ -189,6 +189,7 @@ class HgRepository(repobase.Repository):
         hgeditor: Optional[str] = None,
         cwd: Optional[str] = None,
         check: bool = True,
+        env: Optional[Dict[str, str]] = None,
     ) -> str:
         if "--debug" in args:
             stderr = subprocess.STDOUT
@@ -202,6 +203,7 @@ class HgRepository(repobase.Repository):
             cwd=cwd,
             check=check,
             stderr=stderr,
+            env=env,
         )
         return typing.cast(
             str, completed_process.stdout.decode(encoding, errors="replace")

@@ -156,6 +156,18 @@ python_unittest(
 )
 
 python_unittest(
+    name = "filteredhg_clone",
+    srcs = ["filteredhg_clone_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
     name = "fold",
     srcs = ["fold_test.py"],
     env = artifacts["env"],

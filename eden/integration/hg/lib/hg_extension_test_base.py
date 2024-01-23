@@ -14,11 +14,14 @@ import re
 import sys
 import textwrap
 import typing
+from pathlib import Path
 from textwrap import dedent
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Type, Union
 
 import eden.config
 from eden.integration.lib import hgrepo, testcase
+
+from eden.integration.lib.find_executables import FindExe
 
 
 def get_default_hgrc() -> configparser.ConfigParser:
@@ -79,6 +82,7 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
     enable_windows_symlinks: bool = False
     inode_catalog_type: Optional[str] = None
     backing_store_type: Optional[str] = None
+    adtl_repos: List[Tuple[hgrepo.HgRepository, Optional[hgrepo.HgRepository]]] = []
 
     def setup_eden_test(self) -> None:
         super().setup_eden_test()
@@ -169,6 +173,59 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
             hgeditor=hgeditor,
             check=check,
         )
+
+    def hg_clone_additional_repo(
+        self,
+        *clone_args: str,
+        client_name: str = "repository",
+    ) -> Tuple[hgrepo.HgRepository, Optional[hgrepo.HgRepository]]:
+        """Creates another Hg Repository using `hg clone`. This excercises a
+        different code path than setup_eden_test(). This function returns two
+        HgRepository objects. The first corresponds to the new Eden mount. The
+        second corresponds to the backing repo (backed by a new eager repo)."""
+        num_repos = len(self.adtl_repos)
+        eager = str(Path(self.repos_dir) / f"eager_{num_repos}")
+        mount = str(Path(self.mounts_dir) / f"{client_name}")
+        backing = str(Path(self.repos_dir) / f"{client_name}_{num_repos}")
+
+        # TODO: We rely on `hg clone` to create the eager and backing repos for
+        # us. We could theoretically provide our own to test more cases.
+        cmd, env = FindExe.get_edenfsctl_env()
+        self.repo.hg(
+            "clone",
+            f"eager:{eager}",
+            f"{mount}",
+            "--eden",
+            "--config",
+            "clone.use-rust=true",
+            "--eden-backing-repo",
+            f"{backing}",
+            "--config",
+            f"edenfs.command={cmd}",
+            "--config",
+            f"edenfs.basepath={self.eden._base_dir}",
+            *clone_args,
+            cwd=self.mounts_dir,
+            env=env,
+        )
+
+        # The "--edensparse" option indicates that a FilteredFS repo was cloned
+        is_filtered = clone_args.count("--edensparse") > 0
+
+        # Create the HgRepository objects for the new mount and backing repo
+        mount = hgrepo.HgRepository(
+            str(mount),
+            system_hgrc=self.system_hgrc,
+            filtered=is_filtered,
+        )
+        backing = hgrepo.HgRepository(
+            backing,
+            system_hgrc=self.system_hgrc,
+            temp_mgr=self.temp_mgr,
+            filtered=is_filtered,
+        )
+        self.adtl_repos.append((mount, backing))
+        return mount, backing
 
     def create_editor_that_writes_commit_messages(self, messages: List[str]) -> str:
         """
