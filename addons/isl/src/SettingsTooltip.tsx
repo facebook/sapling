@@ -33,6 +33,7 @@ import {
   VSCodeLink,
   VSCodeOption,
 } from '@vscode/webview-ui-toolkit/react';
+import {useAtom} from 'jotai';
 import {useRecoilState, useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
@@ -287,7 +288,7 @@ function ZoomUISetting() {
 }
 
 function DebugToolsField() {
-  const [isDebug, setIsDebug] = useRecoilState(debugToolsEnabledState);
+  const [isDebug, setIsDebug] = useAtom(debugToolsEnabledState);
 
   return (
     <DropdownField title={t('Debug Tools')}>
