@@ -20,7 +20,7 @@ export function configBackedAtom<T extends Json>(
   name: ConfigName,
   defaultValue: T,
   readonly?: false,
-): WritableAtom<T, [T], void>;
+): WritableAtom<T, [T | ((prev: T) => T)], void>;
 
 /**
  * Define a read-only atom backed by a config.
@@ -39,7 +39,7 @@ export function configBackedAtom<T extends Json>(
   name: ConfigName,
   defaultValue: T,
   readonly = false,
-): WritableAtom<T, [T], void> | Atom<T> {
+): WritableAtom<T, [T | ((prev: T) => T)], void> | Atom<T> {
   // https://jotai.org/docs/guides/persistence
   const primitiveAtom = atom<T>(defaultValue);
 
@@ -60,9 +60,10 @@ export function configBackedAtom<T extends Json>(
 
   return readonly
     ? atom<T>(get => get(primitiveAtom))
-    : atom<T, [T], void>(
+    : atom<T, [T | ((prev: T) => T)], void>(
         get => get(primitiveAtom),
-        (_get, set, newValue) => {
+        (get, set, update) => {
+          const newValue = typeof update === 'function' ? update(get(primitiveAtom)) : update;
           set(primitiveAtom, newValue);
           const strValue = JSON.stringify(newValue);
           if (strValue !== lastStrValue) {
@@ -86,12 +87,13 @@ export function configBackedAtom<T extends Json>(
 export function localStorageBackedAtom<T extends Json>(
   name: LocalStorageName,
   defaultValue: T,
-): WritableAtom<T, [T], void> {
+): WritableAtom<T, [T | ((prev: T) => T)], void> {
   const primitiveAtom = atom<T>(platform.getTemporaryState<T>(name) ?? defaultValue);
 
-  return atom<T, [T], void>(
+  return atom<T, [T | ((prev: T) => T)], void>(
     get => get(primitiveAtom),
-    (_get, set, newValue) => {
+    (get, set, update) => {
+      const newValue = typeof update === 'function' ? update(get(primitiveAtom)) : update;
       set(primitiveAtom, newValue);
       platform.setTemporaryState(name, newValue);
     },
