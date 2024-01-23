@@ -11,12 +11,13 @@ import {Internal} from './Internal';
 import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
 import {VSCodeButtonDropdown} from './VSCodeButtonDropdown';
 import {t, T} from './i18n';
+import {configBackedAtom} from './jotaiUtils';
 import {PullOperation} from './operations/PullOperation';
-import {persistAtomToConfigEffect} from './persistAtomToConfigEffect';
 import {uncommittedChangesWithPreviews, useMostRecentPendingOperation} from './previews';
 import {useRunOperation} from './serverAPIState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
-import {atom, useRecoilState, useRecoilValue} from 'recoil';
+import {useAtom} from 'jotai';
+import {useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 
 import './PullButton.css';
@@ -29,11 +30,10 @@ const DEFAULT_PULL_BUTTON = {
   tooltip: t('Fetch latest repository and branch information from remote.'),
   allowWithUncommittedChanges: true,
 };
-const pullButtonChoiceKey = atom<string>({
-  key: 'pullButtonChoiceKey',
-  default: DEFAULT_PULL_BUTTON.id,
-  effects: [persistAtomToConfigEffect('isl.pull-button-choice')],
-});
+const pullButtonChoiceKey = configBackedAtom<string>(
+  'isl.pull-button-choice',
+  DEFAULT_PULL_BUTTON.id,
+);
 
 export type PullButtonOption = {
   id: string;
@@ -50,7 +50,7 @@ export function PullButton() {
   const pullButtonOptions: Array<PullButtonOption> = [];
   pullButtonOptions.push(DEFAULT_PULL_BUTTON, ...(Internal.additionalPullOptions ?? []));
 
-  const [dropdownChoiceKey, setDropdownChoiceKey] = useRecoilState(pullButtonChoiceKey);
+  const [dropdownChoiceKey, setDropdownChoiceKey] = useAtom(pullButtonChoiceKey);
   const currentChoice =
     pullButtonOptions.find(option => option.id === dropdownChoiceKey) ?? pullButtonOptions[0];
 
