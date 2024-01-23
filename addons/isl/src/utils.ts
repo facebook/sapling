@@ -42,7 +42,7 @@ export function islPlatformName(): string {
 }
 
 export function getWindowWidthInPixels(): number {
-  if (process.env.NODE_ENV === 'test') {
+  if (isTest) {
     return 1000;
   }
   // Use client width and not screen width to handle embedding as an iframe.
@@ -53,3 +53,6 @@ export function leftPad(val: string | number, len: number, char: string) {
   const str = val.toString();
   return `${Array(len - str.length + 1).join(char)}${str}`;
 }
+
+/** Whether running in a test environment. */
+export const isTest = typeof process !== 'undefined' && process.env.NODE_ENV === 'test';
