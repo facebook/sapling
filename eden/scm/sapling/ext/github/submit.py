@@ -9,7 +9,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, List, Optional, Tuple
 
-from sapling import error, git, hintutil
+from sapling import error, formatter, git, hintutil, templatekw
+from sapling.context import changectx
 from sapling.i18n import _
 from sapling.node import hex, nullid
 from sapling.result import Result
@@ -24,6 +25,7 @@ from .pull_request_body import create_pull_request_title_and_body, firstline
 from .pullrequest import PullRequestId
 from .pullrequeststore import PullRequestStore
 from .run_git_command import run_git_command
+from .templates import _GITHUB_PULL_REQUEST_URL_REVCACHE_KEY
 
 
 def submit(ui, repo, *args, **opts) -> int:
@@ -310,6 +312,36 @@ class SerialStrategyParams:
     repository: Optional[Repository]
 
 
+def get_pr_branch_name(
+    ui, ctx: changectx, upstream_repository: Repository, pull_request_number: int
+) -> str:
+    template = ui.config(
+        "github",
+        "pr.branch-name-template",
+        "pr{github_pull_request_number}",
+    )
+    tmpl = formatter.maketemplater(ui, template)
+
+    props = templatekw.keywords.copy()
+    props["templ"] = tmpl
+    props["ctx"] = ctx
+    props["repo"] = ctx.repo()
+    props["cache"] = {}
+    # In order to support {github_pull_request_number} etc., we need to inject
+    # artificial pull-request info, since the repo doesn't yet have a real link
+    # between the commit and the PR.
+    props["revcache"] = {
+        _GITHUB_PULL_REQUEST_URL_REVCACHE_KEY: PullRequestId(
+            hostname=upstream_repository.hostname,
+            owner=upstream_repository.owner,
+            name=upstream_repository.name,
+            number=pull_request_number,
+        )
+    }
+    branch_name = tmpl.render(props)
+    return branch_name
+
+
 async def create_serial_strategy_params(
     ui,
     partitions: List[List[CommitData]],
@@ -360,8 +392,12 @@ async def create_serial_strategy_params(
                     next_pull_request_number = result.unwrap()
             else:
                 next_pull_request_number += 1
-            # Consider including username in branch_name?
-            branch_name = f"pr{next_pull_request_number}"
+            branch_name = get_pr_branch_name(
+                ui=ui,
+                ctx=top.ctx,
+                upstream_repository=repository,
+                pull_request_number=next_pull_request_number,
+            )
             refs_to_update.append(f"{hex(top.node)}:refs/heads/{branch_name}")
             top.head_branch_name = branch_name
             pull_requests_to_create.append((top, branch_name))
@@ -495,9 +531,13 @@ async def create_placeholder_strategy_params(
         for commit_needs_pr, number in zip(
             commits_that_need_pull_requests, issue_numbers
         ):
-            # Consider including username in branch_name?
-            branch_name = f"pr{number}"
             commit = commit_needs_pr.commit
+            branch_name = get_pr_branch_name(
+                ui=ui,
+                ctx=commit.ctx,
+                upstream_repository=repository,
+                pull_request_number=number,
+            )
             commit.head_branch_name = branch_name
             refs_to_update.append(f"{hex(commit.node)}:refs/heads/{branch_name}")
             params = PullRequestParams(
