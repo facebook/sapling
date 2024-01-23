@@ -111,6 +111,29 @@ export function onAtomUpdate<T>(subscribeAtom: MutAtom<T>, onSet: (value: T) => 
   onSet(store.get(subscribeAtom));
 }
 
+/**
+ * Wraps an atom with an "onChange" callback.
+ * Changing the returned atom will trigger the callback.
+ * Calling this function will trigger `onChange` with the current value.
+ */
+export function atomWithOnChange<T>(
+  originalAtom: MutAtom<T>,
+  onChange: (value: T) => void,
+): MutAtom<T> {
+  onChange(readAtom(originalAtom));
+  return atom(
+    get => get(originalAtom),
+    (get, set, args) => {
+      const oldValue = get(originalAtom);
+      set(originalAtom, args);
+      const newValue = get(originalAtom);
+      if (oldValue !== newValue) {
+        onChange(newValue);
+      }
+    },
+  );
+}
+
 export function readAtom<T>(atom: Atom<T>): T {
   return store.get(atom);
 }
