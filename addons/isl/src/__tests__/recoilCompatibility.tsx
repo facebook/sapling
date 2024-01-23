@@ -7,22 +7,30 @@
 
 import {render} from '@testing-library/react';
 import {List} from 'immutable';
-import {RecoilRoot, atom, useRecoilValue} from 'recoil';
+import {atom, useAtomValue} from 'jotai';
+import {RecoilRoot, atom as recoilAtom, useRecoilValue} from 'recoil';
 import {SelfUpdate} from 'shared/immutableExt';
 
 class Foo extends SelfUpdate<List<number>> {}
 
-const testFooAtom = atom<Foo>({
+const testFooRecoilAtom = recoilAtom<Foo>({
   key: 'testFooAtom',
   default: new Foo(List()),
 });
 
+const testFooAtom = atom<Foo>(new Foo(List()));
+
 describe('recoil compatibility', () => {
   it('does not freeze SelfUpdate types', () => {
     function MyTestComponent() {
-      const foo = useRecoilValue(testFooAtom);
+      const foo = useRecoilValue(testFooRecoilAtom);
       expect(Object.isSealed(foo)).toBe(false);
       expect(Object.isFrozen(foo)).toBe(false);
+
+      const foo2 = useAtomValue(testFooAtom);
+      expect(Object.isSealed(foo2)).toBe(false);
+      expect(Object.isFrozen(foo2)).toBe(false);
+
       return null;
     }
     render(
