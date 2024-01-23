@@ -15,18 +15,18 @@ import {Tooltip} from './Tooltip';
 import {VSCodeCheckbox} from './VSCodeCheckbox';
 import {findCurrentPublicBase} from './getCommitTree';
 import {t, T} from './i18n';
+import {configBackedAtom} from './jotaiUtils';
 import {GotoOperation} from './operations/GotoOperation';
 import {GraftOperation} from './operations/GraftOperation';
 import {PullRevOperation} from './operations/PullRevOperation';
 import {RebaseKeepOperation} from './operations/RebaseKeepOperation';
 import {RebaseOperation} from './operations/RebaseOperation';
-import {persistAtomToConfigEffect} from './persistAtomToConfigEffect';
 import {dagWithPreviews} from './previews';
 import {forceFetchCommit, useRunOperation} from './serverAPIState';
 import {succeedableRevset, exactRevset} from './types';
 import {VSCodeButton, VSCodeDivider, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
+import {useAtom} from 'jotai';
 import {useEffect, useRef, useState} from 'react';
-import {atom, useRecoilState} from 'recoil';
 import {Icon} from 'shared/Icon';
 import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
 import {unwrap} from 'shared/utils';
@@ -55,22 +55,15 @@ export function DownloadCommitsTooltipButton() {
   );
 }
 
-const downloadCommitRebaseType = atom<'rebase_base' | 'rebase_ontop' | null>({
-  key: 'downloadCommitRebaseType',
-  default: null,
-  effects: [
-    persistAtomToConfigEffect<'rebase_base' | 'rebase_ontop' | null>(
-      'isl.download-commit-rebase-type',
-      null,
-    ),
-  ],
-});
+const downloadCommitRebaseType = configBackedAtom<'rebase_base' | 'rebase_ontop' | null>(
+  'isl.download-commit-rebase-type',
+  null,
+);
 
-const downloadCommitShouldGoto = atom({
-  key: 'downloadCommitShouldGoto',
-  default: false,
-  effects: [persistAtomToConfigEffect('isl.download-commit-should-goto', false as boolean)],
-});
+const downloadCommitShouldGoto = configBackedAtom<boolean>(
+  'isl.download-commit-should-goto',
+  false,
+);
 
 function DownloadCommitsTooltip({dismiss}: {dismiss: () => unknown}) {
   const [enteredDiffNum, setEnteredDiffNum] = useState('');
@@ -83,8 +76,8 @@ function DownloadCommitsTooltip({dismiss}: {dismiss: () => unknown}) {
     }
   }, [downloadDiffTextArea]);
 
-  const [rebaseType, setRebaseType] = useRecoilState(downloadCommitRebaseType);
-  const [shouldGoto, setShouldGoto] = useRecoilState(downloadCommitShouldGoto);
+  const [rebaseType, setRebaseType] = useAtom(downloadCommitRebaseType);
+  const [shouldGoto, setShouldGoto] = useAtom(downloadCommitShouldGoto);
 
   const doCommitDownload = async () => {
     // We need to dismiss the tooltip now, since we don't want to leave it up until after the operations are run.
