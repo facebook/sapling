@@ -32,6 +32,7 @@ import {applicationinfo, repositoryInfo} from './serverAPIState';
 import {themeState} from './theme';
 import {ModalContainer} from './useModal';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
+import {useAtomValue} from 'jotai';
 import React from 'react';
 import {RecoilRoot, useRecoilValue, useSetRecoilState} from 'recoil';
 import {ContextMenus} from 'shared/ContextMenu';
@@ -74,7 +75,7 @@ function ResetStyle() {
 
 function ISLRoot({children}: {children: ReactNode}) {
   const theme = useRecoilValue(themeState);
-  useRecoilValue(zoomUISettingAtom);
+  useAtomValue(zoomUISettingAtom);
   return (
     <div
       className={`isl-root ${theme}-theme`}

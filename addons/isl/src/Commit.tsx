@@ -56,6 +56,7 @@ import {useShowToast} from './toast';
 import {succeedableRevset} from './types';
 import {short} from './utils';
 import {VSCodeButton, VSCodeTag} from '@vscode/webview-ui-toolkit/react';
+import {useAtomValue} from 'jotai';
 import React, {memo, useEffect, useState} from 'react';
 import {useRecoilCallback, useRecoilValue, useSetRecoilState} from 'recoil';
 import {ComparisonType} from 'shared/Comparison';
@@ -133,7 +134,7 @@ export const Commit = memo(
     const {isSelected, onClickToSelect, overrideSelection} = useCommitSelection(commit.hash);
     const actionsPrevented = previewPreventsActions(previewType);
 
-    const isNarrow = useRecoilValue(isNarrowCommitTree);
+    const isNarrow = useAtomValue(isNarrowCommitTree);
 
     const title = useRecoilValue(latestCommitMessageTitle(commit.hash));
 

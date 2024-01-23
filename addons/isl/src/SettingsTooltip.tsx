@@ -209,7 +209,7 @@ function ConfirmSubmitStackSetting() {
 }
 
 function RenderCompactSetting() {
-  const [value, setValue] = useRecoilState(renderCompactAtom);
+  const [value, setValue] = useAtom(renderCompactAtom);
   return (
     <Tooltip
       title={t(
@@ -228,7 +228,7 @@ function RenderCompactSetting() {
 }
 
 function ZoomUISetting() {
-  const [zoom, setZoom] = useRecoilState(zoomUISettingAtom);
+  const [zoom, setZoom] = useAtom(zoomUISettingAtom);
   function roundToPercent(n: number): number {
     return Math.round(n * 100) / 100;
   }
@@ -239,7 +239,7 @@ function ZoomUISetting() {
           className="zoom-out"
           appearance="icon"
           onClick={() => {
-            setZoom(zoom => roundToPercent(zoom - 0.1));
+            setZoom(roundToPercent(zoom - 0.1));
           }}>
           <Icon icon="zoom-out" />
         </VSCodeButton>
@@ -250,7 +250,7 @@ function ZoomUISetting() {
           className="zoom-in"
           appearance="icon"
           onClick={() => {
-            setZoom(zoom => roundToPercent(zoom + 0.1));
+            setZoom(roundToPercent(zoom + 0.1));
           }}>
           <Icon icon="zoom-in" />
         </VSCodeButton>

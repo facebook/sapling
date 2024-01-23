@@ -202,7 +202,7 @@ export function CommitTreeList() {
   useArrowKeysToChangeSelection();
   useBackspaceToHideSelected();
 
-  const isNarrow = useRecoilValue(isNarrowCommitTree);
+  const isNarrow = useAtomValue(isNarrowCommitTree);
 
   const {trees} = useRecoilValue(treeWithPreviews);
   const fetchError = useRecoilValue(commitFetchError);

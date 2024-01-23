@@ -5,11 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ConfigName} from './types';
+import type {ConfigName, LocalStorageName} from './types';
 import type {WritableAtom, Atom} from 'jotai';
 import type {Json} from 'shared/typeUtils';
 
 import serverAPI from './ClientToServerAPI';
+import platform from './platform';
 import {atom, getDefaultStore} from 'jotai';
 
 const store = getDefaultStore();
@@ -74,4 +75,36 @@ export function configBackedAtom<T extends Json>(
           }
         },
       );
+}
+
+/**
+ * Loads this atom from a local persistent cache (usually browser local storage),
+ * and persists any changes back to it.
+ * Useful for some customizations that don't warrant a user-visible sl config,
+ * for example UI expansion state.
+ */
+export function localStorageBackedAtom<T extends Json>(
+  name: LocalStorageName,
+  defaultValue: T,
+): WritableAtom<T, [T], void> {
+  const primitiveAtom = atom<T>(platform.getTemporaryState<T>(name) ?? defaultValue);
+
+  return atom<T, [T], void>(
+    get => get(primitiveAtom),
+    (_get, set, newValue) => {
+      set(primitiveAtom, newValue);
+      platform.setTemporaryState(name, newValue);
+    },
+  );
+}
+
+/** Perform extra operations when the atom value is changed. */
+export function onAtomUpdate<T>(
+  subscribeAtom: WritableAtom<T, [T], void>,
+  onSet: (value: T) => void,
+) {
+  store.sub(subscribeAtom, () => {
+    onSet(store.get(subscribeAtom));
+  });
+  onSet(store.get(subscribeAtom));
 }
