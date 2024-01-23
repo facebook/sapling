@@ -26,14 +26,16 @@ import {tracker} from './analytics';
 import {islDrawerState} from './drawerState';
 import {GettingStartedModal} from './gettingStarted/GettingStartedModal';
 import {I18nSupport, t, T} from './i18n';
+import {setJotaiStore} from './jotaiUtils';
 import platform from './platform';
 import {DEFAULT_RESET_CSS} from './resetStyle';
 import {useMainContentWidth, zoomUISettingAtom} from './responsive';
 import {applicationinfo, repositoryInfo} from './serverAPIState';
 import {themeState} from './theme';
 import {ModalContainer} from './useModal';
+import {isTest} from './utils';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
-import {useAtomValue, useSetAtom} from 'jotai';
+import {Provider, useAtomValue, useSetAtom, useStore} from 'jotai';
 import React from 'react';
 import {RecoilRoot, useRecoilValue} from 'recoil';
 import {ContextMenus} from 'shared/ContextMenu';
@@ -49,23 +51,47 @@ export default function App() {
       <I18nSupport>
         <RecoilRoot>
           <AccessGlobalRecoil />
-          <ISLRoot>
-            <ISLCommandContext>
-              <ErrorBoundary>
-                <ISLDrawers />
-                <TooltipRootContainer />
-                <GettingStartedModal />
-                <ComparisonViewModal />
-                <ModalContainer />
-                <ContextMenus />
-                <TopLevelToast />
-              </ErrorBoundary>
-            </ISLCommandContext>
-          </ISLRoot>
+          <MaybeWithJotaiRoot>
+            <ISLRoot>
+              <ISLCommandContext>
+                <ErrorBoundary>
+                  <ISLDrawers />
+                  <TooltipRootContainer />
+                  <GettingStartedModal />
+                  <ComparisonViewModal />
+                  <ModalContainer />
+                  <ContextMenus />
+                  <TopLevelToast />
+                </ErrorBoundary>
+              </ISLCommandContext>
+            </ISLRoot>
+          </MaybeWithJotaiRoot>
         </RecoilRoot>
       </I18nSupport>
     </React.StrictMode>
   );
+}
+
+function MaybeWithJotaiRoot({children}: {children: JSX.Element}) {
+  if (isTest) {
+    // Use a new store when re-mounting so each test (that calls `render(<App />)`)
+    // starts with a clean state.
+    return (
+      <Provider>
+        <AccessJotaiRoot />
+        {children}
+      </Provider>
+    );
+  } else {
+    // Such scoped Provider or store complexity is not needed outside tests.
+    return children;
+  }
+}
+
+function AccessJotaiRoot() {
+  const store = useStore();
+  setJotaiStore(store);
+  return null;
 }
 
 function ResetStyle() {

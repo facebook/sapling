@@ -22,7 +22,15 @@ export type MutAtom<T> = WritableAtom<T, [T | ((prev: T) => T)], void>;
  * - use `writeAtom` instead of `store.set`.
  * - use `atomWithOnChange` instead of `store.sub`.
  */
-const store = getDefaultStore();
+let store = getDefaultStore();
+
+/**
+ * Replace the current Jotai store used by this module.
+ * Practically, this is only useful for tests to reset states.
+ */
+export function setJotaiStore(newStore: typeof store) {
+  store = newStore;
+}
 
 /** Define a read-write atom backed by a config. */
 export function configBackedAtom<T extends Json>(
