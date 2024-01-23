@@ -474,7 +474,11 @@ async fn normal_pushrebase<'a>(
     cross_repo_push_source: CrossRepoPushSource,
 ) -> Result<(ChangesetId, Vec<pushrebase::PushrebaseChangesetPair>), BundleResolverError> {
     let bookmark_restriction = BookmarkKindRestrictions::OnlyPublishing;
-    let remote_mode = if tunables().force_local_pushrebase().unwrap_or_default() {
+    let remote_mode = if let Ok(true) = justknobs::eval(
+        "scm/mononoke:mononoke_force_local_pushrebase",
+        None,
+        Some(repo.repo_identity().name()),
+    ) {
         PushrebaseRemoteMode::Local
     } else {
         repo.repo_config().pushrebase.remote_mode.clone()
