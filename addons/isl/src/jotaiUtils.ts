@@ -16,6 +16,12 @@ import {atom, getDefaultStore} from 'jotai';
 /** A mutable atom that stores type `T`. */
 export type MutAtom<T> = WritableAtom<T, [T | ((prev: T) => T)], void>;
 
+/**
+ * The store being used. Do not use this directly. Alternatives are:
+ * - use `readAtom` instead of `store.get`.
+ * - use `writeAtom` instead of `store.set`.
+ * - use `atomWithOnChange` instead of `store.sub`.
+ */
 const store = getDefaultStore();
 
 /** Define a read-write atom backed by a config. */
@@ -52,7 +58,7 @@ export function configBackedAtom<T extends Json>(
       return;
     }
     lastStrValue = event.value;
-    store.set(primitiveAtom, event.value === undefined ? defaultValue : JSON.parse(event.value));
+    writeAtom(primitiveAtom, event.value === undefined ? defaultValue : JSON.parse(event.value));
   });
   serverAPI.onConnectOrReconnect(() => {
     serverAPI.postMessage({
