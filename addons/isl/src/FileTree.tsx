@@ -11,7 +11,7 @@ import type {UseUncommittedSelection} from './partialSelection';
 import type {PathTree} from './pathTree';
 import type {Comparison} from 'shared/Comparison';
 
-import {File} from './UncommittedChanges';
+import {File} from './ChangedFile';
 import {buildPathTree} from './pathTree';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useMemo, useState} from 'react';
