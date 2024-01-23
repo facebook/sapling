@@ -5,10 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {AccessGlobalRecoil} from '../AccessGlobalRecoil';
+import {entangledAtom} from '../recoilUtils';
 import {render} from '@testing-library/react';
 import {List} from 'immutable';
-import {atom, useAtomValue} from 'jotai';
-import {RecoilRoot, atom as recoilAtom, useRecoilValue} from 'recoil';
+import {atom, useAtom, useAtomValue} from 'jotai';
+import {useRef, useState, useEffect} from 'react';
+import {RecoilRoot, atom as recoilAtom, useRecoilState, useRecoilValue} from 'recoil';
 import {SelfUpdate} from 'shared/immutableExt';
 
 class Foo extends SelfUpdate<List<number>> {}
@@ -38,5 +41,69 @@ describe('recoil compatibility', () => {
         <MyTestComponent />
       </RecoilRoot>,
     );
+  });
+});
+
+describe('entangledAtom', () => {
+  const jotaiAtom = atom<string>('default');
+  const recoilAtom = entangledAtom(jotaiAtom, 'testEntangledAtom');
+
+  type TestProps = {
+    update?: string;
+    postUpdate?: () => void;
+    readValue?: (value: string) => void;
+  };
+
+  function useTestHook(props: TestProps, [value, setValue]: [string, (value: string) => void]) {
+    const updated = useRef(false);
+    const {update, readValue, postUpdate} = props;
+    useEffect(() => {
+      if (update && !updated.current) {
+        setValue(update);
+        postUpdate?.();
+        updated.current = true;
+      }
+    }, [update, setValue, postUpdate, updated]);
+    if (readValue) {
+      readValue(value);
+    }
+  }
+
+  function Jotai(props: TestProps) {
+    useTestHook(props, useAtom(jotaiAtom));
+    return null;
+  }
+
+  function Recoil(props: TestProps) {
+    useTestHook(props, useRecoilState(recoilAtom));
+    return null;
+  }
+
+  [Recoil, Jotai].forEach(From => {
+    [Recoil, Jotai].forEach(To => {
+      it(`updates from ${From.name} to ${To.name}`, () => {
+        const message = `${From.name}-to-${To.name}`;
+        let readMessage: string | undefined = undefined;
+
+        // The TestApp first uses `From` (could be either Jotai or Recoil)
+        // to set the value. Once the value is set (updated === true),
+        // renders `To` to read the value into `readMessage`.
+        function TestApp() {
+          const [updated, setUpdated] = useState(false);
+          const handleReadValue = (v: string) => (readMessage = v);
+          return (
+            <RecoilRoot>
+              <AccessGlobalRecoil />
+              <From postUpdate={() => setUpdated(true)} update={message} />
+              {updated && <To readValue={handleReadValue} />}
+            </RecoilRoot>
+          );
+        }
+
+        render(<TestApp />);
+
+        expect(readMessage).toBe(message);
+      });
+    });
   });
 });
