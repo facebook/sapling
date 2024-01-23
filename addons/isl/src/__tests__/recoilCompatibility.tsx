@@ -6,7 +6,7 @@
  */
 
 import {AccessGlobalRecoil} from '../AccessGlobalRecoil';
-import {entangledAtom} from '../recoilUtils';
+import {entangledAtoms} from '../recoilUtils';
 import {render} from '@testing-library/react';
 import {List} from 'immutable';
 import {atom, useAtom, useAtomValue} from 'jotai';
@@ -44,9 +44,9 @@ describe('recoil compatibility', () => {
   });
 });
 
-describe('entangledAtom', () => {
-  const jotaiAtom = atom<string>('default');
-  const recoilAtom = entangledAtom(jotaiAtom, 'testEntangledAtom');
+describe('entangledAtoms', () => {
+  const originalAtom = atom<string>('default');
+  const [jotaiAtom, recoilAtom] = entangledAtoms(originalAtom, 'testEntangledAtom');
 
   type TestProps = {
     update?: string;

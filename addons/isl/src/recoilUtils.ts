@@ -5,12 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {MutAtom} from './jotaiUtils';
 import type {PrimitiveAtom} from 'jotai';
 import type {AtomEffect, RecoilState} from 'recoil';
 
 import {globalRecoil} from './AccessGlobalRecoil';
 import serverAPI from './ClientToServerAPI';
-import {onAtomUpdate, readAtom, writeAtom} from './jotaiUtils';
+import {atomWithOnChange, readAtom, writeAtom} from './jotaiUtils';
 import {atom as RecoilAtom} from 'recoil';
 
 /**
@@ -21,35 +22,38 @@ export function clearOnCwdChange<T>(): AtomEffect<T> {
 }
 
 /**
- * Creates a Recoil atom that is "entangled" with the Jotai atom.
+ * Creates a pair of Jotai and Recoil atoms that is "entangled".
  * Changing one atom automatically updates the other.
+ *
+ * The "source of truth" is the "originalAtom". Note the "originalAtom"
+ * should not be updated without going through the returned Jotai atom.
  */
-export function entangledAtom<T>(
-  jotaiAtom: PrimitiveAtom<T>,
+export function entangledAtoms<T>(
+  originalAtom: PrimitiveAtom<T>,
   key: string,
   recoilEffects?: AtomEffect<T>[],
-): RecoilState<T> {
-  const initialValue = readAtom(jotaiAtom);
+): [MutAtom<T>, RecoilState<T>] {
+  const initialValue = readAtom(originalAtom);
 
   let recoilValue = initialValue;
   let jotaiValue = initialValue;
 
-  jotaiAtom.debugLabel = key;
-  onAtomUpdate(jotaiAtom, () => {
-    const value = (jotaiValue = readAtom(jotaiAtom));
+  const jotaiAtom = atomWithOnChange(originalAtom, value => {
     if (recoilValue !== value) {
       // Recoil value is outdated.
+      recoilValue = value;
       globalRecoil().set(recoilAtom, value);
     }
   });
+  jotaiAtom.debugLabel = key;
 
   const effects = recoilEffects ?? [];
   effects.push(({onSet}) => {
     onSet(newValue => {
       if (jotaiValue !== newValue) {
         // Jotai value is outdated.
-        recoilValue = newValue;
-        writeAtom(jotaiAtom, newValue);
+        jotaiValue = newValue;
+        writeAtom(originalAtom, newValue);
       }
     });
   });
@@ -60,5 +64,5 @@ export function entangledAtom<T>(
     effects,
   });
 
-  return recoilAtom;
+  return [jotaiAtom, recoilAtom];
 }
