@@ -208,7 +208,7 @@ function FileActions({
           onClick={() => {
             platform.openDiff?.(file.path, comparison);
           }}>
-          <Icon icon="git-pull-request-go-to-changes" />
+          <Icon icon="request-changes" />
         </VSCodeButton>
       </Tooltip>,
     );
