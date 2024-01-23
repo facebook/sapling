@@ -14,6 +14,7 @@ import {CommitInfoSidebar} from './CommitInfoView/CommitInfoView';
 import {CommitTreeList} from './CommitTreeList';
 import {ComparisonViewModal} from './ComparisonView/ComparisonViewModal';
 import {CwdSelections} from './CwdSelector';
+import {Drawers} from './Drawers';
 import {EmptyState} from './EmptyState';
 import {ErrorBoundary, ErrorNotice} from './ErrorNotice';
 import {ISLCommandContext, useCommand} from './ISLShortcuts';
@@ -36,7 +37,6 @@ import {useAtomValue} from 'jotai';
 import React from 'react';
 import {RecoilRoot, useRecoilValue, useSetRecoilState} from 'recoil';
 import {ContextMenus} from 'shared/ContextMenu';
-import {Drawers} from 'shared/Drawers';
 import {Icon} from 'shared/Icon';
 import {useThrottledEffect} from 'shared/hooks';
 
@@ -107,7 +107,6 @@ function ISLDrawers() {
 
   return (
     <Drawers
-      drawerState={islDrawerState}
       rightLabel={
         <>
           <Icon icon="edit" />

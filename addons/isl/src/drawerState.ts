@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {AllDrawersState, DrawerState} from 'shared/Drawers';
+import type {AllDrawersState, DrawerState} from './Drawers';
 
 import {persistAtomToLocalStorageEffect} from './persistAtomToConfigEffect';
 import {getWindowWidthInPixels} from './utils';
