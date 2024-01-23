@@ -30,21 +30,25 @@ export function simulateMessageFromServer(message: ServerToClientMessage): void 
   testMessageBus.simulateMessage(serializeToString(message));
 }
 
+/** Filter out binary messages, and filter by wanted type. */
+function filterMessages(wantedType?: string) {
+  let messages = testMessageBus.sent
+    .filter((msg: unknown): msg is string => !(msg instanceof ArrayBuffer))
+    .map(deserializeFromString) as Array<Partial<ClientToServerMessage>>;
+  if (wantedType != null) {
+    messages = messages.filter(msg => msg.type == null || msg.type === wantedType);
+  }
+  return messages;
+}
+
 export function expectMessageSentToServer(
   message: Partial<ClientToServerMessage | ClientToServerMessageWithPayload>,
 ): void {
-  expect(
-    testMessageBus.sent
-      .filter((msg: unknown): msg is string => !(msg instanceof ArrayBuffer))
-      .map(deserializeFromString),
-  ).toContainEqual(message);
+  expect(filterMessages(message.type)).toContainEqual(message);
 }
+
 export function expectMessageNOTSentToServer(message: Partial<ClientToServerMessage>): void {
-  expect(
-    testMessageBus.sent
-      .filter((msg: unknown): msg is string => !(msg instanceof ArrayBuffer))
-      .map(deserializeFromString),
-  ).not.toContainEqual(message);
+  expect(filterMessages(message.type)).not.toContainEqual(message);
 }
 
 /**
