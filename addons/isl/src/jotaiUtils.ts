@@ -13,6 +13,9 @@ import serverAPI from './ClientToServerAPI';
 import platform from './platform';
 import {atom, getDefaultStore} from 'jotai';
 
+/** A mutable atom that stores type `T`. */
+export type MutAtom<T> = WritableAtom<T, [T | ((prev: T) => T)], void>;
+
 const store = getDefaultStore();
 
 /** Define a read-write atom backed by a config. */
@@ -20,7 +23,7 @@ export function configBackedAtom<T extends Json>(
   name: ConfigName,
   defaultValue: T,
   readonly?: false,
-): WritableAtom<T, [T | ((prev: T) => T)], void>;
+): MutAtom<T>;
 
 /**
  * Define a read-only atom backed by a config.
@@ -39,7 +42,7 @@ export function configBackedAtom<T extends Json>(
   name: ConfigName,
   defaultValue: T,
   readonly = false,
-): WritableAtom<T, [T | ((prev: T) => T)], void> | Atom<T> {
+): MutAtom<T> | Atom<T> {
   // https://jotai.org/docs/guides/persistence
   const primitiveAtom = atom<T>(defaultValue);
 
@@ -87,10 +90,10 @@ export function configBackedAtom<T extends Json>(
 export function localStorageBackedAtom<T extends Json>(
   name: LocalStorageName,
   defaultValue: T,
-): WritableAtom<T, [T | ((prev: T) => T)], void> {
+): MutAtom<T> {
   const primitiveAtom = atom<T>(platform.getTemporaryState<T>(name) ?? defaultValue);
 
-  return atom<T, [T | ((prev: T) => T)], void>(
+  return atom(
     get => get(primitiveAtom),
     (get, set, update) => {
       const newValue = typeof update === 'function' ? update(get(primitiveAtom)) : update;
@@ -101,10 +104,7 @@ export function localStorageBackedAtom<T extends Json>(
 }
 
 /** Perform extra operations when the atom value is changed. */
-export function onAtomUpdate<T>(
-  subscribeAtom: WritableAtom<T, [T | ((prev: T) => T)], void>,
-  onSet: (value: T) => void,
-) {
+export function onAtomUpdate<T>(subscribeAtom: MutAtom<T>, onSet: (value: T) => void) {
   store.sub(subscribeAtom, () => {
     onSet(store.get(subscribeAtom));
   });
@@ -115,9 +115,6 @@ export function readAtom<T>(atom: Atom<T>): T {
   return store.get(atom);
 }
 
-export function writeAtom<T>(
-  atom: WritableAtom<T, [T | ((prev: T) => T)], void>,
-  value: T | ((prev: T) => T),
-) {
+export function writeAtom<T>(atom: MutAtom<T>, value: T | ((prev: T) => T)) {
   store.set(atom, value);
 }
