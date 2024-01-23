@@ -79,6 +79,7 @@ import {
   VSCodeRadio,
   VSCodeRadioGroup,
 } from '@vscode/webview-ui-toolkit/react';
+import {useAtomValue} from 'jotai';
 import {useEffect} from 'react';
 import {useRecoilCallback, useRecoilState, useRecoilValue} from 'recoil';
 import {ComparisonType} from 'shared/Comparison';
@@ -113,7 +114,7 @@ export function CommitInfoSidebar() {
 export function MultiCommitInfo({selectedCommits}: {selectedCommits: Array<CommitInfo>}) {
   const provider = useRecoilValue(codeReviewProvider);
   const diffSummaries = useRecoilValue(allDiffSummaries);
-  const shouldSubmitAsDraft = useRecoilValue(submitAsDraft);
+  const shouldSubmitAsDraft = useAtomValue(submitAsDraft);
   const commitsWithDiffs = selectedCommits.filter(commit => commit.diffId != null);
   const [updateMessage, setUpdateMessage] = useRecoilState(
     // Combine hashes to key the typed update message.
@@ -561,7 +562,7 @@ function ActionsBar({
   const provider = useRecoilValue(codeReviewProvider);
   const [repoInfo, setRepoInfo] = useRecoilState(repositoryInfo);
   const diffSummaries = useRecoilValue(allDiffSummaries);
-  const shouldSubmitAsDraft = useRecoilValue(submitAsDraft);
+  const shouldSubmitAsDraft = useAtomValue(submitAsDraft);
   const schema = useRecoilValue(commitMessageFieldsSchema);
   const headCommit = useRecoilValue(latestHeadCommit);
 

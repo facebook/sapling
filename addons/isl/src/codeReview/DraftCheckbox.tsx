@@ -9,16 +9,13 @@ import type {CommitInfo} from '../types';
 
 import {Tooltip} from '../Tooltip';
 import {t, T} from '../i18n';
-import {persistAtomToConfigEffect} from '../persistAtomToConfigEffect';
+import {configBackedAtom} from '../jotaiUtils';
 import {codeReviewProvider} from './CodeReviewInfo';
 import {VSCodeCheckbox} from '@vscode/webview-ui-toolkit/react';
-import {atom, useRecoilState, useRecoilValue} from 'recoil';
+import {useAtom} from 'jotai';
+import {useRecoilValue} from 'recoil';
 
-export const submitAsDraft = atom<boolean>({
-  key: 'submitAsDraft',
-  default: false,
-  effects: [persistAtomToConfigEffect('isl.submitAsDraft')],
-});
+export const submitAsDraft = configBackedAtom<boolean>('isl.submitAsDraft', false);
 
 export function SubmitAsDraftCheckbox({
   commitsToBeSubmit,
@@ -26,7 +23,7 @@ export function SubmitAsDraftCheckbox({
 }:
   | {commitsToBeSubmit: Array<CommitInfo>; forceShow?: undefined}
   | {forceShow: true; commitsToBeSubmit?: undefined}) {
-  const [isDraft, setIsDraft] = useRecoilState(submitAsDraft);
+  const [isDraft, setIsDraft] = useAtom(submitAsDraft);
   const provider = useRecoilValue(codeReviewProvider);
   if (
     !forceShow &&

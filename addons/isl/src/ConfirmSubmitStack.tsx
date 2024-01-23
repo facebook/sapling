@@ -62,7 +62,7 @@ export function useShowConfirmSubmitStack() {
 
   return useRecoilCallback(({snapshot}) => async (mode: SubmitType, stack: Array<CommitInfo>) => {
     if (!shouldShowSubmitStackConfirmation(snapshot)) {
-      const draft = snapshot.getLoadable(submitAsDraft).valueMaybe();
+      const draft = readAtom(submitAsDraft);
       return {submitAsDraft: draft ?? false};
     }
 
@@ -96,7 +96,7 @@ function ConfirmModalContent({
   const [showSubmitConfirmation, setShowSubmitConfirmation] = useAtom(
     confirmShouldSubmitEnabledAtom,
   );
-  const shouldSubmitAsDraft = useRecoilValue(submitAsDraft);
+  const shouldSubmitAsDraft = useAtomValue(submitAsDraft);
   const [updateMessage, setUpdateMessage] = useState('');
   const commitsWithDiffs = stack.filter(commit => commit.diffId != null);
 
