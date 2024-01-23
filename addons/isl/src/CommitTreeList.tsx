@@ -170,7 +170,7 @@ function MaybeStackActions({hash}: {hash: Hash}) {
 }
 
 function HighlightedGlyph({info}: {info: DagCommitInfo}) {
-  const highlighted = useRecoilValue(isHighlightedCommit(info.hash));
+  const highlighted = useAtomValue(isHighlightedCommit(info.hash));
 
   const hilightCircle = highlighted ? (
     <circle cx={0} cy={0} r={8} fill="transparent" stroke="var(--focus-border)" strokeWidth={4} />

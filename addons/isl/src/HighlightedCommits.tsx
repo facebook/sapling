@@ -7,23 +7,15 @@
 
 import type {CommitInfo, Hash} from './types';
 
+import {atom, useSetAtom} from 'jotai';
+import {atomFamily} from 'jotai/utils';
 import {useEffect, useState} from 'react';
-import {atom, selectorFamily, useSetRecoilState} from 'recoil';
 
-export const highlightedCommits = atom<Set<Hash>>({
-  key: 'highlightedCommits',
-  default: new Set(),
-});
+export const highlightedCommits = atom<Set<Hash>>(new Set<Hash>());
 
-export const isHighlightedCommit = selectorFamily({
-  key: 'isHighlightedCommit',
-  get:
-    (key: string) =>
-    ({get}) => {
-      const highlighted = get(highlightedCommits);
-      return highlighted.has(key);
-    },
-});
+export const isHighlightedCommit = atomFamily((hash: Hash) =>
+  atom(get => get(highlightedCommits).has(hash)),
+);
 
 export function HighlightCommitsWhileHovering({
   toHighlight,
@@ -33,7 +25,7 @@ export function HighlightCommitsWhileHovering({
   toHighlight: Array<CommitInfo | Hash>;
   children: React.ReactNode;
 } & React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement>) {
-  const setHighlighted = useSetRecoilState(highlightedCommits);
+  const setHighlighted = useSetAtom(highlightedCommits);
   const [isSourceOfHighlight, setIsSourceOfHighlight] = useState(false);
 
   useEffect(() => {

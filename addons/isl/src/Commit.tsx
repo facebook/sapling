@@ -128,7 +128,7 @@ export const Commit = memo(
     const runOperation = useRunOperation();
     const setEditStackIntentionHashes = useSetRecoilState(editingStackIntentionHashes);
 
-    const isHighlighted = useRecoilValue(isHighlightedCommit(bodyOnly ? '' : commit.hash));
+    const isHighlighted = useAtomValue(isHighlightedCommit(bodyOnly ? '' : commit.hash));
 
     const inlineProgress = useRecoilValue(inlineProgressByHash(commit.hash));
 
