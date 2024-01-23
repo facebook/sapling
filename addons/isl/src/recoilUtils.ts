@@ -10,7 +10,7 @@ import type {AtomEffect, RecoilState} from 'recoil';
 
 import {globalRecoil} from './AccessGlobalRecoil';
 import serverAPI from './ClientToServerAPI';
-import {getDefaultStore as globalJotai} from 'jotai';
+import {onAtomUpdate, readAtom, writeAtom} from './jotaiUtils';
 import {atom as RecoilAtom} from 'recoil';
 
 /**
@@ -19,8 +19,6 @@ import {atom as RecoilAtom} from 'recoil';
 export function clearOnCwdChange<T>(): AtomEffect<T> {
   return ({resetSelf}) => serverAPI.onCwdChanged(resetSelf);
 }
-
-const jotaiStore = globalJotai();
 
 /**
  * Creates a Recoil atom that is "entangled" with the Jotai atom.
@@ -31,14 +29,14 @@ export function entangledAtom<T>(
   key: string,
   recoilEffects?: AtomEffect<T>[],
 ): RecoilState<T> {
-  const initialValue = jotaiStore.get(jotaiAtom);
+  const initialValue = readAtom(jotaiAtom);
 
   let recoilValue = initialValue;
   let jotaiValue = initialValue;
 
   jotaiAtom.debugLabel = key;
-  jotaiStore.sub(jotaiAtom, () => {
-    const value = (jotaiValue = jotaiStore.get(jotaiAtom));
+  onAtomUpdate(jotaiAtom, () => {
+    const value = (jotaiValue = readAtom(jotaiAtom));
     if (recoilValue !== value) {
       // Recoil value is outdated.
       globalRecoil().set(recoilAtom, value);
@@ -51,7 +49,7 @@ export function entangledAtom<T>(
       if (jotaiValue !== newValue) {
         // Jotai value is outdated.
         recoilValue = newValue;
-        jotaiStore.set(jotaiAtom, newValue);
+        writeAtom(jotaiAtom, newValue);
       }
     });
   });

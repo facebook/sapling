@@ -6,8 +6,14 @@
  */
 
 import {useCommand} from './ISLShortcuts';
-import {configBackedAtom, localStorageBackedAtom, onAtomUpdate} from './jotaiUtils';
-import {atom, getDefaultStore, useSetAtom} from 'jotai';
+import {
+  configBackedAtom,
+  localStorageBackedAtom,
+  onAtomUpdate,
+  readAtom,
+  writeAtom,
+} from './jotaiUtils';
+import {atom, useSetAtom} from 'jotai';
 import {useRef, useEffect} from 'react';
 
 export const mainContentWidthState = atom(500);
@@ -20,16 +26,14 @@ onAtomUpdate(zoomUISettingAtom, newValue => {
   document.body?.style.setProperty('--zoom', `${newValue}`);
 });
 
-const store = getDefaultStore();
-
 export function useZoomShortcut() {
   useCommand('ZoomIn', () => {
-    const old = store.get(zoomUISettingAtom);
-    store.set(zoomUISettingAtom, Math.round((old + 0.1) * 100) / 100);
+    const old = readAtom(zoomUISettingAtom);
+    writeAtom(zoomUISettingAtom, Math.round((old + 0.1) * 100) / 100);
   });
   useCommand('ZoomOut', () => {
-    const old = store.get(zoomUISettingAtom);
-    store.set(zoomUISettingAtom, Math.round((old - 0.1) * 100) / 100);
+    const old = readAtom(zoomUISettingAtom);
+    writeAtom(zoomUISettingAtom, Math.round((old - 0.1) * 100) / 100);
   });
 }
 
