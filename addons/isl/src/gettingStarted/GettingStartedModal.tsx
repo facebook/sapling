@@ -7,21 +7,20 @@
 
 import {useCommand} from '../ISLShortcuts';
 import {Modal} from '../Modal';
-import {persistAtomToLocalStorageEffect} from '../persistAtomToConfigEffect';
+import {localStorageBackedAtom} from '../jotaiUtils';
 import platform from '../platform';
 import {useModal} from '../useModal';
+import {useAtom} from 'jotai';
 import {Suspense, useEffect, useState} from 'react';
-import {atom, useRecoilState} from 'recoil';
 import {Icon} from 'shared/Icon';
 
-export const hasShownGettingStarted = atom<boolean | null>({
-  key: 'hasShownGettingStarted',
-  default: null,
-  effects: [persistAtomToLocalStorageEffect<boolean | null>('isl.has-shown-getting-started')],
-});
+export const hasShownGettingStarted = localStorageBackedAtom<boolean | null>(
+  'isl.has-shown-getting-started',
+  null,
+);
 
 export function GettingStartedModal() {
-  const [hasShownAlready, setHasShown] = useRecoilState(hasShownGettingStarted);
+  const [hasShownAlready, setHasShown] = useAtom(hasShownGettingStarted);
   const [isShowingStable, setIsShowingStable] = useState(false);
 
   useEffect(() => {

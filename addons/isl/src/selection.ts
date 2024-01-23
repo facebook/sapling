@@ -13,6 +13,7 @@ import {useCommand} from './ISLShortcuts';
 import {useSelectAllCommitsShortcut} from './SelectAllCommits';
 import {latestSuccessorUnlessExplicitlyObsolete, successionTracker} from './SuccessionTracker';
 import {islDrawerState} from './drawerState';
+import {writeAtom} from './jotaiUtils';
 import {HideOperation} from './operations/HideOperation';
 import {dagWithPreviews} from './previews';
 import {latestDag, operationBeingPreviewed} from './serverAPIState';
@@ -189,7 +190,7 @@ export const linearizedCommitHistory = selector({
 export function useArrowKeysToChangeSelection() {
   const cb = useRecoilCallback(({snapshot, set}) => (which: ISLCommandName) => {
     if (which === 'OpenDetails') {
-      set(islDrawerState, previous => ({
+      writeAtom(islDrawerState, previous => ({
         ...previous,
         right: {
           ...previous.right,

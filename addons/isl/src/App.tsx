@@ -33,9 +33,9 @@ import {applicationinfo, repositoryInfo} from './serverAPIState';
 import {themeState} from './theme';
 import {ModalContainer} from './useModal';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
-import {useAtomValue} from 'jotai';
+import {useAtomValue, useSetAtom} from 'jotai';
 import React from 'react';
-import {RecoilRoot, useRecoilValue, useSetRecoilState} from 'recoil';
+import {RecoilRoot, useRecoilValue} from 'recoil';
 import {ContextMenus} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
 import {useThrottledEffect} from 'shared/hooks';
@@ -97,7 +97,7 @@ function handleDragAndDrop(e: React.DragEvent<HTMLDivElement>) {
 }
 
 function ISLDrawers() {
-  const setDrawerState = useSetRecoilState(islDrawerState);
+  const setDrawerState = useSetAtom(islDrawerState);
   useCommand('ToggleSidebar', () => {
     setDrawerState(state => ({
       ...state,

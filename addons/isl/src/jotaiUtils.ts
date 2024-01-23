@@ -102,11 +102,22 @@ export function localStorageBackedAtom<T extends Json>(
 
 /** Perform extra operations when the atom value is changed. */
 export function onAtomUpdate<T>(
-  subscribeAtom: WritableAtom<T, [T], void>,
+  subscribeAtom: WritableAtom<T, [T | ((prev: T) => T)], void>,
   onSet: (value: T) => void,
 ) {
   store.sub(subscribeAtom, () => {
     onSet(store.get(subscribeAtom));
   });
   onSet(store.get(subscribeAtom));
+}
+
+export function readAtom<T>(atom: Atom<T>): T {
+  return store.get(atom);
+}
+
+export function writeAtom<T>(
+  atom: WritableAtom<T, [T | ((prev: T) => T)], void>,
+  value: T | ((prev: T) => T),
+) {
+  store.set(atom, value);
 }

@@ -7,9 +7,9 @@
 
 import {Tooltip} from './Tooltip';
 import {t, T} from './i18n';
-import {persistAtomToLocalStorageEffect} from './persistAtomToConfigEffect';
+import {localStorageBackedAtom} from './jotaiUtils';
 import {VSCodeDropdown, VSCodeOption} from '@vscode/webview-ui-toolkit/react';
-import {atom, useRecoilState} from 'recoil';
+import {useAtom} from 'jotai';
 
 export enum AmendRestackBehavior {
   ALWAYS = 'always',
@@ -23,14 +23,13 @@ const DEFAULT_AMEND_RESTACK_BEHAVIOR = AmendRestackBehavior.ALWAYS;
  * and this one setting controls this behavior everywhere.
  * We merely give the setting a UI since it's common to customize.
  */
-export const restackBehaviorAtom = atom<AmendRestackBehavior>({
-  key: 'restackBehaviorAtom',
-  default: DEFAULT_AMEND_RESTACK_BEHAVIOR,
-  effects: [persistAtomToLocalStorageEffect<AmendRestackBehavior>('isl.amend-autorestack')],
-});
+export const restackBehaviorAtom = localStorageBackedAtom<AmendRestackBehavior>(
+  'isl.amend-autorestack',
+  DEFAULT_AMEND_RESTACK_BEHAVIOR,
+);
 
 export function RestackBehaviorSetting() {
-  const [value, setValue] = useRecoilState(restackBehaviorAtom);
+  const [value, setValue] = useAtom(restackBehaviorAtom);
   return (
     <Tooltip
       title={t(

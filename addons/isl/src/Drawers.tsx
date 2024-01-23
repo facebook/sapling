@@ -9,8 +9,8 @@ import type {ComponentClass} from 'react';
 import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 
 import {islDrawerState} from './drawerState';
+import {useAtom} from 'jotai';
 import {createElement, useCallback, useRef} from 'react';
-import {useRecoilState} from 'recoil';
 import {debounce} from 'shared/debounce';
 
 import './Drawers.css';
@@ -97,7 +97,7 @@ export function Drawer({
   const isVertical = side === 'top' || side === 'bottom';
   const dragHandleElement = useRef<HTMLDivElement>(null);
 
-  const [drawerState, setDrawerState] = useRecoilState(islDrawerState);
+  const [drawerState, setDrawerState] = useAtom(islDrawerState);
   const state = drawerState[side];
   const isExpanded = !state.collapsed;
 

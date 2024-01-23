@@ -12,6 +12,7 @@ import {Kbd} from './Kbd';
 import {Tooltip} from './Tooltip';
 import {islDrawerState} from './drawerState';
 import {t, T} from './i18n';
+import {writeAtom} from './jotaiUtils';
 import {linearizedCommitHistory, selectedCommits} from './selection';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useRecoilCallback} from 'recoil';
@@ -40,7 +41,7 @@ export function useSelectAllCommits() {
     const draftCommits = getAllDraftCommits(snapshot);
     set(selectedCommits, new Set(draftCommits));
     // pop open sidebar so you can act on the bulk selection
-    set(islDrawerState, last => ({
+    writeAtom(islDrawerState, last => ({
       ...last,
       right: {
         ...last.right,

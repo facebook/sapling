@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {AmendRestackBehavior} from '../RestackBehavior';
 import type {PartialSelection} from '../partialSelection';
 import type {
   ApplyUncommittedChangesPreviewsFuncType,
@@ -14,9 +15,9 @@ import type {
 import type {CommandArg, Hash, RepoRelativePath, UncommittedChanges} from '../types';
 import type {ImportAmendCommit, ImportStack} from 'shared/types/stack';
 
-import {globalRecoil} from '../AccessGlobalRecoil';
-import {AmendRestackBehavior, restackBehaviorAtom} from '../RestackBehavior';
+import {restackBehaviorAtom} from '../RestackBehavior';
 import {t} from '../i18n';
+import {readAtom} from '../jotaiUtils';
 import {Operation} from './Operation';
 
 export class AmendOperation extends Operation {
@@ -27,8 +28,7 @@ export class AmendOperation extends Operation {
   constructor(private filePathsToAmend?: Array<RepoRelativePath>, private message?: string) {
     super('AmendOperation');
 
-    this.restackBehavior =
-      globalRecoil().getLoadable(restackBehaviorAtom).valueMaybe() ?? AmendRestackBehavior.ALWAYS;
+    this.restackBehavior = readAtom(restackBehaviorAtom);
   }
 
   restackBehavior: AmendRestackBehavior;

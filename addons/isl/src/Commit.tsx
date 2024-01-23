@@ -32,6 +32,7 @@ import {islDrawerState} from './drawerState';
 import {FoldButton, useRunFoldPreview} from './fold';
 import {t, T} from './i18n';
 import {IconStack} from './icons/IconStack';
+import {writeAtom} from './jotaiUtils';
 import {getAmendToOperation, isAmendToAllowedForCommit} from './operationUtils';
 import {GotoOperation} from './operations/GotoOperation';
 import {HideOperation} from './operations/HideOperation';
@@ -151,7 +152,7 @@ export const Commit = memo(
             overrideSelection([commit.hash]);
           }
           // Show the drawer.
-          set(islDrawerState, state => ({
+          writeAtom(islDrawerState, state => ({
             ...state,
             right: {
               ...state.right,

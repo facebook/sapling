@@ -39,6 +39,7 @@ import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
 import {latestCommitMessageFields} from './codeReview/CodeReviewInfo';
 import {islDrawerState} from './drawerState';
 import {T, t} from './i18n';
+import {writeAtom} from './jotaiUtils';
 import {AbortMergeOperation} from './operations/AbortMergeOperation';
 import {AddRemoveOperation} from './operations/AddRemoveOperation';
 import {getAmendOperation} from './operations/AmendOperation';
@@ -419,7 +420,7 @@ export function UncommittedChanges({place}: {place: Place}) {
     ({set, reset, snapshot}) =>
       (which: 'commit' | 'amend') => {
         // make sure view is expanded
-        set(islDrawerState, val => ({...val, right: {...val.right, collapsed: false}}));
+        writeAtom(islDrawerState, val => ({...val, right: {...val.right, collapsed: false}}));
 
         // show head commit & set to correct mode
         reset(selectedCommits);
