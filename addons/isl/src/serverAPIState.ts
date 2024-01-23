@@ -27,7 +27,7 @@ import serverAPI from './ClientToServerAPI';
 import messageBus from './MessageBus';
 import {latestSuccessorsMap, successionTracker} from './SuccessionTracker';
 import {Dag, DagCommitInfo} from './dag/dag';
-import {persistAtomToConfigEffect} from './persistAtomToConfigEffect';
+import {configBackedAtom} from './jotaiUtils';
 import {clearOnCwdChange} from './recoilUtils';
 import {initialParams} from './urlParams';
 import {short} from './utils';
@@ -261,11 +261,11 @@ export const mostRecentSubscriptionIds: Record<SubscriptionKind, string> = {
   mergeConflicts: '',
 };
 
-export const hasExperimentalFeatures = atom<boolean | null>({
-  key: 'hasExperimentalFeatures',
-  default: null,
-  effects: [persistAtomToConfigEffect<boolean | null>('isl.experimental-features', false)],
-});
+export const hasExperimentalFeatures = configBackedAtom<boolean | null>(
+  'isl.experimental-features',
+  false,
+  true /* read-only */,
+);
 
 /**
  * Send a subscribeFoo message to the server on initialization,
