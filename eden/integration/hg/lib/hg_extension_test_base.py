@@ -209,8 +209,8 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
             env=env,
         )
 
-        # The "--edensparse" option indicates that a FilteredFS repo was cloned
-        is_filtered = clone_args.count("--edensparse") > 0
+        # The use-eden-sparse config means that a FilteredFS repo was cloned
+        is_filtered = clone_args.count("clone.use-eden-sparse=true") > 0
 
         # Create the HgRepository objects for the new mount and backing repo
         mount = hgrepo.HgRepository(

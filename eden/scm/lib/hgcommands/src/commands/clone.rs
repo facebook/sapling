@@ -81,7 +81,7 @@ define_flags! {
         /// files to exclude in a sparse profile (DEPRECATED)
         exclude: String,
 
-        /// use EdenFs (EXPERIMENTAL)
+        /// use EdenFS (EXPERIMENTAL)
         eden: bool,
 
         /// location of the backing repo to be used or created (EXPERIMENTAL)
@@ -299,7 +299,11 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &mut ConfigSet) -> Result<u8> {
     ));
 
     let clone_type_str = if ctx.opts.eden {
-        "eden_fs"
+        if config.get_or_default::<bool>("clone", "use-eden-sparse")? {
+            "eden_sparse"
+        } else {
+            "eden_fs"
+        }
     } else if !ctx.opts.enable_profile.is_empty() {
         "sparse"
     } else {

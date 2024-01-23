@@ -218,6 +218,10 @@ pub fn eden_clone(backing_repo: &Repo, working_copy: &Path, target: Option<HgId>
         clone_command.arg("--allow-empty-repo");
     }
 
+    if config.get_or_default::<bool>("clone", "use-eden-sparse")? {
+        clone_command.args(["--backing-store", "filteredhg"]);
+    }
+
     tracing::info!(?clone_command, "running edenfsctl clone");
 
     let output = clone_command
