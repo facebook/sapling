@@ -103,14 +103,6 @@ export function localStorageBackedAtom<T extends Json>(
   );
 }
 
-/** Perform extra operations when the atom value is changed. */
-export function onAtomUpdate<T>(subscribeAtom: MutAtom<T>, onSet: (value: T) => void) {
-  store.sub(subscribeAtom, () => {
-    onSet(store.get(subscribeAtom));
-  });
-  onSet(store.get(subscribeAtom));
-}
-
 /**
  * Wraps an atom with an "onChange" callback.
  * Changing the returned atom will trigger the callback.
