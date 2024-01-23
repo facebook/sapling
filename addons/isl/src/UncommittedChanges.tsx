@@ -65,6 +65,7 @@ import {
 } from './serverAPIState';
 import {GeneratedStatus} from './types';
 import {VSCodeBadge, VSCodeButton, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
+import {useAtomValue} from 'jotai';
 import React, {useMemo, useEffect, useRef, useState} from 'react';
 import {useRecoilCallback, useRecoilValue} from 'recoil';
 import {ComparisonType} from 'shared/Comparison';
@@ -205,7 +206,7 @@ export function ChangedFiles(props: {
   selection?: UseUncommittedSelection;
   place?: Place;
 }) {
-  const displayType = useRecoilValue(changedFilesDisplayType);
+  const displayType = useAtomValue(changedFilesDisplayType);
   const {filesSubset, totalFiles, ...rest} = props;
   const PAGE_SIZE = 500;
   const PAGE_FETCH_COUNT = 2;

@@ -8,6 +8,7 @@
 import type {UncommittedChanges} from '../types';
 
 import App from '../App';
+import {defaultChangedFilesDisplayType} from '../ChangedFileDisplayTypePicker';
 import {ignoreRTL, CommitInfoTestUtils} from '../testQueries';
 import {
   expectMessageSentToServer,
@@ -48,6 +49,14 @@ describe('Changed Files', () => {
           COMMIT('a', 'My Commit', '1'),
           COMMIT('b', 'Another Commit', 'a', {isHead: true}),
         ],
+      });
+      // Reset to the default display type.
+      act(() => {
+        simulateMessageFromServer({
+          type: 'gotConfig',
+          name: 'isl.changedFilesDisplayType',
+          value: JSON.stringify(defaultChangedFilesDisplayType),
+        });
       });
       expectMessageSentToServer({
         type: 'subscribe',

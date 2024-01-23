@@ -8,22 +8,21 @@
 import {FlexRow} from './ComponentUtils';
 import {Tooltip} from './Tooltip';
 import {t, T} from './i18n';
-import {persistAtomToConfigEffect} from './persistAtomToConfigEffect';
+import {configBackedAtom} from './jotaiUtils';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
-import {atom, useRecoilState} from 'recoil';
+import {useAtom} from 'jotai';
 import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
 import {isMac} from 'shared/OperatingSystem';
 
 export type ChangedFilesDisplayType = 'short' | 'fullPaths' | 'tree' | 'fish';
 
-export const changedFilesDisplayType = atom<ChangedFilesDisplayType>({
-  key: 'changedFilesDisplayType',
-  default: 'short',
-  effects: [
-    persistAtomToConfigEffect('isl.changedFilesDisplayType', 'short' as ChangedFilesDisplayType),
-  ],
-});
+export const defaultChangedFilesDisplayType: ChangedFilesDisplayType = 'short';
+
+export const changedFilesDisplayType = configBackedAtom<ChangedFilesDisplayType>(
+  'isl.changedFilesDisplayType',
+  defaultChangedFilesDisplayType,
+);
 
 type ChangedFileDisplayTypeOption = {icon: string; label: JSX.Element};
 const ChangedFileDisplayTypeOptions: Record<ChangedFilesDisplayType, ChangedFileDisplayTypeOption> =
@@ -38,7 +37,7 @@ const entries = Object.entries(ChangedFileDisplayTypeOptions) as Array<
 >;
 
 export function ChangedFileDisplayTypePicker() {
-  const [displayType, setDisplayType] = useRecoilState(changedFilesDisplayType);
+  const [displayType, setDisplayType] = useAtom(changedFilesDisplayType);
 
   const actions = entries.map(([type, options]) => ({
     label: (
