@@ -227,15 +227,14 @@ impl DataIndex {
 
         // Write fanout
         // `locations` will contain the eventual offset that each value will be written to.
-        let mut locations: Vec<u32> = Vec::with_capacity(values.len());
-        unsafe { locations.set_len(values.len()) };
-        FanoutTable::write(
+        let locations = FanoutTable::write(
             writer,
             if options.large { 2 } else { 1 },
             &mut values.iter().map(|x| x.0),
             ENTRY_LEN,
-            Some(&mut locations),
-        )?;
+            Some(values.len()),
+        )?
+        .expect("`locations` must be `Some` since `Some(locations_size)` was provided.");
 
         // Map from hgid to location
         let mut nodelocations: HashMap<HgId, u32> = HashMap::new();

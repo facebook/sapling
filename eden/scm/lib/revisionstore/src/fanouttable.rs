@@ -72,15 +72,22 @@ impl FanoutTable {
     /// `entry_size` - The fixed size of each hgid's index value, which is used to compute the
     /// offset in the index of that hgid's value.
     ///
-    /// `locations` - A presized, mutable vector where the offset for each hgid index value will be
-    /// written.
+    /// `locations_size` - Optionally, the number of locations we expect to populate.
+    ///                    If given `Some(size)`, that size will be used to reserve into the
+    ///                    destination Vec.
+    ///                    If given `None`, locations won't be populated and the return value will
+    ///                    be `None`.
+    ///
+    /// Returns
+    /// `locations` - The offset for each hgid index value if `locations_size.is_some()` or `None`
     pub fn write<'b, T: Write, I: Iterator<Item = &'b HgId>>(
         writer: &mut T,
         fanout_factor: u8,
         hgid_iter: &mut I,
         entry_size: usize,
-        mut locations: Option<&mut Vec<u32>>,
-    ) -> Result<()> {
+        locations_size: Option<usize>,
+    ) -> Result<Option<Vec<u32>>> {
+        let mut locations = locations_size.map(Vec::with_capacity);
         let fanout_raw_size = match fanout_factor {
             SMALL_FANOUT_FACTOR => SMALL_RAW_SIZE,
             LARGE_FANOUT_FACTOR => LARGE_RAW_SIZE,
@@ -108,13 +115,13 @@ impl FanoutTable {
 
         // Fill in the fanout table with the offset of the first entry for each prefix.
         let mut offset: u32 = 0;
-        for (i, hgid) in hgid_iter.enumerate() {
+        for hgid in hgid_iter {
             let fanout_key = get_fanout_index(fanout_raw_size, hgid)?;
             if fanout_table[fanout_key as usize].is_none() {
                 fanout_table[fanout_key as usize] = Some(offset);
             }
             if let Some(locations) = locations.as_mut() {
-                locations[i] = offset;
+                locations.push(offset);
             }
             offset += entry_size as u32;
         }
@@ -134,7 +141,7 @@ impl FanoutTable {
             writer.write_u32::<BigEndian>(offset)?;
         }
 
-        Ok(())
+        Ok(locations)
     }
 
     pub fn get_size(large: bool) -> usize {
@@ -170,17 +177,13 @@ mod tests {
             make_hgid(230, 5, 0, 0),
             make_hgid(230, 12, 0, 0),
         ];
-        let mut locations = Vec::with_capacity(nodes.len());
-        unsafe {
-            locations.set_len(nodes.len());
-        }
         let mut buf: Vec<u8> = vec![];
-        FanoutTable::write(
+        let _locations = FanoutTable::write(
             &mut buf,
             SMALL_FANOUT_FACTOR,
             &mut nodes.iter(),
             size_of::<u32>(),
-            Some(&mut locations),
+            Some(nodes.len()),
         )
         .expect("fanout write");
         assert_eq!(SMALL_RAW_SIZE, buf.len());
@@ -217,17 +220,13 @@ mod tests {
             make_hgid(230, 5, 0, 0),
             make_hgid(230, 12, 0, 0),
         ];
-        let mut locations = Vec::with_capacity(nodes.len());
-        unsafe {
-            locations.set_len(nodes.len());
-        }
         let mut buf: Vec<u8> = vec![];
-        FanoutTable::write(
+        let _locations = FanoutTable::write(
             &mut buf,
             LARGE_FANOUT_FACTOR,
             &mut nodes.iter(),
             size_of::<u32>(),
-            Some(&mut locations),
+            Some(nodes.len()),
         )
         .expect("fanout write");
         assert_eq!(LARGE_RAW_SIZE, buf.len());
@@ -258,14 +257,13 @@ mod tests {
     #[test]
     fn test_empty() {
         let nodes: Vec<HgId> = vec![];
-        let mut locations = vec![];
         let mut buf: Vec<u8> = vec![];
-        FanoutTable::write(
+        let _locations = FanoutTable::write(
             &mut buf,
             SMALL_FANOUT_FACTOR,
             &mut nodes.iter(),
             size_of::<u32>(),
-            Some(&mut locations),
+            Some(0),
         )
         .expect("fanout write");
         assert_eq!(SMALL_RAW_SIZE, buf.len());
@@ -288,17 +286,13 @@ mod tests {
             make_hgid(200, 5, 0, 0),
             make_hgid(200, 12, 0, 0),
         ];
-        let mut locations = Vec::with_capacity(nodes.len());
-        unsafe {
-            locations.set_len(nodes.len());
-        }
         let mut buf: Vec<u8> = vec![];
-        FanoutTable::write(
+        let _locations = FanoutTable::write(
             &mut buf,
             SMALL_FANOUT_FACTOR,
             &mut nodes.iter(),
             size_of::<u32>(),
-            Some(&mut locations),
+            Some(nodes.len()),
         )
         .expect("fanout write");
         assert_eq!(SMALL_RAW_SIZE, buf.len());
@@ -331,19 +325,15 @@ mod tests {
             let mut nodes = nodes;
             nodes.sort();
             let fanout_factor = (fanout % 2) + 1;
-            let mut locations = Vec::with_capacity(nodes.len());
-            unsafe {
-                locations.set_len(nodes.len());
-            }
             let mut buf: Vec<u8> = vec![];
             let hgid_size = HgId::len();
-            FanoutTable::write(
+            let locations = FanoutTable::write(
                 &mut buf,
                 fanout_factor,
                 &mut nodes.iter(),
                 hgid_size,
-                Some(&mut locations),
-            ).expect("fanout write");
+                Some(nodes.len()),
+            ).expect("fanout write").expect("locations must have been written");
 
             // Simulate a data file that includes just the nodes
             let data_buf: Vec<u8> = nodes.iter().flat_map(|x| x.as_ref().iter()).copied().collect();
