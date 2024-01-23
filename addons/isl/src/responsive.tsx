@@ -9,7 +9,7 @@ import {useCommand} from './ISLShortcuts';
 import {
   configBackedAtom,
   localStorageBackedAtom,
-  onAtomUpdate,
+  atomWithOnChange,
   readAtom,
   writeAtom,
 } from './jotaiUtils';
@@ -20,11 +20,12 @@ export const mainContentWidthState = atom(500);
 
 export const renderCompactAtom = configBackedAtom<boolean>('isl.render-compact', false);
 
-export const zoomUISettingAtom = localStorageBackedAtom<number>('isl.ui-zoom', 1);
-
-onAtomUpdate(zoomUISettingAtom, newValue => {
-  document.body?.style.setProperty('--zoom', `${newValue}`);
-});
+export const zoomUISettingAtom = atomWithOnChange(
+  localStorageBackedAtom<number>('isl.ui-zoom', 1),
+  newValue => {
+    document.body?.style.setProperty('--zoom', `${newValue}`);
+  },
+);
 
 export function useZoomShortcut() {
   useCommand('ZoomIn', () => {
