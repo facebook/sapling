@@ -133,8 +133,7 @@ fn get_version_impl<'a>(
 pub fn get_mapping_change_version(
     cs_info: &ChangesetInfo,
 ) -> Result<Option<CommitSyncConfigVersion>, Error> {
-    if tunables::tunables()
-        .allow_change_xrepo_mapping_extra()
+    if !justknobs::eval("scm/mononoke:ignore_change_xrepo_mapping_extra", None, None)
         .unwrap_or(false)
     {
         let maybe_mapping = cs_info

@@ -10,13 +10,6 @@
   $ LARGE_REPO_ID="0"
   $ SMALL_REPO_ID="1"
   $ IMPORTED_REPO_ID="2"
-  $ merge_tunables <<EOF
-  > {
-  >   "killswitches": {
-  >     "allow_change_xrepo_mapping_extra": true
-  >   }
-  > }
-  > EOF
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > rebase =

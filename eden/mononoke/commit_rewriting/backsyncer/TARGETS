@@ -19,6 +19,7 @@ rust_library(
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//common/rust/shed/futures_ext:futures_ext",
+        "//common/rust/shed/justknobs_stub:justknobs",
         "//eden/mononoke/blobrepo:blobrepo",
         "//eden/mononoke/blobrepo:blobrepo_hg",
         "//eden/mononoke/blobrepo:changeset_fetcher",
@@ -36,7 +37,6 @@ rust_library(
         "//eden/mononoke/repo_factory:test_repo_factory",
         "//eden/mononoke/tests/fixtures:fixtures",
         "//eden/mononoke/tests/utils:tests_utils",
-        "//eden/mononoke/tunables:tunables",
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
