@@ -16,8 +16,8 @@ import {Tooltip} from '../Tooltip';
 import {T, t} from '../i18n';
 import {CircleEllipsisIcon} from '../icons/CircleEllipsisIcon';
 import {CircleExclamationIcon} from '../icons/CircleExclamationIcon';
+import {configBackedAtom} from '../jotaiUtils';
 import {PullRevOperation} from '../operations/PullRevOperation';
-import {persistAtomToConfigEffect} from '../persistAtomToConfigEffect';
 import platform from '../platform';
 import {useRunOperation} from '../serverAPIState';
 import {exactRevset} from '../types';
@@ -25,17 +25,14 @@ import {diffSummary, codeReviewProvider} from './CodeReviewInfo';
 import {openerUrlForDiffUrl} from './github/GitHubUrlOpener';
 import {SyncStatus, syncStatusByHash} from './syncStatus';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
+import {useAtomValue} from 'jotai';
 import {useState, Component, Suspense} from 'react';
-import {atom, useRecoilValue} from 'recoil';
+import {useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 
 import './DiffBadge.css';
 
-export const showDiffNumberConfig = atom<boolean>({
-  key: 'showDiffNumberConfig',
-  default: false,
-  effects: [persistAtomToConfigEffect('isl.show-diff-number')],
-});
+export const showDiffNumberConfig = configBackedAtom<boolean>('isl.show-diff-number', false);
 
 /**
  * Component that shows inline summary information about a Diff,
@@ -201,7 +198,7 @@ function ResubmitSyncButton({
 
 function DiffNumber({children}: {children: string}) {
   const [showing, setShowing] = useState(false);
-  const showDiffNumber = useRecoilValue(showDiffNumberConfig);
+  const showDiffNumber = useAtomValue(showDiffNumberConfig);
   if (!children || !showDiffNumber) {
     return null;
   }

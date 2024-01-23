@@ -70,7 +70,7 @@ function SettingsDropdown({
   const [theme, setTheme] = useRecoilState(themeState);
   const [repoInfo, setRepoInfo] = useRecoilState(repositoryInfo);
   const runOperation = useRunOperation();
-  const [showDiffNumber, setShowDiffNumber] = useRecoilState(showDiffNumberConfig);
+  const [showDiffNumber, setShowDiffNumber] = useAtom(showDiffNumberConfig);
   return (
     <DropdownFields title={<T>Settings</T>} icon="gear" data-testid="settings-dropdown">
       <VSCodeButton
