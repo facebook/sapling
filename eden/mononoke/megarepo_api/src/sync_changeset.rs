@@ -72,21 +72,27 @@ pub enum MergeMode {
     },
 }
 
-fn get_squashing_overrides(repo_name: &str, target_bookmark: &str) -> (Option<i64>, Option<bool>) {
-    let targets = tunables::tunables()
-        .by_repo_megarepo_squashing_config_override_targets(repo_name)
-        .unwrap_or_default();
-    if targets
-        .iter()
-        .any(|target| target.as_str() == target_bookmark)
-    {
-        (
-            tunables::tunables().by_repo_megarepo_override_squashing_limit(repo_name),
-            tunables::tunables().by_repo_megarepo_override_author_check(repo_name),
-        )
+fn get_squashing_overrides(repo_name: &str, target_bookmark: &str) -> (Option<i64>, bool) {
+    let switchval = format!("{}:{}", repo_name, target_bookmark);
+    let squashing_limit = justknobs::get(
+        "scm/mononoke:megarepo_override_squashing_limit",
+        Some(&switchval),
+    )
+    .unwrap_or(0);
+
+    let maybe_squashing_limit = if squashing_limit == 0 {
+        None
     } else {
-        (None, None)
-    }
+        Some(squashing_limit)
+    };
+
+    let author_check = justknobs::eval(
+        "scm/mononoke:megarepo_override_author_check",
+        None,
+        Some(&switchval),
+    )
+    .unwrap_or(true);
+    (maybe_squashing_limit, author_check)
 }
 
 pub struct SquashingConfig {
@@ -172,14 +178,14 @@ impl<'a> SyncChangeset<'a> {
         // merged-in commits or squash side-branch.
         let maybe_squashing_config = match &source_config.merge_mode {
             Some(megarepo_config::MergeMode::squashed(sq)) => {
-                let (maybe_squash_limit, maybe_check_author) =
+                let (maybe_squash_limit, check_author) =
                     get_squashing_overrides(target_repo.name(), &target.bookmark);
                 Some(SquashingConfig {
                     squash_limit: maybe_squash_limit
                         .unwrap_or(sq.squash_limit)
                         .try_into()
                         .context("couldn't convert squash commits limit")?,
-                    check_author: maybe_check_author.unwrap_or(true),
+                    check_author,
                 })
             }
             None | Some(megarepo_config::MergeMode::with_move_commit(_)) => None,

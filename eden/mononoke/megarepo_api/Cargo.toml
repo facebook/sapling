@@ -28,6 +28,7 @@ filestore = { version = "0.1.0", path = "../filestore" }
 fsnodes = { version = "0.1.0", path = "../derived_data/fsnodes" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 itertools = "0.11.0"
+justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 manifest = { version = "0.1.0", path = "../manifest" }
 megarepo_config = { version = "0.1.0", path = "megarepo_config" }
 megarepo_error = { version = "0.1.0", path = "megarepo_error" }
@@ -48,7 +49,6 @@ repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 requests_table = { version = "0.1.0", path = "requests_table" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-tunables = { version = "0.1.0", path = "../tunables" }
 unodes = { version = "0.1.0", path = "../derived_data/unodes" }
 
 [dev-dependencies]
