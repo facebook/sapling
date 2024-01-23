@@ -185,7 +185,7 @@ function SettingsDropdown({
 }
 
 function ConfirmSubmitStackSetting() {
-  const [value, setValue] = useRecoilState(confirmShouldSubmitEnabledAtom);
+  const [value, setValue] = useAtom(confirmShouldSubmitEnabledAtom);
   const provider = useRecoilValue(codeReviewProvider);
   if (provider == null || !provider.supportSubmittingAsDraft) {
     return null;
