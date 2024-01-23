@@ -48,6 +48,7 @@ use futures::FutureExt;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
 use futures_ext::FbTryFutureExt;
+use justknobs::test_helpers::override_just_knobs;
 use justknobs::test_helpers::with_just_knobs_async;
 use justknobs::test_helpers::JustKnobsInMemory;
 use justknobs::test_helpers::KnobVal;
@@ -1299,6 +1300,10 @@ async fn init_repos(
     ),
     Error,
 > {
+    override_just_knobs(Some(JustKnobsInMemory::new(hashmap! {
+        "scm/mononoke:cross_repo_skip_backsyncing_ordinary_empty_commits".to_string() => KnobVal::Bool(false),
+        "scm/mononoke:ignore_change_xrepo_mapping_extra".to_string() => KnobVal::Bool(false),
+    })));
     let ctx = CoreContext::test_mock(fb);
     let mut factory = TestRepoFactory::new(fb)?;
     let source_repo_id = RepositoryId::new(1);

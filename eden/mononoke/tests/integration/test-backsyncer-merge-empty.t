@@ -50,12 +50,10 @@ Backsync to a small repo
   * syncing bookmark master_bookmark to * (glob)
 
 Skip empty commits option
-  $ merge_tunables <<EOF
+  $ merge_just_knobs <<EOF
   > {
-  > "killswitches_by_repo": {
-  >   "large-mon": {
-  >      "cross_repo_skip_backsyncing_ordinary_empty_commits": true
-  >    }
+  >   "bools": {
+  >     "scm/mononoke:cross_repo_skip_backsyncing_ordinary_empty_commits": true
   >   }
   > }
   > EOF

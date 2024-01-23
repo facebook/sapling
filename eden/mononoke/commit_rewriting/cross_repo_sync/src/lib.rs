@@ -1733,11 +1733,12 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
         // can only do that when they're not changing the mapping.
         let empty_commit_from_large_repo = if !self.small_to_large
             && maybe_mapping_change_version.is_none()
-            && tunables::tunables()
-                .by_repo_cross_repo_skip_backsyncing_ordinary_empty_commits(
-                    self.source_repo_name().0,
-                )
-                .unwrap_or(false)
+            && justknobs::eval(
+                "scm/mononoke:cross_repo_skip_backsyncing_ordinary_empty_commits",
+                None,
+                Some(self.source_repo_name().0),
+            )
+            .unwrap_or(false)
         {
             EmptyCommitFromLargeRepo::Discard
         } else {
