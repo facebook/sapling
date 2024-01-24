@@ -23,7 +23,3 @@ pub mod changeset {
     pub use mercurial_types::blobs::RevlogChangeset;
 }
 pub use crate::changeset::RevlogChangeset;
-
-mod thrift {
-    pub use mononoke_types_thrift::*;
-}

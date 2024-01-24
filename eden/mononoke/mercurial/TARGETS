@@ -36,7 +36,6 @@ rust_library(
         "fbsource//third-party/rust:nom-old",
         "fbsource//third-party/rust:thiserror",
         ":mercurial_types",
-        "//eden/mononoke/mononoke_types/if:mononoke_types-thrift-rust",
         "//eden/scm/lib/lz4-pyframe:lz4-pyframe",
     ],
 )
@@ -47,6 +46,7 @@ rust_library(
     autocargo = {"cargo_toml_dir": "types"},
     test_deps = [
         "fbsource//third-party/rust:tokio",
+        "//eden/mononoke/mononoke_types/if:mononoke_types-thrift-rust",
     ],
     test_srcs = glob([
         "types/src/blobs/*/*.bin",
@@ -83,7 +83,6 @@ rust_library(
         "//eden/mononoke/manifest:manifest",
         "//eden/mononoke/mercurial/types/if:mercurial-thrift-rust",
         "//eden/mononoke/mononoke_types:mononoke_types",
-        "//eden/mononoke/mononoke_types/if:mononoke_types-thrift-rust",
         "//eden/mononoke/server/context:context",
         "//eden/scm/lib/edenapi/types:edenapi_types",
         "//eden/scm/lib/types:types",

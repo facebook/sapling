@@ -21,7 +21,6 @@ futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://gi
 lz4-pyframe = { version = "0.1.0", path = "../../../scm/lib/lz4-pyframe" }
 memmap2 = "0.5.10"
 mercurial_types = { version = "0.1.0", path = "../types" }
-mononoke_types_thrift = { version = "0.1.0", path = "../../mononoke_types/if" }
 nom = { version = "3", features = ["verbose-errors"] }
 thiserror = "1.0.49"
 

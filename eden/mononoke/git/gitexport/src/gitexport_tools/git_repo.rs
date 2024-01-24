@@ -10,7 +10,6 @@ use std::path::PathBuf;
 use anyhow::Context;
 use anyhow::Result;
 use git_symbolic_refs::GitSymbolicRefsEntry;
-use gix_hash::ObjectId;
 use mononoke_api::CoreContext;
 use packfile::bundle::BundleWriter;
 use packfile::pack::DeltaForm;

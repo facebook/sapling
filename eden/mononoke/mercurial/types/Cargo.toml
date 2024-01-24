@@ -28,7 +28,6 @@ itertools = "0.11.0"
 manifest = { version = "0.1.0", path = "../../manifest" }
 mercurial_thrift = { version = "0.1.0", path = "if" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-mononoke_types_thrift = { version = "0.1.0", path = "../../mononoke_types/if" }
 percent-encoding = "2.1"
 quickcheck = "1.0"
 quickcheck_arbitrary_derive = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
@@ -44,3 +43,6 @@ thiserror = "1.0.49"
 time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
 types = { version = "0.1.0", path = "../../../scm/lib/types" }
+
+[dev-dependencies]
+mononoke_types_thrift = { version = "0.1.0", path = "../../mononoke_types/if" }

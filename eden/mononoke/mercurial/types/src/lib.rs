@@ -112,5 +112,6 @@ mod test;
 
 mod thrift {
     pub use mercurial_thrift::*;
+    #[cfg(test)]
     pub use mononoke_types_thrift::*;
 }
