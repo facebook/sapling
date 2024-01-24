@@ -123,13 +123,14 @@ export class GithubUICodeReviewProvider implements UICodeReviewProvider {
   supportsRenderingMarkup = false;
 }
 
-type BadgeState = PullRequestState | 'ERROR' | 'DRAFT';
+type BadgeState = PullRequestState | 'ERROR' | 'DRAFT' | 'MERGE_QUEUED';
 
 function iconForPRState(state?: BadgeState) {
   switch (state) {
     case 'ERROR':
       return 'error';
     case 'DRAFT':
+    case 'MERGE_QUEUED':
       return 'git-pull-request';
     case PullRequestState.Open:
       return 'git-pull-request';
@@ -154,6 +155,8 @@ function PRStateLabel({state}: {state: BadgeState}) {
       return <T>Draft</T>;
     case 'ERROR':
       return <T>Error</T>;
+    case 'MERGE_QUEUED':
+      return <T>Merge Queued</T>;
     default:
       return <T>{state}</T>;
   }
