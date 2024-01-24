@@ -30,6 +30,7 @@ use crate::blob::Blob;
 use crate::blob::BlobstoreValue;
 use crate::blob::SkeletonManifestBlob;
 use crate::errors::MononokeTypeError;
+use crate::path::MPath;
 use crate::path::MPathElement;
 use crate::path::NonRootMPath;
 use crate::thrift;
@@ -113,16 +114,17 @@ impl SkeletonManifest {
         blobstore: &'a impl Blobstore,
     ) -> Result<Option<(NonRootMPath, NonRootMPath)>> {
         let mut sk_mf = Cow::Borrowed(self);
-        let mut path: Option<NonRootMPath> = None;
+        let mut path = MPath::ROOT;
         'outer: loop {
             if sk_mf.summary.child_case_conflicts {
                 let mut lower_map = HashMap::new();
                 for name in sk_mf.subentries.keys() {
                     if let Some(lower_name) = name.to_lowercase_utf8() {
                         if let Some(other_name) = lower_map.insert(lower_name, name.clone()) {
+                            let optional_path = path.into_optional_non_root_path();
                             return Ok(Some((
-                                NonRootMPath::join_opt_element(path.as_ref(), &other_name),
-                                NonRootMPath::join_opt_element(path.as_ref(), name),
+                                NonRootMPath::join_opt_element(optional_path.as_ref(), &other_name),
+                                NonRootMPath::join_opt_element(optional_path.as_ref(), name),
                             )));
                         }
                     }
@@ -134,7 +136,7 @@ impl SkeletonManifest {
                         if subdir.summary.child_case_conflicts
                             || subdir.summary.descendant_case_conflicts
                         {
-                            path = Some(NonRootMPath::join_opt_element(path.as_ref(), name));
+                            path = path.join_element(Some(name));
                             sk_mf = Cow::Owned(subdir.id.load(ctx, blobstore).await?);
                             continue 'outer;
                         }
@@ -156,18 +158,19 @@ impl SkeletonManifest {
     ) -> Result<Option<(NonRootMPath, NonRootMPath)>> {
         bounded_traversal(
             256,
-            (None, self, parents),
-            |(path, sk_mf, parents): (Option<NonRootMPath>, _, _)| {
+            (MPath::ROOT, self, parents),
+            |(path, sk_mf, parents): (MPath, _, _)| {
                 async move {
                     if sk_mf.summary.child_case_conflicts {
-                        if !excluded_paths
-                            .contains_prefix(path.as_ref().iter().flat_map(|p| p.as_ref()))
-                        {
+                        if !excluded_paths.contains_prefix(path.as_ref()) {
                             if let Some((name1, name2)) =
                                 sk_mf.first_new_child_case_conflict(&parents)
                             {
-                                let path1 = NonRootMPath::join_opt_element(path.as_ref(), name1);
-                                let path2 = NonRootMPath::join_opt_element(path.as_ref(), name2);
+                                let optional_path = path.into_optional_non_root_path();
+                                let path1 =
+                                    NonRootMPath::join_opt_element(optional_path.as_ref(), name1);
+                                let path2 =
+                                    NonRootMPath::join_opt_element(optional_path.as_ref(), name2);
 
                                 // Since we only want the first conflict, don't
                                 // recurse to child directories.
@@ -184,7 +187,7 @@ impl SkeletonManifest {
                     let recurse_ids = sk_mf
                         .recurse_new_descendant_case_conflicts(&parents)
                         .map(|(name, recurse_id, recurse_parent_ids)| async move {
-                            let recurse_path = NonRootMPath::join_opt_element(path.as_ref(), name);
+                            let recurse_path = path.join_element(Some(name));
                             let (recurse_sk_mf, recurse_parents) = try_join(
                                 recurse_id.load(ctx, blobstore),
                                 try_join_all(
@@ -194,7 +197,7 @@ impl SkeletonManifest {
                                 ),
                             )
                             .await?;
-                            Ok::<_, Error>((Some(recurse_path), recurse_sk_mf, recurse_parents))
+                            Ok::<_, Error>((recurse_path, recurse_sk_mf, recurse_parents))
                         })
                         .collect::<Vec<_>>();
 

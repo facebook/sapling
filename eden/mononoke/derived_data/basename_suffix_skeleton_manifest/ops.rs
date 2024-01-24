@@ -26,20 +26,18 @@ use manifest::ManifestOrderedOps;
 use manifest::PathOrPrefix;
 use mononoke_types::path::MPath;
 use mononoke_types::MPathElement;
-use mononoke_types::NonRootMPath;
 use vec1::vec1;
 use vec1::Vec1;
 
 use crate::path::BssmPath;
 use crate::RootBasenameSuffixSkeletonManifest;
 
-type MononokePath = Option<NonRootMPath>;
-
 fn normal_to_custom<T>(path: T) -> MPath
 where
-    T: Into<MononokePath>,
+    T: Into<MPath>,
 {
     path.into()
+        .into_optional_non_root_path()
         .map(|p| BssmPath::transform(p).into_raw())
         .into()
 }

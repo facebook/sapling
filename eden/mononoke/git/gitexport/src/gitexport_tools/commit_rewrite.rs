@@ -440,7 +440,7 @@ async fn get_export_paths_for_changeset<'a>(
             // then this path should be exported when rewriting this changeset.
             let is_ancestor_of_head_cs = processed_cs.is_ancestor_of(head_cs.id()).await?;
             if is_ancestor_of_head_cs {
-                return anyhow::Ok::<Option<NonRootMPath>>(Some(exp_path.clone()));
+                return anyhow::Ok(Some(exp_path.clone()));
             }
             // Otherwise the changeset is a descendant of this path's head, so
             // the path should NOT be exported.
