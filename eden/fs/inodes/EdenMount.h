@@ -1313,7 +1313,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * Any operation that modifies an existing InodeBase's location_ data must
    * hold the rename lock.
    */
-  folly::SharedMutex renameMutex_;
+  mutable folly::SharedMutex renameMutex_;
 
   /**
    * The IDs of the parent commit of the working directory.
