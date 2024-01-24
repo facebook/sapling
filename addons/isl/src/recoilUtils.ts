@@ -6,12 +6,12 @@
  */
 
 import type {MutAtom} from './jotaiUtils';
-import type {PrimitiveAtom} from 'jotai';
 import type {AtomEffect, RecoilState} from 'recoil';
 
 import {globalRecoil} from './AccessGlobalRecoil';
 import serverAPI from './ClientToServerAPI';
-import {atomWithOnChange, readAtom, writeAtom} from './jotaiUtils';
+import {atomWithOnChange, writeAtom} from './jotaiUtils';
+import {atom} from 'jotai';
 import {atom as RecoilAtom} from 'recoil';
 
 /**
@@ -24,16 +24,15 @@ export function clearOnCwdChange<T>(): AtomEffect<T> {
 /**
  * Creates a pair of Jotai and Recoil atoms that is "entangled".
  * Changing one atom automatically updates the other.
- *
- * The "source of truth" is the "originalAtom". Note the "originalAtom"
- * should not be updated without going through the returned Jotai atom.
  */
 export function entangledAtoms<T>(
-  originalAtom: PrimitiveAtom<T>,
+  initialValue: T,
   key: string,
   recoilEffects?: AtomEffect<T>[],
 ): [MutAtom<T>, RecoilState<T>] {
-  const initialValue = readAtom(originalAtom);
+  // This is a private atom so this function is the only place to update it.
+  // Updating from elsewhere won't trigger the Jotai->Recoil sync.
+  const originalAtom = atom<T>(initialValue);
 
   let recoilValue = initialValue;
   let jotaiValue = initialValue;
