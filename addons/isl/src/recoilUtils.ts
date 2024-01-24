@@ -25,11 +25,14 @@ export function clearOnCwdChange<T>(): AtomEffect<T> {
  * Creates a pair of Jotai and Recoil atoms that is "entangled".
  * Changing one atom automatically updates the other.
  */
-export function entangledAtoms<T>(
-  initialValue: T,
-  key: string,
-  recoilEffects?: AtomEffect<T>[],
-): [MutAtom<T>, RecoilState<T>] {
+export function entangledAtoms<T>(props: {
+  default: T;
+  key: string;
+  effects?: AtomEffect<T>[];
+}): [MutAtom<T>, RecoilState<T>] {
+  const initialValue = props.default;
+  const {key} = props;
+
   // This is a private atom so this function is the only place to update it.
   // Updating from elsewhere won't trigger the Jotai->Recoil sync.
   const originalAtom = atom<T>(initialValue);
@@ -46,7 +49,7 @@ export function entangledAtoms<T>(
   });
   jotaiAtom.debugLabel = key;
 
-  const effects = recoilEffects ?? [];
+  const effects = props.effects ?? [];
   effects.push(({onSet}) => {
     onSet(newValue => {
       if (jotaiValue !== newValue) {

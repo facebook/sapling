@@ -36,10 +36,10 @@ import {selectorFamily, atom, DefaultValue, selector, useRecoilCallback} from 'r
 import {reuseEqualObjects} from 'shared/deepEqualExt';
 import {defer, randomId} from 'shared/utils';
 
-const [jotaiRepositoryData, repositoryData] = entangledAtoms<{info?: RepoInfo; cwd?: string}>(
-  {},
-  'repositoryData',
-);
+const [jotaiRepositoryData, repositoryData] = entangledAtoms<{info?: RepoInfo; cwd?: string}>({
+  key: 'repositoryData',
+  default: {},
+});
 
 serverAPI.onMessageOfType('repoInfo', event => {
   writeAtom(jotaiRepositoryData, {info: event.info, cwd: event.cwd});

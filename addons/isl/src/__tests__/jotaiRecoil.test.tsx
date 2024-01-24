@@ -47,7 +47,7 @@ describe('recoil compatibility', () => {
 });
 
 describe('entangledAtoms', () => {
-  const [jotaiAtom, recoilAtom] = entangledAtoms('default', 'testEntangledAtom');
+  const [jotaiAtom, recoilAtom] = entangledAtoms({default: 'default', key: 'testEntangledAtom'});
 
   type TestProps = {
     update?: string;

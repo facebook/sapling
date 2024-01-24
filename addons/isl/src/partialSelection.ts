@@ -249,10 +249,10 @@ const defaultUncommittedPartialSelection = PartialSelection.empty({
 });
 
 /** PartialSelection for `wdir()`. See `UseUncommittedSelection` for the public API. */
-const [uncommittedSelection, uncommittedSelectionRecoil] = entangledAtoms(
-  defaultUncommittedPartialSelection,
-  'uncommittedSelection',
-);
+const [uncommittedSelection, uncommittedSelectionRecoil] = entangledAtoms({
+  key: 'uncommittedSelection',
+  default: defaultUncommittedPartialSelection,
+});
 
 resetOnCwdChange(uncommittedSelection, defaultUncommittedPartialSelection);
 
