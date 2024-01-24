@@ -44,6 +44,7 @@ use mononoke_types::fsnode::FsnodeFile;
 use mononoke_types::fsnode::FsnodeSummary;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
+use mononoke_types::path::MPath;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::ChangesetId;
@@ -174,7 +175,7 @@ pub(crate) async fn derive_fsnode(
         None => {
             // All files have been deleted, generate empty fsnode
             let tree_info = TreeInfo {
-                path: None,
+                path: MPath::ROOT,
                 parents,
                 subentries: Default::default(),
             };

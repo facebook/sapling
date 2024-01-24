@@ -30,6 +30,7 @@ use manifest::Entry;
 use manifest::LeafInfo;
 use manifest::ManifestChanges;
 use manifest::TreeInfo;
+use mononoke_types::path::MPath;
 use mononoke_types::unode::FileUnode;
 use mononoke_types::unode::ManifestUnode;
 use mononoke_types::unode::UnodeEntry;
@@ -141,7 +142,7 @@ pub(crate) async fn derive_unode_manifest(
         None => {
             // All files have been deleted, generate empty **root** manifest
             let tree_info = TreeInfo {
-                path: None,
+                path: MPath::ROOT,
                 parents,
                 subentries: Default::default(),
             };

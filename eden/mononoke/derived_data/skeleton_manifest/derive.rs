@@ -32,6 +32,7 @@ use manifest::flatten_subentries;
 use manifest::Entry;
 use manifest::ManifestChanges;
 use manifest::TreeInfo;
+use mononoke_types::path::MPath;
 use mononoke_types::skeleton_manifest::SkeletonManifest;
 use mononoke_types::skeleton_manifest::SkeletonManifestDirectory;
 use mononoke_types::skeleton_manifest::SkeletonManifestEntry;
@@ -126,7 +127,7 @@ pub(crate) async fn derive_skeleton_manifest(
         None => {
             // All files have been deleted, generate empty fsnode
             let tree_info = TreeInfo {
-                path: None,
+                path: MPath::ROOT,
                 parents,
                 subentries: Default::default(),
             };

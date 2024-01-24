@@ -38,6 +38,7 @@ use mercurial_types::blobs::UploadHgTreeEntry;
 use mercurial_types::manifest::Type as HgManifestType;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
+use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
@@ -168,7 +169,7 @@ pub async fn derive_hg_manifest(
         None => {
             // All files have been deleted, generate empty **root** manifest
             let tree_info = TreeInfo {
-                path: None,
+                path: MPath::ROOT,
                 parents,
                 subentries: Default::default(),
             };
@@ -264,7 +265,7 @@ async fn create_hg_manifest(
         contents.push(b'\n')
     }
 
-    let path = match path {
+    let path = match path.into_optional_non_root_path() {
         None => RepoPath::RootPath,
         Some(path) => RepoPath::DirectoryPath(path),
     };

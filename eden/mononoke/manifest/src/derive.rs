@@ -26,6 +26,7 @@ use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use itertools::Either;
+use mononoke_types::path::MPath;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
 use mononoke_types::TrieMap;
@@ -44,7 +45,7 @@ use crate::TrieMapOps;
 /// manifest. It is `Some` for subentries for which `create_{tree|leaf}` was called to
 /// generate them, and `None` if subentry was reused from one of its parents.
 pub struct TreeInfo<TreeId, LeafId, Ctx, TrieMapType> {
-    pub path: Option<NonRootMPath>,
+    pub path: MPath,
     pub parents: Vec<TreeId>,
     pub subentries: TreeInfoSubentries<TreeId, LeafId, Ctx, TrieMapType>,
 }
@@ -284,7 +285,7 @@ where
         256,
         MergeNode {
             name: None,
-            path: None,
+            path: MPath::ROOT,
             changes: PathTree::from_iter(
                 changes
                     .into_iter()
@@ -507,7 +508,7 @@ enum MergeResult<TreeId, LeafId, Leaf, TrieMapType> {
     },
     CreateTree {
         name: Option<MPathElement>,
-        path: Option<NonRootMPath>,
+        path: MPath,
         parents: Vec<TreeId>,
         reused_maps: Vec<(SmallVec<[u8; 24]>, TrieMapType)>,
         consumed_subentries: Vec<Entry<TreeId, LeafId>>,
@@ -518,7 +519,7 @@ enum MergeResult<TreeId, LeafId, Leaf, TrieMapType> {
 /// between changes and parents.
 struct MergeNode<TreeId, LeafId, Leaf> {
     name: Option<MPathElement>, // name of this node in parent manifest
-    path: Option<NonRootMPath>, // path to this node from root of the manifest
+    path: MPath,                // path to this node from root of the manifest
     changes: PathTree<Option<Change<Leaf>>>, // changes associated with current subtree
     parents: Vec<Entry<TreeId, LeafId>>, // unmerged parents of current node
 }
@@ -618,7 +619,9 @@ where
                         MergeResult::CreateLeaf {
                             leaf: None,
                             name,
-                            path: path.expect("leaf can not have empty path"),
+                            path: path
+                                .into_optional_non_root_path()
+                                .expect("leaf can not have empty path"),
                             parents: leaves,
                         },
                         Vec::new(),
@@ -652,7 +655,9 @@ where
                 MergeResult::CreateLeaf {
                     leaf: Some(leaf),
                     name,
-                    path: path.expect("leaf can not have empty path"),
+                    path: path
+                        .into_optional_non_root_path()
+                        .expect("leaf can not have empty path"),
                     parents: parents.into_iter().filter_map(Entry::into_leaf).collect(),
                 },
                 Vec::new(),
@@ -686,14 +691,7 @@ where
         reused_maps,
         merge_nodes,
         consumed_subentries,
-    } = merge_subentries(
-        ctx,
-        store,
-        path.as_ref(),
-        subentries,
-        parent_manifests_trie_maps,
-    )
-    .await?;
+    } = merge_subentries(ctx, store, &path, subentries, parent_manifests_trie_maps).await?;
 
     Ok((
         MergeResult::CreateTree {
@@ -708,7 +706,7 @@ where
 }
 
 struct MergeSubentriesNode<'a, Leaf, TrieMapType> {
-    path: Option<&'a NonRootMPath>,
+    path: &'a MPath,
     prefix: SmallVec<[u8; 24]>,
     changes: TrieMap<PathTree<Option<Change<Leaf>>>>,
     parents: Vec<TrieMapType>,
@@ -723,7 +721,7 @@ struct MergeSubentriesResult<TreeId, IntermediateLeafId, Leaf, TrieMapType> {
 async fn merge_subentries<TreeId, LeafId, IntermediateLeafId, Leaf, TrieMapType, Store>(
     ctx: &CoreContext,
     store: &Store,
-    path: Option<&NonRootMPath>,
+    path: &MPath,
     changes: TrieMap<PathTree<Option<Change<Leaf>>>>,
     parents: Vec<TrieMapType>,
 ) -> Result<MergeSubentriesResult<TreeId, IntermediateLeafId, Leaf, TrieMapType>>
@@ -782,7 +780,7 @@ where
                 if let Some(current_change) = current_change {
                     let name = MPathElement::new_from_slice(&prefix)?;
                     current_merge_node = Some(MergeNode {
-                        path: Some(NonRootMPath::join_opt_element(path, &name)),
+                        path: path.join_element(Some(&name)),
                         name: Some(name),
                         changes: current_change,
                         parents: Default::default(),
@@ -816,7 +814,7 @@ where
 
                         current_merge_node
                             .get_or_insert_with(|| MergeNode {
-                                path: Some(NonRootMPath::join_opt_element(path, &name)),
+                                path: path.join(Some(&name)),
                                 name: Some(name),
                                 changes: Default::default(),
                                 parents: Default::default(),
