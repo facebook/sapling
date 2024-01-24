@@ -12,8 +12,6 @@ use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
-use bookmarks::BookmarkKey;
-use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
 use cmdlib::args;
 use cmdlib::helpers;
@@ -27,15 +25,11 @@ use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::NonRootMPath;
 use mononoke_types::BonsaiChangeset;
-use mononoke_types::DateTime;
 use mononoke_types::FileChange;
-use mononoke_types::Timestamp;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_factory::RepoFactoryBuilder;
 use repo_identity::RepoIdentityRef;
-use serde_json::json;
-use serde_json::to_string_pretty;
 use slog::debug;
 use slog::Logger;
 use synced_commit_mapping::SqlSyncedCommitMapping;
@@ -73,38 +67,6 @@ pub fn print_bonsai_changeset(bcs: &BonsaiChangeset) {
                 println!("\t UNTRACKED ADD/MODIFY: {} {}", path, fc.content_id())
             }
             FileChange::UntrackedDeletion => println!("\t MISSING: {}", path),
-        }
-    }
-}
-
-pub fn format_bookmark_log_entry(
-    json_flag: bool,
-    changeset_id: String,
-    reason: BookmarkUpdateReason,
-    timestamp: Timestamp,
-    changeset_type: &str,
-    bookmark: BookmarkKey,
-    bundle_id: Option<u64>,
-) -> String {
-    let reason_str = reason.to_string();
-    if json_flag {
-        let answer = json!({
-            "changeset_type": changeset_type,
-            "changeset_id": changeset_id,
-            "reason": reason_str,
-            "timestamp_sec": timestamp.timestamp_seconds(),
-            "bundle_id": bundle_id,
-        });
-        to_string_pretty(&answer).unwrap()
-    } else {
-        let dt: DateTime = timestamp.into();
-        let dts = dt.as_chrono().format("%b %e %T %Y");
-        match bundle_id {
-            Some(bundle_id) => format!(
-                "{} ({}) {} {} {}",
-                bundle_id, bookmark, changeset_id, reason, dts
-            ),
-            None => format!("({}) {} {} {}", bookmark, changeset_id, reason, dts),
         }
     }
 }

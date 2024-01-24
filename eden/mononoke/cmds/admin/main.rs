@@ -10,12 +10,9 @@
 use std::process::ExitCode;
 
 use blobstore::PutBehaviour;
-use clientinfo::ClientEntryPoint;
-use clientinfo::ClientInfo;
 use cmdlib::args;
 use cmdlib::args::ArgType;
 use cmdlib::args::MononokeClapApp;
-use context::CoreContext;
 use fbinit::FacebookInit;
 use slog::error;
 
@@ -32,7 +29,6 @@ use crate::hg_changeset::subcommand_hg_changeset;
 mod blobstore_fetch;
 mod blobstore_upload;
 mod bonsai_fetch;
-mod bookmarks_manager;
 mod common;
 mod content_fetch;
 mod crossrepo;
@@ -61,7 +57,6 @@ fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         .subcommand(blobstore_upload::build_subcommand())
         .subcommand(bonsai_fetch::build_subcommand())
         .subcommand(content_fetch::build_subcommand())
-        .subcommand(bookmarks_manager::build_subcommand())
         .subcommand(hg_changeset::build_subcommand())
         .subcommand(hash_convert::build_subcommand())
         .subcommand(filenodes::build_subcommand())
@@ -100,17 +95,6 @@ fn main(fb: FacebookInit) -> ExitCode {
             }
             (content_fetch::CONTENT_FETCH, Some(sub_m)) => {
                 subcommand_content_fetch(fb, logger, &matches, sub_m).await
-            }
-            (bookmarks_manager::BOOKMARKS, Some(sub_m)) => {
-                let ctx = CoreContext::new_with_logger_and_client_info(
-                    fb,
-                    logger.clone(),
-                    ClientInfo::default_with_entry_point(ClientEntryPoint::MononokeAdmin),
-                );
-
-                let repo =
-                    args::not_shardmanager_compatible::open_repo(fb, &logger, &matches).await?;
-                bookmarks_manager::handle_command(ctx, repo, sub_m, logger.clone()).await
             }
             (hg_changeset::HG_CHANGESET, Some(sub_m)) => {
                 subcommand_hg_changeset(fb, logger, &matches, sub_m).await
