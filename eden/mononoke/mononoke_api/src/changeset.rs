@@ -526,7 +526,7 @@ impl ChangesetContext {
             move |(mpath, entry)| {
                 ChangesetPathHistoryContext::new_with_deleted_manifest::<Root::Manifest>(
                     changeset.clone(),
-                    MononokePath::new(mpath),
+                    MononokePath::new(mpath.into()),
                     entry,
                 )
             }

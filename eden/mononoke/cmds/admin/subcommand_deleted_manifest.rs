@@ -165,7 +165,7 @@ async fn subcommand_manifest(
         .await?;
     entries.sort_by_key(|(path, _)| path.clone());
     for (path, mf_id) in entries {
-        println!("{}/ {:?}", NonRootMPath::display_opt(path.as_ref()), mf_id);
+        println!("{}/ {:?}", MPath::display_opt(&path), mf_id);
     }
     Ok(())
 }

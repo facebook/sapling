@@ -34,6 +34,7 @@ use futures::TryStreamExt;
 use manifest::PathOrPrefix;
 use maplit::btreemap;
 use mononoke_types::deleted_manifest_common::DeletedManifestCommon;
+use mononoke_types::path::MPath;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
@@ -135,7 +136,7 @@ pub(crate) async fn linear_test<Root: RootDeletedManifestIdCommon>(
                 .await?;
 
         // nothing was deleted yet
-        let expected_nodes = vec![(None, Status::Live)];
+        let expected_nodes = vec![(MPath::ROOT, Status::Live)];
         assert_eq!(deleted_nodes, expected_nodes);
 
         (bcs_id, mf_id)
@@ -160,15 +161,15 @@ pub(crate) async fn linear_test<Root: RootDeletedManifestIdCommon>(
         .await?;
 
         let expected_nodes = vec![
-            (None, Status::Live),
-            (Some(path("dir")), Status::Deleted(bcs_id)),
-            (Some(path("dir/f-2")), Status::Deleted(bcs_id)),
-            (Some(path("dir/sub")), Status::Deleted(bcs_id)),
-            (Some(path("dir/sub/f-1")), Status::Deleted(bcs_id)),
-            (Some(path("dir-2")), Status::Live),
-            (Some(path("dir-2/sub")), Status::Deleted(bcs_id)),
-            (Some(path("dir-2/sub/f-3")), Status::Deleted(bcs_id)),
-            (Some(path("file.txt")), Status::Deleted(bcs_id)),
+            (MPath::ROOT, Status::Live),
+            (path("dir"), Status::Deleted(bcs_id)),
+            (path("dir/f-2"), Status::Deleted(bcs_id)),
+            (path("dir/sub"), Status::Deleted(bcs_id)),
+            (path("dir/sub/f-1"), Status::Deleted(bcs_id)),
+            (path("dir-2"), Status::Live),
+            (path("dir-2/sub"), Status::Deleted(bcs_id)),
+            (path("dir-2/sub/f-3"), Status::Deleted(bcs_id)),
+            (path("file.txt"), Status::Deleted(bcs_id)),
         ];
         assert_eq!(deleted_nodes, expected_nodes);
 
@@ -191,15 +192,15 @@ pub(crate) async fn linear_test<Root: RootDeletedManifestIdCommon>(
         .await?;
 
         let expected_nodes = vec![
-            (None, Status::Live),
-            (Some(path("dir")), Status::Live),
-            (Some(path("dir/f-2")), Status::Deleted(bcs_id_2)),
-            (Some(path("dir/sub")), Status::Live),
-            (Some(path("dir/sub/f-1")), Status::Deleted(bcs_id_2)),
-            (Some(path("dir-2")), Status::Live),
-            (Some(path("dir-2/sub")), Status::Deleted(bcs_id_2)),
-            (Some(path("dir-2/sub/f-3")), Status::Deleted(bcs_id_2)),
-            (Some(path("file-2.txt")), Status::Deleted(bcs_id)),
+            (MPath::ROOT, Status::Live),
+            (path("dir"), Status::Live),
+            (path("dir/f-2"), Status::Deleted(bcs_id_2)),
+            (path("dir/sub"), Status::Live),
+            (path("dir/sub/f-1"), Status::Deleted(bcs_id_2)),
+            (path("dir-2"), Status::Live),
+            (path("dir-2/sub"), Status::Deleted(bcs_id_2)),
+            (path("dir-2/sub/f-3"), Status::Deleted(bcs_id_2)),
+            (path("file-2.txt"), Status::Deleted(bcs_id)),
         ];
         assert_eq!(deleted_nodes, expected_nodes);
 
@@ -223,14 +224,14 @@ pub(crate) async fn linear_test<Root: RootDeletedManifestIdCommon>(
         .await?;
 
         let expected_nodes = vec![
-            (None, Status::Live),
-            (Some(path("dir")), Status::Live),
-            (Some(path("dir/f-2")), Status::Deleted(bcs_id_2)),
-            (Some(path("dir/sub")), Status::Live),
-            (Some(path("dir/sub/f-1")), Status::Deleted(bcs_id_2)),
-            (Some(path("dir-2")), Status::Live),
-            (Some(path("dir-2/sub")), Status::Live),
-            (Some(path("dir-2/sub/f-3")), Status::Deleted(bcs_id_2)),
+            (MPath::ROOT, Status::Live),
+            (path("dir"), Status::Live),
+            (path("dir/f-2"), Status::Deleted(bcs_id_2)),
+            (path("dir/sub"), Status::Live),
+            (path("dir/sub/f-1"), Status::Deleted(bcs_id_2)),
+            (path("dir-2"), Status::Live),
+            (path("dir-2/sub"), Status::Live),
+            (path("dir-2/sub/f-3"), Status::Deleted(bcs_id_2)),
         ];
         assert_eq!(deleted_nodes, expected_nodes);
 
@@ -256,23 +257,20 @@ pub(crate) async fn linear_test<Root: RootDeletedManifestIdCommon>(
         .await?;
 
         let expected_nodes = vec![
-            (None, Status::Live),
-            (Some(path("dir")), Status::Deleted(bcs_id)),
-            (Some(path("dir/f-2")), Status::Deleted(bcs_id_2)),
-            (Some(path("dir/sub")), Status::Deleted(bcs_id)),
-            (Some(path("dir/sub/f-1")), Status::Deleted(bcs_id_2)),
-            (Some(path("dir/sub/f-4")), Status::Deleted(bcs_id)),
-            (Some(path("dir-2")), Status::Deleted(bcs_id)),
-            (Some(path("dir-2/f-4")), Status::Deleted(bcs_id)),
-            (Some(path("dir-2/sub")), Status::Deleted(bcs_id)),
-            (Some(path("dir-2/sub/f-3")), Status::Deleted(bcs_id_2)),
-            (Some(path("file-2.txt")), Status::Deleted(bcs_id)),
-            (
-                Some(path("file-2.txt/subfile.txt")),
-                Status::Deleted(bcs_id),
-            ),
-            (Some(path("file-3.txt")), Status::Deleted(bcs_id)),
-            (Some(path("file.txt")), Status::Deleted(bcs_id)),
+            (MPath::ROOT, Status::Live),
+            (path("dir"), Status::Deleted(bcs_id)),
+            (path("dir/f-2"), Status::Deleted(bcs_id_2)),
+            (path("dir/sub"), Status::Deleted(bcs_id)),
+            (path("dir/sub/f-1"), Status::Deleted(bcs_id_2)),
+            (path("dir/sub/f-4"), Status::Deleted(bcs_id)),
+            (path("dir-2"), Status::Deleted(bcs_id)),
+            (path("dir-2/f-4"), Status::Deleted(bcs_id)),
+            (path("dir-2/sub"), Status::Deleted(bcs_id)),
+            (path("dir-2/sub/f-3"), Status::Deleted(bcs_id_2)),
+            (path("file-2.txt"), Status::Deleted(bcs_id)),
+            (path("file-2.txt/subfile.txt"), Status::Deleted(bcs_id)),
+            (path("file-3.txt"), Status::Deleted(bcs_id)),
+            (path("file.txt"), Status::Deleted(bcs_id)),
         ];
         assert_eq!(deleted_nodes, expected_nodes);
 
@@ -295,7 +293,7 @@ pub(crate) async fn many_file_dirs_test<Root: RootDeletedManifestIdCommon>(
         let (_, mf_id, deleted_nodes) = derive_manifest::<Root>(&ctx, &repo, bcs, vec![]).await?;
 
         // nothing was deleted yet
-        let expected_nodes = vec![(None, Status::Live)];
+        let expected_nodes = vec![(MPath::ROOT, Status::Live)];
         assert_eq!(deleted_nodes, expected_nodes);
         mf_id
     };
@@ -308,7 +306,7 @@ pub(crate) async fn many_file_dirs_test<Root: RootDeletedManifestIdCommon>(
             derive_manifest::<Root>(&ctx, &repo, bcs, vec![mf_id_1]).await?;
 
         // nothing was deleted yet
-        let expected_nodes = vec![(None, Status::Live)];
+        let expected_nodes = vec![(MPath::ROOT, Status::Live)];
         assert_eq!(deleted_nodes, expected_nodes);
         mf_id
     };
@@ -321,7 +319,7 @@ pub(crate) async fn many_file_dirs_test<Root: RootDeletedManifestIdCommon>(
             derive_manifest::<Root>(&ctx, &repo, bcs, vec![mf_id_2]).await?;
 
         // nothing was deleted yet
-        let expected_nodes = vec![(None, Status::Live)];
+        let expected_nodes = vec![(MPath::ROOT, Status::Live)];
         assert_eq!(deleted_nodes, expected_nodes);
         mf_id
     };
@@ -334,30 +332,24 @@ pub(crate) async fn many_file_dirs_test<Root: RootDeletedManifestIdCommon>(
             derive_manifest::<Root>(&ctx, &repo, bcs, vec![mf_id_3]).await?;
 
         let expected_nodes = vec![
-            (None, Status::Live),
-            (Some(path("dir1")), Status::Live),
-            (Some(path("dir1/file_1_in_dir1")), Status::Deleted(bcs_id)),
-            (Some(path("dir1/file_2_in_dir1")), Status::Deleted(bcs_id)),
-            (Some(path("dir1/subdir1")), Status::Deleted(bcs_id)),
-            (Some(path("dir1/subdir1/file_1")), Status::Deleted(bcs_id)),
+            (MPath::ROOT, Status::Live),
+            (path("dir1"), Status::Live),
+            (path("dir1/file_1_in_dir1"), Status::Deleted(bcs_id)),
+            (path("dir1/file_2_in_dir1"), Status::Deleted(bcs_id)),
+            (path("dir1/subdir1"), Status::Deleted(bcs_id)),
+            (path("dir1/subdir1/file_1"), Status::Deleted(bcs_id)),
+            (path("dir1/subdir1/subsubdir1"), Status::Deleted(bcs_id)),
             (
-                Some(path("dir1/subdir1/subsubdir1")),
+                path("dir1/subdir1/subsubdir1/file_1"),
+                Status::Deleted(bcs_id),
+            ),
+            (path("dir1/subdir1/subsubdir2"), Status::Deleted(bcs_id)),
+            (
+                path("dir1/subdir1/subsubdir2/file_1"),
                 Status::Deleted(bcs_id),
             ),
             (
-                Some(path("dir1/subdir1/subsubdir1/file_1")),
-                Status::Deleted(bcs_id),
-            ),
-            (
-                Some(path("dir1/subdir1/subsubdir2")),
-                Status::Deleted(bcs_id),
-            ),
-            (
-                Some(path("dir1/subdir1/subsubdir2/file_1")),
-                Status::Deleted(bcs_id),
-            ),
-            (
-                Some(path("dir1/subdir1/subsubdir2/file_2")),
+                path("dir1/subdir1/subsubdir2/file_2"),
                 Status::Deleted(bcs_id),
             ),
         ];
@@ -410,12 +402,12 @@ pub(crate) async fn merged_history_test<Root: RootDeletedManifestIdCommon>(
         .await?;
     let deleted_nodes = gen_deleted_manifest_nodes::<Root>(&ctx, &repo, b.clone()).await?;
     let expected_nodes = vec![
-        (None, Status::Live),
-        (Some(path("dir")), Status::Live),
-        (Some(path("dir/file")), Status::Deleted(b)),
-        (Some(path("dir_3")), Status::Live),
-        (Some(path("dir_3/file_1")), Status::Deleted(b)),
-        (Some(path("file")), Status::Deleted(b)),
+        (MPath::ROOT, Status::Live),
+        (path("dir"), Status::Live),
+        (path("dir/file"), Status::Deleted(b)),
+        (path("dir_3"), Status::Live),
+        (path("dir_3/file_1"), Status::Deleted(b)),
+        (path("file"), Status::Deleted(b)),
     ];
     assert_eq!(deleted_nodes, expected_nodes);
 
@@ -432,11 +424,11 @@ pub(crate) async fn merged_history_test<Root: RootDeletedManifestIdCommon>(
 
     let deleted_nodes = gen_deleted_manifest_nodes::<Root>(&ctx, &repo, d.clone()).await?;
     let expected_nodes = vec![
-        (None, Status::Live),
-        (Some(path("dir")), Status::Deleted(d)),
-        (Some(path("dir/file")), Status::Deleted(d)),
-        (Some(path("dir_2")), Status::Deleted(d)),
-        (Some(path("dir_2/file")), Status::Deleted(d)),
+        (MPath::ROOT, Status::Live),
+        (path("dir"), Status::Deleted(d)),
+        (path("dir/file"), Status::Deleted(d)),
+        (path("dir_2"), Status::Deleted(d)),
+        (path("dir_2/file"), Status::Deleted(d)),
     ];
     assert_eq!(deleted_nodes, expected_nodes);
 
@@ -469,10 +461,10 @@ pub(crate) async fn merged_history_test<Root: RootDeletedManifestIdCommon>(
 
     let deleted_nodes = gen_deleted_manifest_nodes::<Root>(&ctx, &repo, g.clone()).await?;
     let expected_nodes = vec![
-        (None, Status::Live),
-        (Some(path("dir")), Status::Deleted(d)),
-        (Some(path("dir/file")), Status::Deleted(d)),
-        (Some(path("file")), Status::Deleted(g)),
+        (MPath::ROOT, Status::Live),
+        (path("dir"), Status::Deleted(d)),
+        (path("dir/file"), Status::Deleted(d)),
+        (path("file"), Status::Deleted(g)),
     ];
     assert_eq!(deleted_nodes, expected_nodes);
 
@@ -485,12 +477,12 @@ pub(crate) async fn merged_history_test<Root: RootDeletedManifestIdCommon>(
 
     let deleted_nodes = gen_deleted_manifest_nodes::<Root>(&ctx, &repo, h.clone()).await?;
     let expected_nodes = vec![
-        (None, Status::Live),
-        (Some(path("dir")), Status::Deleted(d)),
-        (Some(path("dir/file")), Status::Deleted(d)),
-        (Some(path("dir_3")), Status::Live),
-        (Some(path("dir_3/file_2")), Status::Deleted(h)),
-        (Some(path("file")), Status::Deleted(g)),
+        (MPath::ROOT, Status::Live),
+        (path("dir"), Status::Deleted(d)),
+        (path("dir/file"), Status::Deleted(d)),
+        (path("dir_3"), Status::Live),
+        (path("dir_3/file_2"), Status::Deleted(h)),
+        (path("file"), Status::Deleted(g)),
     ];
     assert_eq!(deleted_nodes, expected_nodes);
 
@@ -509,13 +501,13 @@ pub(crate) async fn merged_history_test<Root: RootDeletedManifestIdCommon>(
         .await?;
     let deleted_nodes = gen_deleted_manifest_nodes::<Root>(&ctx, &repo, i.clone()).await?;
     let expected_nodes = vec![
-        (None, Status::Live),
-        (Some(path("dir")), Status::Live),
-        (Some(path("dir/file")), Status::Deleted(i)),
-        (Some(path("dir_3")), Status::Deleted(i)),
-        (Some(path("dir_3/file_1")), Status::Deleted(i)),
-        (Some(path("dir_3/file_2")), Status::Deleted(i)),
-        (Some(path("file")), Status::Deleted(i)),
+        (MPath::ROOT, Status::Live),
+        (path("dir"), Status::Live),
+        (path("dir/file"), Status::Deleted(i)),
+        (path("dir_3"), Status::Deleted(i)),
+        (path("dir_3/file_1"), Status::Deleted(i)),
+        (path("dir_3/file_2"), Status::Deleted(i)),
+        (path("file"), Status::Deleted(i)),
     ];
     assert_eq!(deleted_nodes, expected_nodes);
 
@@ -574,21 +566,21 @@ pub(crate) async fn merged_history_test<Root: RootDeletedManifestIdCommon>(
 
     let deleted_nodes = gen_deleted_manifest_nodes::<Root>(&ctx, &repo, n.clone()).await?;
     let expected_nodes = vec![
-        (None, Status::Live),
-        (Some(path("dir")), Status::Live),
-        (Some(path("dir/file")), Status::Deleted(i)),
-        (Some(path("dir_3")), Status::Deleted(i)),
-        (Some(path("dir_3/file_1")), Status::Deleted(i)),
-        (Some(path("dir_3/file_2")), Status::Deleted(i)),
-        (Some(path("dir_4")), Status::Deleted(n)),
-        (Some(path("dir_4/file_1")), Status::Deleted(k)),
-        (Some(path("dir_4/file_2")), Status::Deleted(m)),
-        (Some(path("dir_5")), Status::Deleted(n)),
-        (Some(path("dir_5/file_1")), Status::Deleted(n)),
-        (Some(path("dir_5/file_2")), Status::Deleted(n)),
-        (Some(path("dir_to_file")), Status::Live),
-        (Some(path("dir_to_file/file")), Status::Deleted(n)),
-        (Some(path("file")), Status::Deleted(i)),
+        (MPath::ROOT, Status::Live),
+        (path("dir"), Status::Live),
+        (path("dir/file"), Status::Deleted(i)),
+        (path("dir_3"), Status::Deleted(i)),
+        (path("dir_3/file_1"), Status::Deleted(i)),
+        (path("dir_3/file_2"), Status::Deleted(i)),
+        (path("dir_4"), Status::Deleted(n)),
+        (path("dir_4/file_1"), Status::Deleted(k)),
+        (path("dir_4/file_2"), Status::Deleted(m)),
+        (path("dir_5"), Status::Deleted(n)),
+        (path("dir_5/file_1"), Status::Deleted(n)),
+        (path("dir_5/file_2"), Status::Deleted(n)),
+        (path("dir_to_file"), Status::Live),
+        (path("dir_to_file/file"), Status::Deleted(n)),
+        (path("file"), Status::Deleted(i)),
     ];
     assert_eq!(deleted_nodes, expected_nodes);
 
@@ -658,7 +650,7 @@ pub(crate) async fn test_find_entries<Root: RootDeletedManifestIdCommon>(
                 .unwrap();
 
             entries.sort();
-            let expected_entries = [Some(path("dir/f-2")), Some(path("dir/sub/f-1"))];
+            let expected_entries = [path("dir/f-2"), path("dir/sub/f-1")];
             assert_eq!(entries, expected_entries);
         }
 
@@ -676,11 +668,8 @@ pub(crate) async fn test_find_entries<Root: RootDeletedManifestIdCommon>(
                 .unwrap();
 
             entries.sort();
-            let expected_entries = vec![
-                Some(path("dir-2/f-4")),
-                Some(path("dir-2/sub")),
-                Some(path("dir-2/sub/f-3")),
-            ];
+            let expected_entries =
+                vec![path("dir-2/f-4"), path("dir-2/sub"), path("dir-2/sub/f-3")];
             assert_eq!(entries, expected_entries);
         }
 
@@ -701,11 +690,7 @@ pub(crate) async fn test_find_entries<Root: RootDeletedManifestIdCommon>(
                 .unwrap();
 
             entries.sort();
-            let expected_entries = vec![
-                Some(path("dir/sub")),
-                Some(path("dir/sub/f-1")),
-                Some(path("dir/sub/f-6")),
-            ];
+            let expected_entries = vec![path("dir/sub"), path("dir/sub/f-1"), path("dir/sub/f-6")];
             assert_eq!(entries, expected_entries);
         }
     }
@@ -777,7 +762,7 @@ async fn gen_deleted_manifest_nodes<Root: RootDeletedManifestIdCommon>(
     ctx: &CoreContext,
     repo: &TestRepo,
     bonsai: ChangesetId,
-) -> Result<Vec<(Option<NonRootMPath>, Status)>, Error> {
+) -> Result<Vec<(MPath, Status)>, Error> {
     let manifest = repo
         .repo_derived_data()
         .manager()
@@ -796,7 +781,7 @@ async fn create_cs_and_derive_manifest<Root: RootDeletedManifestIdCommon>(
     repo: TestRepo,
     file_changes: BTreeMap<&str, Option<&str>>,
     parent_ids: Vec<(ChangesetId, Root::Id)>,
-) -> Result<(ChangesetId, Root::Id, Vec<(Option<NonRootMPath>, Status)>), Error> {
+) -> Result<(ChangesetId, Root::Id, Vec<(MPath, Status)>), Error> {
     let parent_bcs_ids = parent_ids
         .iter()
         .map(|(bs, _)| bs.clone())
@@ -815,7 +800,7 @@ async fn derive_manifest<Root: RootDeletedManifestIdCommon>(
     repo: &TestRepo,
     bcs: BonsaiChangeset,
     parent_mf_ids: Vec<Root::Id>,
-) -> Result<(ChangesetId, Root::Id, Vec<(Option<NonRootMPath>, Status)>), Error> {
+) -> Result<(ChangesetId, Root::Id, Vec<(MPath, Status)>), Error> {
     let blobstore = repo.repo_blobstore_arc() as Arc<dyn Blobstore>;
     let bcs_id = bcs.get_changeset_id();
 
@@ -898,10 +883,10 @@ fn iterate_all_entries<Root: RootDeletedManifestIdCommon>(
     ctx: CoreContext,
     repo: TestRepo,
     manifest_id: Root::Id,
-) -> impl Stream<Item = Result<(Option<NonRootMPath>, Status, Root::Id), Error>> {
+) -> impl Stream<Item = Result<(MPath, Status, Root::Id), Error>> {
     async_stream::stream! {
         let blobstore = repo.repo_blobstore();
-        let s = bounded_traversal_stream(256, Some((None, manifest_id)), move |(path, manifest_id)| {
+        let s = bounded_traversal_stream(256, Some((MPath::ROOT, manifest_id)), move |(path, manifest_id)| {
             cloned!(ctx, blobstore);
             async move {
                 let manifest = manifest_id.load(&ctx, &blobstore).await?;
@@ -913,8 +898,8 @@ fn iterate_all_entries<Root: RootDeletedManifestIdCommon>(
                 let recurse_subentries = manifest
                     .into_subentries(&ctx, &blobstore)
                     .map_ok(|(name, mf_id)| {
-                        let full_path = NonRootMPath::join_opt_element(path.as_ref(), &name);
-                        (Some(full_path), mf_id)
+                        let full_path = path.join_element(Some(&name));
+                        (full_path, mf_id)
                     })
                     .try_collect::<Vec<_>>().await?;
 
@@ -931,6 +916,6 @@ fn iterate_all_entries<Root: RootDeletedManifestIdCommon>(
     }
 }
 
-fn path(path_str: &str) -> NonRootMPath {
-    NonRootMPath::new(path_str).unwrap()
+fn path(path_str: &str) -> MPath {
+    MPath::new(path_str).unwrap()
 }

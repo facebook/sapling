@@ -32,7 +32,6 @@ use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileUnodeId;
 use mononoke_types::ManifestUnodeId;
-use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedDataRef;
 use unodes::RootUnodeManifestId;
@@ -227,7 +226,7 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
         ctx: &'a CoreContext,
         blobstore: &'a impl Blobstore,
         paths_or_prefixes: impl IntoIterator<Item = impl Into<PathOrPrefix>>,
-    ) -> BoxStream<'a, Result<(Option<NonRootMPath>, Self::Id), Error>> {
+    ) -> BoxStream<'a, Result<(MPath, Self::Id), Error>> {
         let root_id = self.id().clone();
         enum Pattern {
             Path,
@@ -248,10 +247,10 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
 
         (async_stream::stream! {
             let blobstore = &blobstore;
-            let s: BoxStream<'_, Result<(Option<NonRootMPath>, Self::Id), Error>> = bounded_traversal_stream(
+            let s: BoxStream<'_, Result<(MPath, Self::Id), Error>> = bounded_traversal_stream(
                 256,
                 // starting point
-                Some((None, Selector::Selector(path_tree), root_id)),
+                Some((MPath::ROOT, Selector::Selector(path_tree), root_id)),
                 move |(path, selector, manifest_id)| {
                     async move {
                         let mf = manifest_id.load(ctx, blobstore).await?;
@@ -265,8 +264,8 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
                             Selector::Recursive => {
                                 // collect subentries to recurse into
                                 let recurse = mf.into_subentries(ctx, blobstore).map_ok(|(name, mf_id)| {
-                                    let next_path = NonRootMPath::join_opt_element(path.as_ref(), &name);
-                                    (Some(next_path), Selector::Recursive, mf_id)
+                                    let next_path = path.join_element(Some(&name));
+                                    (next_path, Selector::Recursive, mf_id)
                                 }).try_collect::<Vec<_>>().await?;
 
                                 Ok((return_entry, recurse))
@@ -278,8 +277,8 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
                                     Some(Pattern::Prefix) => {
                                         // collect subentries to recurse into
                                         let recurse = mf.into_subentries(ctx, blobstore).map_ok(|(name, mf_id)| {
-                                            let next_path = NonRootMPath::join_opt_element(path.as_ref(), &name);
-                                            (Some(next_path), Selector::Recursive, mf_id)
+                                            let next_path = path.join_element(Some(&name));
+                                            (next_path, Selector::Recursive, mf_id)
                                         }).try_collect::<Vec<_>>().await?;
 
                                         Ok((return_entry, recurse))
@@ -293,10 +292,9 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
                                         // add path tree selectors
                                         for (name, tree) in subentries {
                                             if let Some(mf_id) = mf.lookup(ctx, blobstore, &name).await? {
-                                                let next_path =
-                                                    NonRootMPath::join_opt_element(path.as_ref(), &name);
+                                                let next_path = path.join_element(Some(&name));
                                                 recurse.push((
-                                                    Some(next_path),
+                                                    next_path,
                                                     Selector::Selector(tree),
                                                     mf_id,
                                                 ));
