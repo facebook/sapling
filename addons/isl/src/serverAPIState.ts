@@ -27,8 +27,8 @@ import serverAPI from './ClientToServerAPI';
 import messageBus from './MessageBus';
 import {latestSuccessorsMap, successionTracker} from './SuccessionTracker';
 import {Dag, DagCommitInfo} from './dag/dag';
-import {configBackedAtom} from './jotaiUtils';
-import {clearOnCwdChange} from './recoilUtils';
+import {configBackedAtom, writeAtom} from './jotaiUtils';
+import {clearOnCwdChange, entangledAtoms} from './recoilUtils';
 import {initialParams} from './urlParams';
 import {short} from './utils';
 import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD} from 'isl-server/src/constants';
@@ -36,24 +36,19 @@ import {selectorFamily, atom, DefaultValue, selector, useRecoilCallback} from 'r
 import {reuseEqualObjects} from 'shared/deepEqualExt';
 import {defer, randomId} from 'shared/utils';
 
-const repositoryData = atom<{info: RepoInfo | undefined; cwd: string | undefined}>({
-  key: 'repositoryData',
-  default: {info: undefined, cwd: undefined},
-  effects: [
-    ({setSelf}) => {
-      const disposable = serverAPI.onMessageOfType('repoInfo', event => {
-        setSelf({info: event.info, cwd: event.cwd});
-      });
-      return () => disposable.dispose();
-    },
-    () =>
-      serverAPI.onSetup(() =>
-        serverAPI.postMessage({
-          type: 'requestRepoInfo',
-        }),
-      ),
-  ],
+const [jotaiRepositoryData, repositoryData] = entangledAtoms<{info?: RepoInfo; cwd?: string}>(
+  {},
+  'repositoryData',
+);
+
+serverAPI.onMessageOfType('repoInfo', event => {
+  writeAtom(jotaiRepositoryData, {info: event.info, cwd: event.cwd});
 });
+serverAPI.onSetup(() =>
+  serverAPI.postMessage({
+    type: 'requestRepoInfo',
+  }),
+);
 
 export const repositoryInfo = selector<RepoInfo | undefined>({
   key: 'repositoryInfo',
