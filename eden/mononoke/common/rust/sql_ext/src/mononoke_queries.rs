@@ -17,6 +17,8 @@ use anyhow::Result;
 use async_trait::async_trait;
 use bytes::Bytes;
 use caching_ext::*;
+use clientinfo::ClientEntryPoint;
+use clientinfo::ClientRequestInfo;
 use itertools::Itertools;
 use maplit::hashmap;
 use maplit::hashset;
@@ -98,6 +100,8 @@ macro_rules! mononoke_queries {
                 // Not possible to retry query with transaction
                 #[allow(unused_imports)]
                 pub use [<$name Impl>]::query_with_transaction;
+                #[allow(unused_imports)]
+                pub use [<$name Impl>]::commented_query_with_transaction;
 
                 #[allow(dead_code)]
                 pub async fn query(
@@ -107,6 +111,19 @@ macro_rules! mononoke_queries {
                 ) -> Result<Vec<($( $rtype, )*)>> {
                     query_with_retry_no_cache(
                         || [<$name Impl>]::query(connection, $( $pname, )* $( $lname, )*),
+                    ).await
+                }
+
+                #[allow(dead_code)]
+                pub async fn traced_query(
+                    connection: &Connection,
+                    cri: &ClientRequestInfo,
+                    $( $pname: & $ptype, )*
+                    $( $lname: & [ $ltype ], )*
+                ) -> Result<Vec<($( $rtype, )*)>> {
+                    let cri = serde_json::to_string(cri)?;
+                    query_with_retry_no_cache(
+                        || [<$name Impl>]::commented_query(connection, &cri, $( $pname, )* $( $lname, )*),
                     ).await
                 }
             }
@@ -142,6 +159,11 @@ macro_rules! mononoke_queries {
                 // Not possible to retry query with transaction
                 #[allow(unused_imports)]
                 pub use [<$name Impl>]::query_with_transaction;
+                #[allow(unused_imports)]
+                pub use [<$name Impl>]::commented_query_with_transaction;
+
+
+
 
                 #[allow(dead_code)]
                 pub async fn query(
@@ -168,6 +190,41 @@ macro_rules! mononoke_queries {
                     Ok(query_with_retry(
                         data,
                         || async move { Ok(MemcacheWrapper([<$name Impl>]::query(connection, $( $pname, )* $( $lname, )*).await?)) },
+                    ).await?.0)
+                }
+
+                #[allow(dead_code)]
+                pub async fn traced_query(
+                    config: &SqlQueryConfig,
+                    connection: &Connection,
+                    cri: &ClientRequestInfo,
+                    $( $pname: & $ptype, )*
+                    $( $lname: & [ $ltype ], )*
+                ) -> Result<Vec<($( $rtype, )*)>> {
+                    let mut hasher = Hash128::with_seed(0);
+
+                    $(
+                        $pname.hash(&mut hasher);
+                    )*
+                    $(
+                        $lname.hash(&mut hasher);
+                    )*
+                    stringify!($name).hash(&mut hasher);
+                    stringify!($mysql_q).hash(&mut hasher);
+                    stringify!($sqlite_q).hash(&mut hasher);
+                    let key = hasher.finish_ext();
+                    let data = CacheData {key, config: config.caching.as_ref()};
+
+
+                    let cri = serde_json::to_string(cri)?;
+                    Ok(query_with_retry(
+                        data,
+                        || {
+                        let cri = cri.clone();
+                        async move {
+                            Ok(MemcacheWrapper([<$name Impl>]::commented_query(connection, &cri, $( $pname, )* $( $lname, )*).await?))
+                        }
+        },
                     ).await?.0)
                 }
             }
@@ -220,6 +277,8 @@ macro_rules! mononoke_queries {
                 // Not possible to retry query with transaction
                 #[allow(unused_imports)]
                 pub use [<$name Impl>]::query_with_transaction;
+                #[allow(unused_imports)]
+                pub use [<$name Impl>]::commented_query_with_transaction;
 
                 #[allow(dead_code)]
                 pub async fn query(
@@ -229,6 +288,19 @@ macro_rules! mononoke_queries {
                 ) -> Result<WriteResult> {
                     query_with_retry_no_cache(
                         || [<$name Impl>]::query(connection, values $( , $pname )* ),
+                    ).await
+                }
+
+                #[allow(dead_code)]
+                pub async fn traced_query(
+                    connection: &Connection,
+                    cri: &ClientRequestInfo,
+                    values: &[($( & $vtype, )*)],
+                    $( $pname: & $ptype ),*
+                ) -> Result<WriteResult> {
+                    let cri = serde_json::to_string(cri)?;
+                    query_with_retry_no_cache(
+                        || [<$name Impl>]::commented_query(connection, &cri, values $( , $pname )* ),
                     ).await
                 }
             }
@@ -281,6 +353,8 @@ macro_rules! mononoke_queries {
                 // Not possible to retry query with transaction
                 #[allow(unused_imports)]
                 pub use [<$name Impl>]::query_with_transaction;
+                #[allow(unused_imports)]
+                pub use [<$name Impl>]::commented_query_with_transaction;
 
                 #[allow(dead_code)]
                 pub async fn query(
@@ -290,6 +364,19 @@ macro_rules! mononoke_queries {
                 ) -> Result<WriteResult> {
                     query_with_retry_no_cache(
                         || [<$name Impl>]::query(connection, $( $pname, )* $( $lname, )*),
+                    ).await
+                }
+
+                #[allow(dead_code)]
+                pub async fn traced_query(
+                    connection: &Connection,
+                    cri: &ClientRequestInfo,
+                    $( $pname: & $ptype, )*
+                    $( $lname: & [ $ltype ], )*
+                ) -> Result<WriteResult> {
+                    let cri = serde_json::to_string(cri)?;
+                    query_with_retry_no_cache(
+                        || [<$name Impl>]::commented_query(connection, &cri, $( $pname, )* $( $lname, )*),
                     ).await
                 }
             }
@@ -494,10 +581,13 @@ mod tests {
         clippy::todo
     )]
     async fn should_compile() -> anyhow::Result<()> {
+        use clientinfo::ClientEntryPoint;
+        use clientinfo::ClientRequestInfo;
         use sql_query_config::SqlQueryConfig;
 
         let config: &SqlQueryConfig = todo!();
         let connection: &sql::Connection = todo!();
+        let cri = ClientRequestInfo::new(ClientEntryPoint::Sapling);
         TestQuery::query(connection, todo!(), todo!()).await?;
         TestQuery::query_with_transaction(todo!(), todo!(), todo!()).await?;
         TestQuery2::query(config, connection).await?;
@@ -505,6 +595,10 @@ mod tests {
         TestQuery3::query(connection, &[(&12,)]).await?;
         TestQuery3::query_with_transaction(todo!(), &[(&12,)]).await?;
         TestQuery4::query(connection, &"hello").await?;
+        TestQuery::traced_query(connection, &cri, todo!(), todo!()).await?;
+        TestQuery2::traced_query(config, connection, &cri).await?;
+        TestQuery3::traced_query(connection, &cri, &[(&12,)]).await?;
+        TestQuery4::traced_query(connection, &cri, &"hello").await?;
         Ok(())
     }
 }

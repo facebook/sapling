@@ -23,6 +23,7 @@ rust_library(
         "fbsource//third-party/rust:paste",
         "fbsource//third-party/rust:serde",
         "fbsource//third-party/rust:serde_cbor",
+        "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:slog",
         "fbsource//third-party/rust:tokio",
         "fbsource//third-party/rust:twox-hash",
@@ -36,6 +37,7 @@ rust_library(
         "//eden/mononoke/common/retry:retry",
         "//eden/mononoke/common/rust/caching_ext:caching_ext",
         "//eden/mononoke/repo_attributes/sql_query_config:sql_query_config",
+        "//eden/scm/lib/clientinfo:clientinfo",
     ] + ([] if rust_oss.is_oss_build() else [
         "fbsource//third-party/rust:arc-swap",
         "fbsource//third-party/rust:futures",

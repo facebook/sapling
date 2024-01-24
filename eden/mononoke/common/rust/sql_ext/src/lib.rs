@@ -30,7 +30,10 @@ pub mod _macro_internal {
     pub use std::hash::Hasher;
 
     pub use anyhow::Result;
+    pub use clientinfo::ClientEntryPoint;
+    pub use clientinfo::ClientRequestInfo;
     pub use paste;
+    pub use serde_json;
     pub use sql::queries;
     pub use sql::Connection;
     pub use sql::WriteResult;
