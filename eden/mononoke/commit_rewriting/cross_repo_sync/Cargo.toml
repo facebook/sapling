@@ -67,7 +67,6 @@ synced_commit_mapping = { version = "0.1.0", path = "../synced_commit_mapping" }
 thiserror = "1.0.49"
 tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
 topo_sort = { version = "0.1.0", path = "../../common/topo_sort" }
-tunables = { version = "0.1.0", path = "../../tunables" }
 
 [dev-dependencies]
 ascii = "1.0"

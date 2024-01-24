@@ -129,7 +129,6 @@ use synced_commit_mapping::SyncedCommitMappingEntry;
 use synced_commit_mapping::SyncedCommitSourceRepo;
 use thiserror::Error;
 use topo_sort::sort_topological;
-use tunables::tunables;
 use types::Source;
 use types::Target;
 
@@ -2292,8 +2291,7 @@ where
             break;
         }
 
-        let leased = if tunables()
-            .xrepo_disable_commit_sync_lease()
+        let leased = if justknobs::eval("scm/mononoke:xrepo_disable_commit_sync_lease", None, None)
             .unwrap_or_default()
         {
             true

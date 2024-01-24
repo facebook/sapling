@@ -528,9 +528,11 @@ fn create_warm_bookmark_cache_scuba_sample_builder(
     {
         Some(scuba) => {
             let hostname = hostname::get_hostname()?;
-            let sampling_pct = tunables()
-                .warm_bookmark_cache_logging_sampling_pct()
-                .unwrap_or_default() as u64;
+            let sampling_pct = justknobs::get_as::<u64>(
+                "scm/mononoke:warm_bookmark_cache_logging_sampling_pct",
+                None,
+            )
+            .unwrap_or_default();
 
             let mut hasher = DefaultHasher::new();
             hostname.hash(&mut hasher);

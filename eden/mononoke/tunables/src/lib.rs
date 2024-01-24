@@ -78,16 +78,7 @@ pub type TunableVecOfStringsByRepo = ArcSwap<HashMap<String, Vec<String>>>;
 
 #[derive(Tunables, Default, Debug)]
 pub struct MononokeTunables {
-    filenodes_disabled: TunableBool,
     warm_bookmark_cache_poll_interval_ms: TunableI64,
-    xrepo_sync_disable_all_syncs: TunableBool,
-    xrepo_disable_commit_sync_lease: TunableBool,
-    allow_change_xrepo_mapping_extra: TunableBool,
-    // What timeout to use when doing filenode lookup.
-    // Usually filenode lookup is used while generating hg changesets
-    filenode_lookup_timeout_ms: TunableI64,
-    // Sampling ratio percentage for warm boomark cache.
-    warm_bookmark_cache_logging_sampling_pct: TunableI64,
     // Which region writes should be done to, in order to minimise latency.
     // This should align with underlying storage (SQL/Manifold) write regions.
     // Notice writes still work from any region, and this field is not necessarily
@@ -97,22 +88,12 @@ pub struct MononokeTunables {
     // with removing it, but this tunable can be used as a quick killswitch to
     // enable them again.
     sql_lag_monitoring_blocklist: TunableVecOfStrings,
-    // Force local pushrebase instead of talking to SCS or Land Service
-    force_local_pushrebase: TunableBool,
     // Enable usage of basename_suffix_skeleton_manifest in commit_find_files
     disable_basename_suffix_skeleton_manifest: TunableBool,
     // Enable using BSSM for suffix queries. Might be inneficient for broad suffixes (like .php)
     enable_bssm_suffix_query: TunableBool,
     // Enable using optimized BSSM derivation.
     enable_bssm_optimized_derivation: TunableBool,
-    // List of targets in AOSP megarepo to apply squashing config overrides
-    megarepo_squashing_config_override_targets: TunableVecOfStringsByRepo,
-    // Override squashing limit for listed targets
-    megarepo_override_squashing_limit: TunableI64ByRepo,
-    // Override author check during squashing
-    megarepo_override_author_check: TunableBoolByRepo,
-    // Skip backsyncing for empty commits (except mapping changes via extras and merges)
-    cross_repo_skip_backsyncing_ordinary_empty_commits: TunableBoolByRepo,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {
