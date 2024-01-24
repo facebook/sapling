@@ -27,7 +27,6 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use basename_suffix_skeleton_manifest::RootBasenameSuffixSkeletonManifest;
 use blame::RootBlameV2;
 use blobrepo::BlobRepo;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
@@ -613,7 +612,6 @@ async fn derive_all(ctx: &CoreContext, repo: &BlobRepo, csids: &[ChangesetId]) -
         derive::<RootFsnodeId>(ctx, repo, csids),
         derive::<RootSkeletonManifestId>(ctx, repo, csids),
         derive::<ChangesetInfo>(ctx, repo, csids),
-        derive::<RootBasenameSuffixSkeletonManifest>(ctx, repo, csids),
     )?;
     Ok(())
 }

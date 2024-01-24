@@ -26,7 +26,6 @@ rust_binary(
         "//eden/mononoke/changesets/changesets_creation:changesets_creation",
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
         "//eden/mononoke/common/topo_sort:topo_sort",
-        "//eden/mononoke/derived_data:basename_suffix_skeleton_manifest",
         "//eden/mononoke/derived_data:blame",
         "//eden/mononoke/derived_data:changeset_info",
         "//eden/mononoke/derived_data:deleted_manifest",
