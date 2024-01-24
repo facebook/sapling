@@ -62,7 +62,6 @@ thiserror = "1.0.49"
 time_window_counter = { version = "0.1.0", path = "../../time_window_counter" }
 tokio = { version = "1.29.1", features = ["full", "test-util", "tracing"] }
 topo_sort = { version = "0.1.0", path = "../../common/topo_sort" }
-tunables = { version = "0.1.0", path = "../../tunables" }
 wirepack = { version = "0.1.0", path = "../wirepack" }
 wireproto_handler = { version = "0.1.0", path = "../../wireproto_handler" }
 

@@ -39,7 +39,6 @@ use repo_update_logger::CommitInfo;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
 use stats::prelude::*;
-use tunables::tunables;
 
 use crate::hook_running::map_hook_rejections;
 use crate::hook_running::HookRejectionRemapper;

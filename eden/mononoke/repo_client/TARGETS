@@ -228,7 +228,6 @@ rust_library(
         "//eden/mononoke/repo_authorization:repo_authorization",
         "//eden/mononoke/server/context:context",
         "//eden/mononoke/time_window_counter:time_window_counter",
-        "//eden/mononoke/tunables:tunables",
         "//eden/mononoke/wireproto_handler:wireproto_handler",
     ],
 )
