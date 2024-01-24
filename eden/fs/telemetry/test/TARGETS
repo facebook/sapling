@@ -1,0 +1,108 @@
+load("@fbcode_macros//build_defs:cpp_benchmark.bzl", "cpp_benchmark")
+load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("scm_client_infra")
+
+cpp_unittest(
+    name = "test",
+    srcs = [
+        "TraceBusTest.cpp",
+        "TracingTest.cpp",
+    ],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/telemetry:telemetry",
+        "//folly/executors:threaded_executor",
+        "//folly/futures:core",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
+    name = "task_trace_test",
+    srcs = [
+        "TaskTraceTest.cpp",
+    ],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/telemetry:task_trace",
+        "//folly/futures:core",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
+    name = "activity_buffer_test",
+    srcs = [
+        "ActivityBufferTest.cpp",
+    ],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/telemetry:activity_buffer",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
+    name = "scribe_test",
+    srcs = [
+        "SubprocessScribeLoggerTest.cpp",
+    ],
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    deps = [
+        "//eden/fs/telemetry:scribe_logger",
+        "//folly:file_util",
+        "//folly/experimental:test_util",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
+    name = "scuba_test",
+    srcs = [
+        "ScubaStructuredLoggerTest.cpp",
+    ],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/telemetry:scribe_logger",
+        "//eden/fs/telemetry:structured_logger",
+        "//folly:dynamic",
+        "//folly/portability:gmock",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_benchmark(
+    name = "activity_buffer_benchmark",
+    srcs = [
+        "ActivityBufferBenchmark.cpp",
+    ],
+    deps = [
+        "//eden/fs/utils:process",
+        "//folly:file",
+        "//folly:stop_watch",
+        "//folly/init:init",
+        "//folly/portability:gflags",
+    ],
+)
+
+cpp_benchmark(
+    name = "bench",
+    srcs = glob(
+        ["*Benchmark.cpp"],
+        exclude = [
+            "ActivityBufferBenchmark.cpp",
+        ],
+    ),
+    deps = [
+        "fbsource//third-party/benchmark:benchmark",
+        "//eden/common/utils/benchharness:benchharness",
+        "//eden/fs/telemetry:telemetry",
+        "//folly/init:init",
+        "//folly/synchronization/test:barrier",
+    ],
+)

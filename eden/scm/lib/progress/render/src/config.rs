@@ -23,6 +23,9 @@ pub struct RenderingConfig {
     /// Terminal width.
     pub term_width: usize,
 
+    /// Terminal height.
+    pub term_height: usize,
+
     /// Use CJK width (some characters are treated as 2-char width, instead of 1-char width).
     /// Practically, some CJK fonts would work better with this set to true.
     pub cjk_width: bool,
@@ -34,6 +37,7 @@ impl Default for RenderingConfig {
             delay: Duration::from_secs(3),
             max_bar_count: 8,
             term_width: 80,
+            term_height: 25,
             cjk_width: false,
         }
     }
@@ -46,6 +50,7 @@ impl RenderingConfig {
             delay: Duration::from_secs(0),
             max_bar_count: 5,
             term_width: 60,
+            term_height: 25,
             cjk_width: false,
         }
     }

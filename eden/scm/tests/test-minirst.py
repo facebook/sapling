@@ -7,8 +7,7 @@ from __future__ import absolute_import, print_function
 
 import pprint
 
-from edenscm import minirst
-from hghave import require
+from sapling import minirst
 
 
 def debugformat(text, form, **kwargs):

@@ -51,7 +51,7 @@ Absorb triggers mirroring
   > D3
   > EOF
 
-  $ LOG=edenscm::ext::dirsync=debug hg absorb -a
+  $ LOG=sapling::ext::dirsync=debug hg absorb -a
   showing changes for dir1/B
           @@ -0,1 +0,1 @@
   * -B (glob)
@@ -84,10 +84,10 @@ Absorb triggers mirroring
   mirrored changes in 'dir1/C' to 'dir2/C'
   mirrored changes in 'dir1/D' to 'dir2/D'
   mirrored changes in 'dir2/A' to 'dir1/A'
-  DEBUG edenscm::ext::dirsync: rewrite mirrored dir1/A
-  DEBUG edenscm::ext::dirsync: rewrite mirrored dir2/B
-  DEBUG edenscm::ext::dirsync: rewrite mirrored dir2/C
-  DEBUG edenscm::ext::dirsync: rewrite mirrored dir2/D
+  DEBUG sapling::ext::dirsync: rewrite mirrored dir1/A
+  DEBUG sapling::ext::dirsync: rewrite mirrored dir2/B
+  DEBUG sapling::ext::dirsync: rewrite mirrored dir2/C
+  DEBUG sapling::ext::dirsync: rewrite mirrored dir2/D
   5 of 6 chunks applied
 
 Working copy does not have "M" mirrored files
@@ -196,7 +196,7 @@ Only changes the 1st commit:
 
   $ hg revert --config ui.origbackuppath=.hg/origbackups dir1/D
   $ echo A2 > dir1/A
-  $ LOG=edenscm::ext::dirsync=debug hg absorb
+  $ LOG=sapling::ext::dirsync=debug hg absorb
   showing changes for dir1/A
           @@ -0,1 +0,1 @@
   * -A1 (glob)
@@ -207,7 +207,7 @@ Only changes the 1st commit:
   apply changes (yn)?  y
   mirrored adding 'dir1/A' to 'dir2/A'
   mirrored changes in 'dir1/A' to 'dir2/A'
-  DEBUG edenscm::ext::dirsync: rewrite mirrored dir2/A
+  DEBUG sapling::ext::dirsync: rewrite mirrored dir2/A
   1 of 1 chunk applied
 
   $ hg status
@@ -277,7 +277,7 @@ There is no "rewrite mirrored dir2/A" message:
   >      y  : 2
   >     y   : 3
   > EOF
-  $ LOG='edenscm::ext::dirsync=debug' HGEDITOR='cat editortext >' hg absorb --edit-lines -a dir1/A
+  $ LOG='sapling::ext::dirsync=debug' HGEDITOR='cat editortext >' hg absorb --edit-lines -a dir1/A
   mirrored adding 'dir1/A' to 'dir2/A'
   1 of 1 chunk applied
 

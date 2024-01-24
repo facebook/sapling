@@ -545,6 +545,47 @@ WEBVIEW_API int webview_init(webview_t w) {
   item = create_menu_item(title, wv->frameless ? "terminate:" : "close", "q");
   ((id(*)(id, SEL, id))objc_msgSend)(appMenu, sel_registerName("addItem:"), item);
 
+  // ----------------------------------------------------------------------------
+  // Add support for Edit menu, with cut/copy/paste/select all/undo/redo.
+  // This also allows keyboard shortcuts for these actions to work.
+  // See https://github.com/Boscop/web-view/issues/83#issuecomment-597470641
+  id editMenuItem =
+      ((id(*)(id, SEL))objc_msgSend)((id)objc_getClass("NSMenuItem"), sel_registerName("alloc"));
+
+  ((id(*)(id, SEL, id, id, id))objc_msgSend)(editMenuItem,
+               sel_registerName("initWithTitle:action:keyEquivalent:"), get_nsstring("Edit"),
+               NULL, get_nsstring(""));
+
+  id editMenu =
+      ((id(*)(id, SEL))objc_msgSend)((id)objc_getClass("NSMenu"), sel_registerName("alloc"));
+  ((id(*)(id, SEL, id))objc_msgSend)(editMenu, sel_registerName("initWithTitle:"), get_nsstring("Edit"));
+  ((id(*)(id, SEL))objc_msgSend)(editMenu, sel_registerName("autorelease"));
+
+  ((id(*)(id, SEL, id))objc_msgSend)(editMenuItem, sel_registerName("setSubmenu:"), editMenu);
+  ((id(*)(id, SEL, id))objc_msgSend)(menubar, sel_registerName("addItem:"), editMenuItem);
+
+   item = create_menu_item(get_nsstring("Undo"), "undo:", "z");
+  ((id(*)(id, SEL, id))objc_msgSend)(editMenu, sel_registerName("addItem:"), item);
+
+  item = create_menu_item(get_nsstring("Redo"), "redo:", "y");
+  ((id(*)(id, SEL, id))objc_msgSend)(editMenu, sel_registerName("addItem:"), item);
+
+  item = ((id(*)(id, SEL))objc_msgSend)((id)objc_getClass("NSMenuItem"), sel_registerName("separatorItem"));
+  ((id(*)(id, SEL, id))objc_msgSend)(editMenu, sel_registerName("addItem:"), item);
+
+  item = create_menu_item(get_nsstring("Cut"), "cut:", "x");
+  ((id(*)(id, SEL, id))objc_msgSend)(editMenu, sel_registerName("addItem:"), item);
+
+  item = create_menu_item(get_nsstring("Copy"), "copy:", "c");
+  ((id(*)(id, SEL, id))objc_msgSend)(editMenu, sel_registerName("addItem:"), item);
+
+  item = create_menu_item(get_nsstring("Paste"), "paste:", "v");
+  ((id(*)(id, SEL, id))objc_msgSend)(editMenu, sel_registerName("addItem:"), item);
+
+  item = create_menu_item(get_nsstring("Select All"), "selectAll:", "a");
+  ((id(*)(id, SEL, id))objc_msgSend)(editMenu, sel_registerName("addItem:"), item);
+  // ----------------------------------------------------------------------------
+
   ((id(*)(id, SEL, id))objc_msgSend)(((id(*)(id, SEL))objc_msgSend)((id)objc_getClass("NSApplication"),
                             sel_registerName("sharedApplication")),
                sel_registerName("setMainMenu:"), menubar);

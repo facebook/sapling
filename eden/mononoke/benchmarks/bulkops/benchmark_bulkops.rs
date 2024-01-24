@@ -10,8 +10,8 @@ use std::time::Duration;
 use anyhow::Context;
 use anyhow::Result;
 use blobrepo::BlobRepo;
+use bulkops::ChangesetBulkFetcher;
 use bulkops::Direction;
-use bulkops::PublicChangesetBulkFetch;
 use bulkops::MAX_FETCH_STEP;
 use changesets::ChangesetsArc;
 use clap::Parser;
@@ -54,10 +54,10 @@ pub fn bench_stream<'a, F, S, O, E>(
     ctx: &'a CoreContext,
     runtime: &Handle,
     group: String,
-    fetcher: &'a PublicChangesetBulkFetch,
+    fetcher: &'a ChangesetBulkFetcher,
     to_stream: F,
 ) where
-    F: Fn(&'a CoreContext, &'a PublicChangesetBulkFetch) -> S,
+    F: Fn(&'a CoreContext, &'a ChangesetBulkFetcher) -> S,
     S: Stream<Item = Result<O, E>> + 'a,
     E: std::fmt::Debug,
 {
@@ -115,7 +115,7 @@ fn main(fb: fbinit::FacebookInit) -> Result<()> {
             .await
             .context("Failed to open repo")
     })?;
-    let fetcher = PublicChangesetBulkFetch::new(repo.changesets_arc(), repo.phases_arc());
+    let fetcher = ChangesetBulkFetcher::new(repo.changesets_arc(), repo.phases_arc());
     let repo_name = repo.repo_identity().name().to_string();
 
     // Tests are run from here
@@ -126,14 +126,14 @@ fn main(fb: fbinit::FacebookInit) -> Result<()> {
         app.runtime(),
         format!(
             "{}{}",
-            repo_name, ":PublicChangesetBulkFetch::fetch_best_newest_first_mid"
+            repo_name, ":ChangesetBulkFetcher::fetch_best_newest_first_mid"
         ),
         &fetcher,
         |ctx, fetcher| {
             async move {
                 let (lower, upper) = fetcher.get_repo_bounds(ctx).await?;
                 let mid = (upper - lower) / 2;
-                Ok(fetcher.fetch_ids(ctx, Direction::NewestFirst, Some((lower, mid))))
+                Ok(fetcher.fetch_public_ids(ctx, Direction::NewestFirst, Some((lower, mid))))
             }
             .try_flatten_stream()
         },
@@ -145,10 +145,10 @@ fn main(fb: fbinit::FacebookInit) -> Result<()> {
         app.runtime(),
         format!(
             "{}{}",
-            repo_name, ":PublicChangesetBulkFetch::fetch_best_oldest_first"
+            repo_name, ":ChangesetBulkFetcher::fetch_best_oldest_first"
         ),
         &fetcher,
-        |ctx, fetcher| fetcher.fetch_ids(ctx, Direction::OldestFirst, None),
+        |ctx, fetcher| fetcher.fetch_public_ids(ctx, Direction::OldestFirst, None),
     );
 
     bench_stream(
@@ -157,10 +157,10 @@ fn main(fb: fbinit::FacebookInit) -> Result<()> {
         app.runtime(),
         format!(
             "{}{}",
-            repo_name, ":PublicChangesetBulkFetch::fetch_entries_oldest_first"
+            repo_name, ":ChangesetBulkFetcher::fetch_entries_oldest_first"
         ),
         &fetcher,
-        |ctx, fetcher| fetcher.fetch(ctx, Direction::OldestFirst),
+        |ctx, fetcher| fetcher.fetch_public(ctx, Direction::OldestFirst),
     );
 
     criterion.final_summary();

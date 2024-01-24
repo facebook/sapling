@@ -12,6 +12,7 @@ namespace cpp2 facebook.eden
 namespace java com.facebook.eden.thrift
 namespace py facebook.eden
 namespace py3 eden.fs.service
+namespace hack edenfs.service
 
 /**
  * API style guide.
@@ -421,9 +422,7 @@ union FileAttributeDataOrErrorV2 {
  * in a certain directory.
  */
 union DirListAttributeDataOrError {
-  1: map<PathString, FileAttributeDataOrErrorV2> (
-    rust.type = "sorted_vector_map::SortedVectorMap",
-  ) dirListAttributeData;
+  1: map_PathString_FileAttributeDataOrErrorV2_3516 dirListAttributeData;
   2: EdenError error;
 }
 
@@ -1021,6 +1020,11 @@ struct RequestInfo {
   2: optional string processName;
 }
 
+struct ClientRequestInfo {
+  1: string correlator;
+  2: string entry_point;
+}
+
 enum HgEventType {
   UNKNOWN = 0,
   QUEUE = 1,
@@ -1440,6 +1444,20 @@ struct GetScmStatusResult {
   2: string version;
 }
 
+/**
+ * Sometimes additional modifiers need to be applied to the RootID that Eden
+ * receives from clients. This structure contains any such option and should
+ * only be extended with optional fields.
+ */
+struct RootIdOptions {
+  /**
+   * The ID of the filter that should be applied to the supplied RootId. The
+   * filter determines which entries in the repository should be hidden from
+   * the working copy.
+   */
+  1: optional string filterId;
+}
+
 struct GetScmStatusParams {
   /**
    * The Eden checkout to query
@@ -1463,6 +1481,11 @@ struct GetScmStatusParams {
    * directory) will never be reported even when listIgnored is true.
    */
   3: bool listIgnored = false;
+
+  // Pass unique identifier of this request's caller.
+  4: optional ClientRequestInfo cri;
+
+  5: optional RootIdOptions rootIdOptions;
 }
 
 /**
@@ -1513,6 +1536,11 @@ struct CheckOutRevisionParams {
    * need to look it up.
    */
   1: optional BinaryHash hgRootManifest;
+
+  // Pass unique identifier of this request's caller.
+  2: optional ClientRequestInfo cri;
+
+  3: optional RootIdOptions rootIdOptions;
 }
 
 struct ResetParentCommitsParams {
@@ -1527,6 +1555,11 @@ struct ResetParentCommitsParams {
    * need to look it up.
    */
   1: optional BinaryHash hgRootManifest;
+
+  // Pass unique identifier of this request's caller.
+  2: optional ClientRequestInfo cri;
+
+  3: optional RootIdOptions rootIdOptions;
 }
 
 struct RemoveRecursivelyParams {
@@ -2338,3 +2371,8 @@ service EdenService extends fb303_core.BaseService {
     1: EdenError ex,
   );
 }
+
+// The following were automatically generated and may benefit from renaming.
+typedef map<PathString, FileAttributeDataOrErrorV2> (
+  rust.type = "sorted_vector_map::SortedVectorMap",
+) map_PathString_FileAttributeDataOrErrorV2_3516

@@ -58,7 +58,7 @@ const config = {
           ],
         },
         staticDocsProject: 'sapling',
-        trackingFile: 'xplat/staticdocs/WATCHED_FILES',
+        trackingFile: 'fbcode/staticdocs/WATCHED_FILES',
         'remark-code-snippets': {
           baseDir: '..',
         },
@@ -182,11 +182,6 @@ const config = {
         },
       };
     },
-
-    [require.resolve('docusaurus-lunr-search'), {
-        excludeRoutes: [
-        ]
-    }]
   ],
 };
 

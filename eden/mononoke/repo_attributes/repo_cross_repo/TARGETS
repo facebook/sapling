@@ -1,0 +1,15 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "repo_cross_repo",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "//common/rust/shed/facet:facet",
+        "//eden/mononoke/blobstore:cacheblob",
+        "//eden/mononoke/commit_rewriting/live_commit_sync_config:live_commit_sync_config",
+        "//eden/mononoke/commit_rewriting/synced_commit_mapping:synced_commit_mapping",
+    ],
+)

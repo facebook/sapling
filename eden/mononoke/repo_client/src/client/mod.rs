@@ -20,7 +20,6 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
-use std::time::Instant;
 
 use anyhow::format_err;
 use anyhow::Context;
@@ -47,8 +46,6 @@ use context::PerfCounterType;
 use context::PerfCounters;
 use context::SessionContainer;
 use filenodes::FilenodeResult;
-use futures::channel::oneshot;
-use futures::channel::oneshot::Sender;
 use futures::compat::Future01CompatExt;
 use futures::compat::Stream01CompatExt;
 use futures::future;
@@ -86,7 +83,7 @@ use hgproto::GetbundleArgs;
 use hgproto::GettreepackArgs;
 use hgproto::HgCommandRes;
 use hgproto::HgCommands;
-use hooks::HookManagerArc;
+use hook_manager::manager::HookManagerArc;
 use hostname::get_hostname;
 use itertools::Itertools;
 use lazy_static::lazy_static;
@@ -113,7 +110,7 @@ use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::HgNodeHash;
 use mercurial_types::HgParents;
-use mercurial_types::MPath;
+use mercurial_types::NonRootMPath;
 use mercurial_types::RepoPath;
 use mercurial_types::NULL_CSID;
 use mercurial_types::NULL_HASH;
@@ -121,12 +118,12 @@ use metaconfig_types::RepoClientKnobs;
 use metaconfig_types::RepoConfigRef;
 use mononoke_api::Repo;
 use mononoke_types::hash::GitSha1;
+use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
 use nonzero_ext::nonzero;
 use phases::PhasesArc;
 use rand::Rng;
 use rate_limiting::Metric;
-use regex::Regex;
 use remotefilelog::create_getpack_v1_blob;
 use remotefilelog::create_getpack_v2_blob;
 use remotefilelog::get_unordered_file_history_for_multiple_nodes;
@@ -138,14 +135,12 @@ use revisionstore_types::Metadata;
 use serde::Deserialize;
 use serde_json::json;
 use slog::debug;
-use slog::error;
 use slog::info;
 use slog::o;
 use stats::prelude::*;
 use streaming_clone::RevlogStreamingChunks;
 use streaming_clone::StreamingCloneArc;
 use time_ext::DurationExt;
-use tunables::tunables;
 use unbundle::run_hooks;
 use unbundle::run_post_resolve_action;
 use unbundle::BundleResolverError;
@@ -157,7 +152,6 @@ use wireproto_handler::BackupSourceRepo;
 use crate::errors::ErrorKind;
 
 mod logging;
-mod monitor;
 mod session_bookmarks_cache;
 mod tests;
 
@@ -166,7 +160,6 @@ use logging::debug_format_path;
 use logging::log_getpack_params_verbose;
 use logging::log_gettreepack_params_verbose;
 use logging::CommandLogger;
-use monitor::Monitor;
 use session_bookmarks_cache::SessionBookmarkCache;
 
 define_stats! {
@@ -267,46 +260,48 @@ lazy_static! {
 }
 
 fn clone_timeout() -> Duration {
-    let timeout = tunables()
-        .repo_client_clone_timeout_secs()
-        .unwrap_or_default();
-    if timeout > 0 {
-        Duration::from_secs(timeout as u64)
-    } else {
-        Duration::from_secs(4 * 60 * 60)
-    }
+    const FALLBACK_TIMEOUT_SECS: u64 = 4 * 60 * 60;
+
+    let timeout: u64 =
+        justknobs::get_as::<u64>("scm/mononoke_timeouts:repo_client_clone_timeout_secs", None)
+            .unwrap_or(FALLBACK_TIMEOUT_SECS);
+
+    Duration::from_secs(timeout)
 }
 
 fn default_timeout() -> Duration {
-    let timeout = tunables()
-        .repo_client_default_timeout_secs()
-        .unwrap_or_default();
-    if timeout > 0 {
-        Duration::from_secs(timeout as u64)
-    } else {
-        Duration::from_secs(15 * 60)
-    }
+    const FALLBACK_TIMEOUT_SECS: u64 = 15 * 60;
+
+    let timeout: u64 = justknobs::get_as::<u64>(
+        "scm/mononoke_timeouts:repo_client_default_timeout_secs",
+        None,
+    )
+    .unwrap_or(FALLBACK_TIMEOUT_SECS);
+
+    Duration::from_secs(timeout)
 }
 fn getbundle_timeout() -> Duration {
-    let timeout = tunables()
-        .repo_client_getbundle_timeout_secs()
-        .unwrap_or_default();
-    if timeout > 0 {
-        Duration::from_secs(timeout as u64)
-    } else {
-        Duration::from_secs(30 * 60)
-    }
+    const FALLBACK_TIMEOUT_SECS: u64 = 30 * 60;
+
+    let timeout: u64 = justknobs::get_as::<u64>(
+        "scm/mononoke_timeouts:repo_client_getbundle_timeout_secs",
+        None,
+    )
+    .unwrap_or(FALLBACK_TIMEOUT_SECS);
+
+    Duration::from_secs(timeout)
 }
 
 fn getpack_timeout() -> Duration {
-    let timeout = tunables()
-        .repo_client_getpack_timeout_secs()
-        .unwrap_or_default();
-    if timeout > 0 {
-        Duration::from_secs(timeout as u64)
-    } else {
-        Duration::from_secs(5 * 60 * 60)
-    }
+    const FALLBACK_TIMEOUT_SECS: u64 = 5 * 60 * 60;
+
+    let timeout: u64 = justknobs::get_as::<u64>(
+        "scm/mononoke_timeouts:repo_client_getpack_timeout_secs",
+        None,
+    )
+    .unwrap_or(FALLBACK_TIMEOUT_SECS);
+
+    Duration::from_secs(timeout)
 }
 
 fn wireprotocaps() -> Vec<String> {
@@ -331,30 +326,20 @@ fn wireprotocaps() -> Vec<String> {
 }
 
 fn bundle2caps() -> String {
-    let caps = {
-        let mut caps = vec![
-            ("HG20", vec![]),
-            ("changegroup", vec!["02", "03"]),
-            ("b2x:infinitepush", vec![]),
-            ("b2x:infinitepushscratchbookmarks", vec![]),
-            ("pushkey", vec![]),
-            ("treemanifestserver", vec!["True"]),
-            ("b2x:rebase", vec![]),
-            ("b2x:rebasepackpart", vec![]),
-            ("phases", vec!["heads"]),
-            ("obsmarkers", vec!["V1"]),
-            ("listkeys", vec![]),
-        ];
-
-        if tunables()
-            .mutation_advertise_for_infinitepush()
-            .unwrap_or_default()
-        {
-            caps.push(("b2x:infinitepushmutation", vec![]));
-        }
-
-        caps
-    };
+    let caps = vec![
+        ("HG20", vec![]),
+        ("changegroup", vec!["02", "03"]),
+        ("b2x:infinitepush", vec![]),
+        ("b2x:infinitepushscratchbookmarks", vec![]),
+        ("pushkey", vec![]),
+        ("treemanifestserver", vec!["True"]),
+        ("b2x:rebase", vec![]),
+        ("b2x:rebasepackpart", vec![]),
+        ("phases", vec!["heads"]),
+        ("obsmarkers", vec!["V1"]),
+        ("listkeys", vec![]),
+        ("b2x:infinitepushmutation", vec![]),
+    ];
 
     let mut encodedcaps = vec![];
 
@@ -369,111 +354,6 @@ fn bundle2caps() -> String {
     }
 
     percent_encode(&encodedcaps.join("\n"))
-}
-
-struct UndesiredPathLogger {
-    ctx: CoreContext,
-    repo_needs_logging: bool,
-    path_prefix_to_log: Option<MPath>,
-    path_regex_to_log: Option<Regex>,
-}
-
-impl UndesiredPathLogger {
-    fn new(ctx: CoreContext, repo: &BlobRepo) -> Result<Self, Error> {
-        let tunables = tunables();
-        let repo_needs_logging = repo.repo_identity().name()
-            == tunables
-                .undesired_path_repo_name_to_log()
-                .unwrap_or_default()
-                .as_str();
-
-        let path_prefix_to_log = if repo_needs_logging {
-            MPath::new_opt(
-                tunables
-                    .undesired_path_prefix_to_log()
-                    .unwrap_or_default()
-                    .as_str(),
-            )?
-        } else {
-            None
-        };
-
-        let path_regex_to_log = if repo_needs_logging
-            && !tunables
-                .undesired_path_regex_to_log()
-                .unwrap_or_default()
-                .is_empty()
-        {
-            Some(
-                Regex::new(
-                    tunables
-                        .undesired_path_regex_to_log()
-                        .unwrap_or_default()
-                        .as_str(),
-                )
-                .map_err(|e| {
-                    error!(
-                        ctx.logger(),
-                        "Error initializing undesired path regex for {}: {}",
-                        repo.repo_identity().name(),
-                        e
-                    );
-                    e
-                })?,
-            )
-        } else {
-            None
-        };
-
-        Ok(Self {
-            ctx,
-            repo_needs_logging,
-            path_prefix_to_log,
-            path_regex_to_log,
-        })
-    }
-
-    fn maybe_log_tree(&self, path: Option<&MPath>) {
-        if self.should_log(path) {
-            STATS::undesired_tree_fetches.add_value(1);
-            self.ctx
-                .perf_counters()
-                .add_to_counter(PerfCounterType::UndesiredTreeFetch, 1);
-        }
-    }
-
-    fn maybe_log_file(&self, path: Option<&MPath>, sizes: impl Iterator<Item = u64>) {
-        if self.should_log(path) {
-            for size in sizes {
-                STATS::undesired_file_fetches.add_value(1);
-                STATS::undesired_file_fetches_sizes.add_value(size as i64);
-
-                self.ctx
-                    .scuba()
-                    .clone()
-                    .add("undesired_file_size", size)
-                    .log_with_msg("Undesired file fetch", format!("{:?}", path));
-            }
-        }
-    }
-
-    fn should_log(&self, path: Option<&MPath>) -> bool {
-        if self.repo_needs_logging {
-            let op1 = match self.path_prefix_to_log.as_ref() {
-                None => false,
-                Some(prefix) => prefix.is_prefix_of(MPath::iter_opt(path)),
-            };
-
-            let op2 = match (path, self.path_regex_to_log.as_ref()) {
-                (Some(path), Some(re)) => path.matches_regex(re),
-                _ => false,
-            };
-
-            op1 || op2
-        } else {
-            false
-        }
-    }
 }
 
 #[derive(Clone)]
@@ -539,7 +419,7 @@ impl RepoClient {
         H: FnOnce(CoreContext, CommandLogger) -> F,
     {
         let (ctx, command_logger) = self.start_command(command, sampling_rate);
-        with_command_monitor(ctx.clone(), handler(ctx, command_logger)).boxify()
+        Box::new(handler(ctx, command_logger))
     }
 
     fn command_stream<S, I, E, H>(
@@ -553,7 +433,7 @@ impl RepoClient {
         H: FnOnce(CoreContext, CommandLogger) -> S,
     {
         let (ctx, command_logger) = self.start_command(command, sampling_rate);
-        with_command_monitor(ctx.clone(), handler(ctx, command_logger)).boxify()
+        Box::new(handler(ctx, command_logger))
     }
 
     fn start_command(
@@ -686,13 +566,6 @@ impl RepoClient {
         ctx: CoreContext,
         params: GettreepackArgs,
     ) -> BoxStream<BytesOld, Error> {
-        let hash_validation_percentage =
-            tunables().hash_validation_percentage().unwrap_or_default();
-        let validate_hash = ((rand::random::<usize>() % 100) as i64) < hash_validation_percentage;
-
-        let undesired_path_logger =
-            try_boxstream!(UndesiredPathLogger::new(ctx.clone(), self.repo.blob_repo()));
-
         let changed_entries = gettreepack_entries(ctx.clone(), self.repo.blob_repo(), params)
             .filter({
                 let mut used_hashes = HashSet::new();
@@ -705,8 +578,6 @@ impl RepoClient {
                 cloned!(ctx);
                 let blobrepo = self.repo.blob_repo().clone();
                 move |(hg_mf_id, path)| {
-                    undesired_path_logger.maybe_log_tree(path.as_ref());
-
                     ctx.perf_counters()
                         .increment_counter(PerfCounterType::GettreepackNumTreepacks);
 
@@ -715,7 +586,7 @@ impl RepoClient {
                     if ctx.session().is_quicksand() {
                         STATS::quicksand_tree_count.add_value(1);
                     }
-                    fetch_treepack_part_input(ctx.clone(), &blobrepo, hg_mf_id, path, validate_hash)
+                    fetch_treepack_part_input(ctx.clone(), &blobrepo, hg_mf_id, path, true)
                 }
             });
 
@@ -732,7 +603,7 @@ impl RepoClient {
 
     fn getpack<WeightedContent, Content, GetpackHandler>(
         &self,
-        params: BoxStream<(MPath, Vec<HgFileNodeId>), Error>,
+        params: BoxStream<(NonRootMPath, Vec<HgFileNodeId>), Error>,
         handler: GetpackHandler,
         name: &'static str,
     ) -> BoxStream<BytesOld, Error>
@@ -746,9 +617,6 @@ impl RepoClient {
     {
         let allow_short_getpack_history = self.knobs.allow_short_getpack_history;
         self.command_stream(name, UNSAMPLED, |ctx, command_logger| {
-            let undesired_path_logger =
-                try_boxstream!(UndesiredPathLogger::new(ctx.clone(), self.repo.blob_repo()));
-            let undesired_path_logger = Arc::new(undesired_path_logger);
             // We buffer all parameters in memory so that we can log them.
             // That shouldn't be a problem because requests are quite small
             let getpack_params = Arc::new(Mutex::new(vec![]));
@@ -756,16 +624,11 @@ impl RepoClient {
 
             let lfs_params = self.lfs_params();
 
-            let hash_validation_percentage =
-                tunables().hash_validation_percentage().unwrap_or_default();
-            let validate_hash =
-                rand::thread_rng().gen_ratio(hash_validation_percentage as u32, 100);
             let getpack_buffer_size = 500;
 
             let request_stream = move || {
                 let content_stream = {
-                    cloned!(ctx, getpack_params, lfs_params, undesired_path_logger);
-
+                    cloned!(ctx, getpack_params, lfs_params);
                     async move {
                         let buffered_params = BufferedParams {
                             weight_limit: 100_000_000,
@@ -782,7 +645,7 @@ impl RepoClient {
                             .add("getpack_paths", params.len())
                             .log_with_msg("Getpack Params", None);
 
-                        let res = stream::iter(params.into_iter())
+                        let res = stream::iter(params)
                             .map({
                                 cloned!(ctx, getpack_params, repo, lfs_params);
                                 move |(path, filenodes)| {
@@ -801,7 +664,7 @@ impl RepoClient {
                                                 repo.clone(),
                                                 *filenode,
                                                 lfs_params.clone(),
-                                                validate_hash,
+                                                true,
                                             )
                                             .compat()
                                         })
@@ -822,17 +685,9 @@ impl RepoClient {
                                     )
                                     .flatten_err();
 
-                                    cloned!(undesired_path_logger);
-
                                     async move {
                                         let blobs =
                                             future::try_join_all(blob_futs.into_iter()).await?;
-
-                                        undesired_path_logger.maybe_log_file(
-                                            Some(&path),
-                                            blobs.iter().map(|(blobinfo, _)| blobinfo.filesize),
-                                        );
-
                                         let total_weight = blobs
                                             .iter()
                                             .map(|(blob_info, _)| blob_info.weight)
@@ -928,7 +783,7 @@ impl RepoClient {
                                     metadata,
                                 }));
                             }
-                            stream_old::iter_ok(res.into_iter())
+                            stream_old::iter_ok(res)
                         }
                     })
                     .flatten()
@@ -1099,11 +954,12 @@ impl RepoClient {
             {
                 cloned!(ctx);
                 async move {
-                    let max_nodes = tunables()
-                        .repo_client_max_nodes_in_known_method()
-                        .unwrap_or_default()
-                        .try_into()
-                        .unwrap();
+                    let max_nodes = justknobs::get_as::<usize>(
+                        "scm/mononoke:repo_client_max_nodes_in_known_method",
+                        None,
+                    )
+                    .unwrap_or(100000);
+
                     if max_nodes > 0 {
                         if nodes_len > max_nodes {
                             return Err(format_err!(
@@ -1232,7 +1088,7 @@ impl HgCommands for RepoClient {
             // TODO(jsgf): do pairs in parallel?
             // TODO: directly return stream of streams
             cloned!(self.repo);
-            stream_old::iter_ok(pairs.into_iter())
+            stream_old::iter_ok(pairs)
                 .and_then({
                     cloned!(ctx);
                     move |(top, bottom)| {
@@ -1739,7 +1595,6 @@ impl HgCommands for RepoClient {
 
                     let infinitepush_writes_allowed = repo.repo_config().infinitepush.allow_writes;
                     let pushrebase_params = repo.repo_config().pushrebase.clone();
-                    let pure_push_allowed = repo.repo_config().push.pure_push_allowed;
                     let maybe_backup_repo_source = client.maybe_backup_repo_source.clone();
 
                     let pushrebase_flags = pushrebase_params.flags.clone();
@@ -1748,7 +1603,7 @@ impl HgCommands for RepoClient {
                         repo.as_blob_repo(),
                         infinitepush_writes_allowed,
                         stream.compat().boxed(),
-                        pure_push_allowed,
+                        &repo.repo_config().push,
                         pushrebase_flags,
                         maybe_backup_repo_source,
                     )
@@ -2052,7 +1907,7 @@ impl HgCommands for RepoClient {
                         let header = format!("{}\0{}\n", name, size);
 
                         stream::once(future::ready(Ok(header.into_bytes().into())))
-                            .chain(stream::iter(data.into_iter()).buffered(100))
+                            .chain(stream::iter(data).buffered(100))
                     }
 
                     let res = response
@@ -2090,7 +1945,7 @@ impl HgCommands for RepoClient {
     // @wireprotocommand('getpackv1')
     fn getpackv1(
         &self,
-        params: BoxStream<(MPath, Vec<HgFileNodeId>), Error>,
+        params: BoxStream<(NonRootMPath, Vec<HgFileNodeId>), Error>,
     ) -> BoxStream<BytesOld, Error> {
         self.getpack(
             params,
@@ -2111,7 +1966,7 @@ impl HgCommands for RepoClient {
     // @wireprotocommand('getpackv2')
     fn getpackv2(
         &self,
-        params: BoxStream<(MPath, Vec<HgFileNodeId>), Error>,
+        params: BoxStream<(NonRootMPath, Vec<HgFileNodeId>), Error>,
     ) -> BoxStream<BytesOld, Error> {
         self.getpack(
             params,
@@ -2144,7 +1999,7 @@ impl HgCommands for RepoClient {
                 .add("getcommitdata_nodes", nodes.len())
                 .log_with_msg("GetCommitData Params", None);
 
-            let s = stream::iter(nodes.into_iter())
+            let s = stream::iter(nodes)
                 .map({
                     cloned!(ctx, blobrepo);
                     move |hg_cs_id| {
@@ -2203,7 +2058,7 @@ pub fn gettreepack_entries(
     ctx: CoreContext,
     repo: &BlobRepo,
     params: GettreepackArgs,
-) -> BoxStream<(HgManifestId, Option<MPath>), Error> {
+) -> BoxStream<(HgManifestId, MPath), Error> {
     let GettreepackArgs {
         rootdir,
         mfnodes,
@@ -2222,7 +2077,7 @@ pub fn gettreepack_entries(
             return stream_old::once(Err(e)).boxify();
         }
 
-        if rootdir.is_some() {
+        if !rootdir.is_root() {
             let e = Error::msg("rootdir must be empty");
             return stream_old::once(Err(e)).boxify();
         }
@@ -2234,15 +2089,8 @@ pub fn gettreepack_entries(
 
         let entries = mfnodes
             .into_iter()
-            .zip(directories.into_iter())
-            .map(|(node, path)| {
-                let path = if !path.is_empty() {
-                    Some(MPath::new(path.as_ref())?)
-                } else {
-                    None
-                };
-                Ok((node, path))
-            })
+            .zip(directories)
+            .map(|(node, path)| Ok((node, MPath::new(path.as_ref())?)))
             .collect::<Result<Vec<_>, Error>>();
 
         let entries = try_boxstream!(entries);
@@ -2302,9 +2150,9 @@ fn get_changed_manifests_stream(
     repo: &BlobRepo,
     mfid: HgManifestId,
     basemfid: HgManifestId,
-    rootpath: Option<MPath>,
+    rootpath: MPath,
     max_depth: usize,
-) -> BoxStream<(HgManifestId, Option<MPath>), Error> {
+) -> BoxStream<(HgManifestId, MPath), Error> {
     if max_depth == 1 {
         return stream_old::iter_ok(vec![(mfid, rootpath)]).boxify();
     }
@@ -2328,17 +2176,16 @@ fn get_changed_manifests_stream(
                 }
             },
             move |tree_diff| match tree_diff {
-                Diff::Added(path, ..) | Diff::Changed(path, ..) => match path {
-                    Some(path) => path.num_components() <= max_depth,
-                    None => true,
-                },
+                Diff::Added(path, ..) | Diff::Changed(path, ..) => {
+                    path.num_components() <= max_depth
+                }
                 Diff::Removed(..) => false,
             },
         )
         .compat()
         .map(move |(path_no_root_path, hg_mf_id)| {
             let mut path = rootpath.clone();
-            path.extend(MPath::into_iter_opt(path_no_root_path));
+            path.extend(NonRootMPath::into_iter_opt(path_no_root_path.into()));
             (hg_mf_id, path)
         })
         .boxify()
@@ -2348,10 +2195,10 @@ pub fn fetch_treepack_part_input(
     ctx: CoreContext,
     repo: &BlobRepo,
     hg_mf_id: HgManifestId,
-    path: Option<MPath>,
+    path: MPath,
     validate_content: bool,
 ) -> BoxFuture<parts::TreepackPartInput, Error> {
-    let repo_path = match path {
+    let repo_path = match path.into_optional_non_root_path() {
         Some(path) => RepoPath::DirectoryPath(path),
         None => RepoPath::RootPath,
     };
@@ -2422,7 +2269,7 @@ pub fn fetch_treepack_part_input(
                 )?;
             }
 
-            let fullpath = repo_path.into_mpath();
+            let fullpath = repo_path.into_mpath().into();
             let (p1, p2) = parents.get_nodes();
             Ok(parts::TreepackPartInput {
                 node: hg_mf_id.into_nodehash(),
@@ -2534,58 +2381,6 @@ fn serialize_getcommitdata(
     buffer.extend_from_slice(&revlog_commit);
     buffer.put("\n");
     Ok(buffer.freeze())
-}
-
-fn with_command_monitor<T>(ctx: CoreContext, t: T) -> Monitor<T, Sender<()>> {
-    let (sender, receiver) = oneshot::channel();
-
-    let reporting_loop = async move {
-        let start = Instant::now();
-
-        loop {
-            let interval = match tunables()
-                .command_monitor_interval()
-                .unwrap_or_default()
-                .try_into()
-            {
-                Ok(interval) if interval > 0 => interval,
-                _ => {
-                    break;
-                }
-            };
-
-            tokio::time::sleep(Duration::from_secs(interval)).await;
-
-            if tunables()
-                .command_monitor_remote_logging()
-                .unwrap_or_default()
-                != 0
-            {
-                info!(
-                    ctx.logger(),
-                    "Command in progress. Elapsed: {}s, BlobPuts: {}, BlobGets: {}, SqlWrites: {}, SqlReadsMaster: {}, SqlReadsReplica: {}.",
-                    start.elapsed().as_secs(),
-                    ctx.perf_counters().get_counter(PerfCounterType::BlobPuts),
-                    ctx.perf_counters().get_counter(PerfCounterType::BlobGets),
-                    ctx.perf_counters().get_counter(PerfCounterType::SqlWrites),
-                    ctx.perf_counters().get_counter(PerfCounterType::SqlReadsMaster),
-                    ctx.perf_counters().get_counter(PerfCounterType::SqlReadsReplica),
-                    ; o!("remote" => "true")
-                );
-            }
-
-            let mut scuba = ctx.scuba().clone();
-            ctx.perf_counters().insert_perf_counters(&mut scuba);
-            scuba.log_with_msg("Long running command", None);
-        }
-    };
-
-    tokio::task::spawn(async move {
-        futures::pin_mut!(reporting_loop);
-        let _ = future::select(reporting_loop, receiver).await;
-    });
-
-    Monitor::new(t, sender)
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

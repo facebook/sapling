@@ -10,16 +10,27 @@
 
 use std::cmp::Ordering;
 use std::ops::Range;
+use std::str::FromStr;
 
+use anyhow::Context;
 use anyhow::Result;
+use blobstore::BlobstoreBytes;
 use bytes::Bytes;
+use fbthrift::compact_protocol;
 use gix_diff::blob::diff;
 use gix_diff::blob::intern::InternedInput;
 use gix_diff::blob::intern::TokenSource;
 use gix_diff::blob::sink::Sink;
 use gix_diff::blob::Algorithm;
+use mononoke_types::path::MPath;
+use mononoke_types::private::Blake2;
+use mononoke_types::private::MononokeTypeError;
+use mononoke_types::BlobstoreKey;
+use mononoke_types::ChangesetId;
 use tokio::io::AsyncWrite;
 use tokio::io::AsyncWriteExt;
+
+use crate::thrift;
 
 /// The maximum size of raw bytes that can be contained within a single
 /// Data instruction
@@ -37,6 +48,135 @@ const DATA_BITMASK: u8 = (1 << 7) - 1;
 /// Specific range size within a copy instruction which is encoded uniquely by Git, ignoring
 /// the standard format
 const COPY_SPECIAL_SIZE: u32 = 1 << 16;
+/// The hashing key used for generating the final hash for a delta instruction chunk
+const DELTA_INSTRUCTION_HASHING_KEY: &str = "git_delta_instruction_chunk";
+/// The maximum number of chunks for a file that will be considered for computing deltas
+/// This ensures that even big files can be deltaed quickly
+const DELTA_CHUNK_COUNT: usize = 100_000;
+
+/// Identifier for accessing a specific delta instruction chunk from the blobstore
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
+pub struct DeltaInstructionChunkId(Blake2);
+
+#[allow(dead_code)]
+impl DeltaInstructionChunkId {
+    pub fn new(
+        actual_cs_id: &ChangesetId,
+        actual_mpath: &MPath,
+        base_cs_id: &ChangesetId,
+        base_mpath: &MPath,
+        index: usize,
+    ) -> Self {
+        let mut blake2 =
+            mononoke_types::hash::Context::new(DELTA_INSTRUCTION_HASHING_KEY.as_bytes());
+        blake2.update(actual_cs_id);
+        blake2.update(actual_mpath.to_null_separated_bytes());
+        blake2.update(base_cs_id);
+        blake2.update(base_mpath.to_null_separated_bytes());
+        blake2.update(index.to_be_bytes());
+        Self(blake2.finish())
+    }
+
+    pub fn from_hash(hash: Blake2) -> Self {
+        Self(hash)
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+pub struct DeltaInstructionChunkIdPrefix {
+    actual_cs_id: ChangesetId,
+    actual_mpath: MPath,
+    base_cs_id: ChangesetId,
+    base_mpath: MPath,
+}
+
+#[allow(dead_code)]
+impl DeltaInstructionChunkIdPrefix {
+    pub fn new(
+        actual_cs_id: ChangesetId,
+        actual_mpath: MPath,
+        base_cs_id: ChangesetId,
+        base_mpath: MPath,
+    ) -> Self {
+        Self {
+            actual_cs_id,
+            actual_mpath,
+            base_cs_id,
+            base_mpath,
+        }
+    }
+
+    pub fn as_id(&self, index: usize) -> DeltaInstructionChunkId {
+        DeltaInstructionChunkId::new(
+            &self.actual_cs_id,
+            &self.actual_mpath,
+            &self.base_cs_id,
+            &self.base_mpath,
+            index,
+        )
+    }
+}
+
+impl FromStr for DeltaInstructionChunkId {
+    type Err = anyhow::Error;
+    #[inline]
+    fn from_str(s: &str) -> anyhow::Result<Self> {
+        Blake2::from_str(s).map(Self::from_hash)
+    }
+}
+
+impl BlobstoreKey for DeltaInstructionChunkId {
+    fn blobstore_key(&self) -> String {
+        format!("{}.blake2.{}", DELTA_INSTRUCTION_HASHING_KEY, self.0)
+    }
+
+    fn parse_blobstore_key(key: &str) -> Result<Self> {
+        let prefix = format!("{}.blake2", DELTA_INSTRUCTION_HASHING_KEY);
+        match key.strip_prefix(&prefix) {
+            None => anyhow::bail!("{} is not a blobstore key for DeltaInstructionChunkId", key),
+            Some(suffix) => Self::from_str(suffix),
+        }
+    }
+}
+
+/// Type representing a chunk of delta instructions stored as an individual unit in the blobstore
+#[derive(Clone, Eq, PartialEq)]
+pub struct DeltaInstructionChunk(Bytes);
+
+#[allow(dead_code)]
+impl DeltaInstructionChunk {
+    pub fn new_bytes<B: Into<Bytes>>(b: B) -> Self {
+        DeltaInstructionChunk(b.into())
+    }
+
+    pub(crate) fn from_thrift(chunk: thrift::DeltaInstructionChunk) -> Result<Self> {
+        Ok(DeltaInstructionChunk(chunk.0))
+    }
+
+    pub(crate) fn into_thrift(self) -> thrift::DeltaInstructionChunk {
+        thrift::DeltaInstructionChunk(self.0)
+    }
+
+    pub fn from_encoded_bytes(encoded_bytes: Bytes) -> Result<Self> {
+        let thrift_tc = compact_protocol::deserialize(encoded_bytes).with_context(|| {
+            MononokeTypeError::BlobDeserializeError("DeltaInstructionChunk".into())
+        })?;
+        Self::from_thrift(thrift_tc)
+    }
+
+    pub fn into_blobstore_bytes(self) -> BlobstoreBytes {
+        BlobstoreBytes::from_bytes(compact_protocol::serialize(&self.into_thrift()))
+    }
+
+    pub fn size(&self) -> u64 {
+        // NOTE: This panics if the buffer length doesn't fit a u64: that's fine.
+        self.0.len().try_into().unwrap()
+    }
+
+    pub fn into_bytes(self) -> Bytes {
+        self.0
+    }
+}
 
 /// Individual instruction for constructing a part of a
 /// new object based on a base object
@@ -161,17 +301,26 @@ impl std::fmt::Debug for DeltaInstruction {
     }
 }
 
+/// The kind of object used in delta instructions
+pub enum ObjectKind {
+    /// Object is used as base
+    Base,
+    /// Object is used as target generated through base
+    Target,
+}
+
 /// List of instructions which when applied in order form a
 /// complete new object based on delta of a base object
 #[derive(Clone, Hash, Eq, PartialEq)]
 pub struct DeltaInstructions {
     base_object: Bytes,
+    base_object_chunk_size: usize,
     new_object: Bytes,
+    new_object_chunk_size: usize,
     processed_till: u32, // To keep track of the byte position till which the delta has been processed
     instructions: Vec<DeltaInstruction>,
 }
 
-#[allow(dead_code)]
 impl DeltaInstructions {
     // Generate set of DeltaInstructions for the given base and new object by diffing them
     // using the provided diff algorithm
@@ -180,14 +329,18 @@ impl DeltaInstructions {
         new_object: Bytes,
         diff_algorithm: Algorithm,
     ) -> Result<Self> {
+        let base_object_vec = base_object.to_vec();
+        let new_object_vec = new_object.to_vec();
+        let tokened_base_object = ObjectData::new(&base_object_vec);
+        let tokened_new_object = ObjectData::new(&new_object_vec);
         let delta_instructions = Self {
-            base_object: base_object.clone(),
-            new_object: new_object.clone(),
+            base_object,
+            new_object,
+            base_object_chunk_size: tokened_base_object.chunk_size(),
+            new_object_chunk_size: tokened_new_object.chunk_size(),
             instructions: Vec::new(),
             processed_till: 0,
         };
-        let tokened_base_object = ObjectData::new(base_object);
-        let tokened_new_object = ObjectData::new(new_object);
         let interned_input = InternedInput::new(tokened_base_object, tokened_new_object);
         let fallible_delta_instructions = FallibleDeltaInstructions::Valid(delta_instructions);
         diff(diff_algorithm, &interned_input, fallible_delta_instructions)
@@ -207,6 +360,24 @@ impl DeltaInstructions {
             instruction.write(out).await?;
         }
         Ok(())
+    }
+
+    /// Given the chunk-based range in the base or target object, return the equivalent
+    /// byte level range by multiplying the offset
+    pub fn object_byte_range(&self, range: Range<u32>, kind: ObjectKind) -> Range<u32> {
+        let (chunk_size, object_len) = match kind {
+            ObjectKind::Base => (
+                self.base_object_chunk_size as u32,
+                self.base_object.len() as u32,
+            ),
+            ObjectKind::Target => (
+                self.new_object_chunk_size as u32,
+                self.new_object.len() as u32,
+            ),
+        };
+        let range_start = std::cmp::min(range.start * chunk_size, object_len);
+        let range_end = std::cmp::min(range.end * chunk_size, object_len);
+        range_start..range_end
     }
 }
 
@@ -304,6 +475,11 @@ impl Sink for FallibleDeltaInstructions {
     fn process_change(&mut self, before: Range<u32>, after: Range<u32>) {
         match self {
             Self::Valid(delta_instructions) => {
+                // The before and after ranges are essentially chunk indices where each
+                // chunk can be `chunk_size` bytes long. To get the actual byte level index,
+                // we need to multiply the `chunk_size` with the chunk index
+                let before = delta_instructions.object_byte_range(before, ObjectKind::Base);
+                let after = delta_instructions.object_byte_range(after, ObjectKind::Target);
                 let processed_till = delta_instructions.processed_till.clone();
                 // Every change detected by the algorithm would be represented as a Data instruction since
                 // the changed part of the content cannot be copied from the base object. The data instruction
@@ -417,29 +593,35 @@ impl Sink for FallibleDeltaInstructions {
 
 /// Wrapper type over the bytes representing the data of the Git Object, used
 /// for bypassing the orphan rule for implementing the TokenSource trait
-struct ObjectData {
-    data: Bytes,
+struct ObjectData<'a> {
+    data: &'a Vec<u8>,
+    chunk_size: usize,
 }
 
-impl ObjectData {
-    pub fn new(data: Bytes) -> Self {
-        Self { data }
+impl<'a> ObjectData<'a> {
+    pub fn new(data: &'a Vec<u8>) -> Self {
+        let chunk_size = std::cmp::max(data.len() / DELTA_CHUNK_COUNT, 1);
+        Self { data, chunk_size }
+    }
+
+    pub fn chunk_size(&self) -> usize {
+        self.chunk_size
     }
 }
 
-impl TokenSource for ObjectData {
-    // Since we want byte level diff, the atomic unit of difference would
-    // be individual bytes of the Git Object data
-    type Token = u8;
+impl<'a> TokenSource for ObjectData<'a> {
+    // Depending upon the input, the granularity could be individual bytes (for file less than 100KB)
+    // or chunks of bytes (for large files)
+    type Token = &'a [u8];
 
-    type Tokenizer = bytes::buf::IntoIter<Bytes>;
+    type Tokenizer = std::slice::Chunks<'a, u8>;
 
     fn tokenize(&self) -> Self::Tokenizer {
-        self.data.clone().into_iter()
+        self.data.chunks(self.chunk_size)
     }
 
     fn estimate_tokens(&self) -> u32 {
-        self.data.len() as u32
+        (self.data.len() / self.chunk_size) as u32
     }
 }
 
@@ -475,16 +657,28 @@ async fn write_size(size_to_write: usize, out: &mut (impl AsyncWrite + Unpin)) -
 #[cfg(test)]
 mod test {
     use std::io::Write;
+    use std::sync::Arc;
 
     use anyhow::Context;
     use anyhow::Result;
+    use blobstore::Blobstore;
+    use bytes::BytesMut;
+    use context::CoreContext;
+    use fbinit::FacebookInit;
+    use flate2::write::ZlibDecoder;
+    use futures::TryStreamExt;
     use gix_hash::ObjectId;
     use gix_object::ObjectRef;
     use gix_object::Tag;
     use gix_object::WriteTo;
+    use memblob::Memblob;
+    use mononoke_types_mocks::changesetid::ONES_CSID;
+    use mononoke_types_mocks::changesetid::TWOS_CSID;
     use rand::Rng;
 
     use super::*;
+    use crate::fetch_delta_instructions;
+    use crate::store::store_delta_instructions;
     /// Decode the encoded (base or new) object size from Git Delta Instructions header
     /// Originally from gix-pack pub function which is currently not exposed (https://fburl.com/5ucyqwvj)
     /// NOTE: For testing purposes only. Do not use in production.
@@ -557,6 +751,39 @@ mod test {
             }
         }
         assert_eq!(i, data.len());
+    }
+
+    async fn random_bytes_blob_delta_application(
+        base_object_size: usize,
+        new_object_size: usize,
+    ) -> Result<()> {
+        // Create an arbitrary set of bytes and use that as the base object
+        let base_object: Vec<u8> = rand::thread_rng()
+            .sample_iter::<u8, _>(rand::distributions::Standard)
+            .take(base_object_size)
+            .collect();
+        let base_object = Bytes::from(base_object);
+        // Create an arbitrary set of bytes and use that as the new object
+        let new_object: Vec<u8> = rand::thread_rng()
+            .sample_iter::<u8, _>(rand::distributions::Standard)
+            .take(new_object_size)
+            .collect();
+        let new_object = Bytes::from(new_object);
+        let delta_instructions =
+            DeltaInstructions::generate(base_object.clone(), new_object.clone(), Algorithm::Myers)?;
+        let mut encoded_instructions = Vec::new();
+        delta_instructions
+            .write_instructions(&mut encoded_instructions)
+            .await?;
+        let mut recreated_new_object = Vec::new();
+        apply(
+            base_object.as_ref(),
+            &mut recreated_new_object,
+            encoded_instructions.as_ref(),
+        );
+        // Validate that the recreated_new_object matches the original new_object
+        assert_eq!(new_object, Bytes::from(recreated_new_object));
+        Ok(())
     }
 
     #[test]
@@ -636,22 +863,27 @@ mod test {
         Ok(())
     }
 
+    /// Tests that the delta generated is valid under the following conditions:
+    /// 1. The chunk size used is > 1
+    /// 2. The target object is larger than the base object with differences in the middle
+    /// of the file
+    /// 3. The last chunks of content for the target object can be generated using
+    /// data instructions from the target object
+    /// 4. The diffing algorithm produces final data instruction with base object range
+    /// Lb..Lb where Lb is the total number of chunks for the base object
     #[fbinit::test]
-    async fn test_random_bytes_blob_delta_application() -> Result<()> {
-        // Create an arbitrary set of bytes and use that as the base object
-        let base_object: Vec<u8> = rand::thread_rng()
-            .sample_iter::<u8, _>(rand::distributions::Standard)
-            .take(10000)
-            .collect();
-        let base_object = Bytes::from(base_object);
-        // Create an arbitrary set of bytes and use that as the new object
-        let new_object: Vec<u8> = rand::thread_rng()
-            .sample_iter::<u8, _>(rand::distributions::Standard)
-            .take(10000)
-            .collect();
-        let new_object = Bytes::from(new_object);
-        let delta_instructions =
-            DeltaInstructions::generate(base_object.clone(), new_object.clone(), Algorithm::Myers)?;
+    async fn test_end_of_base_object_range_delta_application() -> Result<()> {
+        const BASE_OBJECT: &str = include_str!("../test_data/base_object.txt");
+        const TARGET_OBJECT: &str = include_str!("../test_data/target_object.txt");
+        let base_object = Bytes::from(BASE_OBJECT.as_bytes());
+        let target_object = Bytes::from(TARGET_OBJECT.as_bytes());
+
+        let delta_instructions = DeltaInstructions::generate(
+            base_object.clone(),
+            target_object.clone(),
+            Algorithm::Myers,
+        )?;
+
         let mut encoded_instructions = Vec::new();
         delta_instructions
             .write_instructions(&mut encoded_instructions)
@@ -663,8 +895,56 @@ mod test {
             encoded_instructions.as_ref(),
         );
         // Validate that the recreated_new_object matches the original new_object
-        assert_eq!(new_object, Bytes::from(recreated_new_object));
+        assert_eq!(target_object, Bytes::from(recreated_new_object));
         Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_very_large_string_delta_application() -> Result<()> {
+        // Create a 50 MB string with random characters
+        let base_object: String = rand::thread_rng()
+            .sample_iter::<char, _>(rand::distributions::Standard)
+            .take(52_428_800)
+            .collect();
+        let base_bytes = Bytes::from(base_object.into_bytes());
+
+        // Create another 40 MB string with random characters
+        let new_object: String = rand::thread_rng()
+            .sample_iter::<char, _>(rand::distributions::Standard)
+            .take(41_943_040)
+            .collect();
+        let new_bytes = Bytes::from(new_object.into_bytes());
+
+        let delta_instructions =
+            DeltaInstructions::generate(base_bytes.clone(), new_bytes.clone(), Algorithm::Myers)?;
+        let mut encoded_instructions = Vec::new();
+        delta_instructions
+            .write_instructions(&mut encoded_instructions)
+            .await?;
+        let mut recreated_new_object = Vec::new();
+        apply(
+            base_bytes.as_ref(),
+            &mut recreated_new_object,
+            encoded_instructions.as_ref(),
+        );
+        // Validate that the recreated_new_object matches the original new_object
+        assert_eq!(new_bytes, Bytes::from(recreated_new_object));
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_very_large_random_bytes_blob_delta_application() -> Result<()> {
+        random_bytes_blob_delta_application(41_943_040, 52_428_800).await
+    }
+
+    #[fbinit::test]
+    async fn test_mismatched_random_bytes_blob_delta_application() -> Result<()> {
+        // Very small base object and large new object
+        random_bytes_blob_delta_application(199, 2_097_152).await?;
+        // Large base object and very small new object
+        random_bytes_blob_delta_application(3_145_728, 271).await?;
+        // Both small objects
+        random_bytes_blob_delta_application(4_194_304, 4_194_305).await
     }
 
     #[fbinit::test]
@@ -831,6 +1111,96 @@ mod test {
         // Validate that object sizes are encoded in the right order and represent the correct sizes
         assert_eq!(base_object_size as usize, base_object.len());
         assert_eq!(new_object_size as usize, new_object.len());
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_delta_instruction_storage(fb: FacebookInit) -> Result<()> {
+        let blobstore: Arc<dyn Blobstore> = Arc::new(Memblob::default());
+        let ctx = CoreContext::test_mock(fb);
+        // Create a Git tag object pointing to a tree and use it as base object
+        let tag = Tag {
+            target: ObjectId::empty_tree(gix_hash::Kind::Sha1),
+            target_kind: gix_object::Kind::Tree,
+            name: "TreeTag".into(),
+            tagger: None,
+            message: "Tag pointing to a tree".into(),
+            pgp_signature: None,
+        };
+        let mut base_object = tag.loose_header().into_vec();
+        tag.write_to(base_object.by_ref())?;
+        let base_object = Bytes::from(base_object);
+        // Create a Git tag object pointing to a blob and use it as the new object
+        let tag = Tag {
+            target: ObjectId::empty_tree(gix_hash::Kind::Sha1),
+            target_kind: gix_object::Kind::Blob,
+            name: "BlobTag".into(),
+            tagger: None,
+            message: "Tag pointing to a blob".into(),
+            pgp_signature: None,
+        };
+        let mut new_object = tag.loose_header().into_vec();
+        tag.write_to(new_object.by_ref())?;
+        let new_object = Bytes::from(new_object);
+        let delta_instructions =
+            DeltaInstructions::generate(base_object.clone(), new_object.clone(), Algorithm::Myers)?;
+        let chunk_prefix =
+            DeltaInstructionChunkIdPrefix::new(ONES_CSID, MPath::ROOT, TWOS_CSID, MPath::ROOT);
+        let stored_metadata = store_delta_instructions(
+            &ctx,
+            &blobstore,
+            delta_instructions,
+            chunk_prefix.clone(),
+            Some(4_193_280),
+        )
+        .await?;
+        let fetched_instructions =
+            fetch_delta_instructions(&ctx, &blobstore, &chunk_prefix, stored_metadata.chunks)
+                .try_fold(
+                    BytesMut::with_capacity(stored_metadata.compressed_bytes as usize),
+                    |mut acc, bytes| async move {
+                        acc.extend_from_slice(bytes.as_ref());
+                        anyhow::Ok(acc)
+                    },
+                )
+                .await
+                .context("Error in fetching delta instruction bytes from byte stream")?
+                .freeze();
+        let mut decoded_instructions = Vec::new();
+        let mut decoder = ZlibDecoder::new(decoded_instructions);
+        decoder.write_all(fetched_instructions.as_ref())?;
+        decoded_instructions = decoder.finish()?;
+        let decoded_instructions = Bytes::from(decoded_instructions);
+        let (base_object_size, first_read) = decode_header_size(decoded_instructions.as_ref());
+        let (new_object_size, second_read) =
+            decode_header_size(decoded_instructions.slice(first_read..).as_ref());
+        // Validate that object sizes are encoded in the right order and represent the correct sizes
+        assert_eq!(base_object_size as usize, base_object.len());
+        assert_eq!(new_object_size as usize, new_object.len());
+
+        let read_till = first_read + second_read;
+        let mut recreated_new_object = Vec::new();
+        apply(
+            base_object.as_ref(),
+            &mut recreated_new_object,
+            decoded_instructions.slice(read_till..).as_ref(),
+        );
+        // Validate that we are able to recreate the Git tag object from
+        // the delta-generated bytes
+        let object = ObjectRef::from_loose(recreated_new_object.as_ref())
+            .with_context(|| {
+                format!(
+                    "Error in deserialing bytes into Git Object: {}",
+                    String::from_utf8_lossy(recreated_new_object.as_ref())
+                )
+            })?
+            .to_owned();
+        let output_tag = object
+            .try_into_tag()
+            .expect("Expected successful conversion into Git Tag");
+        // Validate that the Git tag object obtained from the delta-generated bytes is the same
+        // as the Tag object used as new_object above
+        assert_eq!(tag, output_tag, "Git tag objects do not match");
         Ok(())
     }
 }

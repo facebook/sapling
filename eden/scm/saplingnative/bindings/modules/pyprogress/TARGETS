@@ -1,0 +1,27 @@
+load("//eden/scm:targets.bzl", "rust_python_library")
+
+oncall("mercurial_release")
+
+rust_python_library(
+    name = "pyprogress",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "cpython": {
+                        "features": [],
+                        "git": None,
+                        "rev": None,
+                    },
+                },
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    deps = [
+        "//eden/scm/lib/cpython-ext:cpython-ext",
+        "//eden/scm/lib/progress/model:progress-model",
+        "//eden/scm/lib/progress/render:progress-render",
+    ],
+)

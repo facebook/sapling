@@ -11,9 +11,8 @@ import time
 import unittest
 
 import silenttestrunner
-from edenscm import error, util, vfs
-from edenscm.ext import extutil
-from hghave import require
+from sapling import error, util, vfs
+from sapling.ext import extutil
 
 
 locktimeout = 25

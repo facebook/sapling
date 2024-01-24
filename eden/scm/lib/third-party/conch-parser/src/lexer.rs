@@ -199,7 +199,7 @@ impl<I: Iterator<Item = char>> Iterator for Lexer<I> {
         }
 
         fn is_digit(c: char) -> bool {
-            c.is_digit(10)
+            c.is_ascii_digit()
         }
 
         fn name_char(c: char) -> bool {

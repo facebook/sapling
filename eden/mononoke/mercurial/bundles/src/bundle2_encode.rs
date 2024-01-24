@@ -144,7 +144,7 @@ where
         let params = mparams
             .into_iter()
             .map(|x| (capitalize_first(x.0), x.1))
-            .chain(self.header.a_stream_params.into_iter());
+            .chain(self.header.a_stream_params);
         Self::build_stream_params(params, &mut header_buf);
 
         let header_len = (header_buf.len() - 8) as u32;

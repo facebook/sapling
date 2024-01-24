@@ -6,8 +6,9 @@
 
 import abc
 import os
+import subprocess
 
-from eden.integration.lib import hgrepo
+from eden.integration.lib import hgrepo, testcase
 
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 from .lib.histedit_command import HisteditCommand
@@ -109,3 +110,69 @@ class HisteditSQLiteStorageEngineTest(_Hidden.StorageEngineTest):
 class HisteditRocksDBStorageEngineTest(_Hidden.StorageEngineTest):
     def select_storage_engine(self) -> str:
         return "rocksdb"
+
+
+@testcase.eden_test
+class FailsToOpenLocalStoreTest(testcase.EdenTestCase):
+    enable_fault_injection = True
+
+    def test_start_eden_with_local_store_that_fails_to_open(self) -> None:
+        self.eden.shutdown()
+        self.eden.start(
+            extra_args=["--fault_injection_fail_opening_local_store"],
+            should_wait_for_daemon_healthy=False,
+        )
+        self.assertNotEqual(self.eden._process, None)
+        # pyre-ignore[16]: I checked it's not None above :|
+        return_code = self.eden._process.wait(timeout=120)
+        self.assertNotEqual(return_code, 0)
+
+    def test_restart_eden_with_local_store_that_fails_to_open(self) -> None:
+        self.eden.graceful_restart(
+            extra_args=["--fault_injection_fail_opening_local_store"],
+            should_wait_for_old=True,
+            should_wait_for_new=False,
+        )
+        self.assertNotEqual(self.eden._process, None)
+        # pyre-ignore[16]: I checked it's not None above :|
+        return_code = self.eden._process.wait(timeout=120)
+        self.assertNotEqual(return_code, 0)
+
+
+@testcase.eden_test
+# pyre-ignore[13]: T62487924
+class FailsToOpenLocalStoreTestWithMounts(EdenHgTestCase):
+    enable_fault_injection = True
+
+    def populate_backing_repo(self, repo) -> None:
+        repo.write_file("afile", "blah")
+
+    def test_start_eden_with_local_store_that_fails_to_open(self) -> None:
+
+        self.eden.shutdown()
+
+        self.eden.start(
+            extra_args=["--fault_injection_fail_opening_local_store"],
+            should_wait_for_daemon_healthy=False,
+        )
+        self.assertNotEqual(self.eden._process, None)
+        # pyre-ignore[16]: I checked it's not None above :|
+        return_code = self.eden._process.wait(timeout=120)
+        self.assertNotEqual(return_code, 0)
+
+    def cleanup_mount(self) -> None:
+        cmd = ["sudo", "/bin/umount", "-lf", self.mount]
+        subprocess.call(cmd)
+
+    def test_restart_eden_with_local_store_that_fails_to_open(self) -> None:
+        self.eden.graceful_restart(
+            extra_args=["--fault_injection_fail_opening_local_store"],
+            should_wait_for_old=True,
+            should_wait_for_new=False,
+        )
+        self.assertNotEqual(self.eden._process, None)
+        # pyre-ignore[16]: I checked it's not None above :|
+        return_code = self.eden._process.wait(timeout=120)
+        self.assertNotEqual(return_code, 0)
+
+        self.cleanup_mount()

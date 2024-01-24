@@ -1,0 +1,37 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "hgcommits",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "dag": {"features": ["indexedlog-backend"]},
+                    "minibytes": {"features": ["frombytes"]},
+                },
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:fs-err",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:parking_lot",
+        "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/dag:dag",
+        "//eden/scm/lib/edenapi:edenapi",
+        "//eden/scm/lib/hgcommits/trait:commits-trait",
+        "//eden/scm/lib/minibytes:minibytes",
+        "//eden/scm/lib/revlogindex:revlogindex",
+        "//eden/scm/lib/storemodel:storemodel",
+        "//eden/scm/lib/streams:streams",
+        "//eden/scm/lib/types:types",
+        "//eden/scm/lib/util/factory:factory",
+        "//eden/scm/lib/zstore:zstore",
+    ],
+)

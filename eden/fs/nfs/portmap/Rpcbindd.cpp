@@ -60,11 +60,11 @@ class RpcbinddServerProcessor final : public RpcServerProcessor {
   }
 
  private:
-  typedef uint32_t RpcProtocolNumber;
-  typedef uint32_t RpcProtocolVersion;
-  typedef uint16_t PortNumber;
-  typedef std::pair<RpcProtocolNumber, RpcProtocolVersion> RpcIdentifier;
-  typedef std::map<RpcIdentifier, PortNumber> RpcMappings;
+  using RpcProtocolNumber = uint32_t;
+  using RpcProtocolVersion = uint32_t;
+  using PortNumber = uint16_t;
+  using RpcIdentifier = std::pair<RpcProtocolNumber, RpcProtocolVersion>;
+  using RpcMappings = std::map<RpcIdentifier, PortNumber>;
 
   // contains the registered RPC services. Maps (server protocol number & server
   // protocol version -> port. We assume all registered services are going to

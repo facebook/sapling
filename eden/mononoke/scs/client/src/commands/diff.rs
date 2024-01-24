@@ -126,7 +126,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let (other_commit, base_commit) = if commits.len() == 1 {
         (None, commits[0].clone())
     } else {
-        (commits.get(0), commits[1].clone())
+        (commits.first(), commits[1].clone())
     };
     let ordered_params = if args.ordered {
         let after_path = args.after.clone();

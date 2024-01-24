@@ -1,0 +1,55 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("source_control")
+
+# Due to some tools changing '-' to '_' when building,
+# this library/crate is named using an '_' so that it can link successfully.
+rust_library(
+    name = "edenfs_ffi",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_target_config": {
+            "crate_type": [
+                "staticlib",
+                "lib",
+            ],
+        },
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "build-dependencies": {
+                    "cxx-build": {"optional": False},
+                },
+            },
+        },
+    },
+    cpp_deps = [":edenfs_ffi-wrapper"],
+    crate_root = "src/lib.rs",
+    cxx_bridge = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:cxx",
+        "fbsource//third-party/rust:once_cell",
+        "fbsource//third-party/rust:parking_lot",
+        "//eden/scm/lib/async-runtime:async-runtime",
+        "//eden/scm/lib/identity:identity",
+        "//eden/scm/lib/manifest:manifest",
+        "//eden/scm/lib/pathmatcher:pathmatcher",
+        "//eden/scm/lib/repo:repo",
+        "//eden/scm/lib/sparse:sparse",
+        "//eden/scm/lib/types:types",
+    ],
+)
+
+cpp_library(
+    name = "edenfs_ffi-wrapper",
+    srcs = ["src/ffi.cpp"],
+    headers = ["include/ffi.h"],
+    preferred_linkage = "static",
+    undefined_symbols = True,
+    exported_deps = [
+        "fbsource//third-party/rust:cxx-core",
+        ":edenfs_ffi@header",  # @manual
+        "//folly/futures:core",
+    ],
+)

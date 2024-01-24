@@ -32,7 +32,7 @@ use mononoke_types::blame_v2::BlameV2;
 use mononoke_types::blame_v2::BlameV2Id;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileUnodeId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedDataRef;
 use thiserror::Error;
@@ -57,9 +57,9 @@ impl Default for BlameDeriveOptions {
 #[derive(Debug, Error)]
 pub enum BlameError {
     #[error("No such path: {0}")]
-    NoSuchPath(MPath),
+    NoSuchPath(NonRootMPath),
     #[error("Blame is not available for directories: {0}")]
-    IsDirectory(MPath),
+    IsDirectory(NonRootMPath),
     #[error(transparent)]
     Rejected(#[from] BlameRejected),
     #[error(transparent)]
@@ -75,14 +75,14 @@ pub async fn fetch_blame_v2(
     ctx: &CoreContext,
     repo: impl RepoBlobstoreArc + RepoDerivedDataRef + Sync + Send + Copy,
     csid: ChangesetId,
-    path: MPath,
+    path: NonRootMPath,
 ) -> Result<(BlameV2, FileUnodeId), BlameError> {
     let root_unode = RootBlameV2::derive(ctx, &repo, csid).await?.root_manifest();
     let blobstore = repo.repo_blobstore();
     let file_unode_id = root_unode
         .manifest_unode_id()
         .clone()
-        .find_entry(ctx.clone(), blobstore.clone(), Some(path.clone()))
+        .find_entry(ctx.clone(), blobstore.clone(), path.clone().into())
         .await?
         .ok_or_else(|| BlameError::NoSuchPath(path.clone()))?
         .into_leaf()

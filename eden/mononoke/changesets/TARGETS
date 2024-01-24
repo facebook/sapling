@@ -1,0 +1,72 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "changesets",
+    srcs = glob([
+        "src/**/*.rs",
+    ]),
+    test_deps = [
+        "//eden/mononoke/mononoke_types:mononoke_types-mocks",
+    ],
+    deps = [
+        "fbsource//third-party/rust:abomonation",
+        "fbsource//third-party/rust:abomonation_derive",
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:auto_impl",
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:vec1",
+        "//common/rust/shed/facet:facet",
+        "//eden/mononoke/changesets/if:changeset-entry-thrift-rust",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/server/context:context",
+        "//thrift/lib/rust:fbthrift",
+    ],
+)
+
+rust_library(
+    name = "changesets_impl",
+    srcs = glob([
+        "changesets_impl/src/**/*.rs",
+        "changesets_impl/schemas/**/*.sql",
+    ]),
+    autocargo = {"cargo_toml_dir": "changesets_impl"},
+    test_deps = [
+        "fbsource//third-party/rust:assert_matches",
+        "fbsource//third-party/rust:paste",
+        "fbsource//third-party/rust:pretty_assertions",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/mononoke_types:mononoke_types-mocks",
+        "//eden/mononoke/tests/fixtures:fixtures",
+    ],
+    deps = [
+        "fbsource//third-party/rust:abomonation",
+        "fbsource//third-party/rust:abomonation_derive",
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:maplit",
+        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:ref-cast",
+        "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:vec1",
+        ":changesets",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/memcache_stub:memcache",
+        "//common/rust/shed/sql:sql",
+        "//common/rust/shed/stats:stats",
+        "//eden/mononoke/changesets/if:changeset-entry-thrift-rust",
+        "//eden/mononoke/common/rendezvous:rendezvous",
+        "//eden/mononoke/common/rust/caching_ext:caching_ext",
+        "//eden/mononoke/common/rust/sql_ext:sql_ext",
+        "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/server/context:context",
+        "//thrift/lib/rust:fbthrift",
+    ],
+)

@@ -5,16 +5,27 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {DiffId, DiffSummary, PageVisibility, Result} from '../types';
+import type {CommitMessageFields} from '../CommitInfoView/types';
+import type {DiffId, DiffSummary, Hash, PageVisibility, Result} from '../types';
 import type {UICodeReviewProvider} from './UICodeReviewProvider';
 
 import serverAPI from '../ClientToServerAPI';
+import {commitMessageTemplate} from '../CommitInfoView/CommitInfoState';
+import {
+  applyEditedFields,
+  commitMessageFieldsSchema,
+  commitMessageFieldsToString,
+  emptyCommitMessageFields,
+  parseCommitMessageFields,
+} from '../CommitInfoView/CommitMessageFields';
 import {Internal} from '../Internal';
 import {messageSyncingEnabledState} from '../messageSyncing';
-import {treeWithPreviews} from '../previews';
+import {dagWithPreviews} from '../previews';
 import {commitByHash, repositoryInfo} from '../serverAPIState';
+import {firstLine} from '../utils';
 import {GithubUICodeReviewProvider} from './github/github';
 import {atom, DefaultValue, selector, selectorFamily} from 'recoil';
+import {clearTrackedCache} from 'shared/LRU';
 import {debounce} from 'shared/debounce';
 import {unwrap} from 'shared/utils';
 
@@ -115,13 +126,32 @@ export const allDiffSummaries = atom<Result<Map<DiffId, DiffSummary> | null>>({
  * be smoother if we use the optimistic one before the remote has gotten the update propagated.
  * This is only necessary if the optimistic message is different than the local message.
  */
-export const latestCommitMessage = selectorFamily<[title: string, description: string], string>({
+export const latestCommitMessage = selectorFamily<
+  [title: string, description: string],
+  Hash | 'head'
+>({
   key: 'latestCommitMessage',
   get:
     (hash: string) =>
     ({get}) => {
+      if (hash === 'head') {
+        const template = get(commitMessageTemplate);
+        if (template) {
+          const schema = get(commitMessageFieldsSchema);
+          const result = applyEditedFields(emptyCommitMessageFields(schema), template.fields);
+          const templateString = commitMessageFieldsToString(
+            schema,
+            result,
+            /* allowEmptyTitle */ true,
+          );
+          const title = firstLine(templateString);
+          const description = templateString.slice(title.length);
+          return [title, description];
+        }
+        return ['', ''];
+      }
       const commit = get(commitByHash(hash));
-      const preview = get(treeWithPreviews).treeMap.get(hash)?.info;
+      const preview = get(dagWithPreviews).get(hash);
 
       if (
         preview != null &&
@@ -151,13 +181,40 @@ export const latestCommitMessage = selectorFamily<[title: string, description: s
     },
 });
 
+export const latestCommitMessageTitle = selectorFamily<string, Hash | 'head'>({
+  key: 'latestCommitMessageTitle',
+  get:
+    (hash: Hash | 'head') =>
+    ({get}) => {
+      const [title] = get(latestCommitMessage(hash));
+      return title;
+    },
+});
+
+export const latestCommitMessageFields = selectorFamily<CommitMessageFields, Hash | 'head'>({
+  key: 'latestCommitMessageFields',
+  get:
+    (hash: string) =>
+    ({get}) => {
+      const [title, description] = get(latestCommitMessage(hash));
+      const schema = get(commitMessageFieldsSchema);
+      return parseCommitMessageFields(schema, title, description);
+    },
+});
+
 export const pageVisibility = atom<PageVisibility>({
   key: 'pageVisibility',
   default: document.hasFocus() ? 'focused' : document.visibilityState,
   effects: [
     ({setSelf}) => {
       const handleVisibilityChange = () => {
-        setSelf(document.hasFocus() ? 'focused' : document.visibilityState);
+        const newValue = document.hasFocus() ? 'focused' : document.visibilityState;
+        setSelf(oldValue => {
+          if (oldValue !== newValue && newValue === 'hidden') {
+            clearTrackedCache();
+          }
+          return newValue;
+        });
       };
 
       window.addEventListener('focus', handleVisibilityChange);

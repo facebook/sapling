@@ -1,0 +1,26 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "pathhistory",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    test_deps = [
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:sha1",
+        "fbsource//third-party/rust:tokio",
+        "//eden/scm/lib/dev-logger:dev-logger",
+        "//eden/scm/lib/manifest:manifest",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/async-runtime:async-runtime",
+        "//eden/scm/lib/dag:dag",
+        "//eden/scm/lib/manifest-tree:manifest-tree",
+        "//eden/scm/lib/storemodel:storemodel",
+        "//eden/scm/lib/types:types",
+    ],
+)

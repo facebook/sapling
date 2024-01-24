@@ -1,0 +1,22 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("scm_client_infra")
+
+cpp_library(
+    name = "journal",
+    srcs = glob(["*.cpp"]),
+    headers = glob(["*.h"]),
+    deps = [
+        "//eden/fs/utils:match",
+        "//folly/logging:logging",
+    ],
+    exported_deps = [
+        "//eden/fs/model:model",
+        "//eden/fs/service:thrift-streaming-cpp2-types",
+        "//eden/fs/telemetry:telemetry",
+        "//eden/fs/utils:path",
+        "//folly:function",
+        "//folly:synchronized",
+    ],
+)

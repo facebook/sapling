@@ -42,7 +42,7 @@ fn main() {
 
     // This code path is used by `open Sapling.app` on macOS.
     #[cfg(target_os = "macos")]
-    webview_app::maybe_become_webview_app();
+    webview_app::maybe_become_webview_app(false);
 
     let mut full_args = match dispatch::args() {
         Ok(args) => args,
@@ -115,18 +115,21 @@ fn main() {
     // you might want to delay it for chg/pfc server's case.
     // See D44048693 for example.
 
-    let mut code = hgcommands::run_command(full_args, &mut io);
+    let mut code = hgcommands::run_command(full_args, &io);
     if io.flush().is_err() {
         if code == 0 {
             code = 255;
         }
     }
-    drop(io);
+
+    tracing::debug!(target: "atexit", "calling atexit from main()");
 
     // Run atexit handlers.
     atexit::drop_queued();
 
-    std::process::exit(code as i32);
+    drop(io);
+
+    std::process::exit(code);
 }
 
 #[cfg(unix)]

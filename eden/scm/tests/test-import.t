@@ -1434,8 +1434,8 @@ Python utility:
 # ===========================
 
   $ cat > $TESTTMP/parseextra.py << 'EOF'
-  > import edenscm.patch
-  > import edenscm.cmdutil
+  > import sapling.patch
+  > import sapling.cmdutil
   > 
   > def processfoo(repo, data, extra, opts):
   >     if 'foo' in data:
@@ -1444,11 +1444,11 @@ Python utility:
   >     if 'foo' in ctx.extra():
   >         ctx.repo().ui.write('imported-foo: %s\n' % ctx.extra()['foo'])
   > 
-  > edenscm.patch.patchheadermap.append((b'Foo', 'foo'))
-  > edenscm.cmdutil.extrapreimport.append('foo')
-  > edenscm.cmdutil.extrapreimportmap['foo'] = processfoo
-  > edenscm.cmdutil.extrapostimport.append('foo')
-  > edenscm.cmdutil.extrapostimportmap['foo'] = postimport
+  > sapling.patch.patchheadermap.append((b'Foo', 'foo'))
+  > sapling.cmdutil.extrapreimport.append('foo')
+  > sapling.cmdutil.extrapreimportmap['foo'] = processfoo
+  > sapling.cmdutil.extrapostimport.append('foo')
+  > sapling.cmdutil.extrapostimportmap['foo'] = postimport
   > EOF
   $ cat >> $HGRCPATH << 'EOF'
   > [extensions]

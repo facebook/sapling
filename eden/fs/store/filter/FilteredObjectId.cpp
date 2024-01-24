@@ -19,16 +19,30 @@ using std::string;
 
 namespace facebook::eden {
 
-std::string FilteredObjectId::serializeBlob(const ObjectId& object) {
-  // If we're dealing with a blob FilteredObjectId, we only need to
-  // serialize two components: <type_byte><ObjectId>
+namespace {
+std::string serializeBlobOrUnfilteredTree(
+    const ObjectId& object,
+    FilteredObjectIdType objectType) {
+  // If we're dealing with a blob or unfiltered-tree FilteredObjectId, we only
+  // need to serialize two components: <type_byte><ObjectId>
   std::string buf;
   buf.reserve(1 + sizeof(object));
-  uint8_t objectType = FilteredObjectId::OBJECT_TYPE_BLOB;
+  uint8_t oType = folly::to_underlying(objectType);
 
-  buf.append(reinterpret_cast<const char*>(&objectType), sizeof(objectType));
-  buf.append(object.asString());
+  buf.append(reinterpret_cast<const char*>(&oType), sizeof(objectType));
+  buf.append(object.getBytes().begin(), object.getBytes().end());
   return buf;
+}
+} // namespace
+
+std::string FilteredObjectId::serializeBlob(const ObjectId& object) {
+  return serializeBlobOrUnfilteredTree(
+      object, FilteredObjectIdType::OBJECT_TYPE_BLOB);
+}
+
+std::string FilteredObjectId::serializeUnfilteredTree(const ObjectId& object) {
+  return serializeBlobOrUnfilteredTree(
+      object, FilteredObjectIdType::OBJECT_TYPE_UNFILTERED_TREE);
 }
 
 std::string FilteredObjectId::serializeTree(
@@ -45,7 +59,7 @@ std::string FilteredObjectId::serializeTree(
   size_t filterLen = filterId.length();
   uint8_t filterVarint[folly::kMaxVarintLength64] = {};
   size_t filterVarintLen = folly::encodeVarint(filterLen, filterVarint);
-  uint8_t objectType = FilteredObjectId::OBJECT_TYPE_TREE;
+  uint8_t objectType = FilteredObjectIdType::OBJECT_TYPE_TREE;
 
   buf.reserve(
       sizeof(objectType) + pathVarintLen + pathLen + filterVarintLen +
@@ -60,54 +74,53 @@ std::string FilteredObjectId::serializeTree(
 }
 
 RelativePathPiece FilteredObjectId::path() const {
-  switch (value_.data()[0]) {
-    case FilteredObjectId::OBJECT_TYPE_TREE:
-      // Skip the first byte of data that contains the type
-      folly::Range r(value_.data(), value_.size());
-      r.advance(sizeof(FilteredObjectId::OBJECT_TYPE_TREE));
-
-      // Skip the variable length filter id. decodeVarint() advances the
-      // range for us, so we don't need to skip the VarInt after reading it.
-      size_t varintSize = folly::decodeVarint(r);
-      r.advance(varintSize);
-      varintSize = folly::decodeVarint(r);
-
-      StringPiece data{r.begin(), varintSize};
-      // value_ was built with a known good RelativePath, thus we don't need
-      // to recheck it when deserializing.
-      return RelativePathPiece{data, detail::SkipPathSanityCheck{}};
+  if (value_.front() != FilteredObjectIdType::OBJECT_TYPE_TREE) {
+    throwf<std::invalid_argument>(
+        "Cannot determine path of non-tree FilteredObjectId: {}", value_);
   }
-  // We don't know the path of non-tree objects. Throw.
-  throwf<std::invalid_argument>(
-      "Cannot determine path of non-tree FilteredObjectId: {}", value_);
+
+  // Skip the first byte of data that contains the type
+  folly::Range r(value_.data(), value_.size());
+  r.advance(sizeof(FilteredObjectIdType::OBJECT_TYPE_TREE));
+
+  // Skip the variable length filter id. decodeVarint() advances the
+  // range for us, so we don't need to skip the VarInt after reading it.
+  size_t varintSize = folly::decodeVarint(r);
+  r.advance(varintSize);
+  varintSize = folly::decodeVarint(r);
+
+  StringPiece data{r.begin(), varintSize};
+  // value_ was built with a known good RelativePath, thus we don't need
+  // to recheck it when deserializing.
+  return RelativePathPiece{data, detail::SkipPathSanityCheck{}};
 }
 
 StringPiece FilteredObjectId::filter() const {
-  switch (value_.data()[0]) {
-    case FilteredObjectId::OBJECT_TYPE_TREE:
-      // Skip the first byte of data that contains the type
-      folly::Range r(value_.data(), value_.size());
-      r.advance(sizeof(FilteredObjectId::OBJECT_TYPE_TREE));
-
-      // Determine the location/size of the filter
-      size_t varintSize = folly::decodeVarint(r);
-
-      // decodeVarint advances the range for us, so we can use the current
-      // start of the range.
-      StringPiece data{r.begin(), varintSize};
-      return data;
+  if (value_.front() != FilteredObjectIdType::OBJECT_TYPE_TREE) {
+    // We don't know the filter of non-tree objects. Throw.
+    throwf<std::invalid_argument>(
+        "Cannot determine filter for non-tree FilteredObjectId: {}", value_);
   }
-  // We don't know the filter of non-tree objects. Throw.
-  throwf<std::invalid_argument>(
-      "Cannot determine filter for non-tree FilteredObjectId: {}", value_);
+
+  // Skip the first byte of data that contains the type
+  folly::Range r(value_.data(), value_.size());
+  r.advance(sizeof(FilteredObjectIdType::OBJECT_TYPE_TREE));
+
+  // Determine the location/size of the filter
+  size_t varintSize = folly::decodeVarint(r);
+
+  // decodeVarint advances the range for us, so we can use the current
+  // start of the range.
+  StringPiece data{r.begin(), varintSize};
+  return data;
 }
 
 ObjectId FilteredObjectId::object() const {
-  switch (value_.data()[0]) {
-    case FilteredObjectId::OBJECT_TYPE_TREE: {
+  switch (value_.front()) {
+    case FilteredObjectIdType::OBJECT_TYPE_TREE: {
       // Skip the first byte of data that contains the type
       folly::Range r(value_.data(), value_.size());
-      r.advance(sizeof(FilteredObjectId::OBJECT_TYPE_TREE));
+      r.advance(sizeof(FilteredObjectIdType::OBJECT_TYPE_TREE));
 
       // Determine the location/size of the filter and skip it
       size_t varintSize = folly::decodeVarint(r);
@@ -122,9 +135,14 @@ ObjectId FilteredObjectId::object() const {
       return object;
     }
 
-    case FilteredObjectId::OBJECT_TYPE_BLOB: {
+    case FilteredObjectIdType::OBJECT_TYPE_UNFILTERED_TREE:
+      static_assert(
+          sizeof(FilteredObjectIdType::OBJECT_TYPE_UNFILTERED_TREE) ==
+          sizeof(FilteredObjectIdType::OBJECT_TYPE_BLOB));
+      [[fallthrough]];
+    case FilteredObjectIdType::OBJECT_TYPE_BLOB: {
       folly::Range r(value_.data(), value_.size());
-      r.advance(sizeof(FilteredObjectId::OBJECT_TYPE_BLOB));
+      r.advance(sizeof(FilteredObjectIdType::OBJECT_TYPE_BLOB));
       ObjectId object = ObjectId{r};
       return object;
     }
@@ -136,15 +154,18 @@ ObjectId FilteredObjectId::object() const {
 
 // Since some FilteredObjectIds are created without validation, we should
 // validate that we return a valid type.
-FilteredObjectId::FilteredObjectIdType FilteredObjectId::objectType() const {
-  switch (value_.data()[0]) {
-    case FilteredObjectId::OBJECT_TYPE_TREE:
+FilteredObjectIdType FilteredObjectId::objectType() const {
+  switch (value_.front()) {
+    case FilteredObjectIdType::OBJECT_TYPE_TREE:
       return FilteredObjectIdType::OBJECT_TYPE_TREE;
-    case FilteredObjectId::OBJECT_TYPE_BLOB:
+    case FilteredObjectIdType::OBJECT_TYPE_BLOB:
       return FilteredObjectIdType::OBJECT_TYPE_BLOB;
+    case FilteredObjectIdType::OBJECT_TYPE_UNFILTERED_TREE:
+      return FilteredObjectIdType::OBJECT_TYPE_UNFILTERED_TREE;
   }
   // Unknown FilteredObjectId type. Throw.
-  throwf<std::runtime_error>("Unknown FilteredObjectId type: {}", value_[0]);
+  throwf<std::runtime_error>(
+      "Unknown FilteredObjectId type: {}", value_.front());
 }
 
 // It's possible that FilteredObjectIds with different filterIds evaluate to
@@ -165,20 +186,27 @@ void FilteredObjectId::validate() {
   XLOGF(DBG9, "{}", value_);
 
   // Ensure the type byte is valid
-  uint8_t typeByte = infoBytes.data()[0];
-  if (typeByte != FilteredObjectId::OBJECT_TYPE_BLOB &&
-      typeByte != FilteredObjectId::OBJECT_TYPE_TREE) {
+  uint8_t typeByte = infoBytes.front();
+  if (typeByte != FilteredObjectIdType::OBJECT_TYPE_BLOB &&
+      typeByte != FilteredObjectIdType::OBJECT_TYPE_TREE &&
+      typeByte != FilteredObjectIdType::OBJECT_TYPE_UNFILTERED_TREE) {
     auto msg = fmt::format(
         "Invalid FilteredObjectId type byte {}. Value_ = {}", typeByte, value_);
     XLOGF(ERR, "{}", msg);
     throw std::invalid_argument(msg);
   }
-  infoBytes.advance(1);
+  static_assert(
+      sizeof(FilteredObjectIdType::OBJECT_TYPE_UNFILTERED_TREE) ==
+          sizeof(FilteredObjectIdType::OBJECT_TYPE_BLOB) &&
+      sizeof(FilteredObjectIdType::OBJECT_TYPE_BLOB) ==
+          sizeof(FilteredObjectIdType::OBJECT_TYPE_TREE));
+  infoBytes.advance(sizeof(FilteredObjectIdType::OBJECT_TYPE_TREE));
 
   // Validating the wrapped ObjectId is impossible since we don't know what
   // it should contain. Therefore, we simply return if we're validating a
   // filtered blob Id.
-  if (typeByte == FilteredObjectId::OBJECT_TYPE_BLOB) {
+  if (typeByte == FilteredObjectIdType::OBJECT_TYPE_BLOB ||
+      typeByte == FilteredObjectIdType::OBJECT_TYPE_UNFILTERED_TREE) {
     return;
   }
 

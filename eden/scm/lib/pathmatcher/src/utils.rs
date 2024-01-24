@@ -20,9 +20,18 @@
 /// use pathmatcher::expand_curly_brackets;
 ///
 /// assert_eq!(expand_curly_brackets("foo"), vec!["foo"]);
-/// assert_eq!(expand_curly_brackets("foo{a,b,}"), vec!["fooa", "foob", "foo"]);
-/// assert_eq!(expand_curly_brackets("a{b,c{d,e}f}g"), vec!["abg", "acdfg", "acefg"]);
-/// assert_eq!(expand_curly_brackets("{a,b}{}{c,d}{{e}}"), vec!["ace", "ade", "bce", "bde"]);
+/// assert_eq!(
+///     expand_curly_brackets("foo{a,b,}"),
+///     vec!["fooa", "foob", "foo"]
+/// );
+/// assert_eq!(
+///     expand_curly_brackets("a{b,c{d,e}f}g"),
+///     vec!["abg", "acdfg", "acefg"]
+/// );
+/// assert_eq!(
+///     expand_curly_brackets("{a,b}{}{c,d}{{e}}"),
+///     vec!["ace", "ade", "bce", "bde"]
+/// );
 /// assert_eq!(expand_curly_brackets("\\{a\\}"), vec!["\\{a\\}"]);
 /// assert_eq!(expand_curly_brackets("[{a}]"), vec!["[{a}]"]);
 /// assert!(expand_curly_brackets("a}").is_empty());
@@ -53,9 +62,7 @@ pub fn expand_curly_brackets(pat: &str) -> Vec<String> {
     for ch in pat.chars() {
         let mut need_write = true;
         if escaped {
-            match ch {
-                _ => escaped = false,
-            }
+            escaped = false
         } else if in_box_brackets {
             match ch {
                 ']' => in_box_brackets = false,
@@ -153,7 +160,7 @@ pub fn normalize_glob(pat: &str) -> String {
         if ch == '*'
             && i > 0
             && chars[i - 1] == '*'
-            && chars.get(i + 1) != None
+            && chars.get(i + 1).is_some()
             && chars.get(i + 1).cloned() != Some('/')
         {
             // Change '**a' to '**/*a'
@@ -167,7 +174,7 @@ pub fn normalize_glob(pat: &str) -> String {
 /// as a glob pattern.
 pub fn plain_to_glob(plain: &str) -> String {
     let mut result = String::with_capacity(plain.len());
-    if plain.starts_with("!") {
+    if plain.starts_with('!') {
         result.push('\\');
     }
     for ch in plain.chars() {

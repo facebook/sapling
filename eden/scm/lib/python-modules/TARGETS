@@ -1,0 +1,38 @@
+load("@fbcode_macros//build_defs:native_rules.bzl", "buck_genrule")
+load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+buck_genrule(
+    name = "gen=compiled.rs",
+    out = "compiled.rs",
+    cmd = '$(exe //eden/scm/lib/python-modules/codegen:codegen) --out $OUT --python "$(exe :pymain)" --sys-path $(location //eden/scm:pure-modules)',
+)
+
+# alternatively, if we know the buck target to the "python", we can use that instead.
+python_binary(
+    name = "pymain",
+    main_src = "buck_pymain.py",
+    versions = {"python": "3.10"},
+)
+
+rust_library(
+    name = "python-modules",
+    srcs = ["src/lib.rs"],
+    autocargo = {
+        "cargo_toml_config": {
+            "extra_buck_dependencies": {
+                "build-dependencies": [
+                    "//eden/scm/lib/python-modules/codegen:codegen",
+                ],
+            },
+        },
+    },
+    mapped_srcs = {":gen=compiled.rs": "src/compiled.rs"},
+    deps = [
+        "fbsource//third-party/rust:once_cell",
+        "fbsource//third-party/rust:phf",
+        "//eden/scm/lib/zstdelta:zstdelta",
+    ],
+)

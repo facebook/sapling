@@ -13,18 +13,36 @@ use bonsai_git_mapping::BonsaiGitMappingEntry;
 use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_tag_mapping::BonsaiTagMappingEntry;
 use bonsai_tag_mapping::BonsaiTagMappingRef;
+use bookmarks::BookmarksRef;
+use bytes::Bytes;
 use chrono::DateTime;
 use chrono::FixedOffset;
+use commit_graph::CommitGraphRef;
 use context::CoreContext;
+use git_symbolic_refs::GitSymbolicRefsRef;
 use git_types::GitError;
+use gix_hash::ObjectId;
 use mononoke_types::bonsai_changeset::BonsaiAnnotatedTag;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::BonsaiChangesetMut;
+use mononoke_types::ChangesetId;
 use mononoke_types::DateTime as MononokeDateTime;
+use packfile::bundle::BundleWriter;
+use packfile::pack::DeltaForm;
+use protocol::generator::generate_pack_item_stream;
+use protocol::types::DeltaInclusion;
+use protocol::types::PackItemStreamRequest;
+use protocol::types::PackfileItemInclusion;
+use protocol::types::RequestedRefs;
+use protocol::types::RequestedSymrefs;
+use protocol::types::TagInclusion;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedDataRef;
+use repo_identity::RepoIdentityRef;
 
 use crate::changeset::ChangesetContext;
 use crate::errors::MononokeError;
+use crate::repo::RepoBlobstoreArc;
 use crate::repo::RepoContext;
 
 const HGGIT_MARKER_EXTRA: &str = "hg-git-rename-source";
@@ -32,6 +50,7 @@ const HGGIT_MARKER_VALUE: &[u8] = b"git";
 const HGGIT_COMMIT_ID_EXTRA: &str = "convert_revision";
 const GIT_OBJECT_PREFIX: &str = "git_object";
 const SEPARATOR: &str = ".";
+const BUNDLE_HEAD: &str = "BUNDLE_HEAD";
 
 impl RepoContext {
     /// Set the bonsai to git mapping based on the changeset
@@ -74,13 +93,13 @@ impl RepoContext {
         Ok(())
     }
 
-    /// Upload serialized git objects
-    pub async fn upload_git_object(
+    /// Upload serialized git objects. Applies for all git object types except git blobs.
+    pub async fn upload_non_blob_git_object(
         &self,
         git_hash: &gix_hash::oid,
         raw_content: Vec<u8>,
     ) -> anyhow::Result<(), GitError> {
-        upload_git_object(
+        upload_non_blob_git_object(
             &self.ctx,
             self.inner_repo().repo_blobstore(),
             git_hash,
@@ -100,6 +119,7 @@ impl RepoContext {
     /// Create a new annotated tag in the repository.
     pub async fn create_annotated_tag(
         &self,
+        tag_object_id: Option<ObjectId>,
         name: String,
         author: Option<String>,
         author_date: Option<DateTime<FixedOffset>>,
@@ -109,6 +129,7 @@ impl RepoContext {
         let new_changeset_id = create_annotated_tag(
             self.ctx(),
             self.inner_repo(),
+            tag_object_id,
             name,
             author,
             author_date,
@@ -119,10 +140,37 @@ impl RepoContext {
 
         Ok(ChangesetContext::new(self.clone(), new_changeset_id))
     }
+
+    /// Create a git bundle for the given stack of commits, returning the raw content
+    /// of the bundle bytes
+    pub async fn repo_stack_git_bundle(
+        &self,
+        head: ChangesetId,
+        base: ChangesetId,
+    ) -> Result<Bytes, GitError> {
+        repo_stack_git_bundle(self.ctx(), self.inner_repo(), head, base).await
+    }
+
+    /// Upload the packfile base item corresponding to the raw git object with the
+    /// input git hash
+    pub async fn repo_upload_packfile_base_item(
+        &self,
+        git_hash: &gix_hash::oid,
+        raw_content: Vec<u8>,
+    ) -> anyhow::Result<(), GitError> {
+        upload_packfile_base_item(
+            &self.ctx,
+            self.inner_repo().repo_blobstore(),
+            git_hash,
+            raw_content,
+        )
+        .await
+    }
 }
 
-/// Free function for uploading serialized git objects
-pub async fn upload_git_object<B>(
+/// Free function for uploading serialized git objects. Applies to all
+/// git object types except git blobs.
+pub async fn upload_non_blob_git_object<B>(
     ctx: &CoreContext,
     blobstore: &B,
     git_hash: &gix_hash::oid,
@@ -131,7 +179,21 @@ pub async fn upload_git_object<B>(
 where
     B: Blobstore + Clone,
 {
-    git_types::upload_git_object(ctx, blobstore, git_hash, raw_content).await
+    git_types::upload_non_blob_git_object(ctx, blobstore, git_hash, raw_content).await
+}
+
+/// Free function for uploading packfile item for git base object
+pub async fn upload_packfile_base_item<B>(
+    ctx: &CoreContext,
+    blobstore: &B,
+    git_hash: &gix_hash::oid,
+    raw_content: Vec<u8>,
+) -> anyhow::Result<(), GitError>
+where
+    B: Blobstore + Clone,
+{
+    git_types::upload_packfile_base_item(ctx, blobstore, git_hash, raw_content).await?;
+    Ok(())
 }
 
 /// Free function for creating Mononoke counterpart of Git tree object
@@ -186,6 +248,7 @@ pub async fn create_git_tree(
 pub async fn create_annotated_tag(
     ctx: &CoreContext,
     repo: &(impl changesets::ChangesetsRef + repo_blobstore::RepoBlobstoreRef + BonsaiTagMappingRef),
+    tag_hash: Option<ObjectId>,
     name: String,
     author: Option<String>,
     author_date: Option<DateTime<FixedOffset>>,
@@ -217,14 +280,133 @@ pub async fn create_annotated_tag(
     changesets_creation::save_changesets(ctx, repo, vec![changeset])
         .await
         .map_err(|e| GitError::StorageFailure(tag_id.clone(), e.into()))?;
+    let tag_hash = tag_hash.unwrap_or_else(|| ObjectId::null(gix_hash::Kind::Sha1));
+    let tag_hash = GitSha1::from_bytes(tag_hash.as_bytes())
+        .map_err(|_| GitError::InvalidHash(tag_hash.to_string()))?;
     // Create a mapping between the tag name and the metadata changeset
     let mapping_entry = BonsaiTagMappingEntry {
         changeset_id,
+        tag_hash,
         tag_name: name,
     };
     repo.bonsai_tag_mapping()
-        .add_mappings(vec![mapping_entry])
+        .add_or_update_mappings(vec![mapping_entry])
         .await
         .map_err(|e| GitError::StorageFailure(tag_id, e.into()))?;
     Ok(changeset_id)
+}
+
+pub trait Repo = RepoIdentityRef
+    + RepoBlobstoreArc
+    + BookmarksRef
+    + BonsaiGitMappingRef
+    + BonsaiTagMappingRef
+    + RepoDerivedDataRef
+    + GitSymbolicRefsRef
+    + CommitGraphRef
+    + Send
+    + Sync;
+
+async fn get_git_commit(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    cs_id: ChangesetId,
+) -> Result<ObjectId, GitError> {
+    let maybe_git_sha1 = repo
+        .bonsai_git_mapping()
+        .get_git_sha1_from_bonsai(ctx, cs_id)
+        .await
+        .map_err(|e| {
+            GitError::PackfileError(format!(
+                "Error in fetching Git Sha1 for changeset {:?} through BonsaiGitMapping. Cause: {}",
+                cs_id, e
+            ))
+        })?;
+    let git_sha1 = maybe_git_sha1.ok_or_else(|| {
+        GitError::PackfileError(format!("Git Sha1 not found for changeset {:?}", cs_id))
+    })?;
+    ObjectId::from_hex(git_sha1.to_hex().as_bytes()).map_err(|e| {
+        GitError::PackfileError(format!(
+            "Error in converting GitSha1 {} to GitObjectId. Cause: {}",
+            git_sha1.to_hex(),
+            e
+        ))
+    })
+}
+
+/// Free function for creating a Git bundle for the stack of commits
+/// ending at `head` with base `base` and returning the bundle contents
+pub async fn repo_stack_git_bundle(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    head: ChangesetId,
+    base: ChangesetId,
+) -> Result<Bytes, GitError> {
+    let requested_refs =
+        RequestedRefs::IncludedWithValue([(BUNDLE_HEAD.to_owned(), head)].into_iter().collect());
+    // Ensure we don't include the base and any of its ancestors in the bundle
+    let already_present = vec![base];
+    let request = PackItemStreamRequest::new(
+        RequestedSymrefs::ExcludeAll, // Need no symrefs for this bundle
+        requested_refs,
+        already_present,
+        DeltaInclusion::standard(),
+        TagInclusion::AsIs,
+        PackfileItemInclusion::Generate,
+    );
+    let response = generate_pack_item_stream(ctx, repo, request)
+        .await
+        .map_err(|e| {
+            GitError::PackfileError(format!(
+                "Error in generating pack item stream for head {} and base {}. Cause: {}",
+                head, base, e
+            ))
+        })?;
+    let base_git_commit = get_git_commit(ctx, repo, base).await?;
+    // Ensure that the base commit is included as a prerequisite
+    let prereqs = vec![base_git_commit];
+    // Convert the included ref into symref since JF expects only symrefs
+    let refs_to_include = response
+        .included_refs
+        .into_iter()
+        .map(|(ref_name, commit)| match ref_name.strip_prefix("refs/") {
+            Some(stripped_ref) => (stripped_ref.to_owned(), commit),
+            None => (ref_name, commit),
+        })
+        .collect();
+
+    // Create the bundle writer with the header pre-written
+    // A concurrency of 100 is sufficient since the bundle is for a stack of draft commits
+    let concurrency = 100;
+    let mut writer = BundleWriter::new_with_header(
+        Vec::new(),
+        refs_to_include,
+        prereqs,
+        response.num_items as u32,
+        concurrency,
+        DeltaForm::RefAndOffset,
+    )
+    .await
+    .map_err(|e| {
+        GitError::PackfileError(format!(
+            "Error in creating BundleWriter for head {} and base {}. Cause: {}",
+            head, base, e
+        ))
+    })?;
+    // Write the packfile item stream to the bundle
+    writer.write(response.items).await.map_err(|e| {
+        GitError::PackfileError(format!(
+            "Error in writing packfile items to bundle for head {} and base {}. Cause: {}",
+            head, base, e
+        ))
+    })?;
+    // Finish writing the bundle
+    writer.finish().await.map_err(|e| {
+        GitError::PackfileError(format!(
+            "Error in finishing writing to the bundle for head {} and base {}. Cause: {}",
+            head, base, e
+        ))
+    })?;
+
+    Ok(writer.into_write().into())
 }

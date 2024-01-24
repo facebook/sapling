@@ -156,7 +156,7 @@ impl IoTimeSeries {
         let prev = (head + len - 2) % len;
         let old = &samples[prev];
         let new = &samples[cur];
-        new.bytes_per_second(&old)
+        new.bytes_per_second(old)
     }
 
     fn current_sample(&self) -> &MutableIoSample {

@@ -145,7 +145,8 @@ async fn get_things_from_app<R: CrossRepo>(
         &source_repo_config.storage_config.metadata,
         mysql_options,
         readonly_storage.0,
-    )?;
+    )
+    .await?;
 
     let (source_repo, target_repo) = if !unredacted {
         app.open_source_and_target_repos(repo_args).await?

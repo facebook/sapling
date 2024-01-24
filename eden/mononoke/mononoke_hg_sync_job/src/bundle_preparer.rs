@@ -409,14 +409,12 @@ impl BookmarkLogEntryBatch {
                     async {
                         match self.from_cs_id {
                             Some(from_cs_id) => {
-                                commit_graph
-                                    .changeset_generation_required(ctx, from_cs_id)
-                                    .await
+                                commit_graph.changeset_generation(ctx, from_cs_id).await
                             }
                             None => Ok(Generation::new(0)),
                         }
                     },
-                    commit_graph.changeset_generation_required(ctx, to_cs_id),
+                    commit_graph.changeset_generation(ctx, to_cs_id),
                 )
                 .await?;
                 if let Some(diff) = to_gen.difference_from(from_gen) {

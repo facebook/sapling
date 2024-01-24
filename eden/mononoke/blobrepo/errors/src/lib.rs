@@ -15,7 +15,7 @@ use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::HgNodeHash;
 use mercurial_types::HgParents;
-use mercurial_types::MPath;
+use mercurial_types::NonRootMPath;
 use mercurial_types::RepoPath;
 use mercurial_types::Type;
 use mononoke_types::hash::Sha256;
@@ -100,7 +100,7 @@ pub enum ErrorKind {
     #[error("Bookmark {0} does not exist")]
     BookmarkNotFound(AsciiString),
     #[error("Unresolved conflict at {0} with parents: {1:?}")]
-    UnresolvedConflicts(MPath, Vec<(FileType, HgFileNodeId)>),
+    UnresolvedConflicts(NonRootMPath, Vec<(FileType, HgFileNodeId)>),
     #[error("Manifest without parents did not get changed by a BonsaiChangeset")]
     UnchangedManifest,
     #[error("Saving empty manifest which is not a root: {0}")]
@@ -108,7 +108,7 @@ pub enum ErrorKind {
     #[error("Trying to merge a manifest with two existing parents p1 {0} and p2 {1}")]
     ManifestAlreadyAMerge(HgNodeHash, HgNodeHash),
     #[error("Path not found: {0}")]
-    PathNotFound(MPath),
+    PathNotFound(NonRootMPath),
     #[error("Remove called on non-directory")]
     NotADirectory,
     #[error("Empty file path")]
@@ -127,17 +127,17 @@ pub enum ErrorKind {
         "Incorrect copy info: not found a file version {from_path} {from_node} the file {to_path} {to_node} was copied from"
     )]
     IncorrectCopyInfo {
-        from_path: MPath,
+        from_path: NonRootMPath,
         from_node: HgFileNodeId,
-        to_path: MPath,
+        to_path: NonRootMPath,
         to_node: HgFileNodeId,
     },
     #[error(
         "CaseConflict: the changes introduced by this commit have conflicting case. The first offending path is '{0}', and conflicted with '{1}'. Resolve the conflict."
     )]
-    InternalCaseConflict(MPath, MPath),
+    InternalCaseConflict(NonRootMPath, NonRootMPath),
     #[error(
         "CaseConflict: the changes introduced by this commit conflict with existing files in the repository. The first conflicting path in this commit was '{0}', and conflicted with '{1}' in the repository. Resolve the conflict."
     )]
-    ExternalCaseConflict(MPath, MPath),
+    ExternalCaseConflict(NonRootMPath, NonRootMPath),
 }

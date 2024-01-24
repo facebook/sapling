@@ -67,7 +67,7 @@ impl GenericPath {
     /// Return the main filesystem path.
     pub fn as_opt_path(&self) -> Option<&std::path::Path> {
         match self {
-            GenericPath::Filesystem(path) => Some(&path),
+            GenericPath::Filesystem(path) => Some(path),
             GenericPath::SharedMeta { path, .. } => path.as_opt_path(),
             GenericPath::Nothing => None,
         }
@@ -83,7 +83,7 @@ impl GenericPath {
 
     pub(crate) fn lock(&self) -> crate::Result<ScopedDirLock> {
         if let Some(dir) = self.as_opt_path() {
-            Ok(ScopedDirLock::new(&dir)?)
+            Ok(ScopedDirLock::new(dir)?)
         } else {
             Err(crate::Error::programming(
                 "read_meta() does not support GenericPath::Nothing",
@@ -95,13 +95,13 @@ impl GenericPath {
         match self {
             GenericPath::Filesystem(dir) => {
                 let meta_path = dir.join(META_FILE);
-                LogMetadata::read_file(&meta_path)
+                LogMetadata::read_file(meta_path)
             }
             GenericPath::SharedMeta { meta, path } => {
                 let meta = meta.lock().unwrap();
                 if let GenericPath::Filesystem(dir) = path.as_ref() {
                     let meta_path = dir.join(META_FILE);
-                    if let Ok(on_disk_meta) = LogMetadata::read_file(&meta_path) {
+                    if let Ok(on_disk_meta) = LogMetadata::read_file(meta_path) {
                         // Prefer the per-log "meta" if it is compatible with the multi-meta.
                         // The per-log meta might contain more up-to-date information about
                         // indexes, etc.
@@ -122,7 +122,7 @@ impl GenericPath {
         match self {
             GenericPath::Filesystem(dir) => {
                 let meta_path = dir.join(META_FILE);
-                meta.write_file(&meta_path, fsync)?;
+                meta.write_file(meta_path, fsync)?;
                 Ok(())
             }
             GenericPath::SharedMeta {
@@ -134,7 +134,7 @@ impl GenericPath {
                 // or log internal data investigation.
                 if let GenericPath::Filesystem(dir) = path.as_ref() {
                     let meta_path = dir.join(META_FILE);
-                    meta.write_file(&meta_path, fsync)?;
+                    meta.write_file(meta_path, fsync)?;
                 }
                 let mut shared_meta = shared_meta.lock().unwrap();
                 *shared_meta = meta.clone();

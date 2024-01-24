@@ -87,6 +87,13 @@
   word-break: break-word;
 }
 
+.commit-info-rendered-field:focus-visible,
+.commit-info-rendered-title:focus-visible,
+.commit-info-rendered-textarea:focus-visible {
+  outline: var(--focus-border) 1px auto;
+  outline-offset: -1px;
+}
+
 .commit-info-section .see-more-container {
   margin: calc(-1 * var(--pad));
   margin-bottom: var(--pad);
@@ -117,6 +124,22 @@
   flex-direction: row;
   gap: var(--pad);
   margin-left: auto;
+}
+.commit-info-actions-bar-row {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+  flex-direction: row;
+  gap: var(--pad);
+  margin-left: auto;
+}
+
+.commit-info-actions-bar-row {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 .commit-info-view-toolbar-top {
@@ -175,6 +198,10 @@
 
 .min-height-text-area::part(control) {
   overflow: hidden;
+  /* Match vscode-text-field */
+  margin: 2px 0;
+  padding: 4px 9px;
+  min-height: 26px;
 }
 
 .commit-info-section {
@@ -238,17 +265,13 @@
   position: relative;
 }
 .text-area-toolbar {
-  position: absolute;
-  right: var(--halfpad);
-  bottom: var(--halfpad);
-  z-index: 2;
   display: flex;
   flex-direction: row;
   align-items: center;
+  justify-content: flex-end;
   gap: var(--pad);
   font-size: 90%;
-  background-color: var(--background);
-  padding: var(--halfpad) var(--pad);
+  margin-bottom: calc(-1.5 * var(--pad));
   border-radius: var(--pad);
 }
 .text-area-toolbar .choose-file {
@@ -296,7 +319,7 @@
   top: calc(100% + var(--halfpad));
   max-width: 250px;
   min-width: 250px;
-  z-index: 1;
+  z-index: 20;
   display: flex;
   flex-direction: column;
   gap: var(--pad);

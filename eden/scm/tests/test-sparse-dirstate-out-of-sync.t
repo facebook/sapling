@@ -1,12 +1,5 @@
 #debugruntest-compatible
 
-#testcases pythonstatus ruststatus
-#if pythonstatus
-  $ setconfig status.use-rust=false workingcopy.ruststatus=false
-#else
-  $ setconfig status.use-rust=true workingcopy.ruststatus=true
-#endif
-
   $ configure modernclient
 
   $ enable sparse

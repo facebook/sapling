@@ -16,6 +16,7 @@ use blobstore::Loadable;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks_types::BookmarkKey;
 use bookmarks_types::BookmarkKind;
+use borrowed::borrowed;
 use bytes::Bytes;
 use context::CoreContext;
 use cross_repo_sync::CHANGE_XREPO_MAPPING_EXTRA;
@@ -31,7 +32,6 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use repo_authorization::AuthorizationContext;
 use skeleton_manifest::RootSkeletonManifestId;
-use tunables::tunables;
 
 use crate::hook_running::run_hooks;
 use crate::restrictions::should_run_hooks;
@@ -152,24 +152,21 @@ impl AffectedChangesets {
                 future::ready(!exists)
             });
 
-        let limit = match tunables()
-            .hooks_additional_changesets_limit()
-            .unwrap_or_default()
-        {
-            limit if limit > 0 => limit as usize,
-            _ => std::usize::MAX,
-        };
+        const ADDITIONAL_CHANGESETS_LIMIT: usize = 200000;
 
-        let additional_changesets = if tunables()
-            .run_hooks_on_additional_changesets()
-            .unwrap_or_default()
+        let additional_changesets = if justknobs::eval(
+            "scm/mononoke:run_hooks_on_additional_changesets",
+            None,
+            None,
+        )
+        .unwrap_or(true)
         {
             let bonsais = range
                 .and_then({
                     let mut count = 0;
                     move |bcs_id| {
                         count += 1;
-                        if count > limit {
+                        if count > ADDITIONAL_CHANGESETS_LIMIT {
                             future::ready(Err(anyhow!(
                                 "bookmark movement additional changesets limit reached at {}",
                                 bcs_id
@@ -199,13 +196,13 @@ impl AffectedChangesets {
             // Logging-only mode.  Work out how many changesets we would have run
             // on, and whether the limit would have been reached.
             let count = range
-                .take(limit)
+                .take(ADDITIONAL_CHANGESETS_LIMIT)
                 .try_fold(0usize, |acc, _| async move { Ok(acc + 1) })
                 .await?;
 
             let mut scuba = ctx.scuba().clone();
             scuba.add("hook_running_additional_changesets", count);
-            if count >= limit {
+            if count >= ADDITIONAL_CHANGESETS_LIMIT {
                 scuba.add("hook_running_additional_changesets_limit_reached", true);
             }
             scuba.log_with_msg("Hook running skipping additional changesets", None);
@@ -321,55 +318,65 @@ impl AffectedChangesets {
         kind: BookmarkKind,
         additional_changesets: AdditionalChangesets,
     ) -> Result<(), BookmarkMovementError> {
+        let config = &repo.repo_config().pushrebase.flags;
         if (kind == BookmarkKind::Publishing || kind == BookmarkKind::PullDefaultPublishing)
-            && repo.repo_config().pushrebase.flags.casefolding_check
+            && config.casefolding_check
         {
             self.load_additional_changesets(ctx, repo, bookmark, additional_changesets)
                 .await
                 .context("Failed to load additional affected changesets to check case conflicts")?;
 
             stream::iter(self.iter().map(Ok))
-                .try_for_each_concurrent(100, |bcs| async move {
-                    let bcs_id = bcs.get_changeset_id();
+                .try_for_each_concurrent(100, |bcs| {
+                    borrowed!(config);
+                    async move {
+                        let bcs_id = bcs.get_changeset_id();
 
-                    let sk_mf = repo
-                        .repo_derived_data()
-                        .derive::<RootSkeletonManifestId>(ctx, bcs_id)
-                        .await
-                        .map_err(Error::from)?
-                        .into_skeleton_manifest_id()
-                        .load(ctx, repo.repo_blobstore())
-                        .await
-                        .map_err(Error::from)?;
-                    if sk_mf.has_case_conflicts() {
-                        // We only reject a commit if it introduces new case
-                        // conflicts compared to its parents.
-                        let parents = stream::iter(bcs.parents().map(|parent_bcs_id| async move {
-                            repo.repo_derived_data()
-                                .derive::<RootSkeletonManifestId>(ctx, parent_bcs_id)
-                                .await
-                                .map_err(Error::from)?
-                                .into_skeleton_manifest_id()
-                                .load(ctx, repo.repo_blobstore())
-                                .await
-                                .map_err(Error::from)
-                        }))
-                        .buffered(10)
-                        .try_collect::<Vec<_>>()
-                        .await?;
+                        let sk_mf = repo
+                            .repo_derived_data()
+                            .derive::<RootSkeletonManifestId>(ctx, bcs_id)
+                            .await
+                            .map_err(Error::from)?
+                            .into_skeleton_manifest_id()
+                            .load(ctx, repo.repo_blobstore())
+                            .await
+                            .map_err(Error::from)?;
+                        if sk_mf.has_case_conflicts() {
+                            // We only reject a commit if it introduces new case
+                            // conflicts compared to its parents.
+                            let parents =
+                                stream::iter(bcs.parents().map(|parent_bcs_id| async move {
+                                    repo.repo_derived_data()
+                                        .derive::<RootSkeletonManifestId>(ctx, parent_bcs_id)
+                                        .await
+                                        .map_err(Error::from)?
+                                        .into_skeleton_manifest_id()
+                                        .load(ctx, repo.repo_blobstore())
+                                        .await
+                                        .map_err(Error::from)
+                                }))
+                                .buffered(10)
+                                .try_collect::<Vec<_>>()
+                                .await?;
 
-                        if let Some((path1, path2)) = sk_mf
-                            .first_new_case_conflict(ctx, repo.repo_blobstore(), parents)
-                            .await?
-                        {
-                            return Err(BookmarkMovementError::CaseConflict {
-                                changeset_id: bcs_id,
-                                path1,
-                                path2,
-                            });
+                            if let Some((path1, path2)) = sk_mf
+                                .first_new_case_conflict(
+                                    ctx,
+                                    repo.repo_blobstore(),
+                                    parents,
+                                    &config.casefolding_check_excluded_paths,
+                                )
+                                .await?
+                            {
+                                return Err(BookmarkMovementError::CaseConflict {
+                                    changeset_id: bcs_id,
+                                    path1,
+                                    path2,
+                                });
+                            }
                         }
+                        Ok(())
                     }
-                    Ok(())
                 })
                 .await?;
         }
@@ -396,11 +403,14 @@ impl AffectedChangesets {
         if (kind == BookmarkKind::Publishing || kind == BookmarkKind::PullDefaultPublishing)
             && should_run_hooks(authz, reason)
         {
-            if reason == BookmarkUpdateReason::Push
-                && tunables().disable_hooks_on_plain_push().unwrap_or_default()
-            {
-                // Skip running hooks for this plain push.
-                return Ok(());
+            if reason == BookmarkUpdateReason::Push {
+                let disable_fallback_to_master =
+                    justknobs::eval("scm/mononoke:disable_hooks_on_plain_push", None, None)
+                        .unwrap_or_default();
+                if disable_fallback_to_master {
+                    // Skip running hooks for this plain push.
+                    return Ok(());
+                }
             }
 
             if hook_manager.hooks_exist_for_bookmark(bookmark) {

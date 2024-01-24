@@ -196,8 +196,23 @@ export default class GraphQLGitHubClient implements GitHubClient {
     const {content, encoding, sha, size, node_id} = json;
     const decodedContent = encoding === 'base64' ? window.atob(content) : null;
     // If we were unable to get the text contents, tag blob as binary.
-    const isBinary = decodedContent != null ? isBinaryContent(decodedContent) : true;
-    const text = isBinary ? content : decodedContent;
+    const isBinary = decodedContent == null || isBinaryContent(decodedContent);
+    const text =
+      decodedContent != null && !isBinary
+        ? // Takes the result of the original base64-encoded string (whose
+          // encoded value may contain non-ASCII UTF-8 characters) from the
+          // call to atob() and uses a combination of decodeURIComponent()
+          // and escape() to ensure the non-ASCII characters are decoded
+          // correctly in the resulting JavaScript string.
+          //
+          // https://stackoverflow.com/a/30106551 details the problem and
+          // proposes this code as one of the solutions. Note that this uses
+          // the deprecated escape() function, and while we could use an
+          // alternative implementation that does not use escape(), using
+          // escape() is attractive because it is a built-in and is likely
+          // faster than a solution we could code by hand.
+          decodeURIComponent(escape(decodedContent))
+        : content;
     return {
       id: node_id,
       oid: sha,

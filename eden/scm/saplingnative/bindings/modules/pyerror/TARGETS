@@ -1,0 +1,44 @@
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+load("//eden/scm:targets.bzl", "rust_python_library")
+
+oncall("mercurial_release")
+
+rust_python_library(
+    name = "pyerror",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "cpython": {
+                        "features": [],
+                        "git": None,
+                        "rev": None,
+                    },
+                },
+            },
+            "extra_buck_dependencies": {
+                "dependencies": [
+                    "//eden/scm/lib/revisionstore:revisionstore",
+                ],
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    deps = [
+        "//eden/scm/lib/auth:auth",
+        "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/cpython-ext:cpython-ext",
+        "//eden/scm/lib/dag:dag",
+        "//eden/scm/lib/edenapi:edenapi",
+        "//eden/scm/lib/http-client:http-client",
+        "//eden/scm/lib/indexedlog:indexedlog",
+        "//eden/scm/lib/metalog:metalog",
+        "//eden/scm/lib/pathmatcher:pathmatcher",
+        "//eden/scm/lib/repo:repo",
+        "//eden/scm/lib/repolock:repolock",
+        "//eden/scm/lib/revisionstore:revisionstore_with_ods",
+        "//eden/scm/lib/revlogindex:revlogindex",
+        "//eden/scm/lib/types:types",
+    ],
+)

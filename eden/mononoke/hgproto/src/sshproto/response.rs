@@ -59,8 +59,7 @@ pub fn encode(response: Response) -> OutputStream {
             let len = format!("{}\n", len);
             let len = stream::once(Ok(Bytes::from(len.as_bytes())));
 
-            len.chain(stream::iter_ok(separated_results.into_iter()))
-                .boxify()
+            len.chain(stream::iter_ok(separated_results)).boxify()
         }
         Response::Single(resp) => encode_single(resp),
     }

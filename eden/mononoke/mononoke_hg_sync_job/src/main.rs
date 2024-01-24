@@ -13,7 +13,6 @@
 
 #![feature(auto_traits)]
 #![feature(async_closure)]
-#![feature(drain_filter)]
 
 use std::collections::BTreeSet;
 use std::collections::HashMap;
@@ -22,6 +21,7 @@ use std::path::PathBuf;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::sync::OnceLock;
 use std::time::Duration;
 
 use anyhow::bail;
@@ -44,6 +44,8 @@ use changesets::Changesets;
 use clap_old::Arg;
 use clap_old::ArgGroup;
 use clap_old::SubCommand;
+use clientinfo::ClientEntryPoint;
+use clientinfo::ClientInfo;
 use cloned::cloned;
 use cmdlib::args;
 use cmdlib::args::MononokeMatches;
@@ -81,7 +83,6 @@ use mononoke_types::RepositoryId;
 use mutable_counters::ArcMutableCounters;
 use mutable_counters::MutableCounters;
 use mutable_counters::MutableCountersArc;
-use once_cell::sync::OnceCell;
 use regex::Regex;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
@@ -145,6 +146,7 @@ const HGSQL_GLOBALREVS_DB_ADDR: &str = "hgsql-globalrevs-db-addr";
 // repo.
 const DEFAULT_RETRY_NUM: usize = 1;
 const DEFAULT_BATCH_SIZE: usize = 10;
+const DEFAULT_CONFIGERATOR_BATCH_SIZE: usize = 5;
 const DEFAULT_SINGLE_BUNDLE_TIMEOUT_MS: u64 = 5 * 60 * 1000;
 
 #[derive(Copy, Clone)]
@@ -255,6 +257,13 @@ impl HgSyncProcess {
                 .takes_value(true)
                 .required(false)
                 .help("maximum number of bundles allowed over a single hg peer")
+        )
+        .arg(
+            Arg::with_name("configerator-batch-size")
+                .long("configerator-batch-size")
+                .takes_value(true)
+                .required(false)
+                .help("maximum number of bundles allowed over a single hg peer for the configerator repo")
         )
         .arg(
             Arg::with_name("single-bundle-timeout-ms")
@@ -450,8 +459,12 @@ pub struct HgSyncProcessExecutor {
 
 impl HgSyncProcessExecutor {
     fn new(fb: FacebookInit, matches: Arc<MononokeMatches<'static>>, repo_name: String) -> Self {
-        let ctx = CoreContext::new_with_logger(fb, matches.logger().clone())
-            .clone_with_repo_name(&repo_name);
+        let ctx = CoreContext::new_with_logger_and_client_info(
+            fb,
+            matches.logger().clone(),
+            ClientInfo::default_with_entry_point(ClientEntryPoint::MononokeHgSync),
+        )
+        .clone_with_repo_name(&repo_name);
         Self {
             matches,
             ctx,
@@ -834,7 +847,7 @@ fn log_processed_entries_to_scuba(
         // This will make it easier to find entries that were batched
         None
     } else {
-        entries.get(0).map(|entry| entry.id)
+        entries.first().map(|entry| entry.id)
     };
     entries.iter().for_each(|entry| {
         log_processed_entry_to_scuba(
@@ -1239,10 +1252,20 @@ async fn run<'a>(
             try_join3(preparer, overlay, globalrev_syncer),
         )
     };
-    let batch_size = match job_config.as_ref().map(|c| c.batch_size) {
-        Some(size) => size as usize,
-        None => args::get_usize(matches, "batch-size", DEFAULT_BATCH_SIZE),
+
+    let batch_size = if repo_name == "configerator" {
+        args::get_usize(
+            matches,
+            "configerator-batch-size",
+            DEFAULT_CONFIGERATOR_BATCH_SIZE,
+        )
+    } else {
+        match job_config.as_ref().map(|c| c.batch_size) {
+            Some(size) => size as usize,
+            None => args::get_usize(matches, "batch-size", DEFAULT_BATCH_SIZE),
+        }
     };
+
     let single_bundle_timeout_ms = args::get_u64(
         matches,
         "single-bundle-timeout-ms",
@@ -1256,7 +1279,8 @@ async fn run<'a>(
         verify_server_bookmark_on_failure,
     )?;
     let bookmarks =
-        args::open_sql_with_config::<SqlBookmarksBuilder>(ctx.fb, matches, &resolved_repo.config)?;
+        args::open_sql_with_config::<SqlBookmarksBuilder>(ctx.fb, matches, &resolved_repo.config)
+            .await?;
 
     let bookmarks = bookmarks.with_repo_id(repo_id);
     let reporting_handler = build_reporting_handler(ctx, &scuba_sample, retry_num, &bookmarks);
@@ -1270,7 +1294,8 @@ async fn run<'a>(
         &repo_config.storage_config.metadata,
         mysql_options,
         readonly_storage.0,
-    )?;
+    )
+    .await?;
 
     let repo_lock: Arc<dyn RepoLock> = Arc::new(MutableRepoLock::new(sql_repo_lock, repo_id));
 
@@ -1518,7 +1543,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     match process.matches.value_of("sharded-service-name") {
         Some(service_name) => {
             // The service name needs to be 'static to satisfy SM contract
-            static SM_SERVICE_NAME: OnceCell<String> = OnceCell::new();
+            static SM_SERVICE_NAME: OnceLock<String> = OnceLock::new();
             let logger = process.matches.logger().clone();
             let matches = Arc::clone(&process.matches);
             let mut executor = ShardedProcessExecutor::new(
@@ -1545,8 +1570,12 @@ fn main(fb: FacebookInit) -> Result<()> {
             let config_store = matches.config_store();
             let (repo_name, _) =
                 args::not_shardmanager_compatible::get_config(config_store, &matches)?;
-            let ctx = CoreContext::new_with_logger(fb, matches.logger().clone())
-                .clone_with_repo_name(&repo_name);
+            let ctx = CoreContext::new_with_logger_and_client_info(
+                fb,
+                matches.logger().clone(),
+                ClientInfo::default_with_entry_point(ClientEntryPoint::MononokeHgSync),
+            )
+            .clone_with_repo_name(&repo_name);
             let fut = run(&ctx, &matches, repo_name, Arc::new(AtomicBool::new(false)));
             block_execute(
                 fut,

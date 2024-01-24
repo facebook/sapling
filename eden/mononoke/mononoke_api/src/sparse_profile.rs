@@ -24,7 +24,7 @@ use futures::TryStreamExt;
 use maplit::btreeset;
 use metaconfig_types::SparseProfilesConfig;
 use mononoke_types::fsnode::FsnodeEntry;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use pathmatcher::DirectoryMatch;
 use pathmatcher::Matcher;
 use repo_blobstore::RepoBlobstoreRef;
@@ -128,7 +128,7 @@ impl SparseProfileMonitoring {
     pub async fn get_monitoring_profiles(
         &self,
         changeset: &ChangesetContext,
-    ) -> Result<Vec<MPath>, MononokeError> {
+    ) -> Result<Vec<NonRootMPath>, MononokeError> {
         match &self.monitoring_profiles {
             MonitoringProfiles::All => {
                 let prefixes = vec![MononokePath::try_from(
@@ -143,7 +143,7 @@ impl SparseProfileMonitoring {
                             .monitoring_profiles_only_matcher
                             .as_ref()
                             .map_or_else(|| &self.profiles_location_with_excludes_matcher, |m| m);
-                        Ok(match matcher.matches(path.to_string()) {
+                        Ok(match matcher.matches(path.to_string().as_str()) {
                             // Since None in MononokePath is a root repo directory
                             // and we are returning list of profiles
                             // we can safely filter that out.
@@ -182,26 +182,26 @@ impl SparseProfileMonitoring {
             MonitoringProfiles::Exact { .. } => &self.exact_profiles_matcher,
             MonitoringProfiles::All => &self.profiles_location_with_excludes_matcher,
         };
-        matcher.matches(path.to_string())
+        matcher.matches(path.to_string().as_str())
     }
 
     pub async fn get_profile_size(
         &self,
         ctx: &CoreContext,
         changeset: &ChangesetContext,
-        paths: Vec<MPath>,
+        paths: Vec<NonRootMPath>,
     ) -> Result<Out, MononokeError> {
         let cs_id = changeset.id();
         let maybe_sizes = self
             .sql_sparse_profiles
-            .get_profiles_sizes(cs_id, paths.iter().map(MPath::to_string).collect())
+            .get_profiles_sizes(cs_id, paths.iter().map(NonRootMPath::to_string).collect())
             .await?;
         let (paths_to_calculate, mut sizes) = match maybe_sizes {
             None => (paths, HashMap::new()),
             Some(sizes) => {
                 let processed_paths = sizes
                     .iter()
-                    .map(|(path, _)| MPath::try_from(<String as AsRef<str>>::as_ref(path)))
+                    .map(|(path, _)| NonRootMPath::try_from(<String as AsRef<str>>::as_ref(path)))
                     .collect::<Result<HashSet<_>>>()?;
                 (
                     paths
@@ -233,7 +233,7 @@ impl SparseProfileMonitoring {
 
 pub(crate) async fn fetch(path: String, changeset: &ChangesetContext) -> Result<Option<Vec<u8>>> {
     let path: &str = &path;
-    let path = MPath::try_from(path)?;
+    let path = NonRootMPath::try_from(path)?;
     let path_with_content = changeset.path_with_content(path.clone()).await?;
     let file_ctx = path_with_content
         .file()
@@ -248,7 +248,7 @@ pub(crate) async fn fetch(path: String, changeset: &ChangesetContext) -> Result<
 
 async fn create_matchers(
     changeset: &ChangesetContext,
-    paths: Vec<MPath>,
+    paths: Vec<NonRootMPath>,
 ) -> Result<HashMap<String, Arc<dyn Matcher + Send + Sync>>> {
     stream::iter(paths)
         .map(|path| async move {
@@ -278,7 +278,7 @@ async fn calculate_size<'a>(
     matchers: HashMap<String, Arc<dyn Matcher + Send + Sync>>,
 ) -> Result<Out, MononokeError> {
     let root_fsnode_id = changeset.root_fsnode_id().await?;
-    let root: Option<MPath> = None;
+    let root: Option<NonRootMPath> = None;
     bounded_traversal::bounded_traversal(
         256,
         (root, *root_fsnode_id.fsnode_id(), matchers),
@@ -290,7 +290,7 @@ async fn calculate_size<'a>(
                 let mut next: HashMap<_, HashMap<_, _>> = HashMap::new();
                 let fsnode = fsnode_id.load(&ctx, blobstore).await?;
                 for (base_name, entry) in fsnode.list() {
-                    let path = MPath::join_opt_element(path.as_ref(), base_name);
+                    let path = NonRootMPath::join_opt_element(path.as_ref(), base_name);
                     let path_vec = path.to_vec();
                     let repo_path = RepoPath::from_utf8(&path_vec)?;
                     match entry {
@@ -440,7 +440,7 @@ pub async fn get_profile_delta_size(
     monitor: &SparseProfileMonitoring,
     current: &ChangesetContext,
     other: &ChangesetContext,
-    paths: Vec<MPath>,
+    paths: Vec<NonRootMPath>,
 ) -> Result<HashMap<String, ProfileSizeChange>, MononokeError> {
     let matchers = create_matchers(current, paths).await?;
     calculate_delta_size(ctx, monitor, current, other, matchers).await

@@ -30,10 +30,14 @@
   --monospace-fontFamily: source-code-pro, SFMono-Regular, Consolas, 'Liberation Mono', Menlo,
     Courier, monospace;
 
-  height: 100vh;
-  max-height: 100vh;
+  --editor-font-size: var(--vscode-font-size, 13px);
+
+  height: calc(100vh / var(--zoom, 1));
+  max-height: calc(100vh / var(--zoom, 1));
   display: flex;
   flex-direction: column;
+
+  zoom: var(--zoom, 1);
 }
 
 .main-content-area {
@@ -60,4 +64,11 @@ vscode-button::part(content) {
 }
 vscode-button::part(control) {
   margin: 0;
+}
+
+vscode-button[appearance='icon'] {
+  border: 1px solid var(--subtle-hover-darken);
+}
+vscode-button[appearance='icon']:not(:hover) {
+  background-color: var(--subtle-hover-darken);
 }

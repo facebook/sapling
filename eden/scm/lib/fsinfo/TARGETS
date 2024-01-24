@@ -1,0 +1,70 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "fsinfo",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "target": {
+                    "'cfg(windows)'": {
+                        "dependencies": {
+                            "winapi": {
+                                "features": [
+                                    "fileapi",
+                                    "handleapi",
+                                    "ioapiset",
+                                    "minwindef",
+                                    "winbase",
+                                    "winerror",
+                                    "winioctl",
+                                ],
+                                "version": "0.3",
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    os_deps = [
+        (
+            "linux",
+            [
+                "fbsource//third-party/rust:libc",
+            ],
+        ),
+        (
+            "macos",
+            [
+                "fbsource//third-party/rust:libc",
+            ],
+        ),
+        (
+            "windows",
+            [
+                "fbsource//third-party/rust:winapi",
+                "//eden/scm/lib/identity:identity",
+            ],
+        ),
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+    ],
+)
+
+rust_binary(
+    name = "fstype",
+    srcs = ["examples/fstype.rs"],
+    autocargo = {"ignore_rule": True},
+    unittests = False,
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        ":fsinfo",
+    ],
+)

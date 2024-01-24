@@ -16,6 +16,8 @@ use clap_old::App;
 use clap_old::Arg;
 use clap_old::ArgMatches;
 use clap_old::SubCommand;
+use clientinfo::ClientEntryPoint;
+use clientinfo::ClientInfo;
 use cmdlib::args;
 use cmdlib::args::MononokeMatches;
 use cmdlib::helpers;
@@ -29,8 +31,9 @@ use manifest::Entry;
 use manifest::ManifestOps;
 use manifest::PathOrPrefix;
 use mercurial_derivation::DeriveHgChangeset;
+use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
 use revset::AncestorsNodeStream;
 use slog::info;
@@ -46,10 +49,10 @@ const ARG_CSID: &str = "csid";
 const ARG_PATH: &str = "path";
 const ARG_LIMIT: &str = "limit";
 
-fn path_resolve(path: &str) -> Result<Option<MPath>, Error> {
+fn path_resolve(path: &str) -> Result<MPath, Error> {
     match path {
-        "/" => Ok(None),
-        _ => Ok(Some(MPath::new(path)?)),
+        "/" => Ok(MPath::ROOT),
+        _ => Ok(MPath::new(path)?),
     }
 }
 
@@ -92,7 +95,11 @@ pub async fn subcommand_unodes<'a>(
     sub_matches: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
     let repo: BlobRepo = args::not_shardmanager_compatible::open_repo(fb, &logger, matches).await?;
-    let ctx = CoreContext::new_with_logger(fb, logger);
+    let ctx = CoreContext::new_with_logger_and_client_info(
+        fb,
+        logger,
+        ClientInfo::default_with_entry_point(ClientEntryPoint::MononokeAdmin),
+    );
 
     let res = match sub_matches.subcommand() {
         (COMMAND_TREE, Some(matches)) => {
@@ -125,7 +132,7 @@ async fn subcommand_tree(
     ctx: &CoreContext,
     repo: BlobRepo,
     csid: ChangesetId,
-    path: Option<MPath>,
+    path: MPath,
 ) -> Result<(), Error> {
     let root = RootUnodeManifestId::derive(ctx, &repo, csid).await?;
     info!(ctx.logger(), "ROOT: {:?}", root);
@@ -139,10 +146,10 @@ async fn subcommand_tree(
         .try_for_each(|(path, entry)| async move {
             match entry {
                 Entry::Tree(tree_id) => {
-                    println!("{}/ {:?}", MPath::display_opt(path.as_ref()), tree_id);
+                    println!("{}/ {:?}", MPath::display_opt(&path), tree_id);
                 }
                 Entry::Leaf(leaf_id) => {
-                    println!("{} {:?}", MPath::display_opt(path.as_ref()), leaf_id);
+                    println!("{} {:?}", MPath::display_opt(&path), leaf_id);
                 }
             }
             Ok(())
@@ -173,9 +180,9 @@ async fn single_verify(ctx: &CoreContext, repo: &BlobRepo, csid: ChangesetId) ->
             .find_entries(
                 ctx.clone(),
                 repo.repo_blobstore().clone(),
-                vec![PathOrPrefix::Prefix(None)],
+                vec![PathOrPrefix::Prefix(MPath::ROOT)],
             )
-            .try_filter_map(|(path, _)| async move { Ok(path) })
+            .try_filter_map(|(path, _)| async move { Ok(Option::<NonRootMPath>::from(path)) })
             .try_collect::<BTreeSet<_>>()
             .await?;
         Ok::<_, Error>(paths)
@@ -188,9 +195,9 @@ async fn single_verify(ctx: &CoreContext, repo: &BlobRepo, csid: ChangesetId) ->
             .find_entries(
                 ctx.clone(),
                 repo.repo_blobstore().clone(),
-                vec![PathOrPrefix::Prefix(None)],
+                vec![PathOrPrefix::Prefix(MPath::ROOT)],
             )
-            .try_filter_map(|(path, _)| async { Ok(path) })
+            .try_filter_map(|(path, _)| async { Ok(Option::<NonRootMPath>::from(path)) })
             .try_collect::<BTreeSet<_>>()
             .await?;
         Ok(paths)

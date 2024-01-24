@@ -16,6 +16,7 @@ namespace facebook::eden {
 DiffContext::DiffContext(
     DiffCallback* cb,
     folly::CancellationToken cancellation,
+    const ObjectFetchContextPtr& fetchContext,
     bool listIgnored,
     CaseSensitivity caseSensitive,
     bool windowsSymlinksEnabled,
@@ -26,6 +27,12 @@ DiffContext::DiffContext(
       listIgnored{listIgnored},
       topLevelIgnores_(std::move(topLevelIgnores)),
       cancellation_{std::move(cancellation)},
+      statsContext_{makeRefPtr<StatsFetchContext>(
+          fetchContext->getClientPid(),
+          fetchContext->getCause(),
+          fetchContext->getCauseDetail(),
+          fetchContext->getRequestInfo())},
+      fetchContext_{statsContext_.copy()},
       caseSensitive_{caseSensitive},
       windowsSymlinksEnabled_{windowsSymlinksEnabled} {}
 

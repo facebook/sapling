@@ -111,6 +111,7 @@ pub(crate) fn list_needs_check(
         matcher,
         StateFlags::NEED_CHECK,
         StateFlags::empty(),
+        StateFlags::empty(),
         |path, _state| {
             needs_check.push(path);
             Ok(())

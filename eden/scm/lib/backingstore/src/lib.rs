@@ -12,8 +12,37 @@
 //!
 //! The C++ code in `c_api` directory encapsulate Rust functions exposed from this crate into
 //! regular C++ classes.
+//!
+//! Changes to this create may need regeneration of the C/C++ binding header.
+//! To regenerate the binding header, run `./tools/cbindgen.sh`.
 
+mod auxdata;
 mod backingstore;
-mod raw;
+mod ffi;
+mod init;
+mod request;
+mod tree;
 
 pub use crate::backingstore::BackingStore;
+
+#[derive(Debug, Copy, Clone)]
+pub enum FetchMode {
+    /// The fetch may hit remote servers.
+    AllowRemote,
+    /// The fetch is limited to RAM and disk.
+    LocalOnly,
+}
+
+impl FetchMode {
+    pub fn is_local(self) -> bool {
+        matches!(self, FetchMode::LocalOnly)
+    }
+
+    pub fn from_local(local: bool) -> Self {
+        if local {
+            Self::LocalOnly
+        } else {
+            Self::AllowRemote
+        }
+    }
+}

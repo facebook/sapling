@@ -366,7 +366,7 @@ impl ToWire for BonsaiChangesetContent {
                 .map(|(a, b)| (a.to_wire(), b.to_wire()))
                 .collect(),
             message: self.message,
-            snapshot_state: self.is_snapshot.then(|| WireSnapshotState {}),
+            snapshot_state: self.is_snapshot.then_some(WireSnapshotState {}),
         }
     }
 }

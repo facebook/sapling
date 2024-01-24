@@ -5,49 +5,37 @@
  * GNU General Public License version 2.
  */
 
+use std::io;
 use std::path::Path;
 
 use lazystr::LazyStr;
 
-/// IOResult is a replacement for std::io::Result that forces you to
-/// contextualize IO errors using `IOContext`.
-pub type IOResult<T> = Result<T, IOError>;
-
 #[derive(Debug, thiserror::Error)]
 #[error("{msg}: {source}")]
-pub struct IOError {
+pub(crate) struct IOErrorContext {
     msg: String,
     source: std::io::Error,
 }
 
-impl IOError {
-    pub fn from_path(err: std::io::Error, msg: impl AsRef<str>, path: impl AsRef<Path>) -> IOError {
-        IOError {
-            msg: format!("{}: '{}'", msg.as_ref(), path.as_ref().display()),
-            source: err,
-        }
-    }
+pub fn from_err_msg(source: io::Error, msg: String) -> io::Error {
+    let kind = source.kind();
+    let error = IOErrorContext { msg, source };
+    io::Error::new(kind, error)
+}
 
-    pub fn to_io_err(&self) -> std::io::Error {
-        std::io::Error::new(
-            self.source.kind(),
-            format!("{}: {}", self.msg, self.source.to_string()),
-        )
-    }
-
-    pub fn kind(&self) -> std::io::ErrorKind {
-        self.source.kind()
-    }
-
-    pub fn is_not_found(&self) -> bool {
-        self.source.kind() == std::io::ErrorKind::NotFound
-    }
+pub fn from_err_msg_path(
+    err: io::Error,
+    msg: impl AsRef<str>,
+    path: impl AsRef<Path>,
+) -> io::Error {
+    let msg = format!("{}: '{}'", msg.as_ref(), path.as_ref().display());
+    from_err_msg(err, msg)
 }
 
 pub trait IOContext<T> {
-    fn io_context(self, msg: impl LazyStr) -> Result<T, IOError>;
+    fn io_context(self, msg: impl LazyStr) -> io::Result<T>;
 
-    fn path_context(self, msg: impl LazyStr, path: impl AsRef<Path>) -> Result<T, IOError>
+    fn path_context(self, msg: impl LazyStr, path: impl AsRef<Path>) -> io::Result<T>
     where
         Self: Sized,
     {
@@ -56,20 +44,8 @@ pub trait IOContext<T> {
 }
 
 impl<T> IOContext<T> for std::io::Result<T> {
-    fn io_context(self, msg: impl LazyStr) -> Result<T, IOError> {
-        self.map_err(|err| IOError {
-            msg: msg.to_str().to_string(),
-            source: err,
-        })
-    }
-}
-
-impl<T> IOContext<T> for IOResult<T> {
-    fn io_context(self, msg: impl LazyStr) -> Result<T, IOError> {
-        self.map_err(|err| IOError {
-            msg: format!("{}: {}", msg.to_str(), err.msg),
-            source: err.source,
-        })
+    fn io_context(self, msg: impl LazyStr) -> io::Result<T> {
+        self.map_err(|err| from_err_msg(err, msg.to_str().to_string()))
     }
 }
 
@@ -82,7 +58,7 @@ mod test {
         let res: std::io::Result<()> = Err(std::io::Error::from(std::io::ErrorKind::AlreadyExists));
         let path: &Path = "/tmp/foo".as_ref();
 
-        let res: IOResult<()> = res.path_context("error flimflamming file", path);
+        let res: io::Result<()> = res.path_context("error flimflamming file", path);
 
         // Can wrap further with more context.
         let res = res.io_context(|| "flibbertigibbet".to_string());

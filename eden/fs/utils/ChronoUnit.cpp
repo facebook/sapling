@@ -144,7 +144,7 @@ ChronoUnitPerfectHash::in_word_set(StringPiece str) {
        {"day", 86400, 1},
        {"days", 86400, 1}}};
 
-  if (str.size() <= MAX_WORD_LENGTH && str.size() >= MIN_WORD_LENGTH) {
+  if (str.size() <= MAX_WORD_LENGTH && !str.empty()) {
     unsigned int key = hash(str);
     if (key <= MAX_HASH_VALUE) {
       if (wordlist[key].name == str) {

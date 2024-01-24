@@ -6,9 +6,8 @@
  */
 
 import type {
-  ApplyPreviewsFuncType,
   ApplyUncommittedChangesPreviewsFuncType,
-  PreviewContext,
+  Dag,
   UncommittedChangesPreviewContext,
 } from '../previews';
 import type {CommitInfo, UncommittedChanges} from '../types';
@@ -30,31 +29,22 @@ export class UncommitOperation extends Operation {
     return args;
   }
 
-  makeOptimisticApplier(context: PreviewContext): ApplyPreviewsFuncType | undefined {
-    const headCommitHash = context.headCommit?.hash;
-    if (headCommitHash !== this.originalHeadCommit.hash) {
-      // head hash has changed -> uncommit was successful
-      return undefined;
+  optimisticDag(dag: Dag): Dag {
+    const {hash, parents} = this.originalHeadCommit;
+    const p1 = parents.at(0);
+    // If `hash` disappears and `p1` still exists, then uncommit is completed.
+    // We assume uncommit is always run from the stack top.
+    if (dag.get(hash) == null || p1 == null || dag.get(p1) == null) {
+      return dag;
     }
-
-    const func: ApplyPreviewsFuncType = (tree, previewType) => {
-      if (tree.info.hash === this.originalHeadCommit.hash) {
-        // uncommit may not be run on a commit with children
-        // thus, we can just hide the head commit from the tree
-        return {
-          info: null,
-        };
-      } else if (this.originalHeadCommit.parents[0] === tree.info.hash) {
-        // head will move to parent commit after uncommitting
-        return {
-          info: {...tree.info, isHead: true},
-          children: tree.children, // the parent may have other children than the one being uncommitted
-        };
+    // Hide `hash` and set `isHead` on `p1`.
+    return dag.replaceWith([p1, hash], (h, c) => {
+      if (h === hash) {
+        return undefined;
+      } else {
+        return c?.set('isHead', true);
       }
-
-      return {info: tree.info, children: tree.children, previewType};
-    };
-    return func;
+    });
   }
 
   makeOptimisticUncommittedChangesApplier?(

@@ -1,7 +1,6 @@
 from __future__ import absolute_import, print_function
 
-from edenscm import hg
-from hghave import require
+from sapling import hg
 
 
 def testparse(url, branch=[]):

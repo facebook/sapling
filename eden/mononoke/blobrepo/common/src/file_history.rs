@@ -37,7 +37,7 @@ use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileHistoryEntry;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgParents;
-use mercurial_types::MPath;
+use mercurial_types::NonRootMPath;
 use mercurial_types::RepoPath;
 use mercurial_types::NULL_CSID;
 use mercurial_types::NULL_HASH;
@@ -105,7 +105,7 @@ pub async fn check_if_related(
     repo: BlobRepo,
     filenode_a: HgFileNodeId,
     filenode_b: HgFileNodeId,
-    path: MPath,
+    path: NonRootMPath,
 ) -> Result<FilenodesRelatedResult, Error> {
     // Use linknodes to identify the older filenode
     let repo_path = RepoPath::file(path.clone())?;
@@ -182,7 +182,7 @@ pub fn get_file_history_maybe_incomplete(
     ctx: CoreContext,
     repo: BlobRepo,
     filenode: HgFileNodeId,
-    path: MPath,
+    path: NonRootMPath,
     max_length: Option<u64>,
 ) -> impl Stream<Item = Result<HgFileHistoryEntry, Error>> {
     get_file_history(
@@ -225,7 +225,7 @@ pub async fn get_file_history(
     ctx: CoreContext,
     repo: BlobRepo,
     filenode: HgFileNodeId,
-    path: MPath,
+    path: NonRootMPath,
     max_length: Option<u64>,
 ) -> Result<FilenodeResult<Vec<HgFileHistoryEntry>>, Error> {
     // Prefetch and cache filenode information. Performing these fetches in bulk upfront
@@ -277,7 +277,7 @@ fn get_file_history_using_prefetched(
     ctx: CoreContext,
     repo: BlobRepo,
     startnode: HgFileNodeId,
-    path: MPath,
+    path: NonRootMPath,
     max_length: Option<u64>,
     prefetched_history: HashMap<HgFileNodeId, FilenodeInfo>,
 ) -> impl Stream<Item = Result<HgFileHistoryEntry, Error>> {

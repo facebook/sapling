@@ -1,0 +1,79 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbcode_macros//build_defs:rust_unittest.bzl", "rust_unittest")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "edenapi_types",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "dag-types": {"features": ["for-tests"]},
+                },
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    features = ["for-tests"],
+    named_deps = {
+        "blake3-constant": "//blake3:blake3-constants-rust-nothrift",
+    },
+    test_deps = [
+        "fbsource//third-party/rust:quickcheck",
+        "fbsource//third-party/rust:quickcheck_macros",
+        "fbsource//third-party/rust:serde_json",
+        "//common/rust/shed/quickcheck_arbitrary_derive:quickcheck_arbitrary_derive",
+        "//eden/scm/lib/insta_ext:insta_ext",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:blake2",
+        "fbsource//third-party/rust:blake3",
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:paste",
+        "fbsource//third-party/rust:quickcheck",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:serde_bytes",
+        "fbsource//third-party/rust:serde_derive",
+        "fbsource//third-party/rust:sha1",
+        "fbsource//third-party/rust:sha2",
+        "fbsource//third-party/rust:thiserror",
+        ":type_macros",
+        "//common/rust/shed/quickcheck_arbitrary_derive:quickcheck_arbitrary_derive",
+        "//eden/scm/lib/dag/dag-types:dag-types",
+        "//eden/scm/lib/revisionstore:revisionstore_types",
+        "//eden/scm/lib/types:types",
+    ],
+)
+
+rust_library(
+    name = "type_macros",
+    srcs = glob(["proc_macros/*.rs"]),
+    autocargo = {
+        "cargo_toml_dir": "proc_macros",
+    },
+    crate_root = "proc_macros/lib.rs",
+    proc_macro = True,
+    deps = [
+        "fbsource//third-party/rust:proc-macro2",
+        "fbsource//third-party/rust:quote",
+        "fbsource//third-party/rust:syn1",
+    ],
+)
+
+rust_unittest(
+    name = "macro_test",
+    srcs = ["test/basic_test.rs"],
+    crate_root = "test/basic_test.rs",
+    deps = [
+        "fbsource//third-party/rust:quickcheck",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:serde_json",
+        ":edenapi_types",
+        ":type_macros",
+        "//common/rust/shed/quickcheck_arbitrary_derive:quickcheck_arbitrary_derive",
+    ],
+)

@@ -255,11 +255,14 @@ void testAddFile(
   testMount.drainServerExecutor();
 
   auto executor = testMount.getServerExecutor().get();
-  auto checkoutResult =
-      testMount.getEdenMount()
-          ->checkout(
-              testMount.getRootInode(), RootId{"2"}, std::nullopt, __func__)
-          .via(executor);
+  auto checkoutResult = testMount.getEdenMount()
+                            ->checkout(
+                                testMount.getRootInode(),
+                                RootId{"2"},
+                                ObjectFetchContext::getNullContext(),
+                                __func__)
+                            .semi()
+                            .via(executor);
   testMount.drainServerExecutor();
   ASSERT_TRUE(checkoutResult.isReady());
   auto result = std::move(checkoutResult).get();
@@ -312,11 +315,15 @@ void testRemoveFile(folly::StringPiece filePath, LoadBehavior loadType) {
   loadInodes(testMount, filePath, loadType, "this file will be removed\n");
 
   auto executor = testMount.getServerExecutor().get();
-  auto checkoutResult =
-      testMount.getEdenMount()
-          ->checkout(
-              testMount.getRootInode(), RootId{"2"}, std::nullopt, __func__)
-          .waitVia(executor);
+  auto checkoutResult = testMount.getEdenMount()
+                            ->checkout(
+                                testMount.getRootInode(),
+                                RootId{"2"},
+                                ObjectFetchContext::getNullContext(),
+                                __func__)
+                            .semi()
+                            .via(executor)
+                            .waitVia(executor);
   ASSERT_TRUE(checkoutResult.isReady());
   auto result = std::move(checkoutResult).get();
   EXPECT_EQ(0, result.conflicts.size());
@@ -385,11 +392,15 @@ void testModifyFile(
   testMount.getClock().advance(10min);
   FOLLY_MAYBE_UNUSED auto checkoutStart = testMount.getClock().getTimePoint();
   auto executor = testMount.getServerExecutor().get();
-  auto checkoutResult =
-      testMount.getEdenMount()
-          ->checkout(
-              testMount.getRootInode(), RootId{"2"}, std::nullopt, __func__)
-          .waitVia(executor);
+  auto checkoutResult = testMount.getEdenMount()
+                            ->checkout(
+                                testMount.getRootInode(),
+                                RootId{"2"},
+                                ObjectFetchContext::getNullContext(),
+                                __func__)
+                            .semi()
+                            .via(executor)
+                            .waitVia(executor);
   ASSERT_TRUE(checkoutResult.isReady());
   auto result = std::move(checkoutResult).get();
   EXPECT_EQ(0, result.conflicts.size());
@@ -509,7 +520,10 @@ TEST(Checkout, modifyLoadedButNotReadyFileWithConflict) {
 
   // Perform the checkout.
   auto checkoutFuture = mount.getEdenMount()->checkout(
-      mount.getRootInode(), RootId{"2"}, std::nullopt, __func__);
+      mount.getRootInode(),
+      RootId{"2"},
+      ObjectFetchContext::getNullContext(),
+      __func__);
 
   // Trigger blob1 several times to allow the checkout to make forward progress
   // if it needs to access this blob, without necessarily completing all at
@@ -521,7 +535,8 @@ TEST(Checkout, modifyLoadedButNotReadyFileWithConflict) {
   // Mark builder1 as ready and confirm that the checkout completes
   builder1.setAllReady();
   auto executor = mount.getServerExecutor().get();
-  auto waitedCheckoutFuture = std::move(checkoutFuture).waitVia(executor);
+  auto waitedCheckoutFuture =
+      std::move(checkoutFuture).semi().via(executor).waitVia(executor);
   ASSERT_TRUE(waitedCheckoutFuture.isReady());
   auto result = std::move(waitedCheckoutFuture).get();
   EXPECT_THAT(
@@ -584,9 +599,11 @@ void testModifyConflict(
                             ->checkout(
                                 testMount.getRootInode(),
                                 RootId{"b"},
-                                std::nullopt,
+                                ObjectFetchContext::getNullContext(),
                                 __func__,
                                 checkoutMode)
+                            .semi()
+                            .via(executor)
                             .waitVia(executor);
   ASSERT_TRUE(checkoutResult.isReady());
   auto result = std::move(checkoutResult).get();
@@ -703,9 +720,11 @@ TEST(Checkout, modifyThenRevert) {
                             ->checkout(
                                 testMount.getRootInode(),
                                 originalCommit,
-                                std::nullopt,
+                                ObjectFetchContext::getNullContext(),
                                 __func__,
                                 CheckoutMode::FORCE)
+                            .semi()
+                            .via(executor)
                             .waitVia(executor);
   ASSERT_TRUE(checkoutResult.isReady());
   // The checkout should report a/test.txt as a conflict
@@ -738,19 +757,27 @@ TEST(Checkout, modifyThenCheckoutRevisionWithoutFile) {
   commit2->setReady();
 
   auto executor = testMount.getServerExecutor().get();
-  auto checkoutTo2 =
-      testMount.getEdenMount()
-          ->checkout(
-              testMount.getRootInode(), RootId("2"), std::nullopt, __func__)
-          .waitVia(executor);
+  auto checkoutTo2 = testMount.getEdenMount()
+                         ->checkout(
+                             testMount.getRootInode(),
+                             RootId("2"),
+                             ObjectFetchContext::getNullContext(),
+                             __func__)
+                         .semi()
+                         .via(executor)
+                         .waitVia(executor);
   ASSERT_TRUE(checkoutTo2.isReady());
 
   testMount.overwriteFile("src/test.c", "temporary edit\n");
-  auto checkoutTo1 =
-      testMount.getEdenMount()
-          ->checkout(
-              testMount.getRootInode(), RootId("1"), std::nullopt, __func__)
-          .waitVia(executor);
+  auto checkoutTo1 = testMount.getEdenMount()
+                         ->checkout(
+                             testMount.getRootInode(),
+                             RootId("1"),
+                             ObjectFetchContext::getNullContext(),
+                             __func__)
+                         .semi()
+                         .via(executor)
+                         .waitVia(executor);
   ASSERT_TRUE(checkoutTo1.isReady());
 
   EXPECT_THAT(
@@ -771,19 +798,27 @@ TEST(Checkout, createUntrackedFileAndCheckoutAsTrackedFile) {
   commit2->setReady();
 
   auto executor = testMount.getServerExecutor().get();
-  auto checkoutTo1 =
-      testMount.getEdenMount()
-          ->checkout(
-              testMount.getRootInode(), RootId("1"), std::nullopt, __func__)
-          .waitVia(executor);
+  auto checkoutTo1 = testMount.getEdenMount()
+                         ->checkout(
+                             testMount.getRootInode(),
+                             RootId("1"),
+                             ObjectFetchContext::getNullContext(),
+                             __func__)
+                         .semi()
+                         .via(executor)
+                         .waitVia(executor);
   ASSERT_TRUE(checkoutTo1.isReady());
 
   testMount.addFile("src/test.c", "temporary edit\n");
-  auto checkoutTo2 =
-      testMount.getEdenMount()
-          ->checkout(
-              testMount.getRootInode(), RootId("2"), std::nullopt, __func__)
-          .waitVia(executor);
+  auto checkoutTo2 = testMount.getEdenMount()
+                         ->checkout(
+                             testMount.getRootInode(),
+                             RootId("2"),
+                             ObjectFetchContext::getNullContext(),
+                             __func__)
+                         .semi()
+                         .via(executor)
+                         .waitVia(executor);
   ASSERT_TRUE(checkoutTo2.isReady());
 
   EXPECT_THAT(
@@ -811,20 +846,28 @@ TEST(
   commit2->setReady();
 
   auto executor = testMount.getServerExecutor().get();
-  auto checkoutTo1 =
-      testMount.getEdenMount()
-          ->checkout(
-              testMount.getRootInode(), RootId("1"), std::nullopt, __func__)
-          .waitVia(executor);
+  auto checkoutTo1 = testMount.getEdenMount()
+                         ->checkout(
+                             testMount.getRootInode(),
+                             RootId("1"),
+                             ObjectFetchContext::getNullContext(),
+                             __func__)
+                         .semi()
+                         .via(executor)
+                         .waitVia(executor);
   ASSERT_TRUE(checkoutTo1.isReady());
 
   testMount.mkdir("src/test");
   testMount.addFile("src/test/test.c", "temporary edit\n");
-  auto checkoutTo2 =
-      testMount.getEdenMount()
-          ->checkout(
-              testMount.getRootInode(), RootId("2"), std::nullopt, __func__)
-          .waitVia(executor);
+  auto checkoutTo2 = testMount.getEdenMount()
+                         ->checkout(
+                             testMount.getRootInode(),
+                             RootId("2"),
+                             ObjectFetchContext::getNullContext(),
+                             __func__)
+                         .semi()
+                         .via(executor)
+                         .waitVia(executor);
   ASSERT_TRUE(checkoutTo2.isReady());
 
   EXPECT_THAT(
@@ -853,11 +896,15 @@ void testAddSubdirectory(folly::StringPiece newDirPath, LoadBehavior loadType) {
   loadInodes(testMount, newDirPath, loadType);
 
   auto executor = testMount.getServerExecutor().get();
-  auto checkoutResult =
-      testMount.getEdenMount()
-          ->checkout(
-              testMount.getRootInode(), RootId("2"), std::nullopt, __func__)
-          .waitVia(executor);
+  auto checkoutResult = testMount.getEdenMount()
+                            ->checkout(
+                                testMount.getRootInode(),
+                                RootId("2"),
+                                ObjectFetchContext::getNullContext(),
+                                __func__)
+                            .semi()
+                            .via(executor)
+                            .waitVia(executor);
   ASSERT_TRUE(checkoutResult.isReady());
   auto result = std::move(checkoutResult).get();
   EXPECT_EQ(0, result.conflicts.size());
@@ -906,11 +953,15 @@ void testRemoveSubdirectory(LoadBehavior loadType) {
   loadInodes(testMount, path, loadType);
 
   auto executor = testMount.getServerExecutor().get();
-  auto checkoutResult =
-      testMount.getEdenMount()
-          ->checkout(
-              testMount.getRootInode(), RootId("2"), std::nullopt, __func__)
-          .waitVia(executor);
+  auto checkoutResult = testMount.getEdenMount()
+                            ->checkout(
+                                testMount.getRootInode(),
+                                RootId("2"),
+                                ObjectFetchContext::getNullContext(),
+                                __func__)
+                            .semi()
+                            .via(executor)
+                            .waitVia(executor);
   ASSERT_TRUE(checkoutResult.isReady());
   auto results = std::move(checkoutResult).get();
   EXPECT_EQ(0, results.conflicts.size());
@@ -960,7 +1011,10 @@ TEST(Checkout, checkoutModifiesDirectoryDuringLoad) {
 
   // Checkout to a revision where the contents of "dir/sub" have changed.
   auto checkoutResult = testMount.getEdenMount()->checkout(
-      testMount.getRootInode(), RootId{"2"}, std::nullopt, __func__);
+      testMount.getRootInode(),
+      RootId{"2"},
+      ObjectFetchContext::getNullContext(),
+      __func__);
 
   // The checkout ought to wait until the load completes.
   EXPECT_FALSE(checkoutResult.isReady());
@@ -971,7 +1025,8 @@ TEST(Checkout, checkoutModifiesDirectoryDuringLoad) {
   EXPECT_TRUE(inodeFuture.isReady());
 
   auto executor = testMount.getServerExecutor().get();
-  auto waitedCheckoutResult = std::move(checkoutResult).waitVia(executor);
+  auto waitedCheckoutResult =
+      std::move(checkoutResult).semi().via(executor).waitVia(executor);
   ASSERT_TRUE(waitedCheckoutResult.isReady());
   auto result = std::move(waitedCheckoutResult).get();
   EXPECT_EQ(0, result.conflicts.size());
@@ -1002,18 +1057,26 @@ TEST(Checkout, checkoutCaseChanged) {
   upperCommit->setReady();
 
   auto executor = testMount.getServerExecutor().get();
-  auto checkoutToLowerResult =
-      testMount.getEdenMount()
-          ->checkout(
-              testMount.getRootInode(), RootId{"2"}, std::nullopt, __func__)
-          .getVia(executor);
+  auto checkoutToLowerResult = testMount.getEdenMount()
+                                   ->checkout(
+                                       testMount.getRootInode(),
+                                       RootId{"2"},
+                                       ObjectFetchContext::getNullContext(),
+                                       __func__)
+                                   .semi()
+                                   .via(executor)
+                                   .getVia(executor);
   EXPECT_EQ(checkoutToLowerResult.conflicts.size(), 0);
 
-  auto checkoutToUpperResult =
-      testMount.getEdenMount()
-          ->checkout(
-              testMount.getRootInode(), RootId{"3"}, std::nullopt, __func__)
-          .getVia(executor);
+  auto checkoutToUpperResult = testMount.getEdenMount()
+                                   ->checkout(
+                                       testMount.getRootInode(),
+                                       RootId{"3"},
+                                       ObjectFetchContext::getNullContext(),
+                                       __func__)
+                                   .semi()
+                                   .via(executor)
+                                   .getVia(executor);
   EXPECT_EQ(checkoutToUpperResult.conflicts.size(), 0);
 
   auto file1 = testMount.getFileInode("DIR/FILE1"_relpath);
@@ -1063,11 +1126,15 @@ TEST(Checkout, checkoutRemovingDirectoryDeletesOverlayFile) {
 
   // Checkout to a revision without "dir/sub".
   auto executor = testMount.getServerExecutor().get();
-  auto checkoutResult =
-      testMount.getEdenMount()
-          ->checkout(
-              testMount.getRootInode(), RootId("2"), std::nullopt, __func__)
-          .getVia(executor);
+  auto checkoutResult = testMount.getEdenMount()
+                            ->checkout(
+                                testMount.getRootInode(),
+                                RootId("2"),
+                                ObjectFetchContext::getNullContext(),
+                                __func__)
+                            .semi()
+                            .via(executor)
+                            .getVia(executor);
   EXPECT_EQ(0, checkoutResult.conflicts.size());
 
   // The checkout kicked off an async deletion of a subtree - wait for it to
@@ -1107,11 +1174,15 @@ TEST(Checkout, checkoutUpdatesUnlinkedStatusForLoadedTrees) {
   // Checkout to a revision without "dir/sub" even though it's still referenced
   // by FUSE.
   auto executor = testMount.getServerExecutor().get();
-  auto checkoutResult =
-      testMount.getEdenMount()
-          ->checkout(
-              testMount.getRootInode(), RootId("2"), std::nullopt, __func__)
-          .getVia(executor);
+  auto checkoutResult = testMount.getEdenMount()
+                            ->checkout(
+                                testMount.getRootInode(),
+                                RootId("2"),
+                                ObjectFetchContext::getNullContext(),
+                                __func__)
+                            .semi()
+                            .via(executor)
+                            .getVia(executor);
   EXPECT_EQ(0, checkoutResult.conflicts.size());
 
   // Try to load the same tree by its inode number. This will fail if the
@@ -1156,11 +1227,15 @@ TEST(Checkout, checkoutRemembersInodeNumbersAfterCheckoutAndTakeover) {
   // Checkout to a revision with a new dir/sub tree.  The old data should be
   // removed from the overlay.
   auto executor = testMount.getServerExecutor().get();
-  auto checkoutResult =
-      testMount.getEdenMount()
-          ->checkout(
-              testMount.getRootInode(), RootId("2"), std::nullopt, __func__)
-          .getVia(executor);
+  auto checkoutResult = testMount.getEdenMount()
+                            ->checkout(
+                                testMount.getRootInode(),
+                                RootId("2"),
+                                ObjectFetchContext::getNullContext(),
+                                __func__)
+                            .semi()
+                            .via(executor)
+                            .getVia(executor);
   EXPECT_EQ(0, checkoutResult.conflicts.size());
 
   testMount.remountGracefully();
@@ -1550,11 +1625,15 @@ TYPED_TEST(
   // Check out to a commit that changes all of these files.
   // Inode numbers for unreferenced files should be forgotten.
   auto executor = testMount.getServerExecutor().get();
-  auto checkoutResult =
-      testMount.getEdenMount()
-          ->checkout(
-              testMount.getRootInode(), RootId{"2"}, std::nullopt, __func__)
-          .getVia(executor);
+  auto checkoutResult = testMount.getEdenMount()
+                            ->checkout(
+                                testMount.getRootInode(),
+                                RootId{"2"},
+                                ObjectFetchContext::getNullContext(),
+                                __func__)
+                            .semi()
+                            .via(executor)
+                            .getVia(executor);
   EXPECT_EQ(0, checkoutResult.conflicts.size());
 
   // Verify inode numbers for referenced inodes are the same.
@@ -1613,7 +1692,10 @@ TEST(Checkout, diffFailsOnInProgressCheckout) {
   // Block checkout so the checkout is "in progress"
   auto executor = testMount.getServerExecutor().get();
   auto checkoutTo1 = testMount.getEdenMount()->checkout(
-      testMount.getRootInode(), RootId{"1"}, std::nullopt, __func__);
+      testMount.getRootInode(),
+      RootId{"1"},
+      ObjectFetchContext::getNullContext(),
+      __func__);
   EXPECT_FALSE(checkoutTo1.isReady());
 
   // Call getStatus and make sure it fails.
@@ -1621,7 +1703,11 @@ TEST(Checkout, diffFailsOnInProgressCheckout) {
 
   try {
     testMount.getEdenMount()
-        ->diff(testMount.getRootInode(), commitHash, folly::CancellationToken{})
+        ->diff(
+            testMount.getRootInode(),
+            commitHash,
+            folly::CancellationToken{},
+            ObjectFetchContext::getNullContext())
         .get();
     FAIL()
         << "diff should have failed with EdenErrorType::CHECKOUT_IN_PROGRESS";
@@ -1632,12 +1718,16 @@ TEST(Checkout, diffFailsOnInProgressCheckout) {
   // Unblock checkout
   testMount.getServerState()->getFaultInjector().unblock("checkout", ".*");
 
-  auto waitedCheckoutTo1 = std::move(checkoutTo1).waitVia(executor);
+  auto waitedCheckoutTo1 =
+      std::move(checkoutTo1).semi().via(executor).waitVia(executor);
   EXPECT_TRUE(waitedCheckoutTo1.isReady());
 
   // Try to diff again just to make sure we don't block again.
   auto diff2 = testMount.getEdenMount()->diff(
-      testMount.getRootInode(), commitHash, folly::CancellationToken{});
+      testMount.getRootInode(),
+      commitHash,
+      folly::CancellationToken{},
+      ObjectFetchContext::getNullContext());
   EXPECT_NO_THROW(std::move(diff2).get());
 }
 
@@ -1661,9 +1751,11 @@ TEST(Checkout, conflict_when_directory_containing_modified_file_is_removed) {
                             ->checkout(
                                 testMount.getRootInode(),
                                 RootId{"2"},
-                                std::nullopt,
+                                ObjectFetchContext::getNullContext(),
                                 __func__,
                                 CheckoutMode::DRY_RUN)
+                            .semi()
+                            .via(executor)
                             .waitVia(executor);
   ASSERT_TRUE(checkoutResult.isReady());
   auto result = std::move(checkoutResult).get();
@@ -1692,7 +1784,10 @@ TEST(Checkout, checkoutFailsOnInProgressCheckout) {
   // Block checkout so the checkout is "in progress"
   auto executor = testMount.getServerExecutor().get();
   auto checkout1 = testMount.getEdenMount()->checkout(
-      testMount.getRootInode(), RootId{"2"}, std::nullopt, __func__);
+      testMount.getRootInode(),
+      RootId{"2"},
+      ObjectFetchContext::getNullContext(),
+      __func__);
   EXPECT_FALSE(checkout1.isReady());
 
   // Run another checkout and make sure it fails
@@ -1701,11 +1796,12 @@ TEST(Checkout, checkoutFailsOnInProgressCheckout) {
         ->checkout(
             testMount.getRootInode(),
             RootId{"2"},
-            std::nullopt,
+            ObjectFetchContext::getNullContext(),
             __func__,
             CheckoutMode::NORMAL)
-        .waitVia(executor)
-        .get();
+        .semi()
+        .via(executor)
+        .getVia(executor);
     FAIL() << "checkout should have failed with "
               "EdenErrorType::CHECKOUT_IN_PROGRESS";
   } catch (const EdenError& exception) {
@@ -1715,15 +1811,19 @@ TEST(Checkout, checkoutFailsOnInProgressCheckout) {
   // Unblock original checkout and make sure it completes
   testMount.getServerState()->getFaultInjector().unblock("checkout", ".*");
 
-  EXPECT_NO_THROW(std::move(checkout1).getVia(executor));
+  EXPECT_NO_THROW(std::move(checkout1).semi().via(executor).getVia(executor));
 
   // Try to checkout again just to make sure we don't block again.
   testMount.getServerState()->getFaultInjector().removeFault("checkout", ".*");
-  auto checkout2 =
-      testMount.getEdenMount()
-          ->checkout(
-              testMount.getRootInode(), RootId("1"), std::nullopt, __func__)
-          .waitVia(executor);
+  auto checkout2 = testMount.getEdenMount()
+                       ->checkout(
+                           testMount.getRootInode(),
+                           RootId("1"),
+                           ObjectFetchContext::getNullContext(),
+                           __func__)
+                       .semi()
+                       .via(executor)
+                       .waitVia(executor);
   EXPECT_TRUE(checkout2.isReady());
   EXPECT_NO_THROW(std::move(checkout2).get());
 }
@@ -1753,10 +1853,15 @@ TEST(Checkout, changing_hash_scheme_does_not_conflict_if_contents_are_same) {
 
   // At this point, the working copy references the hash scheme used in commit1.
 
-  auto result =
-      mount.getEdenMount()
-          ->checkout(mount.getRootInode(), RootId{"2"}, std::nullopt, __func__)
-          .getVia(executor);
+  auto result = mount.getEdenMount()
+                    ->checkout(
+                        mount.getRootInode(),
+                        RootId{"2"},
+                        ObjectFetchContext::getNullContext(),
+                        __func__)
+                    .semi()
+                    .via(executor)
+                    .getVia(executor);
   EXPECT_EQ(0, result.conflicts.size());
 
   // Call resetParent() to make the mount point back at commit1, even though
@@ -1764,10 +1869,15 @@ TEST(Checkout, changing_hash_scheme_does_not_conflict_if_contents_are_same) {
   // checkout also should not produce conflicts.
   mount.getEdenMount()->resetParent(RootId{"1"});
 
-  result =
-      mount.getEdenMount()
-          ->checkout(mount.getRootInode(), RootId{"2"}, std::nullopt, __func__)
-          .getVia(executor);
+  result = mount.getEdenMount()
+               ->checkout(
+                   mount.getRootInode(),
+                   RootId{"2"},
+                   ObjectFetchContext::getNullContext(),
+                   __func__)
+               .semi()
+               .via(executor)
+               .getVia(executor);
   EXPECT_EQ(0, result.conflicts.size());
 }
 
@@ -1784,7 +1894,7 @@ class FakePrjfsChannel final : public PrjfsChannel {
             EdenDispatcherFactory::makePrjfsDispatcher(mount.get()),
             mount->getServerState()->getReloadableConfig(),
             &mount->getStraceLogger(),
-            mount->getServerState()->getProcessNameCache(),
+            mount->getServerState()->getProcessInfoCache(),
             mount->getCheckoutConfig()->getRepoGuid(),
             mount->getCheckoutConfig()->getEnableWindowsSymlinks(),
             nullptr),
@@ -1835,10 +1945,14 @@ TEST(Checkout, concurrent_crawl_during_checkout) {
   FakePrjfsChannel::initializeFakePrjfsChannel(
       std::move(actions), mount.getEdenMount());
 
-  auto fut =
-      mount.getEdenMount()
-          ->checkout(mount.getRootInode(), RootId{"2"}, std::nullopt, __func__)
-          .via(mount.getServerExecutor().get());
+  auto fut = mount.getEdenMount()
+                 ->checkout(
+                     mount.getRootInode(),
+                     RootId{"2"},
+                     ObjectFetchContext::getNullContext(),
+                     __func__)
+                 .semi()
+                 .via(mount.getServerExecutor().get());
 
   // Several executors are involved in checkout, some of which aren't the
   // server executor, thus we need to loop several times to make sure they all
@@ -1883,10 +1997,14 @@ TEST(Checkout, concurrent_file_to_directory_during_checkout) {
 
   readFile(bTxt).throwUnlessValue();
 
-  auto fut =
-      mount.getEdenMount()
-          ->checkout(mount.getRootInode(), RootId{"2"}, std::nullopt, __func__)
-          .via(mount.getServerExecutor().get());
+  auto fut = mount.getEdenMount()
+                 ->checkout(
+                     mount.getRootInode(),
+                     RootId{"2"},
+                     ObjectFetchContext::getNullContext(),
+                     __func__)
+                 .semi()
+                 .via(mount.getServerExecutor().get());
 
   // Several executors are involved in checkout, some of which aren't the
   // server executor, thus we need to loop several times to make sure they all
@@ -1935,10 +2053,14 @@ TEST(Checkout, concurrent_new_file_during_checkout) {
   readFile(mount.getEdenMount()->getPath() + "a/1.txt"_relpath)
       .throwUnlessValue();
 
-  auto fut =
-      mount.getEdenMount()
-          ->checkout(mount.getRootInode(), RootId{"2"}, std::nullopt, __func__)
-          .via(mount.getServerExecutor().get());
+  auto fut = mount.getEdenMount()
+                 ->checkout(
+                     mount.getRootInode(),
+                     RootId{"2"},
+                     ObjectFetchContext::getNullContext(),
+                     __func__)
+                 .semi()
+                 .via(mount.getServerExecutor().get());
 
   // Several executors are involved in checkout, some of which aren't the
   // server executor, thus we need to loop several times to make sure they all
@@ -1992,9 +2114,10 @@ TEST(Checkout, concurrent_recreation_during_checkout) {
                  ->checkout(
                      mount.getRootInode(),
                      RootId{"2"},
-                     std::nullopt,
+                     ObjectFetchContext::getNullContext(),
                      __func__,
                      CheckoutMode::FORCE)
+                 .semi()
                  .via(mount.getServerExecutor().get());
 
   // Several executors are involved in checkout, some of which aren't the

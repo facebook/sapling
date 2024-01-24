@@ -1,0 +1,17 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "syncify",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    proc_macro = True,
+    rustc_flags = [
+        "--crate-type",
+        "proc-macro",
+    ],
+    deps = [
+        "//eden/scm/lib/util/syncify/tree-pattern-match:tree-pattern-match",
+    ],
+)

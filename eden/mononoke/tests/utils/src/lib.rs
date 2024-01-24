@@ -43,7 +43,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::FileChange;
 use mononoke_types::FileType;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedData;
@@ -95,7 +95,7 @@ pub async fn list_working_copy_utf8(
     ctx: &CoreContext,
     repo: &impl Repo,
     cs_id: ChangesetId,
-) -> Result<HashMap<MPath, String>, Error> {
+) -> Result<HashMap<NonRootMPath, String>, Error> {
     let wc = list_working_copy(ctx, repo, cs_id).await?;
 
     wc.into_iter()
@@ -107,7 +107,7 @@ pub async fn list_working_copy_utf8_with_types(
     ctx: &CoreContext,
     repo: &impl Repo,
     cs_id: ChangesetId,
-) -> Result<HashMap<MPath, (String, FileType)>, Error> {
+) -> Result<HashMap<NonRootMPath, (String, FileType)>, Error> {
     let wc = list_working_copy_with_types(ctx, repo, cs_id).await?;
 
     wc.into_iter()
@@ -119,7 +119,7 @@ pub async fn list_working_copy(
     ctx: &CoreContext,
     repo: &impl Repo,
     cs_id: ChangesetId,
-) -> Result<HashMap<MPath, Bytes>, Error> {
+) -> Result<HashMap<NonRootMPath, Bytes>, Error> {
     let wc = list_working_copy_with_types(ctx, repo, cs_id).await?;
 
     Ok(wc
@@ -132,7 +132,7 @@ pub async fn list_working_copy_with_types(
     ctx: &CoreContext,
     repo: &impl Repo,
     cs_id: ChangesetId,
-) -> Result<HashMap<MPath, (Bytes, FileType)>, Error> {
+) -> Result<HashMap<NonRootMPath, (Bytes, FileType)>, Error> {
     let root_fsnode_id = repo
         .repo_derived_data()
         .derive::<RootFsnodeId>(ctx, cs_id)
@@ -178,7 +178,7 @@ pub struct CreateCommitContext<'a, R: Repo> {
     ctx: &'a CoreContext,
     repo: &'a R,
     parents: Vec<CommitIdentifier>,
-    files: BTreeMap<MPath, CreateFileContext>,
+    files: BTreeMap<NonRootMPath, CreateFileContext>,
     message: Option<String>,
     author: Option<String>,
     author_date: Option<DateTime>,
@@ -235,7 +235,11 @@ impl<'a, R: Repo> CreateCommitContext<'a, R> {
         self
     }
 
-    pub fn add_file(mut self, path: impl TryInto<MPath>, content: impl Into<Vec<u8>>) -> Self {
+    pub fn add_file(
+        mut self,
+        path: impl TryInto<NonRootMPath>,
+        content: impl Into<Vec<u8>>,
+    ) -> Self {
         self.files.insert(
             path.try_into().ok().expect("Invalid path"),
             CreateFileContext::FromHelper(content.into(), FileType::Regular, None),
@@ -243,7 +247,7 @@ impl<'a, R: Repo> CreateCommitContext<'a, R> {
         self
     }
 
-    pub fn add_files<P: TryInto<MPath>, C: Into<Vec<u8>>, I: IntoIterator<Item = (P, C)>>(
+    pub fn add_files<P: TryInto<NonRootMPath>, C: Into<Vec<u8>>, I: IntoIterator<Item = (P, C)>>(
         mut self,
         path_contents: I,
     ) -> Self {
@@ -253,7 +257,7 @@ impl<'a, R: Repo> CreateCommitContext<'a, R> {
         self
     }
 
-    pub fn delete_file(mut self, path: impl TryInto<MPath>) -> Self {
+    pub fn delete_file(mut self, path: impl TryInto<NonRootMPath>) -> Self {
         self.files.insert(
             path.try_into().ok().expect("Invalid path"),
             CreateFileContext::Deleted,
@@ -261,7 +265,7 @@ impl<'a, R: Repo> CreateCommitContext<'a, R> {
         self
     }
 
-    pub fn forget_file(mut self, path: impl TryInto<MPath>) -> Self {
+    pub fn forget_file(mut self, path: impl TryInto<NonRootMPath>) -> Self {
         let path = path.try_into().ok().expect("Invalid path");
         self.files.remove(&path);
         self
@@ -269,7 +273,7 @@ impl<'a, R: Repo> CreateCommitContext<'a, R> {
 
     pub fn add_file_with_type(
         mut self,
-        path: impl TryInto<MPath>,
+        path: impl TryInto<NonRootMPath>,
         content: impl Into<Vec<u8>>,
         t: FileType,
     ) -> Self {
@@ -282,9 +286,9 @@ impl<'a, R: Repo> CreateCommitContext<'a, R> {
 
     pub fn add_file_with_copy_info(
         mut self,
-        path: impl TryInto<MPath>,
+        path: impl TryInto<NonRootMPath>,
         content: impl Into<Vec<u8>>,
-        (parent, parent_path): (impl Into<CommitIdentifier>, impl TryInto<MPath>),
+        (parent, parent_path): (impl Into<CommitIdentifier>, impl TryInto<NonRootMPath>),
     ) -> Self {
         let copy_info = (
             parent_path.try_into().ok().expect("Invalid path"),
@@ -297,7 +301,29 @@ impl<'a, R: Repo> CreateCommitContext<'a, R> {
         self
     }
 
-    pub fn add_file_change(mut self, path: impl TryInto<MPath>, file_change: FileChange) -> Self {
+    pub fn add_file_with_copy_info_and_type(
+        mut self,
+        path: impl TryInto<NonRootMPath>,
+        content: impl Into<Vec<u8>>,
+        (parent, parent_path): (impl Into<CommitIdentifier>, impl TryInto<NonRootMPath>),
+        file_type: FileType,
+    ) -> Self {
+        let copy_info = (
+            parent_path.try_into().ok().expect("Invalid path"),
+            parent.into(),
+        );
+        self.files.insert(
+            path.try_into().ok().expect("Invalid path"),
+            CreateFileContext::FromHelper(content.into(), file_type, Some(copy_info)),
+        );
+        self
+    }
+
+    pub fn add_file_change(
+        mut self,
+        path: impl TryInto<NonRootMPath>,
+        file_change: FileChange,
+    ) -> Self {
         self.files.insert(
             path.try_into().ok().expect("Invalid path"),
             CreateFileContext::FromFileChange(file_change),
@@ -391,7 +417,7 @@ impl<'a, R: Repo> CreateCommitContext<'a, R> {
 }
 
 enum CreateFileContext {
-    FromHelper(Vec<u8>, FileType, Option<(MPath, CommitIdentifier)>),
+    FromHelper(Vec<u8>, FileType, Option<(NonRootMPath, CommitIdentifier)>),
     FromFileChange(FileChange),
     Deleted,
 }
@@ -618,11 +644,11 @@ pub async fn store_files<T: AsRef<str>>(
     ctx: &CoreContext,
     files: BTreeMap<&str, Option<T>>,
     repo: &impl RepoBlobstoreArc,
-) -> BTreeMap<MPath, FileChange> {
+) -> BTreeMap<NonRootMPath, FileChange> {
     let mut res = btreemap! {};
 
     for (path, content) in files {
-        let path = MPath::new(path).unwrap();
+        let path = NonRootMPath::new(path).unwrap();
         match content {
             Some(content) => {
                 let content = content.as_ref();
@@ -651,12 +677,12 @@ pub async fn store_files<T: AsRef<str>>(
 
 pub async fn store_rename(
     ctx: &CoreContext,
-    copy_src: (MPath, ChangesetId),
+    copy_src: (NonRootMPath, ChangesetId),
     path: &str,
     content: &str,
     repo: &impl RepoBlobstoreArc,
-) -> (MPath, FileChange) {
-    let path = MPath::new(path).unwrap();
+) -> (NonRootMPath, FileChange) {
+    let path = NonRootMPath::new(path).unwrap();
     let size = content.len() as u64;
     let content_id = filestore::store(
         &repo.repo_blobstore_arc(),
@@ -724,7 +750,7 @@ pub async fn create_commit(
     ctx: CoreContext,
     repo: impl Repo,
     parents: Vec<ChangesetId>,
-    file_changes: BTreeMap<MPath, FileChange>,
+    file_changes: BTreeMap<NonRootMPath, FileChange>,
 ) -> ChangesetId {
     let bcs = BonsaiChangesetMut {
         parents,
@@ -752,7 +778,7 @@ pub async fn create_commit_with_date(
     ctx: CoreContext,
     repo: impl Repo,
     parents: Vec<ChangesetId>,
-    file_changes: BTreeMap<MPath, FileChange>,
+    file_changes: BTreeMap<NonRootMPath, FileChange>,
     author_date: DateTime,
 ) -> ChangesetId {
     let bcs = BonsaiChangesetMut {

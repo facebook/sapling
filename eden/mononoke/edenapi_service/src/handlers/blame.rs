@@ -86,10 +86,17 @@ async fn blame_file_data(repo: HgRepoContext, key: Key) -> Result<BlameData> {
         .context("failed to resolve blame hgid")?
         .ok_or(ErrorKind::HgIdNotFound(key.hgid))?;
 
+    let disable_mutable_blame: bool = justknobs::eval(
+        "scm/mononoke:edenapi_disable_mutable_blame",
+        None,
+        Some(repo.name()),
+    )
+    .unwrap_or(false);
+
     let blame = cs
         .path_with_history(to_mpath(&key.path)?.context(ErrorKind::UnexpectedEmptyPath)?)
         .await?
-        .blame(true)
+        .blame(!disable_mutable_blame)
         .await?;
 
     let blame = match blame {

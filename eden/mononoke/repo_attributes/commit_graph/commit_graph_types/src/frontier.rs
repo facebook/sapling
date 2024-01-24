@@ -85,11 +85,13 @@ impl ChangesetFrontier {
 
     /// Returns a vec of all changesets in the frontier inside
     /// of the given range.
-    pub fn changesets_in_range(&self, range: impl RangeBounds<Generation>) -> Vec<ChangesetId> {
+    pub fn changesets_in_range(
+        &self,
+        range: impl RangeBounds<Generation>,
+    ) -> impl Iterator<Item = ChangesetId> + '_ {
         self.range(range)
             .flat_map(|(_, cs_ids)| cs_ids.iter())
             .copied()
-            .collect()
     }
 }
 

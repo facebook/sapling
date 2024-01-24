@@ -13,7 +13,7 @@ Make sure merge state is cleared when we have a clean tree.
 
     # Write out some valid contents
     with open(f"foo/.hg/merge/state2", "bw") as f:
-        f.write(b"L\x28\x00\x00\x00")
+        f.write(b"L\x00\x00\x00\x28")
         f.write(b"a" * 40)
 
   $ hg debugmergestate

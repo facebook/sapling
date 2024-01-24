@@ -24,8 +24,8 @@ use shared_error::anyhow::SharedError;
 use time_ext::DurationExt;
 use tokio::sync::Notify;
 
+use crate::ConfigurableRendezVousController;
 use crate::RendezVousStats;
-use crate::TunablesRendezVousController;
 
 /// The RendezVousController controls the behavior of a RendezVous instance. It notably decides
 /// when to wait for a batch to build up and when to kick off queries.
@@ -73,7 +73,7 @@ struct RendezVousInner<K, V, C> {
 /// - Reducing the number of queries and connections to SQL
 /// - Make it easy to do batching right
 /// See D27010317 for more context.
-pub struct RendezVous<K, V, C = TunablesRendezVousController> {
+pub struct RendezVous<K, V, C = ConfigurableRendezVousController> {
     inner: Arc<RendezVousInner<K, V, C>>,
 }
 

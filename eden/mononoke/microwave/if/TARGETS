@@ -1,0 +1,20 @@
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+
+oncall("mononoke")
+
+thrift_library(
+    name = "microwave-if",
+    languages = [
+        "rust",
+    ],
+    rust_deps = [
+        "fbsource//third-party/rust:smallvec",
+    ],
+    thrift_srcs = {
+        "microwave.thrift": [],
+    },
+    deps = [
+        "//eden/mononoke/mercurial/types/if:mercurial-thrift",
+        "//eden/mononoke/mononoke_types/if:mononoke_types-thrift",
+    ],
+)

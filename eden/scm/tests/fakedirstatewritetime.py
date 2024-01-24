@@ -2,13 +2,14 @@
 # specified by '[fakedirstatewritetime] fakenow', only when
 # 'dirstate.write()' is invoked via functions below:
 #
-#   - 'workingctx._poststatusfixup()' (= 'repo.status()')
 #   - 'committablectx.markcommitted()'
 
 from __future__ import absolute_import
 
-from edenscm import context, dirstate, extensions, pycompat, registrar, treestate, util
-from edenscmnative import parsers
+import bindings
+from sapling import context, dirstate, extensions, pycompat, registrar, treestate, util
+
+parsers = bindings.cext.parsers
 
 
 configtable = {}
@@ -55,11 +56,6 @@ def fakewrite(ui, func):
         dirstate._getfsnow = orig_dirstate_getfsnow
 
 
-def _poststatusfixup(orig, self, status, workingctx, oldid):
-    ui = workingctx.repo().ui
-    return fakewrite(ui, lambda: orig(self, status, workingctx, oldid))
-
-
 def markcommitted(orig, committablectx, node):
     ui = committablectx.repo().ui
     return fakewrite(ui, lambda: orig(committablectx, node))
@@ -74,6 +70,5 @@ def treestatewrite(orig, self, st, now):
 
 
 def extsetup(ui):
-    extensions.wrapfunction(dirstate.dirstate, "_poststatusfixup", _poststatusfixup)
     extensions.wrapfunction(context.committablectx, "markcommitted", markcommitted)
     extensions.wrapfunction(treestate.treestatemap, "write", treestatewrite)

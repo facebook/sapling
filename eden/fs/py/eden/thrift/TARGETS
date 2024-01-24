@@ -1,0 +1,29 @@
+load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
+
+oncall("scm_client_infra")
+
+python_library(
+    name = "legacy",
+    srcs = ["legacy.py"],
+    base_module = "eden.thrift",
+    os_deps = [
+        (
+            "windows",
+            [":windows_thrift"],
+        ),
+    ],
+    deps = [
+        "//eden/fs/service:thrift-py",
+        "//thrift/lib/py:base",
+        "//thrift/lib/py:server_base",
+    ],
+)
+
+python_library(
+    name = "windows_thrift",
+    srcs = ["windows_thrift.py"],
+    base_module = "eden.thrift",
+    deps = [
+        "//thrift/lib/py:server_base",
+    ],
+)

@@ -5,13 +5,17 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-#require no-fsmonitor
-
   $ eagerepo
 
   $ hg init a
   $ cd a
   $ hg init b
+  $ hg st
+
+Fsmonitor doesn't handle nested repos well, but the above test shows we at least don't
+consider files under the nested ".hg" directory.
+#if no-fsmonitor
+
   $ echo x > b/x
 
 # Should print nothing:
@@ -50,3 +54,5 @@
   $ hg st
 
   $ cd ..
+
+#endif

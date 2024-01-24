@@ -10,6 +10,7 @@ import {getInnerTextareaForVSCodeTextArea} from './CommitInfoView/utils';
 import {InlineErrorBadge} from './ErrorNotice';
 import {Tooltip} from './Tooltip';
 import {T, t} from './i18n';
+import platform from './platform';
 import {replaceInTextArea, insertAtCursor} from './textareaUtils';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {type MutableRefObject, useState, type ReactNode, useId} from 'react';
@@ -202,7 +203,20 @@ export function FilePicker({uploadFiles}: {uploadFiles: (files: Array<File>) => 
           title={t(
             'Choose image or video files to upload. Drag & Drop and Pasting images or videos is also supported.',
           )}>
-          <VSCodeButton appearance="icon" data-testid="attach-file-button">
+          <VSCodeButton
+            appearance="icon"
+            data-testid="attach-file-button"
+            onClick={e => {
+              if (platform.chooseFile != null) {
+                e.preventDefault();
+                e.stopPropagation();
+                platform.chooseFile('Choose file to upload', /* multi */ true).then(chosen => {
+                  if (chosen.length > 0) {
+                    uploadFiles(chosen);
+                  }
+                });
+              }
+            }}>
             <PaperclipIcon />
           </VSCodeButton>
         </Tooltip>

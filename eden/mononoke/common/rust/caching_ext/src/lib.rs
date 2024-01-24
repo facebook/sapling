@@ -146,6 +146,13 @@ pub trait KeyedEntityStore<K, V>: EntityStore<V> {
     /// If a key has no value in the backing store, omit it from the result map. Only use an
     /// Error for a failure to fetch, not absence
     async fn get_from_db(&self, keys: HashSet<K>) -> Result<HashMap<K, V>, Error>;
+
+    fn on_memcache_hits<'a>(&self, _values: impl IntoIterator<Item = (&'a K, &'a V)>)
+    where
+        K: 'a,
+        V: 'a,
+    {
+    }
 }
 
 /// Utility function to fetch all keys in a single chunk without parallelism
@@ -229,6 +236,8 @@ where
             .memcache_miss
             .add_value(to_fetch_from_store.len() as i64);
 
+        store.on_memcache_hits(fetched_from_memcache.iter().map(|(k, (v, _))| (k, v)));
+
         fill_multiple_cachelib(
             store.cachelib(),
             fetched_from_memcache
@@ -304,6 +313,25 @@ where
     )
     .await;
     Ok(data)
+}
+
+pub fn fill_cachelib<'a, K, V>(
+    store: &impl KeyedEntityStore<K, V>,
+    data: impl IntoIterator<Item = (&'a K, &'a V)>,
+) where
+    K: Hash + Eq + Clone + 'a,
+    V: Abomonation + Send + Clone + 'static,
+{
+    let mut cachelib_keys = Vec::new();
+    for (k, v) in data {
+        let cachelib_key = CachelibKey(store.get_cache_key(k));
+        let ttl = match store.cache_determinator(v) {
+            CacheDisposition::Cache(ttl) => ttl,
+            CacheDisposition::Ignore => continue,
+        };
+        cachelib_keys.push((cachelib_key, ttl, v));
+    }
+    fill_multiple_cachelib(store.cachelib(), cachelib_keys);
 }
 
 /// Directly fill a cache from data you've prefetched outside the caching system

@@ -1,0 +1,16 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+
+oncall("mercurial_release")
+
+rust_binary(
+    name = "codegen",
+    srcs = [
+        "src/codegen.rs",
+        "src/main.rs",
+        "src/pycompile.py",
+    ],
+    crate_root = "src/main.rs",
+    deps = [
+        "//eden/scm/lib/zstdelta:zstdelta",
+    ],
+)

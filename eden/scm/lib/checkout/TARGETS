@@ -1,0 +1,80 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "checkout",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "edenfs-client": {"optional": True},
+                    "hg-metrics": {"optional": True},
+                    "manifest": {"features": ["for-tests"]},
+                    "toml": {"optional": True},
+                },
+                "dev-dependencies": {
+                    "manifest-tree": {"features": ["for-tests"]},
+                },
+            },
+            "features": {
+                "eden": [
+                    "edenfs-client",
+                    "hg-metrics",
+                    "toml",
+                    "workingcopy/eden",
+                ],
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    features = ["eden"],
+    os_deps = [
+        (
+            "windows",
+            [
+                "fbsource//third-party/rust:fs-err",
+            ],
+        ),
+    ],
+    test_deps = [
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:fs-err",
+        "fbsource//third-party/rust:quickcheck",
+        "fbsource//third-party/rust:tempfile",
+        "fbsource//third-party/rust:walkdir",
+        "//eden/scm/lib/manifest-tree:manifest-tree",
+        "//eden/scm/lib/types:types",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:crossbeam",
+        "fbsource//third-party/rust:fail",
+        "fbsource//third-party/rust:parking_lot",
+        "fbsource//third-party/rust:serde_json",
+        "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:toml",
+        "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/edenfs-client:edenfs-client",
+        "//eden/scm/lib/hg-metrics:hg-metrics",
+        "//eden/scm/lib/io/term/logger:termlogger",
+        "//eden/scm/lib/manifest:manifest",
+        "//eden/scm/lib/manifest-tree:manifest-tree",
+        "//eden/scm/lib/minibytes:minibytes",
+        "//eden/scm/lib/pathmatcher:pathmatcher",
+        "//eden/scm/lib/progress/model:progress-model",
+        "//eden/scm/lib/repo:repo",
+        "//eden/scm/lib/repolock:repolock",
+        "//eden/scm/lib/spawn-ext:spawn-ext",
+        "//eden/scm/lib/status:status",
+        "//eden/scm/lib/storemodel:storemodel",
+        "//eden/scm/lib/treestate:treestate",
+        "//eden/scm/lib/types:types",
+        "//eden/scm/lib/util:util",
+        "//eden/scm/lib/util/atexit:atexit",
+        "//eden/scm/lib/vfs:vfs",
+        "//eden/scm/lib/workingcopy:workingcopy",
+    ],
+)

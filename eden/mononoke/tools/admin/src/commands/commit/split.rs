@@ -13,15 +13,15 @@ use blobstore::Loadable;
 use changesets_creation::save_changesets;
 use clap::ArgGroup;
 use clap::Args;
+use commit_id::parse_commit_id;
 use context::CoreContext;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
 
 use super::Repo;
-use crate::commit_id::parse_commit_id;
 
 #[derive(Args)]
 #[clap(group(ArgGroup::new("file-size-and-num").args(&["commit_file_size", "commit_file_num"]).multiple(true)))]
@@ -74,7 +74,7 @@ async fn split_commit(
 
     // We want copy/move sources and destination to be in one commit.
     // So let's group them here
-    let mut file_groups: BTreeMap<MPath, Vec<(MPath, FileChange)>> = BTreeMap::new();
+    let mut file_groups: BTreeMap<NonRootMPath, Vec<(NonRootMPath, FileChange)>> = BTreeMap::new();
     let file_changes = bcs.file_changes_map();
     for (path, fc) in file_changes.iter() {
         if let FileChange::Change(ft) = fc {
@@ -158,7 +158,7 @@ async fn split_commit(
 }
 
 fn modify_file_change_parent(
-    path: &MPath,
+    path: &NonRootMPath,
     fc: &FileChange,
     parent: Option<ChangesetId>,
 ) -> Result<FileChange> {
@@ -193,7 +193,7 @@ async fn create_new_commit(
     repo: &Repo,
     bcs: BonsaiChangeset,
     parent: Option<ChangesetId>,
-    current_file_changes: &mut BTreeMap<MPath, FileChange>,
+    current_file_changes: &mut BTreeMap<NonRootMPath, FileChange>,
 ) -> Result<ChangesetId> {
     let mut new_bcs = bcs.clone().into_mut();
     new_bcs.parents = parent.into_iter().collect();
@@ -278,9 +278,9 @@ mod test {
             assert_eq!(
                 wc,
                 hashmap! {
-                    MPath::new("first")? => "a".to_string(),
-                    MPath::new("second")? => "b".to_string(),
-                    MPath::new("third")? => "c".to_string(),
+                    NonRootMPath::new("first")? => "a".to_string(),
+                    NonRootMPath::new("second")? => "b".to_string(),
+                    NonRootMPath::new("third")? => "c".to_string(),
                 }
             );
 
@@ -322,9 +322,9 @@ mod test {
             assert_eq!(
                 wc,
                 hashmap! {
-                    MPath::new("first")? => "a".to_string(),
-                    MPath::new("second")? => "b".to_string(),
-                    MPath::new("third")? => "c".to_string(),
+                    NonRootMPath::new("first")? => "a".to_string(),
+                    NonRootMPath::new("second")? => "b".to_string(),
+                    NonRootMPath::new("third")? => "c".to_string(),
                 }
             );
         }
@@ -365,8 +365,8 @@ mod test {
             assert_eq!(
                 wc,
                 hashmap! {
-                    MPath::new("second")? => "a".to_string(),
-                    MPath::new("third")? => "c".to_string(),
+                    NonRootMPath::new("second")? => "a".to_string(),
+                    NonRootMPath::new("third")? => "c".to_string(),
                 }
             );
         }
@@ -407,8 +407,8 @@ mod test {
             assert_eq!(
                 wc,
                 hashmap! {
-                    MPath::new("second")? => "a".to_string(),
-                    MPath::new("third")? => "c".to_string(),
+                    NonRootMPath::new("second")? => "a".to_string(),
+                    NonRootMPath::new("third")? => "c".to_string(),
                 }
             );
             let bcs = cs_id.load(&ctx, repo.repo_blobstore()).await?;

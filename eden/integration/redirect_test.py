@@ -15,6 +15,10 @@ from eden.fs.cli.util import mkscratch_bin
 from .lib import testcase
 
 
+if sys.platform == "win32":
+    from eden.fs.cli.util import remove_unc_prefix
+
+
 def scratch_path(repo: str, subdir: str) -> str:
     return (
         subprocess.check_output(
@@ -227,8 +231,14 @@ via-profile = "bind"
             msg="saved config agrees with last output",
         )
 
+        expected_target = Path(
+            os.readlink(os.path.join(self.mount, "a", "new-one"))
+        ).resolve()
+        if sys.platform == "win32":
+            expected_target = remove_unc_prefix(expected_target)
+
         self.assertEqual(
-            Path(os.readlink(os.path.join(self.mount, "a", "new-one"))).resolve(),
+            expected_target,
             Path(target_path).resolve(),
             msg="symlink points to scratch space",
         )

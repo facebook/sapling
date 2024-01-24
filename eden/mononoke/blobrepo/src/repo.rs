@@ -26,6 +26,7 @@ use filenodes::Filenodes;
 use filestore::FilestoreConfig;
 use git_symbolic_refs::GitSymbolicRefs;
 use mercurial_mutation::HgMutationStore;
+use metaconfig_types::RepoConfig;
 use mononoke_types::BonsaiChangeset;
 use mutable_counters::MutableCounters;
 use phases::Phases;
@@ -48,6 +49,9 @@ pub struct BlobRepoInner {
 
     #[init(repo_identity.name().to_string())]
     pub reponame: String,
+
+    #[facet]
+    pub config: RepoConfig,
 
     #[facet]
     pub repo_blobstore: RepoBlobstore,
@@ -139,6 +143,7 @@ pub struct BlobRepo {
         dyn GitSymbolicRefs,
         dyn HgMutationStore,
         RepoDerivedData,
+        RepoConfig,
         dyn MutableCounters,
         dyn RepoPermissionChecker,
         dyn RepoLock,

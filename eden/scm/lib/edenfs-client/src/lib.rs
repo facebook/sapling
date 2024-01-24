@@ -7,4 +7,13 @@
 
 //! # Communicating to EdenFS via Thrift
 
-pub mod status;
+mod client;
+mod filter;
+mod types;
+
+pub use crate::client::EdenFsClient;
+pub use crate::types::CheckoutConflict;
+pub use crate::types::CheckoutMode;
+pub use crate::types::ConflictType;
+pub use crate::types::EdenError;
+pub use crate::types::FileStatus;

@@ -35,7 +35,7 @@ use mercurial_types::HgFileEnvelopeMut;
 use mercurial_types::HgFileHistoryEntry;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgParents;
-use mercurial_types::MPath;
+use mercurial_types::NonRootMPath;
 use mercurial_types::RevFlags;
 use redactedblobstore::has_redaction_root_cause;
 use repo_blobstore::RepoBlobstore;
@@ -237,14 +237,12 @@ pub fn get_unordered_file_history_for_multiple_nodes(
     ctx: &CoreContext,
     repo: &(impl RepoLike + AsBlobRepo),
     filenodes: HashSet<HgFileNodeId>,
-    path: &MPath,
+    path: &NonRootMPath,
     allow_short_getpack_history: bool,
 ) -> impl Stream<Item = Result<HgFileHistoryEntry>> {
     let limit = if allow_short_getpack_history {
-        let limit = tunables::tunables()
-            .remotefilelog_file_history_limit()
-            .unwrap_or_default();
-        if limit <= 0 { None } else { Some(limit as u64) }
+        const REMOTEFILELOG_FILE_HISTORY_LIMIT: u64 = 1000;
+        Some(REMOTEFILELOG_FILE_HISTORY_LIMIT)
     } else {
         None
     };

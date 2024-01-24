@@ -1,0 +1,38 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+
+oncall("mononoke")
+
+rust_binary(
+    name = "gitimport",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:gix-hash",
+        "fbsource//third-party/rust:linked-hash-map",
+        "fbsource//third-party/rust:slog",
+        "fbsource//third-party/rust:vec1",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/lock_ext:lock_ext",
+        "//eden/mononoke/blobrepo:blobrepo",
+        "//eden/mononoke/blobrepo:blobrepo_override",
+        "//eden/mononoke/blobrepo:repo_blobstore",
+        "//eden/mononoke/blobstore:blobstore",
+        "//eden/mononoke/blobstore:cacheblob",
+        "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
+        "//eden/mononoke/changesets:changesets",
+        "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
+        "//eden/mononoke/derived_data/mercurial_derivation:mercurial_derivation",
+        "//eden/mononoke/git/import_direct:import_direct",
+        "//eden/mononoke/git/import_tools:import_tools",
+        "//eden/mononoke/mononoke_api:mononoke_api",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
+        "//eden/mononoke/repo_authorization:repo_authorization",
+        "//eden/mononoke/server/context:context",
+        "//eden/scm/lib/clientinfo:clientinfo",
+    ],
+)

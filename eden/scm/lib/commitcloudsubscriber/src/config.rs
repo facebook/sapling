@@ -35,7 +35,7 @@ mod defaults {
             Some(ref val) if !val.is_empty() => Some(val),
             _ => None,
         }
-        .map(|value| PathBuf::from(value))
+        .map(PathBuf::from)
     }
 
     pub fn connected_subscribers_path() -> Option<PathBuf> {
@@ -43,14 +43,7 @@ mod defaults {
     }
 
     pub fn user_token_path() -> Option<PathBuf> {
-        #[cfg(target_os = "macos")]
-        {
-            None
-        }
-        #[cfg(not(target_os = "macos"))]
-        {
-            home_dir_os()
-        }
+        home_dir_os()
     }
 
     pub fn cloudsync_retries() -> u32 {
@@ -67,9 +60,9 @@ mod defaults {
 
 #[derive(Debug, Deserialize)]
 pub struct CommitCloudConfig {
-    /// Server-Sent Events endpoint for real-time Commit Cloud Notifications
+    /// Endpoint for real-time polling of Commit Cloud Notifications
     #[serde(default)]
-    pub notification_url: Option<String>,
+    pub polling_update_url: Option<String>,
 
     /// Path to the directory containing current connected subscribers
     /// This is an optional override, see logic for the default location

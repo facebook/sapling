@@ -1,0 +1,90 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.light-theme .rendered-markup {
+  --pre-bg: #fdf5d4;
+  --pre-border: 1px solid #f1c40f;
+  --tt-bg: rgb(235, 233, 231);
+  --th-bg: #ebecee;
+  --td-bg: white;
+  --table-border: #bdc7d8;
+  --quote-fg: #8c98b8;
+}
+.dark-theme .rendered-markup {
+  --pre-bg: #120b00;
+  --pre-border: 1px solid #673b00;
+  --tt-bg: #18191a;
+  --th-bg: #18191a;
+  --td-bg: black;
+  --table-border: #323436;
+  --quote-fg: #8c98b8;
+}
+
+.rendered-markup div {
+  margin-block: calc(2 * var(--pad));
+}
+
+.rendered-markup table {
+  border: 1px solid var(--table-border);
+  background: var(--table-border);
+  border-collapse: separate;
+  border-spacing: 1px;
+}
+
+.rendered-markup th {
+  background: var(--th-bg);
+  font-weight: bold;
+  padding: 3px 6px;
+}
+
+.rendered-markup td {
+  background: var(--td-bg);
+  padding: 3px 6px;
+  text-align: left;
+}
+
+.rendered-markup tt {
+  background-color: var(--tt-bg);
+  padding-inline: 4px;
+  overflow-wrap: break-word;
+  font-size: 110%;
+}
+
+.rendered-markup pre {
+  background: var(--pre-bg);
+  border: var(--pre-border);
+  padding: var(--halfpad);
+  font-size: 110%;
+  white-space: pre-wrap;
+}
+
+.rendered-markup a {
+  color: var(--link-foreground);
+  text-decoration: none;
+}
+.rendered-markup a:hover {
+  text-decoration: underline;
+}
+
+.rendered-markup blockquote {
+  color: var(--quote-fg);
+  border-left: 3px solid var(--quote-fg);
+  padding-left: 10px;
+  padding-block: 5px;
+  font-style: italic;
+  margin: 0;
+}
+
+.rendered-markup ul,
+.rendered-markup ol {
+  padding-left: 30px;
+}
+
+.rendered-markup video,
+.rendered-markup img {
+  max-width: 100%;
+}

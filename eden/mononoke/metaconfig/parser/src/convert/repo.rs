@@ -52,8 +52,9 @@ use metaconfig_types::UpdateLoggingConfig;
 use metaconfig_types::WalkerConfig;
 use metaconfig_types::WalkerJobParams;
 use metaconfig_types::WalkerJobType;
+use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use mononoke_types::PrefixTrie;
 use mononoke_types::RepositoryId;
 use regex::Regex;
@@ -148,6 +149,7 @@ impl Convert for RawHookConfig {
 
         let config = HookConfig {
             bypass,
+            options: self.config_json,
             strings: self.config_strings.unwrap_or_default(),
             ints: self.config_ints.unwrap_or_default(),
             ints_64: self.config_ints_64.unwrap_or_default(),
@@ -157,6 +159,7 @@ impl Convert for RawHookConfig {
         };
 
         Ok(HookParams {
+            implementation: self.implementation.unwrap_or_else(|| self.name.clone()),
             name: self.name,
             config,
         })
@@ -228,6 +231,10 @@ impl Convert for RawPushParams {
         let default = PushParams::default();
         Ok(PushParams {
             pure_push_allowed: self.pure_push_allowed.unwrap_or(default.pure_push_allowed),
+            unbundle_commit_limit: self
+                .unbundle_commit_limit
+                .map(|limit| limit.try_into())
+                .transpose()?,
         })
     }
 }
@@ -299,7 +306,7 @@ impl Convert for RawPushrebaseParams {
                     .casefolding_check_excluded_paths
                     .map(|raw| {
                         raw.into_iter()
-                            .map(|path| MPath::new_opt(path.as_bytes()))
+                            .map(|path| NonRootMPath::new_opt(path.as_bytes()).map(MPath::from))
                             .collect::<Result<PrefixTrie>>()
                     })
                     .transpose()?
@@ -397,7 +404,10 @@ impl Convert for RawServiceWriteRestrictions {
         let permitted_path_prefixes = permitted_path_prefixes
             .map(|raw| {
                 raw.into_iter()
-                    .map(|path| MPath::new_opt(path.as_bytes()))
+                    .map(|path| {
+                        NonRootMPath::new_opt(path.as_bytes())
+                            .map(mononoke_types::path::MPath::from)
+                    })
                     .collect::<Result<PrefixTrie>>()
             })
             .transpose()?
@@ -534,7 +544,7 @@ impl Convert for RawSegmentedChangelogConfig {
             default: Option<Duration>,
         ) -> Result<Option<Duration>> {
             match maybe_secs {
-                Some(secs) if secs == 0 => Ok(None),
+                Some(0) => Ok(None),
                 Some(secs) => Ok(Some(Duration::from_secs(secs.try_into()?))),
                 None => Ok(default),
             }

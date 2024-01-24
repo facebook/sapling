@@ -10,7 +10,7 @@ triggered due to a shallow repo, and then the code can later interact with
 non-shallow repositories.
 
   $ cat > setupremotefilelog.py << EOF
-  > from edenscm import extensions
+  > from sapling import extensions
   > def extsetup(ui):
   >     remotefilelog = extensions.find('remotefilelog')
   >     remotefilelog.onetimeclientsetup(ui)

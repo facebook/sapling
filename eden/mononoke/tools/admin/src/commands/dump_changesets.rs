@@ -13,8 +13,8 @@ use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
+use bulkops::ChangesetBulkFetcher;
 use bulkops::Direction;
-use bulkops::PublicChangesetBulkFetch;
 use bytes::Bytes;
 use changeset_fetcher::ChangesetFetcher;
 use changesets::deserialize_cs_entries;
@@ -29,6 +29,7 @@ use clap::Subcommand;
 use clap::ValueEnum;
 use commit_graph::CommitGraph;
 use commit_graph::CommitGraphRef;
+use commit_id::parse_commit_id;
 use context::CoreContext;
 use futures::future;
 use futures::stream;
@@ -41,8 +42,6 @@ use mononoke_types::ChangesetId;
 use phases::Phases;
 use phases::PhasesArc;
 use repo_identity::RepoIdentity;
-
-use crate::commit_id::parse_commit_id;
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
 enum Format {
@@ -232,7 +231,7 @@ impl FetchPublicArgs {
         repo: &Repo,
         input_format: Format,
     ) -> Result<Vec<ChangesetEntry>> {
-        let fetcher = PublicChangesetBulkFetch::new(repo.changesets_arc(), repo.phases_arc());
+        let fetcher = ChangesetBulkFetcher::new(repo.changesets_arc(), repo.phases_arc());
 
         let start_commit = {
             if let Some(path) = self.start_from_file_end {
@@ -253,7 +252,7 @@ impl FetchPublicArgs {
         }
 
         fetcher
-            .fetch_bounded(ctx, Direction::OldestFirst, Some(bounds))
+            .fetch_public_bounded(ctx, Direction::OldestFirst, Some(bounds))
             .try_collect()
             .await
     }

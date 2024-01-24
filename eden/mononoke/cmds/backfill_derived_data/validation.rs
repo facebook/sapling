@@ -94,7 +94,7 @@ pub async fn validate(
         info!(
             ctx.logger(),
             "Processing chunk starting from {:?}",
-            chunk.get(0)
+            chunk.first()
         );
         let orig_repo = repo.clone();
         let mut memblobstore = None;

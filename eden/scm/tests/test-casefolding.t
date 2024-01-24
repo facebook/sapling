@@ -53,7 +53,7 @@ test changing case of path components
   $ hg ci -Am addb D/b
   $ hg mv D/b d/b
   D/b: not overwriting - file already committed
-  (hg rename --force to replace the file by recording a rename)
+  (use 'hg rename --amend --mark' to amend the current commit)
   $ hg mv D/b d/c
   $ hg st
   A D/c
@@ -67,12 +67,9 @@ test changing case of path components
   $ rm d/c
   $ echo c > D/c
   $ hg add "glob:**/c"
-  adding d/c (no-fsmonitor !)
-  warning: possible case-folding collision for D/c (fsmonitor !)
-  adding D/c (fsmonitor !)
+  adding D/c
   $ hg st
-  A d/c (no-fsmonitor !)
-  A D/c (fsmonitor !)
+  A D/c
   $ hg ci -m addc "glob:**/c"
   $ hg mv d/b d/e
   moving D/b to D/e

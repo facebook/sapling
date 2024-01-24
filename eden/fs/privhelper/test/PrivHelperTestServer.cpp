@@ -21,7 +21,7 @@ using std::string;
 
 namespace facebook::eden {
 
-PrivHelperTestServer::PrivHelperTestServer() {}
+PrivHelperTestServer::PrivHelperTestServer() = default;
 
 void PrivHelperTestServer::init(folly::File socket, uid_t uid, gid_t gid) {
   // folly::init() has already been called before the unit tests start,

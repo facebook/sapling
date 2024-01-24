@@ -9,7 +9,7 @@
   bottom: 0;
   background: var(--background);
   padding: calc(2 * var(--pad));
-  z-index: 100;
+  z-index: 1;
   border-top: 1px solid var(--panel-view-border);
   display: flex;
   flex-direction: column;

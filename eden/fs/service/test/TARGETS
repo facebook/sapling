@@ -1,0 +1,87 @@
+load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
+
+oncall("scm_client_infra")
+
+cpp_unittest(
+    name = "startup_logger_test",
+    srcs = ["StartupLoggerTest.cpp"],
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
+    deps = [
+        "//eden/fs/service:startup_logger",
+        "//eden/fs/service:startup_status_subscriber",
+        "//eden/fs/telemetry:log_info",
+        "//eden/fs/utils:file_utils",
+        "//eden/fs/utils:process",
+        "//folly:exception",
+        "//folly:file",
+        "//folly:file_util",
+        "//folly/experimental:test_util",
+        "//folly/init:init",
+        "//folly/logging:logging",
+        "//folly/portability:gmock",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
+    name = "startup_status_subscriber_test",
+    srcs = ["StartupStatusSubscriberTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/service:startup_status_subscriber",
+        "//eden/fs/utils:eden_error",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
+    name = "thrift_stream_startup_status_subscriber_test",
+    srcs = ["ThriftStreamStartupStatusSubscriberTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/service:thrift_startup_status_subscriber",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
+    name = "periodic_task_test",
+    srcs = ["PeriodicTaskTest.cpp"],
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:windows",
+    ],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/service:server",
+        "//eden/fs/testharness:test_server",
+        "//folly/io/async/test:util",
+        "//folly/logging:logging",
+        "//folly/logging/test:test_handler",
+        "//folly/portability:gmock",
+        "//folly/portability:gtest",
+        "//thrift/lib/cpp2:server",
+    ],
+)
+
+cpp_unittest(
+    name = "thrift_glob_impl_test",
+    srcs = ["ThriftGlobImplTest.cpp"],
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:windows",
+    ],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/service:thrift-cpp2-types",
+        "//eden/fs/service:thrift_glob_impl",
+        "//eden/fs/store:context",
+        "//eden/fs/testharness:fake_backing_store_and_tree_builder",
+        "//eden/fs/testharness:test_mount",
+        "//eden/fs/testharness:test_server_state",
+        "//folly/portability:gtest",
+    ],
+)

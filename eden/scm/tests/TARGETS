@@ -1,0 +1,184 @@
+# @noautodeps
+
+load("@fbcode_macros//build_defs:native_rules.bzl", "buck_filegroup")
+load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
+load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
+load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+load("//eden/scm/tests:targets.bzl", "get_blocklist", "get_hg_run_tests_excluded", "get_hg_watchman_run_tests_excluded")
+
+oncall("mercurial_release")
+
+python_binary(
+    name = "run_tests",
+    srcs = ["unittestify.py"] + glob(["**/*.t"]),
+    base_module = "",
+    main_function = "unittestify.main",
+    package_style = "inplace",
+    resources = {
+        "//eden/scm/tests:dummyssh3": "dummyssh3.par",
+        "//eden/scm:hg": "fb/run_buck_hg.sh",
+        "//eden/scm:hgpython": "fb/run_buck_hgpython.sh",
+        "//watchman:watchman": "watchman",
+    },
+    deps = [
+        "//libfb/py:parutil",
+        "//libfb/py:pathutils",
+    ],
+)
+
+SRCS = dict(
+    [("unittestify.py", "unittestify.py")] +
+    [(f, f) for f in glob(["**/*.t"])],
+)
+
+# @unsorted-dict-items
+ENV = {
+    # PYTHONPATH messed up:
+    #  - extension
+    #  - extension_foreign_module
+    #  - hook
+    #  - merge_tools
+    #  - commandserver
+    "HGTEST_EXCLUDED": get_hg_run_tests_excluded(),
+    "HGTEST_BLOCKLIST": get_blocklist(),
+    # used by unittestify.py
+    "HGTEST_DIR": "eden/scm/tests",
+    "HGTEST_DUMMYSSH": "$(location :dummyssh3)",
+    "HGTEST_GETDB_SH": "$(location //eden/scm/fb/tests:getdb_sh)",
+    "HGTEST_HG": "$(location //eden/scm:hg)",
+    "HGEXECUTABLEPATH": "$(location //eden/scm:hg)",
+    "URLENCODE": "$(location //eden/mononoke/tests/integration:urlencode)",
+    "HGTEST_NORMAL_LAYOUT": "0",
+    "HGTEST_PYTHON": "$(location //eden/scm:hgpython)",
+    "HGTEST_SLOWTIMEOUT": "2147483647",
+    # used by run-tests.py
+    # buck test has its own timeout so just disable run-tests.py
+    # timeout practically.
+    "HGTEST_TIMEOUT": "2147483647",
+    "HGTEST_CERTDIR": "$(location //eden/mononoke/tests/integration/certs/facebook:test_certs)",
+}
+
+python_library(
+    name = "watchman",
+    srcs = [
+        "watchman.py",
+    ],
+)
+
+python_unittest(
+    name = "hg_run_tests",
+    srcs = SRCS,
+    # non-python deps should be in cpp_deps (even if not cpp)
+    cpp_deps = [
+        "//eden/scm:scm_prompt",
+    ],
+    env = ENV,
+    resources = {
+        "//eden/scm/tests:dummyssh3": "dummyssh3.par",
+        "//eden/scm:hg": "hg.sh",
+        "//eden/scm:hgpython": "hgpython.sh",
+    },
+    supports_static_listing = False,
+    runtime_deps = [
+        "//eden/mononoke/tests/integration/certs/facebook:test_certs",
+    ],
+    deps = [
+        "//libfb/py:parutil",
+    ],
+)
+
+W_ENV = dict(ENV)
+
+W_ENV["HGTEST_EXCLUDED"] = get_hg_watchman_run_tests_excluded()
+
+W_ENV["HGTEST_BLOCKLIST"] = get_blocklist()
+
+W_ENV["HGTEST_WATCHMAN"] = "$(location //watchman:watchman)"
+
+python_unittest(
+    name = "hg_watchman_run_tests",
+    srcs = SRCS,
+    env = W_ENV,
+    resources = {
+        "//eden/scm/tests:dummyssh3": "dummyssh3.par",
+        "//eden/scm:hg": "hg.sh",
+        "//eden/scm:hgpython": "hgpython.sh",
+        "//watchman:watchman": "watchman",
+    },
+    supports_static_listing = False,
+    deps = [
+        ":watchman",
+        "//libfb/py:parutil",
+    ],
+)
+
+M_ENV = dict(ENV)
+
+M_ENV["USE_MONONOKE"] = "1"
+
+M_ENV["HGTEST_MONONOKE_SERVER"] = "$(location //eden/mononoke:mononoke)"
+
+M_ENV["HGTEST_GET_FREE_SOCKET"] = "$(location //eden/mononoke/tests/integration:get_free_socket)"
+
+M_ENV["HGTEST_CERTDIR"] = "$(location //eden/mononoke/tests/integration/certs/facebook:test_certs)"
+
+M_ENV.pop("HGTEST_EXCLUDED")
+
+M_ENV.pop("HGTEST_BLOCKLIST")
+
+M_ENV["HGTEST_INCLUDED"] = "test_(fb_ext_remotefilelog_(log|getpackv2|worker|rust_lfs|ruststores_lfs_duplicated)|edenapi.*)_t"
+
+M_ENV["TEST_FIXTURES"] = "$(location //eden/mononoke/tests/integration:test_fixtures)"
+
+M_ENV["FB_TEST_FIXTURES"] = "$(location //eden/mononoke/tests/integration/facebook:facebook_test_fixtures)"
+
+python_unittest(
+    name = "hg_mononoke_run_tests",
+    srcs = SRCS,
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
+    env = M_ENV,
+    resources = {
+        "//eden/mononoke/tests/integration/certs/facebook:test_certs": "certs",
+        "//eden/mononoke/tests/integration:get_free_socket": "get_free_socket.par",
+        "//eden/mononoke:mononoke": "mononoke",
+        "//eden/scm/tests:dummyssh3": "dummyssh3.par",
+        "//eden/scm:hg": "hg.sh",
+        "//eden/scm:hgpython": "hgpython.sh",
+        "//watchman:watchman": "watchman",
+    },
+    supports_static_listing = False,
+    runtime_deps = [
+        "//eden/mononoke/tests/integration/certs/facebook:test_certs",
+        "//eden/mononoke/tests/integration:test_fixtures",
+    ],
+    deps = ["//libfb/py:parutil"],
+)
+
+buck_filegroup(
+    name = "test_runner",
+    srcs = [
+        "default_hgrc.py",
+        "dummyssh",
+        "heredoctest.py",
+        "hghave",
+        "hghave.py",
+        "hgsql/library.sh",
+        "hgsql/schema.innodb.sql",
+        "hgsql/schema.rocksdb.sql",
+        "infinitepush/library.sh",
+        "killdaemons.py",
+        "run-tests.py",
+        "setconfig.py",
+        "tinit.sh",
+        "watchman.py",
+    ],
+)
+
+python_binary(
+    name = "dummyssh3",
+    srcs = ["dummyssh3.py"],
+    main_module = "eden.scm.tests.dummyssh3",
+)

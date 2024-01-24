@@ -369,8 +369,8 @@ async fn test_bounded_traversal_limited_ordered_stream_partial() -> Result<(), E
                                 Ok::<_, Error>(children.into_iter().filter_map(
                                     |child| match child {
                                         OrdTree::Leaf(id) if id % 2 == 1 && id < 10 => None,
-                                        OrdTree::Node(id, _) if id == 112 => None,
-                                        OrdTree::Node(id, _) if id == 130 => None,
+                                        OrdTree::Node(112, _) => None,
+                                        OrdTree::Node(130, _) => None,
                                         OrdTree::Leaf(id) => Some(OrderedTraversal::Output(id)),
                                         subtree => {
                                             Some(OrderedTraversal::Recurse(subtree.size(), subtree))

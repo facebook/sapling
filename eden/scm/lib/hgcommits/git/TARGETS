@@ -1,0 +1,26 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "commits-git",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:fs-err",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:parking_lot",
+        "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/dag:dag",
+        "//eden/scm/lib/dag/gitdag:gitdag",
+        "//eden/scm/lib/hgcommits/trait:commits-trait",
+        "//eden/scm/lib/metalog:metalog",
+        "//eden/scm/lib/minibytes:minibytes",
+        "//eden/scm/lib/refencode:refencode",
+        "//eden/scm/lib/storemodel:storemodel",
+        "//eden/scm/lib/types:types",
+        "//eden/scm/lib/util/factory:factory",
+    ],
+)

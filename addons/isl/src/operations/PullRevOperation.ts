@@ -5,12 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {ExactRevset} from '../types';
+
 import {Operation} from './Operation';
 
 export class PullRevOperation extends Operation {
   static opName = 'PullRev';
 
-  constructor(private rev: string) {
+  constructor(private rev: ExactRevset) {
     super('PullRevOperation');
   }
 

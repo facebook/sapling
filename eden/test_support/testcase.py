@@ -5,12 +5,11 @@
 # GNU General Public License version 2.
 
 import contextlib
-import os
 import sys
 import unittest
 import warnings
 from pathlib import Path
-from typing import cast, List, Optional, Union
+from typing import cast, Optional, Union
 
 from . import environment_variable as env_module
 from .temporary_directory import TempFileManager
@@ -58,16 +57,7 @@ class EdenTestCaseBase(IsolatedAsyncioTestCase):
         if sys.platform == "darwin":
             self.setenv("TMPDIR", "/tmp")
 
-        self.temp_mgr = self.exit_stack.enter_context(
-            TempFileManager(self._get_tmp_prefix())
-        )
-
-    def disableBuckHgForTests(self, testnames: List[str]) -> None:
-        """Forces tests in the `testnames` list to use the hg bundled with the system rather than the one built with Buck"""
-        if self._testMethodName in testnames:
-            # Both EdenFS and the integration tests use these two env vars for determining where to find hg
-            os.environ.pop("EDEN_HG_BINARY", None)
-            os.environ.pop("HG_REAL_BIN", None)
+        self.temp_mgr = self.exit_stack.enter_context(TempFileManager())
 
     def _callSetUp(self):
         with no_warnings(self):
@@ -80,19 +70,6 @@ class EdenTestCaseBase(IsolatedAsyncioTestCase):
     def _callTestMethod(self, testMethod):
         with no_warnings(self):
             return super()._callTestMethod(testMethod)
-
-    def _get_tmp_prefix(self) -> str:
-        """Get a prefix to use for the test's temporary directory name."""
-        # Attempt to include a potion of the test name in the temporary directory
-        # prefix, but limit it to 20 characters.  If the path is too long EdenFS will
-        # fail to start since its Unix socket path won't fit in sockaddr_un, which has a
-        # 108 byte maximum path length.
-        method_name = self._testMethodName
-        for strip_prefix in ("test_", "test"):
-            if method_name.startswith(strip_prefix):
-                method_name = method_name[len(strip_prefix) :]
-                break
-        return f"eden_test.{method_name[:10]}."
 
     def setenv(self, name: str, value: Optional[str]) -> None:
         self.exit_stack.enter_context(env_module.setenv_scope(name, value))

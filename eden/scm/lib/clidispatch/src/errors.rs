@@ -45,9 +45,16 @@ pub struct RepoRequired(pub String);
 #[error("malformed --config option: '{0}' (use --config section.name=value)")]
 pub struct MalformedConfigOption(pub String);
 
-#[derive(Debug, Error)]
-#[error("{0}")]
+#[derive(Debug)]
 pub struct Abort(pub Cow<'static, str>);
+
+impl std::error::Error for Abort {}
+
+impl std::fmt::Display for Abort {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", identity::default().punch(&self.0))
+    }
+}
 
 /// Print an error suitable for end-user consumption.
 ///
@@ -86,6 +93,33 @@ pub fn print_error(err: &anyhow::Error, io: &crate::io::IO, _args: &[String]) {
         // print it in the user-friendly way.
         let _ = io.write_err(format!("abort: {:#}\n", err));
     }
+}
+
+/// Get the traceback from anyhow and upload it
+pub fn upload_traceback(err: &anyhow::Error, start_time_epoch_ms: u64) {
+    if !tracing::enabled!(target: "errortrace", tracing::Level::INFO)
+        || !tracing::enabled!(target: "errortracekey", tracing::Level::INFO)
+    {
+        return;
+    }
+    let hostname = match hostname::get_hostname() {
+        Ok(s) => s,
+        Err(_) => {
+            return;
+        }
+    };
+    let pid = std::process::id();
+    let trace_key = format!(
+        "flat/errortrace-{}-{}-{}{}",
+        hostname,
+        pid,
+        start_time_epoch_ms / 1000,
+        (start_time_epoch_ms % 1000) * 1000, // this is microseconds on python
+    );
+    let traceback = format!("abort: {:?}\n", err);
+    let tk = trace_key.as_str();
+    tracing::info!(target: "errortracekey", errortracekey=tk);
+    tracing::info!(target: "errortrace", key=tk, payload=traceback);
 }
 
 /// Optionally transform an error into something more friendly to the user.

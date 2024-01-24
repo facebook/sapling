@@ -117,9 +117,12 @@ impl HintedMatcher {
         // Now we can be sure at least one of pats or fileset is non-empty.
 
         let mut matchers: Vec<DynMatcher> = Vec::new();
+        let mut warnings: Vec<String> = Vec::new();
 
         if !pats.is_empty() {
-            matchers.push(build_matcher_from_patterns(pats, case_sensitive)?);
+            let (m, w) = build_matcher_from_patterns(pats, case_sensitive)?;
+            matchers.push(m);
+            warnings.extend(w);
         }
 
         if !fs.is_empty() {
@@ -130,11 +133,7 @@ impl HintedMatcher {
 
         Ok(Self {
             case_sensitive,
-            matcher: if matchers.len() == 1 {
-                matchers.remove(0)
-            } else {
-                Arc::new(UnionMatcher::new(matchers))
-            },
+            matcher: Arc::new(UnionMatcher::new_or_single(matchers)),
             always_matches: false,
             never_matches: false,
             all_recursive_paths: fs.is_empty()
@@ -142,7 +141,7 @@ impl HintedMatcher {
                     .iter()
                     .all(|p| p.kind.is_path() && p.kind.is_recursive()),
             exact_files: pats.iter().filter_map(|p| p.exact_file.clone()).collect(),
-            warnings: Vec::new(),
+            warnings,
         })
     }
 
@@ -161,7 +160,12 @@ impl HintedMatcher {
             never_matches: self.never_matches || other.never_matches,
             all_recursive_paths: self.all_recursive_paths && other.always_matches,
             case_sensitive: self.case_sensitive,
-            warnings: Vec::new(),
+            warnings: self
+                .warnings
+                .iter()
+                .chain(other.warnings.iter())
+                .cloned()
+                .collect(),
         }
     }
 
@@ -190,7 +194,12 @@ impl HintedMatcher {
                 || (other.always_matches && self.exact_files.is_empty()),
             all_recursive_paths: self.all_recursive_paths && other.never_matches,
             case_sensitive: self.case_sensitive,
-            warnings: Vec::new(),
+            warnings: self
+                .warnings
+                .iter()
+                .chain(other.warnings.iter())
+                .cloned()
+                .collect(),
         }
     }
 
@@ -199,7 +208,7 @@ impl HintedMatcher {
     }
 
     pub(crate) fn with_warnings(mut self, warnings: Vec<String>) -> Self {
-        self.warnings = warnings;
+        self.warnings.extend(warnings);
         self
     }
 
@@ -321,6 +330,7 @@ mod test {
                     "/root".as_ref(),
                     "/root".as_ref(),
                     false,
+                    Some(&mut std::io::empty()),
                 )?
                 .0,
             ),

@@ -9,6 +9,7 @@ export type DebouncedFunction<Args extends Array<unknown>> = {
   (...args: Args): void;
   reset: () => void;
   isPending: () => boolean;
+  dispose: () => void;
 };
 
 /**
@@ -52,6 +53,7 @@ export function debounce<Args extends Array<unknown>>(
     if (leading) {
       callback = function () {
         shouldCallLeading = true;
+        clearTimeout(timeout);
         timeout = undefined;
       };
 
@@ -66,11 +68,13 @@ export function debounce<Args extends Array<unknown>>(
     } else {
       debouncer.reset();
       callback = function () {
+        clearTimeout(timeout);
         timeout = undefined;
         func.apply(context, args);
       };
     }
 
+    clearTimeout(timeout);
     timeout = setTimeout(callback, wait);
   }
 
@@ -78,6 +82,11 @@ export function debounce<Args extends Array<unknown>>(
     clearTimeout(timeout);
     timeout = undefined;
     shouldCallLeading = true;
+  };
+
+  debouncer.dispose = function () {
+    clearTimeout(timeout);
+    timeout = undefined;
   };
 
   debouncer.isPending = function () {

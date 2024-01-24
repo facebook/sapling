@@ -1,0 +1,38 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_binary(
+    name = "bookmarks_validator",
+    srcs = glob(["src/**/*.rs"]),
+    test_deps = [
+        "fbsource//third-party/rust:tokio",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/commit_rewriting/cross_repo_sync:cross_repo_sync_test_utils",
+        "//eden/mononoke/tests/utils:tests_utils",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:slog",
+        "fbsource//third-party/rust:tokio",
+        "//common/rust/shed/cached_config:cached_config",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/justknobs_stub:justknobs",
+        "//common/rust/shed/stats:stats",
+        "//configerator/structs/scm/mononoke/pushredirect:pushredirect_enable-rust",
+        "//eden/mononoke/bookmarks:bookmarks",
+        "//eden/mononoke/cmdlib:cmdlib",
+        "//eden/mononoke/cmdlib:cmdlib_x_repo",
+        "//eden/mononoke/cmdlib/sharding:executor_lib",
+        "//eden/mononoke/cmdlib/sharding_ext:sharding_ext",
+        "//eden/mononoke/commit_rewriting/cross_repo_sync:cross_repo_sync",
+        "//eden/mononoke/commit_rewriting/live_commit_sync_config:live_commit_sync_config",
+        "//eden/mononoke/commit_rewriting/synced_commit_mapping:synced_commit_mapping",
+        "//eden/mononoke/common/scuba_ext:scuba_ext",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/server/context:context",
+    ],
+)

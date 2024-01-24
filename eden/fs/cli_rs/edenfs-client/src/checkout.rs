@@ -42,7 +42,6 @@ use serde::Deserializer;
 use serde::Serialize;
 use serde::Serializer;
 use thrift_types::edenfs::errors::eden_service::PrefetchFilesError;
-use thrift_types::edenfs::types::Glob;
 use thrift_types::edenfs::types::GlobParams;
 use thrift_types::edenfs::types::MountInfo;
 use thrift_types::edenfs::types::MountState;
@@ -68,9 +67,12 @@ const SNAPSHOT_MAGIC_2: &[u8] = b"eden\x00\x00\x00\x02";
 const SNAPSHOT_MAGIC_3: &[u8] = b"eden\x00\x00\x00\x03";
 const SNAPSHOT_MAGIC_4: &[u8] = b"eden\x00\x00\x00\x04";
 
-const SUPPORTED_REPOS: &[&str] = &["git", "hg", "recas"];
+// List of supported repository types. This should stay in sync with the list
+// in the Python CLI at fs/cli_rs/edenfs-client/src/checkout.rs and the list in
+// the Daemon's CheckoutConfig at fs/config/CheckoutConfig.h.
+const SUPPORTED_REPOS: &[&str] = &["git", "hg", "recas", "filteredhg"];
 const SUPPORTED_MOUNT_PROTOCOLS: &[&str] = &["fuse", "nfs", "prjfs"];
-const SUPPORTED_INODE_CATALOG_TYPES: &[&str] = &["legacy", "sqlite", "inmemory"];
+const SUPPORTED_INODE_CATALOG_TYPES: &[&str] = &["legacy", "sqlite", "inmemory", "lmdb"];
 
 #[derive(Deserialize, Serialize, Debug)]
 struct Repository {
@@ -104,7 +106,11 @@ struct Repository {
     #[serde(rename = "use-write-back-cache", default)]
     use_write_back_cache: bool,
 
-    #[serde(rename = "enable-windows-symlinks", default)]
+    #[serde(
+        rename = "enable-windows-symlinks",
+        default = "default_enable_windows_symlinks",
+        deserialize_with = "deserialize_enable_windows_symlinks"
+    )]
     enable_windows_symlinks: bool,
 
     #[serde(
@@ -113,6 +119,18 @@ struct Repository {
         deserialize_with = "deserialize_inode_catalog_type"
     )]
     inode_catalog_type: Option<String>,
+}
+
+fn default_enable_windows_symlinks() -> bool {
+    cfg!(target_os = "windows")
+}
+
+fn deserialize_enable_windows_symlinks<'de, D>(deserializer: D) -> Result<bool, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s = bool::deserialize(deserializer)?;
+    Ok(s)
 }
 
 fn default_sqlite_overlay() -> bool {
@@ -279,14 +297,6 @@ impl CheckoutConfig {
         Ok(config)
     }
 
-    pub fn print_prefetch_profiles(&self) {
-        if let Some(profiles) = &self.profiles {
-            for s in profiles.active.iter() {
-                println!("{}", s);
-            }
-        }
-    }
-
     pub fn get_prefetch_profiles(&self) -> Result<&Vec<String>> {
         if let Some(profiles) = &self.profiles {
             Ok(&profiles.active)
@@ -380,23 +390,15 @@ impl CheckoutConfig {
     }
 
     /// Add a profile to the config (read the config file and write it back
-    /// with profile added). Returns true if we should fetch, false otherwise.
-    pub fn activate_profile(
-        &mut self,
-        profile: &str,
-        config_dir: PathBuf,
-        force_fetch: &bool,
-    ) -> Result<bool> {
+    /// with profile added).
+    pub fn activate_profile(&mut self, profile: &str, config_dir: PathBuf) -> Result<()> {
         if let Some(profiles) = &mut self.profiles {
             if profiles.active.iter().any(|x| x == profile) {
-                // The profile is already activated so we don't need to update the profile list,
-                // but we want to return a success so we continue with the fetch
-                if *force_fetch {
-                    return Ok(true);
-                }
+                // The profile is already activated so we don't need to update the profile list
                 eprintln!("{} is already an active prefetch profile", profile);
-                return Ok(false);
+                return Ok(());
             }
+
             profiles.push(profile);
             self.save_config(config_dir.clone()).with_context(|| {
                 anyhow!(
@@ -404,8 +406,13 @@ impl CheckoutConfig {
                     &config_dir.display()
                 )
             })?;
+            Ok(())
+        } else {
+            Err(EdenFsError::Other(anyhow!(
+                "failed to activate prefetch profile '{}'; could not find active profile list",
+                profile
+            )))
         }
-        Ok(true)
     }
 
     /// Switch on predictive prefetch profiles (read the config file and write
@@ -688,7 +695,7 @@ impl EdenFsCheckout {
         background: bool,
         predictive: bool,
         predictive_num_dirs: u32,
-    ) -> Result<Glob> {
+    ) -> Result<()> {
         let mut commit_vec = vec![];
         if predict_revisions {
             // The arc and hg commands need to be run in the mount mount, so we need
@@ -799,8 +806,11 @@ impl EdenFsCheckout {
                 predictiveGlob: Some(predictive_params),
                 ..Default::default()
             };
-            let res = client.predictiveGlobFiles(&glob_params).await;
-            Ok(res.context("Failed predictiveGlobFiles() thrift call")?)
+            client
+                .predictiveGlobFiles(&glob_params)
+                .await
+                .context("Failed predictiveGlobFiles() thrift call")?;
+            Ok(())
         } else {
             let profile_set = all_profile_contents.into_iter().collect::<Vec<_>>();
             let prefetch_params = PrefetchParams {
@@ -814,7 +824,7 @@ impl EdenFsCheckout {
             let res = client.prefetchFiles(&prefetch_params).await;
 
             match res {
-                Ok(_) => Ok(Glob::default()),
+                Ok(_) => Ok(()),
                 Err(error) => {
                     if is_unknown_method_error(&error) {
                         let glob_params = GlobParams {
@@ -827,8 +837,11 @@ impl EdenFsCheckout {
                             background,
                             ..Default::default()
                         };
-                        let glob_res = client.globFiles(&glob_params).await;
-                        Ok(glob_res.context("Failed globFiles() thrift call")?)
+                        client
+                            .globFiles(&glob_params)
+                            .await
+                            .context("Failed globFiles() thrift call")?;
+                        Ok(())
                     } else {
                         Err(EdenFsError::Other(error.into()))
                     }
@@ -859,7 +872,7 @@ impl EdenFsCheckout {
         predict_revisions: bool,
         predictive: bool,
         predictive_num_dirs: u32,
-    ) -> Result<Vec<Glob>> {
+    ) -> Result<()> {
         let mut profiles_to_fetch = profiles.clone();
 
         let config = instance
@@ -874,7 +887,7 @@ impl EdenFsCheckout {
                     the EdenFS configs.",
                 );
             } else {
-                return Ok(vec![Glob::default()]);
+                return Ok(());
             }
         }
 
@@ -886,11 +899,10 @@ impl EdenFsCheckout {
                     the EdenFS configs."
                 );
             }
-            return Ok(vec![Glob::default()]);
+            return Ok(());
         }
 
         let mut profile_contents = HashSet::new();
-        let mut glob_results = vec![];
 
         if !predictive {
             // special trees prefetch profile which fetches all of the trees in the repo, kick this
@@ -901,23 +913,21 @@ impl EdenFsCheckout {
                 let mut profile_set = HashSet::new();
                 profile_set.insert("**/*".to_owned());
 
-                let blob_res = self
-                    .make_prefetch_request(
-                        instance,
-                        profile_set,
-                        true, // only prefetch directories
-                        silent,
-                        revisions.clone(),
-                        predict_revisions,
-                        background,
-                        predictive,
-                        predictive_num_dirs,
-                    )
-                    .await
-                    .with_context(|| anyhow!("make_prefetch_request() failed, returning early"))?;
-                glob_results.push(blob_res);
+                self.make_prefetch_request(
+                    instance,
+                    profile_set,
+                    true, // only prefetch directories
+                    silent,
+                    revisions.clone(),
+                    predict_revisions,
+                    background,
+                    predictive,
+                    predictive_num_dirs,
+                )
+                .await
+                .with_context(|| anyhow!("make_prefetch_request() failed, returning early"))?;
                 if profiles_to_fetch.is_empty() {
-                    return Ok(glob_results);
+                    return Ok(());
                 }
             }
 
@@ -930,22 +940,20 @@ impl EdenFsCheckout {
                 profile_contents.extend(res);
             }
         }
-        let blob_res = self
-            .make_prefetch_request(
-                instance,
-                profile_contents,
-                directories_only,
-                silent,
-                revisions,
-                predict_revisions,
-                background,
-                predictive,
-                predictive_num_dirs,
-            )
-            .await
-            .with_context(|| anyhow!("make_prefetch_request() failed, returning early"))?;
-        glob_results.push(blob_res);
-        Ok(glob_results)
+        self.make_prefetch_request(
+            instance,
+            profile_contents,
+            directories_only,
+            silent,
+            revisions,
+            predict_revisions,
+            background,
+            predictive,
+            predictive_num_dirs,
+        )
+        .await
+        .with_context(|| anyhow!("make_prefetch_request() failed, returning early"))?;
+        Ok(())
     }
 }
 
@@ -1053,7 +1061,7 @@ fn get_checkout_root_state(path: &Path) -> Result<(Option<PathBuf>, Option<PathB
     let mut checkout_state_dir = None;
 
     // On Windows, walk backwards through the path until you find the `.eden` folder
-    let mut curr_dir = Some(path.clone());
+    let mut curr_dir = Some(path);
     while let Some(candidate_dir) = curr_dir {
         if candidate_dir.join(".eden").exists() {
             let config_file = candidate_dir.join(".eden").join("config");

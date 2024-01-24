@@ -69,21 +69,22 @@ impl Display for DisplayChangeset {
         writeln!(fmt, "Message: {}", self.message)?;
         writeln!(fmt, "FileChanges:")?;
         for (path, change) in self.file_changes.iter() {
-            match change {
-                FileChange::Change(change) => match change.copy_from() {
-                    Some(_) => writeln!(fmt, "\t COPY/MOVE: {} {}", path, change.content_id())?,
-                    None => writeln!(fmt, "\t ADDED/MODIFIED: {} {}", path, change.content_id())?,
-                },
-                FileChange::Deletion => writeln!(fmt, "\t REMOVED: {}", path)?,
-                FileChange::UntrackedChange(change) => writeln!(
-                    fmt,
-                    "\t UNTRACKED ADD/MODIFY: {} {}",
-                    path,
-                    change.content_id()
-                )?,
-                FileChange::UntrackedDeletion => writeln!(fmt, "\t MISSING: {}", path)?,
-            }
+            writeln!(fmt, "{}", display_file_change(path, change))?;
         }
         Ok(())
+    }
+}
+
+pub fn display_file_change(path: &String, change: &FileChange) -> String {
+    match change {
+        FileChange::Change(change) => match change.copy_from() {
+            Some(_) => format!("\t COPY/MOVE: {} {}", path, change.content_id()),
+            None => format!("\t ADDED/MODIFIED: {} {}", path, change.content_id()),
+        },
+        FileChange::Deletion => format!("\t REMOVED: {}", path),
+        FileChange::UntrackedChange(change) => {
+            format!("\t UNTRACKED ADD/MODIFY: {} {}", path, change.content_id())
+        }
+        FileChange::UntrackedDeletion => format!("\t MISSING: {}", path),
     }
 }

@@ -12,8 +12,7 @@ use lazystr::LazyStr;
 
 /// TermLogger mixes the IO object with knowledge of output verbosity.
 pub struct TermLogger {
-    output: io::IOOutput,
-    error: io::IOError,
+    io: IO,
     quiet: bool,
     verbose: bool,
 }
@@ -21,8 +20,15 @@ pub struct TermLogger {
 impl TermLogger {
     pub fn new(io: &IO) -> Self {
         TermLogger {
-            output: io.output(),
-            error: io.error(),
+            io: io.clone(),
+            quiet: false,
+            verbose: false,
+        }
+    }
+
+    pub fn null() -> Self {
+        TermLogger {
+            io: IO::null(),
             quiet: false,
             verbose: false,
         }
@@ -39,21 +45,21 @@ impl TermLogger {
     }
 
     /// Write to stdout if not --quiet.
-    pub fn info(&mut self, msg: impl LazyStr) {
+    pub fn info(&self, msg: impl LazyStr) {
         if !self.quiet {
-            Self::write(&mut self.output, msg.to_str())
+            Self::write(self.io.output(), msg.to_str())
         }
     }
 
     /// Write to stderr.
-    pub fn warn(&mut self, msg: impl AsRef<str>) {
-        Self::write(&mut self.error, msg)
+    pub fn warn(&self, msg: impl AsRef<str>) {
+        Self::write(self.io.error(), msg)
     }
 
     /// Write to stdout if --verbose.
-    pub fn verbose(&mut self, msg: impl LazyStr) {
+    pub fn verbose(&self, msg: impl LazyStr) {
         if self.verbose {
-            Self::write(&mut self.output, msg.to_str())
+            Self::write(self.io.output(), msg.to_str())
         }
     }
 
@@ -62,9 +68,12 @@ impl TermLogger {
         identity::cli_name()
     }
 
-    pub fn flush(&mut self) {
-        let _ = self.output.flush();
-        let _ = self.error.flush();
+    pub fn flush(&self) {
+        let _ = self.io.flush();
+    }
+
+    pub fn io(&self) -> &IO {
+        &self.io
     }
 
     fn write(mut w: impl Write, msg: impl AsRef<str>) {
@@ -89,7 +98,7 @@ mod test {
     #[test]
     fn test_quiet() {
         let io = IO::new("".as_bytes(), Vec::new(), Some(Vec::new()));
-        let mut logger = TermLogger::new(&io).with_quiet(true);
+        let logger = TermLogger::new(&io).with_quiet(true);
         logger.info("hello");
         logger.warn("error");
         assert_eq!(get_stdout(&io), "");
@@ -99,7 +108,7 @@ mod test {
     #[test]
     fn test_default() {
         let io = IO::new("".as_bytes(), Vec::new(), Some(Vec::new()));
-        let mut logger = TermLogger::new(&io);
+        let logger = TermLogger::new(&io);
         logger.info("status");
         logger.verbose("verbose");
         logger.warn("warn");
@@ -110,13 +119,13 @@ mod test {
     #[test]
     fn test_verbose() {
         let io = IO::new("".as_bytes(), Vec::new(), Some(Vec::new()));
-        let mut logger = TermLogger::new(&io);
+        let logger = TermLogger::new(&io);
         logger.verbose(|| -> String {
             panic!("don't call me!");
         });
         assert_eq!(get_stdout(&io), "");
 
-        let mut logger = logger.with_verbose(true);
+        let logger = logger.with_verbose(true);
         logger.verbose(|| "okay".to_string());
         assert_eq!(get_stdout(&io), "okay\n");
     }

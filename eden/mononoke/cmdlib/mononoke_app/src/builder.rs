@@ -36,8 +36,8 @@ use cmdlib_caching::CachelibSettings;
 use cmdlib_logging::LoggingArgs;
 use cmdlib_logging::ScubaLoggingArgs;
 use derived_data_remote::RemoteDerivationArgs;
+use environment::BookmarkCacheOptions;
 use environment::MononokeEnvironment;
-use environment::WarmBookmarksCacheDerivedData;
 use fbinit::FacebookInit;
 use megarepo_config::MegarepoConfigsArgs;
 use megarepo_config::MononokeMegarepoConfigsOptions;
@@ -62,6 +62,7 @@ use crate::app::MononokeApp;
 use crate::args::parse_config_spec_to_path;
 use crate::args::AclArgs;
 use crate::args::ConfigArgs;
+use crate::args::JustKnobsArgs;
 use crate::args::MysqlArgs;
 use crate::args::RuntimeArgs;
 use crate::args::TunablesArgs;
@@ -77,7 +78,7 @@ pub struct MononokeAppBuilder {
     cachelib_settings: CachelibSettings,
     default_scuba_dataset: Option<String>,
     defaults: HashMap<&'static str, String>,
-    warm_bookmarks_cache_derived_data: Option<WarmBookmarksCacheDerivedData>,
+    bookmark_cache_options: BookmarkCacheOptions,
 }
 
 #[derive(Args, Debug)]
@@ -99,6 +100,9 @@ pub struct EnvironmentArgs {
 
     #[clap(flatten, next_help_heading = "TUNABLES OPTIONS")]
     tunables_args: TunablesArgs,
+
+    #[clap(flatten, next_help_heading = "JUST KNOBS OPTIONS")]
+    just_knobs_args: JustKnobsArgs,
 
     #[clap(flatten, next_help_heading = "BLOBSTORE OPTIONS")]
     blobstore_args: BlobstoreArgs,
@@ -132,7 +136,7 @@ impl MononokeAppBuilder {
             cachelib_settings: CachelibSettings::default(),
             default_scuba_dataset: None,
             defaults: HashMap::new(),
-            warm_bookmarks_cache_derived_data: None,
+            bookmark_cache_options: Default::default(),
         }
     }
 
@@ -146,11 +150,8 @@ impl MononokeAppBuilder {
         self
     }
 
-    pub fn with_warm_bookmarks_cache(
-        mut self,
-        warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData,
-    ) -> Self {
-        self.warm_bookmarks_cache_derived_data = Some(warm_bookmarks_cache_derived_data);
+    pub fn with_bookmarks_cache(mut self, bookmark_cache_options: BookmarkCacheOptions) -> Self {
+        self.bookmark_cache_options = bookmark_cache_options;
         self
     }
 
@@ -286,6 +287,7 @@ impl MononokeAppBuilder {
             remote_derivation_args,
             rendezvous_args,
             tunables_args,
+            just_knobs_args,
         } = env_args;
 
         let log_level = logging_args.create_log_level();
@@ -361,6 +363,12 @@ impl MononokeAppBuilder {
             logger.clone(),
             runtime.handle().clone(),
         )?;
+        init_just_knobs_worker(
+            &just_knobs_args,
+            &config_store,
+            logger.clone(),
+            runtime.handle().clone(),
+        )?;
 
         Ok(MononokeEnvironment {
             fb: self.fb,
@@ -379,7 +387,7 @@ impl MononokeAppBuilder {
             megarepo_configs_options,
             remote_derivation_options,
             disabled_hooks: HashMap::new(),
-            warm_bookmarks_cache_derived_data: self.warm_bookmarks_cache_derived_data,
+            bookmark_cache_options: self.bookmark_cache_options.clone(),
             filter_repos: None,
         })
     }
@@ -547,6 +555,21 @@ fn init_tunables_worker(
         config_store.get_config_handle(parse_config_spec_to_path(&tunables_config)?)?;
 
     tunables::init_tunables_worker(logger, config_handle, handle)
+}
+
+fn init_just_knobs_worker(
+    just_knobs_args: &JustKnobsArgs,
+    config_store: &ConfigStore,
+    logger: Logger,
+    handle: Handle,
+) -> Result<()> {
+    if let Some(just_knobs_config_path) = &just_knobs_args.just_knobs_config_path {
+        let config_handle =
+            config_store.get_config_handle(parse_config_spec_to_path(just_knobs_config_path)?)?;
+        justknobs::cached_config::init_just_knobs_worker(logger, config_handle, handle)
+    } else {
+        Ok(())
+    }
 }
 
 fn create_acl_provider(fb: FacebookInit, acl_args: &AclArgs) -> Result<Arc<dyn AclProvider>> {

@@ -23,3 +23,16 @@
     transform: rotate(360deg);
   }
 }
+
+.icon-blue {
+  color: var(--button-primary-background);
+}
+.icon-red {
+  color: var(--signal-bad-bg);
+}
+.icon-yellow {
+  color: var(--signal-medium-bg);
+}
+.icon-green {
+  color: var(--signal-good-bg);
+}

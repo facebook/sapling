@@ -9,8 +9,9 @@ use std::fmt;
 
 use anyhow::Error;
 use bookmarks::BookmarkKey;
+use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use permission_checker::MononokeIdentitySet;
 use thiserror::Error;
 
@@ -22,9 +23,9 @@ pub enum DeniedAction {
     FullRepoRead,
     FullRepoDraft,
     RepoMetadataRead,
-    PathRead(ChangesetId, Option<MPath>),
+    PathRead(ChangesetId, MPath),
     RepoWrite(RepoWriteOperation),
-    PathWrite(MPath),
+    PathWrite(NonRootMPath),
     BookmarkModification(BookmarkKey),
     OverrideGitMapping,
     GitImportOperation,
@@ -36,14 +37,17 @@ impl fmt::Display for DeniedAction {
             DeniedAction::FullRepoRead => f.write_str("Full repo read access"),
             DeniedAction::FullRepoDraft => f.write_str("Full repo draft access"),
             DeniedAction::RepoMetadataRead => f.write_str("Repo metadata read access"),
-            DeniedAction::PathRead(csid, None) => {
-                write!(f, "Repo read access for root of changeset {}", csid)
+            DeniedAction::PathRead(csid, path) => {
+                if path.is_root() {
+                    write!(f, "Repo read access for root of changeset {}", csid)
+                } else {
+                    write!(
+                        f,
+                        "Repo read access for path '{}' in changeset {}",
+                        path, csid
+                    )
+                }
             }
-            DeniedAction::PathRead(csid, Some(path)) => write!(
-                f,
-                "Repo read access for path '{}' in changeset {}",
-                path, csid
-            ),
             DeniedAction::RepoWrite(op) => write!(f, "Repo write access for {:?}", op),
             DeniedAction::PathWrite(path) => write!(f, "Repo write access to path '{}'", path),
             DeniedAction::BookmarkModification(bookmark) => {

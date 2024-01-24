@@ -8,7 +8,7 @@
 //! Base types used throughout Mononoke.
 #![feature(round_char_boundary)]
 
-pub mod basename_suffix_skeleton_manifest;
+pub mod basename_suffix_skeleton_manifest_v3;
 pub mod blame_v2;
 pub mod blob;
 pub mod bonsai_changeset;
@@ -31,10 +31,14 @@ pub mod redaction_key_list;
 pub mod repo;
 pub mod sha1_hash;
 pub mod sharded_map;
+pub mod sharded_map_v2;
 pub mod skeleton_manifest;
 pub mod sql_types;
 pub mod svnrev;
+pub mod test_manifest;
+pub mod test_sharded_manifest;
 pub mod thrift_convert;
+pub mod trie_map;
 pub mod typed_hash;
 pub mod unode;
 
@@ -73,10 +77,11 @@ pub use generation::FIRST_GENERATION;
 pub use globalrev::Globalrev;
 pub use path::check_case_conflicts;
 pub use path::mpath_element_iter;
+pub use path::non_root_mpath_element_iter;
 pub use path::path_bytes_from_mpath;
-pub use path::MPath;
 pub use path::MPathElement;
 pub use path::MPathHash;
+pub use path::NonRootMPath;
 pub use path::PrefixTrie;
 pub use path::RepoPath;
 pub use rawbundle2::RawBundle2;
@@ -85,8 +90,9 @@ pub use repo::RepositoryId;
 pub use repo::REPO_PREFIX_REGEX;
 pub use svnrev::Svnrev;
 pub use thrift_convert::ThriftConvert;
-pub use typed_hash::BasenameSuffixSkeletonManifestId;
+pub use trie_map::TrieMap;
 pub use typed_hash::BlobstoreKey;
+pub use typed_hash::BssmV3DirectoryId;
 pub use typed_hash::ChangesetId;
 pub use typed_hash::ChangesetIdPrefix;
 pub use typed_hash::ChangesetIdsResolvedFromPrefix;
@@ -101,6 +107,8 @@ pub use typed_hash::ManifestUnodeId;
 pub use typed_hash::MononokeId;
 pub use typed_hash::RawBundle2Id;
 pub use typed_hash::SkeletonManifestId;
+pub use typed_hash::TestManifestId;
+pub use typed_hash::TestShardedManifestId;
 
 mod macros;
 

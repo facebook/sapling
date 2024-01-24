@@ -26,37 +26,67 @@ from typing import (
     Union,
 )
 
-import edenscm.connectionpool
-import edenscm.context
-import edenscm.filelog
-import edenscm.lock
-import edenscm.namespaces
-import edenscm.pathutil
-import edenscm.peer
-import edenscm.phases
-import edenscm.repository
-import edenscm.scmutil
-import edenscm.store
-import edenscm.urllibcompat
-import edenscm.util
-import edenscm.vfs
+# pyre-fixme[21]: Could not find module `sapling.connectionpool`.
+import sapling.connectionpool
+
+# pyre-fixme[21]: Could not find module `sapling.context`.
+import sapling.context
+
+# pyre-fixme[21]: Could not find module `sapling.filelog`.
+import sapling.filelog
+
+# pyre-fixme[21]: Could not find module `sapling.lock`.
+import sapling.lock
+
+# pyre-fixme[21]: Could not find module `sapling.namespaces`.
+import sapling.namespaces
+
+# pyre-fixme[21]: Could not find module `sapling.pathutil`.
+import sapling.pathutil
+
+# pyre-fixme[21]: Could not find module `sapling.peer`.
+import sapling.peer
+
+# pyre-fixme[21]: Could not find module `sapling.phases`.
+import sapling.phases
+
+# pyre-fixme[21]: Could not find module `sapling.repository`.
+import sapling.repository
+
+# pyre-fixme[21]: Could not find module `sapling.scmutil`.
+import sapling.scmutil
+
+# pyre-fixme[21]: Could not find module `sapling.store`.
+import sapling.store
+
+# pyre-fixme[21]: Could not find module `sapling.urllibcompat`.
+import sapling.urllibcompat
+
+# pyre-fixme[21]: Could not find module `sapling.util`.
+import sapling.util
+
+# pyre-fixme[21]: Could not find module `sapling.vfs`.
+import sapling.vfs
 
 _T = TypeVar("_T")
 _T0 = TypeVar("_T0")
 _T1 = TypeVar("_T1")
-_Tlocalpeer = TypeVar("_Tlocalpeer", bound="edenscm.repository._basepeer")
+_Tlocalpeer = TypeVar("_Tlocalpeer", bound="sapling.repository._basepeer")
 _Tlocalrepository = TypeVar("_Tlocalrepository", bound=localrepository)
 
-class _basefilecache(edenscm.scmutil.filecache):
+# pyre-fixme[11]: Annotation `filecache` is not defined as a type.
+class _basefilecache(sapling.scmutil.filecache):
     __doc__: str
     def __delete__(self, obj) -> None: ...
     def __get__(self, obj, type=...) -> Any: ...
     def __set__(self, obj, value) -> None: ...
 
-class filteredpropertycache(edenscm.util.propertycache):
+# pyre-fixme[11]: Annotation `propertycache` is not defined as a type.
+class filteredpropertycache(sapling.util.propertycache):
     __doc__: str
 
-class locallegacypeer(edenscm.repository.legacypeer, localpeer):
+# pyre-fixme[11]: Annotation `legacypeer` is not defined as a type.
+class locallegacypeer(sapling.repository.legacypeer, localpeer):
     __doc__: str
     _caps: Any
     _repo: Any
@@ -67,7 +97,8 @@ class locallegacypeer(edenscm.repository.legacypeer, localpeer):
     def changegroup(self, nodes, kind) -> Any: ...
     def changegroupsubset(self, bases, heads, kind) -> Any: ...
 
-class localpeer(edenscm.repository.peer):
+# pyre-fixme[11]: Annotation `peer` is not defined as a type.
+class localpeer(sapling.repository.peer):
     __doc__: str
     _caps: Any
     _repo: Any
@@ -83,11 +114,13 @@ class localpeer(edenscm.repository.peer):
         self, source, heads=..., common=..., bundlecaps=..., **kwargs
     ) -> Any: ...
     def heads(self, *args, **kwargs) -> list: ...
-    def iterbatch(self) -> edenscm.peer.localiterbatcher: ...
+    # pyre-fixme[11]: Annotation `localiterbatcher` is not defined as a type.
+    def iterbatch(self) -> sapling.peer.localiterbatcher: ...
     def known(self, nodes) -> Any: ...
     def listkeys(self, namespace) -> Any: ...
     def local(self) -> Any: ...
     def lookup(self, key) -> Any: ...
+    # pyre-fixme[11]: Annotation `_Tlocalpeer` is not defined as a type.
     def peer(self: _Tlocalpeer) -> _Tlocalpeer: ...
     def pushkey(self, namespace, key, old, new) -> Any: ...
     def stream_out(self, shallow=...) -> NoReturn: ...
@@ -111,27 +144,34 @@ class localrepository:
     _lockfreeprefix: Set[str]
     _lockref: Optional[_weakref.ReferenceType[Any]]
     _mutationstore: Any
-    _phasecache: edenscm.phases.phasecache
+    # pyre-fixme[11]: Annotation `phasecache` is not defined as a type.
+    _phasecache: sapling.phases.phasecache
     _phasedefaults: List[Any]
     _postdsstatus: List[Tuple[Any, Any]]
     _transref: Optional[_weakref.ReferenceType[Any]]
     _wlockfreeprefix: Set[str]
     _wlockref: Optional[_weakref.ReferenceType[Any]]
-    auditor: edenscm.pathutil.pathauditor
-    baseui: edenscm.ui.ui
-    cachevfs: edenscm.vfs.vfs
-    connectionpool: edenscm.connectionpool.connectionpool
-    dirstate: edenscm.dirstate.dirstate
+    # pyre-fixme[11]: Annotation `pathauditor` is not defined as a type.
+    auditor: sapling.pathutil.pathauditor
+    # pyre-fixme[11]: Annotation `ui` is not defined as a type.
+    baseui: sapling.ui.ui
+    # pyre-fixme[11]: Annotation `vfs` is not defined as a type.
+    cachevfs: sapling.vfs.vfs
+    # pyre-fixme[11]: Annotation `connectionpool` is not defined as a type.
+    connectionpool: sapling.connectionpool.connectionpool
+    # pyre-fixme[11]: Annotation `dirstate` is not defined as a type.
+    dirstate: sapling.dirstate.dirstate
     disableeventreporting: Callable[..., contextlib._GeneratorContextManager]
     featuresetupfuncs: Set[Any]
     fileservice: Any
     fileslog: Any
     filteredrevcache: Dict[Any, Any]
     filterpats: Dict[Any, List[Tuple[Any, Any, Any]]]
-    localvfs: edenscm.vfs.vfs
+    localvfs: sapling.vfs.vfs
     manifestlog: Any
-    names: edenscm.namespaces.namespaces
-    nofsauditor: edenscm.pathutil.pathauditor
+    # pyre-fixme[11]: Annotation `namespaces` is not defined as a type.
+    names: sapling.namespaces.namespaces
+    nofsauditor: sapling.pathutil.pathauditor
     obsstore: Any
     openerreqs: Set[str]
     origroot: str
@@ -142,19 +182,20 @@ class localrepository:
     sharedfeatures: Set[str]
     sharedpath: str
     sharedroot: str
-    sharedvfs: Optional[edenscm.vfs.vfs]
+    sharedvfs: Optional[sapling.vfs.vfs]
     sjoin: Callable[[Any], Any]
     spath: str
-    store: edenscm.store.basicstore
+    # pyre-fixme[11]: Annotation `basicstore` is not defined as a type.
+    store: sapling.store.basicstore
     storefeaturesetupfuncs: Set[Any]
     storerequirements: Set[str]
     storesupported: Set[str]
     supported: Set[str]
     supportedformats: Set[str]
-    svfs: edenscm.vfs.vfs
-    ui: edenscm.ui.ui
-    vfs: edenscm.vfs.vfs
-    wvfs: edenscm.vfs.vfs
+    svfs: sapling.vfs.vfs
+    ui: sapling.ui.ui
+    vfs: sapling.vfs.vfs
+    wvfs: sapling.vfs.vfs
     def __bool__(self) -> bool: ...
     def __contains__(self, changeid) -> bool: ...
     def __getitem__(self, changeid) -> Any: ...
@@ -180,9 +221,9 @@ class localrepository:
         self,
     ) -> Tuple[
         Tuple[Any, str],
-        Tuple[edenscm.vfs.vfs, str],
-        Tuple[edenscm.vfs.vfs, str],
-        Tuple[edenscm.vfs.vfs, str],
+        Tuple[sapling.vfs.vfs, str],
+        Tuple[sapling.vfs.vfs, str],
+        Tuple[sapling.vfs.vfs, str],
         Tuple[Any, str],
         Tuple[Any, str],
         Tuple[Any, str],
@@ -220,8 +261,9 @@ class localrepository:
     def cancopy(self) -> bool: ...
     def changectx(
         self,
-        changeid: Union[int, str, bytes, edenscm.context.basectx],
-    ) -> edenscm.context.basectx: ...
+        # pyre-fixme[11]: Annotation `basectx` is not defined as a type.
+        changeid: Union[int, str, bytes, sapling.context.basectx],
+    ) -> sapling.context.basectx: ...
     def checkcommitpatterns(self, wctx, match, status, fail) -> None: ...
     def checkpush(self, pushop) -> None: ...
     def clearpostdsstatus(self) -> None: ...
@@ -234,8 +276,10 @@ class localrepository:
     def debugwireargs(self, one, two, three=..., four=..., five=...) -> str: ...
     def destroyed(self) -> None: ...
     def destroying(self) -> None: ...
-    def file(self, f) -> edenscm.filelog.filelog: ...
-    def filectx(self, path, changeid=..., fileid=...) -> edenscm.context.filectx: ...
+    # pyre-fixme[11]: Annotation `filelog` is not defined as a type.
+    def file(self, f) -> sapling.filelog.filelog: ...
+    # pyre-fixme[11]: Annotation `filectx` is not defined as a type.
+    def filectx(self, path, changeid=..., fileid=...) -> sapling.context.filectx: ...
     def getcwd(self) -> str: ...
     def headrevs(
         self, start=..., includepublic=..., includedraft=..., reverse=...
@@ -297,7 +341,7 @@ class storecache(_basefilecache):
     __doc__: str
     def join(self, obj, fname) -> Any: ...
 
-class unfilteredpropertycache(edenscm.util.propertycache):
+class unfilteredpropertycache(sapling.util.propertycache):
     __doc__: str
     def __get__(self, obj, type=...) -> Any: ...
 

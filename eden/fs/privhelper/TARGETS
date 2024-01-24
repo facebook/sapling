@@ -1,0 +1,150 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+
+oncall("scm_client_infra")
+
+cpp_library(
+    name = "interface",
+    srcs = ["PrivHelper.cpp"],
+    headers = ["PrivHelper.h"],
+    deps = [
+        "//folly:file",
+        "//folly/futures:core",
+        "//folly/io/async:async_base",
+    ],
+    exported_deps = [
+        "//folly:network_address",
+        "//folly:portability",
+        "//folly:range",
+    ],
+)
+
+cpp_library(
+    name = "flags",
+    srcs = ["PrivHelperFlags.cpp"],
+    headers = ["PrivHelperFlags.h"],
+    exported_deps = [
+        "//folly/portability:gflags",
+    ],
+)
+
+cpp_library(
+    name = "conn",
+    srcs = ["PrivHelperConn.cpp"],
+    headers = ["PrivHelperConn.h"],
+    deps = [
+        "//eden/fs/utils:system_error",
+        "//eden/fs/utils:throw",
+        "//eden/fs/utils:utils",
+        "//folly:demangle",
+        "//folly:exception",
+        "//folly:file",
+        "//folly:file_util",
+        "//folly:network_address",
+        "//folly:scope_guard",
+        "//folly/futures:core",
+        "//folly/logging:logging",
+        "//folly/portability:gflags",
+        "//folly/portability:sockets",
+        "//folly/portability:unistd",
+    ],
+    exported_deps = [
+        "//eden/fs/utils:io",
+        "//folly:range",
+        "//folly/io:iobuf",
+    ],
+)
+
+cpp_library(
+    name = "server",
+    srcs = [
+        "PrivHelperServer.cpp",
+        "PrivHelperServerSanityCheck.cpp",
+    ],
+    headers = ["PrivHelperServer.h"],
+    os_deps = [(
+        "macos",
+        [
+            "fbsource//third-party/osxfuse:osxfuse",
+            "fbsource//third-party/toolchains/macos:CoreFoundation",
+            "fbsource//third-party/toolchains/macos:IOKit",
+        ],
+    )],
+    deps = [
+        ":nfs_rpc",
+        "//eden/fs/utils:path",
+        "//eden/fs/utils:process",
+        "//eden/fs/utils:sysctl_util",
+        "//eden/fs/utils:throw",
+        "//folly:conv",
+        "//folly:exception",
+        "//folly:expected",
+        "//folly:file",
+        "//folly:file_util",
+        "//folly:network_address",
+        "//folly:string",
+        "//folly:utility",
+        "//folly/init:init",
+        "//folly/io:iobuf",
+        "//folly/io/async:async_base",
+        "//folly/logging:init",
+        "//folly/logging:logging",
+        "//folly/portability:unistd",
+        "//folly/system:thread_name",
+    ],
+    exported_deps = [
+        ":conn",
+        "//eden/fs/utils:io",
+    ],
+    external_deps = [
+        ("boost", None, "boost_algorithm"),
+    ],
+)
+
+cpp_library(
+    name = "privhelper",
+    srcs = [
+        "PrivHelperImpl.cpp",
+    ],
+    headers = [
+        "PrivHelperImpl.h",
+    ],
+    deps = [
+        ":conn",
+        ":flags",
+        ":interface",
+        ":server",
+        "//eden/fs/utils:eden_error",
+        "//eden/fs/utils:io",
+        "//eden/fs/utils:process",
+        "//eden/fs/utils:user_info",
+        "//eden/fs/utils:utils",
+        "//folly:exception",
+        "//folly:expected",
+        "//folly:file",
+        "//folly:file_util",
+        "//folly:network_address",
+        "//folly:string",
+        "//folly:synchronized",
+        "//folly/futures:core",
+        "//folly/init:init",
+        "//folly/io:iobuf",
+        "//folly/io/async:async_base",
+        "//folly/logging:init",
+        "//folly/logging:logging",
+        "//folly/portability:sys_types",
+        "//folly/portability:unistd",
+    ],
+    exported_deps = [
+        "//eden/fs/utils:path",
+        "//folly/portability:gflags",
+    ],
+)
+
+cpp_library(
+    name = "nfs_rpc",
+    srcs = ["NfsMountRpc.cpp"],
+    headers = ["NfsMountRpc.h"],
+    exported_deps = [
+        "//eden/fs/nfs/xdr:xdr",
+    ],
+)

@@ -1,0 +1,53 @@
+load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
+load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
+load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+load("//eden:defs.bzl", "get_integration_test_env_and_deps")
+
+oncall("scm_client_infra")
+
+artifacts = get_integration_test_env_and_deps()
+
+python_library(
+    name = "snapshot",
+    srcs = [
+        "inode_metadata.py",
+        "snapshot.py",
+        "verify.py",
+    ] + glob(["types/*.py"]),
+    deps = [
+        "//eden/integration/lib:lib",
+        "//eden/test_support:py",
+    ],
+)
+
+python_binary(
+    name = "gen_snapshot",
+    srcs = ["gen_snapshot.py"],
+    main_function = "eden.integration.snapshot.gen_snapshot.main_2",
+    deps = [
+        ":snapshot",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_binary(
+    name = "unpack_snapshot",
+    srcs = ["unpack_snapshot.py"],
+    main_function = "eden.integration.snapshot.unpack_snapshot.main",
+    deps = [
+        ":snapshot",
+    ],
+)
+
+python_unittest(
+    name = "test_snapshots",
+    srcs = ["test_snapshots.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        ":snapshot",
+        "//eden/integration/lib:lib",
+    ],
+)

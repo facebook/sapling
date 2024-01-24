@@ -39,7 +39,7 @@ fn chg_main_wrapper(args: Vec<CString>, envs: Vec<CString>) -> i32 {
             envp.as_mut_ptr(),
             name.as_c_str().as_ptr(),
         )
-    } as i32;
+    };
     rc
 }
 
@@ -85,6 +85,9 @@ fn file_decision(path: Option<impl AsRef<Path>>) -> Option<bool> {
 fn should_call_chg(args: &[String]) -> (bool, &'static str) {
     if cfg!(target_os = "windows") {
         return (false, "windows");
+    }
+    if !cfg!(feature = "fb") && cfg!(target_os = "macos") {
+        return (false, "macos");
     }
     // This means we're already inside the chg call chain
     if std::env::var_os("CHGINTERNALMARK").is_some() {

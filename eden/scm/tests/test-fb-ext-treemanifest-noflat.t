@@ -11,7 +11,7 @@ This file tests that normal mercurial operations never read the flat manifests
   $ cat >> $TESTTMP/flatcheck.py <<EOF
   > from __future__ import print_function
   > import sys, traceback
-  > from edenscm import extensions, manifest
+  > from sapling import extensions, manifest
   > def uisetup(ui):
   >     extensions.wrapfunction(manifest.manifestrevlog, 'revision', readmf)
   > def readmf(orig, self, nodeorrev, **kwargs):
@@ -26,7 +26,7 @@ This file tests that normal mercurial operations never read the flat manifests
   $ cd master
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > treemanifest=$TESTDIR/../edenscm/ext/treemanifestserver.py
+  > treemanifest=$TESTDIR/../sapling/ext/treemanifestserver.py
   > [treemanifest]
   > server=True
   > [remotefilelog]

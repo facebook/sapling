@@ -1,0 +1,85 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "procinfo",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "target": {
+                    "'cfg(windows)'": {
+                        "dependencies": {
+                            "winapi": {
+                                "features": [
+                                    "handleapi",
+                                    "minwindef",
+                                    "processthreadsapi",
+                                    "psapi",
+                                    "tlhelp32",
+                                ],
+                                "version": "0.3",
+                            },
+                        },
+                    },
+                },
+            },
+            "extra_buck_dependencies": {
+                "target": {
+                    """'cfg(target_os = "macos")'""": {
+                        "build-dependencies": [
+                            "fbsource//third-party/rust:cc",
+                        ],
+                    },
+                },
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    os_deps = [
+        (
+            "macos",
+            [
+                ":macos_compat",
+            ],
+        ),
+        (
+            "windows",
+            [
+                "fbsource//third-party/rust:winapi",
+            ],
+        ),
+    ],
+    deps = [
+        "fbsource//third-party/rust:libc",
+    ],
+)
+
+cpp_library(
+    name = "macos_compat",
+    srcs = ["darwin.c"],
+)
+
+rust_binary(
+    name = "ppid",
+    srcs = ["examples/ppid.rs"],
+    autocargo = {"ignore_rule": True},
+    unittests = False,
+    deps = [
+        ":procinfo",
+    ],
+)
+
+rust_binary(
+    name = "rss",
+    srcs = ["examples/rss.rs"],
+    autocargo = {"ignore_rule": True},
+    unittests = False,
+    deps = [
+        ":procinfo",
+    ],
+)

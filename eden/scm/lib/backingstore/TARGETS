@@ -1,0 +1,93 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbcode_macros//build_defs:rust_cxx_bridge.bzl", "rust_cxx_bridge")
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+cpp_library(
+    name = "sapling_native_backingstore-include",
+    srcs = [],
+    headers = glob(["include/**/*.h"]),
+    exported_deps = [
+        "fbsource//third-party/rust:cxx-core",
+        "//folly:function",
+        "//folly:range",
+        "//folly:try",
+        "//folly/futures:core",
+    ],
+)
+
+cpp_library(
+    # @autodeps-skip
+    name = "sapling_native_backingstore",
+    srcs = glob(["src/**/*.cpp"]),
+    headers = [],
+    preferred_linkage = "static",
+    undefined_symbols = True,
+    deps = [
+        "fbsource//third-party/rust:cxx-core",
+        ":backingstore_bridge@header",
+        ":sapling_native_backingstore-include",
+        "//folly:range",
+        "//folly:string",
+        "//folly/io:iobuf",
+        "//folly/logging:logging",
+    ],
+)
+
+rust_cxx_bridge(
+    name = "backingstore_bridge",
+    src = "src/ffi.rs",
+    deps = [":sapling_native_backingstore-include"],
+)
+
+rust_library(
+    name = "backingstore",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_target_config": {
+            "crate_type": [
+                "staticlib",
+                "lib",
+            ],
+        },
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "constructors": {"default-features": False},
+                    "indexedlog": {"features": ["configurable"]},
+                },
+            },
+            "features": {
+                "fb": ["configloader/fb"],
+            },
+            "package": {
+                "authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"],
+            },
+        },
+    },
+    cpp_deps = [":sapling_native_backingstore"],
+    crate_root = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:arc-swap",
+        "fbsource//third-party/rust:cxx",
+        "fbsource//third-party/rust:env_logger",
+        "fbsource//third-party/rust:log",
+        "fbsource//third-party/rust:parking_lot",
+        "fbsource//third-party/rust:tracing",
+        "fbsource//third-party/rust:tracing-subscriber",
+        ":backingstore_bridge",
+        "//eden/scm/lib/config/loader:configloader",
+        "//eden/scm/lib/constructors:constructors",
+        "//eden/scm/lib/eagerepo:eagerepo",
+        "//eden/scm/lib/edenapi:edenapi",
+        "//eden/scm/lib/identity:identity",
+        "//eden/scm/lib/indexedlog:indexedlog",
+        "//eden/scm/lib/manifest:manifest",
+        "//eden/scm/lib/repo:repo",
+        "//eden/scm/lib/storemodel:storemodel",
+        "//eden/scm/lib/tracing-collector:tracing-collector",
+        "//eden/scm/lib/types:types",
+    ],
+)

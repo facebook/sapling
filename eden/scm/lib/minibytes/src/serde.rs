@@ -18,7 +18,7 @@ use crate::Bytes;
 impl Serialize for Bytes {
     #[inline]
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        serializer.serialize_bytes(&self)
+        serializer.serialize_bytes(self)
     }
 }
 

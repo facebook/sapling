@@ -2,7 +2,7 @@
 
   $ eagerepo
   $ newext testcommands <<EOF
-  > from edenscm import registrar
+  > from sapling import registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command('test', [], 'hg test SUBCOMMAND', subonly=True)

@@ -1,0 +1,66 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.shelved-changes-dropdown {
+  min-width: 400px;
+}
+
+.shelved-changes-title {
+  display: flex;
+  gap: var(--pad);
+  align-items: center;
+}
+
+.shelved-changes-list {
+  display: flex;
+  flex-direction: column;
+  gap: calc(2 * var(--pad));
+  align-items: flex-start;
+}
+
+.shelved-changes-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.unshelve-button {
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.shelved-changes-item:focus-within .unshelve-button,
+.shelved-changes-item:hover .unshelve-button {
+  opacity: 1;
+}
+
+.shelved-changes-item-row {
+  width: 100%;
+  display: flex;
+  gap: var(--pad);
+  align-items: center;
+}
+
+.shelve-name {
+  font-weight: bold;
+  font-size: 90%;
+}
+
+.shelved-changes-item .changed-files {
+  width: 100%;
+  margin-left: 0;
+}
+.shelved-changes-item vscode-button {
+  margin-left: 0;
+}
+
+.shelved-changes-item .changed-files-list {
+  --changed-files-list-height: 80px;
+  --changed-files-overflow-color: var(--tooltip-background);
+}

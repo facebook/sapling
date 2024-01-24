@@ -13,8 +13,10 @@ use async_trait::async_trait;
 use bookmarks_movement::BookmarkKindRestrictions;
 use bytes::Bytes;
 use edenapi_types::HgId;
+use edenapi_types::LandStackData;
 use edenapi_types::LandStackRequest;
 use edenapi_types::LandStackResponse;
+use edenapi_types::ServerError;
 use futures::stream;
 use futures::StreamExt;
 use hooks::PushAuthoredBy;
@@ -44,7 +46,7 @@ impl EdenApiHandler for LandStackHandler {
         ectx: EdenApiContext<Self::PathExtractor, Self::QueryStringExtractor>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
-        Ok(stream::once(land_stack(
+        Ok(stream::once(land_stack_response(
             ectx.repo(),
             request.bookmark,
             request.head,
@@ -59,13 +61,27 @@ impl EdenApiHandler for LandStackHandler {
     }
 }
 
-async fn land_stack(
+async fn land_stack_response(
     repo: HgRepoContext,
     bookmark: String,
     head_hgid: HgId,
     base_hgid: HgId,
     pushvars: HashMap<String, Bytes>,
 ) -> Result<LandStackResponse, Error> {
+    Ok(LandStackResponse {
+        data: land_stack(repo, bookmark, head_hgid, base_hgid, pushvars)
+            .await
+            .map_err(|e| ServerError::generic(format!("{:?}", e))),
+    })
+}
+
+async fn land_stack(
+    repo: HgRepoContext,
+    bookmark: String,
+    head_hgid: HgId,
+    base_hgid: HgId,
+    pushvars: HashMap<String, Bytes>,
+) -> Result<LandStackData, Error> {
     let repo = repo.repo();
 
     let head = HgChangesetId::new(HgNodeHash::from(head_hgid));
@@ -147,7 +163,7 @@ async fn land_stack(
 
     let old_to_new_hgids = old_hgids?.into_iter().zip(new_hgids?.into_iter()).collect();
 
-    Ok(LandStackResponse {
+    Ok(LandStackData {
         new_head: new_head_hgid,
         old_to_new_hgids,
     })

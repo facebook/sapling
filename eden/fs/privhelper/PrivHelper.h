@@ -32,7 +32,7 @@ namespace facebook::eden {
  */
 class PrivHelper {
  public:
-  virtual ~PrivHelper() {}
+  virtual ~PrivHelper() = default;
 
   /**
    * Attach the PrivHelper to an EventBase.

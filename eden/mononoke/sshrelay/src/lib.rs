@@ -153,7 +153,7 @@ impl SshEncoder {
         match &mut self.compressor {
             Some(compressor) => {
                 let buflen = zstd_safe::compress_bound(input.len());
-                if buflen >= zstd_safe::dstream_out_size() {
+                if buflen >= zstd_safe::DStream::out_size() {
                     return Err(anyhow!(
                         "block is too big to compress in to a single zstd block"
                     ));

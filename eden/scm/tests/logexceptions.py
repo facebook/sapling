@@ -13,7 +13,7 @@ import sys
 import traceback
 import uuid
 
-from edenscm import dispatch, extensions
+from sapling import dispatch, extensions
 
 
 def handleexception(orig, ui):
@@ -41,7 +41,7 @@ def handleexception(orig, ui):
     # Find the first Mercurial frame in the stack.
     for tb in stack:
         mod = inspect.getmodule(tb)
-        if not mod.__name__.startswith(("hg", "edenscm")):
+        if not mod.__name__.startswith(("hg", "sapling")):
             continue
 
         frame = tb.tb_frame

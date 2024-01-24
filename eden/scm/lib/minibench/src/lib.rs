@@ -15,6 +15,7 @@
 //! - Minimalism. Without fancy features.
 
 use std::env::args;
+use std::sync::OnceLock;
 
 pub mod measure;
 pub use measure::Measure;
@@ -49,9 +50,7 @@ pub fn elapsed(func: impl FnMut()) -> Result<self::measure::WallClock, String> {
 /// ```
 pub fn bench<T: Measure, F: FnMut() -> Result<T, String>>(name: impl ToString, mut func: F) {
     let name = name.to_string();
-    // The first arg is the program name. Skip it and flag-like arguments (ex. --bench).
-    let args: Vec<String> = args().skip(1).filter(|a| !a.starts_with('-')).collect();
-    if args.is_empty() || args.iter().any(|a| name.find(a).is_some()) {
+    if bench_enabled(&name) {
         let mut try_func = || -> Result<T, String> {
             let mut measured = func()?;
             while measured.need_more() {
@@ -65,4 +64,14 @@ pub fn bench<T: Measure, F: FnMut() -> Result<T, String>>(name: impl ToString, m
         };
         println!("{:50}{}", name, text);
     }
+}
+
+/// Test if a benchmark is enabled.
+pub fn bench_enabled(name: &str) -> bool {
+    static ARGS: OnceLock<Vec<String>> = OnceLock::new();
+    let args = ARGS.get_or_init(|| {
+        // The first arg is the program name. Skip it and flag-like arguments (ex. --bench).
+        args().skip(1).filter(|a| !a.starts_with('-')).collect()
+    });
+    args.is_empty() || args.iter().any(|a| name.contains(a))
 }

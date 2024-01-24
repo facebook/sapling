@@ -27,9 +27,8 @@ std::shared_ptr<HgImportRequest> makeBlobImportRequest(
     ImportPriority priority) {
   auto hgRevHash = uniqueHash();
   auto proxyHash = HgProxyHash{RelativePath{"some_blob"}, hgRevHash};
-  auto hash = proxyHash.sha1();
   return HgImportRequest::makeBlobImportRequest(
-      hash,
+      ObjectId{proxyHash.getValue()},
       std::move(proxyHash),
       priority,
       ObjectFetchContext::Cause::Unknown,

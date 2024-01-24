@@ -33,8 +33,8 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::FileType;
-use mononoke_types::MPath;
 use mononoke_types::ManifestUnodeId;
+use mononoke_types::NonRootMPath;
 use slog::debug;
 use stats::prelude::*;
 
@@ -97,7 +97,6 @@ impl BonsaiDerivable for RootUnodeManifestId {
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
     ) -> Result<Self> {
-        let unode_version = derivation_ctx.config().unode_version;
         let csid = bonsai.get_changeset_id();
         derive_unode_manifest(
             ctx,
@@ -108,7 +107,6 @@ impl BonsaiDerivable for RootUnodeManifestId {
                 .map(|root_mf_id| root_mf_id.manifest_unode_id().clone())
                 .collect(),
             get_file_changes(&bonsai),
-            unode_version,
         )
         .map_ok(RootUnodeManifestId)
         .await
@@ -129,7 +127,6 @@ impl BonsaiDerivable for RootUnodeManifestId {
         let batch_len = bonsais.len();
         let stacks = split_bonsais_in_linear_stacks(&bonsais, FileConflicts::ChangeDelete.into())?;
 
-        let unode_version = derivation_ctx.config().unode_version;
         for stack in stacks {
             let derived_parents = try_join_all(
                 stack
@@ -171,9 +168,8 @@ impl BonsaiDerivable for RootUnodeManifestId {
                         .map(|item| (item.cs_id, item.per_commit_file_changes))
                         .collect(),
                     derived_parents
-                        .get(0)
+                        .first()
                         .map(|mf_id| *mf_id.manifest_unode_id()),
-                    unode_version,
                 )
                 .await
                 .with_context(|| format!("failed deriving stack of {:?} to {:?}", first, last,))?;
@@ -234,7 +230,7 @@ impl_bonsai_derived_via_manager!(RootUnodeManifestId);
 
 pub(crate) fn get_file_changes(
     bcs: &BonsaiChangeset,
-) -> Vec<(MPath, Option<(ContentId, FileType)>)> {
+) -> Vec<(NonRootMPath, Option<(ContentId, FileType)>)> {
     bcs.file_changes()
         .map(|(mpath, file_change)| {
             let content_file_type = file_change

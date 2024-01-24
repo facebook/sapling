@@ -10,7 +10,8 @@
 #include <folly/Conv.h>
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
-#include <git2.h>
+// TODO(T168360028)
+#include <git2.h> // @manual
 
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"

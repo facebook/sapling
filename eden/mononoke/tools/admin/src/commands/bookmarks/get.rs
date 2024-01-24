@@ -12,11 +12,11 @@ use bookmarks::BookmarkKey;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarksRef;
 use clap::Args;
+use commit_id::print_commit_id;
+use commit_id::IdentityScheme;
 use context::CoreContext;
 
 use super::Repo;
-use crate::commit_id::print_commit_id;
-use crate::commit_id::IdentityScheme;
 
 #[derive(Args)]
 pub struct BookmarksGetArgs {
@@ -47,8 +47,9 @@ pub async fn get(ctx: &CoreContext, repo: &Repo, get_args: BookmarksGetArgs) -> 
             if key.category() == &BookmarkCategory::Tag {
                 let metadata_changeset = repo
                     .bonsai_tag_mapping
-                    .get_changeset_by_tag_name(key.name().clone().into_string())
-                    .await?;
+                    .get_entry_by_tag_name(key.name().clone().into_string())
+                    .await?
+                    .map(|entry| entry.changeset_id);
                 match metadata_changeset {
                     Some(metadata_changeset) => {
                         println!("Metadata changeset for tag bookmark {}: ", key.name());

@@ -12,7 +12,7 @@
 #include <boost/filesystem.hpp>
 #include <fcntl.h>
 #include <folly/portability/Unistd.h>
-#include <time.h>
+#include <ctime>
 
 #include <folly/Conv.h>
 #include <folly/ExceptionWrapper.h>
@@ -45,14 +45,14 @@ using fsck::InodeType;
 
 struct OverlayChecker::Impl {
   InodeCatalog* const inodeCatalog;
-  FileContentStore* const fcs;
+  FsFileContentStore* const fcs;
   std::optional<InodeNumber> loadedNextInodeNumber;
   InodeCatalog::LookupCallback& lookupCallback;
   std::unordered_map<InodeNumber, InodeInfo> inodes;
 
   Impl(
       InodeCatalog* inodeCatalog,
-      FileContentStore* fcs,
+      FsFileContentStore* fcs,
       std::optional<InodeNumber> nextInodeNumber,
       InodeCatalog::LookupCallback& lookupCallback)
       : inodeCatalog{inodeCatalog},
@@ -101,7 +101,7 @@ class OverlayChecker::RepairState {
   InodeCatalog* inodeCatalog() {
     return checker_->impl_->inodeCatalog;
   }
-  FileContentStore* fcs() {
+  FsFileContentStore* fcs() {
     return checker_->impl_->fcs;
   }
 
@@ -576,8 +576,8 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
       InodeNumber number,
       AbsolutePath archivePath,
       mode_t mode) const {
-    auto input =
-        repair.fcs()->openFile(number, FileContentStore::kHeaderIdentifierFile);
+    auto input = std::get<folly::File>(repair.fcs()->openFile(
+        number, FsFileContentStore::kHeaderIdentifierFile));
 
     // If the file is a symlink, try to create the file in the archive
     // directory as a symlink.
@@ -596,7 +596,7 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
           input.fd(),
           contents.data(),
           contents.size(),
-          FileContentStore::kHeaderLength);
+          FsFileContentStore::kHeaderLength);
       if (bytesRead < 0) {
         folly::throwSystemError(
             "read error while copying symlink data from inode ",
@@ -745,7 +745,7 @@ class OverlayChecker::BadNextInodeNumber : public OverlayChecker::Error {
 
 OverlayChecker::OverlayChecker(
     InodeCatalog* inodeCatalog,
-    FileContentStore* fcs,
+    FsFileContentStore* fcs,
     optional<InodeNumber> nextInodeNumber,
     InodeCatalog::LookupCallback& lookupCallback)
     : impl_{std::make_unique<Impl>(
@@ -754,7 +754,7 @@ OverlayChecker::OverlayChecker(
           nextInodeNumber,
           lookupCallback)} {}
 
-OverlayChecker::~OverlayChecker() {}
+OverlayChecker::~OverlayChecker() = default;
 
 void OverlayChecker::scanForErrors(const ProgressCallback& progressCallback) {
   XLOG(INFO) << "Starting fsck scan on overlay " << impl_->fcs->getLocalDir();
@@ -984,14 +984,14 @@ void OverlayChecker::readInodes(const ProgressCallback& progressCallback) {
     }
   }
 
-  seq(0u, FileContentStore::kNumShards - 1) |
+  seq(0u, FsFileContentStore::kNumShards - 1) |
       pmap(
           [this, &errors](
               uint32_t shardID) -> std::vector<std::tuple<uint64_t, uint32_t>> {
             // Get entries in directory
             std::array<char, 2> subdirBuffer;
             MutableStringPiece subdir{subdirBuffer.data(), subdirBuffer.size()};
-            FileContentStore::formatSubdirShardPath(shardID, subdir);
+            FsFileContentStore::formatSubdirShardPath(shardID, subdir);
             auto path = impl_->fcs->getLocalDir() + PathComponentPiece{subdir};
 
             XLOG(DBG5) << "fsck:" << impl_->fcs->getLocalDir() << ": scanning "
@@ -1016,7 +1016,7 @@ void OverlayChecker::readInodes(const ProgressCallback& progressCallback) {
               auto entryInodeNumber =
                   folly::tryTo<uint64_t>(inodePath.basename().value());
               if (entryInodeNumber.hasValue()) {
-                inodes.push_back(std::make_tuple(*entryInodeNumber, shardID));
+                inodes.emplace_back(*entryInodeNumber, shardID);
               } else {
                 errors.wlock()->push_back(
                     make_error<UnexpectedOverlayFile>(inodePath));
@@ -1047,7 +1047,7 @@ void OverlayChecker::readInodes(const ProgressCallback& progressCallback) {
         if (inodeInfoOpt.has_value()) {
           auto inodeInfo = inodeInfoOpt.value();
           ShardID shardID = static_cast<ShardID>(inodeInfo.number.get() & 0xff);
-          uint32_t progress = (10 * shardID) / FileContentStore::kNumShards;
+          uint32_t progress = (10 * shardID) / FsFileContentStore::kNumShards;
           if (progress > progress10pct) {
             XLOG(INFO) << "fsck:" << impl_->fcs->getLocalDir() << ": scan "
                        << progress << "0% complete: " << impl_->inodes.size()

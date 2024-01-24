@@ -13,6 +13,7 @@ use anyhow::Error;
 use anyhow::Result;
 use blobstore::Blobstore;
 use bytes::Bytes;
+use clientinfo::CLIENT_INFO_HEADER;
 use cloned::cloned;
 use context::CoreContext;
 use filestore::fetch_stream;
@@ -25,6 +26,7 @@ use futures::TryStreamExt;
 use gotham_ext::body_ext::BodyExt;
 use http::status::StatusCode;
 use http::uri::Uri;
+use http::HeaderValue;
 use hyper::client::HttpConnector;
 use hyper::Body;
 use hyper::Client;
@@ -104,9 +106,16 @@ impl LfsVerifier {
 
         let body = Bytes::from(serde_json::to_vec(&batch).context(ErrorKind::SerializationFailed)?);
 
-        let req = Request::post(uri)
+        let mut req = Request::post(uri)
             .body(body.into())
             .context(ErrorKind::RequestCreationFailed)?;
+
+        if let Some(client_info) = ctx.metadata().client_info() {
+            req.headers_mut().insert(
+                CLIENT_INFO_HEADER,
+                HeaderValue::from_str(&client_info.to_json()?)?,
+            );
+        }
 
         let response = client
             .request(req)
@@ -208,10 +217,18 @@ async fn upload<'a>(
                 };
 
                 let body = Body::wrap_stream(s.map_ok(|b| Bytes::copy_from_slice(b.as_ref())));
+                let mut req = Request::put(format!("{}", href)).body(body)?;
 
-                let req = Request::put(format!("{}", href))
-                    .header("Content-Length", &resp_object.object.size.to_string())
-                    .body(body)?;
+                if let Some(client_info) = ctx.metadata().client_info() {
+                    req.headers_mut().insert(
+                        CLIENT_INFO_HEADER,
+                        HeaderValue::from_str(&client_info.to_json()?)?,
+                    );
+                }
+                req.headers_mut().insert(
+                    "Content-Length",
+                    HeaderValue::from_str(&resp_object.object.size.to_string())?,
+                );
 
                 let res = client.request(req).await?;
                 let (head, body) = res.into_parts();

@@ -29,6 +29,8 @@ struct JournalStats;
 struct ThriftStats;
 struct TelemetryStats;
 struct OverlayStats;
+struct InodeMapStats;
+struct InodeMetadataTableStats;
 
 /**
  * StatsGroupBase is a base class for a group of thread-local stats
@@ -124,6 +126,8 @@ class EdenStats : public RefCounted {
   ThreadLocal<ThriftStats> thriftStats_;
   ThreadLocal<TelemetryStats> telemetryStats_;
   ThreadLocal<OverlayStats> overlayStats_;
+  ThreadLocal<InodeMapStats> inodeMapStats_;
+  ThreadLocal<InodeMetadataTableStats> inodeMetadataTableStats_;
 };
 
 using EdenStatsPtr = RefPtr<EdenStats>;
@@ -183,6 +187,17 @@ inline TelemetryStats& EdenStats::getStatsForCurrentThread<TelemetryStats>() {
 template <>
 inline OverlayStats& EdenStats::getStatsForCurrentThread<OverlayStats>() {
   return *overlayStats_.get();
+}
+
+template <>
+inline InodeMapStats& EdenStats::getStatsForCurrentThread<InodeMapStats>() {
+  return *inodeMapStats_.get();
+}
+
+template <>
+inline InodeMetadataTableStats&
+EdenStats::getStatsForCurrentThread<InodeMetadataTableStats>() {
+  return *inodeMetadataTableStats_.get();
 }
 
 template <typename T>
@@ -293,9 +308,11 @@ struct ObjectStoreStats : StatsGroup<ObjectStoreStats> {
   Duration getBlob{"store.get_blob_us"};
   Duration getBlobMetadata{"store.get_blob_metadata_us"};
 
+  Counter getBlobFromMemory{"object_store.get_blob.memory"};
   Counter getBlobFromLocalStore{"object_store.get_blob.local_store"};
   Counter getBlobFromBackingStore{"object_store.get_blob.backing_store"};
 
+  Counter getTreeFromMemory{"object_store.get_tree.memory"};
   Counter getTreeFromLocalStore{"object_store.get_tree.local_store"};
   Counter getTreeFromBackingStore{"object_store.get_tree.backing_store"};
 
@@ -314,9 +331,15 @@ struct LocalStoreStats : StatsGroup<LocalStoreStats> {
   Duration getTree{"local_store.get_tree_us"};
   Duration getBlob{"local_store.get_blob_us"};
   Duration getBlobMetadata{"local_store.get_blob_metadata_us"};
+  Counter getTreeSuccess{"local_store.get_tree_success"};
+  Counter getBlobSuccess{"local_store.get_blob_success"};
+  Counter getBlobMetadataSuccess{"local_store.get_blob_metadata_success"};
   Counter getTreeFailure{"local_store.get_tree_failure"};
   Counter getBlobFailure{"local_store.get_blob_failure"};
   Counter getBlobMetadataFailure{"local_store.get_blob_metadata_failure"};
+  Counter getTreeError{"local_store.get_tree_error"};
+  Counter getBlobError{"local_store.get_blob_error"};
+  Counter getBlobMetadataError{"local_store.get_blob_metadata_error"};
 };
 
 /**
@@ -325,15 +348,25 @@ struct LocalStoreStats : StatsGroup<LocalStoreStats> {
  * Terminology:
  *   get = entire lookup process, including both Sapling disk hits and fetches
  *   fetch = includes asynchronous retrieval from Mononoke
- *   import = fall back on hg debugedenimporthelper process
+ *   import = fall back process
  */
 struct HgBackingStoreStats : StatsGroup<HgBackingStoreStats> {
   Duration getTree{"store.hg.get_tree_us"};
   Duration fetchTree{"store.hg.fetch_tree_us"};
-  Duration importTree{"store.hg.import_tree_us"};
+  Counter fetchTreeRetrySuccess{"store.hg.fetch_tree_retry_success"};
+  Counter fetchTreeRetryFailure{"store.hg.fetch_tree_retry_failure"};
+  Duration importTreeDuration{"store.hg.import_tree_us"};
+  Counter importTreeSuccess{"store.hg.import_tree_success"};
+  Counter importTreeFailure{"store.hg.import_tree_failure"};
+  Counter importTreeError{"store.hg.import_tree_error"};
   Duration getBlob{"store.hg.get_blob_us"};
   Duration fetchBlob{"store.hg.fetch_blob_us"};
-  Duration importBlob{"store.hg.import_blob_us"};
+  Counter fetchBlobRetrySuccess{"store.hg.fetch_blob_retry_success"};
+  Counter fetchBlobRetryFailure{"store.hg.fetch_blob_retry_failure"};
+  Duration importBlobDuration{"store.hg.import_blob_us"};
+  Counter importBlobSuccess{"store.hg.import_blob_success"};
+  Counter importBlobFailure{"store.hg.import_blob_failure"};
+  Counter importBlobError{"store.hg.import_blob_error"};
   Duration getBlobMetadata{"store.hg.get_blob_metadata_us"};
   Duration fetchBlobMetadata{"store.hg.fetch_blob_metadata_us"};
   Counter loadProxyHash{"store.hg.load_proxy_hash"};
@@ -359,6 +392,9 @@ struct JournalStats : StatsGroup<JournalStats> {
 struct ThriftStats : StatsGroup<ThriftStats> {
   Duration streamChangesSince{
       "thrift.StreamingEdenService.streamChangesSince.streaming_time_us"};
+
+  Duration streamSelectedChangesSince{
+      "thrift.StreamingEdenService.streamSelectedChangesSince.streaming_time_us"};
 };
 
 struct TelemetryStats : StatsGroup<TelemetryStats> {
@@ -376,6 +412,21 @@ struct OverlayStats : StatsGroup<OverlayStats> {
   Duration removeChild{"overlay.remove_child_us"};
   Duration removeChildren{"overlay.remove_children_us"};
   Duration renameChild{"overlay.rename_child_us"};
+  Counter loadOverlayDirHit{"overlay.load_overlay_dir_hit"};
+  Counter loadOverlayDirMiss{"overlay.load_overlay_dir_miss"};
+};
+
+struct InodeMapStats : StatsGroup<InodeMapStats> {
+  Counter lookupTreeInodeHit{"inode_map.lookup_tree_inode_hit"};
+  Counter lookupBlobInodeHit{"inode_map.lookup_blob_inode_hit"};
+  Counter lookupTreeInodeMiss{"inode_map.lookup_tree_inode_miss"};
+  Counter lookupBlobInodeMiss{"inode_map.lookup_blob_inode_miss"};
+  Counter lookupInodeError{"inode_map.lookup_inode_error"};
+};
+
+struct InodeMetadataTableStats : StatsGroup<InodeMetadataTableStats> {
+  Counter getHit{"inode_metadata_table.get_hit"};
+  Counter getMiss{"inode_metadata_table.get_miss"};
 };
 
 /**

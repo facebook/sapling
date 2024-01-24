@@ -11,6 +11,9 @@ use std::net::IpAddr;
 use std::pin::Pin;
 use std::sync::Arc;
 
+use clientinfo::ClientEntryPoint;
+use clientinfo::ClientInfo;
+use clientinfo::CLIENT_INFO_HEADER;
 use connection_security_checker::ConnectionSecurityChecker;
 use ephemeral_blobstore::BubbleId;
 use ephemeral_blobstore::RepoEphemeralStore;
@@ -54,7 +57,6 @@ use source_control::services::source_control_service as service;
 use srserver::RequestContext;
 use stats::prelude::*;
 use time_ext::DurationExt;
-use tunables::tunables;
 
 use crate::commit_id::CommitIdExt;
 use crate::errors;
@@ -69,6 +71,8 @@ const FORWARDED_IDENTITIES_HEADER: &str = "scm_forwarded_identities";
 const FORWARDED_CLIENT_IP_HEADER: &str = "scm_forwarded_client_ip";
 const FORWARDED_CLIENT_DEBUG_HEADER: &str = "scm_forwarded_client_debug";
 const FORWARDED_OTHER_CATS_HEADER: &str = "scm_forwarded_other_cats";
+const PER_REQUEST_READ_QPS: usize = 4000;
+const PER_REQUEST_WRITE_QPS: usize = 4000;
 
 define_stats! {
     prefix = "mononoke.scs_server";
@@ -144,6 +148,9 @@ impl SourceControlServiceImpl {
         let session = self.create_session(req_ctxt).await?;
         let identities = session.metadata().identities();
         let mut scuba = self.create_scuba(name, req_ctxt, specifier, params, identities)?;
+        if let Some(client_info) = session.metadata().client_request_info() {
+            scuba.add_client_request_info(client_info);
+        }
         scuba.add("session_uuid", session.metadata().session_id().to_string());
 
         let ctx = session.new_context_with_scribe(self.logger.clone(), scuba, self.scribe.clone());
@@ -175,13 +182,13 @@ impl SourceControlServiceImpl {
         }
 
         let sampling_rate = core::num::NonZeroU64::new(if POPULAR_METHODS.contains(name) {
-            tunables()
-                .scs_popular_methods_sampling_rate()
-                .unwrap_or_default() as u64
+            const FALLBACK_SAMPLING_RATE: u64 = 1000;
+            justknobs::get_as::<u64>("scm/mononoke:scs_popular_methods_sampling_rate", None)
+                .unwrap_or(FALLBACK_SAMPLING_RATE)
         } else {
-            tunables()
-                .scs_other_methods_sampling_rate()
-                .unwrap_or_default() as u64
+            const FALLBACK_SAMPLING_RATE: u64 = 1;
+            justknobs::get_as::<u64>("scm/mononoke:scs_other_methods_sampling_rate", None)
+                .unwrap_or(FALLBACK_SAMPLING_RATE)
         });
         if let Some(sampling_rate) = sampling_rate {
             scuba.sampled(sampling_rate);
@@ -241,6 +248,12 @@ impl SourceControlServiceImpl {
             .map(MononokeIdentity::from_identity_ref)
             .collect();
 
+        let client_info: Option<ClientInfo> = req_ctxt
+            .header(CLIENT_INFO_HEADER)
+            .map_err(errors::invalid_request)?
+            .as_ref()
+            .and_then(|ci| serde_json::from_str(ci).ok());
+
         let is_trusted = self
             .identity_proxy_checker
             .check_if_trusted(&tls_identities)
@@ -277,12 +290,14 @@ impl SourceControlServiceImpl {
                 if let Some(other_cats) = header(FORWARDED_OTHER_CATS_HEADER)? {
                     metadata.add_raw_encoded_cats(other_cats);
                 }
-
+                let client_info = client_info.unwrap_or_else(|| {
+                    ClientInfo::default_with_entry_point(ClientEntryPoint::ScsServer)
+                });
+                metadata.add_client_info(client_info);
                 return Ok(metadata);
             }
         }
-
-        Ok(Metadata::new(
+        let mut metadata = Metadata::new(
             None,
             tls_identities.union(&cats_identities).cloned().collect(),
             false,
@@ -290,7 +305,12 @@ impl SourceControlServiceImpl {
                 .map_err(errors::invalid_request)?,
             None,
         )
-        .await)
+        .await;
+
+        let client_info = client_info
+            .unwrap_or_else(|| ClientInfo::default_with_entry_point(ClientEntryPoint::ScsServer));
+        metadata.add_client_info(client_info);
+        Ok(metadata)
     }
 
     /// Create and configure the session container for a request.
@@ -301,11 +321,9 @@ impl SourceControlServiceImpl {
         let metadata = self.create_metadata(req_ctxt).await?;
         let session = SessionContainer::builder(self.fb)
             .metadata(Arc::new(metadata))
-            .blobstore_maybe_read_qps_limiter(tunables().scs_request_read_qps().unwrap_or_default())
+            .blobstore_maybe_read_qps_limiter(PER_REQUEST_READ_QPS)
             .await
-            .blobstore_maybe_write_qps_limiter(
-                tunables().scs_request_write_qps().unwrap_or_default(),
-            )
+            .blobstore_maybe_write_qps_limiter(PER_REQUEST_WRITE_QPS)
             .await
             .build();
         Ok(session)
@@ -585,7 +603,9 @@ fn log_result<T: AddScubaResponse>(
     scuba.add_future_stats(stats);
     scuba.add("status", status);
     if let Some(error) = error {
-        if !tunables().scs_error_log_sampling().unwrap_or_default() {
+        let scs_error_log_sampling =
+            justknobs::eval("scm/mononoke:scs_error_log_sampling", None, None).unwrap_or(true);
+        if !scs_error_log_sampling {
             scuba.unsampled();
         }
         scuba.add("error", error.as_str());
@@ -920,10 +940,10 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             token: thrift::MegarepoRemergeSourceToken,
         ) -> Result<thrift::MegarepoRemergeSourcePollResponse, service::MegarepoRemergeSourcePollExn>;
 
-        async fn upload_git_object(
+        async fn repo_upload_non_blob_git_object(
             repo: thrift::RepoSpecifier,
-            params: thrift::UploadGitObjectParams,
-        ) -> Result<thrift::UploadGitObjectResponse, service::UploadGitObjectExn>;
+            params: thrift::RepoUploadNonBlobGitObjectParams,
+        ) -> Result<thrift::RepoUploadNonBlobGitObjectResponse, service::RepoUploadNonBlobGitObjectExn>;
 
         async fn create_git_tree(
             repo: thrift::RepoSpecifier,
@@ -934,5 +954,15 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             repo: thrift::RepoSpecifier,
             params: thrift::CreateGitTagParams,
         ) -> Result<thrift::CreateGitTagResponse, service::CreateGitTagExn>;
+
+        async fn repo_stack_git_bundle_store(
+            repo: thrift::RepoSpecifier,
+            params: thrift::RepoStackGitBundleStoreParams,
+        ) -> Result<thrift::RepoStackGitBundleStoreResponse, service::RepoStackGitBundleStoreExn>;
+
+        async fn repo_upload_packfile_base_item(
+            repo: thrift::RepoSpecifier,
+            params: thrift::RepoUploadPackfileBaseItemParams,
+        ) -> Result<thrift::RepoUploadPackfileBaseItemResponse, service::RepoUploadPackfileBaseItemExn>;
     }
 }

@@ -4,7 +4,7 @@ sidebar_position: 47
 
 ## web | isl
 <!--
-  @generated SignedSource<<ad7c8912d66412a4d2be050e92e408a2>>
+  @generated SignedSource<<4ba84a11c3de0c33a48aed22ee5c6375>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -16,6 +16,8 @@ which is a GUI that facilitates source control operations such as creating,
 reordering, or rebasing commits.
 Running this command launches a web server that makes Sapling Web and
 Interactive Smartlog available in a local web browser.
+When possible, this command opens a separate OS window,
+either using a webview or a Chrome-like browser with --app.
 
 Examples:
 
@@ -58,3 +60,4 @@ killed ISL server process 1521158
 | `-f`| `--foreground`| `false`| keep the server process in the foreground|
 | | `--kill`| `false`| kill any running server process, but do not start a new server|
 | | `--force`| `false`| kill any running server process, then start a new server|
+| | `--app`| `true`| Use a native OS window or Chrome-like browser to open ISL in a standalone window. Use --no-app to use a normal browser tab instead.|

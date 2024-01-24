@@ -112,8 +112,8 @@ async fn on_disk_optimization(
                 };
                 match future.await {
                     Ok(r) => Ok(r),
-                    Err(_) if conservative => return Ok(Some((rel_path, file_type))),
-                    Err(err) => Err(err.into()),
+                    Err(_) if conservative => Ok(Some((rel_path, file_type))),
+                    Err(err) => Err(err),
                 }
             }
         })
@@ -148,7 +148,7 @@ fn merge_tokens(
                 map
             });
 
-    to_download.into_iter().map(|(_, value)| value)
+    to_download.into_values()
 }
 
 const WORKERS: usize = 10;

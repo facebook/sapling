@@ -26,7 +26,7 @@ test various admin commands
       prefix map:
         arvr->.fbsource-rest/arvr
       small repo: 2
-      default action: PrependPrefix(MPath("arvr-legacy"))
+      default action: PrependPrefix(NonRootMPath("arvr-legacy"))
       prefix map:
         arvr->arvr
         fbandroid->.ovrsource-rest/fbandroid
@@ -47,7 +47,7 @@ test various admin commands
         arvr->.fbsource-rest/arvr
         d/e->ma/b/c2/d/e
       small repo: 2
-      default action: PrependPrefix(MPath("arvr-legacy"))
+      default action: PrependPrefix(NonRootMPath("arvr-legacy"))
       prefix map:
         a/b/c1->ma/b/c1
         a/b/c2->ma/b/c2
@@ -68,7 +68,7 @@ test various admin commands
       prefix map:
         arvr->.fbsource-rest/arvr_old
       small repo: 2
-      default action: PrependPrefix(MPath("arvr-legacy"))
+      default action: PrependPrefix(NonRootMPath("arvr-legacy"))
       prefix map:
         arvr->arvr
         fbandroid->.ovrsource-rest/fbandroid
@@ -86,7 +86,7 @@ test various admin commands
     prefix map:
       arvr->.fbsource-rest/arvr_old
     small repo: 2
-    default action: PrependPrefix(MPath("arvr-legacy"))
+    default action: PrependPrefix(NonRootMPath("arvr-legacy"))
     prefix map:
       arvr->arvr
       fbandroid->.ovrsource-rest/fbandroid

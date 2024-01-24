@@ -246,11 +246,12 @@ config editing without an editor
 
  invalid pattern
   $ hg config --edit missing.value
-  abort: missing config value for 'missing.value'
+  abort: invalid config edit: 'missing.value'
+  (try section.name=value)
   [255]
 
   $ hg config --edit missing=name
-  abort: invalid argument: 'missing'
+  abort: invalid config edit: 'missing'
   (try section.name=value)
   [255]
 
@@ -388,3 +389,28 @@ Can see all sources w/ --debug and --verbose:
   $TESTTMP/sources/.hg/hgrc:*: foo.bar=2 (glob)
     $TESTTMP/sources/.hg/hgrc:*: foo.bar=1 (glob)
     $TESTTMP/sources.rc:*: foo.bar=3 (glob)
+
+Can delete in place:
+  $ newrepo delete
+  $ cat > .hg/hgrc << EOF
+  > [foo]
+  > bar = 1
+  > baz = 2
+  > EOF
+
+  $ hg config --delete foo.bar
+  abort: --delete requires one of --user, --local or --system
+  [255]
+
+  $ hg config --delete --local foo.bar=123
+  abort: invalid config deletion: 'foo.bar=123'
+  (try section.name)
+  [255]
+
+  $ hg config --delete --local foo.bar -v
+  deleting foo.bar from $TESTTMP/delete/.hg/hgrc
+  updated config in $TESTTMP/delete/.hg/hgrc
+
+  $ cat .hg/hgrc
+  [foo]
+  baz = 2

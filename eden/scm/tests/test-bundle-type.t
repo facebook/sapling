@@ -226,7 +226,7 @@ test garbage file
   $ echo garbage > bgarbage
   $ newclientrepo tgarbage
   $ hg unbundle ../bgarbage
-  abort: ../bgarbage: not a Mercurial bundle
+  abort: ../bgarbage: not a Sapling bundle
   [255]
   $ cd ..
 

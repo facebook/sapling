@@ -56,7 +56,6 @@ pub mod file;
 pub mod flags;
 pub mod fsencode;
 pub mod manifest;
-mod node;
 pub mod nodehash;
 pub mod remotefilelog;
 pub mod sql_types;
@@ -67,8 +66,8 @@ pub mod utils;
 pub use mononoke_types::sha1_hash;
 pub use mononoke_types::FileType;
 pub use mononoke_types::Globalrev;
-pub use mononoke_types::MPath;
 pub use mononoke_types::MPathElement;
+pub use mononoke_types::NonRootMPath;
 pub use mononoke_types::RepoPath;
 
 pub use crate::blob::HgBlob;
@@ -94,7 +93,6 @@ pub use crate::flags::RevFlags;
 pub use crate::fsencode::fncache_fsencode;
 pub use crate::fsencode::simple_fsencode;
 pub use crate::manifest::Type;
-pub use crate::node::Node;
 pub use crate::nodehash::HgChangesetId;
 pub use crate::nodehash::HgChangesetIdPrefix;
 pub use crate::nodehash::HgChangesetIdsResolvedFromPrefix;
@@ -114,5 +112,6 @@ mod test;
 
 mod thrift {
     pub use mercurial_thrift::*;
+    #[cfg(test)]
     pub use mononoke_types_thrift::*;
 }

@@ -5,15 +5,15 @@
  * GNU General Public License version 2.
  */
 
-use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::io::Write;
-use std::path::Path;
+use std::path::PathBuf;
 use std::time::Duration;
 use std::time::SystemTime;
 
 use anyhow::Result;
+use fs_err::File;
 use serde::Deserialize;
 use serde::Serialize;
 use types::Key;
@@ -66,7 +66,7 @@ impl ActivityLogger {
     }
 }
 
-pub fn log_iter<P: AsRef<Path>>(path: P) -> Result<impl Iterator<Item = Result<ActivityLog>>> {
+pub fn log_iter<P: Into<PathBuf>>(path: P) -> Result<impl Iterator<Item = Result<ActivityLog>>> {
     let file = File::open(path)?;
     Ok(BufReader::new(file).lines().map(|line| {
         let log: ActivityLog = serde_json::from_str(&line?)?;

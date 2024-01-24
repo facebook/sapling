@@ -20,6 +20,7 @@ use xdiff::DiffFile;
 use xdiff::DiffOpts;
 use xdiff::FileType;
 
+#[cfg(target_family = "unix")]
 const EXEC_BIT: u32 = 0o0000100;
 
 #[derive(Debug, StructOpt)]
@@ -44,6 +45,7 @@ struct Opt {
 
     /// Do not follow symlinks - compare them instead (POSIX-only)
     #[structopt(short, long)]
+    #[cfg_attr(windows, allow(dead_code))]
     symlink: bool,
 
     /// Number of lines of unified context (default: 3)

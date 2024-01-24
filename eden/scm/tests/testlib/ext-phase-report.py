@@ -2,7 +2,7 @@
 
 from __future__ import absolute_import
 
-from edenscm import pycompat
+from sapling import pycompat
 
 
 def reposetup(ui, repo):

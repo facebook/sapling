@@ -9,8 +9,6 @@ use std::cell::RefCell;
 use std::collections::vec_deque::Iter;
 use std::collections::vec_deque::IterMut;
 use std::collections::VecDeque;
-use std::fs::read_dir;
-use std::fs::DirEntry;
 use std::io::ErrorKind;
 use std::path::Path;
 use std::path::PathBuf;
@@ -21,6 +19,8 @@ use std::time::Duration;
 use std::time::Instant;
 
 use anyhow::Result;
+use fs_err::read_dir;
+use fs_err::DirEntry;
 use parking_lot::Mutex;
 use types::Key;
 use types::NodeInfo;
@@ -601,7 +601,11 @@ impl HgIdMutableDeltaStore for MutableDataPackStore {
         let mut packs = self.result_packs.lock();
         let result = std::mem::take(&mut *packs);
 
-        Ok(if result.len() > 0 { Some(result) } else { None })
+        Ok(if !result.is_empty() {
+            Some(result)
+        } else {
+            None
+        })
     }
 }
 
@@ -695,15 +699,18 @@ impl HgIdMutableHistoryStore for MutableHistoryPackStore {
         let mut packs = self.result_packs.lock();
         let result = std::mem::take(&mut *packs);
 
-        Ok(if result.len() > 0 { Some(result) } else { None })
+        Ok(if !result.is_empty() {
+            Some(result)
+        } else {
+            None
+        })
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
-    use std::fs::OpenOptions;
-
+    use fs_err as fs;
+    use fs_err::OpenOptions;
     use minibytes::Bytes;
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
@@ -757,7 +764,7 @@ mod tests {
             },
             Default::default(),
         );
-        make_datapack(&tempdir, &vec![revision.clone()]);
+        make_datapack(&tempdir, &vec![revision]);
 
         let store = DataPackStore::new(
             &tempdir,
@@ -765,7 +772,7 @@ mod tests {
             None,
             ExtStoredPolicy::Use,
         );
-        let missing = store.get_missing(&vec![StoreKey::from(k)])?;
+        let missing = store.get_missing(&[StoreKey::from(k)])?;
         assert_eq!(missing.len(), 0);
         Ok(())
     }
@@ -817,7 +824,7 @@ mod tests {
             },
             Default::default(),
         );
-        make_datapack(&tempdir, &vec![revision.clone()]);
+        make_datapack(&tempdir, &vec![revision]);
 
         store.get(StoreKey::hgid(k)).unwrap();
 
@@ -830,7 +837,7 @@ mod tests {
             },
             Default::default(),
         );
-        make_datapack(&tempdir, &vec![revision.clone()]);
+        make_datapack(&tempdir, &vec![revision]);
 
         let k = StoreKey::hgid(k);
         assert_eq!(store.get(k.clone()).unwrap(), StoreResult::NotFound(k));
@@ -854,7 +861,7 @@ mod tests {
             },
             Default::default(),
         );
-        make_datapack(&tempdir, &vec![revision.clone()]);
+        make_datapack(&tempdir, &vec![revision]);
 
         store.get(StoreKey::hgid(k))?;
 
@@ -867,7 +874,7 @@ mod tests {
             },
             Default::default(),
         );
-        make_datapack(&tempdir, &vec![revision.clone()]);
+        make_datapack(&tempdir, &vec![revision]);
 
         store.force_rescan();
         assert_eq!(
@@ -951,7 +958,7 @@ mod tests {
             },
             Default::default(),
         );
-        make_datapack(&tempdir, &vec![revision1.clone()]);
+        make_datapack(&tempdir, &vec![revision1]);
 
         let k2 = key("b", "3");
         let revision2 = (
@@ -962,7 +969,7 @@ mod tests {
             },
             Default::default(),
         );
-        make_datapack(&tempdir, &vec![revision2.clone()]);
+        make_datapack(&tempdir, &vec![revision2]);
 
         let packstore = DataPackStore::new(
             &tempdir,
@@ -1014,7 +1021,7 @@ mod tests {
             },
             Default::default(),
         );
-        let path = make_datapack(&tempdir, &vec![revision1.clone()])
+        let path = make_datapack(&tempdir, &vec![revision1])
             .pack_path()
             .to_path_buf();
 
@@ -1054,7 +1061,7 @@ mod tests {
             },
             Default::default(),
         );
-        let path = make_datapack(&tempdir, &vec![revision1.clone()])
+        let path = make_datapack(&tempdir, &vec![revision1])
             .pack_path()
             .to_path_buf();
 
@@ -1066,7 +1073,7 @@ mod tests {
         let datapack = OpenOptions::new().write(true).open(path)?;
         datapack.set_len(datapack.metadata()?.len() / 2)?;
 
-        assert_eq!(read_dir(&tempdir)?.count(), 2);
+        assert_eq!(read_dir(tempdir.path())?.count(), 2);
 
         let packstore = DataPackStore::new(
             &tempdir,
@@ -1077,7 +1084,7 @@ mod tests {
         let k1 = StoreKey::hgid(k1);
         assert_eq!(packstore.get(k1.clone())?, StoreResult::NotFound(k1));
 
-        assert_eq!(read_dir(&tempdir)?.count(), 2);
+        assert_eq!(read_dir(tempdir.path())?.count(), 2);
         Ok(())
     }
 
@@ -1096,7 +1103,7 @@ mod tests {
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
             base: Some(key("a", "1")),
-            key: k1.clone(),
+            key: k1,
         };
 
         packstore.add(&delta, &Default::default())?;
@@ -1229,19 +1236,19 @@ mod tests {
         let delta1 = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
             base: None,
-            key: k1.clone(),
+            key: k1,
         };
         let k2 = key("a", "2");
         let delta2 = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
             base: None,
-            key: k2.clone(),
+            key: k2,
         };
         let k3 = key("a", "3");
         let delta3 = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
             base: None,
-            key: k3.clone(),
+            key: k3,
         };
 
         packstore.add(&delta1, &Default::default())?;

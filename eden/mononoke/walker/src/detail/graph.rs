@@ -9,11 +9,11 @@ use std::fmt;
 use std::hash::Hash;
 use std::hash::Hasher;
 use std::str::FromStr;
+use std::sync::OnceLock;
 
 use ahash::RandomState;
 use anyhow::format_err;
 use anyhow::Error;
-use basename_suffix_skeleton_manifest::RootBasenameSuffixSkeletonManifest;
 use bitflags::bitflags;
 use blame::RootBlameV2;
 use blobrepo::BlobRepo;
@@ -29,13 +29,11 @@ use filenodes::FilenodeInfo;
 use filenodes_derivation::FilenodesOnlyPublic;
 use filestore::Alias;
 use fsnodes::RootFsnodeId;
-use futures::compat::Future01CompatExt;
 use futures::future::BoxFuture;
 use futures::stream;
 use futures::stream::BoxStream;
 use futures::FutureExt;
 use futures::StreamExt;
-use futures::TryStreamExt;
 use hash_memo::EagerHashMemoizer;
 use internment::ArcIntern;
 use manifest::Entry;
@@ -50,15 +48,14 @@ use mercurial_types::HgFileEnvelopeMut;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::HgParents;
-use mononoke_types::basename_suffix_skeleton_manifest::BasenameSuffixSkeletonManifest;
 use mononoke_types::blame_v2::BlameV2;
 use mononoke_types::deleted_manifest_v2::DeletedManifestV2;
 use mononoke_types::fastlog_batch::FastlogBatch;
 use mononoke_types::fsnode::Fsnode;
+use mononoke_types::path::MPath;
 use mononoke_types::skeleton_manifest::SkeletonManifest;
 use mononoke_types::unode::FileUnode;
 use mononoke_types::unode::ManifestUnode;
-use mononoke_types::BasenameSuffixSkeletonManifestId;
 use mononoke_types::BlameV2Id;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::BlobstoreValue;
@@ -70,14 +67,13 @@ use mononoke_types::DeletedManifestV2Id;
 use mononoke_types::FastlogBatchId;
 use mononoke_types::FileUnodeId;
 use mononoke_types::FsnodeId;
-use mononoke_types::MPath;
 use mononoke_types::MPathHash;
 use mononoke_types::ManifestUnodeId;
 use mononoke_types::MononokeId;
+use mononoke_types::NonRootMPath;
 use mononoke_types::RepoPath;
 use mononoke_types::SkeletonManifestId;
 use newfilenodes::PathHash;
-use once_cell::sync::OnceCell;
 use phases::Phase;
 use repo_blobstore::RepoBlobstoreRef;
 use skeleton_manifest::RootSkeletonManifestId;
@@ -270,7 +266,7 @@ impl ChangesetKey<HgChangesetId> {
 
 bitflags! {
     /// Some derived data needs unodes as precondition, flags represent what is available in a compact way
-    #[derive(Default)]
+    #[derive(Default, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Clone, Copy)]
     pub struct UnodeFlags: u8 {
         const NONE = 0b00000000;
         const BLAME = 0b00000001;
@@ -371,8 +367,6 @@ create_graph!(
             FsnodeMapping,
             SkeletonManifest,
             SkeletonManifestMapping,
-            BasenameSuffixSkeletonManifest,
-            BasenameSuffixSkeletonManifestMapping,
             UnodeFile,
             UnodeManifest,
             UnodeMapping
@@ -393,7 +387,6 @@ create_graph!(
             DeletedManifestV2Mapping,
             FsnodeMapping,
             SkeletonManifestMapping,
-            BasenameSuffixSkeletonManifestMapping,
             UnodeMapping
         ]
     ),
@@ -501,12 +494,6 @@ create_graph!(
     ),
     (SkeletonManifestMapping, ChangesetId, [RootSkeletonManifest(SkeletonManifest)]),
     (
-        BasenameSuffixSkeletonManifest,
-        BasenameSuffixSkeletonManifestId,
-        [BasenameSuffixSkeletonManifestChild(BasenameSuffixSkeletonManifest)]
-    ),
-    (BasenameSuffixSkeletonManifestMapping, ChangesetId, [RootBasenameSuffixSkeletonManifest(BasenameSuffixSkeletonManifest)]),
-    (
         UnodeFile,
         UnodeKey<FileUnodeId>,
         [Blame, FastlogFile, FileContent, LinkedChangeset(Changeset), UnodeFileParent(UnodeFile)]
@@ -563,12 +550,6 @@ impl NodeType {
             NodeType::FsnodeMapping => Some(RootFsnodeId::NAME),
             NodeType::SkeletonManifest => Some(RootSkeletonManifestId::NAME),
             NodeType::SkeletonManifestMapping => Some(RootSkeletonManifestId::NAME),
-            NodeType::BasenameSuffixSkeletonManifest => {
-                Some(RootBasenameSuffixSkeletonManifest::NAME)
-            }
-            NodeType::BasenameSuffixSkeletonManifestMapping => {
-                Some(RootBasenameSuffixSkeletonManifest::NAME)
-            }
             NodeType::UnodeFile => Some(RootUnodeManifestId::NAME),
             NodeType::UnodeManifest => Some(RootUnodeManifestId::NAME),
             NodeType::UnodeMapping => Some(RootUnodeManifestId::NAME),
@@ -610,8 +591,6 @@ impl NodeType {
             NodeType::FsnodeMapping => false,
             NodeType::SkeletonManifest => true,
             NodeType::SkeletonManifestMapping => false,
-            NodeType::BasenameSuffixSkeletonManifest => true,
-            NodeType::BasenameSuffixSkeletonManifestMapping => false,
             NodeType::UnodeFile => true,
             NodeType::UnodeManifest => true,
             NodeType::UnodeMapping => false,
@@ -688,15 +667,15 @@ impl fmt::Display for WrappedPathHash {
 // Memoize the hash of the path as it is used frequently
 #[derive(Debug)]
 pub struct MPathWithHashMemo {
-    mpath: MPath,
-    memoized_hash: OnceCell<WrappedPathHash>,
+    mpath: NonRootMPath,
+    memoized_hash: OnceLock<WrappedPathHash>,
 }
 
 impl MPathWithHashMemo {
-    fn new(mpath: MPath) -> Self {
+    fn new(mpath: NonRootMPath) -> Self {
         Self {
             mpath,
-            memoized_hash: OnceCell::new(),
+            memoized_hash: OnceLock::new(),
         }
     }
 
@@ -705,7 +684,7 @@ impl MPathWithHashMemo {
             .get_or_init(|| WrappedPathHash::NonRoot(self.mpath.get_path_hash()))
     }
 
-    pub fn mpath(&self) -> &MPath {
+    pub fn mpath(&self) -> &NonRootMPath {
         &self.mpath
     }
 }
@@ -731,7 +710,7 @@ pub enum WrappedPath {
 }
 
 impl WrappedPath {
-    pub fn as_ref(&self) -> Option<&MPath> {
+    pub fn as_ref(&self) -> Option<&NonRootMPath> {
         match self {
             WrappedPath::Root => None,
             WrappedPath::NonRoot(path) => Some(path.mpath()),
@@ -782,12 +761,12 @@ impl fmt::Display for WrappedPath {
     }
 }
 
-static PATH_HASHER_FACTORY: OnceCell<RandomState> = OnceCell::new();
+static PATH_HASHER_FACTORY: OnceLock<RandomState> = OnceLock::new();
 
-impl From<Option<MPath>> for WrappedPath {
-    fn from(mpath: Option<MPath>) -> Self {
+impl From<MPath> for WrappedPath {
+    fn from(mpath: MPath) -> Self {
         let hasher_fac = PATH_HASHER_FACTORY.get_or_init(RandomState::default);
-        match mpath {
+        match mpath.into_optional_non_root_path() {
             Some(mpath) => WrappedPath::NonRoot(ArcIntern::new(EagerHashMemoizer::new(
                 MPathWithHashMemo::new(mpath),
                 hasher_fac,
@@ -869,8 +848,6 @@ pub enum NodeData {
     FsnodeMapping(Option<FsnodeId>),
     SkeletonManifest(Option<SkeletonManifest>),
     SkeletonManifestMapping(Option<SkeletonManifestId>),
-    BasenameSuffixSkeletonManifest(Option<BasenameSuffixSkeletonManifest>),
-    BasenameSuffixSkeletonManifestMapping(Option<BasenameSuffixSkeletonManifestId>),
     UnodeFile(FileUnode),
     UnodeManifest(ManifestUnode),
     UnodeMapping(Option<ManifestUnodeId>),
@@ -942,8 +919,6 @@ impl Node {
             Node::FsnodeMapping(_) => None,
             Node::SkeletonManifest(_) => None,
             Node::SkeletonManifestMapping(_) => None,
-            Node::BasenameSuffixSkeletonManifest(_) => None,
-            Node::BasenameSuffixSkeletonManifestMapping(_) => None,
             Node::UnodeFile(_) => None,
             Node::UnodeManifest(_) => None,
             Node::UnodeMapping(_) => None,
@@ -984,8 +959,6 @@ impl Node {
             Node::FsnodeMapping(k) => k.blobstore_key(),
             Node::SkeletonManifest(k) => k.blobstore_key(),
             Node::SkeletonManifestMapping(k) => k.blobstore_key(),
-            Node::BasenameSuffixSkeletonManifest(k) => k.blobstore_key(),
-            Node::BasenameSuffixSkeletonManifestMapping(k) => k.blobstore_key(),
             Node::UnodeFile(k) => k.blobstore_key(),
             Node::UnodeManifest(k) => k.blobstore_key(),
             Node::UnodeMapping(k) => k.blobstore_key(),
@@ -1026,8 +999,6 @@ impl Node {
             Node::FsnodeMapping(_) => None,
             Node::SkeletonManifest(_) => None,
             Node::SkeletonManifestMapping(_) => None,
-            Node::BasenameSuffixSkeletonManifest(_) => None,
-            Node::BasenameSuffixSkeletonManifestMapping(_) => None,
             Node::UnodeFile(_) => None,
             Node::UnodeManifest(_) => None,
             Node::UnodeMapping(_) => None,
@@ -1069,8 +1040,6 @@ impl Node {
             Node::FsnodeMapping(k) => Some(k.sampling_fingerprint()),
             Node::SkeletonManifest(k) => Some(k.sampling_fingerprint()),
             Node::SkeletonManifestMapping(k) => Some(k.sampling_fingerprint()),
-            Node::BasenameSuffixSkeletonManifest(k) => Some(k.sampling_fingerprint()),
-            Node::BasenameSuffixSkeletonManifestMapping(k) => Some(k.sampling_fingerprint()),
             Node::UnodeFile(k) => Some(k.sampling_fingerprint()),
             Node::UnodeManifest(k) => Some(k.sampling_fingerprint()),
             Node::UnodeMapping(k) => Some(k.sampling_fingerprint()),
@@ -1106,13 +1075,9 @@ impl Node {
                     let p1 = p1.map(|p| p.into_nodehash());
                     let p2 = p2.map(|p| p.into_nodehash());
                     let actual = calculate_hg_node_id_stream(
-                        stream::once(async { Ok(metadata) })
-                            .chain(file_bytes)
-                            .boxed()
-                            .compat(),
+                        stream::once(async { Ok(metadata) }).chain(file_bytes),
                         &HgParents::new(p1, p2),
                     )
-                    .compat()
                     .await?;
                     let actual = HgFileNodeId::new(actual);
 
@@ -1226,8 +1191,14 @@ mod tests {
         // If you are adding a new derived data type, please add it to the walker graph rather than to this
         // list, otherwise it won't get scrubbed and thus you would be unaware of different representation
         // in different stores
-        let grandfathered: HashSet<&'static str> =
-            HashSet::from_iter(vec!["git_trees", "git_commits"].into_iter());
+        let grandfathered: HashSet<&'static str> = HashSet::from_iter(vec![
+            "git_trees",
+            "git_commits",
+            "git_delta_manifests",
+            "testmanifest",
+            "testshardedmanifest",
+            "bssm_v3",
+        ]);
         let mut missing = HashSet::new();
         for t in a {
             if s.contains(t.as_str()) {

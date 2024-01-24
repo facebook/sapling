@@ -31,6 +31,7 @@ use gix_object::Commit;
 use gix_object::Tag;
 use gix_object::Tree;
 use manifest::bonsai_diff;
+use manifest::find_intersection_of_diffs;
 use manifest::BonsaiDiffFileChange;
 use manifest::Entry;
 use manifest::Manifest;
@@ -39,8 +40,8 @@ use mononoke_types::hash;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::FileType;
-use mononoke_types::MPath;
 use mononoke_types::MPathElement;
+use mononoke_types::NonRootMPath;
 use slog::debug;
 use slog::Logger;
 use smallvec::SmallVec;
@@ -318,6 +319,7 @@ impl GitimportTarget {
 
 #[derive(Debug)]
 pub struct TagMetadata {
+    pub oid: ObjectId,
     pub message: String,
     pub author: Option<String>,
     pub author_date: Option<DateTime>,
@@ -352,6 +354,7 @@ impl TagMetadata {
             .take()
             .map(|signature| Bytes::from(signature.to_vec()));
         Result::<_, Error>::Ok(TagMetadata {
+            oid,
             author,
             author_date,
             name,
@@ -433,8 +436,16 @@ fn decode_message(
     encoding: &Option<BString>,
     logger: &Logger,
 ) -> Result<String, Error> {
-    let encoding = Encoding::for_label(&encoding.clone().unwrap_or_else(|| BString::from("utf-8")))
-        .ok_or_else(|| anyhow!("Failed to parse git commit encoding: {encoding:?}"))?;
+    let mut encoding_or_utf8 = encoding.clone().unwrap_or_else(|| BString::from("utf-8"));
+    // remove single quotes so that "'utf8'" will be accepted
+    encoding_or_utf8.retain(|c| *c != 39);
+
+    let encoding = Encoding::for_label(&encoding_or_utf8).ok_or_else(|| {
+        anyhow!(
+            "Failed to parse git commit encoding: {encoding:?} {}",
+            String::from_utf8_lossy(&encoding_or_utf8)
+        )
+    })?;
     let (decoded, actual_encoding, replacement) = encoding.decode(message);
     let message = decoded.to_string();
     if actual_encoding != encoding {
@@ -546,6 +557,32 @@ impl ExtractedCommit {
         }
     }
 
+    /// Compare the tree for the commit against its parents and return all the trees and subtrees
+    /// that have changed w.r.t its parents
+    pub fn changed_trees(
+        &self,
+        ctx: &CoreContext,
+        reader: &GitRepoReader,
+    ) -> impl Stream<Item = Result<GitTree<true>, Error>> {
+        // When doing manifest diff over trees, submodules enabled or disabled doesn't matter
+        let tree = GitTree::<true>(self.tree_oid);
+        let parent_trees = self
+            .parent_tree_oids
+            .iter()
+            .cloned()
+            .map(GitTree::<true>)
+            .collect();
+        find_intersection_of_diffs(ctx.clone(), reader.clone(), tree, parent_trees)
+            .try_filter_map(|(_, entry)| async move {
+                let result = match entry {
+                    Entry::Tree(git_tree) => Some(git_tree),
+                    Entry::Leaf(_) => None,
+                };
+                anyhow::Ok(result)
+            })
+            .boxed()
+    }
+
     /// Generic version of `diff_root` based on whether submodules are
     /// included or not.
     fn diff_root_for_submodules<const SUBMODULES: bool>(
@@ -604,7 +641,7 @@ pub trait GitUploader: Clone + Send + Sync + 'static {
         &self,
         ctx: &CoreContext,
         lfs: &GitImportLfs,
-        path: &MPath,
+        path: &NonRootMPath,
         ty: FileType,
         oid: ObjectId,
         git_bytes: Bytes,
@@ -613,6 +650,15 @@ pub trait GitUploader: Clone + Send + Sync + 'static {
     /// Upload a single git object to the repo blobstore of the mercurial mirror.
     /// Use this method for uploading non-blob git objects (e.g. tree, commit, etc)
     async fn upload_object(
+        &self,
+        ctx: &CoreContext,
+        oid: ObjectId,
+        git_bytes: Bytes,
+    ) -> Result<(), Error>;
+
+    /// Upload a single packfile item corresponding to a git base object, i.e. commit,
+    /// tree, blob or tag
+    async fn upload_packfile_base_item(
         &self,
         ctx: &CoreContext,
         oid: ObjectId,
@@ -630,7 +676,7 @@ pub trait GitUploader: Clone + Send + Sync + 'static {
         ctx: &CoreContext,
         bonsai_parents: Vec<ChangesetId>,
         metadata: CommitMetadata,
-        changes: SortedVectorMap<MPath, Self::Change>,
+        changes: SortedVectorMap<NonRootMPath, Self::Change>,
         dry_run: bool,
     ) -> Result<(Self::IntermediateChangeset, ChangesetId), Error>;
 

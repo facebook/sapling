@@ -14,13 +14,17 @@ pub use super::IO;
 
 commands! {
     mod args;
-    mod dumpdynamicconfig;
+    mod currentexe;
+    mod dumpinternalconfig;
     mod dumpindexedlog;
     mod dumptrace;
-    mod dynamicconfig;
+    mod refreshconfig;
     mod fsync;
     mod http;
+    mod mergestate;
+    mod metrics;
     mod networkdoctor;
+    mod structuredprogress;
     mod python;
     mod racyoutput;
     mod revsets;
@@ -32,6 +36,7 @@ commands! {
     mod segmentpull;
     mod store;
     mod top;
+    mod wait;
 }
 
 define_flags! {

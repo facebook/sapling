@@ -369,7 +369,7 @@ impl NameSet {
                             let filter_func = filter_func.clone();
                             async move {
                                 match v {
-                                    Ok(v) => match (&filter_func)(&v).await {
+                                    Ok(v) => match filter_func(&v).await {
                                         Ok(true) => Some(Ok(v)),
                                         Ok(false) => None,
                                         Err(e) => Some(Err(e)),
@@ -385,7 +385,7 @@ impl NameSet {
             Box::new(move |_, v| {
                 let filter_func = filter_func.clone();
                 let this = this.clone();
-                Box::pin(async move { Ok(this.0.contains(v).await? && (&filter_func)(v).await?) })
+                Box::pin(async move { Ok(this.0.contains(v).await? && filter_func(v).await?) })
             }),
             hints,
         );
@@ -977,7 +977,7 @@ pub(crate) mod tests {
         let s = |set: NameSet| -> Vec<String> { shorten_iter(set.iter()) };
         assert_eq!(s(ab.clone() | bc.clone()), ["61", "62", "63"]);
         assert_eq!(s(ab.clone() & bc.clone()), ["62"]);
-        assert_eq!(s(ab.clone() - bc.clone()), ["61"]);
+        assert_eq!(s(ab - bc), ["61"]);
     }
 
     #[test]
@@ -1000,35 +1000,35 @@ pub(crate) mod tests {
         assert_eq!(
             hints_ops(&partial, &empty),
             [
-                "- Hints(ID_ASC)",
-                "  Hints(EMPTY | ID_DESC | ID_ASC | TOPO_DESC | ANCESTORS)",
-                "& Hints(EMPTY | ID_DESC | ID_ASC | TOPO_DESC | ANCESTORS)",
-                "  Hints(EMPTY | ID_DESC | ID_ASC | TOPO_DESC | ANCESTORS)",
-                "| Hints(ID_ASC)",
-                "  Hints(ID_ASC)"
+                "- Hints(Flags(ID_ASC))",
+                "  Hints(Flags(EMPTY | ID_DESC | ID_ASC | TOPO_DESC | ANCESTORS))",
+                "& Hints(Flags(EMPTY | ID_DESC | ID_ASC | TOPO_DESC | ANCESTORS))",
+                "  Hints(Flags(EMPTY | ID_DESC | ID_ASC | TOPO_DESC | ANCESTORS))",
+                "| Hints(Flags(ID_ASC))",
+                "  Hints(Flags(ID_ASC))"
             ]
         );
         // Fast paths are not used for "|" because there is no dag associated.
         assert_eq!(
             hints_ops(&partial, &full),
             [
-                "- Hints(ID_ASC)",
-                "  Hints(ID_DESC)",
-                "& Hints(ID_ASC)",
-                "  Hints(ID_ASC)",
-                "| Hints((empty))",
-                "  Hints((empty))"
+                "- Hints(Flags(ID_ASC))",
+                "  Hints(Flags(ID_DESC))",
+                "& Hints(Flags(ID_ASC))",
+                "  Hints(Flags(ID_ASC))",
+                "| Hints(Flags(0x0))",
+                "  Hints(Flags(0x0))"
             ]
         );
         assert_eq!(
             hints_ops(&empty, &full),
             [
-                "- Hints(EMPTY | ID_DESC | ID_ASC | TOPO_DESC | ANCESTORS)",
-                "  Hints(FULL | ID_DESC | ANCESTORS)",
-                "& Hints(EMPTY | ID_DESC | ID_ASC | TOPO_DESC | ANCESTORS)",
-                "  Hints(EMPTY | ID_DESC | ID_ASC | TOPO_DESC | ANCESTORS)",
-                "| Hints(FULL | ID_DESC | ANCESTORS)",
-                "  Hints(FULL | ID_DESC | ANCESTORS)"
+                "- Hints(Flags(EMPTY | ID_DESC | ID_ASC | TOPO_DESC | ANCESTORS))",
+                "  Hints(Flags(FULL | ID_DESC | ANCESTORS))",
+                "& Hints(Flags(EMPTY | ID_DESC | ID_ASC | TOPO_DESC | ANCESTORS))",
+                "  Hints(Flags(EMPTY | ID_DESC | ID_ASC | TOPO_DESC | ANCESTORS))",
+                "| Hints(Flags(FULL | ID_DESC | ANCESTORS))",
+                "  Hints(Flags(FULL | ID_DESC | ANCESTORS))"
             ]
         );
     }
@@ -1111,12 +1111,12 @@ pub(crate) mod tests {
         assert_eq!(
             hints_ops(&bc, &ad),
             [
-                "- Hints(ID_DESC, 20..)",
-                "  Hints(ID_ASC, ..=40)",
-                "& Hints(ID_DESC, 20..=40)",
-                "  Hints(ID_ASC, 20..=40)",
-                "| Hints((empty))",
-                "  Hints((empty))"
+                "- Hints(Flags(ID_DESC), 20..)",
+                "  Hints(Flags(ID_ASC), ..=40)",
+                "& Hints(Flags(ID_DESC), 20..=40)",
+                "  Hints(Flags(ID_ASC), 20..=40)",
+                "| Hints(Flags(0x0))",
+                "  Hints(Flags(0x0))"
             ]
         );
 
@@ -1125,12 +1125,12 @@ pub(crate) mod tests {
         assert_eq!(
             hints_ops(&bc, &ad),
             [
-                "- Hints(ID_DESC, 20..=30)",
-                "  Hints(ID_ASC, 10..=40)",
-                "& Hints(ID_DESC, 20..=30)",
-                "  Hints(ID_ASC, 20..=30)",
-                "| Hints((empty))",
-                "  Hints((empty))"
+                "- Hints(Flags(ID_DESC), 20..=30)",
+                "  Hints(Flags(ID_ASC), 10..=40)",
+                "& Hints(Flags(ID_DESC), 20..=30)",
+                "  Hints(Flags(ID_ASC), 20..=30)",
+                "| Hints(Flags(0x0))",
+                "  Hints(Flags(0x0))"
             ]
         );
     }
@@ -1144,12 +1144,12 @@ pub(crate) mod tests {
         assert_eq!(
             hints_ops(&a, &b),
             [
-                "- Hints((empty))",
-                "  Hints((empty))",
-                "& Hints((empty))",
-                "  Hints((empty))",
-                "| Hints((empty))",
-                "  Hints((empty))"
+                "- Hints(Flags(0x0))",
+                "  Hints(Flags(0x0))",
+                "& Hints(Flags(0x0))",
+                "  Hints(Flags(0x0))",
+                "| Hints(Flags(0x0))",
+                "  Hints(Flags(0x0))"
             ]
         );
 
@@ -1157,12 +1157,12 @@ pub(crate) mod tests {
         assert_eq!(
             hints_ops(&a, &b),
             [
-                "- Hints((empty))",
-                "  Hints((empty))",
-                "& Hints(ANCESTORS)",
-                "  Hints(ANCESTORS)",
-                "| Hints(ANCESTORS)",
-                "  Hints(ANCESTORS)"
+                "- Hints(Flags(0x0))",
+                "  Hints(Flags(0x0))",
+                "& Hints(Flags(ANCESTORS))",
+                "  Hints(Flags(ANCESTORS))",
+                "| Hints(Flags(ANCESTORS))",
+                "  Hints(Flags(ANCESTORS))"
             ]
         );
     }
@@ -1277,7 +1277,7 @@ pub(crate) mod tests {
                 .all(|(b, old_contains)| {
                     let name = VertexName::from(vec![b; 20]);
                     let contains = nb(query.contains_fast(&name)).unwrap_or(None);
-                    old_contains == None || contains == old_contains
+                    old_contains.is_none() || contains == old_contains
                 }),
             "contains_fast() should be consistent (set: {:?})",
             &query
@@ -1286,7 +1286,7 @@ pub(crate) mod tests {
             (0..=0xff).all(|b| {
                 let name = VertexName::from(vec![b; 20]);
                 let contains = nb(query.contains_fast(&name)).unwrap_or(None);
-                contains == None || contains == Some(names.contains(&name))
+                contains.is_none() || contains == Some(names.contains(&name))
             }),
             "contains_fast() should not return true for names not returned by iter() (set: {:?})",
             &query

@@ -72,6 +72,18 @@ pub const NULL_ID: HgId = HgId::from_byte_array([0; HgId::len()]);
 /// The hard-coded 'working copy parent' Mercurial id.
 pub const WDIR_ID: HgId = HgId::from_byte_array([0xff; HgId::len()]);
 
+/// The hard-coded 'pending file add' manifest node id.
+pub const MF_ADDED_NODE_ID: HgId = HgId::from_byte_array([
+    b'0', b'0', b'0', b'0', b'0', b'0', b'0', b'0', b'0', b'0', b'0', b'0', b'0', b'0', b'0', b'a',
+    b'd', b'd', b'e', b'd',
+]);
+
+/// The hard-coded 'pending file modification' manifest node id.
+pub const MF_MODIFIED_NODE_ID: HgId = HgId::from_byte_array([
+    b'0', b'0', b'0', b'0', b'0', b'0', b'0', b'0', b'0', b'0', b'0', b'0', b'm', b'o', b'd', b'i',
+    b'f', b'i', b'e', b'd',
+]);
+
 impl HgId {
     pub fn null_id() -> &'static Self {
         &NULL_ID
@@ -144,11 +156,13 @@ pub trait WriteHgIdExt {
     /// # Examples
     ///
     /// ```
-    /// use types::hgid::{HgId, WriteHgIdExt};
+    /// use types::hgid::HgId;
+    /// use types::hgid::WriteHgIdExt;
     /// let mut v = vec![];
     ///
     /// let n = HgId::null_id();
-    /// v.write_hgid(&n).expect("writing a hgid to a vec should work");
+    /// v.write_hgid(&n)
+    ///     .expect("writing a hgid to a vec should work");
     ///
     /// assert_eq!(v, vec![0; HgId::len()]);
     /// ```
@@ -168,11 +182,15 @@ pub trait ReadHgIdExt {
     ///
     /// ```
     /// use std::io::Cursor;
-    /// use types::hgid::{HgId, ReadHgIdExt};
+    ///
+    /// use types::hgid::HgId;
+    /// use types::hgid::ReadHgIdExt;
     /// let mut v = vec![0; HgId::len()];
     /// let mut c = Cursor::new(v);
     ///
-    /// let n = c.read_hgid().expect("reading a hgid from a vec should work");
+    /// let n = c
+    ///     .read_hgid()
+    ///     .expect("reading a hgid from a vec should work");
     ///
     /// assert_eq!(&n, HgId::null_id());
     /// ```

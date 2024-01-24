@@ -11,7 +11,6 @@ different, so this is a different test script.
 
   $ hgcloneshallow ssh://user@dummy/master client -q
   $ cd client
-  $ setconfig remotefilelog.usefastdatapack=true
 
   $ sorted() {
   >   "$@" > $TESTTMP/out

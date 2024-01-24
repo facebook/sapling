@@ -26,7 +26,15 @@ pub enum ErrorKind {
     #[error("EventSource: unexpected Content-Type: {0}")]
     EventSourceInvalidContentType(Mime),
     #[error("EventSource: Content-Type missing")]
-    EventSourceNoContentType(),
+    EventSourceNoContentType,
+    #[error("Commit Cloud Updates Polling Failure: unauthorized")]
+    PollingUpdatesUnauthorizedError,
+    #[error("Commit Cloud Updates Polling Failure: HTTP status code: {0}")]
+    PollingUpdatesHttpError(StatusCode),
+    #[error("Commit Cloud Updates Polling Failure: received an error response: {0}")]
+    PollingUpdatesServerError(String),
+    #[error("Commit Cloud Updates Polling Failure: failed to parse payload field")]
+    PollingUpdatesPayloadError,
 }
 
 lazy_static! {

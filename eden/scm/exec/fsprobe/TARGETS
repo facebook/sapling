@@ -1,0 +1,12 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+
+oncall("mercurial_release")
+
+rust_binary(
+    name = "fsprobe",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:structopt",
+    ],
+)

@@ -8,7 +8,6 @@
 #include "eden/fs/store/hg/HgProxyHash.h"
 
 #include <fmt/core.h>
-#include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
 
 #include "eden/fs/store/LocalStore.h"
@@ -65,31 +64,50 @@ std::optional<HgProxyHash> HgProxyHash::tryParseEmbeddedProxyHash(
       "Unknown proxy hash type: size {}, type {}", edenObjectId.size(), type);
 }
 
-folly::Future<std::vector<HgProxyHash>> HgProxyHash::getBatch(
+ImmediateFuture<std::vector<HgProxyHash>> HgProxyHash::getBatch(
     LocalStore* store,
     ObjectIdRange blobHashes,
     EdenStats& edenStats) {
-  std::vector<HgProxyHash> embedded_results;
-  std::vector<ByteRange> byteRanges;
-  for (const auto& hash : blobHashes) {
-    if (auto embedded = tryParseEmbeddedProxyHash(hash)) {
-      embedded_results.push_back(*embedded);
+  std::vector<HgProxyHash> results;
+  results.reserve(blobHashes.size());
+  std::vector<size_t> byteRangesIndexes;
+  for (size_t index = 0; index < blobHashes.size(); index++) {
+    if (auto embedded = tryParseEmbeddedProxyHash(blobHashes.at(index))) {
+      results.emplace_back(*embedded);
     } else {
-      byteRanges.push_back(hash.getBytes());
+      byteRangesIndexes.push_back(index);
+      results.emplace_back();
     }
   }
-  if (byteRanges.empty()) {
-    return folly::Future<std::vector<HgProxyHash>>{std::move(embedded_results)};
+
+  // If all hashes are embedded, we can just return them
+  if (byteRangesIndexes.empty()) {
+    return std::move(results);
   }
+
+  // Otherwise, we have some non-embedded hashes.
+  std::vector<ByteRange> byteRanges;
+  byteRanges.reserve(byteRangesIndexes.size());
+  for (auto& index : byteRangesIndexes) {
+    byteRanges.emplace_back(blobHashes.at(index).getBytes());
+  }
+
   edenStats.increment(&HgBackingStoreStats::loadProxyHash, byteRanges.size());
   return store->getBatch(KeySpace::HgProxyHashFamily, byteRanges)
-      .thenValue([embedded_results,
-                  byteRanges](std::vector<StoreResult>&& data) {
-        std::vector<HgProxyHash> results{embedded_results};
+      .thenValue([results = std::move(results),
+                  byteRanges, // can't move - see https://fburl.com/585912384
+                  byteRangesIndexes = std::move(byteRangesIndexes)](
+                     std::vector<StoreResult>&& data) mutable {
+        XCHECK_EQ(data.size(), byteRanges.size());
 
-        for (size_t i = 0; i < byteRanges.size(); ++i) {
-          results.emplace_back(HgProxyHash{
-              ObjectId{byteRanges.at(i)}, data[i], "prefetchFiles getBatch"});
+        // Now that we have retrieved the HgProxyHashes from the local store, we
+        // can walk through them and update the results.
+        for (size_t i = 0; i < data.size(); i++) {
+          // Convert ByteRanges to HgProxyHashes - by pairing them with the
+          // store results.
+          auto index = byteRangesIndexes.at(i);
+          results.at(index) = HgProxyHash{
+              ObjectId{byteRanges.at(i)}, data.at(i), "prefetchFiles getBatch"};
         }
 
         return results;
@@ -211,18 +229,6 @@ ByteRange HgProxyHash::byteHash() const noexcept {
 
 Hash20 HgProxyHash::revHash() const noexcept {
   return Hash20{byteHash()};
-}
-
-ObjectId HgProxyHash::sha1() const noexcept {
-  if (value_.empty()) {
-    // The SHA-1 of an empty HgProxyHash, (kZeroHash, "").
-    // The correctness of this value is asserted in tests.
-    const ObjectId emptyProxyHash = ObjectId::fromHex(
-        folly::StringPiece{"d3399b7262fb56cb9ed053d68db9291c410839c4"});
-    return emptyProxyHash;
-  } else {
-    return ObjectId::sha1(value_);
-  }
 }
 
 bool HgProxyHash::operator==(const HgProxyHash& otherHash) const {

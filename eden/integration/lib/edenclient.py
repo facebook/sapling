@@ -107,6 +107,10 @@ class EdenFS:
         return self._home_dir / ".edenrc"
 
     @property
+    def dynamic_rc_path(self) -> Path:
+        return self._etc_eden_dir / "edenfs_dynamic.rc"
+
+    @property
     def system_rc_path(self) -> Path:
         return self._etc_eden_dir / "edenfs.rc"
 
@@ -281,8 +285,6 @@ class EdenFS:
             "2",
             "--local_storage_engine_unsafe",
             self._storage_engine,
-            "--hgPath",
-            FindExe.HG_REAL,
         ]
 
         privhelper = FindExe.EDEN_PRIVHELPER
@@ -370,6 +372,7 @@ class EdenFS:
             stderr=subprocess.PIPE,
             universal_newlines=True,
             env=env,
+            errors="surrogateescape",
         )
 
         # TODO(T69605343): Until TPX properly knows how to redirect writes done
@@ -442,7 +445,9 @@ class EdenFS:
     def graceful_restart(
         self,
         timeout: float = EDENFS_START_TIMEOUT,
-        should_wait: bool = True,
+        should_wait_for_old: bool = True,
+        should_wait_for_new: bool = True,
+        extra_args: Optional[List[str]] = None,
     ) -> subprocess.Popen:
         """
         Roughly equivalent to `eden restart --graceful` to restart the daemon
@@ -468,7 +473,8 @@ class EdenFS:
             self.start(
                 timeout=timeout,
                 takeover_from=old_pid,
-                should_wait_for_daemon_healthy=should_wait,
+                should_wait_for_daemon_healthy=should_wait_for_new,
+                extra_args=extra_args,
             )
         except Exception:
             # TODO: There might be classes of errors where the old_process is
@@ -477,7 +483,7 @@ class EdenFS:
             raise
 
         # Check the return code from the old edenfs process
-        if should_wait:
+        if should_wait_for_old:
             return_code = old_process.wait()
             if return_code != 0:
                 raise Exception(
@@ -597,6 +603,7 @@ class EdenFS:
         allow_empty: bool = False,
         case_sensitive: Optional[bool] = None,
         enable_windows_symlinks: bool = False,
+        backing_store: Optional[str] = None,
     ) -> None:
         """
         Run "eden clone"
@@ -610,6 +617,9 @@ class EdenFS:
             params.append("--case-insensitive")
         if enable_windows_symlinks:
             params.append("--enable-windows-symlinks")
+        if backing_store:
+            params.append("--backing-store")
+            params.append(backing_store)
         self.run_cmd(*params)
 
     def is_case_sensitive(self, path: Union[str, os.PathLike]) -> bool:

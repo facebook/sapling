@@ -20,7 +20,7 @@ export type Serializable =
   | Error
   | Date
   | {[key: string]: Serializable}
-  | Array<Serializable>;
+  | ReadonlyArray<Serializable>;
 
 export type Serialized =
   | string

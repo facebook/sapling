@@ -7,8 +7,8 @@
 
 #pragma once
 
-#include "BackingStore.h"
 #include "eden/fs/model/RootId.h"
+#include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 
 namespace facebook::eden {

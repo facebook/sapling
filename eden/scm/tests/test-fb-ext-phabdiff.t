@@ -1,7 +1,7 @@
 #chg-compatible
 
   $ eagerepo
-  $ enable phabdiff
+  $ enable fbcodereview
 
 Setup repo
 

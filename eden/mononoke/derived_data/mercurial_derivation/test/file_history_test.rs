@@ -20,7 +20,7 @@ use fixtures::Linear;
 use fixtures::TestRepoFixture;
 use manifest::ManifestOps;
 use mercurial_types::HgChangesetId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
 use tests_utils::resolve_cs_id;
 
@@ -51,7 +51,7 @@ async fn test_linear_get_file_history(fb: FacebookInit) -> Result<(), Error> {
         &repo,
         expected_linknodes,
         HgChangesetId::from_str("79a13814c5ce7330173ec04d279bf95ab3f652fb")?,
-        MPath::new("files")?,
+        NonRootMPath::new("files")?,
         None,
     )
     .await?;
@@ -65,7 +65,7 @@ async fn test_linear_get_file_history(fb: FacebookInit) -> Result<(), Error> {
         &repo,
         expected_linknodes,
         HgChangesetId::from_str("79a13814c5ce7330173ec04d279bf95ab3f652fb")?,
-        MPath::new("files")?,
+        NonRootMPath::new("files")?,
         Some(2),
     )
     .await?;
@@ -79,7 +79,7 @@ async fn test_linear_get_file_history(fb: FacebookInit) -> Result<(), Error> {
         &repo,
         expected_linknodes,
         HgChangesetId::from_str("79a13814c5ce7330173ec04d279bf95ab3f652fb")?,
-        MPath::new("10")?,
+        NonRootMPath::new("10")?,
         None,
     )
     .await?;
@@ -91,7 +91,7 @@ async fn assert_linknodes(
     repo: &BlobRepo,
     expected_linknodes: Vec<HgChangesetId>,
     start_from: HgChangesetId,
-    path: MPath,
+    path: NonRootMPath,
     max_length: Option<u64>,
 ) -> Result<(), Error> {
     let root_mf_id = start_from
@@ -102,7 +102,7 @@ async fn assert_linknodes(
         .find_entry(
             ctx.clone(),
             repo.repo_blobstore().clone(),
-            Some(path.clone()),
+            path.clone().into(),
         )
         .await?
         .ok_or_else(|| anyhow!("entry not found"))?

@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#[cfg(unix)]
 use std::fs;
 use std::fs::File;
 #[cfg(unix)]
@@ -15,6 +14,7 @@ use std::io;
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::path::PathBuf;
+use std::time::Duration;
 
 use tempfile::NamedTempFile;
 
@@ -41,6 +41,69 @@ pub fn atomic_write(
     let mut af = AtomicFile::open(path, mode_perms, fsync)?;
     op(af.as_file())?;
     af.save()
+}
+
+/// State to wait for change to a path.
+pub struct Wait<'a> {
+    path: &'a Path,
+    meta: Option<fs::Metadata>,
+}
+
+impl<'a> Wait<'a> {
+    /// Construct from a path for change detection. This reads the
+    /// file stats immediately. If you also need to read the file
+    /// content to double check whether to "wait" or not, call
+    /// this before reading the file content to avoid races.
+    pub fn from_path(path: &'a Path) -> io::Result<Self> {
+        let meta = match path.symlink_metadata() {
+            Ok(m) => Some(m),
+            Err(e) if e.kind() == io::ErrorKind::NotFound => None,
+            Err(e) => return Err(e),
+        };
+        Ok(Self { path, meta })
+    }
+
+    /// Wait for change on the given `path`. The `path` is expected to be
+    /// atomically updated (ex. `inode` should change on Linux).
+    ///
+    /// If `path` does not exist, wait for it to be created.
+    pub fn wait_for_change(&mut self) -> io::Result<()> {
+        #[cfg(unix)]
+        use std::os::unix::fs::MetadataExt;
+        #[cfg(windows)]
+        use std::os::windows::fs::MetadataExt;
+        tracing::debug!("waiting for atomic change: {}", self.path.display());
+        let mut new_wait;
+        'wait_loop: loop {
+            new_wait = Self::from_path(self.path)?;
+            match (&self.meta, new_wait.meta.as_ref()) {
+                (None, None) => {}
+                (Some(_), None) | (None, Some(_)) => {
+                    tracing::trace!(" waited: existence changed");
+                    break 'wait_loop;
+                }
+                (Some(new), Some(old)) => {
+                    #[cfg(unix)]
+                    if new.ino() != old.ino() {
+                        tracing::trace!(" waited: inode changed");
+                        break 'wait_loop;
+                    }
+                    // Consider using `file_index`, similar to `ino` once stabilized:
+                    // https://github.com/rust-lang/rust/issues/63010
+                    #[cfg(windows)]
+                    if new.last_write_time() != old.last_write_time()
+                        || new.creation_time() != old.creation_time()
+                    {
+                        tracing::trace!(" waited: mtime changed");
+                        break 'wait_loop;
+                    }
+                }
+            }
+            std::thread::sleep(Duration::from_millis(100));
+        }
+        self.meta = new_wait.meta;
+        Ok(())
+    }
 }
 
 pub struct AtomicFile {
@@ -138,6 +201,7 @@ mod tests {
     use std::io::Write;
     #[cfg(unix)]
     use std::os::unix::prelude::MetadataExt;
+    use std::sync::mpsc;
 
     use tempfile::tempdir;
 
@@ -163,6 +227,48 @@ mod tests {
             0o640,
             0o777 & std::fs::File::open(&foo_path)?.metadata()?.mode()
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_wait_for_change() -> io::Result<()> {
+        let dir = tempdir()?;
+        let path = dir.path().join("f");
+
+        let (tx, rx) = mpsc::channel::<i32>();
+
+        std::thread::spawn({
+            let path = path.clone();
+            move || {
+                let mut wait = Wait::from_path(&path).unwrap();
+
+                wait.wait_for_change().unwrap();
+                tx.send(101).unwrap();
+
+                wait.wait_for_change().unwrap();
+                tx.send(102).unwrap();
+
+                wait.wait_for_change().unwrap();
+                tx.send(103).unwrap();
+            }
+        });
+
+        // Nothing changed yet.
+        std::thread::sleep(Duration::from_millis(110));
+        assert!(rx.try_recv().is_err());
+
+        // Create.
+        atomic_write(&path, 0o640, false, |_| Ok(()))?;
+        assert_eq!(rx.recv().unwrap(), 101);
+
+        // Rewrite.
+        atomic_write(&path, 0o640, false, |_| Ok(()))?;
+        assert_eq!(rx.recv().unwrap(), 102);
+
+        // Delete.
+        std::fs::remove_file(&path)?;
+        assert_eq!(rx.recv().unwrap(), 103);
 
         Ok(())
     }

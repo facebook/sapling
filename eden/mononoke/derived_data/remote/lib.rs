@@ -6,8 +6,10 @@
  */
 
 use anyhow::Result;
+use arg_extensions::ArgDefaults;
 use async_trait::async_trait;
 use clap::Args;
+use context::CoreContext;
 use derived_data_service_if::types as thrift;
 
 #[derive(Clone, Debug)]
@@ -24,7 +26,7 @@ pub enum Address {
 }
 
 /// Command line arguments for controlling remote derivation
-#[derive(Args, Debug)]
+#[derive(Args, Debug, Clone)]
 pub struct RemoteDerivationArgs {
     /// Derive data remotely using the derived data service
     #[clap(long)]
@@ -37,6 +39,28 @@ pub struct RemoteDerivationArgs {
     /// Specify Host:Port pair to connect to derived data service
     #[clap(long, value_name = "HOST:PORT", group = "Address")]
     pub derive_remotely_hostport: Option<String>,
+}
+
+impl ArgDefaults for RemoteDerivationArgs {
+    fn arg_defaults(&self) -> Vec<(&'static str, String)> {
+        let mut args = vec![("derive_remotely", self.derive_remotely.to_string())];
+
+        if let Some(derive_remotely_tier) = &self.derive_remotely_tier {
+            args.push((
+                "derive_remotely_tier",
+                derive_remotely_tier.clone().to_string(),
+            ));
+        };
+
+        if let Some(derive_remotely_hostport) = &self.derive_remotely_hostport {
+            args.push((
+                "derive_remotely_hostport",
+                derive_remotely_hostport.clone().to_string(),
+            ));
+        };
+
+        args
+    }
 }
 
 impl From<RemoteDerivationArgs> for RemoteDerivationOptions {
@@ -53,12 +77,23 @@ impl From<RemoteDerivationArgs> for RemoteDerivationOptions {
     }
 }
 
+impl RemoteDerivationOptions {
+    pub fn from_args(args: &RemoteDerivationArgs) -> Self {
+        From::<RemoteDerivationArgs>::from(args.clone())
+    }
+}
+
 #[async_trait]
 pub trait DerivationClient: Send + Sync {
     async fn derive_remotely(
         &self,
+        ctx: &CoreContext,
         request: &thrift::DeriveRequest,
     ) -> Result<thrift::DeriveResponse>;
 
-    async fn poll(&self, request: &thrift::DeriveRequest) -> Result<thrift::DeriveResponse>;
+    async fn poll(
+        &self,
+        ctx: &CoreContext,
+        request: &thrift::DeriveRequest,
+    ) -> Result<thrift::DeriveResponse>;
 }

@@ -2,7 +2,7 @@
 
   $ eagerepo
   $ cat >> foo.py << EOF
-  > from edenscm import registrar
+  > from sapling import registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command('foo', [], norepo=True)

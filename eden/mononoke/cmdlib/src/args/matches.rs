@@ -96,6 +96,7 @@ use super::app::DISABLE_TUNABLES;
 use super::app::ENABLE_MCROUTER;
 use super::app::GET_MEAN_DELAY_SECS_ARG;
 use super::app::GET_STDDEV_DELAY_SECS_ARG;
+use super::app::JUST_KNOBS_CONFIG_PATH;
 use super::app::LOCAL_CONFIGERATOR_PATH_ARG;
 use super::app::LOGVIEW_ADDITIONAL_LEVEL_FILTER;
 use super::app::LOGVIEW_CATEGORY;
@@ -201,6 +202,13 @@ impl<'a> MononokeMatches<'a> {
             runtime.handle().clone(),
         )
         .context("Failed to initialize tunables")?;
+        init_just_knobs(
+            &matches,
+            &config_store,
+            logger.clone(),
+            runtime.handle().clone(),
+        )
+        .context("Failed to initialize JustKnobs")?;
 
         let mysql_options =
             parse_mysql_options(&matches, &app_data).context("Failed to parse MySQL options")?;
@@ -236,7 +244,7 @@ impl<'a> MononokeMatches<'a> {
                     megarepo_configs_options,
                     remote_derivation_options,
                     disabled_hooks: HashMap::new(),
-                    warm_bookmarks_cache_derived_data: None,
+                    bookmark_cache_options: Default::default(),
                     filter_repos: None,
                 }),
                 app_data,
@@ -520,9 +528,11 @@ fn create_warm_bookmark_cache_scuba_sample_builder(
     {
         Some(scuba) => {
             let hostname = hostname::get_hostname()?;
-            let sampling_pct = tunables()
-                .warm_bookmark_cache_logging_sampling_pct()
-                .unwrap_or_default() as u64;
+            let sampling_pct = justknobs::get_as::<u64>(
+                "scm/mononoke:warm_bookmark_cache_logging_sampling_pct",
+                None,
+            )
+            .unwrap_or_default();
 
             let mut hasher = DefaultHasher::new();
             hostname.hash(&mut hasher);
@@ -885,7 +895,10 @@ fn parse_rendezvous_options(matches: &ArgMatches<'_>) -> Result<RendezVousOption
         .expect("A default is set, should never be None")
         .parse()
         .with_context(|| format!("Provided {} is not an integer", RENDEZVOUS_FREE_CONNECTIONS))?;
-    Ok(RendezVousOptions { free_connections })
+    Ok(RendezVousOptions {
+        free_connections,
+        ..Default::default()
+    })
 }
 
 fn parse_mononoke_megarepo_configs_options(
@@ -940,6 +953,21 @@ fn init_tunables<'a>(
         config_store.get_config_handle(parse_config_spec_to_path(tunables_spec)?)?;
 
     init_tunables_worker(logger, config_handle, handle)
+}
+
+fn init_just_knobs<'a>(
+    matches: &'a ArgMatches<'a>,
+    config_store: &'a ConfigStore,
+    logger: Logger,
+    handle: Handle,
+) -> Result<()> {
+    if let Some(just_knobs_cached_config_path) = matches.value_of(JUST_KNOBS_CONFIG_PATH) {
+        let config_handle = config_store
+            .get_config_handle(parse_config_spec_to_path(just_knobs_cached_config_path)?)?;
+        justknobs::cached_config::init_just_knobs_worker(logger, config_handle, handle)
+    } else {
+        Ok(())
+    }
 }
 
 /// Initialize a new `Runtime` with thread number parsed from the CLI

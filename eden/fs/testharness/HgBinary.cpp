@@ -7,8 +7,20 @@
 
 #include "eden/fs/testharness/HgBinary.h"
 #include <folly/Range.h>
-#include "eden/fs/store/hg/HgImporter.h"
 #include "eden/fs/utils/PathFuncs.h"
+
+#ifdef _WIN32
+// We will use the known path to HG executable instead of searching in the
+// path. This would make sure we are picking the right mercurial. In future
+// we should find a chef config to lookup the path.
+
+DEFINE_string(
+    hgPath,
+    "C:\\tools\\hg\\hg.real.exe",
+    "The path to the mercurial executable");
+#else
+DEFINE_string(hgPath, "hg.real", "The path to the mercurial executable");
+#endif
 
 namespace facebook::eden {
 AbsolutePath findAndConfigureHgBinary() {

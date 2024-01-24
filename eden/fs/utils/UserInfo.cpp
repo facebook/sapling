@@ -111,8 +111,7 @@ void UserInfo::restoreEnvironmentAfterSudo() {
   }
 
   // Update the $USER environment variable.  This is important so that any
-  // subprocesses we spawn (such as "hg debugedenimporthelper") see the correct
-  // $USER value.
+  // subprocesses we spawn see the correct $USER value.
   setenv("USER", username_.c_str(), 1);
   // sudo also sets the USERNAME and LOGNAME environment variables.
   // Update these as well.

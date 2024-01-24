@@ -30,9 +30,26 @@ export function getAllRecoilStateJson(snapshot: Snapshot): UIStateSnapshot {
         : loadable.state === 'loading'
         ? '(pending promise)'
         : loadable.errorMaybe();
-    return [node.key, trySerialize(() => serialize(value))];
+    return [
+      node.key,
+      shouldSkipField(node.key) ? '(skipped)' : trySerialize(() => serialize(value)),
+    ];
   });
   return Object.fromEntries(resolvedNodes);
+}
+
+/** If we included the entire UI state, it would be several MB large and hard to read.
+ * Let's trim down some unnecessary fields, such as large selectors that derive from other state. */
+function shouldSkipField(key: string): boolean {
+  return (
+    // all commits already listed in latestCommitsData, these selectors are convenient in code but provide no additional info
+    key === 'latestCommitTreeMap' ||
+    key === 'latestCommits' ||
+    key === 'linearizedCommitHistory' ||
+    key.startsWith('commitByHash') ||
+    // available in allDiffSummaries
+    key.startsWith('diffSummary')
+  );
 }
 
 function serialize(arg: Json): Json {

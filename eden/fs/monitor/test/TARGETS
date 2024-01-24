@@ -1,0 +1,22 @@
+load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("scm_client_infra")
+
+cpp_unittest(
+    name = "test",
+    srcs = glob(["*.cpp"]),
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    deps = [
+        "//eden/fs/monitor:edenfs_monitor_lib",
+        "//eden/fs/testharness:fake_clock",
+        "//eden/fs/testharness:temp_file",
+        "//folly:range",
+        "//folly/logging:logging",
+        "//folly/portability:gmock",
+        "//folly/portability:gtest",
+    ],
+)

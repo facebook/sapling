@@ -33,11 +33,15 @@ export function TokensList({
   );
 }
 
+function deduplicate<T>(values: Array<T>) {
+  return [...new Set(values)];
+}
+
 /** Extract comma-separated tokens into an array, plus any remaining non-tokenized text */
 export function extractTokens(raw: string): [Array<string>, string] {
   const tokens = raw.split(',');
   const remaining = tokens.length === 0 ? raw : tokens.pop();
-  return [tokens.map(token => token.trim()), remaining ?? ''];
+  return [deduplicate(tokens.map(token => token.trim())), remaining ?? ''];
 }
 
 /** Combine tokens back into a string to be stored in the commit message */

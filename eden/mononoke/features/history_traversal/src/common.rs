@@ -9,9 +9,9 @@ use anyhow::Error;
 use context::CoreContext;
 use futures::stream;
 use futures::stream::TryStreamExt;
+use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
-use mononoke_types::MPath;
 
 use crate::Repo;
 
@@ -33,11 +33,11 @@ pub(crate) async fn find_possible_mutable_ancestors(
     ctx: &CoreContext,
     repo: &impl Repo,
     csid: ChangesetId,
-    path: Option<&MPath>,
+    path: &MPath,
 ) -> Result<Vec<(Generation, ChangesetId)>, Error> {
     let mutable_renames = repo.mutable_renames();
     let mutable_csids = mutable_renames
-        .get_cs_ids_with_rename(ctx, path.cloned())
+        .get_cs_ids_with_rename(ctx, path.clone())
         .await?;
     let mut possible_mutable_ancestors: Vec<(Generation, ChangesetId)> =
         stream::iter(mutable_csids.into_iter().map(anyhow::Ok))

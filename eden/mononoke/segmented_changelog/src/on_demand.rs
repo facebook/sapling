@@ -259,18 +259,18 @@ impl OnDemandUpdateSegmentedChangelog {
     ) -> Result<bool> {
         let changeset_fetcher = self.changeset_fetcher.clone();
         let id_map = self.namedag.read().await.map().clone_idmap();
-        let max_commits = tunables::tunables()
-            .segmented_changelog_client_max_commits_to_traverse()
-            .unwrap_or_default();
+        let max_commits = justknobs::get_as::<usize>(
+            "scm/mononoke:segmented_changelog_client_max_commits_to_traverse",
+            None,
+        )
+        .unwrap_or_default();
         for cs_id in heads {
             let ancestors =
                 AncestorsNodeStream::new(ctx.clone(), &changeset_fetcher, *cs_id).compat();
-            let ids = ancestors
-                .take(max_commits as usize)
-                .try_filter_map(|cs_id| {
-                    cloned!(ctx, id_map);
-                    async move { id_map.find_dag_id(&ctx, cs_id).await }
-                });
+            let ids = ancestors.take(max_commits).try_filter_map(|cs_id| {
+                cloned!(ctx, id_map);
+                async move { id_map.find_dag_id(&ctx, cs_id).await }
+            });
             pin_mut!(ids);
             if ids.try_next().await?.is_none() {
                 return Ok(false);

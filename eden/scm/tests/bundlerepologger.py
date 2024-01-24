@@ -3,8 +3,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-from edenscm import bundlerepo, extensions
-from edenscm.i18n import _
+from sapling import bundlerepo, extensions
+from sapling.i18n import _
 
 
 def extsetup(ui):

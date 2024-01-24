@@ -8,7 +8,7 @@
 use anyhow::Error;
 use anyhow::Result;
 use edenapi_types::WireHistoryEntry;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use types::Parents;
 use types::RepoPathBuf as ClientRepoPathBuf;
 
@@ -22,8 +22,8 @@ use crate::nodehash::NULL_HASH;
 /// remotefilelog format
 pub fn convert_parents_to_remotefilelog_format<'a>(
     parents: &HgParents,
-    copyfrom: Option<&'a (MPath, HgFileNodeId)>,
-) -> (HgFileNodeId, HgFileNodeId, Option<&'a MPath>) {
+    copyfrom: Option<&'a (NonRootMPath, HgFileNodeId)>,
+) -> (HgFileNodeId, HgFileNodeId, Option<&'a NonRootMPath>) {
     let (p1, p2) = match parents {
         HgParents::None => (NULL_HASH, NULL_HASH),
         HgParents::One(p) => (p.clone(), NULL_HASH),
@@ -47,7 +47,7 @@ pub struct HgFileHistoryEntry {
     node: HgFileNodeId,
     parents: HgParents,
     linknode: HgChangesetId,
-    copyfrom: Option<(MPath, HgFileNodeId)>,
+    copyfrom: Option<(NonRootMPath, HgFileNodeId)>,
 }
 
 impl HgFileHistoryEntry {
@@ -55,7 +55,7 @@ impl HgFileHistoryEntry {
         node: HgFileNodeId,
         parents: HgParents,
         linknode: HgChangesetId,
-        copyfrom: Option<(MPath, HgFileNodeId)>,
+        copyfrom: Option<(NonRootMPath, HgFileNodeId)>,
     ) -> Self {
         Self {
             node,
@@ -77,7 +77,7 @@ impl HgFileHistoryEntry {
         &self.linknode
     }
 
-    pub fn copyfrom(&self) -> &Option<(MPath, HgFileNodeId)> {
+    pub fn copyfrom(&self) -> &Option<(NonRootMPath, HgFileNodeId)> {
         &self.copyfrom
     }
 }

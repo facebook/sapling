@@ -10,10 +10,9 @@ add_library(
     ${STORE_FILTER_SRCS}
 )
 
-target_link_libraries(
-  eden_store_filter
-  PUBLIC
+target_link_libraries(eden_store_filter PUBLIC
+    eden_config
     eden_model
     eden_utils
-    ${RE2_LIBRARY}
-)
+    edenfs_ffi
+    ${RE2_LIBRARY})

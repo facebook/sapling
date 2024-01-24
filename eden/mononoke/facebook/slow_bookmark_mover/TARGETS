@@ -1,0 +1,52 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+load("//antlir/fbpkg:fbpkg.bzl", "fbpkg")
+
+oncall("mononoke")
+
+rust_binary(
+    name = "slow_bookmark_mover",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:maplit",
+        "fbsource//third-party/rust:slog",
+        "fbsource//third-party/rust:tokio",
+        "//common/rust/shed/borrowed:borrowed",
+        "//common/rust/shed/facet:facet",
+        "//common/rust/shed/fbinit:fbinit",
+        "//eden/mononoke/blobrepo:blobrepo",
+        "//eden/mononoke/blobrepo:changeset_fetcher",
+        "//eden/mononoke/blobrepo:repo_blobstore",
+        "//eden/mononoke/blobstore:blobstore",
+        "//eden/mononoke/bonsai_git_mapping:bonsai_git_mapping",
+        "//eden/mononoke/bonsai_globalrev_mapping:bonsai_globalrev_mapping",
+        "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
+        "//eden/mononoke/bookmarks:bookmarks",
+        "//eden/mononoke/changesets:changesets",
+        "//eden/mononoke/cmdlib:cmdlib",
+        "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
+        "//eden/mononoke/common/time_measuring:time_measuring",
+        "//eden/mononoke/common/topo_sort:topo_sort",
+        "//eden/mononoke/mercurial:mercurial_mutation",
+        "//eden/mononoke/mononoke_hg_sync_job:mononoke_hg_sync_job_helper_lib",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/mutable_counters:mutable_counters",
+        "//eden/mononoke/phases:phases",
+        "//eden/mononoke/pushrebase_mutation_mapping:pushrebase_mutation_mapping",
+        "//eden/mononoke/repo_attributes/commit_graph/commit_graph:commit_graph",
+        "//eden/mononoke/repo_attributes/repo_derived_data:repo_derived_data",
+        "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
+        "//eden/mononoke/segmented_changelog:segmented_changelog",
+        "//eden/mononoke/server/context:context",
+    ],
+)
+
+fbpkg.builder(
+    name = "mononoke.slow_bookmark_mover",
+    path_actions = {
+        "slow_bookmark_mover": ":slow_bookmark_mover",
+    },
+)

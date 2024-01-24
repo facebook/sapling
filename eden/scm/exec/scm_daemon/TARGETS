@@ -1,0 +1,40 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("@fbcode_macros//build_defs:rust_universal_binary.bzl", "rust_universal_binary")
+
+oncall("mercurial_release")
+
+rust_binary(
+    name = "scm_daemon",
+    srcs = glob(["src/**/*.rs"]),
+    link_style = "static",
+    os_deps = [
+        (
+            "linux",
+            [
+                "fbsource//third-party/rust:libc",
+            ],
+        ),
+        (
+            "macos",
+            [
+                "fbsource//third-party/rust:libc",
+            ],
+        ),
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:clap-2",
+        "fbsource//third-party/rust:env_logger",
+        "fbsource//third-party/rust:log",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:toml",
+        "//eden/scm/lib/commitcloudsubscriber:commitcloudsubscriber",
+    ],
+)
+
+rust_universal_binary(
+    name = "scm_daemon_universal_binary",
+    source = ":scm_daemon",
+)

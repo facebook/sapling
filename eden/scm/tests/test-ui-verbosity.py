@@ -2,8 +2,7 @@ from __future__ import absolute_import, print_function
 
 import os
 
-from edenscm import ui as uimod
-from hghave import require
+from sapling import ui as uimod
 
 
 hgrc = os.environ["HGRCPATH"]

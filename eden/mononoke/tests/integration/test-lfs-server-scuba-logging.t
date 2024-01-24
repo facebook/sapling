@@ -25,7 +25,7 @@
   ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746  -
 
 # Finally, send an extra query to do a little more ad-hoc testing
-  $ curl -fsSL -o /dev/null "${lfs_root}/config?foo=bar"
+  $ curltest -fsSL -o /dev/null "${lfs_root}/config?foo=bar"
 
 # Check that Scuba logs are present
   $ wait_for_json_record_count "$SCUBA" 5
@@ -34,6 +34,7 @@
     "int": {
       "BlobGets": 1,
       "BlobGetsMaxLatency": *, (glob)
+      "BlobGetsMaxSize": 0,
       "BlobGetsNotFound": 1,
       "BlobGetsNotFoundMaxLatency": *, (glob)
       "BlobGetsTotalSize": 0,
@@ -41,10 +42,10 @@
       "BlobPresenceChecksMaxLatency": *, (glob)
       "BlobPuts": 0,
       "BlobPutsMaxLatency": *, (glob)
+      "BlobPutsMaxSize": 0,
       "BlobPutsTotalSize": 0,
       "BlobUnlinks": 0,
       "BlobUnlinksMaxLatency": *, (glob)
-      "BlobUnlinksTotalSize": 0,
       "CachelibHits": 0,
       "CachelibMisses": 0,
       "GetpackNumPossibleLFSFiles": 0,
@@ -65,15 +66,17 @@
       "headers_duration_ms": *, (glob)
       "http_status": 200,
       "request_content_length": *, (glob)
-      "request_load": *, (glob)
       "response_bytes_sent": *, (glob)
       "response_content_length": *, (glob)
       "seq": 0,
       "time": * (glob)
     },
     "normal": {
+      "client_correlator": "*", (glob)
+      "client_entry_point": "sapling",
       "client_hostname": "localhost",
       "client_ip": "$LOCALIP",
+      "client_main_id": "*", (glob)
       "http_host": "*", (glob)
       "http_method": "POST",
       "http_path": "/lfs1/objects/batch",
@@ -90,6 +93,7 @@
     "int": {
       "BlobGets": 0,
       "BlobGetsMaxLatency": *, (glob)
+      "BlobGetsMaxSize": 0,
       "BlobGetsNotFound": 0,
       "BlobGetsNotFoundMaxLatency": *, (glob)
       "BlobGetsTotalSize": 0,
@@ -97,10 +101,10 @@
       "BlobPresenceChecksMaxLatency": *, (glob)
       "BlobPuts": 211,
       "BlobPutsMaxLatency": *, (glob)
+      "BlobPutsMaxSize": *, (glob)
       "BlobPutsTotalSize": *, (glob)
       "BlobUnlinks": 0,
       "BlobUnlinksMaxLatency": *, (glob)
-      "BlobUnlinksTotalSize": 0,
       "CachelibHits": 0,
       "CachelibMisses": 0,
       "GetpackNumPossibleLFSFiles": 0,
@@ -117,15 +121,17 @@
       "http_status": 200,
       "request_bytes_received": 2048,
       "request_content_length": 2048,
-      "request_load": *, (glob)
       "response_bytes_sent": 0,
       "response_content_length": 0,
       "seq": 0,
       "time": * (glob)
     },
     "normal": {
+      "client_correlator": "*", (glob)
+      "client_entry_point": "sapling",
       "client_hostname": "localhost",
       "client_ip": "$LOCALIP",
+      "client_main_id": "*", (glob)
       "http_host": "*", (glob)
       "http_method": "PUT",
       "http_path": "/lfs1/upload/ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746/2048",
@@ -143,6 +149,7 @@
     "int": {
       "BlobGets": 2,
       "BlobGetsMaxLatency": *, (glob)
+      "BlobGetsMaxSize": *, (glob)
       "BlobGetsNotFound": 0,
       "BlobGetsNotFoundMaxLatency": *, (glob)
       "BlobGetsTotalSize": *, (glob)
@@ -150,10 +157,10 @@
       "BlobPresenceChecksMaxLatency": *, (glob)
       "BlobPuts": 0,
       "BlobPutsMaxLatency": *, (glob)
+      "BlobPutsMaxSize": 0,
       "BlobPutsTotalSize": 0,
       "BlobUnlinks": 0,
       "BlobUnlinksMaxLatency": *, (glob)
-      "BlobUnlinksTotalSize": 0,
       "CachelibHits": 0,
       "CachelibMisses": 0,
       "GetpackNumPossibleLFSFiles": 0,
@@ -174,7 +181,6 @@
       "headers_duration_ms": *, (glob)
       "http_status": 200,
       "request_content_length": *, (glob)
-      "request_load": *, (glob)
       "response_bytes_sent": *, (glob)
       "response_content_length": *, (glob)
       "seq": 0,
@@ -182,8 +188,11 @@
     },
     "normal": {
       "batch_order": "*", (glob)
+      "client_correlator": "*", (glob)
+      "client_entry_point": "sapling",
       "client_hostname": "localhost",
       "client_ip": "$LOCALIP",
+      "client_main_id": "*", (glob)
       "http_host": "*", (glob)
       "http_method": "POST",
       "http_path": "/lfs1/objects/batch",
@@ -201,6 +210,7 @@
     "int": {
       "BlobGets": 206,
       "BlobGetsMaxLatency": *, (glob)
+      "BlobGetsMaxSize": *, (glob)
       "BlobGetsNotFound": 0,
       "BlobGetsNotFoundMaxLatency": *, (glob)
       "BlobGetsTotalSize": 1*, (glob)
@@ -208,10 +218,10 @@
       "BlobPresenceChecksMaxLatency": *, (glob)
       "BlobPuts": 0,
       "BlobPutsMaxLatency": *, (glob)
+      "BlobPutsMaxSize": 0,
       "BlobPutsTotalSize": 0,
       "BlobUnlinks": 0,
       "BlobUnlinksMaxLatency": *, (glob)
-      "BlobUnlinksTotalSize": 0,
       "CachelibHits": 0,
       "CachelibMisses": 0,
       "GetpackNumPossibleLFSFiles": 0,
@@ -227,7 +237,6 @@
       "error_count": 0,
       "headers_duration_ms": *, (glob)
       "http_status": 200,
-      "request_load": *, (glob)
       "response_bytes_sent": 2048,
       "response_content_length": 2048,
       "seq": 0,
@@ -241,8 +250,11 @@
       "time": * (glob)
     },
     "normal": {
+      "client_correlator": "*", (glob)
+      "client_entry_point": "sapling",
       "client_hostname": "localhost",
       "client_ip": "$LOCALIP",
+      "client_main_id": "*", (glob)
       "http_host": "*", (glob)
       "http_method": "GET",
       "http_path": "/lfs1/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d",
@@ -260,6 +272,7 @@
     "int": {
       "BlobGets": 0,
       "BlobGetsMaxLatency": *, (glob)
+      "BlobGetsMaxSize": 0,
       "BlobGetsNotFound": 0,
       "BlobGetsNotFoundMaxLatency": *, (glob)
       "BlobGetsTotalSize": 0,
@@ -267,10 +280,10 @@
       "BlobPresenceChecksMaxLatency": *, (glob)
       "BlobPuts": 0,
       "BlobPutsMaxLatency": *, (glob)
+      "BlobPutsMaxSize": 0,
       "BlobPutsTotalSize": 0,
       "BlobUnlinks": 0,
       "BlobUnlinksMaxLatency": *, (glob)
-      "BlobUnlinksTotalSize": 0,
       "CachelibHits": 0,
       "CachelibMisses": 0,
       "GetpackNumPossibleLFSFiles": 0,
@@ -285,13 +298,15 @@
       "error_count": 0,
       "headers_duration_ms": *, (glob)
       "http_status": 200,
-      "request_load": *, (glob)
       "seq": 0,
       "time": * (glob)
     },
     "normal": {
+      "client_correlator": "*", (glob)
+      "client_entry_point": "curl_test",
       "client_hostname": "localhost",
       "client_ip": "$LOCALIP",
+      "client_main_id": "*", (glob)
       "http_host": *, (glob)
       "http_method": "GET",
       "http_path": "/config",
@@ -306,8 +321,8 @@
 
 # Send an invalid request and check that this gets logged
   $ truncate -s 0 "$SCUBA"
-  $ curl -fsSL "${lfs_root}/lfs1/download/bad" -o /dev/null
-  curl: (22) The requested URL returned error: 400 Bad Request
+  $ curltest -fsSL "${lfs_root}/lfs1/download/bad" -o /dev/null
+  curl: (22) The requested URL returned error: 400* (glob)
   [22]
   $ wait_for_json_record_count "$SCUBA" 1
   $ jq -r .normal.error_msg < "$SCUBA"
@@ -316,12 +331,13 @@
   Caused by:
       invalid blake2 input: need exactly 64 hex digits
 
+
 # Send a request after corrupting our data, and check that this gets logged
 # too. Silence the error we get so that output variations in Curl don't break
 # the test.
   $ truncate -s 0 "$SCUBA"
   $ find "$TESTTMP/blobstore_lfs1" -type f -name "*chunk*" | xargs rm
-  $ curl -fsL "${lfs_root}/lfs1/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d" -o /dev/null || false
+  $ curltest -fsL "${lfs_root}/lfs1/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d" -o /dev/null || false
   [1]
   $ wait_for_json_record_count "$SCUBA" 1
   $ jq -r .normal.error_msg < "$SCUBA"

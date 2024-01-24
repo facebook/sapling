@@ -1,0 +1,43 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "mononoke_api_types",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "//common/rust/shed/facet:facet",
+        "//eden/mononoke/acl_regions:acl_regions",
+        "//eden/mononoke/blobrepo:blobrepo",
+        "//eden/mononoke/blobrepo:changeset_fetcher",
+        "//eden/mononoke/blobrepo:repo_blobstore",
+        "//eden/mononoke/blobstore:ephemeral_blobstore",
+        "//eden/mononoke/bonsai_git_mapping:bonsai_git_mapping",
+        "//eden/mononoke/bonsai_globalrev_mapping:bonsai_globalrev_mapping",
+        "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
+        "//eden/mononoke/bonsai_svnrev_mapping:bonsai_svnrev_mapping",
+        "//eden/mononoke/bonsai_tag_mapping:bonsai_tag_mapping",
+        "//eden/mononoke/bookmarks:bookmarks",
+        "//eden/mononoke/changesets:changesets",
+        "//eden/mononoke/filenodes:filenodes",
+        "//eden/mononoke/filestore:filestore",
+        "//eden/mononoke/git_symbolic_refs:git_symbolic_refs",
+        "//eden/mononoke/mercurial:mercurial_mutation",
+        "//eden/mononoke/metaconfig:metaconfig_types",
+        "//eden/mononoke/mutable_counters:mutable_counters",
+        "//eden/mononoke/mutable_renames:mutable_renames",
+        "//eden/mononoke/phases:phases",
+        "//eden/mononoke/pushrebase_mutation_mapping:pushrebase_mutation_mapping",
+        "//eden/mononoke/repo_attributes/commit_graph/commit_graph:commit_graph",
+        "//eden/mononoke/repo_attributes/repo_bookmark_attrs:repo_bookmark_attrs",
+        "//eden/mononoke/repo_attributes/repo_cross_repo:repo_cross_repo",
+        "//eden/mononoke/repo_attributes/repo_derived_data:repo_derived_data",
+        "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
+        "//eden/mononoke/repo_attributes/repo_lock:repo_lock",
+        "//eden/mononoke/repo_attributes/repo_permission_checker:repo_permission_checker",
+        "//eden/mononoke/repo_attributes/repo_sparse_profiles:repo_sparse_profiles",
+        "//eden/mononoke/repo_client:streaming_clone",
+        "//eden/mononoke/segmented_changelog:segmented_changelog_types",
+    ],
+)

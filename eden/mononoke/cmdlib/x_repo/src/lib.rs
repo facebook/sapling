@@ -139,7 +139,8 @@ async fn get_things_from_matches<R: Repo>(
         &source_repo_config.storage_config.metadata,
         mysql_options,
         readonly_storage.0,
-    )?;
+    )
+    .await?;
 
     let source_repo_fut = args::open_repo_with_repo_id(fb, logger, source_repo_id, matches);
     let target_repo_fut = args::open_repo_with_repo_id(fb, logger, target_repo_id, matches);

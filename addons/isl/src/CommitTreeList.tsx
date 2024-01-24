@@ -5,64 +5,204 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {UICodeReviewProvider} from './codeReview/UICodeReviewProvider';
+import type {RenderGlyphResult} from './RenderDag';
+import type {Dag, DagCommitInfo} from './dag/dag';
+import type {ExtendedGraphRow} from './dag/render';
+import type {HashSet} from './dag/set';
 import type {CommitTree, CommitTreeWithPreviews} from './getCommitTree';
-import type {CommitInfo, DiffSummary, Hash} from './types';
-import type {ContextMenuItem} from 'shared/ContextMenu';
+import type {Hash} from './types';
 
 import {BranchIndicator} from './BranchIndicator';
 import serverAPI from './ClientToServerAPI';
 import {Commit} from './Commit';
-import {Center, FlexRow, LargeSpinner} from './ComponentUtils';
+import {Center, LargeSpinner} from './ComponentUtils';
 import {ErrorNotice} from './ErrorNotice';
-import {HighlightCommitsWhileHovering} from './HighlightedCommits';
-import {OperationDisabledButton} from './OperationDisabledButton';
-import {StackEditIcon} from './StackEditIcon';
-import {StackEditSubTree, UndoDescription} from './StackEditSubTree';
+import {isHighlightedCommit} from './HighlightedCommits';
+import {RegularGlyph, RenderDag, YouAreHereGlyph} from './RenderDag';
+import {StackActions} from './StackActions';
 import {Tooltip, DOCUMENTATION_DELAY} from './Tooltip';
-import {allDiffSummaries, codeReviewProvider, pageVisibility} from './codeReview/CodeReviewInfo';
-import {isTreeLinear, walkTreePostorder} from './getCommitTree';
+import {pageVisibility} from './codeReview/CodeReviewInfo';
+import {YOU_ARE_HERE_VIRTUAL_COMMIT} from './dag/virtualCommit';
 import {T, t} from './i18n';
+import {configBackedAtom} from './jotaiUtils';
 import {CreateEmptyInitialCommitOperation} from './operations/CreateEmptyInitialCommitOperation';
-import {HideOperation} from './operations/HideOperation';
-import {ImportStackOperation} from './operations/ImportStackOperation';
-import {treeWithPreviews, useMarkOperationsCompleted} from './previews';
-import {useArrowKeysToChangeSelection} from './selection';
+import {dagWithPreviews, treeWithPreviews, useMarkOperationsCompleted} from './previews';
+import {isNarrowCommitTree} from './responsive';
+import {useArrowKeysToChangeSelection, useBackspaceToHideSelected} from './selection';
 import {
   commitFetchError,
   commitsShownRange,
   isFetchingAdditionalCommits,
-  latestHeadCommit,
   latestUncommittedChangesData,
   useRunOperation,
 } from './serverAPIState';
-import {
-  bumpStackEditMetric,
-  editingStackHashes,
-  loadingStackState,
-  sendStackEditMetrics,
-  useStackEditState,
-} from './stackEditState';
+import {MaybeEditStackModal} from './stackEdit/ui/EditStackModal';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {ErrorShortMessages} from 'isl-server/src/constants';
-import {useRecoilState, useRecoilValue, useSetRecoilState} from 'recoil';
-import {useContextMenu} from 'shared/ContextMenu';
+import {useAtomValue} from 'jotai';
+import {selector, selectorFamily, useRecoilState, useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
-import {generatorContains, notEmpty, unwrap} from 'shared/utils';
+import {notEmpty} from 'shared/utils';
 
 import './CommitTreeList.css';
 
+enum GraphRendererConfig {
+  Tree = 0,
+  Dag = 1,
+  Both = 2,
+}
+
+const configGraphRenderer = configBackedAtom<GraphRendererConfig>(
+  'isl.experimental-graph-renderer',
+  GraphRendererConfig.Tree,
+  true,
+);
+
+type DagCommitListProps = {
+  isNarrow: boolean;
+};
+
+const dagWithYouAreHere = selector<Dag>({
+  key: 'dagWithYouAreHere',
+  get: ({get}) => {
+    let dag = get(dagWithPreviews);
+    // Insert a virtual "You are here" as a child of ".".
+    const dot = dag.resolve('.');
+    if (dot != null) {
+      dag = dag.add([YOU_ARE_HERE_VIRTUAL_COMMIT.set('parents', [dot.hash])]);
+    }
+    return dag;
+  },
+});
+
+function DagCommitList(props: DagCommitListProps) {
+  const {isNarrow} = props;
+
+  const dag = useRecoilValue(dagWithYouAreHere);
+  const subset = getRenderSubset(dag);
+
+  return (
+    <RenderDag
+      dag={dag}
+      subset={subset}
+      className={'commit-tree-root ' + (isNarrow ? ' commit-tree-narrow' : '')}
+      renderCommit={renderCommit}
+      renderCommitExtras={renderCommitExtras}
+      renderGlyph={renderGlyph}
+    />
+  );
+}
+
+function renderCommit(info: DagCommitInfo) {
+  return <DagCommitBody info={info} />;
+}
+
+function renderCommitExtras(info: DagCommitInfo, row: ExtendedGraphRow) {
+  if (row.termLine != null && (info.parents.length > 0 || (info.ancestors?.size ?? 0) > 0)) {
+    // Root (no parents) in the displayed DAG, but not root in the full DAG.
+    return <MaybeFetchingAdditionalCommitsRow hash={info.hash} />;
+  } else if (info.phase === 'draft') {
+    // Draft but parents are not drafts. Likely a stack root. Show stack buttons.
+    return <MaybeStackActions hash={info.hash} />;
+  }
+  return null;
+}
+
+function renderGlyph(info: DagCommitInfo): RenderGlyphResult {
+  if (info.isYouAreHere) {
+    return ['replace-tile', <YouAreHereGlyph info={info} />];
+  } else {
+    return ['inside-tile', <HighlightedGlyph info={info} />];
+  }
+}
+
+const dagHasChildren = selectorFamily({
+  key: 'dagHasChildren',
+  get:
+    (key: string) =>
+    ({get}) => {
+      const dag = get(dagWithPreviews);
+      return dag.children(key).size > 0;
+    },
+});
+
+function DagCommitBody({info}: {info: DagCommitInfo}) {
+  const hasChildren = useRecoilValue(dagHasChildren(info.hash));
+  return (
+    <Commit
+      commit={info}
+      key={info.hash}
+      previewType={info.previewType}
+      hasChildren={hasChildren}
+      bodyOnly={true}
+    />
+  );
+}
+
+const dagHasParents = selectorFamily({
+  key: 'dagHasParents',
+  get:
+    (key: string) =>
+    ({get}) => {
+      const dag = get(dagWithPreviews);
+      return dag.parents(key).size > 0;
+    },
+});
+
+const dagIsDraftStackRoot = selectorFamily({
+  key: 'dagIsDraftStackRoot',
+  get:
+    (key: string) =>
+    ({get}) => {
+      const dag = get(dagWithPreviews);
+      return dag.draft(dag.parents(key)).size === 0;
+    },
+});
+
+function MaybeFetchingAdditionalCommitsRow({hash}: {hash: Hash}) {
+  const hasParents = useRecoilValue(dagHasParents(hash));
+  return hasParents ? null : <FetchingAdditionalCommitsRow />;
+}
+
+function MaybeStackActions({hash}: {hash: Hash}) {
+  const isDraftStackRoot = useRecoilValue(dagIsDraftStackRoot(hash));
+  return isDraftStackRoot ? <StackActions hash={hash} /> : null;
+}
+
+function HighlightedGlyph({info}: {info: DagCommitInfo}) {
+  const highlighted = useAtomValue(isHighlightedCommit(info.hash));
+
+  const hilightCircle = highlighted ? (
+    <circle cx={0} cy={0} r={8} fill="transparent" stroke="var(--focus-border)" strokeWidth={4} />
+  ) : null;
+
+  return (
+    <>
+      {hilightCircle}
+      <RegularGlyph info={info} />
+    </>
+  );
+}
+
+function getRenderSubset(dag: Dag): HashSet {
+  return dag.collapseObsolete();
+}
+
 export function CommitTreeList() {
   // Make sure we trigger subscription to changes to uncommitted changes *before* we have a tree to render,
-  // so we don't miss the first returned uncommitted changes mesage.
+  // so we don't miss the first returned uncommitted changes message.
   // TODO: This is a little ugly, is there a better way to tell recoil to start the subscription immediately?
   // Or should we queue/cache messages?
   useRecoilState(latestUncommittedChangesData);
   useRecoilState(pageVisibility);
+  const renderer = useAtomValue(configGraphRenderer);
 
   useMarkOperationsCompleted();
 
   useArrowKeysToChangeSelection();
+  useBackspaceToHideSelected();
+
+  const isNarrow = useAtomValue(isNarrowCommitTree);
 
   const {trees} = useRecoilValue(treeWithPreviews);
   const fetchError = useRecoilValue(commitFetchError);
@@ -73,9 +213,13 @@ export function CommitTreeList() {
   ) : (
     <>
       {fetchError ? <CommitFetchError error={fetchError} /> : null}
-      {trees.length === 0 ? null : (
+      {renderer >= 1 && <DagCommitList isNarrow={isNarrow} />}
+      {trees.length === 0 || renderer === 1 ? null : (
         <div
-          className="commit-tree-root commit-group with-vertical-line"
+          className={
+            'commit-tree-root commit-group with-vertical-line' +
+            (isNarrow ? ' commit-tree-narrow' : '')
+          }
           data-testid="commit-tree-root">
           <MainLineEllipsis />
           {trees.filter(shouldShowPublicCommit).map(tree => (
@@ -85,6 +229,7 @@ export function CommitTreeList() {
             <FetchingAdditionalCommitsButton />
             <FetchingAdditionalCommitsIndicator />
           </MainLineEllipsis>
+          <MaybeEditStackModal />
         </div>
       )}
     </>
@@ -99,6 +244,7 @@ export function CommitTreeList() {
  */
 function shouldShowPublicCommit(tree: CommitTree) {
   return (
+    tree.info.isHead ||
     tree.children.length > 0 ||
     tree.info.bookmarks.length > 0 ||
     tree.info.remoteBookmarks.length > 0 ||
@@ -133,22 +279,8 @@ function SubTree({tree, depth}: {tree: CommitTreeWithPreviews; depth: number}): 
   const {info, children, previewType} = tree;
   const isPublic = info.phase === 'public';
 
-  const stackHashes = useRecoilValue(editingStackHashes);
-  const loadingState = useRecoilValue(loadingStackState);
-  const isStackEditing =
-    depth > 0 && stackHashes.has(info.hash) && loadingState.state === 'hasValue';
-
   const stackActions =
-    !isPublic && depth === 1 ? <StackActions key="stack-actions" tree={tree} /> : null;
-
-  if (isStackEditing) {
-    return (
-      <>
-        <StackEditSubTree />
-        {stackActions}
-      </>
-    );
-  }
+    !isPublic && depth === 1 ? <StackActions key="stack-actions" hash={info.hash} /> : null;
 
   const renderedChildren = (children ?? [])
     .map(tree => <SubTree key={`tree-${tree.info.hash}`} tree={tree} depth={depth + 1} />)
@@ -213,6 +345,15 @@ function MainLineEllipsis({children}: {children?: React.ReactNode}) {
   );
 }
 
+function FetchingAdditionalCommitsRow() {
+  return (
+    <div className="fetch-additional-commits-row">
+      <FetchingAdditionalCommitsButton />
+      <FetchingAdditionalCommitsIndicator />
+    </div>
+  );
+}
+
 function FetchingAdditionalCommitsIndicator() {
   const isFetching = useRecoilValue(isFetchingAdditionalCommits);
   return isFetching ? <Icon icon="loading" /> : null;
@@ -240,329 +381,5 @@ function FetchingAdditionalCommitsButton() {
         <T>Load more commits</T>
       </VSCodeButton>
     </Tooltip>
-  );
-}
-
-function isStackEligibleForCleanup(
-  tree: CommitTreeWithPreviews,
-  diffMap: Map<string, DiffSummary>,
-  provider: UICodeReviewProvider,
-): boolean {
-  if (
-    tree.info.diffId == null ||
-    tree.info.isHead || // don't allow hiding a stack you're checked out on
-    diffMap.get(tree.info.diffId) == null ||
-    !provider.isDiffEligibleForCleanup(unwrap(diffMap.get(tree.info.diffId)))
-  ) {
-    return false;
-  }
-
-  // any child not eligible -> don't show
-  for (const subtree of tree.children) {
-    if (!isStackEligibleForCleanup(subtree, diffMap, provider)) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.ReactElement | null {
-  const reviewProvider = useRecoilValue(codeReviewProvider);
-  const diffMap = useRecoilValue(allDiffSummaries);
-  const stackHashes = useRecoilValue(editingStackHashes);
-  const loadingState = useRecoilValue(loadingStackState);
-  const runOperation = useRunOperation();
-
-  // buttons at the bottom of the stack
-  const actions = [];
-  // additional actions hidden behind [...] menu.
-  // Non-empty only when actions is non-empty.
-  const moreActions: Array<ContextMenuItem> = [];
-
-  const isStackEditingActivated =
-    stackHashes.size > 0 &&
-    loadingState.state === 'hasValue' &&
-    generatorContains(walkTreePostorder([tree]), v => stackHashes.has(v.info.hash));
-
-  const showCleanupButton =
-    reviewProvider == null || diffMap?.value == null
-      ? false
-      : isStackEligibleForCleanup(tree, diffMap.value, reviewProvider);
-
-  const contextMenu = useContextMenu(() => moreActions);
-  if (reviewProvider !== null && !isStackEditingActivated) {
-    const reviewActions =
-      diffMap.value == null ? {} : reviewProvider?.getSupportedStackActions(tree, diffMap.value);
-    const resubmittableStack = reviewActions?.resubmittableStack;
-    const submittableStack = reviewActions?.submittableStack;
-    const MIN_STACK_SIZE_TO_SUGGEST_SUBMIT = 2; // don't show "submit stack" on single commits... they're not really "stacks".
-
-    // any existing diffs -> show resubmit stack,
-    if (
-      resubmittableStack != null &&
-      resubmittableStack.length >= MIN_STACK_SIZE_TO_SUGGEST_SUBMIT
-    ) {
-      actions.push(
-        <HighlightCommitsWhileHovering key="resubmit-stack" toHighlight={resubmittableStack}>
-          <OperationDisabledButton
-            contextKey="submit-stack"
-            appearance="icon"
-            icon={<Icon icon="cloud-upload" slot="start" />}
-            runOperation={() => {
-              return reviewProvider.submitOperation(resubmittableStack);
-            }}>
-            <T>Resubmit stack</T>
-          </OperationDisabledButton>
-        </HighlightCommitsWhileHovering>,
-      );
-      //     any non-submitted diffs -> "submit all commits this stack" in hidden group
-      if (
-        submittableStack != null &&
-        submittableStack.length > 0 &&
-        submittableStack.length > resubmittableStack.length
-      ) {
-        moreActions.push({
-          label: (
-            <HighlightCommitsWhileHovering key="submit-entire-stack" toHighlight={submittableStack}>
-              <FlexRow>
-                <Icon icon="cloud-upload" slot="start" />
-                <T>Submit entire stack</T>
-              </FlexRow>
-            </HighlightCommitsWhileHovering>
-          ),
-          onClick: () => {
-            runOperation(
-              reviewProvider.submitOperation([...resubmittableStack, ...submittableStack]),
-            );
-          },
-        });
-      }
-      //     NO non-submitted diffs -> nothing in hidden group
-    } else if (
-      submittableStack != null &&
-      submittableStack.length >= MIN_STACK_SIZE_TO_SUGGEST_SUBMIT
-    ) {
-      // NO existing diffs -> show submit stack ()
-      actions.push(
-        <HighlightCommitsWhileHovering key="submit-stack" toHighlight={submittableStack}>
-          <OperationDisabledButton
-            contextKey="submit-stack"
-            appearance="icon"
-            icon={<Icon icon="cloud-upload" slot="start" />}
-            runOperation={() => {
-              return reviewProvider.submitOperation(submittableStack);
-            }}>
-            <T>Submit stack</T>
-          </OperationDisabledButton>
-        </HighlightCommitsWhileHovering>,
-      );
-    }
-  }
-
-  if (tree.children.length > 0) {
-    actions.push(<StackEditButton key="edit-stack" tree={tree} />);
-  }
-
-  if (showCleanupButton) {
-    actions.push(
-      <CleanupButton key="cleanup" commit={tree.info} hasChildren={tree.children.length > 0} />,
-    );
-  }
-
-  if (actions.length === 0) {
-    return null;
-  }
-  const moreActionsButton =
-    moreActions.length === 0 ? null : (
-      <VSCodeButton key="more-actions" appearance="icon" onClick={contextMenu}>
-        <Icon icon="ellipsis" />
-      </VSCodeButton>
-    );
-  return (
-    <div className="commit-tree-stack-actions">
-      {actions}
-      {moreActionsButton}
-    </div>
-  );
-}
-
-function CleanupButton({commit, hasChildren}: {commit: CommitInfo; hasChildren: boolean}) {
-  const runOperation = useRunOperation();
-  return (
-    <Tooltip
-      title={
-        hasChildren
-          ? t('You can safely "clean up" by hiding this stack of commits.')
-          : t('You can safely "clean up" by hiding this commit.')
-      }
-      placement="bottom">
-      <VSCodeButton
-        appearance="icon"
-        onClick={() => {
-          runOperation(new HideOperation(commit.hash));
-        }}>
-        <Icon icon="eye-closed" slot="start" />
-        {hasChildren ? <T>Clean up stack</T> : <T>Clean up</T>}
-      </VSCodeButton>
-    </Tooltip>
-  );
-}
-
-function StackEditConfirmButtons(): React.ReactElement {
-  const setStackHashes = useSetRecoilState(editingStackHashes);
-  const originalHead = useRecoilValue(latestHeadCommit);
-  const runOperation = useRunOperation();
-  const stackEdit = useStackEditState();
-
-  const canUndo = stackEdit.canUndo();
-  const canRedo = stackEdit.canRedo();
-
-  const handleUndo = () => {
-    stackEdit.undo();
-    bumpStackEditMetric('undo');
-  };
-
-  const handleRedo = () => {
-    stackEdit.redo();
-    bumpStackEditMetric('redo');
-  };
-
-  const handleSaveChanges = () => {
-    const importStack = stackEdit.commitStack.calculateImportStack({
-      goto: originalHead?.hash,
-      rewriteDate: Date.now() / 1000,
-    });
-    const op = new ImportStackOperation(importStack);
-    runOperation(op);
-    sendStackEditMetrics(true);
-    // Exit stack editing.
-    setStackHashes(new Set());
-  };
-
-  const handleCancel = () => {
-    sendStackEditMetrics(false);
-    setStackHashes(new Set<Hash>());
-  };
-
-  // Show [Cancel] [Save changes] [Undo] [Redo].
-  return (
-    <>
-      <Tooltip
-        title={t('Discard stack editing changes')}
-        delayMs={DOCUMENTATION_DELAY}
-        placement="bottom">
-        <VSCodeButton
-          className="cancel-edit-stack-button"
-          appearance="secondary"
-          onClick={handleCancel}>
-          <T>Cancel</T>
-        </VSCodeButton>
-      </Tooltip>
-      <Tooltip
-        title={t('Save stack editing changes')}
-        delayMs={DOCUMENTATION_DELAY}
-        placement="bottom">
-        <VSCodeButton
-          className="confirm-edit-stack-button"
-          appearance="primary"
-          onClick={handleSaveChanges}>
-          <T>Save changes</T>
-        </VSCodeButton>
-      </Tooltip>
-      <Tooltip
-        component={() =>
-          canUndo ? (
-            <T replace={{$op: <UndoDescription op={stackEdit.undoOperationDescription()} />}}>
-              Undo $op
-            </T>
-          ) : (
-            <T>No operations to undo</T>
-          )
-        }
-        placement="bottom">
-        <VSCodeButton appearance="icon" disabled={!canUndo} onClick={handleUndo}>
-          <Icon icon="discard" />
-        </VSCodeButton>
-      </Tooltip>
-      <Tooltip
-        component={() =>
-          canRedo ? (
-            <T replace={{$op: <UndoDescription op={stackEdit.redoOperationDescription()} />}}>
-              Redo $op
-            </T>
-          ) : (
-            <T>No operations to redo</T>
-          )
-        }
-        placement="bottom">
-        <VSCodeButton appearance="icon" disabled={!canRedo} onClick={handleRedo}>
-          <Icon icon="redo" />
-        </VSCodeButton>
-      </Tooltip>
-    </>
-  );
-}
-
-function StackEditButton({tree}: {tree: CommitTreeWithPreviews}): React.ReactElement | null {
-  const uncommitted = useRecoilValue(latestUncommittedChangesData);
-  const [stackHashes, setStackHashes] = useRecoilState(editingStackHashes);
-  const loadingState = useRecoilValue(loadingStackState);
-
-  const stackCommits = [...walkTreePostorder([tree])].map(t => t.info);
-  const isEditing = stackHashes.size > 0 && stackCommits.some(c => stackHashes.has(c.hash));
-  const isLoaded = isEditing && loadingState.state === 'hasValue';
-  if (isLoaded) {
-    return <StackEditConfirmButtons />;
-  }
-
-  const isPreview = tree.previewType != null;
-  const isLoading = isEditing && loadingState.state === 'loading';
-  const isError = isEditing && loadingState.state === 'hasError';
-  const isLinear = isTreeLinear(tree);
-  const isDirty = stackCommits.some(c => c.isHead) && uncommitted.files.length > 0;
-  const hasPublic = stackCommits.some(c => c.phase === 'public');
-  const obsoleted = stackCommits.filter(c => c.successorInfo != null);
-  const hasObsoleted = obsoleted.length > 0;
-  const disabled =
-    isDirty || hasObsoleted || !isLinear || isLoading || isError || isPreview || hasPublic;
-  const title = isError
-    ? t(`Failed to load stack: ${loadingState.error}`)
-    : isLoading
-    ? loadingState.exportedStack === undefined
-      ? t('Reading stack content')
-      : t('Analyzing stack content')
-    : hasObsoleted
-    ? t('Cannot edit stack with commits that have newer versions')
-    : isDirty
-    ? t(
-        'Cannot edit stack when there are uncommitted changes.\nCommit or amend your changes first.',
-      )
-    : isPreview
-    ? t('Cannot edit pending changes')
-    : hasPublic
-    ? t('Cannot edit public commits')
-    : isLinear
-    ? t('Reorder, fold, or drop commits')
-    : t('Cannot edit non-linear stack');
-  const highlight = disabled ? [] : stackCommits;
-  const tooltipDelay = disabled && !isLoading ? undefined : DOCUMENTATION_DELAY;
-  const icon = isLoading ? <Icon icon="loading" slot="start" /> : <StackEditIcon slot="start" />;
-
-  return (
-    <HighlightCommitsWhileHovering key="submit-stack" toHighlight={highlight}>
-      <Tooltip title={title} delayMs={tooltipDelay} placement="bottom">
-        <VSCodeButton
-          className={`edit-stack-button ${disabled && 'disabled'}`}
-          disabled={disabled}
-          appearance="icon"
-          onClick={() => {
-            setStackHashes(new Set<Hash>(stackCommits.map(c => c.hash)));
-          }}>
-          {icon}
-          <T>Edit stack</T>
-        </VSCodeButton>
-      </Tooltip>
-    </HighlightCommitsWhileHovering>
   );
 }

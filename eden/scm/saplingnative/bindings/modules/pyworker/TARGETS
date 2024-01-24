@@ -1,0 +1,43 @@
+load("//eden/scm:targets.bzl", "rust_python_library")
+
+oncall("mercurial_release")
+
+rust_python_library(
+    name = "pyworker",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "cpython": {
+                        "features": [],
+                        "git": None,
+                        "rev": None,
+                    },
+                },
+            },
+            "extra_buck_dependencies": {
+                "dependencies": [
+                    "//eden/scm/lib/revisionstore:revisionstore",
+                ],
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    test_deps = [
+        "fbsource//third-party/rust:memmap2",
+        "fbsource//third-party/rust:quickcheck",
+        "fbsource//third-party/rust:tempfile",
+        "//eden/scm/lib/minibytes:minibytes",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:crossbeam",
+        "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/cpython-ext:cpython-ext",
+        "//eden/scm/lib/revisionstore:revisionstore_with_ods",
+        "//eden/scm/lib/types:types",
+        "//eden/scm/lib/vfs:vfs",
+        "//eden/scm/saplingnative/bindings/modules/pyrevisionstore:pyrevisionstore",
+    ],
+)

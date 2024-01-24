@@ -23,7 +23,7 @@ use mercurial_types::nodehash::HgChangesetId;
 use mercurial_types::nodehash::HgNodeHash;
 use mercurial_types::FileBytes;
 use mercurial_types::HgFileNodeId;
-use mercurial_types::MPath;
+use mercurial_types::NonRootMPath;
 use mercurial_types::RepoPath;
 use mercurial_types::NULL_HASH;
 use mercurial_types_mocks::nodehash;
@@ -235,7 +235,7 @@ fn generate_metadata_0() {
 
     let mut meta: Vec<u8> = vec![];
     File::generate_metadata(
-        Some(&(MPath::new("foo").unwrap(), nodehash::ONES_FNID)),
+        Some(&(NonRootMPath::new("foo").unwrap(), nodehash::ONES_FNID)),
         &file_bytes,
         &mut meta,
     )
@@ -259,7 +259,7 @@ fn generate_metadata_1() {
 
     let mut meta: Vec<u8> = vec![];
     File::generate_metadata(
-        Some(&(MPath::new("foo").unwrap(), nodehash::ONES_FNID)),
+        Some(&(NonRootMPath::new("foo").unwrap(), nodehash::ONES_FNID)),
         &file_bytes,
         &mut meta,
     )
@@ -385,7 +385,7 @@ fn test_roundtrip_lfs_content() {
 
 quickcheck! {
     fn copy_info_roundtrip(
-        copy_info: Option<(MPath, HgFileNodeId)>,
+        copy_info: Option<(NonRootMPath, HgFileNodeId)>,
         file_bytes: FileBytes
     ) -> bool {
         let mut buf = Vec::new();
@@ -404,7 +404,7 @@ quickcheck! {
     fn lfs_copy_info_roundtrip(
         oid: Sha256,
         size: u64,
-        copy_from: Option<(MPath, HgFileNodeId)>
+        copy_from: Option<(NonRootMPath, HgFileNodeId)>
     ) -> bool {
         let result = File::generate_lfs_file(oid, size, copy_from.clone())
             .and_then(|bytes| File::data_only(bytes).get_lfs_content());

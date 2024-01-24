@@ -9,8 +9,8 @@
 
 #include <boost/filesystem.hpp>
 #include <fmt/format.h>
-#include <time.h>
 #include <chrono>
+#include <ctime>
 #include <queue>
 
 #include <folly/Exception.h>
@@ -25,7 +25,7 @@ namespace fs = boost::filesystem;
 
 namespace facebook::eden {
 
-LogRotationStrategy::~LogRotationStrategy() {}
+LogRotationStrategy::~LogRotationStrategy() = default;
 
 TimestampLogRotation::TimestampLogRotation(
     size_t numFilesToKeep,
@@ -36,7 +36,7 @@ TimestampLogRotation::TimestampLogRotation(
   }
 }
 
-TimestampLogRotation::~TimestampLogRotation() {}
+TimestampLogRotation::~TimestampLogRotation() = default;
 
 void TimestampLogRotation::init(AbsolutePathPiece path) {
   path_ = path.copy();

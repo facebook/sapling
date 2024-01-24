@@ -11,19 +11,28 @@ import {Tooltip} from './Tooltip';
 
 import './Banner.css';
 
+export enum BannerKind {
+  default = 'default',
+  warning = 'warning',
+  error = 'error',
+  green = 'green',
+}
+
 export function Banner({
+  kind,
   children,
   icon,
   buttons,
   tooltip,
 }: {
+  kind?: BannerKind;
   children: ReactNode;
   icon?: ReactNode;
   buttons?: ReactNode;
   tooltip?: string;
 }) {
   const content = (
-    <div className="banner">
+    <div className={`banner banner-${kind ?? 'default'}`}>
       <div className="banner-content">
         {icon ?? null} {children}
       </div>

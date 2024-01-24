@@ -103,13 +103,16 @@ impl CommandTable {
             return;
         }
         for name in aliases.split('|') {
+            if name.is_empty() {
+                continue;
+            }
             self.alias.insert(name.to_string(), aliases.to_string());
         }
     }
 
     /// Look up a command by name. Consider aliases.
     pub fn get(&self, name: &str) -> Option<&CommandDefinition> {
-        let name = self.alias.get(name).map(AsRef::as_ref).unwrap_or(name);
+        let name = self.alias.get(name).map_or(name, AsRef::as_ref);
         self.commands.get(name)
     }
 }

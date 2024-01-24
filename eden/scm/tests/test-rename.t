@@ -41,10 +41,10 @@ rename a single file using absolute paths
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm d2/c
 
-rename --after a single file
+rename --mark a single file
 
   $ mv d1/d11/a1 d2/c
-  $ hg rename --after d1/d11/a1 d2/c
+  $ hg rename --mark d1/d11/a1 d2/c
   $ hg status -C
   A d2/c
     d1/d11/a1
@@ -53,13 +53,13 @@ rename --after a single file
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm d2/c
 
-rename --after a single file when src and tgt already tracked
+rename --mark a single file when src and tgt already tracked
 
   $ mv d1/d11/a1 d2/c
   $ hg addrem -s 0
   removing d1/d11/a1
   adding d2/c
-  $ hg rename --after d1/d11/a1 d2/c
+  $ hg rename --mark d1/d11/a1 d2/c
   $ hg status -C
   A d2/c
     d1/d11/a1
@@ -68,9 +68,9 @@ rename --after a single file when src and tgt already tracked
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm d2/c
 
-rename --after a single file to a nonexistent target filename
+rename --mark a single file to a nonexistent target filename
 
-  $ hg rename --after d1/a dummy
+  $ hg rename --mark d1/a dummy
   d1/a: not recording move - dummy does not exist
 
 move a single file to an existing directory
@@ -84,10 +84,10 @@ move a single file to an existing directory
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm d2/a1
 
-move --after a single file to an existing directory
+move --mark a single file to an existing directory
 
   $ mv d1/d11/a1 d2
-  $ hg rename --after d1/d11/a1 d2
+  $ hg rename --mark d1/d11/a1 d2
   $ hg status -C
   A d2/a1
     d1/d11/a1
@@ -107,9 +107,9 @@ rename a file using a relative path
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm d1/d11/e
 
-rename --after a file using a relative path
+rename --mark a file using a relative path
 
-  $ (cd d1/d11; mv ../../d2/b e; hg rename --after ../../d2/b e)
+  $ (cd d1/d11; mv ../../d2/b e; hg rename --mark ../../d2/b e)
   $ hg status -C
   A d1/d11/e
     d2/b
@@ -142,10 +142,10 @@ rename directory d1 as d3
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm -rf d3
 
-rename --after directory d1 as d3
+rename --mark directory d1 as d3
 
   $ mv d1 d3
-  $ hg rename --after d1 d3
+  $ hg rename --mark d1 d3
   moving d1/a to d3/a
   moving d1/b to d3/b
   moving d1/ba to d3/ba
@@ -179,9 +179,9 @@ move a directory using a relative path
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm -rf d2/d3
 
-move --after a directory using a relative path
+move --mark a directory using a relative path
 
-  $ (cd d2; mkdir d3; mv ../d1/d11 d3; hg rename --after ../d1/d11 d3)
+  $ (cd d2; mkdir d3; mv ../d1/d11 d3; hg rename --mark ../d1/d11 d3)
   moving ../d1/d11/a1 to d3/d11/a1
   $ hg status -C
   A d2/d3/d11/a1
@@ -232,11 +232,11 @@ move directories d1 and d2 to a new directory d3
   5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm -rf d3
 
-move --after directories d1 and d2 to a new directory d3
+move --mark directories d1 and d2 to a new directory d3
 
   $ mkdir d3
   $ mv d1 d2 d3
-  $ hg rename --after d1 d2 d3
+  $ hg rename --mark d1 d2 d3
   moving d1/a to d3/d1/a
   moving d1/b to d3/d1/b
   moving d1/ba to d3/d1/ba
@@ -267,7 +267,7 @@ overwrite existing files (d2/b)
 
   $ hg rename d1/* d2
   d2/b: not overwriting - file already committed
-  (hg rename --force to replace the file by recording a rename)
+  (use 'hg rename --amend --mark' to amend the current commit)
   moving d1/d11/a1 to d2/d11/a1
   $ hg status -C
   A d2/a
@@ -330,11 +330,11 @@ move every file under d1 to d2/d21
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm -rf d2/d21
 
-move --after some files under d1 to d2/d21
+move --mark some files under d1 to d2/d21
 
   $ mkdir d2/d21
   $ mv d1/a d1/d11/a1 d2/d21
-  $ hg rename --after 'glob:d1/**' d2/d21
+  $ hg rename --mark 'glob:d1/**' d2/d21
   moving d1/a to d2/d21/a
   d1/b: not recording move - d2/d21/b does not exist
   d1/ba: not recording move - d2/d21/ba does not exist
@@ -372,7 +372,7 @@ attempt to overwrite an existing file
   $ echo "ca" > d1/ca
   $ hg rename d1/ba d1/ca
   d1/ca: not overwriting - file exists
-  (hg rename --after to record the rename)
+  (hg rename --mark to record the rename)
   $ hg status -C
   ? d1/ca
   $ hg goto -C
@@ -396,7 +396,7 @@ attempt to overwrite an existing broken symlink
   $ ln -s ba d1/ca
   $ hg rename --traceback d1/ba d1/ca
   d1/ca: not overwriting - file exists
-  (hg rename --after to record the rename)
+  (hg rename --mark to record the rename)
   $ hg status -C
   ? d1/ca
   $ hg goto -C
@@ -464,11 +464,11 @@ move a whole subtree with "hg rename ."
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm -rf d3
 
-move a whole subtree with "hg rename --after ."
+move a whole subtree with "hg rename --mark ."
 
   $ mkdir d3
   $ mv d1/* d3
-  $ (cd d1; hg rename --after . ../d3)
+  $ (cd d1; hg rename --mark . ../d3)
   moving a to ../d3/a
   moving b to ../d3/b
   moving ba to ../d3/ba
@@ -548,11 +548,11 @@ transitive rename
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm d1/bc
 
-transitive rename --after
+transitive rename --mark
 
   $ hg rename d1/b d1/bb
   $ mv d1/bb d1/bc
-  $ hg rename --after d1/bb d1/bc
+  $ hg rename --mark d1/bb d1/bc
   $ hg status -C
   A d1/bc
     d1/b
@@ -613,7 +613,7 @@ check illegal path components
   $ hg status -C
 
   $ mv d1/d11/a1 .hg/foo
-  $ hg rename --after d1/d11/a1 .hg/foo
+  $ hg rename --mark d1/d11/a1 .hg/foo
   abort: path contains illegal component: .hg/foo
   [255]
   $ hg status -C
@@ -632,7 +632,7 @@ check illegal path components
   $ hg status -C
 
   $ mv d1/d11/a1 .hg
-  $ hg rename --after d1/d11/a1 .hg
+  $ hg rename --mark d1/d11/a1 .hg
   abort: path contains illegal component: .hg/a1
   [255]
   $ hg status -C

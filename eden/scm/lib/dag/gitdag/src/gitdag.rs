@@ -52,7 +52,7 @@ impl GitDag {
         main_branch: &str,
     ) -> dag::Result<Self> {
         let dag = Dag::open(dag_dir)?;
-        Ok(sync_from_git(dag, git_repo, main_branch)?)
+        sync_from_git(dag, git_repo, main_branch)
     }
 
     /// Get "snapshotted" references.

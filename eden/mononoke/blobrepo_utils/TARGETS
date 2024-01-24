@@ -1,0 +1,51 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbcode_macros//build_defs:rust_unittest.bzl", "rust_unittest")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "blobrepo_utils",
+    srcs = glob(["src/**/*.rs"]),
+    named_deps = {
+        "futures-old": "fbsource//third-party/rust:futures-old",
+        "futures_ext": "//common/rust/shed/futures_01_ext:futures_01_ext",
+    },
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:dashmap",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:slog",
+        "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tokio",
+        "//common/rust/shed/cloned:cloned",
+        "//eden/mononoke/blobrepo:blobrepo",
+        "//eden/mononoke/blobrepo:blobrepo_hg",
+        "//eden/mononoke/blobrepo:blobrepo_override",
+        "//eden/mononoke/blobrepo:repo_blobstore",
+        "//eden/mononoke/blobstore:blobstore",
+        "//eden/mononoke/blobstore:cacheblob",
+        "//eden/mononoke/derived_data/mercurial_derivation:mercurial_derivation",
+        "//eden/mononoke/manifest:manifest",
+        "//eden/mononoke/mercurial:mercurial_types",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/server/context:context",
+    ],
+)
+
+rust_unittest(
+    name = "blobrepo_utils_test",
+    srcs = glob(["test/**/*.rs"]),
+    named_deps = {
+        "futures-old": "fbsource//third-party/rust:futures-old",
+    },
+    deps = [
+        "fbsource//third-party/rust:futures",
+        ":blobrepo_utils",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/blobrepo:blobrepo_hg",
+        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/tests/fixtures:fixtures",
+    ],
+)

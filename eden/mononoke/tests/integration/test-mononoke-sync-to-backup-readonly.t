@@ -8,9 +8,28 @@
 
 setup configuration
 
-  $ REPOID=0 REPONAME=orig setup_common_config blob_files
-  $ export READ_ONLY_REPO=1
-  $ REPOID=1 REPONAME=backup setup_common_config blob_files
+  $ cat >> "$ACL_FILE" << ACLS
+  > {
+  >   "repos": {
+  >     "orig": {
+  >       "actions": {
+  >         "read": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA"],
+  >         "write": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA"],
+  >         "bypass_readonly": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA"]
+  >       }
+  >     },
+  >     "backup": {
+  >       "actions": {
+  >         "read": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA"],
+  >         "write": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA"],
+  >          "bypass_readonly": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA"]
+  >       }
+  >     }
+  >   }
+  > }
+  > ACLS
+  $ REPOID=0 REPONAME=orig ACL_NAME=orig setup_common_config blob_files
+  $ REPOID=1 READ_ONLY_REPO=1 REPONAME=backup ACL_NAME=backup setup_common_config blob_files
   $ export BACKUP_REPO_ID=1
   $ cd $TESTTMP
 

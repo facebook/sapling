@@ -289,33 +289,6 @@ def get_fuse_latency(counters: DiagInfoCounters, all_flg: bool) -> Table2D:
     return table
 
 
-@stats_cmd(
-    "hgimporter",
-    "Show the number of requests to hg-debugedenimporthelper",
-    aliases=[
-        "debugedenimporthelper",
-        "hg-debugedenimporthelper",
-        "hg",
-        "hg-import",
-        "hg-importer",
-        "hgimport",
-    ],
-)
-class HgImporterCmd(Subcmd):
-    def run(self, args: argparse.Namespace) -> int:
-        TITLE = "Counts of HgImporter requests performed in EdenFS"
-        stats_print.write_heading(TITLE, sys.stdout)
-
-        instance = cmd_util.get_eden_instance(args)
-        with instance.get_thrift_client_legacy() as client:
-            counters = client.getCounters()
-
-        table = get_counter_table(counters, ["hg_importer"], ["count"])
-        stats_print.write_table(table, "HgImporter Request", sys.stdout)
-
-        return 0
-
-
 @stats_cmd("thrift", "Show the number of received thrift calls")
 class ThriftCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:

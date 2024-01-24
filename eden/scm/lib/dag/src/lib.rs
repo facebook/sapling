@@ -6,7 +6,7 @@
  */
 
 #![allow(dead_code)]
-#![allow(clippy::iter_nth_zero, clippy::for_loops_over_fallibles)]
+#![allow(clippy::iter_nth_zero, for_loops_over_fallibles)]
 
 //! # dag
 //!

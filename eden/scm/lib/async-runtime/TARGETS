@@ -1,0 +1,23 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "async-runtime",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "package": {
+                "authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"],
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    test_deps = [],
+    deps = [
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:num_cpus",
+        "fbsource//third-party/rust:once_cell",
+        "fbsource//third-party/rust:tokio",
+    ],
+)

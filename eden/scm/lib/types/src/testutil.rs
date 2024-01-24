@@ -19,7 +19,7 @@ use crate::path::RepoPath;
 use crate::path::RepoPathBuf;
 
 pub fn repo_path(s: &str) -> &RepoPath {
-    if s == "" {
+    if s.is_empty() {
         RepoPath::empty()
     } else {
         RepoPath::from_str(s).unwrap()
@@ -27,7 +27,7 @@ pub fn repo_path(s: &str) -> &RepoPath {
 }
 
 pub fn repo_path_buf(s: &str) -> RepoPathBuf {
-    if s == "" {
+    if s.is_empty() {
         RepoPathBuf::new()
     } else {
         RepoPathBuf::from_string(s.to_owned()).unwrap()
@@ -83,7 +83,7 @@ pub fn generate_repo_paths(count: usize, qc_gen: &mut Gen) -> Vec<RepoPathBuf> {
                 std::usize::MAX
             } else {
                 self.directory_component_min
-                    + usize::arbitrary(&mut self.qc_gen)
+                    + usize::arbitrary(self.qc_gen)
                         % (self.directory_component_max - self.directory_component_min)
             };
             let mut component_hash = HashSet::new();

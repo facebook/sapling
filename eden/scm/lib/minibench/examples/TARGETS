@@ -1,0 +1,19 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+
+oncall("mercurial_release")
+
+rust_binary(
+    name = "fs_read",
+    srcs = ["fs_read.rs"],
+    autocargo = {
+        "cargo_toml_config": {
+            "package": {"name": "minibench_examples"},
+        },
+    },
+    deps = [
+        "fbsource//third-party/rust:crossbeam",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:tokio",
+        "//eden/scm/lib/minibench:minibench",
+    ],
+)

@@ -1,0 +1,44 @@
+load("@fbcode_macros//build_defs:native_rules.bzl", "buck_filegroup")
+load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
+load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
+load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
+
+oncall("mononoke")
+
+python_binary(
+    name = "review-bookmarks",
+    srcs = [
+        "review_bookmarks.py",
+    ],
+    main_function = "eden.mononoke.facebook.monitoring.review_bookmarks.main_2",
+    deps = [
+        ":lib",
+        "//libfb/py:log",
+        "//rfe/scubadata:scubadata_py3",
+        "//thrift/lib/py:server_base",
+    ],
+)
+
+python_library(
+    name = "lib",
+    srcs = ["lib.py"],
+    deps = [
+        "//libfb/py:decorators",
+    ],
+)
+
+python_unittest(
+    name = "test",
+    srcs = ["test.py"],
+    deps = [
+        ":lib",
+        "//libfb/py:testutil",
+    ],
+)
+
+buck_filegroup(
+    name = "listserverbookmarks",
+    srcs = [
+        "listserverbookmarks.py",
+    ],
+)

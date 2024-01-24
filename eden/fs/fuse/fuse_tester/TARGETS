@@ -1,0 +1,34 @@
+load("@fbcode_macros//build_defs:cpp_binary.bzl", "cpp_binary")
+
+oncall("scm_client_infra")
+
+cpp_binary(
+    name = "fuse_tester",
+    srcs = ["main.cpp"],
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    deps = [
+        "//eden/common/utils:process_info_cache",
+        "//eden/fs/fuse:fuse",
+        "//eden/fs/privhelper:interface",
+        "//eden/fs/privhelper:privhelper",
+        "//eden/fs/store:store",
+        "//eden/fs/telemetry:telemetry",
+        "//eden/fs/utils:case_sensitivity",
+        "//eden/fs/utils:enum",
+        "//eden/fs/utils:path",
+        "//eden/fs/utils:user_info",
+        "//folly:exception",
+        "//folly/init:init",
+        "//folly/io/async:async_base",
+        "//folly/io/async:event_base_thread",
+        "//folly/logging:init",
+        "//folly/logging:logging",
+        "//folly/portability:gflags",
+    ],
+    external_deps = [
+        ("boost", None, "boost_filesystem"),
+    ],
+)

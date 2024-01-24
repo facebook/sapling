@@ -38,7 +38,6 @@ use configloader::config::ConfigSet;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use fail::FailScenario;
-use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use progress_model::Registry;
 use repo::repo::Repo;
@@ -60,7 +59,8 @@ use crate::HgPython;
 ///
 /// Have side effect on `io` and return the command exit code.
 pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
-    let start_time = SystemTime::now();
+    let start_time = StartTime::now();
+    let start_blocked = io.time_interval().total_blocked_ms();
 
     // The pfcserver or commandserver do not want tracing or blackbox or ctrlc setup,
     // or going through the Rust command table. Bypass them.
@@ -93,6 +93,7 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
             .chain(rest_args.iter().cloned())
             .collect();
         let mut hgpython = HgPython::new(&args);
+        constructors::init();
         return hgpython.run_python(&args, io) as i32;
     }
 
@@ -117,7 +118,7 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
     setup_ctrlc();
 
     let scenario = setup_fail_points();
-    setup_eager_repo();
+    constructors::init();
 
     // This is intended to be "process start". "exec/hgmain" seems to be
     // a better place for it. However, chg makes it tricky. Because if hgmain
@@ -175,7 +176,7 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
 
     let _ = maybe_write_trace(io, &tracing_data, trace_output_path);
 
-    log_end(exit_code as u8, start_time, tracing_data, &span);
+    log_end(io, exit_code as u8, start_blocked, start_time, tracing_data);
 
     // Sync the blackbox before returning: this exit code is going to be used to process::exit(),
     // so we need to flush now.
@@ -194,7 +195,7 @@ fn dispatch_command(
     mut dispatcher: Dispatcher,
     cwd: PathBuf,
     in_scope: Weak<()>,
-    start_time: SystemTime,
+    start_time: StartTime,
 ) -> i32 {
     log_repo_path_and_exe_version(dispatcher.repo());
 
@@ -274,6 +275,7 @@ fn dispatch_command(
                 interp.run_hg(dispatcher.args().to_vec(), io, config)
             } else {
                 errors::print_error(&err, io, &dispatcher.args()[1..]);
+                errors::upload_traceback(&err, start_time.epoch_ms());
                 255
             }
         }
@@ -491,11 +493,15 @@ fn spawn_progress_thread(
         disable_rendering = true;
     }
 
-    let render_function = progress_render::simple::render;
-    let renderer_name = config.get_or("progress", "renderer", || "rust:simple".to_string())?;
+    let renderer_name = config.get_or_default::<String>("progress", "renderer")?;
     if renderer_name == "none" {
         disable_rendering = true;
     }
+
+    let render_function = match renderer_name.as_str() {
+        "structured" => progress_render::structured::render,
+        _ => progress_render::simple::render,
+    };
 
     let interval = Duration::from_secs_f64(config.get_or("progress", "refresh", || 0.1)?)
         .max(Duration::from_millis(50));
@@ -509,9 +515,11 @@ fn spawn_progress_thread(
 
     let progress = io.progress();
 
+    let (term_width, term_height) = progress.term_size();
     let mut config = progress_render::RenderingConfig {
         delay: Duration::from_secs_f64(config.get_or("progress", "delay", || 3.0)?),
-        term_width: progress.term_size().0,
+        term_width,
+        term_height,
         ..Default::default()
     };
 
@@ -532,8 +540,12 @@ fn spawn_progress_thread(
                 registry.wait();
             }
 
+            registry.remove_orphan_progress_bar();
+
             if !disable_rendering {
-                config.term_width = progress.term_size().0;
+                let (term_width, term_height) = progress.term_size();
+                config.term_width = term_width;
+                config.term_height = term_height;
 
                 let changes = (render_function)(registry, &config);
                 if changes != last_changes {
@@ -558,8 +570,6 @@ fn spawn_progress_thread(
                     last_runlog_time = Some(now);
                 }
             }
-
-            registry.remove_orphan_progress_bar();
 
             if !lockstep {
                 thread::sleep(interval);
@@ -612,7 +622,7 @@ pub(crate) fn write_trace(io: &IO, path: &str, data: &TracingData) -> Result<()>
     let mut out: Box<dyn Write> = if path == "-" || path.is_empty() {
         Box::new(io.error())
     } else {
-        Box::new(BufWriter::new(File::create(&path)?))
+        Box::new(BufWriter::new(File::create(path)?))
     };
 
     match format {
@@ -645,18 +655,14 @@ pub(crate) fn write_trace(io: &IO, path: &str, data: &TracingData) -> Result<()>
     Ok(())
 }
 
-fn log_start(args: Vec<String>, now: SystemTime) -> tracing::Span {
+fn log_start(args: Vec<String>, now: StartTime) -> tracing::Span {
     let inside_test = is_inside_test();
     let (uid, pid, nice) = if inside_test {
         (0, 0, 0)
     } else {
         #[cfg(unix)]
         unsafe {
-            (
-                libc::getuid() as u32,
-                libc::getpid() as u32,
-                libc::nice(0) as i32,
-            )
+            (libc::getuid(), libc::getpid() as u32, libc::nice(0))
         }
 
         #[cfg(not(unix))]
@@ -690,26 +696,14 @@ fn log_start(args: Vec<String>, now: SystemTime) -> tracing::Span {
         }
     }
 
-    let span = tracing::info_span!(
-        "Run Command",
-        pid = pid,
-        uid = uid,
-        nice = nice,
-        args = AsRef::<str>::as_ref(&serde_json::to_string(&args).unwrap()),
-        parent_pids = AsRef::<str>::as_ref(&serde_json::to_string(&parent_pids).unwrap()),
-        parent_names = AsRef::<str>::as_ref(&serde_json::to_string(&parent_names).unwrap()),
-        version = version::VERSION,
-        // Reserved for log_end.
-        exit_code = 0,
-        max_rss = 0,
-    );
+    let span = tracing::info_span!("run");
 
     blackbox::log(&blackbox::event::Event::Start {
         pid,
         uid,
         nice,
         args,
-        timestamp_ms: epoch_ms(now),
+        timestamp_ms: now.epoch_ms(),
     });
 
     blackbox::log(&blackbox::event::Event::ProcessTree {
@@ -721,34 +715,52 @@ fn log_start(args: Vec<String>, now: SystemTime) -> tracing::Span {
 }
 
 fn log_end(
+    io: &IO,
     exit_code: u8,
-    start_time: SystemTime,
+    start_blocked: u64,
+    start_time: StartTime,
     tracing_data: Arc<Mutex<TracingData>>,
-    span: &tracing::Span,
 ) {
     let inside_test = is_inside_test();
     let duration_ms = if inside_test {
         0
     } else {
-        match start_time.elapsed() {
-            Ok(duration) => duration.as_millis() as u64,
-            Err(_) => 0,
-        }
+        start_time.elapsed().as_millis() as u64
     };
     let max_rss = if inside_test {
         0
     } else {
         procinfo::max_rss_bytes()
     };
+    let total_blocked_ms = if inside_test {
+        0
+    } else {
+        io.time_interval().total_blocked_ms() - start_blocked
+    };
 
-    span.record("exit_code", &exit_code);
-    span.record("max_rss", &max_rss);
+    if tracing::enabled!(target: "hgcommands::run::blocked", Level::DEBUG) {
+        let interval = io.time_interval();
+        let tags = interval.list_tags();
+        for tag in tags {
+            let tag: &str = tag.as_ref();
+            let time = interval.tagged_blocked_ms(tag);
+            tracing::debug!(target: "hgcommands::run::blocked", tag=tag, time=time, "blocked tag");
+        }
+        tracing::debug!(target: "hgcommands::run::blocked", total=total_blocked_ms, start=start_blocked, "blocked total");
+    }
+
+    tracing::info!(
+        target: "command_info",
+        exit_code=exit_code,
+        max_rss=max_rss,
+        total_blocked_ms=util::math::truncate_int(total_blocked_ms, 3),
+    );
 
     blackbox::log(&blackbox::event::Event::Finish {
         exit_code,
         max_rss,
         duration_ms,
-        timestamp_ms: epoch_ms(start_time),
+        timestamp_ms: start_time.epoch_ms(),
     });
 
     // Stop sending tracing events to subscribers. This prevents
@@ -770,12 +782,36 @@ fn log_end(
         }
         blackbox::sync();
     });
+
+    let counters = hg_metrics::summarize();
+    if !counters.is_empty() {
+        sampling::append_sample_map("metrics", &counters);
+    }
 }
 
-fn epoch_ms(time: SystemTime) -> u64 {
-    match time.duration_since(SystemTime::UNIX_EPOCH) {
-        Ok(duration) => duration.as_millis() as u64,
-        Err(_) => 0,
+#[derive(Copy, Clone)]
+struct StartTime {
+    t: SystemTime,
+    i: Instant,
+}
+
+impl StartTime {
+    pub fn now() -> Self {
+        Self {
+            t: SystemTime::now(),
+            i: Instant::now(),
+        }
+    }
+
+    pub fn epoch_ms(&self) -> u64 {
+        match self.t.duration_since(SystemTime::UNIX_EPOCH) {
+            Ok(duration) => duration.as_millis() as u64,
+            Err(_) => 0,
+        }
+    }
+
+    pub fn elapsed(&self) -> Duration {
+        self.i.elapsed()
     }
 }
 
@@ -803,30 +839,29 @@ fn log_repo_path_and_exe_version(repo: Option<&Repo>) {
     tracing::info!(target: "command_info", version = version::VERSION);
 }
 
-fn log_perftrace(io: &IO, config: &ConfigSet, start_time: SystemTime) -> Result<()> {
+fn log_perftrace(io: &IO, config: &ConfigSet, start_time: StartTime) -> Result<()> {
     if let Some(threshold) = config.get_opt::<Duration>("tracing", "threshold")? {
-        if let Ok(elapsed) = start_time.elapsed() {
-            if elapsed >= threshold {
-                let key = format!(
-                    "flat/perftrace-{}-{}-{}",
-                    hostname::get()?.to_string_lossy(),
-                    std::process::id(),
-                    (epoch_ms(start_time) as f64) / 1e3,
-                );
+        let elapsed = start_time.elapsed();
+        if elapsed >= threshold {
+            let key = format!(
+                "flat/perftrace-{}-{}-{}",
+                hostname::get()?.to_string_lossy(),
+                std::process::id(),
+                (start_time.epoch_ms() as f64) / 1e3,
+            );
 
-                let mut ascii_opts = tracing_collector::model::AsciiOptions::default();
+            let mut ascii_opts = tracing_collector::model::AsciiOptions::default();
 
-                // Minimum resolution = 1% of duration.
-                ascii_opts.min_duration_micros_to_hide = (elapsed.as_micros() / 100) as u64;
+            // Minimum resolution = 1% of duration.
+            ascii_opts.min_duration_micros_to_hide = (elapsed.as_micros() / 100) as u64;
 
-                let output = pytracing::DATA.lock().ascii(&ascii_opts);
+            let output = pytracing::DATA.lock().ascii(&ascii_opts);
 
-                tracing::info!(target: "perftrace", key=key.as_str(), payload=output.as_str(), "Trace:\n{}\n", output);
-                tracing::info!(target: "perftracekey", perftracekey=key.as_str(), "Trace key:\n{}\n", key);
+            tracing::info!(target: "perftrace", key=key.as_str(), payload=output.as_str(), "Trace:\n{}\n", output);
+            tracing::info!(target: "perftracekey", perftracekey=key.as_str(), "Trace key:\n{}\n", key);
 
-                if config.get_or_default("tracing", "stderr")? {
-                    let _ = write!(io.error(), "{}\n", output);
-                }
+            if config.get_or_default("tracing", "stderr")? {
+                let _ = write!(io.error(), "{}\n", output);
             }
         }
     }
@@ -845,14 +880,6 @@ fn setup_http(global_opts: &HgGlobalOpts) {
     }
 }
 
-fn setup_eager_repo() {
-    static REGISTERED: Lazy<()> = Lazy::new(|| {
-        edenapi::Builder::register_customize_build_func(eagerepo::edenapi_from_config)
-    });
-
-    *REGISTERED
-}
-
 static FAIL_SETUP: AtomicBool = AtomicBool::new(false);
 
 fn setup_fail_points<'a>() -> Option<FailScenario<'a>> {
@@ -868,12 +895,9 @@ fn setup_fail_points<'a>() -> Option<FailScenario<'a>> {
     }
 }
 
-fn setup_atexit(start_time: SystemTime) {
+fn setup_atexit(start_time: StartTime) {
     atexit::AtExit::new(Box::new(move || {
-        let duration_ms = match start_time.elapsed() {
-            Ok(duration) => duration.as_millis() as u64,
-            Err(_) => 0,
-        };
+        let duration_ms = start_time.elapsed().as_millis() as u64;
 
         // Truncate duration to top three significant decimal digits of
         // precision to reduce cardinality for logging storage.
@@ -881,7 +905,7 @@ fn setup_atexit(start_time: SystemTime) {
 
         // Make extra sure our metrics are written out.
         sampling::flush();
-    })).queued();
+    })).named("flush sampling".into()).queued();
 }
 
 fn setup_ctrlc() {
@@ -899,6 +923,8 @@ fn setup_ctrlc() {
         // Minimal cleanup then just exit. Our main storage (indexedlog,
         // metalog) is SIGKILL-safe, if "finally" (Python) or "Drop" (Rust) does
         // not run, it won't corrupt the repo data.
+
+        tracing::debug!(target: "atexit", "calling atexit from ctrlc handler");
 
         // Exit pager to restore terminal states (ex. quit raw mode)
         if let Ok(io) = clidispatch::io::IO::main() {
@@ -940,7 +966,7 @@ fn commandserver_serve(args: &[String], io: &IO) -> i32 {
 
     let run_func = |server: &Server, args: Vec<String>| -> i32 {
         tracing::debug!("commandserver is about to run command: {:?}", &args);
-        if let Err(e) = python.setup_ui_system(&server) {
+        if let Err(e) = python.setup_ui_system(server) {
             tracing::warn!("cannot setup ui.system:\n{:?}", &e);
         }
         run_command(args, io)

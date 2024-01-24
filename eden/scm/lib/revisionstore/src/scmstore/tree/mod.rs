@@ -5,29 +5,38 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::Instant;
 
+use ::types::tree::TreeItemFlag;
+use ::types::HgId;
 use ::types::Key;
 use ::types::Node;
+use ::types::PathComponent;
+use ::types::PathComponentBuf;
 use ::types::RepoPath;
-use ::types::RepoPathBuf;
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Result;
 use crossbeam::channel::unbounded;
+use edenapi_types::FileAuxData;
+use edenapi_types::TreeChildEntry;
 use minibytes::Bytes;
+use once_cell::sync::OnceCell;
+use storemodel::SerializationFormat;
 use tracing::field;
 
 pub mod types;
+
+use clientinfo::get_client_request_info_thread_local;
+use clientinfo::set_client_request_info_thread_local;
+use storemodel::BoxIterator;
+use storemodel::TreeEntry;
 
 use crate::datastore::HgIdDataStore;
 use crate::datastore::RemoteDataStore;
 use crate::indexedlogdatastore::Entry;
 use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
-use crate::memcache::MEMCACHE_DELAY;
 use crate::scmstore::fetch::CommonFetchState;
 use crate::scmstore::fetch::FetchErrors;
 use crate::scmstore::fetch::FetchMode;
@@ -46,7 +55,6 @@ use crate::EdenApiTreeStore;
 use crate::HgIdMutableDeltaStore;
 use crate::LegacyStore;
 use crate::LocalStore;
-use crate::MemcacheStore;
 use crate::Metadata;
 use crate::RepackLocation;
 use crate::StoreKey;
@@ -65,13 +73,6 @@ pub struct TreeStore {
     /// will the written to indexedlog_cache.
     pub cache_to_local_cache: bool,
 
-    /// If provided, memcache will be checked before other remote stores
-    pub memcache: Option<Arc<MemcacheStore>>,
-
-    /// If cache_to_memcache is true, data found by falling back to another remote store
-    // will be written to memcache.
-    pub cache_to_memcache: bool,
-
     /// An EdenApi Client, EdenApiTreeStore provides the tree-specific subset of EdenApi functionality
     /// used by TreeStore.
     pub edenapi: Option<Arc<EdenApiTreeStore>>,
@@ -83,8 +84,6 @@ pub struct TreeStore {
 
     /// A FileStore, which can be used for fetching and caching file aux data for a tree.
     pub filestore: Option<Arc<FileStore>>,
-
-    pub creation_time: Instant,
 
     pub flush_on_drop: bool,
 }
@@ -106,18 +105,15 @@ impl TreeStore {
         let (found_tx, found_rx) = unbounded();
         let found_tx2 = found_tx.clone();
         let mut common: CommonFetchState<StoreTree> =
-            CommonFetchState::new(reqs, TreeAttributes::CONTENT, found_tx);
+            CommonFetchState::new(reqs, TreeAttributes::CONTENT, found_tx, fetch_mode);
 
         let keys_len = common.pending_len();
 
         let indexedlog_cache = self.indexedlog_cache.clone();
         let indexedlog_local = self.indexedlog_local.clone();
-        let memcache = self.memcache.clone();
         let edenapi = self.edenapi.clone();
 
         let contentstore = self.contentstore.clone();
-        let creation_time = self.creation_time;
-        let cache_to_memcache = self.cache_to_memcache;
         let cache_to_local_cache = self.cache_to_local_cache;
         let (aux_local, aux_cache) = if let Some(ref filestore) = self.filestore {
             (filestore.aux_local.clone(), filestore.aux_cache.clone())
@@ -147,34 +143,6 @@ impl TreeStore {
                     if let Some(entry) = indexedlog_local.get_entry(key)? {
                         tracing::trace!("{:?} found in local", &entry.key());
                         common.found(entry.key().clone(), LazyTree::IndexedLog(entry).into());
-                    }
-                }
-            }
-
-            if let FetchMode::AllowRemote = fetch_mode {
-                if use_memcache(creation_time) {
-                    if let Some(ref memcache) = memcache {
-                        let pending: Vec<_> = common
-                            .pending(TreeAttributes::CONTENT, false)
-                            .map(|(key, _attrs)| key.clone())
-                            .collect();
-
-                        if !pending.is_empty() {
-                            for entry in memcache.get_data_iter(&pending)? {
-                                let entry = entry?;
-                                let key = entry.key.clone();
-                                let entry = LazyTree::Memcache(entry);
-                                if indexedlog_cache.is_some() && cache_to_local_cache {
-                                    if let Some(entry) =
-                                        entry.indexedlog_cache_entry(key.clone())?
-                                    {
-                                        indexedlog_cache.as_ref().unwrap().put_entry(entry)?;
-                                    }
-                                }
-                                tracing::trace!("{:?} found in memcache", &key);
-                                common.found(key, entry.into());
-                            }
-                        }
                     }
                 }
             }
@@ -232,14 +200,6 @@ impl TreeStore {
                                     indexedlog_cache.as_ref().unwrap().put_entry(entry)?;
                                 }
                             }
-                            if memcache.is_some()
-                                && cache_to_memcache
-                                && use_memcache(creation_time)
-                            {
-                                if let Some(entry) = entry.indexedlog_cache_entry(key.clone())? {
-                                    memcache.as_ref().unwrap().add_mcdata(entry.try_into()?);
-                                }
-                            }
                             common.found(key, entry.into());
                         }
                         util::record_edenapi_stats(&span, &response.stats);
@@ -281,7 +241,7 @@ impl TreeStore {
                             };
 
                             if let (Some(blob), Some(meta)) = (blob, meta) {
-                                // We don't write to local indexedlog or memcache for contentstore fallbacks because
+                                // We don't write to local indexedlog for contentstore fallbacks because
                                 // contentstore handles that internally.
                                 tracing::trace!("{:?} found in contentstore", &key);
                                 common.found(key, LazyTree::ContentStore(blob.into(), meta).into());
@@ -303,7 +263,13 @@ impl TreeStore {
 
         // Only kick off a thread if there's a substantial amount of work.
         if keys_len > 1000 {
-            std::thread::spawn(process_func_errors);
+            let cri = get_client_request_info_thread_local();
+            std::thread::spawn(move || {
+                if let Some(cri) = cri {
+                    set_client_request_info_thread_local(cri);
+                }
+                process_func_errors();
+            });
         } else {
             process_func_errors();
         }
@@ -323,19 +289,11 @@ impl TreeStore {
     pub fn empty() -> Self {
         TreeStore {
             indexedlog_local: None,
-
             indexedlog_cache: None,
             cache_to_local_cache: true,
-
-            memcache: None,
-            cache_to_memcache: true,
-
             edenapi: None,
-
             contentstore: None,
-
             filestore: None,
-            creation_time: Instant::now(),
             flush_on_drop: true,
         }
     }
@@ -373,12 +331,6 @@ impl TreeStore {
     }
 }
 
-fn use_memcache(creation_time: Instant) -> bool {
-    // Only use memcache if the process has been around a while. It takes 2s to setup, which
-    // hurts responiveness for short commands.
-    creation_time.elapsed() > MEMCACHE_DELAY
-}
-
 impl LegacyStore for TreeStore {
     /// Returns only the local cache / shared stores, in place of the local-only stores, such that writes will go directly to the local cache.
     /// For compatibility with ContentStore::get_shared_mutable
@@ -392,23 +344,11 @@ impl LegacyStore for TreeStore {
             indexedlog_local: self.indexedlog_cache.clone(),
             indexedlog_cache: None,
             cache_to_local_cache: false,
-
-            memcache: None,
-            cache_to_memcache: false,
-
             edenapi: None,
             contentstore: None,
-
             filestore: None,
-            creation_time: Instant::now(),
             flush_on_drop: true,
         })
-    }
-
-    fn get_logged_fetches(&self) -> HashSet<RepoPathBuf> {
-        unimplemented!(
-            "get_logged_fetches is not implemented for trees, it should only ever be falled for files"
-        );
     }
 
     fn get_file_content(&self, _key: &Key) -> Result<Option<Bytes>> {
@@ -517,12 +457,15 @@ impl LocalStore for TreeStore {
         missing = if let Some(ref indexedlog_cache) = self.indexedlog_cache {
             missing
                 .into_iter()
-                .filter(
-                    |sk| match sk.maybe_as_key().map(|k| indexedlog_cache.get_raw_entry(k)) {
+                .filter(|sk| {
+                    match sk
+                        .maybe_as_key()
+                        .map(|k| indexedlog_cache.get_raw_entry(&k.hgid))
+                    {
                         Some(Ok(Some(_))) => false,
                         None | Some(Err(_)) | Some(Ok(None)) => true,
-                    },
-                )
+                    }
+                })
                 .collect()
         } else {
             missing
@@ -531,12 +474,15 @@ impl LocalStore for TreeStore {
         missing = if let Some(ref indexedlog_local) = self.indexedlog_local {
             missing
                 .into_iter()
-                .filter(
-                    |sk| match sk.maybe_as_key().map(|k| indexedlog_local.get_raw_entry(k)) {
+                .filter(|sk| {
+                    match sk
+                        .maybe_as_key()
+                        .map(|k| indexedlog_local.get_raw_entry(&k.hgid))
+                    {
                         Some(Ok(Some(_))) => false,
                         None | Some(Err(_)) | Some(Ok(None)) => true,
-                    },
-                )
+                    }
+                })
                 .collect()
         } else {
             missing
@@ -584,12 +530,29 @@ impl ContentDataStore for TreeStore {
     }
 }
 
-impl storemodel::TreeStore for TreeStore {
-    fn get(&self, path: &RepoPath, node: Node) -> Result<minibytes::Bytes> {
+impl storemodel::KeyStore for TreeStore {
+    fn get_local_content(
+        &self,
+        path: &RepoPath,
+        node: HgId,
+    ) -> anyhow::Result<Option<minibytes::Bytes>> {
+        if node.is_null() {
+            return Ok(Some(Default::default()));
+        }
+        let key = Key::new(path.to_owned(), node);
+        match self
+            .fetch_batch(std::iter::once(key.clone()), FetchMode::LocalOnly)
+            .single()?
+        {
+            Some(entry) => Ok(Some(entry.content.expect("no tree content").hg_content()?)),
+            None => Ok(None),
+        }
+    }
+
+    fn get_content(&self, path: &RepoPath, node: Node) -> Result<minibytes::Bytes> {
         if node.is_null() {
             return Ok(Default::default());
         }
-
         let key = Key::new(path.to_owned(), node);
         match self
             .fetch_batch(std::iter::once(key.clone()), FetchMode::AllowRemote)
@@ -600,19 +563,110 @@ impl storemodel::TreeStore for TreeStore {
         }
     }
 
+    fn get_content_iter(
+        &self,
+        keys: Vec<Key>,
+    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Bytes)>>> {
+        let fetched = self.fetch_batch(keys.into_iter(), FetchMode::AllowRemote);
+        let iter = fetched
+            .into_iter()
+            .map(|entry| -> anyhow::Result<(Key, Bytes)> {
+                let (key, store_tree) = entry?;
+                let content = store_tree
+                    .content
+                    .ok_or_else(|| anyhow::format_err!("no content available"))?;
+                Ok((key, content.hg_content()?))
+            });
+        Ok(Box::new(iter))
+    }
+
     fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
         self.fetch_batch(keys.into_iter(), FetchMode::AllowRemote)
             .consume();
         Ok(())
     }
 
-    fn insert(&self, _path: &RepoPath, _node: Node, _data: Bytes) -> Result<()> {
-        unimplemented!("not needed yet");
+    fn refresh(&self) -> Result<()> {
+        TreeStore::refresh(self)
     }
 }
 
-impl storemodel::RefreshableTreeStore for TreeStore {
-    fn refresh(&self) -> Result<()> {
-        self.refresh()
+/// Extends a basic `TreeEntry` with aux data.
+struct ScmStoreTreeEntry {
+    tree: LazyTree,
+    // The "basic" version of `TreeEntry` that does not have aux data.
+    basic_tree_entry: OnceCell<Box<dyn TreeEntry>>,
+}
+
+impl ScmStoreTreeEntry {
+    fn basic_tree_entry(&self) -> Result<&Box<dyn TreeEntry>> {
+        self.basic_tree_entry.get_or_try_init(|| {
+            let data = self.tree.hg_content()?;
+            let entry = storemodel::basic_parse_tree(data, SerializationFormat::Hg)?;
+            Ok(entry)
+        })
+    }
+}
+
+impl TreeEntry for ScmStoreTreeEntry {
+    fn iter(&self) -> Result<BoxIterator<Result<(PathComponentBuf, HgId, TreeItemFlag)>>> {
+        self.basic_tree_entry()?.iter()
+    }
+
+    fn lookup(&self, name: &PathComponent) -> Result<Option<(HgId, TreeItemFlag)>> {
+        self.basic_tree_entry()?.lookup(name)
+    }
+
+    fn file_aux_iter(&self) -> anyhow::Result<BoxIterator<anyhow::Result<(HgId, FileAuxData)>>> {
+        let maybe_iter = (|| -> Option<BoxIterator<anyhow::Result<(HgId, FileAuxData)>>> {
+            let entry = match &self.tree {
+                LazyTree::EdenApi(entry) => entry,
+                _ => return None,
+            };
+            let children = entry.children.as_ref()?;
+            let iter = children.iter().filter_map(|child| {
+                let child = child.as_ref().ok()?;
+                let file_entry = match child {
+                    TreeChildEntry::File(v) => v,
+                    _ => return None,
+                };
+                let file_metadata = file_entry.file_metadata?;
+                // For easier coding, we simply skip incomplete data here.
+                let aux = FileAuxData {
+                    total_size: file_metadata.size?,
+                    content_id: file_metadata.content_id?,
+                    sha1: file_metadata.content_sha1?,
+                    sha256: file_metadata.content_sha256?,
+                    seeded_blake3: file_metadata.content_seeded_blake3,
+                };
+                Some(Ok((file_entry.key.hgid, aux)))
+            });
+            Some(Box::new(iter))
+        })();
+        Ok(maybe_iter.unwrap_or_else(|| Box::new(std::iter::empty())))
+    }
+}
+
+impl storemodel::TreeStore for TreeStore {
+    fn get_tree_iter(
+        &self,
+        keys: Vec<Key>,
+    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Box<dyn TreeEntry>)>>> {
+        let fetched = self.fetch_batch(keys.into_iter(), FetchMode::AllowRemote);
+        let iter = fetched
+            .into_iter()
+            .map(|entry| -> anyhow::Result<(Key, Box<dyn TreeEntry>)> {
+                let (key, store_tree) = entry?;
+                let tree: LazyTree = store_tree
+                    .content
+                    .ok_or_else(|| anyhow::format_err!("no content available"))?;
+                // ScmStoreTreeEntry supports aux data.
+                let tree_entry = ScmStoreTreeEntry {
+                    tree,
+                    basic_tree_entry: OnceCell::new(),
+                };
+                Ok((key, Box::new(tree_entry)))
+            });
+        Ok(Box::new(iter))
     }
 }

@@ -52,7 +52,7 @@ std::pair<ObjectId, std::shared_ptr<HgImportRequest>> makeBlobImportRequest(
     ImportPriority priority) {
   auto hgRevHash = uniqueHash();
   auto proxyHash = HgProxyHash{RelativePath{"some_blob"}, hgRevHash};
-  auto hash = proxyHash.sha1();
+  auto hash = ObjectId{proxyHash.getValue()};
   return std::make_pair(
       hash,
       HgImportRequest::makeBlobImportRequest(
@@ -65,7 +65,7 @@ std::pair<ObjectId, std::shared_ptr<HgImportRequest>> makeBlobImportRequest(
 
 std::pair<ObjectId, std::shared_ptr<HgImportRequest>>
 makeBlobImportRequestWithHash(ImportPriority priority, HgProxyHash proxyHash) {
-  auto hash = proxyHash.sha1();
+  auto hash = ObjectId{proxyHash.getValue()};
   return std::make_pair(
       hash,
       HgImportRequest::makeBlobImportRequest(
@@ -80,7 +80,7 @@ std::pair<ObjectId, std::shared_ptr<HgImportRequest>>
 makeBlobMetaImportRequestWithHash(
     ImportPriority priority,
     HgProxyHash proxyHash) {
-  auto hash = proxyHash.sha1();
+  auto hash = ObjectId{proxyHash.getValue()};
   return std::make_pair(
       hash,
       HgImportRequest::makeBlobMetaImportRequest(
@@ -95,7 +95,7 @@ std::pair<ObjectId, std::shared_ptr<HgImportRequest>> makeTreeImportRequest(
     ImportPriority priority) {
   auto hgRevHash = uniqueHash();
   auto proxyHash = HgProxyHash{RelativePath{"some_tree"}, hgRevHash};
-  auto hash = proxyHash.sha1();
+  auto hash = ObjectId{proxyHash.getValue()};
   return std::make_pair(
       hash,
       HgImportRequest::makeTreeImportRequest(

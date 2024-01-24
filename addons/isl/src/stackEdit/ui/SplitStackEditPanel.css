@@ -1,0 +1,346 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.interactive-split {
+  height: 100%;
+  position: relative;
+  min-width: calc((100vw / var(--zoom)) - 81px);
+  min-height: calc((100vh / var(--zoom)) - 220px);
+
+  margin-inline: calc(0px - var(--pad));
+  font-size: var(--editor-font-size);
+}
+
+.split-commit-column {
+  margin-inline: var(--pad);
+  background-color: var(--tooltip-background);
+  padding: var(--pad);
+  padding-bottom: 0px;
+  border-radius: var(--halfpad);
+  min-width: 700px;
+  max-width: 700px;
+  flex-shrink: 0;
+  height: 100%;
+}
+
+.split-commit-header {
+  font-size: 110%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--pad);
+  margin: var(--pad) 0px;
+  margin-bottom: calc(2 * var(--pad));
+}
+
+.split-commit-header-stack-number {
+  flex-shrink: 0;
+  font-size: 140%;
+  font-weight: 300;
+  opacity: 0.8;
+  margin: 0 var(--pad);
+}
+
+.split-range-selector-button {
+  font-size: 90%;
+  display: flex;
+  gap: var(--pad);
+  align-items: center;
+}
+
+.split-range-selector-info {
+  display: flex;
+  align-items: center;
+  gap: var(--pad);
+  background-color: var(--subtle-hover-darken);
+  border-radius: 8px;
+  padding: var(--pad);
+}
+
+.split-range-selector {
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  gap: var(--pad);
+}
+.split-range-selector .inner-commit-group {
+  margin-left: var(--halfpad);
+}
+.split-range-commit {
+  display: flex;
+  flex-direction: row;
+  gap: var(--halfpad);
+  align-items: center;
+  padding-left: calc(3 * var(--pad));
+  margin-left: -20px;
+  user-select: none;
+  cursor: pointer;
+  padding-block: calc(var(--halfpad) / 2);
+}
+
+.split-range-commit .commit-title {
+  opacity: 0.7;
+}
+.split-range-commit:hover .commit-title {
+  opacity: 0.9;
+}
+
+.split-range-commit.selection-start .commit-title,
+.split-range-commit.selection-end .commit-title,
+.split-range-commit.selection-middle .commit-title {
+  opacity: 1;
+}
+
+.split-range-commit .commit-selection-avatar {
+  position: absolute;
+  z-index: 0;
+  left: -21px;
+  border-radius: 24px;
+  height: 12px;
+  width: 14px;
+  box-sizing: border-box;
+}
+
+.split-range-commit.selection-start .commit-selection-avatar,
+.split-range-commit.selection-middle .commit-selection-avatar,
+.split-range-commit.selection-end .commit-selection-avatar {
+  background-color: var(--focus-border);
+  border-color: var(--focus-border);
+  width: 24px;
+  height: 24px;
+  left: -26px;
+}
+.split-range-commit.selection-start .commit-selection-avatar {
+  border-top-right-radius: 0;
+  border-top-left-radius: 0;
+  height: 28px;
+  transform: translateY(-2px);
+}
+
+.split-range-commit.selection-end .commit-selection-avatar {
+  border-bottom-right-radius: 0;
+  border-bottom-left-radius: 0;
+  height: 28px;
+  transform: translateY(2px);
+}
+.split-range-commit.selection-middle .commit-selection-avatar {
+  border-radius: 0;
+  border-top-width: 17px;
+  height: 28px;
+}
+.split-range-commit.selection-end.selection-start .commit-selection-avatar {
+  border-radius: 24px;
+  height: 24px;
+  transform: none;
+}
+.split-range-commit.selection-end .commit-avatar,
+.split-range-commit.selection-middle .commit-avatar,
+.split-range-commit.selection-start .commit-avatar {
+  border: none;
+}
+
+label.split-range-label {
+  font-size: 80%;
+}
+
+.split-insert-blank-commit-container {
+  height: auto;
+  margin-top: var(--pad);
+}
+.split-insert-blank-commit-container > .tooltip-creator {
+  height: calc(100% - 3 * var(--pad));
+}
+.split-insert-blank-commit {
+  cursor: pointer;
+  margin: calc(-1 * var(--pad) + var(--halfpad));
+  padding: var(--halfpad);
+  padding-top: calc(2 * var(--pad));
+  padding-bottom: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  height: 100%;
+  transition: background-color 0.1s;
+  border-radius: 4px;
+}
+.split-insert-blank-commit:hover {
+  background-color: var(--tooltip-background);
+}
+.split-insert-blank-commit .codicon {
+  transition: transform 0.1s;
+  margin-left: 1px;
+  margin-right: -1px;
+}
+.split-insert-blank-commit:hover .codicon {
+  transform: scale(1.5);
+}
+
+.split-commit-file,
+.split-commit-file pre {
+  font-family: var(--monospace-fontFamily);
+}
+
+.split-commit-file {
+  background-color: var(--background);
+  margin-bottom: var(--pad);
+}
+.split-commit-file .split-diff-view-file-header {
+  background-color: var(--background);
+  border: 1px solid var(--panel-view-border);
+  margin-left: 0;
+  margin-right: 0;
+}
+.split-commit-file-arrows vscode-button {
+  font-family: var(--monospace-fontFamily);
+  opacity: 0.5;
+  font-size: 120%;
+  min-width: 25px;
+}
+.split-commit-file-arrows vscode-button:hover {
+  opacity: 0.8;
+}
+.split-commit-file-arrows vscode-button:hover::part(content) {
+  transform: scale(1.3);
+}
+
+.split-file {
+  border: 1px solid var(--panel-view-border);
+  border-top-width: 0px;
+}
+
+.split-commit-file table {
+  white-space: pre-wrap;
+  border-spacing: 0px;
+}
+.split-commit-file tr {
+  /* Set line-height explicitly to avoid dynamic line heights based on (different) fonts decided by text content. */
+  line-height: 1.2;
+}
+
+.split-commit-file td {
+  padding: 0;
+}
+
+.split-commit-file .split-line-content {
+  word-break: break-all;
+}
+
+.split-file .split-left-lineno,
+.split-file .split-right-lineno {
+  vertical-align: top;
+}
+
+.split-file .context-button {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 20'%3E%3Cpath d='M0 10 Q10 15 20 10 Q30 5 40 10' stroke='grey' fill='transparent' /%3E%3C/svg%3E");
+  background-repeat: repeat-x;
+  user-select: none;
+  cursor: pointer;
+  opacity: 0.8;
+  position: relative;
+  transition: opacity 0.1s;
+}
+.split-file .context-button:before {
+  opacity: 0;
+  transition: opacity 0.1s;
+  display: block;
+  position: absolute;
+  left: calc(50% - 70px);
+  right: calc(50% - 70px);
+  text-align: center;
+  padding: 0 var(--pad);
+  content: 'Click to expand';
+}
+.split-file .context-button:hover {
+  opacity: 1;
+}
+.split-file .context-button:hover:before {
+  opacity: 1;
+  background-color: var(--background);
+}
+
+.split-file .lineno {
+  padding-left: var(--halfpad);
+  padding-right: var(--halfpad);
+  text-align: right;
+  user-select: none;
+}
+.split-right-lineno,
+.split-left-lineno,
+.split-right-button,
+.split-left-button {
+  background-color: var(--subtle-hover-darken);
+  user-select: none;
+}
+
+.split-file tr.add {
+  background: var(--diffEditor-insertedLineBackground);
+}
+.split-file tr.del {
+  background: var(--diffEditor-removedLineBackground);
+}
+.split-file tr:hover.add {
+  background: var(--diffEditor-insertedLineHighlightBackground);
+}
+.split-file tr:hover.del {
+  background: var(--diffEditor-removedLineHighlightBackground);
+}
+
+.split-file tr.selected.add {
+  background: var(--diffEditor-insertedLineHighlightBackground);
+}
+.split-file tr.selected.del {
+  background: var(--diffEditor-removedLineHighlightBackground);
+}
+
+.split-file .main-content {
+  min-width: 200px;
+  position: relative;
+}
+
+.split-file .line {
+  padding-left: var(--halfpad);
+}
+
+.split-file .selected .button {
+  opacity: 0.8;
+}
+
+.split-file .button {
+  user-select: none;
+  cursor: pointer;
+  opacity: 0.3;
+  display: block;
+  transition: transform 0.1s;
+}
+
+.split-commit-file tr.selected .button {
+  opacity: 0.6;
+  transform: translateX(-2px) scale(1.25);
+}
+.split-commit-file tr:hover .button {
+  opacity: 0.7;
+  transform: translateX(-2px) scale(1.3);
+}
+.split-commit-file tr:hover .left .button {
+  transform: translateX(2px) scale(1.3);
+}
+
+.split-file .button:active {
+  color: grey;
+  opacity: 1;
+}
+
+.split-file-row .filerev-title {
+  padding-left: var(--pad);
+  text-overflow: ellipsis;
+}
+
+.split-header-hint {
+  padding: var(--pad);
+  border: 1px solid var(--panel-view-border);
+  border-top: none;
+  background: var(--hint-background);
+}

@@ -64,7 +64,7 @@ impl Header {
 
 /// Parse a status line, e.g. "HTTP/1.1 200 OK".
 fn parse_status(line: &str) -> Option<(Version, StatusCode)> {
-    let captures = STATUS_REGEX.captures(&line)?;
+    let captures = STATUS_REGEX.captures(line)?;
 
     let version_str = captures.get(1).map(|m| m.as_str())?;
     let version = parse_version(version_str)?;

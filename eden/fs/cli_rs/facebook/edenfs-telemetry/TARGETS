@@ -1,0 +1,22 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("scm_client_infra")
+
+rust_library(
+    name = "edenfs-telemetry",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:serde_derive",
+        "fbsource//third-party/rust:serde_json",
+        "fbsource//third-party/rust:sysinfo",
+        "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tracing",
+        "fbsource//third-party/rust:whoami",
+        "//common/rust/build_info:build_info",
+        "//common/rust/fbwhoami:fbwhoami",
+    ],
+)

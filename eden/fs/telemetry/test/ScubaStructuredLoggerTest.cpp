@@ -54,7 +54,7 @@ TEST_F(ScubaStructuredLoggerTest, json_is_written_in_one_line) {
 
 std::vector<std::string> keysOf(const folly::dynamic& d) {
   std::vector<std::string> rv;
-  for (auto key : d.keys()) {
+  for (const auto& key : d.keys()) {
     rv.push_back(key.asString());
   }
   return rv;

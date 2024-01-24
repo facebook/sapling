@@ -6,7 +6,6 @@
  */
 
 import App from '../App';
-import {__TEST__} from '../Tooltip';
 import {
   closeCommitInfoSidebar,
   expectMessageSentToServer,
@@ -28,9 +27,6 @@ describe('Download Commits', () => {
       closeCommitInfoSidebar();
       simulateCommits({value: TEST_COMMIT_HISTORY});
     });
-  });
-  afterEach(() => {
-    __TEST__.resetMemoizedTooltipContainer();
   });
 
   it('starts focused', () => {
@@ -65,7 +61,7 @@ describe('Download Commits', () => {
       expect.objectContaining({
         type: 'runOperation',
         operation: expect.objectContaining({
-          args: expect.arrayContaining(['aaa']),
+          args: expect.arrayContaining([{type: 'exact-revset', revset: 'aaa'}]),
         }),
       }),
     );

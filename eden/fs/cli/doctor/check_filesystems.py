@@ -14,7 +14,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from typing import Callable, List, Set, Tuple
+from typing import Callable, List, Set, Tuple, Union
 
 from eden.fs.cli import hg_util
 from eden.fs.cli.config import EdenCheckout, EdenInstance, InProgressCheckoutError
@@ -182,12 +182,57 @@ class LowDiskSpace(Problem):
         super().__init__(message, severity=severity)
 
 
+class LowDiskSpaceMacOS(Problem, FixableProblem):
+    """
+    The LowDiskSpace problem **on macOS** is potentially fixable, so we have a separate class for it (as a subclass of FixableProblem).
+    For all other OSes, use the regular LowDiskSpace problem class.
+    """
+
+    def __init__(self, message: str, severity: ProblemSeverity) -> None:
+        super().__init__(message, severity=severity)
+
+    def dry_run_msg(self) -> str:
+        return "Would attempt to purge the APFS cache\n"
+
+    def start_msg(self) -> str:
+        return "Trying to purge the APFS cache...\n"
+
+    def perform_fix(self) -> None:
+        apfs_util = "/System/Library/Filesystems/apfs.fs/Contents/Resources/apfs.util"
+        command = f"{apfs_util} -P -high ~"
+        try:
+            subprocess.run(
+                command,
+                shell=True,
+                stdout=subprocess.PIPE,
+                check=True,
+                text=True,
+            )
+        except subprocess.CalledProcessError as e:
+            raise RemediationError(f"Failed to purge APFS cache.\n{e}")
+
+
 def check_disk_usage(
     tracker: ProblemTracker,
     mount_paths: List[str],
     instance: EdenInstance,
     fs_util: FsUtil,
 ) -> None:
+    def get_low_disk_space_problem_for_detected_os(
+        message: str,
+        severity: ProblemSeverity,
+    ) -> Union[LowDiskSpaceMacOS, LowDiskSpace]:
+        if sys.platform == "darwin":
+            return LowDiskSpaceMacOS(
+                message,
+                severity=severity,
+            )
+        else:
+            return LowDiskSpace(
+                message,
+                severity=severity,
+            )
+
     prob_advice_space_used_ratio_threshold = 0.90
     prob_error_absolute_space_used_threshold = 1024 * 1024 * 1024  # 1GB
 
@@ -216,23 +261,23 @@ def check_disk_usage(
                 message = f"{message} {extra_message}"
 
             if avail <= prob_error_absolute_space_used_threshold:
-                tracker.add_problem(
-                    LowDiskSpace(
-                        f"{eden_mount_pt} "
-                        f"has only {str(avail)} bytes available. "
-                        f"{message}",
-                        severity=ProblemSeverity.ERROR,
-                    )
+                few_bytes_available_message = (
+                    f"{eden_mount_pt} has only {str(avail)} bytes available. {message}"
                 )
+                problem = get_low_disk_space_problem_for_detected_os(
+                    few_bytes_available_message,
+                    severity=ProblemSeverity.ERROR,
+                )
+                tracker.add_problem(problem)
             elif used_percent >= prob_advice_space_used_ratio_threshold:
-                tracker.add_problem(
-                    LowDiskSpace(
-                        f"{eden_mount_pt} "
-                        f"is {used_percent:.2%} full. "
-                        f"{message}",
-                        severity=ProblemSeverity.ADVICE,
-                    )
+                high_percent_used_disk_space_message = str(
+                    f"{eden_mount_pt} is {used_percent:.2%} full. {message}",
                 )
+                problem = get_low_disk_space_problem_for_detected_os(
+                    high_percent_used_disk_space_message,
+                    severity=ProblemSeverity.ADVICE,
+                )
+                tracker.add_problem(problem)
 
 
 class PathsProblem(Problem):
@@ -550,7 +595,11 @@ def check_materialized_are_accessible(
                             == FILE_ATTRIBUTE_REPARSE_POINT
                         )
                         if is_reparse:
-                            dirent_mode = stat.S_IFREG
+                            dirent_mode = (
+                                stat.S_IFLNK
+                                if windows_symlinks_enabled
+                                else stat.S_IFREG
+                            )
                         else:
                             dirent_mode = stat.S_IFDIR
 
@@ -807,6 +856,7 @@ def get_modified_files(instance: EdenInstance, checkout: EdenCheckout) -> List[P
             GetScmStatusParams(
                 mountPoint=bytes(checkout.path),
                 commit=checkout.get_snapshot().working_copy_parent.encode(),
+                rootIdOptions=None,
             )
         )
 

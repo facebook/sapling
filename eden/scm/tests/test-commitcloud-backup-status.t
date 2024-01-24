@@ -34,7 +34,7 @@ Setup client
   $ hg add file2
   $ commit_time=$(($now - 15 * 60))
   $ hg commit -d "$commit_time 0" -m "Public changeset 2"
-  $ hg push --to master --create --force
+  $ hg push --to master --create
   pushing rev c46481f83c9b to destination ssh://user@dummy/repo bookmark master
   searching for changes
   exporting bookmark master

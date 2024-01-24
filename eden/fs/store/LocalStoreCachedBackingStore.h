@@ -82,9 +82,10 @@ class LocalStoreCachedBackingStore
   void startRecordingFetch() override;
   std::unordered_set<std::string> stopRecordingFetch() override;
 
-  folly::SemiFuture<folly::Unit> importManifestForRoot(
+  ImmediateFuture<folly::Unit> importManifestForRoot(
       const RootId& rootId,
-      const Hash20& manifest) override;
+      const Hash20& manifest,
+      const ObjectFetchContextPtr& context) override;
 
   RootId parseRootId(folly::StringPiece rootId) override;
   std::string renderRootId(const RootId& rootId) override;

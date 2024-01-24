@@ -31,6 +31,8 @@ use futures::stream::StreamExt;
 use once_cell::sync::Lazy;
 use tokio::runtime::Builder as RuntimeBuilder;
 use tokio::runtime::Runtime;
+/// `block_in_place(f)` is similar to `spawn_blocking(f).await?` but `f` can use references.
+pub use tokio::task::block_in_place;
 use tokio::task::JoinHandle;
 
 static RUNTIME: Lazy<Runtime> = Lazy::new(|| {

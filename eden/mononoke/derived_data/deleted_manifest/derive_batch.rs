@@ -25,8 +25,8 @@ use manifest::PathTree;
 use mononoke_types::deleted_manifest_common::DeletedManifestCommon;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
 use mononoke_types::MPathElement;
+use mononoke_types::NonRootMPath;
 
 use crate::derive::DeletedManifestChangeType;
 use crate::derive::DeletedManifestDeriver;
@@ -63,14 +63,14 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
         ctx: &CoreContext,
         blobstore: &Arc<dyn Blobstore>,
         parent: Option<Manifest::Id>,
-        all_changes: Vec<(ChangesetId, Vec<(MPath, PathChange)>)>,
+        all_changes: Vec<(ChangesetId, Vec<(NonRootMPath, PathChange)>)>,
     ) -> Result<Vec<Manifest::Id>> {
         let (path_tree, commit_stack) = {
             let mut path_tree: PathTree<Vec<(ChangesetId, PathChange)>> = PathTree::default();
             let mut commit_stack: Vec<ChangesetId> = vec![];
             for (csid, cs_changes) in all_changes {
                 for (path, change) in cs_changes {
-                    path_tree.insert_and_merge(Some(path), (csid, change));
+                    path_tree.insert_and_merge(path.into(), (csid, change));
                 }
                 commit_stack.push(csid);
             }
@@ -152,10 +152,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
             all_changes,
             parent,
         } = unfold_node;
-        let PathTree {
-            value: change_by_cs,
-            subentries,
-        } = all_changes;
+        let (change_by_cs, subentries) = all_changes.deconstruct();
 
         let parent = match parent {
             None => None,

@@ -239,7 +239,7 @@ Corrupt file contents via an extension:
   remote:                                 source: SharedError {
   remote:                                     error: InconsistentEntryHashForPath(
   remote:                                         FilePath(
-  remote:                                             MPath("inconsistent_file"),
+  remote:                                             NonRootMPath("inconsistent_file"),
   remote:                                         ),
   remote:                                         HgNodeHash(
   remote:                                             Sha1(ef5953d600ca68bacb539eab8dffb415441213bb),

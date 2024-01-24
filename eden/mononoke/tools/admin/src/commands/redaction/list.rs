@@ -12,6 +12,7 @@ use anyhow::Context;
 use anyhow::Result;
 use blobstore::Loadable;
 use clap::Args;
+use commit_id::parse_commit_id;
 use context::CoreContext;
 use fsnodes::RootFsnodeId;
 use futures::stream::TryStreamExt;
@@ -22,13 +23,12 @@ use mononoke_app::MononokeApp;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 
 use super::Repo;
-use crate::commit_id::parse_commit_id;
 
 #[derive(Args)]
 pub struct RedactionListArgs {
@@ -46,7 +46,7 @@ pub(super) async fn paths_for_content_keys(
     repo: &Repo,
     cs_id: ChangesetId,
     keys: &HashSet<String>,
-) -> Result<Vec<(MPath, ContentId)>> {
+) -> Result<Vec<(NonRootMPath, ContentId)>> {
     let root_fsnode_id = repo
         .repo_derived_data()
         .derive::<RootFsnodeId>(ctx, cs_id)

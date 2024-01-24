@@ -167,13 +167,13 @@ mod tests {
             vec!["cmd.exe", "/c", "echo foo > a"]
         };
         let mut command = if cfg!(unix) {
-            Command::new(&args[0])
+            Command::new(args[0])
         } else {
-            Command::new(&args[0])
+            Command::new(args[0])
         };
         let mut child = command
             .args(&args[1..])
-            .current_dir(&dir.path())
+            .current_dir(dir.path())
             .spawn_detached()
             .unwrap();
         child.wait().unwrap();

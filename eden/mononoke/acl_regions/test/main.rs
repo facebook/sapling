@@ -21,8 +21,8 @@ use filestore::FilestoreConfig;
 use metaconfig_types::AclRegion;
 use metaconfig_types::AclRegionConfig;
 use metaconfig_types::AclRegionRule;
+use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
 use pretty_assertions::assert_eq;
 use repo_blobstore::RepoBlobstore;
 use repo_derived_data::RepoDerivedData;
@@ -57,13 +57,13 @@ struct Repo {
     changeset_fetcher: dyn ChangesetFetcher,
 }
 
-fn path(p: &str) -> Option<MPath> {
-    MPath::new_opt(p).unwrap()
+fn path(p: &str) -> MPath {
+    MPath::new(p).unwrap()
 }
 
 struct TestData {
     cs_id: ChangesetId,
-    path: Option<MPath>,
+    path: MPath,
     expected_names: HashSet<String>,
 }
 
@@ -83,7 +83,7 @@ impl TestData {
 
     async fn verify(&self, ctx: &CoreContext, acl_regions: &dyn AclRegions) -> Result<()> {
         let res = acl_regions
-            .associated_rules(ctx, self.cs_id, self.path.as_ref())
+            .associated_rules(ctx, self.cs_id, &self.path)
             .await?;
         let rules = match res {
             AssociatedRulesResult::AclRegionsDisabled => {
@@ -107,13 +107,13 @@ async fn test_acl_regions(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let mut factory = TestRepoFactory::new(fb)?;
     let repo: Repo = factory.build().await?;
-    let dag = r#"
+    let dag = r"
           I
          /
     A-B-C-D-G-H
        \   /
         E-F
-    "#;
+    ";
     let mapping = create_from_dag(&ctx, &repo, dag).await?;
     let a = mapping["A"];
     let b = mapping["B"];

@@ -47,10 +47,15 @@ use bonsai_svnrev_mapping::CachingBonsaiSvnrevMapping;
 use bonsai_svnrev_mapping::SqlBonsaiSvnrevMappingBuilder;
 use bonsai_tag_mapping::ArcBonsaiTagMapping;
 use bonsai_tag_mapping::SqlBonsaiTagMappingBuilder;
+#[cfg(fbcode_build)]
+use bookmark_service_client::BookmarkServiceClient;
+#[cfg(fbcode_build)]
+use bookmark_service_client::RepoBookmarkServiceClient;
 use bookmarks::bookmark_heads_fetcher;
 use bookmarks::ArcBookmarkUpdateLog;
 use bookmarks::ArcBookmarks;
 use bookmarks::CachedBookmarks;
+use bookmarks_cache::ArcBookmarksCache;
 use cacheblob::new_cachelib_blobstore_no_lease;
 use cacheblob::new_memcache_blobstore;
 use cacheblob::CachelibBlobstoreOptions;
@@ -78,12 +83,16 @@ use deletion_log::DeletionLog;
 use deletion_log::SqlDeletionLog;
 #[cfg(fbcode_build)]
 use derived_data_client_library::Client as DerivationServiceClient;
+#[cfg(fbcode_build)]
 use derived_data_remote::Address;
 use derived_data_remote::DerivationClient;
 use derived_data_remote::RemoteDerivationOptions;
+#[cfg(fbcode_build)]
+use environment::BookmarkCacheAddress;
+use environment::BookmarkCacheDerivedData;
+use environment::BookmarkCacheKind;
 use environment::Caching;
 use environment::MononokeEnvironment;
-use environment::WarmBookmarksCacheDerivedData;
 use ephemeral_blobstore::ArcRepoEphemeralStore;
 use ephemeral_blobstore::RepoEphemeralStore;
 use ephemeral_blobstore::RepoEphemeralStoreBuilder;
@@ -94,11 +103,10 @@ use filestore::FilestoreConfig;
 use futures_watchdog::WatchdogExt;
 use git_symbolic_refs::ArcGitSymbolicRefs;
 use git_symbolic_refs::SqlGitSymbolicRefsBuilder;
+use hook_manager::manager::ArcHookManager;
+use hook_manager::manager::HookManager;
+use hook_manager::TextOnlyHookFileContentProvider;
 use hooks::hook_loader::load_hooks;
-use hooks::ArcHookManager;
-use hooks::HookManager;
-use hooks_content_stores::RepoFileContentManager;
-use hooks_content_stores::TextOnlyFileContentManager;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use memcache::KeyGen;
 use memcache::MemcacheClient;
@@ -129,7 +137,6 @@ use readonlyblob::ReadOnlyBlobstore;
 use redactedblobstore::ArcRedactionConfigBlobstore;
 use redactedblobstore::RedactedBlobs;
 use redactedblobstore::RedactionConfigBlobstore;
-use rendezvous::RendezVousOptions;
 use repo_blobstore::ArcRepoBlobstore;
 use repo_blobstore::ArcRepoBlobstoreUnlinkOps;
 use repo_blobstore::RepoBlobstore;
@@ -142,6 +149,7 @@ use repo_derived_data::ArcRepoDerivedData;
 use repo_derived_data::RepoDerivedData;
 use repo_derived_data_service::ArcDerivedDataManagerSet;
 use repo_derived_data_service::DerivedDataManagerSet;
+use repo_hook_file_content_provider::RepoHookFileContentProvider;
 use repo_identity::ArcRepoIdentity;
 use repo_identity::RepoIdentity;
 use repo_lock::AlwaysLockedRepoLock;
@@ -173,9 +181,7 @@ use streaming_clone::StreamingCloneBuilder;
 use synced_commit_mapping::ArcSyncedCommitMapping;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 use thiserror::Error;
-use tunables::tunables;
 use virtually_sharded_blobstore::VirtuallyShardedBlobstore;
-use warm_bookmarks_cache::ArcBookmarksCache;
 use warm_bookmarks_cache::NoopBookmarksCache;
 use warm_bookmarks_cache::WarmBookmarksCacheBuilder;
 use wireproto_handler::ArcPushRedirectorMode;
@@ -236,6 +242,7 @@ pub struct RepoFactory {
     blobstores: RepoFactoryCache<BlobConfig, Arc<dyn Blobstore>>,
     redacted_blobs: RepoFactoryCache<MetadataDatabaseConfig, Arc<RedactedBlobs>>,
     blobstore_override: Option<Arc<dyn RepoFactoryOverride<Arc<dyn Blobstore>>>>,
+    lease_override: Option<Arc<dyn RepoFactoryOverride<Arc<dyn LeaseOps>>>>,
     scrub_handler: Arc<dyn ScrubHandler>,
     blobstore_component_sampler: Option<Arc<dyn ComponentSamplingHandler>>,
     bonsai_hg_mapping_overwrite: bool,
@@ -248,6 +255,7 @@ impl RepoFactory {
             blobstores: RepoFactoryCache::new(),
             redacted_blobs: RepoFactoryCache::new(),
             blobstore_override: None,
+            lease_override: None,
             scrub_handler: default_scrub_handler(),
             blobstore_component_sampler: None,
             bonsai_hg_mapping_overwrite: false,
@@ -260,6 +268,14 @@ impl RepoFactory {
         blobstore_override: impl RepoFactoryOverride<Arc<dyn Blobstore>>,
     ) -> &mut Self {
         self.blobstore_override = Some(Arc::new(blobstore_override));
+        self
+    }
+
+    pub fn with_lease_override(
+        &mut self,
+        lease_override: impl RepoFactoryOverride<Arc<dyn LeaseOps>>,
+    ) -> &mut Self {
+        self.lease_override = Some(Arc::new(lease_override));
         self
     }
 
@@ -449,6 +465,32 @@ impl RepoFactory {
                 Ok(blobstore)
             })
             .await
+    }
+
+    fn lease_init(
+        fb: FacebookInit,
+        caching: Caching,
+        lease_type: &'static str,
+    ) -> Result<Arc<dyn LeaseOps>> {
+        // Derived data leasing is performed through the cache, so is only
+        // available if caching is enabled.
+        if let Caching::Enabled(_) = caching {
+            Ok(Arc::new(MemcacheOps::new(fb, lease_type, "")?))
+        } else {
+            Ok(Arc::new(InProcessLease::new()))
+        }
+    }
+
+    fn lease(&self, lease_type: &'static str) -> Result<Arc<dyn LeaseOps>> {
+        let fb = self.env.fb;
+        let caching = self.env.caching;
+        Self::lease_init(fb, caching, lease_type).map(|lease| {
+            if let Some(lease_override) = &self.lease_override {
+                lease_override(lease)
+            } else {
+                lease
+            }
+        })
     }
 
     pub async fn blobstore_unlink_ops_with_overriden_blob_config(
@@ -807,7 +849,7 @@ impl RepoFactory {
             Ok(Arc::new(CachingBonsaiHgMapping::new(
                 Arc::new(bonsai_hg_mapping),
                 cache_handler_factory,
-            )))
+            )?))
         } else {
             Ok(Arc::new(bonsai_hg_mapping))
         }
@@ -973,9 +1015,9 @@ impl RepoFactory {
                 history_cache_handler_factory,
                 "newfilenodes",
                 &filenodes_tier.tier_name,
-            );
+            )?;
         }
-        Ok(Arc::new(filenodes_builder.build(repo_identity.id())))
+        Ok(Arc::new(filenodes_builder.build(repo_identity.id())?))
     }
 
     pub async fn hg_mutation_store(
@@ -993,7 +1035,7 @@ impl RepoFactory {
             Ok(Arc::new(CachedHgMutationStore::new(
                 Arc::new(hg_mutation_store),
                 cache_handler_factory,
-            )))
+            )?))
         } else {
             Ok(Arc::new(hg_mutation_store))
         }
@@ -1067,7 +1109,7 @@ impl RepoFactory {
         repo_blobstore: &ArcRepoBlobstore,
     ) -> Result<ArcRepoDerivedData> {
         let config = repo_config.derived_data_config.clone();
-        let lease = lease_init(self.env.fb, self.env.caching, DERIVED_DATA_LEASE)?;
+        let lease = self.lease(DERIVED_DATA_LEASE)?;
         let scuba = build_scuba(
             self.env.fb,
             config.scuba_table.clone(),
@@ -1205,7 +1247,7 @@ impl RepoFactory {
         repo_blobstore: &ArcRepoBlobstore,
     ) -> Result<ArcDerivedDataManagerSet> {
         let config = repo_config.derived_data_config.clone();
-        let lease = lease_init(self.env.fb, self.env.caching, DERIVED_DATA_LEASE)?;
+        let lease = self.lease(DERIVED_DATA_LEASE)?;
         let ctx = self.ctx(Some(repo_identity));
         let logger = ctx.logger().clone();
         let derived_data_scuba = build_scuba(
@@ -1296,12 +1338,6 @@ impl RepoFactory {
     ) -> Result<ArcHookManager> {
         let name = repo_identity.name();
 
-        let content_store = RepoFileContentManager::from_parts(
-            bookmarks.clone(),
-            repo_blobstore.clone(),
-            repo_derived_data.clone(),
-        );
-
         let disabled_hooks = self
             .env
             .disabled_hooks
@@ -1323,15 +1359,19 @@ impl RepoFactory {
         }
 
         let hook_manager = async {
-            let fetcher = Box::new(TextOnlyFileContentManager::new(
-                content_store,
+            let content_provider = Box::new(TextOnlyHookFileContentProvider::new(
+                RepoHookFileContentProvider::from_parts(
+                    bookmarks.clone(),
+                    repo_blobstore.clone(),
+                    repo_derived_data.clone(),
+                ),
                 repo_config.hook_max_file_size,
             ));
 
             let mut hook_manager = HookManager::new(
                 self.env.fb,
                 self.env.acl_provider.as_ref(),
-                fetcher,
+                content_provider,
                 repo_config.hook_manager_params.clone().unwrap_or_default(),
                 hooks_scuba,
                 name.to_string(),
@@ -1367,7 +1407,7 @@ impl RepoFactory {
         Ok(Arc::new(RepoSparseProfiles { sql_profile_sizes }))
     }
 
-    pub fn repo_lock(
+    pub async fn repo_lock(
         &self,
         repo_config: &ArcRepoConfig,
         repo_identity: &ArcRepoIdentity,
@@ -1383,7 +1423,8 @@ impl RepoFactory {
                     &repo_config.storage_config.metadata,
                     &self.env.mysql_options,
                     self.env.readonly_storage.0,
-                )?;
+                )
+                .await?;
 
                 Ok(Arc::new(MutableRepoLock::new(sql, repo_identity.id())))
             }
@@ -1425,8 +1466,8 @@ impl RepoFactory {
         repo_derived_data: &ArcRepoDerivedData,
         phases: &ArcPhases,
     ) -> Result<ArcBookmarksCache> {
-        match self.env.warm_bookmarks_cache_derived_data {
-            Some(derived_data) => {
+        match &self.env.bookmark_cache_options.cache_kind {
+            BookmarkCacheKind::Local => {
                 let mut scuba = self.env.warm_bookmarks_cache_scuba_sample_builder.clone();
                 scuba.add("repo", repo_identity.name());
 
@@ -1437,21 +1478,48 @@ impl RepoFactory {
                     repo_identity.clone(),
                 );
 
-                match derived_data {
-                    WarmBookmarksCacheDerivedData::HgOnly => {
+                match self.env.bookmark_cache_options.derived_data {
+                    BookmarkCacheDerivedData::HgOnly => {
                         wbc_builder.add_hg_warmers(repo_derived_data, phases)?;
                     }
-                    WarmBookmarksCacheDerivedData::AllKinds => {
+                    BookmarkCacheDerivedData::AllKinds => {
                         wbc_builder.add_all_warmers(repo_derived_data, phases)?;
                     }
-                    WarmBookmarksCacheDerivedData::NoDerivation => {}
+                    BookmarkCacheDerivedData::NoDerivation => {}
                 }
 
                 Ok(Arc::new(
                     wbc_builder.build().watched(&self.env.logger).await?,
                 ))
             }
-            None => Ok(Arc::new(NoopBookmarksCache::new(bookmarks.clone()))),
+            #[cfg(fbcode_build)]
+            BookmarkCacheKind::Remote(address) => {
+                anyhow::ensure!(
+                    self.env.bookmark_cache_options.derived_data
+                        == BookmarkCacheDerivedData::HgOnly,
+                    "HgOnly derivation supported right now"
+                );
+
+                let client = match address {
+                    BookmarkCacheAddress::HostPort(host_port) => {
+                        BookmarkServiceClient::from_host_port(self.env.fb, host_port.to_string())?
+                    }
+                    BookmarkCacheAddress::SmcTier(tier_name) => {
+                        BookmarkServiceClient::from_tier_name(self.env.fb, tier_name.to_string())?
+                    }
+                };
+                let repo_client =
+                    RepoBookmarkServiceClient::new(repo_identity.name().to_string(), client);
+
+                Ok(Arc::new(repo_client))
+            }
+            #[cfg(not(fbcode_build))]
+            BookmarkCacheKind::Remote(_addr) => {
+                return Err(anyhow::anyhow!(
+                    "Remote bookmark cache not supported in non-fbcode builds"
+                ));
+            }
+            BookmarkCacheKind::Disabled => Ok(Arc::new(NoopBookmarksCache::new(bookmarks.clone()))),
         }
     }
 
@@ -1526,11 +1594,7 @@ impl RepoFactory {
         let caching = if let Some(cache_handler_factory) = self.cache_handler_factory("sql")? {
             const KEY_PREFIX: &str = "scm.mononoke.sql";
             const MC_CODEVER: u32 = 0;
-            let sitever: u32 = tunables()
-                .sql_memcache_sitever()
-                .unwrap_or_default()
-                .try_into()
-                .unwrap_or(0);
+            let sitever = justknobs::get_as::<u32>("scm/mononoke_memcache_sitevers:sql", None)?;
             Some(sql_query_config::CachingConfig {
                 keygen: KeyGen::new(KEY_PREFIX, MC_CODEVER, sitever),
                 cache_handler_factory,
@@ -1550,12 +1614,7 @@ impl RepoFactory {
         let sql_storage = self
             .open_sql::<SqlCommitGraphStorageBuilder>(repo_config)
             .await?
-            .build(
-                RendezVousOptions {
-                    free_connections: 5,
-                },
-                repo_identity.id(),
-            );
+            .build(self.env.rendezvous_options, repo_identity.id());
 
         let maybe_cached_storage: Arc<dyn CommitGraphStorage> =
             if let Some(cache_handler_factory) = self.cache_handler_factory("commit_graph")? {
@@ -1620,20 +1679,6 @@ impl RepoFactory {
             .await
             .context(RepoFactoryError::SqlDeletionLog)?;
         Ok(Arc::new(DeletionLog { sql_deletion_log }))
-    }
-}
-
-fn lease_init(
-    fb: FacebookInit,
-    caching: Caching,
-    lease_type: &'static str,
-) -> Result<Arc<dyn LeaseOps>> {
-    // Derived data leasing is performed through the cache, so is only
-    // available if caching is enabled.
-    if let Caching::Enabled(_) = caching {
-        Ok(Arc::new(MemcacheOps::new(fb, lease_type, "")?))
-    } else {
-        Ok(Arc::new(InProcessLease::new()))
     }
 }
 

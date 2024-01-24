@@ -13,6 +13,7 @@ use std::str;
 use anyhow::Error;
 use anyhow::Result;
 use configmodel::Config;
+use configmodel::ConfigExt;
 use configmodel::Text;
 use indexmap::IndexMap;
 use thiserror::Error;
@@ -162,7 +163,7 @@ impl<'a> AuthSection<'a> {
 
         let scheme = url.scheme().to_string();
         let username = url.username();
-        let url_suffix = strip_scheme_and_user(&url);
+        let url_suffix = strip_scheme_and_user(url);
 
         'groups: for group in &self.groups {
             if !group.schemes.contains(&scheme) {
@@ -184,7 +185,7 @@ impl<'a> AuthSection<'a> {
 
             // If there is an existing candidate, check whether the current
             // auth entry is a more specific match.
-            if let Some(ref best) = best {
+            if let Some(best) = best {
                 // Take the entry with the longer prefix.
                 if group.prefix.len() < best.prefix.len() {
                     continue;
@@ -227,7 +228,16 @@ impl<'a> AuthSection<'a> {
         }
 
         if let Some(best) = best {
-            Ok(Some(best.clone()))
+            tracing::debug!(%url, ?best, "best_auth_group");
+
+            let mut best = best.clone();
+            if best.cacerts.is_none() {
+                if let Ok(cacerts) = self.config.must_get("web", "cacerts") {
+                    tracing::debug!(%url, ?cacerts, "using web.cacerts bundle");
+                    best.cacerts = Some(cacerts);
+                }
+            }
+            Ok(Some(best))
         } else if !missing.is_empty() {
             let msg = self.config.get("help", "tlsauthhelp").unwrap_or_default();
             Err(MissingCerts {

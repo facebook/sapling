@@ -115,7 +115,7 @@ Somehow problematic: With many extensions
   > extorder=
   > fastlog=
   > fastpartialmatch=!
-  > fbscmquery=
+  > fbcodereview=
   > fbhistedit=
   > githelp=
   > gitlookup=!
@@ -131,11 +131,8 @@ Somehow problematic: With many extensions
   > mergedriver=
   > morestatus=
   > myparent=
-  > phabdiff=
-  > phabstatus=
   > phrevset=
   > progressfile=
-  > pullcreatemarkers=
   > pushrebase =
   > pushrebase=
   > rage=
@@ -151,7 +148,6 @@ Somehow problematic: With many extensions
   > simplecache=
   > smartlog=
   > sparse=
-  > sshaskpass=
   > stat=
   > traceprof=
   > treedirstate=
@@ -163,8 +159,6 @@ Somehow problematic: With many extensions
   > publish = False
   > 
   > [remotefilelog]
-  > datapackversion = 1
-  > historypackv1 = True
   > reponame = x
   > cachepath = $TESTTMP/cache
   > 

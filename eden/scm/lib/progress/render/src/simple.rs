@@ -38,20 +38,20 @@ pub fn render_string(registry: &Registry, config: &RenderingConfig) -> String {
     let bar_list = registry.list_progress_bar();
 
     render_cache_stats(&mut lines, &cache_list, config);
-    render_time_series(&mut lines, &series_list, config);
+    render_time_series(&mut lines, &series_list, config.max_topic_len());
     render_progress_bars(&mut lines, &bar_list, config);
 
     for line in lines.iter_mut() {
-        *line = config.truncate_line(&line).to_string();
+        *line = config.truncate_line(line).to_string();
     }
 
     lines.join("\r\n")
 }
 
-fn render_time_series(
+pub(crate) fn render_time_series(
     lines: &mut Vec<String>,
     series_list: &[Arc<IoTimeSeries>],
-    config: &RenderingConfig,
+    topic_pad: usize,
 ) {
     for model in series_list {
         let mut phrases = Vec::with_capacity(4);
@@ -60,9 +60,9 @@ fn render_time_series(
         }
 
         // Net [▁▂▄█▇▅▃▆] 3 MB/s
-        phrases.push(format!("{:>1$}", model.topic(), config.max_topic_len()));
+        phrases.push(format!("{:>1$}", model.topic(), topic_pad));
 
-        let ascii = ascii_time_series(&model);
+        let ascii = ascii_time_series(model);
         phrases.push(format!("[{}]", ascii));
 
         let speed = match model.mode() {
@@ -105,7 +105,7 @@ fn render_progress_bars(
     let mut hidden = 0;
     let mut shown = 0;
     for bar in bars.iter() {
-        if config.delay.as_millis() > 0 && bar.elapsed() < config.delay {
+        if config.delay.as_millis() > 0 && bar.since_creation() < config.delay {
             continue;
         }
 
@@ -146,7 +146,7 @@ fn render_progress_bars(
             let pos = if cfg!(test) {
                 5
             } else {
-                bar.elapsed().as_millis() / 200
+                bar.since_creation().as_millis() / 200
             };
             let spaceship = "<=>";
             let left_max = width - spaceship.len();
@@ -183,7 +183,11 @@ fn render_progress_bars(
     }
 }
 
-fn render_cache_stats(lines: &mut Vec<String>, list: &[Arc<CacheStats>], config: &RenderingConfig) {
+pub(crate) fn render_cache_stats(
+    lines: &mut Vec<String>,
+    list: &[Arc<CacheStats>],
+    config: &RenderingConfig,
+) {
     for model in list {
         // topic [====>    ] 12 / 56 files message
         let topic = model.topic();

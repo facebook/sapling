@@ -104,11 +104,11 @@ the table cases
   R foo
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-20 state added, options -A
+20 state added, options --mark
 
   $ echo b > bar
   $ hg add bar
-  $ remove -A bar
+  $ remove --mark bar
   not removing bar: file still exists
   exit code: 1
   A bar
@@ -116,9 +116,9 @@ the table cases
   ./foo
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-21 state clean, options -Av
+21 state clean, options --mark -v
 
-  $ remove -Av foo
+  $ remove --mark -v foo
   not removing foo: file still exists
   exit code: 1
   ? bar
@@ -126,10 +126,10 @@ the table cases
   ./foo
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-22 state modified, options -Av
+22 state modified, options --mark -v
 
   $ echo b >> foo
-  $ remove -Av foo
+  $ remove --mark -v foo
   not removing foo: file still exists
   exit code: 1
   M foo
@@ -138,21 +138,21 @@ the table cases
   ./foo
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-23 state missing, options -A
+23 state missing, options --mark
 
   $ rm foo
-  $ remove -A foo
+  $ remove --mark foo
   exit code: 0
   R foo
   ? bar
   ./bar
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-30 state added, options -Af
+30 state added, options --mark -f
 
   $ echo b > bar
   $ hg add bar
-  $ remove -Af bar
+  $ remove --mark -f bar
   exit code: 0
   ? bar
   ./bar
@@ -160,27 +160,27 @@ the table cases
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm bar
 
-31 state clean, options -Af
+31 state clean, options --mark -f
 
-  $ remove -Af foo
+  $ remove --mark -f foo
   exit code: 0
   R foo
   ./foo
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-32 state modified, options -Af
+32 state modified, options --mark -f
 
   $ echo b >> foo
-  $ remove -Af foo
+  $ remove --mark -f foo
   exit code: 0
   R foo
   ./foo
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-33 state missing, options -Af
+33 state missing, options --mark -f
 
   $ rm foo
-  $ remove -Af foo
+  $ remove --mark -f foo
   exit code: 0
   R foo
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -218,10 +218,10 @@ dir, options -f
   ./foo
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-dir, options -Av
+dir, options --mark -v
 
   $ rm test/bar
-  $ remove -Av test
+  $ remove --mark -v test
   removing test/bar
   exit code: 0
   R test/bar
@@ -229,9 +229,9 @@ dir, options -Av
   ./test/foo
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-dir, options -A <dir>
+dir, options --mark <dir>
   $ rm test/bar
-  $ remove -A test
+  $ remove --mark test
   removing test/bar
   exit code: 0
   R test/bar
@@ -239,9 +239,9 @@ dir, options -A <dir>
   ./test/foo
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-without any files/dirs, options -A
+without any files/dirs, options --mark
   $ rm test/bar
-  $ remove -A
+  $ remove --mark
   removing test/bar
   exit code: 0
   R test/bar
@@ -249,10 +249,10 @@ without any files/dirs, options -A
   ./test/foo
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-dir, options -Af
+dir, options --mark -f
 
   $ rm test/bar
-  $ remove -Af test
+  $ remove --mark -f test
   removing test/bar
   removing test/foo
   exit code: 0
@@ -290,15 +290,15 @@ handling of untracked directories and missing files
 
   $ mkdir d1
   $ echo a > d1/a
-  $ hg rm --after d1
+  $ hg rm --mark d1
   not removing d1: no tracked files
   [1]
   $ hg add d1/a
   $ rm d1/a
-  $ hg rm --after d1
+  $ hg rm --mark d1
   removing d1/a
 
-  $ hg rm --after nosuch
+  $ hg rm --mark nosuch
   nosuch: $ENOENT$
   [1]
 

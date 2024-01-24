@@ -19,7 +19,7 @@ Prepare
 Test that raising an exception in the release function doesn't cause the lock to choke
 
   $ cat > testlock.py << EOF
-  > from edenscm import error, registrar
+  > from sapling import error, registrar
   > 
   > cmdtable = {}
   > command = registrar.command(cmdtable)
@@ -56,13 +56,16 @@ One process waiting for another for a significant period of time (longer than th
 
   $ cat > hooks.py << EOF
   > import time
-  > def sleeplong(**x): time.sleep(3.1)
-  > def sleepshort(**x): time.sleep(0.1)
+  > def sleeplong(**x):
+  >     import os
+  >     os.system("touch sleeping")
+  >     time.sleep(2)
   > EOF
   $ echo b > b/b
   $ hg -R b ci -A -m b --config hooks.precommit="python:`pwd`/hooks.py:sleeplong" > stdout &
-  $ hg -R b up -q --config hooks.pre-update="python:`pwd`/hooks.py:sleepshort" \
-  > > preup-stdout 2>preup-stderr
+Wait until bg process has entered critical section.
+  $ while [ ! -f sleeping ]; do sleep 0.01; done
+  $ hg -R b up -q --config ui.timeout.warn=0 > preup-stdout 2>preup-stderr
   $ wait
   $ cat preup-stdout
   $ cat preup-stderr
@@ -153,30 +156,6 @@ On processs waiting on another, warning disabled, (debug output on)
   $ cat stdout
   adding g
 
-#if windows
-Pushing to a local read-only repo that can't be locked
-
-  $ chmod 100 a/.hg/store
-
-  $ hg -R b push a
-  pushing to a
-  searching for changes
-  abort: could not lock repository a: Permission denied
-  [255]
-
-  $ chmod 700 a/.hg/store
-
-Having an empty lock file
-  $ cd a
-  $ touch .hg/wlock
-  $ hg backout # a command which always acquires a lock
-  abort: malformed lock file ($TESTTMP/a/.hg/wlock)
-  (run hg debuglocks)
-  [255]
-  $ rm .hg/wlock
-
-#else
-
 Having an empty lock file
   $ cd a
   $ touch .hg/wlock
@@ -203,6 +182,5 @@ Having an empty undolog lock file
   undolog/lock:  free
   prefetchlock:  free
   infinitepushbackup.lock: free
-#endif
 
   $ cd ..

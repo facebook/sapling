@@ -15,16 +15,6 @@ from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 @hg_test
 # pyre-ignore[13]: T62487924
 class GrepTest(EdenHgTestCase):
-    def setUp(self) -> None:
-        # TODO: Remove this once there are no weird batch hacks around Buck the buck-built hg
-        self.disableBuckHgForTests(
-            [
-                "test_grep_that_does_not_match_anything",
-                "test_grep_that_does_not_match_anything_in_directory",
-            ]
-        )
-        super().setUp()
-
     def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         repo.write_file("file_in_root.txt", "\n".join(["apple", "  banana", "cat"]))
         repo.write_file("d1/d2/afile.txt", "\n".join(["banana", "  banana"]))

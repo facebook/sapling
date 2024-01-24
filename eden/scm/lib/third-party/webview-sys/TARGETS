@@ -1,0 +1,102 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+# Build these targets with @//mode/mac-xcode
+
+rust_library(
+    name = "webview-sys",
+    srcs = ["lib.rs"],
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "build-dependencies": {
+                    "cc": {"version": "1"},
+                },
+            },
+            "lib": {
+                "name": "webview_sys",
+                "path": "lib.rs",
+            },
+            "package": {
+                "authors": [
+                    "Boscop",
+                    "zxey <r.hozak@seznam.cz>",
+                ],
+                "build": "build.rs",
+                "categories": [
+                    "gui",
+                    "web-programming",
+                    "api-bindings",
+                    "rendering",
+                    "visualization",
+                ],
+                "description": "Rust native ffi bindings for webview",
+                "exclude": ["Cargo.lock"],
+                "keywords": [
+                    "web",
+                    "gui",
+                    "desktop",
+                    "electron",
+                    "webkit",
+                ],
+                "license": "MIT",
+                "links": "webview",
+                "name": "webview-sys",
+                "repository": "https://github.com/evangrayk/web-view",
+                "version": "0.6.2",
+            },
+        },
+    },
+    compatible_with = [
+        "ovr_config//os:macos",
+    ],
+    os_deps = [
+        (
+            "macos",
+            [
+                ":webview-cocoa",
+            ],
+        ),
+    ],
+    # This is a workaround. Ideally it should move to `cpp_library` linker_flags.
+    rustc_flags = [
+        "-lframework=CoreFoundation",
+        "-lframework=WebKit",
+    ],
+)
+
+cpp_library(
+    name = "webview-cocoa",
+    srcs = ["webview_cocoa.c"],
+    headers = ["webview.h"],
+    compatible_with = [
+        "ovr_config//os:macos",
+    ],
+    compiler_flags = [
+        "-std=c11",
+        "-x",
+        "objective-c",
+    ],
+    # Need to update linker_flags allowlist to work.
+    # linker_flags = [
+    #     "-framework",
+    #     "Cocoa",
+    #     "-framework",
+    #     "WebKit",
+    # ],
+    preprocessor_flags = ["-DNDEBUG"],
+)
+
+rust_binary(
+    name = "example",
+    srcs = ["examples/example.rs"],
+    autocargo = {"ignore_rule": True},
+    compatible_with = [
+        "ovr_config//os:macos",
+    ],
+    crate_root = "examples/example.rs",
+    deps = [":webview-sys"],
+)

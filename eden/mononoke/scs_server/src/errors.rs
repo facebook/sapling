@@ -225,6 +225,7 @@ impl_into_thrift_error!(service::RepoDeleteBookmarkExn);
 impl_into_thrift_error!(service::RepoLandStackExn);
 impl_into_thrift_error!(service::RepoBookmarkInfoExn);
 impl_into_thrift_error!(service::RepoStackInfoExn);
+impl_into_thrift_error!(service::RepoStackGitBundleStoreExn);
 impl_into_thrift_error!(service::RepoPrepareCommitsExn);
 impl_into_thrift_error!(service::RepoUploadFileContentExn);
 impl_into_thrift_error!(service::CommitCommonBaseWithExn);
@@ -266,7 +267,8 @@ impl_into_thrift_error!(service::MegarepoSyncChangesetExn);
 impl_into_thrift_error!(service::MegarepoSyncChangesetPollExn);
 impl_into_thrift_error!(service::MegarepoRemergeSourceExn);
 impl_into_thrift_error!(service::MegarepoRemergeSourcePollExn);
-impl_into_thrift_error!(service::UploadGitObjectExn);
+impl_into_thrift_error!(service::RepoUploadNonBlobGitObjectExn);
+impl_into_thrift_error!(service::RepoUploadPackfileBaseItemExn);
 impl_into_thrift_error!(service::CreateGitTreeExn);
 impl_into_thrift_error!(service::CreateGitTagExn);
 

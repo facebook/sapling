@@ -17,13 +17,13 @@ import urllib.parse as urlparse
 # no-check-code
 from optparse import OptionParser
 
-from edenscm import pycompat
+from sapling import pycompat
 
 
 try:
-    from edenscm.server import runservice
+    from sapling.server import runservice
 except ImportError:
-    from edenscm.cmdutil import service as runservice
+    from sapling.cmdutil import service as runservice
 
 known_translations = {}
 next_error_message = []

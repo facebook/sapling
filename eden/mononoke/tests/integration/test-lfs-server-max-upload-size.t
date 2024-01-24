@@ -24,5 +24,5 @@
   [255]
 
 # Verify that direct uploads fail too
-  $ curl -s --upload-file /dev/null "${lfs_uri}/upload/1111111111111111111111111111111111111111111111111111111111111111/11"
+  $ curltest -s --upload-file /dev/null "${lfs_uri}/upload/1111111111111111111111111111111111111111111111111111111111111111/11"
   {"message":"Object size (11) exceeds max allowed size (10)","request_id":"*"} (no-eol) (glob)

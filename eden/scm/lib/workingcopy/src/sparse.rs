@@ -13,22 +13,19 @@ use std::ops::DerefMut;
 use std::path::Path;
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::Error;
-use async_runtime::try_block_unless_interrupted;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use manifest::FileMetadata;
 use manifest::FsNodeMetadata;
 use manifest::Manifest;
+use manifest_tree::TreeManifest;
 use parking_lot::Mutex;
 use pathmatcher::DynMatcher;
 use pathmatcher::ExactMatcher;
 use pathmatcher::UnionMatcher;
 pub use sparse::Root;
-use storemodel::futures::StreamExt;
-use storemodel::ReadFileContents;
-use types::Key;
+use storemodel::FileStore;
 use types::RepoPath;
 use types::RepoPathBuf;
 use vfs::VFS;
@@ -39,8 +36,8 @@ pub static MERGE_FILE_OVERRIDES: &str = "tempsparse";
 pub fn repo_matcher(
     vfs: &VFS,
     dot_path: &Path,
-    manifest: impl Manifest + Send + Sync + 'static,
-    store: Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
+    manifest: &impl Manifest,
+    store: Arc<dyn FileStore>,
 ) -> anyhow::Result<Option<(DynMatcher, u64)>> {
     repo_matcher_with_overrides(vfs, dot_path, manifest, store, &disk_overrides(dot_path)?)
 }
@@ -48,11 +45,11 @@ pub fn repo_matcher(
 pub fn repo_matcher_with_overrides(
     vfs: &VFS,
     dot_path: &Path,
-    manifest: impl Manifest + Send + Sync + 'static,
-    store: Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
+    manifest: &impl Manifest,
+    store: Arc<dyn FileStore>,
     overrides: &HashMap<String, String>,
 ) -> anyhow::Result<Option<(DynMatcher, u64)>> {
-    let prof = match util::file::read(dot_path.join("sparse")) {
+    let prof = match fs_err::read(dot_path.join("sparse")) {
         Ok(contents) => sparse::Root::from_bytes(contents, ".hg/sparse".to_string())?,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
             return Ok(None);
@@ -62,82 +59,13 @@ pub fn repo_matcher_with_overrides(
         }
     };
 
-    Ok(Some(build_matcher(
-        vfs,
-        dot_path,
-        &prof,
-        manifest,
-        store.clone(),
-        overrides,
-    )?))
-}
-
-fn build_matcher(
-    vfs: &VFS,
-    dot_path: &Path,
-    prof: &sparse::Root,
-    manifest: impl Manifest + Send + Sync + 'static,
-    store: Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
-    overrides: &HashMap<String, String>,
-) -> anyhow::Result<(DynMatcher, u64)> {
-    let manifest = Arc::new(manifest);
-
-    let hasher = Mutex::new(DefaultHasher::new());
-    prof.hash(hasher.lock().deref_mut());
-
-    let matcher = try_block_unless_interrupted(prof.matcher(|path| async {
-        let path = path;
-
-        let file_id = {
-            let manifest = manifest.clone();
-            let repo_path = RepoPathBuf::from_string(path.clone())?;
-
-            // Work around nested block_on() calls by spawning a new thread.
-            // Once the Manifest is async this can go away.
-            tokio::task::spawn_blocking(move || match manifest.get(&repo_path)? {
-                None => {
-                    tracing::warn!(?repo_path, "non-existent sparse profile include");
-                    Ok::<_, Error>(None)
-                }
-                Some(fs_node) => match fs_node {
-                    FsNodeMetadata::File(FileMetadata { hgid, .. }) => Ok(Some(hgid)),
-                    FsNodeMetadata::Directory(_) => {
-                        tracing::warn!(?repo_path, "sparse profile include is a directory");
-                        Ok(None)
-                    }
-                },
-            })
-            .await??
-        };
-
-        let file_id = match file_id {
-            Some(id) => id,
-            None => return Ok(None),
-        };
-
-        let repo_path = RepoPathBuf::from_string(path.clone())?;
-        let mut stream = store
-            .read_file_contents(vec![Key::new(repo_path.clone(), file_id.clone())])
-            .await;
-        match stream.next().await {
-            Some(Ok((bytes, _key))) => {
-                let mut bytes = bytes.into_vec();
-                if let Some(extra) = overrides.get(&path) {
-                    bytes.append(&mut extra.to_string().into_bytes());
-                }
-                bytes.hash(hasher.lock().deref_mut());
-                Ok(Some(bytes))
-            }
-            Some(Err(err)) => Err(err),
-            None => Err(anyhow!("no contents for {}", repo_path)),
-        }
-    }))?;
+    let (matcher, mut hasher) = build_matcher(&prof, manifest, store.clone(), overrides)?;
 
     let mut matcher: DynMatcher = Arc::new(matcher);
 
-    match util::file::read_to_string(dot_path.join(MERGE_FILE_OVERRIDES)) {
+    match fs_err::read_to_string(dot_path.join(MERGE_FILE_OVERRIDES)) {
         Ok(temp) => {
-            temp.hash(hasher.lock().deref_mut());
+            temp.hash(&mut hasher);
             let exact = ExactMatcher::new(
                 temp.split('\n')
                     .map(|p| p.try_into())
@@ -151,8 +79,58 @@ fn build_matcher(
         Err(err) => return Err(err.into()),
     }
 
-    let hash = hasher.lock().finish();
-    Ok((matcher, hash))
+    Ok(Some((matcher, hasher.finish())))
+}
+
+#[tracing::instrument(skip_all)]
+pub fn build_matcher(
+    prof: &sparse::Root,
+    manifest: &impl Manifest,
+    store: Arc<dyn FileStore>,
+    overrides: &HashMap<String, String>,
+) -> anyhow::Result<(sparse::Matcher, DefaultHasher)> {
+    let hasher = Mutex::new(DefaultHasher::new());
+    prof.hash(hasher.lock().deref_mut());
+
+    let matcher = prof.matcher(|path| {
+        let file_id = {
+            let repo_path = RepoPathBuf::from_string(path.clone())?;
+
+            // This might block.
+            match manifest.get(&repo_path)? {
+                None => {
+                    tracing::warn!(?repo_path, "non-existent sparse profile include");
+                    Ok::<_, Error>(None)
+                }
+                Some(fs_node) => match fs_node {
+                    FsNodeMetadata::File(FileMetadata { hgid, .. }) => Ok(Some(hgid)),
+                    FsNodeMetadata::Directory(_) => {
+                        tracing::warn!(?repo_path, "sparse profile include is a directory");
+                        Ok(None)
+                    }
+                },
+            }
+        };
+
+        let file_id = match file_id? {
+            Some(id) => id,
+            None => return Ok(None),
+        };
+
+        let repo_path = RepoPathBuf::from_string(path.clone())?;
+        let bytes = store.get_content(&repo_path, file_id)?;
+        let mut bytes = bytes.into_vec();
+        if let Some(extra) = overrides.get(&path) {
+            bytes.append(&mut extra.to_string().into_bytes());
+        }
+        bytes.hash(hasher.lock().deref_mut());
+
+        tracing::debug!(path, size = bytes.len(), "fetched included profile");
+
+        Ok(Some(bytes))
+    })?;
+
+    Ok((matcher, hasher.into_inner()))
 }
 
 pub fn config_overrides(config: impl Config) -> HashMap<String, String> {
@@ -188,11 +166,48 @@ pub fn config_overrides(config: impl Config) -> HashMap<String, String> {
     overrides
 }
 
-fn disk_overrides(dot_path: &Path) -> anyhow::Result<HashMap<String, String>> {
-    match util::file::open(dot_path.join(CONFIG_OVERRIDE_CACHE), "r") {
-        Ok(f) => Ok(serde_json::from_reader(f)?),
-        Err(err) if err.kind() != std::io::ErrorKind::NotFound => Err(err.into()),
-        _ => Ok(HashMap::new()),
+pub fn disk_overrides(dot_path: &Path) -> anyhow::Result<HashMap<String, String>> {
+    // Pick up cached overrides written out by sparse.py during checkout.
+    // The ".<pid>" file contains uncommited overrides for an in-progress checkout.
+    for loc in [
+        format!("{}.{}", CONFIG_OVERRIDE_CACHE, std::process::id()),
+        CONFIG_OVERRIDE_CACHE.to_string(),
+    ] {
+        match util::file::open(dot_path.join(&loc), "r") {
+            Ok(f) => return Ok(serde_json::from_reader(f)?),
+            Err(err) if err.kind() != std::io::ErrorKind::NotFound => return Err(err.into()),
+            _ => continue,
+        }
+    }
+
+    Ok(HashMap::new())
+}
+
+pub fn sparse_matcher(
+    vfs: &VFS,
+    manifests: &[Arc<TreeManifest>],
+    store: Arc<dyn FileStore>,
+    dot_dir: &Path,
+) -> anyhow::Result<Option<DynMatcher>> {
+    assert!(!manifests.is_empty());
+
+    let mut sparse_matchers: Vec<DynMatcher> = Vec::new();
+    for manifest in manifests.iter() {
+        if let Some((matcher, _hash)) = repo_matcher(
+            vfs,
+            &vfs.root().join(dot_dir),
+            manifest.as_ref(),
+            store.clone(),
+        )? {
+            sparse_matchers.push(matcher);
+        }
+    }
+
+    if sparse_matchers.is_empty() {
+        // Indicates we have no .hg/sparse (i.e. sparse is disabled).
+        Ok(None)
+    } else {
+        Ok(Some(Arc::new(UnionMatcher::new(sparse_matchers))))
     }
 }
 
@@ -200,8 +215,9 @@ fn disk_overrides(dot_path: &Path) -> anyhow::Result<HashMap<String, String>> {
 mod tests {
     use std::collections::BTreeMap;
 
-    use futures::stream;
-    use futures::stream::BoxStream;
+    use pathmatcher::Matcher;
+    use storemodel::minibytes::Bytes;
+    use storemodel::KeyStore;
     use types::HgId;
     use types::Parents;
     use types::RepoPath;
@@ -296,10 +312,8 @@ exc",
         );
 
         let (matcher, _hash) = build_matcher(
-            &vfs,
-            root_dir.path(),
             &sparse::Root::from_bytes(b"%include tools/sparse/base", "root".to_string())?,
-            commit.clone(),
+            &commit,
             Arc::new(commit.clone()),
             &config_overrides(&config),
         )?;
@@ -311,19 +325,15 @@ exc",
         // Test the config override.
         assert!(!matcher.matches_file("inc/exc/foo".try_into()?)?);
 
-        std::fs::write(
+        fs_err::write(
             root_dir.path().join(MERGE_FILE_OVERRIDES),
             "merge/a\nmerge/b",
         )?;
 
-        let (matcher, _hash) = build_matcher(
-            &vfs,
-            root_dir.path(),
-            &sparse::Root::from_bytes(b"%include tools/sparse/base", "root".to_string())?,
-            commit.clone(),
-            Arc::new(commit.clone()),
-            &config_overrides(&config),
-        )?;
+        fs_err::write(root_dir.path().join("sparse"), "%include tools/sparse/base")?;
+
+        let (matcher, _hash) =
+            repo_matcher(&vfs, root_dir.path(), &commit, Arc::new(commit.clone()))?.unwrap();
 
         assert!(matcher.matches_file("merge/a".try_into()?)?);
         assert!(matcher.matches_file("merge/b".try_into()?)?);
@@ -334,9 +344,6 @@ exc",
 
     #[test]
     fn test_matcher_hashes() -> anyhow::Result<()> {
-        let root_dir = tempfile::tempdir()?;
-        let vfs = VFS::new(root_dir.path().to_path_buf())?;
-
         let config: BTreeMap<String, String> = BTreeMap::new();
 
         let mut commit = StubCommit::new();
@@ -350,10 +357,8 @@ exc",
         );
 
         let (_matcher, hash) = build_matcher(
-            &vfs,
-            root_dir.path(),
             &sparse::Root::from_bytes(b"%include tools/sparse/base", "root".to_string())?,
-            commit.clone(),
+            &commit,
             Arc::new(commit.clone()),
             &config_overrides(&config),
         )?;
@@ -369,19 +374,18 @@ exc",
         );
 
         let (_matcher, same_hash) = build_matcher(
-            &vfs,
-            root_dir.path(),
             &sparse::Root::from_bytes(b"%include tools/sparse/base", "root".to_string())?,
-            commit.clone(),
+            &commit,
             Arc::new(commit.clone()),
             &config_overrides(&config),
         )?;
 
-        assert!(hash == same_hash, "hashes should match if contents matches");
+        assert!(
+            hash.finish() == same_hash.finish(),
+            "hashes should match if contents matches"
+        );
 
         let (_matcher, different_hash_config_change) = build_matcher(
-            &vfs,
-            root_dir.path(),
             &sparse::Root::from_bytes(
                 b"%include tools/sparse/base
 [include]
@@ -389,13 +393,14 @@ config_inc
 ",
                 "root".to_string(),
             )?,
-            commit.clone(),
+            &commit,
             Arc::new(commit.clone()),
             &config_overrides(&config),
         )?;
 
         assert_ne!(
-            hash, different_hash_config_change,
+            hash.finish(),
+            different_hash_config_change.finish(),
             "hashes should not match if contents do not match"
         );
 
@@ -408,16 +413,15 @@ inc
         );
 
         let (_matcher, different_hash_profile_change) = build_matcher(
-            &vfs,
-            root_dir.path(),
             &sparse::Root::from_bytes(b"%include tools/sparse/base", "root".to_string())?,
-            commit.clone(),
+            &commit,
             Arc::new(commit.clone()),
             &config_overrides(&config),
         )?;
 
         assert_ne!(
-            hash, different_hash_profile_change,
+            hash.finish(),
+            different_hash_profile_change.finish(),
             "hashes should not match if contents do not match"
         );
 
@@ -520,28 +524,17 @@ inc
     }
 
     #[async_trait::async_trait]
-    impl ReadFileContents for StubCommit {
-        type Error = anyhow::Error;
-
-        async fn read_file_contents(
-            &self,
-            keys: Vec<Key>,
-        ) -> BoxStream<Result<(storemodel::minibytes::Bytes, Key), Self::Error>> {
-            stream::iter(keys.into_iter().map(|k| match self.file_id(&k.path) {
-                None => Err(anyhow!("no such path")),
-                Some(id) if id == k.hgid => {
-                    Ok((self.files.get(&k.path).unwrap().clone().into(), k))
+    impl KeyStore for StubCommit {
+        fn get_local_content(&self, path: &RepoPath, hgid: HgId) -> anyhow::Result<Option<Bytes>> {
+            match self.file_id(path) {
+                Some(id) if id == hgid => {
+                    Ok(Some(Bytes::copy_from_slice(self.files.get(path).unwrap())))
                 }
-                Some(_) => Err(anyhow!("bad file id")),
-            }))
-            .boxed()
-        }
-
-        async fn read_rename_metadata(
-            &self,
-            _keys: Vec<Key>,
-        ) -> BoxStream<Result<(Key, Option<Key>), Self::Error>> {
-            stream::empty().boxed()
+                _ => Ok(None),
+            }
         }
     }
+
+    #[async_trait::async_trait]
+    impl FileStore for StubCommit {}
 }

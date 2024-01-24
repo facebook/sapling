@@ -8,14 +8,14 @@
 use std::fmt::Display;
 
 use anyhow::Result;
-use bytes::Bytes;
-use futures::Future;
 use futures::Stream;
 use gix_hash::ObjectId;
 use tokio::io::AsyncWrite;
 use tokio::io::AsyncWriteExt;
 
+use crate::pack::DeltaForm;
 use crate::pack::PackfileWriter;
+use crate::types::PackfileItem;
 
 /// The message/comment associated with the pre-requisite objects
 const BUNDLE_PREREQ_MSG: &str = "bundled object";
@@ -42,7 +42,7 @@ where
 {
     /// List of objects that are NOT included in the bundle but are
     /// required to be present for unbundling to work.
-    pub prereqs: Option<Vec<ObjectId>>,
+    pub prereqs: Vec<ObjectId>,
     /// The version of bundle format
     pub version: BundleVersion,
     /// List of ref-names with the commits IDs that they point to
@@ -58,20 +58,20 @@ impl<T: AsyncWrite + Unpin> BundleWriter<T> {
     pub async fn new_with_header(
         mut writer: T,
         refs: Vec<(String, ObjectId)>,
-        prereqs: Option<Vec<ObjectId>>,
+        prereqs: Vec<ObjectId>,
         num_objects: u32,
+        concurrency: usize,
+        delta_form: DeltaForm,
     ) -> Result<Self> {
         // Append the bundle header
         writer
             .write_all(format!("{}", BundleVersion::V2).as_bytes())
             .await?;
         // Append the pre-requisite objects, if present
-        if let Some(ref prereqs) = prereqs {
-            for prereq in prereqs {
-                writer
-                    .write_all(format!("-{} {}\n", prereq, BUNDLE_PREREQ_MSG).as_bytes())
-                    .await?;
-            }
+        for prereq in prereqs.iter() {
+            writer
+                .write_all(format!("-{} {}\n", prereq, BUNDLE_PREREQ_MSG).as_bytes())
+                .await?;
         }
         // Append the refs
         for (ref_name, id) in &refs {
@@ -81,7 +81,7 @@ impl<T: AsyncWrite + Unpin> BundleWriter<T> {
         }
         // Newline before starting packfile
         writer.write_all(b"\n").await?;
-        let pack_writer = PackfileWriter::new(writer, num_objects);
+        let pack_writer = PackfileWriter::new(writer, num_objects, concurrency, delta_form);
         Ok(Self {
             version: BundleVersion::V2,
             refs,
@@ -93,7 +93,7 @@ impl<T: AsyncWrite + Unpin> BundleWriter<T> {
     /// Write the stream of input items to the bundle
     pub async fn write(
         &mut self,
-        objects_stream: impl Stream<Item = impl Future<Output = Result<Bytes>>>,
+        objects_stream: impl Stream<Item = Result<PackfileItem>>,
     ) -> Result<()> {
         self.pack_writer.write(objects_stream).await
     }

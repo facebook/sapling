@@ -6,6 +6,7 @@
  */
 
 use std::collections::HashSet;
+use std::num::NonZeroU64;
 use std::sync::Arc;
 
 use configmodel::Config;
@@ -22,8 +23,11 @@ use dag::Vertex;
 use dag::VertexName;
 use edenapi::configmodel;
 use edenapi::types::make_hash_lookup_request;
+use edenapi::types::AnyFileContentId;
 use edenapi::types::BookmarkEntry;
 use edenapi::types::CommitGraphEntry;
+use edenapi::types::CommitGraphSegments;
+use edenapi::types::CommitGraphSegmentsEntry;
 use edenapi::types::CommitHashLookupResponse;
 use edenapi::types::CommitHashToLocationResponse;
 use edenapi::types::CommitKnownResponse;
@@ -35,7 +39,9 @@ use edenapi::types::FileContent;
 use edenapi::types::FileEntry;
 use edenapi::types::FileResponse;
 use edenapi::types::FileSpec;
+use edenapi::types::HgFilenodeData;
 use edenapi::types::HgId;
+use edenapi::types::HgMutationEntryContent;
 use edenapi::types::HistoryEntry;
 use edenapi::types::Key;
 use edenapi::types::NodeInfo;
@@ -43,6 +49,11 @@ use edenapi::types::Parents;
 use edenapi::types::RepoPathBuf;
 use edenapi::types::TreeAttributes;
 use edenapi::types::TreeEntry;
+use edenapi::types::UploadHgChangeset;
+use edenapi::types::UploadToken;
+use edenapi::types::UploadTokensResponse;
+use edenapi::types::UploadTreeEntry;
+use edenapi::types::UploadTreeResponse;
 use edenapi::EdenApi;
 use edenapi::EdenApiError;
 use edenapi::Response;
@@ -53,11 +64,22 @@ use futures::stream::TryStreamExt;
 use futures::StreamExt;
 use http::StatusCode;
 use http::Version;
+use minibytes::Bytes;
 use nonblocking::non_blocking_result;
 use tracing::debug;
 use tracing::trace;
 
 use crate::EagerRepo;
+
+impl EagerRepo {
+    /// Load file/tree store changes from disk.
+    ///
+    /// This is intended to be used by EdenApi impls so content fetched
+    /// via EdenApi (during testing) is always fresh.
+    pub(crate) fn refresh_for_api(&self) {
+        let _ = self.store.flush();
+    }
+}
 
 #[async_trait::async_trait]
 impl EdenApi for EagerRepo {
@@ -70,11 +92,15 @@ impl EdenApi for EagerRepo {
     }
 
     async fn capabilities(&self) -> Result<Vec<String>, EdenApiError> {
-        Ok(vec!["segmented-changelog".to_string()])
+        Ok(vec![
+            "segmented-changelog".to_string(),
+            "commit-graph-segments".to_string(),
+        ])
     }
 
     async fn files(&self, keys: Vec<Key>) -> edenapi::Result<Response<FileResponse>> {
         debug!("files {}", debug_key_list(&keys));
+        self.refresh_for_api();
         let mut values = Vec::with_capacity(keys.len());
         for key in keys {
             let id = key.hgid;
@@ -102,6 +128,7 @@ impl EdenApi for EagerRepo {
 
     async fn files_attrs(&self, reqs: Vec<FileSpec>) -> edenapi::Result<Response<FileResponse>> {
         debug!("files {}", debug_spec_list(&reqs));
+        self.refresh_for_api();
         let mut values = Vec::with_capacity(reqs.len());
         for spec in reqs {
             let key = spec.key;
@@ -135,6 +162,7 @@ impl EdenApi for EagerRepo {
         _length: Option<u32>,
     ) -> edenapi::Result<Response<HistoryEntry>> {
         debug!("history {}", debug_key_list(&keys));
+        self.refresh_for_api();
         let mut values = Vec::new();
         let mut visited: HashSet<Key> = Default::default();
         let mut to_visit: Vec<Key> = keys;
@@ -185,6 +213,7 @@ impl EdenApi for EagerRepo {
         attributes: Option<TreeAttributes>,
     ) -> edenapi::Result<Response<Result<TreeEntry, edenapi::types::EdenApiServerError>>> {
         debug!("trees {}", debug_key_list(&keys));
+        self.refresh_for_api();
         let mut values = Vec::new();
         let attributes = attributes.unwrap_or_default();
         if attributes.child_metadata {
@@ -217,6 +246,7 @@ impl EdenApi for EagerRepo {
         hgids: Vec<HgId>,
     ) -> edenapi::Result<Response<CommitRevlogData>> {
         debug!("revlog_data {}", debug_hgid_list(&hgids));
+        self.refresh_for_api();
         let mut values = Vec::new();
         for id in hgids {
             let data = self.get_sha1_blob_for_api(id, "commit_revlog_data")?;
@@ -374,10 +404,8 @@ impl EdenApi for EagerRepo {
             debug_hgid_list(&heads),
             debug_hgid_list(&common),
         );
-        let heads =
-            dag::Set::from_static_names(heads.iter().map(|v| Vertex::copy_from(v.as_ref())));
-        let common =
-            dag::Set::from_static_names(common.iter().map(|v| Vertex::copy_from(v.as_ref())));
+        let heads = Set::from_static_names(heads.iter().map(|v| Vertex::copy_from(v.as_ref())));
+        let common = Set::from_static_names(common.iter().map(|v| Vertex::copy_from(v.as_ref())));
         let graph = self.dag().only(heads, common).await.map_err(map_dag_err)?;
         let stream = graph.iter_rev().await.map_err(map_dag_err)?;
         let stream: BoxStream<edenapi::Result<CommitGraphEntry>> = stream
@@ -400,6 +428,34 @@ impl EdenApi for EagerRepo {
             .boxed();
         let values: edenapi::Result<Vec<CommitGraphEntry>> = stream.try_collect().await;
         values
+    }
+
+    async fn commit_graph_segments(
+        &self,
+        heads: Vec<HgId>,
+        common: Vec<HgId>,
+    ) -> Result<Vec<CommitGraphSegmentsEntry>, EdenApiError> {
+        ::fail::fail_point!("eagerepo::api::commitgraphsegments", |_| {
+            Err(EdenApiError::NotSupported)
+        });
+
+        debug!(
+            "commit_graph_segments {} {}",
+            debug_hgid_list(&heads),
+            debug_hgid_list(&common),
+        );
+        let heads = Set::from_static_names(heads.iter().map(|v| Vertex::copy_from(v.as_ref())));
+        let common = Set::from_static_names(common.iter().map(|v| Vertex::copy_from(v.as_ref())));
+        let graph = self.dag().only(heads, common).await.map_err(map_dag_err)?;
+
+        let graph_segments: CommitGraphSegments = self
+            .dag()
+            .export_pull_data(&graph)
+            .await
+            .map_err(map_dag_err)?
+            .try_into()?;
+
+        Ok(graph_segments.segments)
     }
 
     async fn bookmarks(&self, bookmarks: Vec<String>) -> edenapi::Result<Vec<BookmarkEntry>> {
@@ -455,6 +511,41 @@ impl EdenApi for EagerRepo {
         debug!("commit_mutations {}", debug_hgid_list(&commits));
         let _ = (commits,);
         Ok(vec![])
+    }
+
+    async fn process_files_upload(
+        &self,
+        data: Vec<(AnyFileContentId, Bytes)>,
+        bubble_id: Option<NonZeroU64>,
+        copy_from_bubble_id: Option<NonZeroU64>,
+    ) -> Result<Response<UploadToken>, EdenApiError> {
+        let _ = (data, bubble_id, copy_from_bubble_id);
+        Err(EdenApiError::NotSupported)
+    }
+
+    async fn upload_filenodes_batch(
+        &self,
+        items: Vec<HgFilenodeData>,
+    ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
+        let _ = items;
+        Err(EdenApiError::NotSupported)
+    }
+
+    async fn upload_trees_batch(
+        &self,
+        items: Vec<UploadTreeEntry>,
+    ) -> Result<Response<UploadTreeResponse>, EdenApiError> {
+        let _ = items;
+        Err(EdenApiError::NotSupported)
+    }
+
+    async fn upload_changesets(
+        &self,
+        changesets: Vec<UploadHgChangeset>,
+        mutations: Vec<HgMutationEntryContent>,
+    ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
+        let _ = (changesets, mutations);
+        Err(EdenApiError::NotSupported)
     }
 }
 
@@ -564,10 +655,7 @@ fn extract_rename(data: &[u8]) -> Option<Key> {
                 }
             }
             if let (Some(path), Some(rev)) = (path, rev) {
-                return Some(Key {
-                    path: path.into(),
-                    hgid: rev,
-                });
+                return Some(Key { path, hgid: rev });
             }
         }
     }
@@ -637,7 +725,7 @@ fn debug_list<T>(keys: &[T], func: impl Fn(&T) -> String) -> String {
     let msg = keys
         .iter()
         .take(limit)
-        .map(|k| func(k))
+        .map(func)
         .collect::<Vec<_>>()
         .join(", ");
     if keys.len() > limit {

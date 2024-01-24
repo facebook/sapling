@@ -21,6 +21,7 @@ export type LanguageExtensionAmendment = Omit<
  */
 const languageExtensionAmendments: {[language: string]: LanguageExtensionAmendment} = {
   cpp: {
+    aliases: ['c++'],
     extensions: ['.cu', '.cuh'],
   },
   ini: {

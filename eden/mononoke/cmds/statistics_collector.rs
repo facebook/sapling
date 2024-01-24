@@ -13,6 +13,7 @@ use std::path::Path;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::sync::OnceLock;
 use std::time::Duration;
 
 use anyhow::Context;
@@ -60,7 +61,6 @@ use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_types::FileType;
 use mononoke_types::RepositoryId;
-use once_cell::sync::OnceCell;
 use redactedblobstore::ErrorKind as RedactedBlobstoreError;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
@@ -709,7 +709,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         Some(name) => {
             let logger = process.app.logger().clone();
             // The service name needs to be 'static to satisfy SM contract
-            static SM_SERVICE_NAME: OnceCell<String> = OnceCell::new();
+            static SM_SERVICE_NAME: OnceLock<String> = OnceLock::new();
             let mut executor = ShardedProcessExecutor::new(
                 process.app.fb,
                 process.app.runtime().clone(),

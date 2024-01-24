@@ -20,7 +20,6 @@
 //!
 //! Having the flexibility of being able to dynamically load flags from an external source such
 //! as other languages ( python ) or files ( configuration ).
-//!
 
 pub mod alias;
 pub mod errors;

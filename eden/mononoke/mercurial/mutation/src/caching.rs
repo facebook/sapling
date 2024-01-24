@@ -34,12 +34,9 @@ use memcache::KeyGen;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
 use mononoke_types::RepositoryId;
-use tunables::tunables;
 
 use crate::HgMutationEntry;
 use crate::HgMutationStore;
-
-const DEFAULT_TTL_SECS: u64 = 3600;
 
 /// Struct representing the cache entry for
 /// (repo_id, cs_id) -> Vec<HgMutationEntry> mapping
@@ -122,27 +119,24 @@ impl CachedHgMutationStore {
     pub fn new(
         inner_store: Arc<dyn HgMutationStore>,
         cache_handler_factory: CacheHandlerFactory,
-    ) -> Self {
-        Self {
+    ) -> Result<Self> {
+        Ok(Self {
             inner_store,
             cachelib: cache_handler_factory.cachelib(),
             memcache: cache_handler_factory.memcache(),
-            keygen: CachedHgMutationStore::create_key_gen(),
-        }
+            keygen: CachedHgMutationStore::create_key_gen()?,
+        })
     }
 
     pub fn new_test(inner_store: Arc<dyn HgMutationStore>) -> Self {
-        Self::new(inner_store, CacheHandlerFactory::Mocked)
+        Self::new(inner_store, CacheHandlerFactory::Mocked).unwrap()
     }
 
-    fn create_key_gen() -> KeyGen {
+    fn create_key_gen() -> Result<KeyGen> {
         let key_prefix = "scm.mononoke.hg_mutation_store";
-        let sitever = if tunables().hg_mutation_store_sitever().unwrap_or_default() > 0 {
-            tunables().hg_mutation_store_sitever().unwrap_or_default() as u32
-        } else {
-            thrift::MC_SITEVER as u32
-        };
-        KeyGen::new(key_prefix, thrift::MC_CODEVER as u32, sitever)
+        let sitever =
+            justknobs::get_as::<u32>("scm/mononoke_memcache_sitevers:hg_mutation_store", None)?;
+        Ok(KeyGen::new(key_prefix, thrift::MC_CODEVER as u32, sitever))
     }
 }
 
@@ -230,18 +224,7 @@ impl EntityStore<HgMutationCacheEntry> for CacheRequest<'_> {
     }
 
     fn cache_determinator(&self, _: &HgMutationCacheEntry) -> CacheDisposition {
-        let ttl = if tunables()
-            .hg_mutation_store_caching_ttl_secs()
-            .unwrap_or_default()
-            > 0
-        {
-            tunables()
-                .hg_mutation_store_caching_ttl_secs()
-                .unwrap_or_default() as u64
-        } else {
-            DEFAULT_TTL_SECS
-        };
-        CacheDisposition::Cache(CacheTtl::Ttl(Duration::from_secs(ttl)))
+        CacheDisposition::Cache(CacheTtl::Ttl(Duration::from_secs(3600)))
     }
 
     caching_ext::impl_singleton_stats!("hg_mutation_store");

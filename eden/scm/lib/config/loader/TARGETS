@@ -1,0 +1,105 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "configloader",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_target_config": {
+            "crate_type": [
+                "staticlib",
+                "lib",
+            ],
+        },
+        "cargo_toml_config": {
+            "bench": [
+                {
+                    "harness": False,
+                    "name": "bench",
+                },
+            ],
+            "dependencies_override": {
+                "dependencies": {
+                    "version": {"path": "../../version"},
+                },
+            },
+            "extra_buck_dependencies": {
+                "dev-dependencies": [
+                    "//eden/scm/lib/minibench:minibench",
+                ],
+            },
+            "features": {
+                "default": [],
+                "fb": [
+                    "sha2",
+                    "types",
+                    "zstd",
+                    "identity/fb",
+                    "tempfile",
+                    "filetime",
+                    "hgtime",
+                    "http-client",
+                    "regex",
+                    "serde_json",
+                    "serde",
+                    "serde_urlencoded",
+                    "sha2",
+                ],
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    features = ["fb"],
+    test_deps = [
+        "fbsource//third-party/rust:once_cell",
+        "fbsource//third-party/rust:tempfile",
+        "//eden/scm/lib/util/testutil:testutil",
+    ] + ([] if rust_oss.is_oss_build() else [
+        "fbsource//third-party/rust:tempfile",
+    ]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:tracing",
+        "fbsource//third-party/rust:url",
+        "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/config/set:configset",
+        "//eden/scm/lib/config/static:staticconfig",
+        "//eden/scm/lib/config/union:unionconfig",
+        "//eden/scm/lib/identity:identity",
+        "//eden/scm/lib/minibytes:minibytes",
+        "//eden/scm/lib/util/hgplain:hgplain",
+    ] + ([] if rust_oss.is_oss_build() else [
+        "fbsource//third-party/rust:base64",
+        "fbsource//third-party/rust:dirs",
+        "fbsource//third-party/rust:filetime",
+        "fbsource//third-party/rust:hostname",
+        "fbsource//third-party/rust:regex",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:serde_json",
+        "fbsource//third-party/rust:serde_urlencoded",
+        "fbsource//third-party/rust:sha2",
+        "fbsource//third-party/rust:tempfile",
+        "fbsource//third-party/rust:zstd",
+        "//common/rust/shed/hostcaps:hostcaps",
+        "//eden/scm/lib/hgtime:hgtime",
+        "//eden/scm/lib/http-client:http-client",
+        "//eden/scm/lib/types:types",
+        "//eden/scm/lib/util:util",
+        "//eden/scm/lib/version:rust_version",
+    ]),
+)
+
+rust_binary(
+    name = "bench",
+    srcs = ["benches/bench.rs"],
+    autocargo = {"ignore_rule": True},
+    deps = [
+        "fbsource//third-party/rust:tempfile",
+        "//eden/scm/lib/config/loader:configloader",
+        "//eden/scm/lib/minibench:minibench",
+    ],
+)

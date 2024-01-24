@@ -67,12 +67,16 @@ pub(crate) async fn slice_repository(
     heads: Vec<ChangesetId>,
     slice_size: u64,
 ) -> Result<Vec<(u64, Vec<ChangesetId>)>> {
-    repo.commit_graph()
+    Ok(repo
+        .commit_graph()
         .slice_ancestors(
             ctx,
             heads,
             |heads| async move { underived_heads(ctx, repo, derivers, heads.as_slice()).await },
             slice_size,
         )
-        .await
+        .await?
+        .into_iter()
+        .map(|(slice_start, slice_heads)| (slice_start.value(), slice_heads))
+        .collect())
 }

@@ -14,6 +14,7 @@ import sys
 
 from thrift.transport.TSocket import TSocket
 from thrift.transport.TTransport import TTransportException
+from typing_extensions import Buffer
 
 
 if sys.platform == "win32":
@@ -182,7 +183,7 @@ class WindowsSocketHandle:
     address: str = ""
 
     @staticmethod
-    def _checkReturnCode(retcode):
+    def _checkReturnCode(retcode) -> None:
         if retcode == -1:
             errcode = WSAGetLastError()
             if errcode == WSAECONNREFUSED:
@@ -205,7 +206,7 @@ class WindowsSocketHandle:
             else:
                 raise WindowsSocketException(errcode)
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._io_refs = 0  # stub to make socket.makefile work on this object
         wsa_data = WSAData64()
         # ctypes.c_ushort(514) = MAKE_WORD(2,2) which is for the winsock
@@ -283,7 +284,7 @@ class WindowsSocketHandle:
         self._checkReturnCode(retsize)
         return buff.raw[0:retsize]
 
-    def recv_into(self, buffer, size=0):
+    def recv_into(self, buffer: Buffer, size: int = 0):
         if size == 0:
             size = len(buffer)
 

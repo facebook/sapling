@@ -313,8 +313,9 @@
   U a/a
 
   $ hg shelve
-  abort: unshelve already in progress
-  (use 'hg unshelve --continue' or 'hg unshelve --abort')
+  abort: unshelve in progress
+  (use 'hg unshelve --continue' to continue or
+       'hg unshelve --abort' to abort)
   [255]
 
 # Abort the unshelve and be happy
@@ -364,8 +365,9 @@
   (no more unresolved files)
   continue: hg unshelve --continue
   $ hg commit -m 'commit while unshelve in progress'
-  abort: unshelve already in progress
-  (use 'hg unshelve --continue' or 'hg unshelve --abort')
+  abort: unshelve in progress
+  (use 'hg unshelve --continue' to continue or
+       'hg unshelve --abort' to abort)
   [255]
   $ hg graft --continue
   abort: no graft in progress
@@ -991,11 +993,11 @@
   [1]
 
   $ sed 's/ae8c668541e8/123456789012/' .hg/shelvedstate > ../corrupt-shelvedstate
-  $ mv ../corrupt-shelvedstate .hg/histedit-state
+  $ mv ../corrupt-shelvedstate .hg/shelvedstate
 
   $ hg unshelve --abort
-  rebase aborted
-  unshelve of * aborted (glob)
+  could not read shelved state file, your working copy may be in an unexpected state
+  please update to some commit
   $ hg up -C .
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ..
@@ -1255,7 +1257,7 @@
   @  6408d34d8180 'commit1'
 
   $ cat >> $TESTTMP/abortupdate.py << 'EOF'
-  > from edenscm import extensions, hg, error
+  > from sapling import extensions, hg, error
   > def update(orig, repo, *args, **kwargs):
   >     if not repo.ui.configbool("abortupdate", "abort"):
   >         return orig(repo, *args, **kwargs)

@@ -12,12 +12,12 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::process::Output;
 use std::str;
+use std::sync::OnceLock;
 
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
-use once_cell::sync::OnceCell;
 use serde::de::DeserializeOwned;
 use serde::*;
 use sha2::Digest;
@@ -211,7 +211,7 @@ impl ApfsUtil<SystemCommandImpl> {
     }
 
     pub fn global() -> &'static Self {
-        static INSTANCE: OnceCell<ApfsUtil> = OnceCell::new();
+        static INSTANCE: OnceLock<ApfsUtil> = OnceLock::new();
         INSTANCE.get_or_init(|| Self::new(DISKUTIL_PATH, MOUNT_PATH))
     }
 }

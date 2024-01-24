@@ -11,11 +11,11 @@ use std::hash::Hasher;
 
 use anyhow::Error;
 use anyhow::Result;
+use arg_extensions::ArgDefaults;
 use clap::Args;
 use fbinit::FacebookInit;
 use observability::ObservabilityContext;
 use scuba_ext::MononokeScubaSampleBuilder;
-use tunables::tunables;
 
 /// Command line arguments that control scuba logging
 #[derive(Args, Debug)]
@@ -67,9 +67,11 @@ impl ScubaLoggingArgs {
         let maybe_scuba = match self.warm_bookmark_cache_scuba_dataset.clone() {
             Some(scuba) => {
                 let hostname = hostname::get_hostname()?;
-                let sampling_pct = tunables()
-                    .warm_bookmark_cache_logging_sampling_pct()
-                    .unwrap_or_default() as u64;
+                let sampling_pct = justknobs::get_as::<u64>(
+                    "scm/mononoke:warm_bookmark_cache_logging_sampling_pct",
+                    None,
+                )
+                .unwrap_or_default();
                 let mut hasher = DefaultHasher::new();
                 hostname.hash(&mut hasher);
 
@@ -83,5 +85,27 @@ impl ScubaLoggingArgs {
         };
 
         MononokeScubaSampleBuilder::with_opt_table(fb, maybe_scuba)
+    }
+}
+
+impl ArgDefaults for ScubaLoggingArgs {
+    fn arg_defaults(&self) -> Vec<(&'static str, String)> {
+        let mut args = vec![];
+
+        if let Some(scuba_dataset) = &self.scuba_dataset {
+            args.push(("scuba_dataset", scuba_dataset.clone().to_string()));
+        };
+        if self.no_default_scuba_dataset {
+            args.push(("no_default_scuba_dataset", String::from("")));
+        };
+
+        if let Some(warm_bookmark_cache_scuba_dataset) = &self.warm_bookmark_cache_scuba_dataset {
+            args.push((
+                "warm_bookmark_cache_scuba_dataset",
+                warm_bookmark_cache_scuba_dataset.clone().to_string(),
+            ));
+        };
+
+        args
     }
 }

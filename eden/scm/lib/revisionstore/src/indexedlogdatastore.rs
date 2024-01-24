@@ -23,6 +23,7 @@ use indexedlog::log::IndexOutput;
 use lz4_pyframe::compress;
 use lz4_pyframe::decompress;
 use minibytes::Bytes;
+use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
 use tracing::warn;
 use types::hgid::ReadHgIdExt;
@@ -62,7 +63,7 @@ pub struct Entry {
     key: Key,
     metadata: Metadata,
 
-    content: Option<Bytes>,
+    content: OnceCell<Bytes>,
     compressed_content: Option<Bytes>,
 }
 
@@ -70,7 +71,7 @@ impl std::cmp::PartialEq for Entry {
     fn eq(&self, other: &Self) -> bool {
         self.key == other.key
             && self.metadata == other.metadata
-            && match (self.content_inner(), other.content_inner()) {
+            && match (self.calculate_content(), other.calculate_content()) {
                 (Ok(c1), Ok(c2)) if c1 == c2 => true,
                 _ => false,
             }
@@ -81,7 +82,7 @@ impl Entry {
     pub fn new(key: Key, content: Bytes, metadata: Metadata) -> Self {
         Entry {
             key,
-            content: Some(content),
+            content: OnceCell::with_value(content),
             metadata,
             compressed_content: None,
         }
@@ -123,16 +124,16 @@ impl Entry {
 
         Ok(Entry {
             key,
-            content: None,
+            content: OnceCell::new(),
             compressed_content: Some(bytes),
             metadata,
         })
     }
 
     /// Read an entry from the IndexedLog and deserialize it.
-    pub fn from_log(key: &Key, log: &RwLock<Store>) -> Result<Option<Self>> {
+    pub(crate) fn from_log(id: &[u8], log: &RwLock<Store>) -> Result<Option<Self>> {
         let locked_log = log.read();
-        let mut log_entry = locked_log.lookup(0, key.hgid.as_ref().to_vec())?;
+        let mut log_entry = locked_log.lookup(0, id)?;
         let buf = match log_entry.next() {
             None => return Ok(None),
             Some(buf) => buf?,
@@ -154,37 +155,32 @@ impl Entry {
 
         let compressed = if let Some(compressed) = self.compressed_content {
             compressed
+        } else if let Some(raw) = self.content.get() {
+            compress(&raw)?.into()
         } else {
-            if let Some(raw) = self.content {
-                compress(&raw)?.into()
-            } else {
-                bail!("No content");
-            }
+            bail!("No content");
         };
 
         buf.write_u64::<BigEndian>(compressed.len() as u64)?;
         buf.write_all(&compressed)?;
 
-        Ok(log.write().append(buf)?)
+        log.write().append(buf)
     }
 
-    fn content_inner(&self) -> Result<Bytes> {
-        if let Some(content) = self.content.as_ref() {
-            return Ok(content.clone());
-        }
-
-        if let Some(compressed) = self.compressed_content.as_ref() {
-            let raw = Bytes::from(decompress(&compressed)?);
-            Ok(raw)
-        } else {
-            bail!("No content");
-        }
+    pub(crate) fn calculate_content(&self) -> Result<Bytes> {
+        let content = self.content.get_or_try_init(|| {
+            if let Some(compressed) = self.compressed_content.as_ref() {
+                let raw = Bytes::from(decompress(compressed)?);
+                Ok(raw)
+            } else {
+                bail!("No content");
+            }
+        })?;
+        Ok(content.clone())
     }
 
-    pub fn content(&mut self) -> Result<Bytes> {
-        self.content = Some(self.content_inner()?);
-        // this unwrap is safe because we assign the field in the line above
-        Ok(self.content.as_ref().unwrap().clone())
+    pub fn content(&self) -> Result<Bytes> {
+        self.calculate_content()
     }
 
     pub fn metadata(&self) -> &Metadata {
@@ -229,6 +225,9 @@ impl IndexedLogHgIdDataStore {
     }
 
     fn open_options(config: &IndexedLogHgIdDataStoreConfig) -> StoreOpenOptions {
+        // If you update defaults/logic here, please update the "cache" help topic
+        // calculations in help.py.
+
         // Default configuration: 4 x 2.5GB.
         let mut open_options = StoreOpenOptions::new()
             .max_log_count(4)
@@ -263,14 +262,29 @@ impl IndexedLogHgIdDataStore {
     }
 
     /// Attempt to read an Entry from IndexedLog, replacing the stored path with the one from the provided Key
-    pub fn get_entry(&self, key: Key) -> Result<Option<Entry>> {
-        Ok(self.get_raw_entry(&key)?.map(|e| e.with_key(key)))
+    pub(crate) fn get_entry(&self, key: Key) -> Result<Option<Entry>> {
+        Ok(self.get_raw_entry(&key.hgid)?.map(|e| e.with_key(key)))
     }
 
     // TODO(meyer): Make IndexedLogHgIdDataStore "directly" lockable so we can lock and do a batch of operations (RwLock Guard pattern)
     /// Attempt to read an Entry from IndexedLog, without overwriting the Key (return Key path may not match the request Key path)
-    pub(crate) fn get_raw_entry(&self, key: &Key) -> Result<Option<Entry>> {
-        Entry::from_log(key, &self.store)
+    pub(crate) fn get_raw_entry(&self, id: &HgId) -> Result<Option<Entry>> {
+        Entry::from_log(id.as_ref(), &self.store)
+    }
+
+    /// Directly get the local content. Do not ask remote servers.
+    pub(crate) fn get_local_content_direct(&self, id: &HgId) -> Result<Option<Bytes>> {
+        let entry = match self.get_raw_entry(&id)? {
+            None => return Ok(None),
+            Some(v) => v,
+        };
+        if entry.metadata().is_lfs() {
+            // Does not handle the LFS complexity here.
+            // It seems this is not actually used in modern setup.
+            return Ok(None);
+        }
+        let data = hgstore::strip_hg_file_metadata(&entry.calculate_content()?)?.0;
+        Ok(Some(data))
     }
 
     /// Write an entry to the IndexedLog
@@ -282,26 +296,6 @@ impl IndexedLogHgIdDataStore {
     pub fn flush_log(&self) -> Result<()> {
         self.store.write().flush()?;
         Ok(())
-    }
-}
-
-impl From<crate::memcache::McData> for Entry {
-    fn from(v: crate::memcache::McData) -> Self {
-        Entry::new(v.key, v.data, v.metadata)
-    }
-}
-
-impl TryFrom<Entry> for crate::memcache::McData {
-    type Error = anyhow::Error;
-
-    fn try_from(mut v: Entry) -> Result<Self, Self::Error> {
-        let data = v.content()?;
-
-        Ok(crate::memcache::McData {
-            key: v.key,
-            data,
-            metadata: v.metadata,
-        })
     }
 }
 
@@ -354,7 +348,7 @@ impl LocalStore for IndexedLogHgIdDataStore {
                         warn!("Force missing: {}", k.path);
                         return true;
                     }
-                    match Entry::from_log(k, &self.store) {
+                    match Entry::from_log(k.hgid.as_ref(), &self.store) {
                         Ok(None) | Err(_) => true,
                         Ok(Some(_)) => false,
                     }
@@ -374,7 +368,7 @@ impl HgIdDataStore for IndexedLogHgIdDataStore {
             content => return Ok(StoreResult::NotFound(content)),
         };
 
-        let mut entry = match self.get_raw_entry(&key)? {
+        let entry = match self.get_raw_entry(&key.hgid)? {
             None => return Ok(StoreResult::NotFound(StoreKey::HgId(key))),
             Some(entry) => entry,
         };
@@ -393,7 +387,7 @@ impl HgIdDataStore for IndexedLogHgIdDataStore {
             content => return Ok(StoreResult::NotFound(content)),
         };
 
-        let entry = match self.get_raw_entry(&key)? {
+        let entry = match self.get_raw_entry(&key.hgid)? {
             None => return Ok(StoreResult::NotFound(StoreKey::HgId(key))),
             Some(entry) => entry,
         };
@@ -426,9 +420,9 @@ impl ToKeys for IndexedLogHgIdDataStore {
 
 #[cfg(test)]
 mod tests {
-    use std::fs::remove_file;
     use std::sync::Arc;
 
+    use fs_err::remove_file;
     use minibytes::Bytes;
     use tempfile::TempDir;
     use types::testutil::*;
@@ -619,7 +613,7 @@ mod tests {
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
             base: None,
-            key: k.clone(),
+            key: k,
         };
         let metadata = Default::default();
 
@@ -648,14 +642,14 @@ mod tests {
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
             base: None,
-            key: k.clone(),
+            key: k,
         };
         let metadata = Default::default();
         log.add(&delta, &metadata)?;
         log.flush()?;
 
         // There should be only one key in the store.
-        assert_eq!(log.to_keys().into_iter().count(), 1);
+        assert_eq!(log.to_keys().len(), 1);
         Ok(())
     }
 
@@ -757,12 +751,12 @@ mod tests {
 
         // Set up local-only FileStore
         let mut store = FileStore::empty();
-        store.indexedlog_local = Some(local.clone());
+        store.indexedlog_local = Some(local);
 
         // Attempt fetch.
         let mut fetched = store
             .fetch(
-                std::iter::once(k.clone()),
+                std::iter::once(k),
                 FileAttributes::CONTENT,
                 FetchMode::AllowRemote,
             )
@@ -795,7 +789,7 @@ mod tests {
 
         // Set up local-only FileStore
         let mut store = FileStore::empty();
-        store.indexedlog_local = Some(local.clone());
+        store.indexedlog_local = Some(local);
 
         // Write a file
         store.write_batch(std::iter::once((k.clone(), d.data.clone(), meta)))?;
@@ -803,7 +797,7 @@ mod tests {
         // Attempt fetch.
         let mut fetched = store
             .fetch(
-                std::iter::once(k.clone()),
+                std::iter::once(k),
                 FileAttributes::CONTENT,
                 FetchMode::AllowRemote,
             )

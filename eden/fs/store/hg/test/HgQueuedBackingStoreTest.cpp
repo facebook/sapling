@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#include <folly/executors/QueuedImmediateExecutor.h>
 #include <folly/experimental/TestUtil.h>
 #include <folly/logging/xlog.h>
 #include <folly/portability/GTest.h>
@@ -15,10 +14,11 @@
 #include "eden/fs/model/TestOps.h"
 #include "eden/fs/store/BackingStoreLogger.h"
 #include "eden/fs/store/MemoryLocalStore.h"
-#include "eden/fs/store/hg/HgImporter.h"
 #include "eden/fs/store/hg/HgQueuedBackingStore.h"
+#include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/testharness/HgRepo.h"
+#include "eden/fs/utils/FaultInjector.h"
 
 using namespace facebook::eden;
 using namespace std::chrono_literals;
@@ -49,21 +49,21 @@ struct TestRepo {
 };
 
 struct HgQueuedBackingStoreTest : TestRepo, ::testing::Test {
-  HgQueuedBackingStoreTest() {}
+  HgQueuedBackingStoreTest() = default;
 
   std::shared_ptr<ReloadableConfig> edenConfig{
       std::make_shared<ReloadableConfig>(EdenConfig::createTestEdenConfig())};
   EdenStatsPtr stats{makeRefPtr<EdenStats>()};
   std::shared_ptr<MemoryLocalStore> localStore{
       std::make_shared<MemoryLocalStore>(stats.copy())};
-  HgImporter importer{repo.path(), stats.copy()};
 
+  FaultInjector faultInjector{/*enabled=*/false};
   std::unique_ptr<HgBackingStore> backingStore{std::make_unique<HgBackingStore>(
       repo.path(),
-      &importer,
       edenConfig,
       localStore,
-      stats.copy())};
+      stats.copy(),
+      &faultInjector)};
 
   std::unique_ptr<HgQueuedBackingStore> makeQueuedStore() {
     return std::make_unique<HgQueuedBackingStore>(
@@ -119,7 +119,7 @@ TEST_F(HgQueuedBackingStoreTest, getBlob) {
   }
 }
 
-TEST(HgQueuedBackingStore_ObjectId, round_trip_object_IDs) {
+TEST(HgQueuedBackingStoreObjectId, round_trip_object_IDs) {
   Hash20 testHash{
       folly::StringPiece{"0123456789abcdef0123456789abcdef01234567"}};
 

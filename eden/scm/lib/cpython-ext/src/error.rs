@@ -33,20 +33,23 @@ use parking_lot::Mutex;
 /// # Examples
 ///
 /// ```
-/// use anyhow::{format_err, Error};
-/// use cpython::{exc, Python, PyResult};
+/// use anyhow::format_err;
+/// use anyhow::Error;
+/// use cpython::exc;
+/// use cpython::PyResult;
+/// use cpython::Python;
 /// use cpython_ext::error::ResultPyErrExt;
 ///
 /// fn fail_if_negative(i: i32) -> Result<i32, Error> {
-///    if (i >= 0) {
-///       Ok(i)
-///    } else {
-///       Err(format_err!("{} is negative", i))
-///    }
+///     if (i >= 0) {
+///         Ok(i)
+///     } else {
+///         Err(format_err!("{} is negative", i))
+///     }
 /// }
 ///
 /// fn py_fail_if_negative(py: Python, i: i32) -> PyResult<i32> {
-///    fail_if_negative(i).map_pyerr(py)
+///     fail_if_negative(i).map_pyerr(py)
 /// }
 /// ```
 pub trait ResultPyErrExt<T> {
@@ -59,7 +62,8 @@ pub trait ResultPyErrExt<T> {
 ///
 /// ```
 /// use anyhow::Result;
-/// use cpython_ext::error::{AnyhowResultExt, PyErr};
+/// use cpython_ext::error::AnyhowResultExt;
+/// use cpython_ext::error::PyErr;
 ///
 /// fn eval_py() -> Result<i32> {
 ///     let gil = cpython::Python::acquire_gil();
@@ -76,7 +80,6 @@ pub trait ResultPyErrExt<T> {
 ///     res.map(|_| ()).map_pyerr(py)
 /// }
 /// ```
-///
 pub trait AnyhowResultExt<T> {
     fn into_anyhow_result(self) -> Result<T>;
 }

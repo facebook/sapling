@@ -103,7 +103,7 @@ EdenMonitor::EdenMonitor(
       logDir + "edenfs.log"_relpath, maxLogSize, std::move(rotationStrategy));
 }
 
-EdenMonitor::~EdenMonitor() {}
+EdenMonitor::~EdenMonitor() = default;
 
 void EdenMonitor::run() {
   // Schedule our start operation to run once we start the EventBase loop
@@ -201,9 +201,9 @@ void EdenMonitor::performSelfRestart() {
   auto spawnedEdenfs = dynamic_cast<SpawnedEdenInstance*>(edenfs_.get());
   if (spawnedEdenfs) {
     childPipeFd = spawnedEdenfs->getLogPipeFD();
-    extraRestartArgs.push_back("--childEdenFSPid");
+    extraRestartArgs.emplace_back("--childEdenFSPid");
     extraRestartArgs.push_back(folly::to<string>(edenfs_->getPid()));
-    extraRestartArgs.push_back("--childEdenFSPipe");
+    extraRestartArgs.emplace_back("--childEdenFSPipe");
     extraRestartArgs.push_back(folly::to<string>(childPipeFd));
   }
 

@@ -1,0 +1,14 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "quiet_stream",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:pin-project",
+        "fbsource//third-party/rust:tokio",
+    ],
+)

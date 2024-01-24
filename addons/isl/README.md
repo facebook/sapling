@@ -5,13 +5,13 @@ Interactive Smartlog (ISL) is an embeddable, web-based GUI for Sapling.
 
 The code for ISL lives in the addons folder:
 
-| folder          | use                                                        |
-| --------------- | ---------------------------------------------------------- |
-| isl             | Front end UI written with React and Recoil                 |
-| isl-sever       | Back end, which runs sl commands / interacts with the repo |
-| isl-sever/proxy | `sl web` CLI and server management                         |
-| shared          | Utils shared by reviewstack and isl                        |
-| vscode          | VS Code extension for Sapling, including ISL as a webview  |
+| folder           | use                                                        |
+| ---------------- | ---------------------------------------------------------- |
+| isl              | Front end UI written with React and Recoil                 |
+| isl-server       | Back end, which runs sl commands / interacts with the repo |
+| isl-server/proxy | `sl web` CLI and server management                         |
+| shared           | Utils shared by reviewstack and isl                        |
+| vscode           | VS Code extension for Sapling, including ISL as a webview  |
 
 ## Development
 
@@ -62,8 +62,9 @@ When developing, it's useful to add a few extra arguments to `yarn serve`:
 
 ## Production builds
 
-`isl/release.js` is a script to build production bundles and
-package them into a single self-contained directory that can be distributed.
+`build-tar.py` is a script to build production bundles and
+package them into a single self-contained `tar.xz` that can be distributed
+along with `sl`. It can be launched by the `sl web` command.
 
 `yarn build` lets you build production bundles without watching for changes, in either
 `isl/` or `isl-server/`.

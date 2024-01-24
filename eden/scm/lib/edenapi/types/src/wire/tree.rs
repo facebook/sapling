@@ -278,7 +278,7 @@ impl Arbitrary for WireTreeEntry {
         let bytes: Option<Vec<u8>> = Arbitrary::arbitrary(g);
         Self {
             key: Arbitrary::arbitrary(g),
-            data: bytes.map(|b| Bytes::from(b)),
+            data: bytes.map(Bytes::from),
             parents: Arbitrary::arbitrary(g),
             // Not recursing here because it causes Quickcheck to overflow the stack
             children: None,

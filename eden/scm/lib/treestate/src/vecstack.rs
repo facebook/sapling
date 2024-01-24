@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::mem;
-
 /// Manage a `Vec` of references. so elements with different lifetimes can be
 /// pushed manually, and poped automatically. Elements pushed later must have
 /// a more narrow lifetime than elements pushed earlier.
@@ -116,7 +114,7 @@ impl<'outer, T: ?Sized> VecStack<'outer, T> {
             "cannot push if vec is changed"
         );
         let vec: &'inner mut Vec<&'inner T> =
-            unsafe { mem::transmute(self.inner as *mut Vec<&'outer T>) };
+            unsafe { &mut *(self.inner as *mut Vec<&'outer T>).cast::<std::vec::Vec<&T>>() };
         let postdrop_len = vec.len();
         vec.push(elem);
         let prepush_len = vec.len();

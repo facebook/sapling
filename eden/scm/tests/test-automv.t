@@ -150,7 +150,7 @@
   $ hg status -C
   A b.txt
   R a.txt
-  $ hg commit --no-automv -m msg
+  $ hg commit --no-move-detection -m msg
   $ hg status --change . -C
   A b.txt
   R a.txt

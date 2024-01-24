@@ -78,6 +78,9 @@ impl ChangesetsCommitGraphCompat {
         let mut scuba = self.scuba.clone();
 
         scuba.add_common_server_data();
+        if let Some(client_info) = ctx.metadata().client_request_info() {
+            scuba.add_client_request_info(client_info);
+        }
         // Only the last id, which is good enough for logging.
         scuba.add("changeset_id", css.last().0.to_string());
         scuba.add("changeset_count", css.len());

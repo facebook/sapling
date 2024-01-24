@@ -65,15 +65,15 @@ impl MutationEntry {
         w.write_vlq(self.op.len())?;
         w.write_all(self.op.as_bytes())?;
         w.write_vlq(self.user.len())?;
-        w.write_all(&self.user.as_bytes())?;
+        w.write_all(self.user.as_bytes())?;
         w.write_f64::<BigEndian>(self.time as f64)?;
         w.write_vlq(self.tz)?;
         w.write_vlq(self.extra.len())?;
         for (key, value) in self.extra.iter() {
             w.write_vlq(key.len())?;
-            w.write_all(&key)?;
+            w.write_all(key)?;
             w.write_vlq(value.len())?;
-            w.write_all(&value)?;
+            w.write_all(value)?;
         }
         Ok(())
     }

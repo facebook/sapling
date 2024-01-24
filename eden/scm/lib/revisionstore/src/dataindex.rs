@@ -6,7 +6,6 @@
  */
 
 use std::collections::HashMap;
-use std::fs::File;
 use std::io::Cursor;
 use std::io::Read;
 use std::io::Write;
@@ -16,6 +15,7 @@ use anyhow::Result;
 use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
+use fs_err::File;
 use memmap2::Mmap;
 use memmap2::MmapOptions;
 use thiserror::Error;
@@ -227,15 +227,14 @@ impl DataIndex {
 
         // Write fanout
         // `locations` will contain the eventual offset that each value will be written to.
-        let mut locations: Vec<u32> = Vec::with_capacity(values.len());
-        unsafe { locations.set_len(values.len()) };
-        FanoutTable::write(
+        let locations = FanoutTable::write(
             writer,
             if options.large { 2 } else { 1 },
             &mut values.iter().map(|x| x.0),
             ENTRY_LEN,
-            Some(&mut locations),
-        )?;
+            Some(values.len()),
+        )?
+        .expect("`locations` must be `Some` since `Some(locations_size)` was provided.");
 
         // Map from hgid to location
         let mut nodelocations: HashMap<HgId, u32> = HashMap::new();
@@ -252,9 +251,7 @@ impl DataIndex {
                     .map_or(DeltaBaseOffset::FullText, |delta_base| {
                         nodelocations
                             .get(&delta_base)
-                            .map_or(DeltaBaseOffset::Missing, |x| {
-                                DeltaBaseOffset::Offset(*x as u32)
-                            })
+                            .map_or(DeltaBaseOffset::Missing, |x| DeltaBaseOffset::Offset(*x))
                     });
 
             let entry = IndexEntry::new(hgid.clone(), delta_base_offset, value.offset, value.size);
@@ -314,7 +311,7 @@ mod tests {
 
     fn make_index(values: &HashMap<HgId, DeltaLocation>) -> DataIndex {
         let mut file = NamedTempFile::new().expect("file");
-        DataIndex::write(&mut file, &values).expect("write dataindex");
+        DataIndex::write(&mut file, values).expect("write dataindex");
         let path = file.into_temp_path();
 
         DataIndex::new(&path).expect("dataindex")
@@ -391,8 +388,8 @@ mod tests {
                     hgid.clone(),
                     DeltaLocation {
                         delta_base: Default::default(),
-                        offset: offset,
-                        size: size,
+                        offset,
+                        size,
                     },
                 );
 

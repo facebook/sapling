@@ -7,8 +7,8 @@
 
 #pragma once
 
-#include <folly/futures/Future.h>
 #include <memory>
+#include "eden/fs/utils/ImmediateFuture.h"
 
 namespace facebook::eden {
 
@@ -52,14 +52,14 @@ class StoredObject {
    * value available.  Otherwise the future will become ready when trigger() or
    * setReady() is called on this StoredObject.
    */
-  folly::Future<std::shared_ptr<T>> getFuture() {
+  ImmediateFuture<std::shared_ptr<T>> getFuture() {
     auto data = data_.wlock();
     if (data->ready) {
       return folly::makeFuture(std::make_shared<T>(object_));
     }
 
     data->promises.emplace_back();
-    return data->promises.back().getFuture();
+    return data->promises.back().getSemiFuture();
   }
 
   /**

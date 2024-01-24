@@ -21,6 +21,8 @@ namespace cpp facebook.fb303
 /**
  * Common status reporting mechanism across all services
  */
+include "thrift/annotation/thrift.thrift"
+
 enum fb_status {
   DEAD = 0,
   STARTING = 1,
@@ -37,7 +39,8 @@ service FacebookService {
   /**
    * Gets the status of this service
    */
-  fb_status getStatus() (priority = 'IMPORTANT');
+  @thrift.Priority{level = thrift.RpcPriority.IMPORTANT}
+  fb_status getStatus();
 
   /**
    * Gets the counters for this service
@@ -52,7 +55,8 @@ service FacebookService {
   /**
    * Returns the unix time that the server has been running since
    */
-  i64 aliveSince() (priority = 'IMPORTANT');
+  @thrift.Priority{level = thrift.RpcPriority.IMPORTANT}
+  i64 aliveSince();
 
   /**
    * Returns the pid of the process

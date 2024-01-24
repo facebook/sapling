@@ -24,7 +24,7 @@ impl FromConfigValue for bool {
         match value.as_ref() {
             "1" | "yes" | "true" | "on" | "always" => Ok(true),
             "0" | "no" | "false" | "off" | "never" => Ok(false),
-            _ => Err(Error::Convert(format!("invalid bool: {}", value)).into()),
+            _ => Err(Error::Convert(format!("invalid bool: {}", value))),
         }
     }
 }
@@ -161,15 +161,17 @@ impl FromConfigValue for ByteCount {
                     return Err(Error::Convert(format!(
                         "byte size '{:?}' cannot be negative",
                         value
-                    ))
-                    .into());
+                    )));
                 }
                 let unit = *unit as f64;
                 return Ok(ByteCount((number * unit) as u64));
             }
         }
 
-        Err(Error::Convert(format!("'{:?}' cannot be parsed as a byte size", value)).into())
+        Err(Error::Convert(format!(
+            "'{:?}' cannot be parsed as a byte size",
+            value
+        )))
     }
 }
 
@@ -210,7 +212,12 @@ impl<T: FromConfigValue> FromConfigValue for Option<T> {
 ///
 /// assert_eq!(
 ///     parse_list("this,is \"a small\" ,test"),
-///     vec!["this".to_string(), "is".to_string(), "a small".to_string(), "test".to_string()]
+///     vec![
+///         "this".to_string(),
+///         "is".to_string(),
+///         "a small".to_string(),
+///         "test".to_string()
+///     ]
 /// );
 /// ```
 pub fn parse_list<B: AsRef<str>>(value: B) -> Vec<Text> {

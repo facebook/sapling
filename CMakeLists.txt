@@ -178,6 +178,8 @@ else()
   set(EDEN_HAVE_NFS_PY "False")
 endif()
 
+set(EDEN_HAVE_FILTEREDHG_PY "False")
+
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/CMake/eden-config.py.in
   ${CMAKE_CURRENT_BINARY_DIR}/eden/fs/py/eden/config.py

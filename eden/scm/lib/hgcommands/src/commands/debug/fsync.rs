@@ -33,10 +33,9 @@ pub fn run(_ctx: ReqCtx<NoOpts>, repo: &mut Repo) -> Result<u8> {
     let patterns = ["treestate/*", "dirstate"];
     fsyncglob::fsync_glob(dot_hg_path, &patterns, None);
 
-    if let Some(Some(cache_path)) = repo
+    if let Ok(Some(cache_path)) = repo
         .config()
         .get_opt::<String>("remotefilelog", "cachepath")
-        .ok()
     {
         let patterns = ["*/indexedlog*/*", "*/lfs/*"];
         fsyncglob::fsync_glob(Path::new(&cache_path), &patterns, None);

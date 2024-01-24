@@ -1,0 +1,40 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "s3blob",
+    srcs = glob(["src/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:base64",
+        "fbsource//third-party/rust:chrono",
+        "fbsource//third-party/rust:hyper",
+        "fbsource//third-party/rust:hyper-openssl",
+        "fbsource//third-party/rust:log",
+        "fbsource//third-party/rust:nonzero_ext",
+        "fbsource//third-party/rust:openssl",
+        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:rusoto_core",
+        "fbsource//third-party/rust:rusoto_credential",
+        "fbsource//third-party/rust:rusoto_s3",
+        "fbsource//third-party/rust:sha1",
+        "fbsource//third-party/rust:slog",
+        "fbsource//third-party/rust:tokio",
+        "//cloud/authd/thrift:thrift-rust",
+        "//cloud/authd/thrift:thrift-rust-srclients",
+        "//common/rust/fwdproxy_client:fwdproxy_hyper",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/futures_stats:futures_stats",
+        "//common/rust/shed/time_ext:time_ext",
+        "//common/rust/smc-thrift:smc-thrift",
+        "//common/smc/if:if-rust",
+        "//crypto/keychain_service:if-rust",
+        "//crypto/keychain_service:if-rust-srclients",
+        "//eden/mononoke/blobstore:blobstore",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/server/context:context",
+    ],
+)

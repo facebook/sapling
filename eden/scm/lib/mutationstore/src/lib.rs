@@ -62,6 +62,7 @@ pub struct MutationStore {
 }
 
 bitflags! {
+    #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Clone, Copy)]
     pub struct DagFlags: u8 {
         /// Include successors.
         const SUCCESSORS = 0b1;
@@ -293,9 +294,10 @@ impl MutationStore {
         Ok(obsoleted.flatten().await?)
     }
 
+    /// Query successors by a predecessor.
     pub fn get_successors_sets(&self, node: Node) -> Result<Vec<Vec<Node>>> {
         let mut successors_sets = Vec::new();
-        for entry in self.log.lookup(INDEX_PRED, &node)? {
+        for entry in self.log.lookup(INDEX_PRED, node)? {
             let mutation_entry = MutationEntry::deserialize(&mut Cursor::new(entry?))?;
             let mut successors = Vec::new();
             successors.extend(&mutation_entry.split);
@@ -305,14 +307,15 @@ impl MutationStore {
         Ok(successors_sets)
     }
 
+    /// Query predecessors by a successor. Consider split.
     pub fn get_predecessors(&self, node: Node) -> Result<Vec<Node>> {
         let mut lookup = self
             .log
-            .lookup(INDEX_SUCC, &node)?
-            .chain(self.log.lookup(INDEX_SPLIT, &node)?);
+            .lookup(INDEX_SUCC, node)?
+            .chain(self.log.lookup(INDEX_SPLIT, node)?);
         let predecessors = if let Some(entry) = lookup.next() {
             let mutation_entry = MutationEntry::deserialize(&mut Cursor::new(entry?))?;
-            mutation_entry.preds.clone()
+            mutation_entry.preds
         } else {
             vec![]
         };
@@ -320,19 +323,43 @@ impl MutationStore {
     }
 
     pub fn get_split_head(&self, node: Node) -> Result<Option<MutationEntry>> {
-        let mutation_entry = match self.log.lookup(INDEX_SPLIT, &node)?.next() {
+        let mutation_entry = match self.log.lookup(INDEX_SPLIT, node)?.next() {
             Some(entry) => Some(MutationEntry::deserialize(&mut Cursor::new(entry?))?),
             None => None,
         };
         Ok(mutation_entry)
     }
 
+    /// Query predecessor entry by a successor.
     pub fn get(&self, succ: Node) -> Result<Option<MutationEntry>> {
-        let mutation_entry = match self.log.lookup(INDEX_SUCC, &succ)?.next() {
+        let mutation_entry = match self.log.lookup(INDEX_SUCC, succ)?.next() {
             Some(entry) => Some(MutationEntry::deserialize(&mut Cursor::new(entry?))?),
             None => None,
         };
         Ok(mutation_entry)
+    }
+
+    /// Get all mutation entries that have one predecessor match or successor match.
+    /// Might return duplicated entries.
+    pub fn get_entries(
+        &self,
+        predecessors: &[Node],
+        successors: &[Node],
+    ) -> Result<Vec<MutationEntry>> {
+        let mut result = Vec::new();
+        for node in predecessors {
+            for entry in self.log.lookup(INDEX_PRED, node)? {
+                let entry = MutationEntry::deserialize(&mut Cursor::new(entry?))?;
+                result.push(entry);
+            }
+        }
+        for node in successors {
+            for entry in self.log.lookup(INDEX_SUCC, node)? {
+                let entry = MutationEntry::deserialize(&mut Cursor::new(entry?))?;
+                result.push(entry);
+            }
+        }
+        Ok(result)
     }
 
     /// Return a connected component that includes `nodes` and represents
@@ -366,14 +393,14 @@ impl MutationStore {
                 continue;
             }
             if flags.contains(DagFlags::SUCCESSORS) {
-                for entry in self.log.lookup(INDEX_PRED, &node)? {
+                for entry in self.log.lookup(INDEX_PRED, node)? {
                     let entry = MutationEntry::deserialize(&mut Cursor::new(entry?))?;
                     add_parent(&node, &entry.succ);
                     to_visit.push(entry.succ);
                 }
             }
             if flags.contains(DagFlags::PREDECESSORS) {
-                for entry in self.log.lookup(INDEX_SUCC, &node)? {
+                for entry in self.log.lookup(INDEX_SUCC, node)? {
                     let entry = MutationEntry::deserialize(&mut Cursor::new(entry?))?;
                     for pred in entry.preds {
                         add_parent(&pred, &node);
@@ -422,14 +449,14 @@ mod tests {
     use dag::DagAlgorithm;
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
-    use tempdir::TempDir;
+    use tempfile::TempDir;
 
     use super::*;
 
     #[test]
     fn test_basic_store() {
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
-        let dir = TempDir::new("mutationstore").unwrap();
+        let dir = TempDir::with_prefix("mutationstore.").unwrap();
         let nodes = Node::random_distinct(&mut rng, 20);
 
         {
@@ -525,7 +552,7 @@ mod tests {
 
     #[test]
     fn test_dag() -> Result<()> {
-        let dir = TempDir::new("mutationstore")?;
+        let dir = TempDir::with_prefix("mutationstore.")?;
         let mut ms = MutationStore::open(dir.path())?;
         let parents = drawdag::parse(
             r#"
@@ -577,7 +604,7 @@ mod tests {
 
     #[test]
     fn test_dag_cycle() -> Result<()> {
-        let dir = TempDir::new("mutationstore")?;
+        let dir = TempDir::with_prefix("mutationstore.")?;
         let mut ms = MutationStore::open(dir.path())?;
 
         for (pred, succ) in [("A", "B"), ("B", "C"), ("C", "A")] {
@@ -610,7 +637,7 @@ mod tests {
 
     #[test]
     fn test_copy_entries() -> Result<()> {
-        let dir = TempDir::new("mutationstore")?;
+        let dir = TempDir::with_prefix("mutationstore.")?;
         let mut ms = MutationStore::open(dir.path())?;
 
         for (pred, succ) in [("P", "E"), ("E", "X")] {
@@ -658,7 +685,7 @@ mod tests {
 
     #[test]
     fn test_calculate_obsolete() -> Result<()> {
-        let dir = TempDir::new("mutationstore")?;
+        let dir = TempDir::with_prefix("mutationstore.")?;
         let mut ms = MutationStore::open(dir.path())?;
 
         // C   F  # C -> F

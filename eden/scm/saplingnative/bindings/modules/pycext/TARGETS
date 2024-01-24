@@ -1,0 +1,41 @@
+load("//eden/scm:targets.bzl", "rust_python_library")
+
+oncall("mercurial_release")
+
+rust_python_library(
+    name = "pycext",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "cpython": {
+                        "default-features": False,
+                        "features": ["python3-sys"],
+                    },
+                },
+            },
+            "extra_buck_dependencies": {
+                "build-dependencies": ["fbsource//third-party/rust:cc"],
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    include_python_sys = True,
+    os_deps = [
+        (
+            "windows",
+            [
+                "//eden/scm/lib/third-party/windows-curses:windows-curses",
+            ],
+        ),
+    ],
+    deps = [
+        "//eden/scm:bser",
+        "//eden/scm:traceprof",
+        "//eden/scm/sapling/cext:bdiff",
+        "//eden/scm/sapling/cext:mpatch",
+        "//eden/scm/sapling/cext:osutil",
+        "//eden/scm/sapling/cext:parsers",
+    ],
+)

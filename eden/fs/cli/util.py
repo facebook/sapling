@@ -21,6 +21,7 @@ import subprocess
 import sys
 import time
 import typing
+from io import BytesIO
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING, TypeVar
 
@@ -44,6 +45,8 @@ PID_FILE = "pid"
 NFS_MOUNT_PROTOCOL_STRING = "nfs"
 FUSE_MOUNT_PROTOCOL_STRING = "fuse"
 PRJFS_MOUNT_PROTOCOL_STRING = "prjfs"
+
+INODE_CATALOG_TYPE_IN_MEMORY_STRING = "inmemory"
 
 
 class EdenStartError(Exception):
@@ -342,9 +345,16 @@ class Repo(abc.ABC):
 class HgRepo(Repo):
     HEAD = "."
 
-    def __init__(self, source: str, working_dir: Optional[str] = None) -> None:
+    def __init__(
+        self,
+        source: str,
+        working_dir: Optional[str] = None,
+        backing_type: Optional[str] = None,
+    ) -> None:
         super(HgRepo, self).__init__(
-            "hg", source, source if working_dir is None else working_dir
+            backing_type if backing_type is not None else "hg",
+            source,
+            source if working_dir is None else working_dir,
         )
         self._env = os.environ.copy()
         self._env["HGPLAIN"] = "1"
@@ -460,7 +470,7 @@ def _get_git_repo(path: str) -> Optional[GitRepo]:
     return None
 
 
-def get_hg_repo(path: str) -> Optional[HgRepo]:
+def get_hg_repo(path: str, backing_type: Optional[str] = None) -> Optional[HgRepo]:
     """
     If path points to a mercurial repository, return a HgRepo object.
     Otherwise, if path is not a mercurial repository, return None.
@@ -487,7 +497,7 @@ def get_hg_repo(path: str) -> Optional[HgRepo]:
     if not os.path.isdir(os.path.join(hg_dir, "store")):
         return None
 
-    return HgRepo(repo_path, working_dir)
+    return HgRepo(repo_path, working_dir, backing_type)
 
 
 def get_recas_repo(path: str) -> Optional[ReCasRepo]:
@@ -524,7 +534,7 @@ def get_repo(path: str, backing_store_type: Optional[str] = None) -> Optional[Re
         return None
 
     while True:
-        hg_repo = get_hg_repo(path)
+        hg_repo = get_hg_repo(path, backing_store_type)
         if hg_repo is not None:
             return hg_repo
         git_repo = _get_git_repo(path)
@@ -783,3 +793,77 @@ def hook_recursive_with_spinner(function: Callable, spinner: Spinner):
         return function(*args, **kwargs)
 
     return run
+
+
+if sys.platform == "win32":
+
+    def remove_unc_prefix(path: Path) -> Path:
+        parts = list(path.parts)
+        if re.match(r"\\\\\?\\[A-Za-z]:\\", parts[0]):
+            parts[0] = parts[0][-3:].upper()
+        return Path(*parts)
+
+
+def _varint_byte(b: int):
+    return bytes((b,))
+
+
+def encode_varint(number: int) -> bytes:
+    """Pack `number` into varint bytes"""
+    buf = b""
+    while True:
+        towrite = number & 0x7F
+        number >>= 7
+        if number:
+            buf += _varint_byte(towrite | 0x80)
+        else:
+            buf += _varint_byte(towrite)
+            break
+    return buf
+
+
+# Adapted from https://github.com/fmoo/python-varint and
+# https://fburl.com/p8xrmnch
+def decode_varint(buf: bytes) -> typing.Tuple[int, int]:
+    """Read a varint from from `buf` bytes and return the number of bytes read"""
+    stream = BytesIO(buf)
+    shift = 0
+    result = 0
+    bytes_read = 0
+
+    def read_one_byte(stream: BytesIO):
+        """Reads a byte from the file (as an integer)
+
+        raises EOFError if the stream ends while reading bytes.
+        """
+        c = stream.read(1)
+        if c == b"":
+            raise EOFError("Unexpected EOF while reading varint bytes")
+        return ord(c)
+
+    while True:
+        bytes_read += 1
+        i = read_one_byte(stream)
+        result |= (i & 0x7F) << shift
+        shift += 7
+        if not (i & 0x80):
+            break
+
+    return result, bytes_read
+
+
+def create_filtered_rootid(root_id: str, filter: Optional[str] = None) -> bytes:
+    """Create a FilteredRootId from a RootId and FilterId pair.
+
+    The FilteredRootId is in the form:
+
+    <Varint><OriginalRootId><FilterId>
+
+    Where the Varint represents the length of the OriginalRootId and the
+    FilterId represents which filter should be applied to the checkout. If no
+    filter is provided, the "null" filter is used.
+    """
+    original_len = len(root_id)
+    filter_id = filter if filter is not None else "null"
+    varint = encode_varint(original_len)
+    return varint + root_id.encode() + filter_id.encode()

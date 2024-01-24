@@ -1,13 +1,5 @@
 #debugruntest-compatible
 
-#testcases rust python
-
-#if rust
-  $ setconfig experimental.rustmatcher=true
-#else
-  $ setconfig experimental.rustmatcher=false
-#endif
-
   $ configure modern
 
   $ newrepo

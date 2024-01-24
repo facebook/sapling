@@ -32,6 +32,8 @@ pub static SUPPORTED_DEFAULT_REQUIREMENTS: Lazy<HashSet<String>> = Lazy::new(|| 
         "windowssymlinks".to_owned(),
         "hgsql".to_owned(),
         "remotefilelog".to_owned(),
+        // allows sparse eden (filteredfs) checkouts
+        "edensparse".to_owned(),
     ])
 });
 pub static SUPPORTED_STORE_REQUIREMENTS: Lazy<HashSet<String>> = Lazy::new(|| {

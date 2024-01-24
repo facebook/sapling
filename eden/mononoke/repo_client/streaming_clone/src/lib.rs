@@ -240,7 +240,7 @@ impl StreamingClone {
 
         let res =
             SelectSizes::query(&self.connections.read_connection, &self.repo_id, &tag).await?;
-        let (idx, data) = match res.get(0) {
+        let (idx, data) = match res.first() {
             Some((Some(idx), Some(data))) => (idx, data),
             _ => {
                 return Ok(None);
@@ -256,6 +256,6 @@ impl StreamingClone {
 
         let res =
             SelectMaxChunkNum::query(&self.connections.read_connection, &self.repo_id).await?;
-        Ok(res.get(0).and_then(|x| x.0))
+        Ok(res.first().and_then(|x| x.0))
     }
 }

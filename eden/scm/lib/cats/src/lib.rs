@@ -109,7 +109,7 @@ impl<'a> CatsSection<'a> {
         for group in &self.groups {
             // If there is an existing candidate, check whether the current
             // cats entry is a more specific match.
-            if let Some(ref best) = best {
+            if let Some(best) = best {
                 // If prefixes are the same, break the tie using priority.
                 if group.priority < best.priority {
                     continue;

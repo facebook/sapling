@@ -4,9 +4,13 @@
 # GNU General Public License version 2.
 
 if (IS_FB_BUILD)
-  rust_static_library(rust_backingstore CRATE backingstore FEATURES fb)
+  rust_static_library(
+    rust_backingstore
+    CRATE backingstore
+    USE_CXX_INCLUDE
+    FEATURES fb)
 else()
-  rust_static_library(rust_backingstore CRATE backingstore)
+  rust_static_library(rust_backingstore CRATE backingstore USE_CXX_INCLUDE)
 endif()
 
 install_rust_static_library(
@@ -15,22 +19,39 @@ install_rust_static_library(
   INSTALL_DIR lib
 )
 
-file(GLOB C_API_SRCS "c_api/*.cpp")
-add_library(backingstore "${C_API_SRCS}")
+rust_cxx_bridge(
+  backingstore
+  "src/ffi.rs"
+  LIBS
+  fmt::fmt
+  Folly::folly
+)
+
+file(GLOB C_API_SRCS "src/*.cpp")
+file(GLOB C_API_HDRS "include/*.h")
+target_sources(
+  backingstore
+  PRIVATE
+  "${C_API_SRCS}"
+)
 set_target_properties(
   backingstore
   PROPERTIES
   PUBLIC_HEADER
-  "c_api/SaplingNativeBackingStore.h;c_api/BackingStoreBindings.h"
+  "${C_API_HDRS}"
 )
-target_include_directories(backingstore PUBLIC
+
+target_include_directories(
+  backingstore
+  PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
 )
 target_link_libraries(
   backingstore
-  PRIVATE
+  PUBLIC
   rust_backingstore
+  fmt::fmt
   Folly::folly
 )
 
@@ -67,6 +88,6 @@ endif()
 install(
   TARGETS backingstore
   EXPORT mercurial
-  LIBRARY DESTINATION ${LIB_INSTALL_DIR}
-  PUBLIC_HEADER DESTINATION "include/eden/scm/lib/backingstore/c_api"
+  LIBRARY DESTINATION lib
+  PUBLIC_HEADER DESTINATION eden/scm/lib/backingstore/include
 )

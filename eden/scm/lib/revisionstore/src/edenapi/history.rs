@@ -52,8 +52,7 @@ impl RemoteHistoryStore for EdenApiHistoryStore {
         let keys = hgid_keys(keys);
 
         let response = async move {
-            let prog =
-                ProgressBar::register_new("Downloading file history over HTTP", 0, "entries");
+            let prog = ProgressBar::new_adhoc("Downloading file history over HTTP", 0, "entries");
 
             let mut response = client.history(keys, None).await?;
             while let Some(entry) = response.entries.try_next().await? {

@@ -98,8 +98,8 @@ int main(int argc, char** argv) {
     threads.emplace_back(thread);
   }
 
-  for (auto& thread : threads) {
-    thread.join();
+  for (auto& thrd : threads) {
+    thrd.join();
   }
 
   printf(

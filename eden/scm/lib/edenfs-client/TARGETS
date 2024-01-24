@@ -1,0 +1,35 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "edenfs-client",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+            },
+            "features": {
+                "fb": [
+                    "identity/fb",
+                ],
+            },
+        },
+    },
+    features = ["fb"],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:fs-err",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:toml",
+        "fbsource//third-party/rust:tracing",
+        "//common/rust/shed/fbthrift_ext:socket",
+        "//common/rust/shed/tokio-uds-compat:tokio-uds-compat",
+        "//eden/scm/lib/async-runtime:async-runtime",
+        "//eden/scm/lib/clientinfo:clientinfo",
+        "//eden/scm/lib/identity:identity",
+        "//eden/scm/lib/thrift-types:thrift-types",
+        "//eden/scm/lib/types:types",
+    ],
+)

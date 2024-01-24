@@ -1,0 +1,23 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "exchange",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    test_deps = [
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/async-runtime:async-runtime",
+        "//eden/scm/lib/dag:dag",
+        "//eden/scm/lib/edenapi:edenapi",
+        "//eden/scm/lib/hgcommits:hgcommits",
+        "//eden/scm/lib/metalog:metalog",
+        "//eden/scm/lib/refencode:refencode",
+        "//eden/scm/lib/types:types",
+    ],
+)

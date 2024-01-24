@@ -7,12 +7,14 @@
 
 #pragma once
 
-#include <folly/futures/Future.h>
 #include <memory>
 #include "eden/fs/store/BlobCache.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 
 namespace facebook::eden {
+
+template <typename T>
+class ImmediateFuture;
 
 class Blob;
 class IObjectStore;
@@ -53,7 +55,7 @@ class BlobAccess {
    * Returns both the blob and an interest handle from the BlobCache that can
    * be dropped when the blob is no longer needed.
    */
-  folly::Future<BlobCache::GetResult> getBlob(
+  ImmediateFuture<BlobCache::GetResult> getBlob(
       const ObjectId& hash,
       const ObjectFetchContextPtr& context,
       BlobCache::Interest interest = BlobCache::Interest::LikelyNeededAgain);

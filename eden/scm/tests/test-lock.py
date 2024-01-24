@@ -5,14 +5,12 @@
 
 from __future__ import absolute_import
 
-import errno
 import os
 import tempfile
 import unittest
 
 import silenttestrunner
-from edenscm import encoding, error, extensions, lock, pycompat, ui, util, vfs as vfsmod
-from hghave import require
+from sapling import lock, pycompat, vfs as vfsmod
 
 
 testlockname = "testlock"

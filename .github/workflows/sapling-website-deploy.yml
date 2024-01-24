@@ -2,9 +2,8 @@ name: Publish https://sapling-scm.com
 
 on:
   workflow_dispatch:
-  # only run on prs if not a fork
-  if: ${{ !github.event.pull_request.head.repo.fork }}
-  pull_request:
+  schedule:
+    - cron: '0 0 * * 1-5'
 
 jobs:
   deploy:

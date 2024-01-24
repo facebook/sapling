@@ -46,7 +46,10 @@ mod rechunk;
 mod streamhash;
 
 pub use alias::add_aliases_to_multiplexer;
+pub use chunk::make_chunks;
+pub use chunk::Chunks;
 pub use copy::copy;
+pub use expected_size::ExpectedSize;
 pub use fetch::Range;
 pub use fetch_key::Alias;
 pub use fetch_key::AliasBlob;
@@ -109,8 +112,6 @@ pub struct StoreRequest {
 
 impl StoreRequest {
     pub fn new(size: u64) -> Self {
-        use expected_size::ExpectedSize;
-
         Self {
             expected_size: ExpectedSize::new(size),
             canonical: None,
@@ -122,8 +123,6 @@ impl StoreRequest {
     }
 
     pub fn with_canonical(size: u64, canonical: ContentId) -> Self {
-        use expected_size::ExpectedSize;
-
         Self {
             expected_size: ExpectedSize::new(size),
             canonical: Some(canonical),
@@ -135,8 +134,6 @@ impl StoreRequest {
     }
 
     pub fn with_sha1(size: u64, sha1: hash::Sha1) -> Self {
-        use expected_size::ExpectedSize;
-
         Self {
             expected_size: ExpectedSize::new(size),
             canonical: None,
@@ -148,8 +145,6 @@ impl StoreRequest {
     }
 
     pub fn with_sha256(size: u64, sha256: hash::Sha256) -> Self {
-        use expected_size::ExpectedSize;
-
         Self {
             expected_size: ExpectedSize::new(size),
             canonical: None,
@@ -161,8 +156,6 @@ impl StoreRequest {
     }
 
     pub fn with_git_sha1(size: u64, git_sha1: hash::RichGitSha1) -> Self {
-        use expected_size::ExpectedSize;
-
         Self {
             expected_size: ExpectedSize::new(size),
             canonical: None,
@@ -467,8 +460,6 @@ pub async fn store<B: Blobstore + Clone + 'static>(
     req: &StoreRequest,
     data: impl Stream<Item = Result<Bytes, Error>> + Send,
 ) -> Result<ContentMetadataV2, Error> {
-    use chunk::Chunks;
-
     let prepared = match chunk::make_chunks(data, req.expected_size, config.chunk_size) {
         Chunks::Inline(fut) => prepare::prepare_bytes(fut.await?).await,
         Chunks::Chunked(expected_size, chunks) => {

@@ -20,7 +20,9 @@ namespace py3 eden.mononoke.mononoke_types
 typedef binary Blake2 (rust.newtype, rust.type = "smallvec::SmallVec<[u8; 32]>")
 
 // NB don't call the type bytes as py3 bindings don't like it
-typedef binary (rust.type = "bytes::Bytes") binary_bytes
+// NB (SF, 23-12-04) It can't be called bytes::Bytes because that is the syntax
+// of a nonstandard type which this isn't.
+typedef binary (rust.type = "Bytes") binary_bytes
 typedef binary small_binary (
   rust.newtype,
   rust.type = "smallvec::SmallVec<[u8; 24]>",
@@ -40,10 +42,14 @@ typedef IdType ManifestUnodeId (rust.newtype)
 typedef IdType DeletedManifestId (rust.newtype)
 typedef IdType DeletedManifestV2Id (rust.newtype)
 typedef IdType ShardedMapNodeId (rust.newtype)
+typedef IdType ShardedMapV2NodeId (rust.newtype)
 typedef IdType FsnodeId (rust.newtype)
 typedef IdType SkeletonManifestId (rust.newtype)
 typedef IdType MPathHash (rust.newtype)
 typedef IdType BasenameSuffixSkeletonManifestId (rust.newtype)
+typedef IdType BssmV3DirectoryId (rust.newtype)
+typedef IdType TestManifestId (rust.newtype)
+typedef IdType TestShardedManifestId (rust.newtype)
 
 typedef IdType ContentMetadataV2Id (rust.newtype)
 typedef IdType FastlogBatchId (rust.newtype)
@@ -69,13 +75,17 @@ typedef binary MPathElement (
   rust.newtype,
   rust.type = "smallvec::SmallVec<[u8; 24]>",
 )
+/// Type representing all forms of path in Mononoke (i.e. root, directory, file)
 typedef list<MPathElement> MPath (rust.newtype)
+
+/// Type representing non-root paths used in Mononoke
+typedef MPath NonRootMPath (rust.newtype)
 
 union RepoPath {
   # Thrift language doesn't support void here, so put a dummy bool
   1: bool RootPath;
-  2: MPath DirectoryPath;
-  3: MPath FilePath;
+  2: NonRootMPath DirectoryPath;
+  3: NonRootMPath FilePath;
 }
 
 // Parent ordering
@@ -101,7 +111,7 @@ union RepoPath {
 //   wants to read metadata can stop early.
 // * The "required" fields are only for data that is absolutely core to the
 //   model. Note that Thrift does allow changing "required" to unqualified.
-// * MPath, Id and DateTime fields do not have a reasonable default value, so
+// * NonRootMPath, Id and DateTime fields do not have a reasonable default value, so
 //   they must always be either "required" or "optional".
 // * The set of keys in file_changes is path-conflict-free (pcf): no changed
 //   path is a directory prefix of another path. So file_changes can never have
@@ -124,7 +134,7 @@ struct BonsaiChangeset {
   7: map<string, binary> (
     rust.type = "sorted_vector_map::SortedVectorMap",
   ) hg_extra;
-  8: map<MPath, FileChangeOpt> (
+  8: map<NonRootMPath, FileChangeOpt> (
     rust.type = "sorted_vector_map::SortedVectorMap",
   ) file_changes;
   // Changeset is a snapshot iff this field is present
@@ -174,6 +184,8 @@ struct DateTime {
   // an i16 can't fit them.
   2: required i32 tz_offset_secs;
 } (rust.exhaustive)
+
+typedef i64 Timestamp (rust.newtype)
 
 struct ContentChunkPointer {
   1: ContentChunkId chunk_id;
@@ -241,9 +253,9 @@ struct ContentMetadataV2 {
   // whichever is the shortest. If is_utf8 is false, the
   // first_line is None
   11: optional string first_line;
-  // Is the file auto-generated? i.e. does it have the '@generated' tag
+  // Is the file auto-generated? i.e. does it have the '@'+'generated' tag
   12: optional bool is_generated;
-  // Is the file partially-generated? i.e. does it have the '@partially-generated' tag
+  // Is the file partially-generated? i.e. does it have the '@'+'partially-generated' tag
   13: optional bool is_partially_generated;
   // Blake3 hash of the file seeded with the global thrift constant in fbcode/blake3.thrift
   14: optional Blake3 seeded_blake3;
@@ -292,7 +304,7 @@ struct FileChange {
 
 // This is only used optionally so it is OK to use `required` here.
 struct CopyInfo {
-  1: required MPath file;
+  1: required NonRootMPath file;
   // cs_id must match one of the parents specified in BonsaiChangeset
   2: required ChangesetId cs_id;
 } (rust.exhaustive)
@@ -410,6 +422,51 @@ union ShardedMapNode {
   2: ShardedMapTerminalNode terminal;
 }
 
+const i32 SHARDED_MAP_V2_WEIGHT_LIMIT = 2000;
+
+typedef binary_bytes ShardedMapV2Value
+typedef binary_bytes ShardedMapV2RollupData
+
+struct ShardedMapV2StoredNode {
+  1: ShardedMapV2NodeId id;
+  2: i64 weight;
+  3: i64 size;
+  4: ShardedMapV2RollupData rollup_data;
+} (rust.exhaustive)
+
+union LoadableShardedMapV2Node {
+  1: ShardedMapV2Node inlined;
+  2: ShardedMapV2StoredNode stored;
+}
+
+// ShardedMapV2 is the same as ShardedMap except that it doesn't compress
+// small subtrees into terminal nodes, instead it relies purely on inlining
+// to solve the problem of having too many small blobs.
+//
+// Each ShardedMapV2Node has a conceptual weight which is defined as the sum of
+// weights of all its inlined children, plus the count of its non-inlined children,
+// plus one if it contains a value itself.
+//
+// To figure out which of a node's children are going to be inlined and which will
+// not:
+//    1) Recursively figure out inlining for each child's subtree.
+//    2) Assume that all children are going to not be inlined and calculate the weight.
+//    3) Iterate over children in order and for each check if inlining them will not make
+//    the weight of the node go beyond SHARDED_MAP_V2_WEIGHT_LIMIT. If so inline them,
+//    otherwise store them in a separate blob and store their id.
+//
+// This guarantees that the size of individual blobs will not grow too large, and
+// should avoid creating too many small blobs in most cases. In particular, subtrees that
+// would've have become a terminal node in ShardedMap will all be inlined in ShardedMapV2,
+// with the added upside that they could potentially be stored inlined in their parent.
+struct ShardedMapV2Node {
+  1: small_binary prefix;
+  2: optional ShardedMapV2Value value;
+  3: map<byte, LoadableShardedMapV2Node> (
+    rust.type = "sorted_vector_map::SortedVectorMap",
+  ) children;
+} (rust.exhaustive)
+
 struct DeletedManifestV2 {
   1: optional ChangesetId linknode;
   // Map of MPathElement -> DeletedManifestV2Id
@@ -436,6 +493,64 @@ union BssmEntry {
 struct BasenameSuffixSkeletonManifest {
   // Map of MPathElement -> BssmEntry
   1: ShardedMapNode subentries;
+} (rust.exhaustive)
+
+// BssmV3 is an optimized version of Bssm that differs from it in two ways:
+//
+// 1) It uses ShardedMapV2 instead of ShardedMap which avoids creating un-cachable blobs,
+// instead dividing the manifest into closely sized blobs.
+//
+// 2) Stores the sharded map inlined without a layer of indirection, and relies only
+// on the sharded map to decide which parts of the manifest should be inlined and
+// which should be stored in a separate blob. This avoids the large number of tiny
+// blobs that Bssm creates due to how unique basenames tend to be.
+struct BssmV3File {} (rust.exhaustive)
+struct BssmV3Directory {
+  1: ShardedMapV2Node subentries;
+} (rust.exhaustive)
+
+union BssmV3Entry {
+  1: BssmV3File file;
+  2: BssmV3Directory directory;
+} (rust.exhaustive)
+
+// TestManifest is a manifest type intended only to be used in tests. It contains
+// only the file names and the maximum basename length of all files in each directory.
+struct TestManifestFile {} (rust.exhaustive)
+struct TestManifestDirectory {
+  1: TestManifestId id;
+  2: i64 max_basename_length;
+} (rust.exhaustive)
+
+union TestManifestEntry {
+  1: TestManifestFile file;
+  2: TestManifestDirectory directory;
+} (rust.exhaustive)
+
+struct TestManifest {
+  1: map<MPathElement, TestManifestEntry> (
+    rust.type = "sorted_vector_map::SortedVectorMap",
+  ) subentries;
+} (rust.exhaustive)
+
+// TestShardedManifest is a sharded version of TestManifest (uses ShardedMapV2 in place of SortedVectorMap).
+struct TestShardedManifestFile {
+  // Storing the basename length of the file instead of calculating it from the edges from its parent
+  // simplifies the derivation logic.
+  1: i64 basename_length;
+} (rust.exhaustive)
+struct TestShardedManifestDirectory {
+  1: TestShardedManifestId id;
+  2: i64 max_basename_length;
+} (rust.exhaustive)
+
+union TestShardedManifestEntry {
+  1: TestShardedManifestFile file;
+  2: TestShardedManifestDirectory directory;
+} (rust.exhaustive)
+
+struct TestShardedManifest {
+  1: ShardedMapV2Node subentries;
 } (rust.exhaustive)
 
 struct FsnodeFile {
@@ -594,7 +709,7 @@ struct BlameRange {
 
 struct Blame {
   1: list<BlameRange> ranges;
-  2: list<MPath> paths;
+  2: list<NonRootMPath> paths;
 } (rust.exhaustive)
 
 union BlameMaybeRejected {
@@ -718,7 +833,7 @@ struct BlameDataV2 {
   // reduce repetition of data in ranges.  Since files are not often moved, and
   // for simplicity, this includes all paths the file has ever been located at,
   // even if they are no longer referenced by any of the ranges.
-  4: list<MPath> paths;
+  4: list<NonRootMPath> paths;
 } (rust.exhaustive)
 
 union BlameV2 {

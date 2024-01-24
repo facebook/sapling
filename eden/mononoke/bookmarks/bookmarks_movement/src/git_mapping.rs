@@ -303,13 +303,13 @@ mod tests {
         let dag = create_from_dag_with_changes(
             ctx,
             repo.as_blob_repo(),
-            r##"
+            r"
                 Z-A-B-C-D
                      \
                       X-Y
                        \
                         E-F
-            "##,
+            ",
             changes! {
                 "A" => |c| add_git_extras(c, ONES_GIT_SHA1),
                 "B" => |c| add_git_extras(c, TWOS_GIT_SHA1),

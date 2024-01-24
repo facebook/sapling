@@ -41,7 +41,7 @@ pub(crate) async fn create_new_batch(
     .await?;
 
     if parent_batches.len() < 2 {
-        match parent_batches.get(0) {
+        match parent_batches.first() {
             Some(parent_batch) => {
                 parent_batch
                     .prepend_child_with_single_parent(ctx, blobstore, linknode)
@@ -86,7 +86,7 @@ fn create_merged_list(
     // parents_of_merge_commits preserve the order of `parents_lists`
     let mut parents_of_merge_commit = vec![];
     for list in parents_lists.iter() {
-        if let Some((p, _)) = list.get(0) {
+        if let Some((p, _)) = list.first() {
             parents_of_merge_commit.push(FastlogParent::Known(*p));
         }
     }

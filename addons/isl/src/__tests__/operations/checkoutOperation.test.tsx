@@ -15,7 +15,7 @@ import {
   COMMIT,
   closeCommitInfoSidebar,
 } from '../../testUtils';
-import {CommandRunner, SucceedableRevset} from '../../types';
+import {CommandRunner, succeedableRevset} from '../../types';
 import {fireEvent, render, screen, within} from '@testing-library/react';
 import {act} from 'react-dom/test-utils';
 
@@ -51,13 +51,19 @@ describe('GotoOperation', () => {
     fireEvent.click(gotoButton as Element);
   };
 
+  it('goto button is accessible', () => {
+    expect(screen.getByLabelText('Go to commit "Commit A"')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Go to commit "Commit B"')).not.toBeInTheDocument(); // already head, no goto button
+    expect(screen.getByLabelText('Go to commit "Commit C"')).toBeInTheDocument();
+  });
+
   it('runs goto', () => {
     clickGoto('a');
 
     expectMessageSentToServer({
       type: 'runOperation',
       operation: {
-        args: ['goto', '--rev', SucceedableRevset('a')],
+        args: ['goto', '--rev', succeedableRevset('a')],
         id: expect.anything(),
         runner: CommandRunner.Sapling,
         trackEventName: 'GotoOperation',
@@ -102,7 +108,7 @@ describe('GotoOperation', () => {
       expectMessageSentToServer({
         type: 'runOperation',
         operation: {
-          args: ['goto', '--rev', SucceedableRevset('remote/master')],
+          args: ['goto', '--rev', succeedableRevset('remote/master')],
           id: expect.anything(),
           runner: CommandRunner.Sapling,
           trackEventName: 'GotoOperation',

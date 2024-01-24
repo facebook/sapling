@@ -1,0 +1,55 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "mononoke_api_hg",
+    srcs = glob(["src/**/*.rs"]),
+    named_deps = {
+    },
+    test_deps = [
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/repo_factory:test_repo_factory",
+        "//eden/mononoke/tests/fixtures:fixtures",
+        "//eden/mononoke/tests/utils:tests_utils",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:futures-util",
+        "fbsource//third-party/rust:slog",
+        "//eden/mononoke/blobrepo:blobrepo",
+        "//eden/mononoke/blobrepo:blobrepo_hg",
+        "//eden/mononoke/blobrepo:changeset_fetcher",
+        "//eden/mononoke/blobrepo:repo_blobstore",
+        "//eden/mononoke/blobstore:blobstore",
+        "//eden/mononoke/blobstore:ephemeral_blobstore",
+        "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
+        "//eden/mononoke/bookmarks:bookmarks",
+        "//eden/mononoke/changesets:changesets",
+        "//eden/mononoke/derived_data/mercurial_derivation:mercurial_derivation",
+        "//eden/mononoke/features/repo_update_logger:repo_update_logger",
+        "//eden/mononoke/filestore:filestore",
+        "//eden/mononoke/hgproto:hgproto",
+        "//eden/mononoke/manifest:manifest",
+        "//eden/mononoke/mercurial:mercurial_mutation",
+        "//eden/mononoke/mercurial:mercurial_types",
+        "//eden/mononoke/metaconfig:metaconfig_types",
+        "//eden/mononoke/mononoke_api:mononoke_api",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/phases:phases",
+        "//eden/mononoke/repo_attributes/commit_graph/commit_graph:commit_graph",
+        "//eden/mononoke/repo_client:getbundle_response",
+        "//eden/mononoke/repo_client:remotefilelog",
+        "//eden/mononoke/repo_client:repo_client",
+        "//eden/mononoke/repo_client:unbundle",
+        "//eden/mononoke/segmented_changelog:segmented_changelog",
+        "//eden/mononoke/server/context:context",
+        "//eden/scm/lib/edenapi/types:edenapi_types",
+        "//eden/scm/lib/revisionstore:revisionstore_types",
+    ],
+)

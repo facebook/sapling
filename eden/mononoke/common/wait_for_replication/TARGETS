@@ -1,0 +1,21 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mononoke")
+
+rust_library(
+    name = "wait_for_replication",
+    srcs = glob([
+        "src/**/*.rs",
+    ]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:slog",
+        "fbsource//third-party/rust:tokio",
+        "//common/rust/shed/cached_config:cached_config",
+        "//common/rust/shed/fbinit:fbinit",
+        "//configerator/structs/scm/mononoke/mysql/replication_lag:replication_lag_config-rust",
+        "//eden/mononoke/common/rust/sql_ext:sql_ext",
+        "//eden/mononoke/metaconfig:metaconfig_types",
+    ],
+)

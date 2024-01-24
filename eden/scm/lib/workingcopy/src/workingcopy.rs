@@ -5,24 +5,24 @@
  * GNU General Public License version 2.
  */
 
+use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::SystemTime;
 
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
+#[cfg(feature = "eden")]
+use edenfs_client::EdenFsClient;
 use identity::Identity;
-use io::IO;
 use manifest::FileType;
 use manifest::Manifest;
 use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
 use parking_lot::Mutex;
-use parking_lot::RwLock;
 use pathmatcher::DifferenceMatcher;
 use pathmatcher::DynMatcher;
 use pathmatcher::GitignoreMatcher;
@@ -30,48 +30,54 @@ use pathmatcher::IntersectMatcher;
 use pathmatcher::Matcher;
 use pathmatcher::NegateMatcher;
 use pathmatcher::UnionMatcher;
+use repolock::LockedPath;
 use repolock::RepoLocker;
+use repostate::MergeState;
 use status::FileStatus;
 use status::Status;
 use status::StatusBuilder;
-use storemodel::ReadFileContents;
+use storemodel::FileStore;
+use termlogger::TermLogger;
+use treestate::dirstate::Dirstate;
+use treestate::dirstate::TreeStateFields;
 use treestate::filestate::StateFlags;
+use treestate::serialization::Serializable;
 use treestate::tree::VisitorResult;
 use treestate::treestate::TreeState;
-use types::hgid::NULL_ID;
 use types::repo::StorageFormat;
 use types::HgId;
 use types::RepoPath;
 use types::RepoPathBuf;
+use util::file::atomic_write;
+use util::file::read_to_string_if_exists;
+use util::file::unlink_if_exists;
 use vfs::VFS;
 
 #[cfg(feature = "eden")]
 use crate::edenfs::EdenFileSystem;
 use crate::errors;
+use crate::filesystem::FileSystem;
 use crate::filesystem::FileSystemType;
 use crate::filesystem::PendingChange;
-use crate::filesystem::PendingChanges;
 use crate::git::parse_submodules;
 use crate::physicalfs::PhysicalFileSystem;
 use crate::status::compute_status;
 use crate::util::walk_treestate;
 use crate::watchmanfs::WatchmanFileSystem;
 
-type ArcReadFileContents = Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>;
-type ArcReadTreeManifest = Arc<dyn ReadTreeManifest + Send + Sync>;
+#[cfg(not(feature = "eden"))]
+pub struct EdenFsClient {}
 
-struct FileSystem {
-    vfs: VFS,
-    file_store: ArcReadFileContents,
-    file_system_type: FileSystemType,
-    inner: Box<dyn PendingChanges + Send>,
-}
-
-impl AsRef<Box<dyn PendingChanges + Send>> for FileSystem {
-    fn as_ref(&self) -> &Box<dyn PendingChanges + Send> {
-        &self.inner
+#[cfg(not(feature = "eden"))]
+impl EdenFsClient {
+    pub fn from_wdir(_wdir_root: &Path) -> anyhow::Result<Self> {
+        panic!("cannot use EdenFS in a non-EdenFS build");
     }
 }
+
+type ArcFileStore = Arc<dyn FileStore>;
+type ArcReadTreeManifest = Arc<dyn ReadTreeManifest + Send + Sync>;
+type BoxFileSystem = Box<dyn FileSystem + Send>;
 
 pub struct WorkingCopy {
     vfs: VFS,
@@ -79,25 +85,114 @@ pub struct WorkingCopy {
     format: StorageFormat,
     treestate: Arc<Mutex<TreeState>>,
     tree_resolver: ArcReadTreeManifest,
-    filesystem: Mutex<FileSystem>,
+    filestore: ArcFileStore,
+    pub(crate) filesystem: Mutex<BoxFileSystem>,
     ignore_matcher: Arc<GitignoreMatcher>,
-    locker: Arc<RepoLocker>,
-    dot_hg_path: PathBuf,
+    pub(crate) locker: Arc<RepoLocker>,
+    pub(crate) dot_hg_path: PathBuf,
+    eden_client: Option<Arc<EdenFsClient>>,
 }
+
+const ACTIVE_BOOKMARK_FILE: &str = "bookmarks.current";
 
 impl WorkingCopy {
     pub fn new(
-        vfs: VFS,
-        format: StorageFormat,
-        // TODO: Have constructor figure out FileSystemType
-        file_system_type: FileSystemType,
-        treestate: Arc<Mutex<TreeState>>,
-        tree_resolver: ArcReadTreeManifest,
-        filestore: ArcReadFileContents,
+        path: &Path,
         config: &dyn Config,
+        format: StorageFormat,
+        tree_resolver: ArcReadTreeManifest,
+        filestore: ArcFileStore,
         locker: Arc<RepoLocker>,
+        // For dirstate
+        dot_dir: &Path,
+        has_requirement: &dyn Fn(&str) -> bool,
     ) -> Result<Self> {
-        tracing::debug!(target: "dirstate_size", dirstate_size=treestate.lock().len());
+        tracing::trace!("initializing vfs at {path:?}");
+        let vfs = VFS::new(path.to_path_buf())?;
+
+        let is_eden = has_requirement("eden");
+
+        // In case the "requires" file gets corrupted, check `.eden` directory
+        // and prevent treating edenfs as non-edenfs.
+        if !is_eden && path.join(".eden").is_dir() {
+            anyhow::bail!(
+                "Detected conflicting information about whether EdenFS is enabled.\n\
+                 This might indicate repo metadata (ex. {}) corruption.\n\
+                 To avoid further corruption, this is a fatal error.\n\
+                 Contact the Source Control support team for investigation.",
+                dot_dir.join("requires").display()
+            );
+        }
+
+        let fsmonitor_ext = config.get("extensions", "fsmonitor");
+        let fsmonitor_mode = config.get_nonempty("fsmonitor", "mode");
+        let is_watchman = if fsmonitor_ext.is_none() || fsmonitor_ext == Some("!".into()) {
+            false
+        } else {
+            fsmonitor_mode.is_none() || fsmonitor_mode == Some("on".into())
+        };
+        let file_system_type = match (is_eden, is_watchman) {
+            (true, _) => FileSystemType::Eden,
+            (false, true) => FileSystemType::Watchman,
+            (false, false) => FileSystemType::Normal,
+        };
+        let treestate = {
+            let case_sensitive = vfs.case_sensitive();
+            tracing::trace!("case sensitive: {case_sensitive}");
+            let dirstate_path = dot_dir.join("dirstate");
+            let treestate = match file_system_type {
+                FileSystemType::Eden => {
+                    tracing::trace!("loading edenfs dirstate");
+                    TreeState::from_eden_dirstate(dirstate_path, case_sensitive)?
+                }
+                _ => {
+                    let treestate_path = dot_dir.join("treestate");
+                    if util::file::exists(&dirstate_path)
+                        .map_err(anyhow::Error::from)?
+                        .is_some()
+                    {
+                        tracing::trace!("reading dirstate file");
+                        let mut buf =
+                            util::file::open(dirstate_path, "r").map_err(anyhow::Error::from)?;
+                        tracing::trace!("deserializing dirstate");
+                        let dirstate = Dirstate::deserialize(&mut buf)?;
+                        let fields = dirstate
+                            .tree_state
+                            .ok_or_else(|| anyhow!("missing treestate fields on dirstate"))?;
+
+                        let filename = fields.tree_filename;
+                        let root_id = fields.tree_root_id;
+                        tracing::trace!("loading treestate {filename} {root_id:?}");
+                        TreeState::open(treestate_path.join(filename), root_id, case_sensitive)?
+                    } else {
+                        tracing::trace!("creating treestate");
+                        let (treestate, root_id) = TreeState::new(&treestate_path, case_sensitive)?;
+
+                        tracing::trace!("creating dirstate");
+                        let dirstate = Dirstate {
+                            p1: *HgId::null_id(),
+                            p2: *HgId::null_id(),
+                            tree_state: Some(TreeStateFields {
+                                tree_filename: treestate.file_name()?,
+                                tree_root_id: root_id,
+                                // TODO: set threshold
+                                repack_threshold: None,
+                            }),
+                        };
+
+                        tracing::trace!(target: "repo::workingcopy", "creating dirstate file");
+                        let mut file =
+                            util::file::create(dirstate_path).map_err(anyhow::Error::from)?;
+
+                        tracing::trace!(target: "repo::workingcopy", "serializing dirstate");
+                        dirstate.serialize(&mut file)?;
+                        treestate
+                    }
+                }
+            };
+            tracing::debug!(target: "dirstate_size", dirstate_size=treestate.len());
+            Arc::new(Mutex::new(treestate))
+        };
 
         let ignore_matcher = Arc::new(GitignoreMatcher::new(
             vfs.root(),
@@ -108,17 +203,18 @@ impl WorkingCopy {
             vfs.case_sensitive(),
         ));
 
-        let filesystem = Mutex::new(Self::construct_file_system(
+        let (filesystem, eden_client) = Self::construct_file_system(
             vfs.clone(),
             file_system_type,
             treestate.clone(),
             tree_resolver.clone(),
-            filestore,
+            filestore.clone(),
             locker.clone(),
-        )?);
+        )?;
+        let filesystem = Mutex::new(filesystem);
 
         let root = vfs.root();
-        let ident = match identity::sniff_dir(&root)? {
+        let ident = match identity::sniff_dir(root)? {
             Some(ident) => ident,
             None => {
                 return Err(errors::RepoNotFound(root.to_string_lossy().to_string()).into());
@@ -132,10 +228,12 @@ impl WorkingCopy {
             ident,
             treestate,
             tree_resolver,
+            filestore,
             filesystem,
             ignore_matcher,
             locker,
             dot_hg_path,
+            eden_client,
         })
     }
 
@@ -144,12 +242,12 @@ impl WorkingCopy {
         &self.dot_hg_path
     }
 
-    pub fn lock(&self) -> Result<repolock::RepoLockHandle, repolock::LockError> {
-        self.locker.lock_working_copy(self.dot_hg_path.clone())
-    }
-
-    pub fn ensure_locked(&self) -> Result<(), repolock::LockError> {
-        self.locker.ensure_working_copy_locked(&self.dot_hg_path)
+    pub fn lock(&self) -> Result<LockedWorkingCopy, repolock::LockError> {
+        let locked_path = self.locker.lock_working_copy(self.dot_hg_path.clone())?;
+        Ok(LockedWorkingCopy {
+            dot_hg_path: locked_path,
+            wc: self,
+        })
     }
 
     pub fn treestate(&self) -> Arc<Mutex<TreeState>> {
@@ -164,27 +262,30 @@ impl WorkingCopy {
         self.treestate.lock().parents().collect()
     }
 
-    pub fn set_parents(&mut self, parents: &mut dyn Iterator<Item = &HgId>) -> Result<()> {
-        self.treestate.lock().set_parents(parents)
+    pub fn filestore(&self) -> ArcFileStore {
+        self.filestore.clone()
+    }
+
+    pub fn tree_resolver(&self) -> ArcReadTreeManifest {
+        self.tree_resolver.clone()
     }
 
     pub(crate) fn current_manifests(
         treestate: &TreeState,
         tree_resolver: &ArcReadTreeManifest,
-    ) -> Result<Vec<Arc<RwLock<TreeManifest>>>> {
+    ) -> Result<Vec<Arc<TreeManifest>>> {
         let mut parents = treestate.parents().peekable();
         if parents.peek_mut().is_some() {
             parents
-                .into_iter()
-                .map(|p| tree_resolver.get(&p?))
+                .map(|p| Ok(Arc::new(tree_resolver.get(&p?)?)))
                 .collect()
         } else {
             let null_commit = HgId::null_id().clone();
-            Ok(vec![
+            Ok(vec![Arc::new(
                 tree_resolver
                     .get(&null_commit)
                     .context("resolving null commit tree")?,
-            ])
+            )])
         }
     }
 
@@ -207,43 +308,47 @@ impl WorkingCopy {
         file_system_type: FileSystemType,
         treestate: Arc<Mutex<TreeState>>,
         tree_resolver: ArcReadTreeManifest,
-        store: ArcReadFileContents,
+        store: ArcFileStore,
         locker: Arc<RepoLocker>,
-    ) -> Result<FileSystem> {
-        let inner: Box<dyn PendingChanges + Send> = match file_system_type {
-            FileSystemType::Normal => Box::new(PhysicalFileSystem::new(
-                vfs.clone(),
-                tree_resolver,
-                store.clone(),
-                treestate.clone(),
-                locker,
-            )?),
-            FileSystemType::Watchman => Box::new(WatchmanFileSystem::new(
-                vfs.clone(),
-                treestate.clone(),
-                tree_resolver,
-                store.clone(),
-                locker,
-            )?),
+    ) -> Result<(BoxFileSystem, Option<Arc<EdenFsClient>>)> {
+        Ok(match file_system_type {
+            FileSystemType::Normal => (
+                Box::new(PhysicalFileSystem::new(
+                    vfs.clone(),
+                    tree_resolver,
+                    store.clone(),
+                    treestate,
+                    locker,
+                )?),
+                None,
+            ),
+            FileSystemType::Watchman => (
+                Box::new(WatchmanFileSystem::new(
+                    vfs.clone(),
+                    tree_resolver,
+                    store.clone(),
+                    treestate,
+                    locker,
+                )?),
+                None,
+            ),
             FileSystemType::Eden => {
                 #[cfg(not(feature = "eden"))]
                 panic!("cannot use EdenFS in a non-EdenFS build");
                 #[cfg(feature = "eden")]
-                Box::new(EdenFileSystem::new(
-                    vfs.clone(),
-                    treestate
-                        .lock()
-                        .parents()
-                        .next()
-                        .unwrap_or_else(|| Ok(NULL_ID))?,
-                )?)
+                {
+                    let client = Arc::new(EdenFsClient::from_wdir(vfs.root())?);
+                    (
+                        Box::new(EdenFileSystem::new(
+                            treestate,
+                            client.clone(),
+                            vfs.clone(),
+                            store.clone(),
+                        )?),
+                        Some(client),
+                    )
+                }
             }
-        };
-        Ok(FileSystem {
-            vfs,
-            file_store: store,
-            file_system_type,
-            inner,
         })
     }
 
@@ -276,45 +381,12 @@ impl WorkingCopy {
         Ok(added_files)
     }
 
-    fn sparse_matcher(
-        &self,
-        manifests: &[Arc<RwLock<TreeManifest>>],
-    ) -> Result<Option<DynMatcher>> {
-        assert!(!manifests.is_empty());
-
-        let fs = &self.filesystem.lock();
-
-        if fs.file_system_type == FileSystemType::Eden {
-            return Ok(None);
-        }
-
-        let mut sparse_matchers: Vec<DynMatcher> = Vec::new();
-        for manifest in manifests.iter() {
-            if let Some((matcher, _hash)) = crate::sparse::repo_matcher(
-                &self.vfs,
-                &fs.vfs.root().join(self.ident.dot_dir()),
-                manifest.read().clone(),
-                fs.file_store.clone(),
-            )? {
-                sparse_matchers.push(matcher);
-            }
-        }
-
-        if sparse_matchers.is_empty() {
-            // Indicates we have no .hg/sparse (i.e. sparse is disabled).
-            Ok(None)
-        } else {
-            Ok(Some(Arc::new(UnionMatcher::new(sparse_matchers))))
-        }
-    }
-
     pub fn status(
         &self,
         mut matcher: DynMatcher,
-        last_write: SystemTime,
         include_ignored: bool,
         config: &dyn Config,
-        io: &IO,
+        lgr: &TermLogger,
     ) -> Result<Status> {
         let added_files = self.added_files()?;
 
@@ -331,7 +403,10 @@ impl WorkingCopy {
             )));
         }
 
-        let sparse_matcher = self.sparse_matcher(&manifests)?;
+        let sparse_matcher = self
+            .filesystem
+            .lock()
+            .sparse_matcher(&manifests, self.ident.dot_dir())?;
 
         if let Some(sparse) = sparse_matcher.clone() {
             matcher = Arc::new(IntersectMatcher::new(vec![matcher, sparse]));
@@ -364,7 +439,7 @@ impl WorkingCopy {
             let git_modules_path = self.vfs.join(".gitmodules".try_into()?);
             if git_modules_path.exists() {
                 ignore_dirs.extend(
-                    parse_submodules(&util::file::read(&git_modules_path)?)?
+                    parse_submodules(&fs_err::read(&git_modules_path)?)?
                         .into_iter()
                         .map(|s| PathBuf::from(s.path)),
                 );
@@ -374,15 +449,13 @@ impl WorkingCopy {
         let pending_changes = self
             .filesystem
             .lock()
-            .inner
             .pending_changes(
                 matcher.clone(),
                 ignore_matcher,
                 ignore_dirs,
                 include_ignored,
-                last_write,
                 config,
-                io,
+                lgr,
             )?
             .filter_map(|result| match result {
                 Ok(change_type) => match matcher.matches_file(change_type.get_path()) {
@@ -419,7 +492,7 @@ impl WorkingCopy {
                 }
             }));
 
-        let p1_manifest = &*manifests[0].read();
+        let p1_manifest = manifests[0].as_ref();
         let mut status_builder = compute_status(
             p1_manifest,
             self.treestate.clone(),
@@ -486,6 +559,7 @@ impl WorkingCopy {
             matcher,
             StateFlags::COPIED,
             StateFlags::empty(),
+            StateFlags::empty(),
             |path, state| {
                 let copied_path = state
                     .copied
@@ -501,5 +575,85 @@ impl WorkingCopy {
         )?;
 
         Ok(copied)
+    }
+
+    pub fn eden_client(&self) -> Result<Arc<EdenFsClient>> {
+        self.eden_client
+            .clone()
+            .context("EdenFS client not available in current working copy")
+    }
+
+    pub fn read_merge_state(&self) -> Result<Option<MergeState>> {
+        // Conceptually it seems like read_merge_state should be on LockedWorkingCopy.
+        // In practice, light weight operations such as status+morestatus read the
+        // merge state without a lock, so we can't require a lock. The merge
+        // state is written atomically so we won't see an incomplete merge
+        // state, but if we read other state files without locking then things
+        // can be inconsistent.
+
+        MergeState::read(&self.dot_hg_path().join("merge/state2"))
+    }
+
+    pub fn active_bookmark(&self) -> Result<Option<String>> {
+        Ok(read_to_string_if_exists(
+            self.dot_hg_path.join(ACTIVE_BOOKMARK_FILE),
+        )?)
+    }
+}
+
+pub struct LockedWorkingCopy<'a> {
+    dot_hg_path: LockedPath,
+    wc: &'a WorkingCopy,
+}
+
+impl<'a> std::ops::Deref for LockedWorkingCopy<'a> {
+    type Target = WorkingCopy;
+
+    fn deref(&self) -> &Self::Target {
+        self.wc
+    }
+}
+
+impl<'a> LockedWorkingCopy<'a> {
+    pub fn locked_dot_hg_path(&self) -> &LockedPath {
+        &self.dot_hg_path
+    }
+
+    pub fn write_merge_state(&self, ms: &MergeState) -> Result<()> {
+        let dir = self.dot_hg_path.join("merge");
+        fs_err::create_dir_all(&dir)?;
+        let mut f = util::file::atomic_open(&dir.join("state2"))?;
+        ms.serialize(f.as_file())?;
+        f.save()?;
+        Ok(())
+    }
+
+    pub fn set_parents(&self, parents: Vec<HgId>, parent_tree_hash: Option<HgId>) -> Result<()> {
+        let p1 = parents
+            .get(0)
+            .context("At least one parent is required for setting parents")?
+            .clone();
+        let p2 = parents.get(1).copied();
+        self.treestate.lock().set_parents(&mut parents.iter())?;
+        self.filesystem.lock().set_parents(p1, p2, parent_tree_hash)
+    }
+
+    pub fn clear_merge_state(&self) -> Result<()> {
+        let merge_state_dir = self.dot_hg_path().join("merge");
+        if util::file::exists(&merge_state_dir)
+            .context("clearing merge state")?
+            .is_some()
+        {
+            fs_err::remove_dir_all(&merge_state_dir)?;
+        }
+        Ok(())
+    }
+
+    pub fn set_active_bookmark(&self, bm: Option<String>) -> Result<()> {
+        let active_path = self.dot_hg_path.join(ACTIVE_BOOKMARK_FILE);
+        match bm {
+            Some(bm) => Ok(atomic_write(&active_path, |f| write!(f, "{bm}")).map(|_f| ())?),
+            None => Ok(unlink_if_exists(&active_path)?),
+        }
     }
 }

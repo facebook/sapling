@@ -8,16 +8,11 @@
 
 setup configuration
   $ INFINITEPUSH_NAMESPACE_REGEX='^scratch/.+$' setup_common_config
-  $ merge_tunables <<EOF
+  $ merge_just_knobs <<EOF
   > {
-  >   "killswitches": {
-  >     "mutation_accept_for_infinitepush": true,
-  >     "mutation_advertise_for_infinitepush": true,
-  >     "mutation_generate_for_draft": true
-  >   },
-  >   "ints": {
-  >     "zstd_compression_level": 3
-  >   }
+  >    "ints": {
+  >      "scm/mononoke:zstd_compression_level": 3
+  >    }
   > }
   > EOF
   $ cd $TESTTMP
@@ -634,12 +629,12 @@ More sophisticated test for phases
   
   changeset: bf677f20a49dc5ac94946f3d91ad181f8a6fdbab
   author: test
-  date: Thu, 01 Jan 1970 00:00:00 +0000
+  date: Thu, 1 Jan 1970 00:00:00 +0000
   summary: zzz
   
   changeset: b9f080ea95005f3513a22aa15f1f74d7371ce5d4
   author: test
-  date: Thu, 01 Jan 1970 00:00:00 +0000
+  date: Thu, 1 Jan 1970 00:00:00 +0000
   summary: zzzzz
   !
   [255]

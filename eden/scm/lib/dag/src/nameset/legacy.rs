@@ -45,11 +45,7 @@ mod tests {
         use LegacyCodeNeedIdAccess as L;
         with_dag(|dag| -> Result<()> {
             let set1 = r(dag.ancestors("G".into()))?;
-            let spans: IdSet = (
-                L,
-                set1.as_any().downcast_ref::<IdStaticSet>().unwrap().clone(),
-            )
-                .into();
+            let spans: IdSet = (L, set1.as_any().downcast_ref::<IdStaticSet>().unwrap()).into();
             let set2: NameSet = (L, spans.clone(), dag).into();
             assert_eq!(format!("{:?}", &set1), "<spans [E:G+4:6, A:B+0:1]>");
             assert_eq!(format!("{:?}", &set2), "<spans [E:G+4:6, A:B+0:1]>");

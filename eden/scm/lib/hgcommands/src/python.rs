@@ -5,19 +5,17 @@
  * GNU General Public License version 2.
  */
 
+use std::ffi::CStr;
 use std::ffi::CString;
 
 use ffi::PyEval_InitThreads;
 use ffi::PyGILState_Ensure;
-use ffi::PySys_SetArgv;
 use ffi::PyUnicode_AsWideCharString;
 use ffi::PyUnicode_FromString;
 use ffi::Py_DECREF;
 use ffi::Py_Finalize;
-use ffi::Py_InitializeEx;
 use ffi::Py_IsInitialized;
 use ffi::Py_Main;
-use ffi::Py_SetProgramName;
 use libc::c_int;
 use libc::wchar_t;
 use python3_sys as ffi;
@@ -45,14 +43,6 @@ fn to_py_argv(args: &[String]) -> Vec<*mut PyChar> {
     argv
 }
 
-pub fn py_set_argv(args: &[String]) {
-    let mut argv = to_py_argv(args);
-    unsafe {
-        // This inserts argv[0] path to sys.path, useful for running local builds.
-        PySys_SetArgv((argv.len() - 1) as c_int, argv.as_mut_ptr());
-    }
-}
-
 pub fn py_main(args: &[String]) -> u8 {
     let mut argv = to_py_argv(args);
     unsafe {
@@ -62,16 +52,95 @@ pub fn py_main(args: &[String]) -> u8 {
     }
 }
 
-pub fn py_set_program_name(name: &str) {
-    unsafe {
-        Py_SetProgramName(to_py_str(name));
-    }
+macro_rules! check_status {
+    ($status: expr, $config: expr) => {
+        let status = $status;
+        if ffi::PyStatus_Exception(status) != 0 {
+            if let Some(mut config) = $config {
+                ffi::PyConfig_Clear(&mut config);
+            }
+            ffi::Py_ExitStatusException(status);
+            unreachable!();
+        }
+    };
 }
 
-pub fn py_initialize() {
+/// Initialize Python interpreter given args and optional Sapling Python home.
+/// `args[0]` is the executable name to be used. If specified, `sapling_home`
+/// points to the directory containing the "sapling" Python package. This allows
+/// Sapling Python modules to be loaded from disk during development.
+pub fn py_initialize(args: &[String], sapling_home: Option<&String>) {
     unsafe {
-        // Avoid overriding exiting Ctrl+C signal handlers.
-        Py_InitializeEx(0);
+        let mut pre_config = ffi::PyPreConfig::default();
+        ffi::PyPreConfig_InitPythonConfig(&mut pre_config);
+
+        pre_config.parse_argv = 0;
+        pre_config.utf8_mode = 1;
+
+        check_status!(ffi::Py_PreInitialize(&pre_config), None);
+
+        let mut config = ffi::PyConfig::default();
+
+        // Ideally we could use PyConfig_InitIsolatedConfig, but we rely on some
+        // of the vanilla initialization logic to find the std lib, at least.
+        ffi::PyConfig_InitPythonConfig(&mut config);
+
+        config.install_signal_handlers = 0;
+        config.site_import = 0;
+        config.parse_argv = 0;
+
+        // This allows IPython to be installed in user site dir.
+        config.user_site_directory = 1;
+
+        // This assumes Python has been pre-initialized, and filesystem encoding
+        // is utf-8 (both done above).
+        unsafe fn to_wide(s: impl AsRef<str>) -> *const PyChar {
+            let s = CString::new(s.as_ref()).unwrap();
+            ffi::Py_DecodeLocale(s.as_ptr(), std::ptr::null_mut())
+        }
+
+        check_status!(
+            ffi::PyConfig_SetString(&mut config, &mut config.executable, to_wide(&args[0])),
+            Some(config)
+        );
+
+        for arg in args.iter() {
+            check_status!(
+                ffi::PyWideStringList_Append(&mut config.argv, to_wide(arg)),
+                Some(config)
+            );
+        }
+
+        check_status!(ffi::PyConfig_Read(&mut config), Some(config));
+
+        // "3.10.9 (v3.10.9:1dd9be6584, Dec  6 2022, 14:37:36) [Clang 13.0.0 (clang-1300.0.29.30)]"
+        let version = CStr::from_ptr(ffi::Py_GetVersion());
+        let minor_version: Option<u8> = version
+            .to_string_lossy()
+            .strip_prefix("3.")
+            .and_then(|v| v.split_once(|c: char| !c.is_ascii_digit()))
+            .and_then(|(v, _)| v.parse().ok());
+
+        // In Python 3.10 we need to set `config.module_search_paths_set = 1` or
+        // else Py_Main (for "debugpython") always overwrites sys.path.
+        //
+        // In Python 3.11, Py_Main doesn't clobber sys.path, so our
+        // sys.path.append(SAPLING_PYTHON_HOME) takes effect in
+        // HgPython::update_meta_path.
+        if minor_version == Some(10) {
+            if let Some(home) = sapling_home {
+                // This tells Py_Main to not overwrite sys.path and to copy our below value.
+                config.module_search_paths_set = 1;
+                check_status!(
+                    ffi::PyWideStringList_Append(&mut config.module_search_paths, to_wide(home)),
+                    Some(config)
+                );
+            }
+        }
+
+        check_status!(ffi::Py_InitializeFromConfig(&config), Some(config));
+
+        ffi::PyConfig_Clear(&mut config);
     }
 }
 

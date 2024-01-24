@@ -37,7 +37,7 @@ impl AsyncLimiter {
         let (dispatch, dispatch_recv) = mpsc::unbounded();
         let (cancel, cancel_recv) = mpsc::channel(1);
 
-        tokio_shim::task::spawn(async move {
+        tokio::task::spawn(async move {
             let worker = dispatch_recv
                 .zip(futures::stream::select(
                     cancel_recv,

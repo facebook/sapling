@@ -35,7 +35,7 @@ Make commit and backup it.
 
 Make first commit public (by doing push) and then backup new commit
   $ hg debugmakepublic .
-  $ hg push --to master --create --force
+  $ hg push --to master --create 
   pushing rev 7e6a6fd9c7c8 to destination ssh://user@dummy/repo bookmark master
   searching for changes
   exporting bookmark master

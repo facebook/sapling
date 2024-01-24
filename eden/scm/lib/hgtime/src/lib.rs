@@ -125,7 +125,7 @@ impl HgTime {
 
     pub fn to_utc(self) -> DateTime<Utc> {
         let naive = NaiveDateTime::from_timestamp_opt(self.unixtime, 0).unwrap();
-        DateTime::from_utc(naive, Utc)
+        naive.and_utc()
     }
 
     /// Converts to `NaiveDateTime` with local timezone specified by `offset`.
@@ -226,8 +226,8 @@ impl HgTime {
                 let phrases: Vec<_> = date.split(" to ").collect();
                 if phrases.len() == 2 {
                     if let (Some(start), Some(end)) = (
-                        Self::parse_range_internal(&phrases[0], false),
-                        Self::parse_range_internal(&phrases[1], false),
+                        Self::parse_range_internal(phrases[0], false),
+                        Self::parse_range_internal(phrases[1], false),
                     ) {
                         Some(start.start..end.end)
                     } else {
@@ -476,7 +476,7 @@ pub fn set_default_offset(offset: i32) {
 
 fn is_valid_offset(offset: i32) -> bool {
     // UTC-12 to UTC+14.
-    offset >= -50400 && offset <= 43200
+    (-50400..=43200).contains(&offset)
 }
 
 /// Lower bound for default values in dates.
@@ -636,7 +636,7 @@ mod tests {
     fn d(date: &str, duration: Duration) -> String {
         match HgTime::parse(date) {
             Some(time) => {
-                let value = (time.unixtime as i64 - HgTime::now().unwrap().unixtime as i64).abs()
+                let value = (time.unixtime - HgTime::now().unwrap().unixtime).abs()
                     / duration.num_seconds();
                 format!("{}", value)
             }

@@ -1,0 +1,25 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "bounded_traversal",
+    srcs = glob(["src/**/*.rs"]),
+    test_deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:maplit",
+        "fbsource//third-party/rust:pretty_assertions",
+        "fbsource//third-party/rust:quickcheck",
+        "fbsource//third-party/rust:quickcheck_async",
+        "fbsource//third-party/rust:tokio",
+        "//common/rust/shed/cloned:cloned",
+        "//common/rust/shed/lock_ext:lock_ext",
+    ],
+    deps = [
+        "fbsource//third-party/rust:either",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:smallvec",
+        "fbsource//third-party/rust:thiserror",
+    ],
+)

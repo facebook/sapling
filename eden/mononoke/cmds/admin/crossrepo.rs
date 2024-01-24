@@ -25,6 +25,8 @@ use clap_old::App;
 use clap_old::Arg;
 use clap_old::ArgMatches;
 use clap_old::SubCommand;
+use clientinfo::ClientEntryPoint;
+use clientinfo::ClientInfo;
 use cmdlib::args;
 use cmdlib::args::MononokeMatches;
 use cmdlib::helpers;
@@ -63,7 +65,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::FileChange;
 use mononoke_types::FileType;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use mutable_counters::MutableCountersRef;
 use pushrebase::do_pushrebase_bonsai;
@@ -139,7 +141,11 @@ pub async fn subcommand_crossrepo<'a>(
     let config_store = matches.config_store();
     let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(&logger, config_store)?;
 
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    let ctx = CoreContext::new_with_logger_and_client_info(
+        fb,
+        logger.clone(),
+        ClientInfo::default_with_entry_point(ClientEntryPoint::MononokeAdmin),
+    );
     match sub_m.subcommand() {
         (MAP_SUBCOMMAND, Some(sub_sub_m)) => {
             let (source_repo, target_repo, mapping) =
@@ -406,7 +412,7 @@ async fn run_pushredirection_subcommand<'a>(
 
             let dump_mapping_file = sub_m
                 .value_of(DUMP_MAPPING_LARGE_REPO_PATH_ARG)
-                .map(MPath::new)
+                .map(NonRootMPath::new)
                 .transpose()?;
 
             let large_cs_id = create_commit_for_mapping_change(
@@ -507,7 +513,7 @@ async fn change_mapping_via_extras<'a>(
 
     let dump_mapping_file = sub_m
         .value_of(DUMP_MAPPING_LARGE_REPO_PATH_ARG)
-        .map(MPath::new)
+        .map(NonRootMPath::new)
         .transpose()?;
     let large_cs_id = create_commit_for_mapping_change(
         ctx,
@@ -733,7 +739,9 @@ async fn get_source_target_cs_ids_and_version(
 
 struct MappingCommitOptions {
     add_mapping_change_extra: bool,
-    dump_mapping_file: Option<MPath>,
+    // Fine to have Option<NonRootMPath> in this case since this represents an Optional
+    // path that may or may not be provided, i.e. None != Root path in this case
+    dump_mapping_file: Option<NonRootMPath>,
 }
 
 async fn create_commit_for_mapping_change(
@@ -814,7 +822,7 @@ async fn create_file_changes(
     options: MappingCommitOptions,
     commit_syncer: &CommitSyncer<SqlSyncedCommitMapping, CrossRepo>,
     live_commit_sync_config: &Arc<dyn LiveCommitSyncConfig>,
-) -> Result<BTreeMap<MPath, FileChange>, Error> {
+) -> Result<BTreeMap<NonRootMPath, FileChange>, Error> {
     let mut file_changes = btreemap! {};
     if let Some(path) = options.dump_mapping_file {
         // This "dump-mapping-file" is going to be created in the large repo,
@@ -1612,7 +1620,8 @@ mod test {
                 common_pushrebase_bookmarks: vec![master.clone()],
                 small_repos: hashmap! {
                     small_repo.repo_identity().id() => SmallRepoPermanentConfig {
-                        bookmark_prefix: Default::default()
+                        bookmark_prefix: Default::default(),
+                        common_pushrebase_bookmarks_map: Default::default(),
                     },
                 },
                 large_repo_id: large_repo.repo_identity().id(),
@@ -1705,6 +1714,7 @@ mod test {
             small_repos: hashmap! {
                 small_repo.repo_identity().id() => SmallRepoPermanentConfig {
                     bookmark_prefix: AsciiString::new(),
+                    common_pushrebase_bookmarks_map: Default::default(),
                 }
             },
             large_repo_id: large_repo.repo_identity().id(),
@@ -1717,6 +1727,7 @@ mod test {
                 small_repo.repo_identity().id() => SmallRepoCommitSyncConfig {
                     default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
                     map: hashmap! { },
+                    git_submodules_action: Default::default(),
                 },
             },
             version_name: current_version.clone(),

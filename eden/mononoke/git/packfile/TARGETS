@@ -1,0 +1,51 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbcode_macros//build_defs:rust_unittest.bzl", "rust_unittest")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "packfile",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:flate2",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:gix-features",
+        "fbsource//third-party/rust:gix-hash",
+        "fbsource//third-party/rust:gix-object",
+        "fbsource//third-party/rust:gix-pack",
+        "fbsource//third-party/rust:pin-project",
+        "fbsource//third-party/rust:quickcheck",
+        "fbsource//third-party/rust:sha1",
+        "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tokio",
+        "//eden/mononoke/blobstore:blobstore",
+        "//eden/mononoke/git/packfile/if:packfile-thrift-rust",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//thrift/lib/rust:fbthrift",
+    ],
+)
+
+rust_unittest(
+    name = "packfile_test",
+    srcs = glob(["test/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:flate2",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:gix-diff",
+        "fbsource//third-party/rust:gix-features",
+        "fbsource//third-party/rust:gix-hash",
+        "fbsource//third-party/rust:gix-object",
+        "fbsource//third-party/rust:gix-pack",
+        "fbsource//third-party/rust:quickcheck",
+        "fbsource//third-party/rust:tempfile",
+        ":packfile",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/git/git_types:git_types",
+    ],
+)

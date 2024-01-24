@@ -21,6 +21,17 @@ PYTHON := python
 endif
 PYTHON3 := python3
 
+ifeq ($(OS),Windows_NT)
+  BUCK_DEV_BUILD_MODE := @fbcode//mode/win
+else
+  UNAME_S := $(shell uname -s)
+  ifeq ($(UNAME_S),Darwin)
+    BUCK_DEV_BUILD_MODE := @fbcode//mode/mac
+  endif
+endif
+
+PYTHON_MINOR_VERSION=$(shell $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) -c "import sys; print(sys.version_info.minor)")
+
 ifeq ($(RUST_DEBUG),1)
 RUST_FLAG = --debug
 endif
@@ -29,7 +40,7 @@ $(eval HGROOT := $(shell pwd))
 HGPYTHONS ?= $(HGROOT)/build/pythons
 PURE=
 PYFILES:=$(shell find mercurial ext -name '*.py' 2>/dev/null)
-DOCFILES=edenscm/help/*.txt
+DOCFILES=sapling/help/*.txt
 export LANGUAGE=C
 export LC_ALL=C
 TESTFLAGS ?= $(shell echo $$HGTESTFLAGS)
@@ -69,43 +80,40 @@ help:
 
 all: build
 
-oss:
-	SAPLING_OSS_BUILD=true HGNAME=$(SL_NAME) \
-	  $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup.py $(PURE) \
-	  build_interactive_smartlog \
-	  build_py -c -d . \
-	  build_clib $(COMPILERFLAG) \
-	  build_ext $(COMPILERFLAG) -i \
-	  build_rust_ext -i -l $(RUST_FLAG) \
-	  build_pyzip -i \
-	  build_mo
-ifeq ($(OS),Windows_NT)
-	cp build/scripts-3*/$(SL_NAME).exe $(SL_NAME).exe
-else
-	$(RM) $(SL_NAME)
-	cp build/scripts-3*/$(SL_NAME) $(SL_NAME)
-endif
+oss: OSS=true
+oss: HGNAME=$(SL_NAME)
+oss: local
 
 install-oss: oss
-	SAPLING_OSS_BUILD=true HGNAME=$(SL_NAME) \
-	  $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup.py $(PURE) \
-	  install --root="$(DESTDIR)/" --prefix="$(PREFIX)" \
-	  --install-lib="$(PREFIX)"/lib/python3.$(shell $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) -c "import sys; print(sys.version_info.minor)")/site-packages \
-	  --install-scripts="$(PREFIX)/bin" --force
+	mkdir -p $(DESTDIR)/$(PREFIX)/bin
+	cp $(SL_NAME) $(DESTDIR)/$(PREFIX)/bin
+	mkdir -p $(DESTDIR)/$(PREFIX)/lib
+	cp isl-dist.tar.xz $(DESTDIR)/$(PREFIX)/lib
 
 local:
-	$(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup.py $(PURE) \
-	  build_py -c -d . \
+	SAPLING_OSS_BUILD=$(OSS) HGNAME=$(HGNAME) \
+	  $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup.py $(PURE) \
+	  build_interactive_smartlog \
 	  build_clib $(COMPILERFLAG) \
-	  build_ext $(COMPILERFLAG) -i \
 	  build_rust_ext -i -l $(RUST_FLAG) \
-	  build_pyzip -i \
 	  build_mo
 ifeq ($(OS),Windows_NT)
-	cp build/scripts-3*/$(HGNAME).exe $(HGNAME).exe
+	cp build/scripts-3.$(PYTHON_MINOR_VERSION)/$(HGNAME).exe $(HGNAME).exe
 else
 	$(RM) $(HGNAME)
-	cp build/scripts-3*/$(HGNAME) $(HGNAME)
+	cp build/scripts-3.$(PYTHON_MINOR_VERSION)/$(HGNAME) $(HGNAME)
+endif
+
+hg:
+	SAPLING_SKIP_OTHER_RUST_BINARIES=true $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup.py $(PURE) \
+	  build_clib $(COMPILERFLAG) \
+	  build_rust_ext -i -l $(RUST_FLAG) \
+	  build_mo
+ifeq ($(OS),Windows_NT)
+	cp build/scripts-3.$(PYTHON_MINOR_VERSION)/$(HGNAME).exe $(HGNAME).exe
+else
+	$(RM) $(HGNAME)
+	cp build/scripts-3.$(PYTHON_MINOR_VERSION)/$(HGNAME) $(HGNAME)
 endif
 
 build:
@@ -134,13 +142,13 @@ getdepsbuild:
 
 cleanbutpackages:
 	-$(PYTHON3) setup.py clean --all # ignore errors from this command
-	find contrib doc i18n edenscm edenscmnative tests \
+	find contrib doc i18n sapling tests \
 		\( -name '*.py[cdo]' -o -name '*.so' \) -exec rm -f '{}' ';'
-	rm -f MANIFEST MANIFEST.in edenscm/ext/__index__.py tests/*.err
-	rm -f edenscm/__modulepolicy__.py
-	if test -d .hg; then rm -f edenscm/__version__.py; fi
+	rm -f MANIFEST MANIFEST.in sapling/ext/__index__.py tests/*.err
+	rm -f sapling/__modulepolicy__.py
+	if test -d .hg; then rm -f sapling/__version__.py; fi
 	rm -rf build/*
-	rm -rf build edenscm/locale
+	rm -rf build sapling/locale
 	rm -f Cargo.lock
 ifeq ($(OS),Windows_NT)
 	$(RM) -r hg-python $(HGNAME).exe python27.dll
@@ -172,13 +180,13 @@ tests:
 update-pot: i18n/hg.pot
 
 i18n/hg.pot: $(PYFILES) $(DOCFILES) i18n/posplit i18n/hggettext
-	$(PYTHON) i18n/hggettext edenscm/commands.py \
-	  edenscm/ext/*.py edenscm/ext/*/__init__.py \
-	  edenscm/fileset.py edenscm/revset.py \
-	  edenscm/templatefilters.py edenscm/templatekw.py \
-	  edenscm/templater.py \
-	  edenscm/filemerge.py \
-	  edenscm/util.py \
+	$(PYTHON) i18n/hggettext sapling/commands.py \
+	  sapling/ext/*.py sapling/ext/*/__init__.py \
+	  sapling/fileset.py sapling/revset.py \
+	  sapling/templatefilters.py sapling/templatekw.py \
+	  sapling/templater.py \
+	  sapling/filemerge.py \
+	  sapling/util.py \
 	  $(DOCFILES) > i18n/hg.pot.tmp
         # All strings marked for translation in Mercurial contain
         # ASCII characters only. But some files contain string
@@ -203,6 +211,9 @@ i18n/hg.pot: $(PYFILES) $(DOCFILES) i18n/posplit i18n/hggettext
 	msgmerge --no-location --update $@.tmp $^
 	mv -f $@.tmp $@
 
+buck:
+	cp $(shell buck2 build $(BUCK_DEV_BUILD_MODE) fbcode//eden/scm:hg --show-full-simple-output) $(HGNAME)
+
 # Packaging targets
 
-.PHONY: help all local build cleanbutpackages clean install install-home install-getdeps getdepsbuild deb
+.PHONY: help all local build cleanbutpackages clean install install-home install-getdeps getdepsbuild deb hg buck

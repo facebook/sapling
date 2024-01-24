@@ -376,7 +376,7 @@ describe('operations', () => {
           COMMIT('1', 'public', '0', {phase: 'public'}),
         ],
       };
-      const commitsAfterOptions = {
+      const commitsAfterOperations = {
         value: [
           COMMIT('e2', 'Commit E', 'd2'),
           COMMIT('d2', 'Commit D', 'c2', {isHead: true}), // goto
@@ -482,7 +482,7 @@ describe('operations', () => {
           kind: 'smartlogCommits',
           subscriptionID: mostRecentSubscriptionIds.smartlogCommits,
           data: {
-            commits: commitsAfterOptions,
+            commits: commitsBeforeOperations, // not observed the new head
             fetchStartTimestamp: 400, // before goto finished
             fetchCompletedTimestamp: 450,
           },
@@ -499,7 +499,25 @@ describe('operations', () => {
           kind: 'smartlogCommits',
           subscriptionID: mostRecentSubscriptionIds.smartlogCommits,
           data: {
-            commits: commitsAfterOptions,
+            commits: commitsAfterOperations, // observed the new head
+            fetchStartTimestamp: 400, // before goto finished
+            fetchCompletedTimestamp: 450,
+          },
+        }),
+      );
+
+      // However, even if the latest fetch started before the goto finished,
+      // if "goto" saw that head = the new commit, the optimistic state is a
+      // no-op and we won't see "You were here...".
+      expect(screen.queryByText('You were here...')).not.toBeInTheDocument();
+
+      act(() =>
+        simulateMessageFromServer({
+          type: 'subscriptionResult',
+          kind: 'smartlogCommits',
+          subscriptionID: mostRecentSubscriptionIds.smartlogCommits,
+          data: {
+            commits: commitsBeforeOperations, // intentionally "incorrect" to test the force clear out
             fetchStartTimestamp: 550, // after goto finished
             fetchCompletedTimestamp: 600,
           },

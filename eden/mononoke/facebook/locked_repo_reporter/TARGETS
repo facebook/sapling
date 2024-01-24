@@ -1,0 +1,17 @@
+load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
+
+oncall("mononoke")
+
+python_binary(
+    name = "locked_repo_reporter",
+    srcs = ["locked_repo_reporter.py"],
+    main_function = "eden.mononoke.facebook.locked_repo_reporter.locked_repo_reporter.main",
+    deps = [
+        "//common/db/smc_db:py",
+        "//configerator/distribution/api/py:configerator_config",
+        "//configerator/structs/scm/mononoke/pushredirect:pushredirect_enable-py",
+        "//configerator/structs/scm/mononoke/repos:repos-py",
+        "//libfb/py:ods_logging",
+        "//scm/scmadmin:constants",
+    ],
+)

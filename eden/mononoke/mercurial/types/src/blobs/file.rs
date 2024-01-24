@@ -28,7 +28,7 @@ use crate::HgBlob;
 use crate::HgBlobNode;
 use crate::HgFileEnvelope;
 use crate::HgFileNodeId;
-use crate::MPath;
+use crate::NonRootMPath;
 
 #[async_trait]
 impl Loadable for HgFileNodeId {
@@ -140,7 +140,7 @@ impl File {
         Self::parse_to_hash_map(content, &[b' '])
     }
 
-    pub fn copied_from(&self) -> Result<Option<(MPath, HgFileNodeId)>> {
+    pub fn copied_from(&self) -> Result<Option<(NonRootMPath, HgFileNodeId)>> {
         let buf = self.node.as_blob().as_slice();
         Self::extract_copied_from(buf)
     }
@@ -149,8 +149,8 @@ impl File {
         meta: &HashMap<&[u8], &[u8]>,
         copy_path_key: &'static [u8],
         copy_rev_key: &'static [u8],
-    ) -> Result<Option<(MPath, HgFileNodeId)>> {
-        let path = meta.get(copy_path_key).cloned().map(MPath::new);
+    ) -> Result<Option<(NonRootMPath, HgFileNodeId)>> {
+        let path = meta.get(copy_path_key).cloned().map(NonRootMPath::new);
         let nodeid = meta
             .get(copy_rev_key)
             .and_then(|rev| str::from_utf8(rev).ok())
@@ -162,13 +162,13 @@ impl File {
         }
     }
 
-    pub fn extract_copied_from(buf: &[u8]) -> Result<Option<(MPath, HgFileNodeId)>> {
+    pub fn extract_copied_from(buf: &[u8]) -> Result<Option<(NonRootMPath, HgFileNodeId)>> {
         let meta = Self::parse_meta(buf);
         Self::get_copied_from_with_keys(&meta, COPY_PATH_KEY, COPY_REV_KEY)
     }
 
     pub fn generate_metadata<T>(
-        copy_from: Option<&(MPath, HgFileNodeId)>,
+        copy_from: Option<&(NonRootMPath, HgFileNodeId)>,
         file_bytes: &FileBytes,
         buf: &mut T,
     ) -> Result<()>
@@ -281,14 +281,16 @@ impl File {
             })
     }
 
-    fn get_copied_lfs(contents: &HashMap<&[u8], &[u8]>) -> Result<Option<(MPath, HgFileNodeId)>> {
+    fn get_copied_lfs(
+        contents: &HashMap<&[u8], &[u8]>,
+    ) -> Result<Option<(NonRootMPath, HgFileNodeId)>> {
         Self::get_copied_from_with_keys(contents, HGCOPY, HGCOPYREV)
     }
 
     pub fn generate_lfs_file(
         oid: Sha256,
         size: u64,
-        copy_from: Option<(MPath, HgFileNodeId)>,
+        copy_from: Option<(NonRootMPath, HgFileNodeId)>,
     ) -> Result<Bytes> {
         let git_version = String::from_utf8(GIT_VERSION.to_vec())?;
         let lfs_content = LFSContent {
@@ -319,7 +321,7 @@ pub struct LFSContent {
     size: u64,
 
     // copy fields
-    copy_from: Option<(MPath, HgFileNodeId)>,
+    copy_from: Option<(NonRootMPath, HgFileNodeId)>,
 }
 
 impl LFSContent {
@@ -327,7 +329,7 @@ impl LFSContent {
         version: String,
         oid: Sha256,
         size: u64,
-        copy_from: Option<(MPath, HgFileNodeId)>,
+        copy_from: Option<(NonRootMPath, HgFileNodeId)>,
     ) -> Self {
         Self {
             version,
@@ -345,7 +347,7 @@ impl LFSContent {
         self.oid.clone()
     }
 
-    pub fn copy_from(&self) -> Option<(MPath, HgFileNodeId)> {
+    pub fn copy_from(&self) -> Option<(NonRootMPath, HgFileNodeId)> {
         self.copy_from.clone()
     }
 

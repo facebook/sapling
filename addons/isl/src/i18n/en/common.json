@@ -4,6 +4,16 @@
   "numImagesUploading_other": "Uploading $count files",
   "imageUploadFailed_one": "1 file upload failed",
   "imageUploadFailed_other": "$count file uploads failed",
+  "confirmUnsavedEditsBeforeSplit_one": "You have unsaved edits to the commit message which must be saved before splitting by this commit. Do you want to save these edits first?",
+  "confirmUnsavedEditsBeforeSplit_other": "You have unsaved edits to commit messages which must be saved before splitting by these commits. Do you want to save these edits first?",
+  "confirmUnsavedEditsBeforeEditStack_one": "You have unsaved edits to a commit message which must be saved before editing this stack. Do you want to save these edits first?",
+  "confirmUnsavedEditsBeforeEditStack_other": "You have unsaved edits to commit messages which must be saved before editing this stack. Do you want to save these edits first?",
+  "someCommitsUpdatedLocallyAddendum_one": "\n\n1 commit in this stack has been updated locally and should be resubmitted.",
+  "someCommitsUpdatedLocallyAddendum_other": "\n\n$count commits in this stack have been updated locally and should be resubmitted.",
+  "commitsBeingBackedUp_one": "1 commit being backed up...",
+  "commitsBeingBackedUp_other": "$count commits being backed up...",
+  "commitsFailedBackingUp_one": "1 commit failed to back up",
+  "commitsFailedBackingUp_other": "$count commits failed to back up",
   "whetherToSubmitDiffAsDraft_one": "Whether to submit this diff as a draft",
   "whetherToSubmitDiffAsDraft_other": "Whether to submit these $count diffs as a draft"
 }

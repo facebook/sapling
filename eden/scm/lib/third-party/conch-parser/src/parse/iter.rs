@@ -4,7 +4,6 @@ use crate::parse::SourcePos;
 use crate::token::Token;
 use crate::token::Token::*;
 use std::iter as std_iter;
-use std::mem;
 
 /// Indicates an error such that EOF was encountered while some unmatched
 /// tokens were still pending. The error stores the unmatched token
@@ -153,7 +152,7 @@ impl<I: Iterator<Item = Token>> PeekableIterator for TokenIter<I> {
         // the borrow checker.
         let _ = self.multipeek().peek_next()?;
 
-        if let Some(&TokenOrPos::Tok(ref t)) = self.prev_buffered.last() {
+        if let Some(TokenOrPos::Tok(t)) = self.prev_buffered.last() {
             Some(t)
         } else {
             unreachable!("unexpected state: peeking next token failed. This is a bug!")
@@ -313,7 +312,7 @@ pub struct Multipeek<'a> {
 
 impl<'a> Drop for Multipeek<'a> {
     fn drop(&mut self) {
-        let tokens = mem::replace(&mut self.buf, Vec::new());
+        let tokens = std::mem::take(&mut self.buf);
         self.iter.rewind(tokens);
     }
 }
@@ -345,7 +344,7 @@ impl<'a> Multipeek<'a> {
             }
         }
 
-        if let Some(&TokenOrPos::Tok(ref t)) = self.buf.last() {
+        if let Some(TokenOrPos::Tok(t)) = self.buf.last() {
             Some(t)
         } else {
             None

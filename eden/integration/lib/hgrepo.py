@@ -31,19 +31,21 @@ class HgRepository(repobase.Repository):
     hg_environment: Dict[str, str]
     temp_mgr: TempFileManager
     staged_files: List[str]
+    filtered: bool = False
 
     def __init__(
         self,
         path: str,
         system_hgrc: Optional[str] = None,
         temp_mgr: Optional[TempFileManager] = None,
+        filtered: bool = False,
     ) -> None:
         """
         If hgrc is specified, it will be used as the value of the HGRCPATH
         environment variable when `hg` is run.
         """
         super().__init__(path)
-        self.temp_mgr = temp_mgr or TempFileManager("hgrepo")
+        self.temp_mgr = temp_mgr or TempFileManager()
         self.hg_environment = os.environ.copy()
         # Drop any environment variables starting with 'HG'
         # to ensure the user's environment does not affect the tests.
@@ -63,6 +65,7 @@ class HgRepository(repobase.Repository):
             self.hg_environment["HGRCPATH"] = ""
         self.hg_bin = FindExe.HG
         self.staged_files = []
+        self.filtered = filtered
 
     @classmethod
     def get_system_hgrc_contents(cls) -> str:
@@ -143,23 +146,13 @@ class HgRepository(repobase.Repository):
         cwd: Optional[str] = None,
         check: bool = True,
         traceback: bool = True,
+        env: Optional[Dict[str, str]] = None,
     ) -> subprocess.CompletedProcess:
-        env = self.hg_environment
+        env = self.hg_environment | (env or {})
         argslist = list(args)
-        if sys.platform == "win32" and "EDEN_HG_BINARY" in env:
-            # If the EDEN_HG_BINARY env var is set, that means that the test is using the Buck-built hg rather than the system one.
-            # Currently calling hg through Buck goes through three layers of batch scripts, which makes it necessary to escape certain characters in arguments.
-            # Newlines need an additional backward slash to be properly escaped.
-            # As for the 7 and 8 carets (^) used for replace ^ and |, these are necessary since each batch layer essentially halves the ammount of carets
-            # necessary for the next layer. 3 layers means we need 2^3 = 8 carets.
-            for i in range(len(argslist)):
-                argslist[i] = argslist[i].replace("\n", r"\n")
-                argslist[i] = argslist[i].replace("^", r"^^^^^^^^")
-                argslist[i] = argslist[i].replace("|", r"^^^^^^^|")
         cmd = [self.hg_bin] + (["--traceback"] if traceback else []) + argslist
         print(f"Trying to run {cmd}")
         if hgeditor is not None:
-            env = dict(env)
             env["HGEDITOR"] = hgeditor
 
         input_bytes = None
@@ -196,6 +189,7 @@ class HgRepository(repobase.Repository):
         hgeditor: Optional[str] = None,
         cwd: Optional[str] = None,
         check: bool = True,
+        env: Optional[Dict[str, str]] = None,
     ) -> str:
         if "--debug" in args:
             stderr = subprocess.STDOUT
@@ -209,6 +203,7 @@ class HgRepository(repobase.Repository):
             cwd=cwd,
             check=check,
             stderr=stderr,
+            env=env,
         )
         return typing.cast(
             str, completed_process.stdout.decode(encoding, errors="replace")
@@ -246,6 +241,15 @@ class HgRepository(repobase.Repository):
         hgrc["remotefilelog"]["server"] = "false"
         hgrc["remotefilelog"]["reponame"] = "test"
         hgrc["remotefilelog"]["cachepath"] = cachepath
+
+        # Use Rust status.
+        hgrc.setdefault("status", {})
+        hgrc["status"]["use-rust"] = "true"
+
+        # Use (native) Rust checkout whenever possible
+        hgrc.setdefault("checkout", {})
+        hgrc["checkout"]["use-rust"] = "true"
+
         self.write_hgrc(hgrc)
 
         storerequirespath = os.path.join(self.path, ".hg", "store", "requires")
@@ -271,7 +275,7 @@ class HgRepository(repobase.Repository):
             f.write("[hooks]\npost-pull.changelo-migrate=")
 
     def get_type(self) -> str:
-        return "hg"
+        return "filteredhg" if self.filtered else "hg"
 
     def get_head_hash(self) -> str:
         return self.hg("log", "-r.", "-T{node}")
@@ -342,7 +346,9 @@ class HgRepository(repobase.Repository):
 
             # Do not capture stdout or stderr when running "hg commit"
             # This allows its output to show up in the test logs.
-            self.run_hg(*args, stdout=None, stderr=None)
+            self.run_hg(
+                *args, stdout=None, stderr=None, env={"SL_LOG": "workingcopy=trace"}
+            )
 
         # Get the commit ID and return it
         return self.hg("log", "-T{node}", "-r.")

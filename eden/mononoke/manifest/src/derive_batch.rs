@@ -12,25 +12,28 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Context;
-use anyhow::Error;
+use anyhow::Result;
 use blobstore::StoreLoadable;
 use cloned::cloned;
 use context::CoreContext;
+use futures::stream::TryStreamExt;
 use futures::Future;
 use futures::FutureExt;
+use itertools::Either;
+use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
 use mononoke_types::MPathElement;
+use mononoke_types::NonRootMPath;
 
+use crate::AsyncManifest as Manifest;
 use crate::Entry;
 use crate::LeafInfo;
-use crate::Manifest;
 use crate::PathTree;
 use crate::TreeInfo;
 
 pub struct ManifestChanges<Leaf> {
     pub cs_id: ChangesetId,
-    pub changes: Vec<(MPath, Option<Leaf>)>,
+    pub changes: Vec<(NonRootMPath, Option<Leaf>)>,
 }
 
 // Function that can derive manifests for a "simple" stack of commits. But what does "simple" mean?
@@ -62,19 +65,31 @@ pub async fn derive_manifests_for_simple_stack_of_commits<
     changes: Vec<ManifestChanges<Leaf>>,
     create_tree: T,
     create_leaf: L,
-) -> Result<BTreeMap<ChangesetId, TreeId>, Error>
+) -> Result<BTreeMap<ChangesetId, TreeId>>
 where
     Store: Sync + Send + Clone + 'static,
     LeafId: Send + Clone + Eq + Hash + fmt::Debug + 'static + Sync,
     IntermediateLeafId: Clone + Send + From<LeafId> + 'static + Sync,
     Leaf: Send + 'static,
     TreeId: StoreLoadable<Store> + Clone + Eq + Hash + fmt::Debug + Send + Sync + 'static,
-    TreeId::Value: Manifest<TreeId = TreeId, LeafId = LeafId> + Sync,
+    TreeId::Value: Manifest<Store, TreeId = TreeId, LeafId = LeafId> + Sync,
     <TreeId as StoreLoadable<Store>>::Value: Send,
-    T: Fn(TreeInfo<TreeId, IntermediateLeafId, Ctx>, ChangesetId) -> TFut + Send + Sync + 'static,
-    TFut: Future<Output = Result<(Ctx, TreeId), Error>> + Send + 'caller,
+    T: Fn(
+            TreeInfo<
+                TreeId,
+                IntermediateLeafId,
+                Ctx,
+                <TreeId::Value as Manifest<Store>>::TrieMapType,
+            >,
+            ChangesetId,
+        ) -> TFut
+        + Send
+        + Sync
+        + 'static,
+    TFut: Future<Output = Result<(Ctx, TreeId)>> + Send + 'caller,
     L: Fn(LeafInfo<IntermediateLeafId, Leaf>, ChangesetId) -> LFut + Send + Sync + 'static,
-    LFut: Future<Output = Result<(Ctx, IntermediateLeafId), Error>> + Send + 'caller,
+    LFut: Future<Output = Result<(Ctx, IntermediateLeafId)>> + Send + 'caller,
+    <TreeId::Value as Manifest<Store>>::TrieMapType: Clone,
     Ctx: Clone + Send + Sync + 'static,
 {
     Deriver {
@@ -128,15 +143,27 @@ where
     IntermediateLeafId: Clone + Send + From<LeafId> + 'static + Sync,
     Leaf: Send + 'static,
     TreeId: StoreLoadable<Store> + Clone + Eq + Hash + fmt::Debug + Send + Sync + 'static,
-    TreeId::Value: Manifest<TreeId = TreeId, LeafId = LeafId> + Sync,
+    TreeId::Value: Manifest<Store, TreeId = TreeId, LeafId = LeafId> + Sync,
     <TreeId as StoreLoadable<Store>>::Value: Send,
-    T: Fn(TreeInfo<TreeId, IntermediateLeafId, Ctx>, ChangesetId) -> TFut + Send + Sync + 'static,
-    TFut: Future<Output = Result<(Ctx, TreeId), Error>> + Send + 'caller,
+    T: Fn(
+            TreeInfo<
+                TreeId,
+                IntermediateLeafId,
+                Ctx,
+                <TreeId::Value as Manifest<Store>>::TrieMapType,
+            >,
+            ChangesetId,
+        ) -> TFut
+        + Send
+        + Sync
+        + 'static,
+    TFut: Future<Output = Result<(Ctx, TreeId)>> + Send + 'caller,
     L: Fn(LeafInfo<IntermediateLeafId, Leaf>, ChangesetId) -> LFut + Send + Sync + 'static,
-    LFut: Future<Output = Result<(Ctx, IntermediateLeafId), Error>> + Send + 'caller,
+    LFut: Future<Output = Result<(Ctx, IntermediateLeafId)>> + Send + 'caller,
+    <TreeId::Value as Manifest<Store>>::TrieMapType: Clone,
     Ctx: Clone + Send + Sync + 'static,
 {
-    async fn derive(self) -> Result<BTreeMap<ChangesetId, TreeId>, Error> {
+    async fn derive(self) -> Result<BTreeMap<ChangesetId, TreeId>> {
         let Deriver {
             ctx,
             store,
@@ -157,32 +184,28 @@ where
         let mut stack_of_commits = vec![];
         for mf_changes in changes {
             for (path, leaf) in mf_changes.changes {
-                path_tree.insert_and_merge(Some(path), (mf_changes.cs_id, leaf));
+                path_tree.insert_and_merge(path.into(), (mf_changes.cs_id, leaf));
             }
             stack_of_commits.push(mf_changes.cs_id);
         }
 
         struct UnfoldState<TreeId, LeafId, Leaf> {
-            path: Option<MPath>,
+            path: MPath,
             name: Option<MPathElement>,
             parent: Option<Entry<TreeId, LeafId>>,
             path_tree: PathTree<Vec<(ChangesetId, Leaf)>>,
         }
 
         enum FoldState<TreeId, LeafId, Leaf> {
-            Reuse(
-                Option<MPath>,
-                Option<MPathElement>,
-                Option<Entry<TreeId, LeafId>>,
-            ),
+            Reuse(MPath, Option<MPathElement>, Option<Entry<TreeId, LeafId>>),
             CreateLeaves(
-                Option<MPath>,
+                MPath,
                 MPathElement,
                 Option<Entry<TreeId, LeafId>>,
                 Vec<Leaf>,
             ),
             CreateTrees(
-                Option<MPath>,
+                MPath,
                 Option<MPathElement>,
                 Option<Entry<TreeId, LeafId>>,
                 // We might have a single file deletion, this field represents it
@@ -194,7 +217,7 @@ where
         let (_, entry_stack) = bounded_traversal::bounded_traversal(
             256,
             UnfoldState {
-                path: None,
+                path: MPath::ROOT,
                 name: None,
                 parent: parent.clone().map(Entry::Tree),
                 path_tree,
@@ -212,10 +235,7 @@ where
                 | {
                     cloned!(ctx, store);
                     async move {
-                        let PathTree {
-                            value: changes,
-                            subentries,
-                        } = path_tree;
+                        let (changes, subentries) = path_tree.deconstruct();
 
                         if !changes.is_empty() && subentries.is_empty() {
                             // We have a stack of changes for a given leaf
@@ -256,10 +276,11 @@ where
                             let mut deps: BTreeMap<MPathElement, _> = Default::default();
                             if let Some(Entry::Tree(tree_id)) = &parent {
                                 let mf = tree_id.load(&ctx, &store).await?;
-                                for (name, entry) in mf.list() {
+                                let mut stream = mf.list(&ctx, &store).await?;
+                                while let Some((name, entry)) = stream.try_next().await? {
                                     let subentry =
                                         deps.entry(name.clone()).or_insert_with(|| UnfoldState {
-                                            path: Some(MPath::join_opt_element(path.as_ref(), &name)),
+                                            path: path.join_element(Some(&name)),
                                             name: Some(name),
                                             parent: Default::default(),
                                             path_tree: Default::default(),
@@ -271,7 +292,7 @@ where
                             for (name, path_tree) in subentries {
                                 let subentry =
                                     deps.entry(name.clone()).or_insert_with(|| UnfoldState {
-                                        path: Some(MPath::join_opt_element(path.as_ref(), &name)),
+                                        path: path.join_element(Some(&name)),
                                         name: Some(name),
                                         parent: Default::default(),
                                         path_tree: Default::default(),
@@ -284,10 +305,10 @@ where
                                 FoldState::CreateTrees(path, name, parent, maybe_file_deletion),
                                 deps,
                             ))
-                        } else if path.is_none() && parent.is_none() {
+                        } else if path.is_root() && parent.is_none() {
                             // This is a weird case - we got an empty commit with no parent.
                             // In that case  we want to create an empty root tree for this commit
-                            Ok((FoldState::CreateTrees(None, None, None, None), vec![]))
+                            Ok((FoldState::CreateTrees(MPath::ROOT, None, None, None), vec![]))
                         } else {
                             // No changes, no subentries - just reuse the entry
                             Ok((FoldState::Reuse(path, name, parent.map(convert_to_intermediate_entry)), vec![]))
@@ -319,7 +340,7 @@ where
                                     );
                                 }
 
-                                let path = path.clone().context("unexpected empty path for leaf")?;
+                                let path = path.clone().into_optional_non_root_path().context("unexpected empty path for leaf")?;
                                 let entry_stack = Self::create_leaves(
                                     &ctx,
                                     path,
@@ -393,13 +414,13 @@ where
 
     async fn create_leaves(
         ctx: &CoreContext,
-        path: MPath,
+        path: NonRootMPath,
         parent: Option<Entry<TreeId, IntermediateLeafId>>,
         changes: Vec<(ChangesetId, Option<Leaf>)>,
         create_leaf: Arc<L>,
         create_tree: Arc<T>,
         store: Store,
-    ) -> Result<EntryStack<TreeId, IntermediateLeafId, Ctx>, Error> {
+    ) -> Result<EntryStack<TreeId, IntermediateLeafId, Ctx>> {
         let mut entry_stack = EntryStack {
             parent: parent.clone(),
             values: vec![],
@@ -438,14 +459,19 @@ where
                         // derive_manifest()
                         let parent_mf = tree_id.load(ctx, &store).await?;
                         let subentries = parent_mf
-                            .list()
-                            .map(|(path, entry)| {
-                                (path, (None, convert_to_intermediate_entry(entry)))
+                            .list(ctx, &store)
+                            .await?
+                            .map_ok(|(path, entry)| {
+                                (
+                                    path.to_smallvec(),
+                                    Either::Left((None, convert_to_intermediate_entry(entry))),
+                                )
                             })
-                            .collect();
+                            .try_collect()
+                            .await?;
                         let (upload_ctx, tree_id) = create_tree(
                             TreeInfo {
-                                path: Some(path.clone()),
+                                path: path.clone().into(),
                                 parents: vec![tree_id],
                                 subentries,
                             },
@@ -470,17 +496,16 @@ where
     }
 
     async fn create_trees(
-        path: Option<MPath>,
+        path: MPath,
         parent: Option<Entry<TreeId, IntermediateLeafId>>,
         stack_sub_entries: BTreeMap<MPathElement, EntryStack<TreeId, IntermediateLeafId, Ctx>>,
         create_tree: Arc<T>,
         stack_of_commits: Arc<Vec<ChangesetId>>,
         maybe_file_deletion: Option<ChangesetId>,
-    ) -> Result<EntryStack<TreeId, IntermediateLeafId, Ctx>, Error> {
+    ) -> Result<EntryStack<TreeId, IntermediateLeafId, Ctx>> {
         // These are all sub entries for the commit we are currently processing.
         // We start with parent entries, and then apply delta changes on top.
-        let mut cur_sub_entries: BTreeMap<MPathElement, (Option<Ctx>, Entry<_, _>)> =
-            BTreeMap::new();
+        let mut cur_sub_entries: BTreeMap<MPathElement, _> = BTreeMap::new();
 
         // `stack_sub_entries` is a mapping from (name -> list of changes).
         // We want to pivot it into (Changeset id -> Map(name, entry)),
@@ -556,7 +581,7 @@ where
                 Some(delta) => delta,
                 None => {
                     // This directory hasn't been changed in `cs_id`, just continue...
-                    if path.is_none() && cur_sub_entries.is_empty() && parent.is_none() {
+                    if path.is_root() && cur_sub_entries.is_empty() && parent.is_none() {
                         // ... unless it's an empty root tree with no parents.
                         // That means we have an empty commit with no parents,
                         // and for that case let's create a new root object to match what
@@ -570,6 +595,7 @@ where
                             *cs_id,
                         )
                         .await?;
+
                         parent = Some(tree_id.clone());
                         entry_stack
                             .values
@@ -597,7 +623,13 @@ where
                     TreeInfo {
                         path: path.clone(),
                         parents: parent.clone().into_iter().collect(),
-                        subentries: cur_sub_entries.clone(),
+                        subentries: cur_sub_entries
+                            .clone()
+                            .into_iter()
+                            .map(|(name, (context, entry))| {
+                                (name.to_smallvec(), Either::Left((context, entry)))
+                            })
+                            .collect(),
                     },
                     *cs_id,
                 )
@@ -607,7 +639,7 @@ where
                 entry_stack
                     .values
                     .push((*cs_id, Some(ctx), Some(Entry::Tree(tree_id))));
-            } else if path.is_none() {
+            } else if path.is_root() {
                 // Everything is deleted in the repo - let's create a new root
                 // object
                 let (ctx, tree_id) = create_tree(
@@ -619,6 +651,7 @@ where
                     *cs_id,
                 )
                 .await?;
+
                 parent = Some(tree_id.clone());
                 entry_stack
                     .values

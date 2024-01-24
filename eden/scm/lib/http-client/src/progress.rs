@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::cell::RefCell;
 use std::fmt;
 use std::iter::Sum;
 use std::ops::Add;
@@ -17,9 +16,8 @@ use std::sync::atomic::Ordering::Acquire;
 use std::sync::atomic::Ordering::Relaxed;
 use std::sync::atomic::Ordering::Release;
 use std::sync::Arc;
+use std::sync::OnceLock;
 use std::time::Instant;
-
-use once_cell::sync::OnceCell;
 
 #[derive(Default, Debug, Copy, Clone, Eq, PartialEq)]
 pub struct Progress {
@@ -163,24 +161,13 @@ impl Sum for Progress {
 /// a collection of active transfers. Its main purpose is
 /// to report the aggregate progress of these transfers
 /// as if they were a single transfer.
-pub(crate) struct ProgressReporter<P> {
+#[derive(Default)]
+pub(crate) struct ProgressReporter {
     inner: Arc<ProgressInner>,
-    callback: RefCell<P>,
     last_progress: MutableProgress,
 }
 
-impl<P: FnMut(Progress)> ProgressReporter<P> {
-    /// Create a new progress reporter that will call the provided
-    /// callback whenever one of its underlying transfers reports
-    /// progress.
-    pub(crate) fn with_callback(callback: P) -> Self {
-        Self {
-            inner: Arc::new(ProgressInner::default()),
-            callback: RefCell::new(callback),
-            last_progress: Default::default(),
-        }
-    }
-
+impl ProgressReporter {
     /// Allocate a slot for a new transfer in the reporter,
     /// and return an updater so that the transfer handler
     /// can update the values as the transfer makes progress.
@@ -210,7 +197,6 @@ impl<P: FnMut(Progress)> ProgressReporter<P> {
         let inner = &self.inner;
         let progress = inner.aggregate();
         if progress != self.last_progress.to_progress() {
-            (&mut *self.callback.borrow_mut())(inner.aggregate());
             self.last_progress.set(progress);
         }
     }
@@ -239,7 +225,7 @@ impl ProgressUpdater {
 #[derive(Default)]
 struct ProgressInner {
     total_progress: MutableProgress,
-    first_byte_received: OnceCell<Instant>,
+    first_byte_received: OnceLock<Instant>,
 }
 
 impl ProgressInner {
@@ -265,12 +251,7 @@ mod tests {
 
     #[test]
     fn test_progress() {
-        let mut reported = Vec::new();
-        let callback = |progress| {
-            reported.push(progress);
-        };
-
-        let reporter = ProgressReporter::with_callback(callback);
+        let reporter = ProgressReporter::default();
         let updater1 = reporter.updater();
         let updater2 = reporter.updater();
 
@@ -292,8 +273,5 @@ mod tests {
         updater2.update(p(4, 3, 102, 101));
 
         reporter.report_if_updated();
-
-        let expected = vec![p(2, 4, 6, 8), p(5, 5, 105, 105)];
-        assert_eq!(&expected, &reported);
     }
 }

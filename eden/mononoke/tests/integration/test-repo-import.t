@@ -66,12 +66,11 @@
 
 # Run setup checker
   $ cd "$TESTTMP"
-  $ echo n | repo_import \
+  $ repo_import \
   > check-additional-setup-steps \
   > --disable-phabricator-check \
   > --bookmark-suffix "new_repo" \
   > --dest-bookmark master_bookmark
-  Does the git repo you're about to merge has multiple heads (unmerged branches)? It's unsafe to use this tool when it does. (y/n) * Let's get this merged! (glob)
   * using repo "repo" repoid RepositoryId(0) (glob)
   * The importing bookmark name is: repo_import_new_repo. * (glob)
   * The destination bookmark name is: master_bookmark. * (glob)
@@ -90,12 +89,11 @@
   > }
   > EOF
 
-  $ echo n | repo_import \
+  $ repo_import \
   > check-additional-setup-steps \
   > --disable-phabricator-check \
   > --bookmark-suffix "new_repo" \
   > --dest-bookmark master_bookmark
-  Does the git repo you're about to merge has multiple heads (unmerged branches)? It's unsafe to use this tool when it does. (y/n) * Let's get this merged! (glob)
   * using repo "repo" repoid RepositoryId(0) (glob)
   * The importing bookmark name is: repo_import_new_repo. * (glob)
   * The destination bookmark name is: master_bookmark. * (glob)
@@ -116,7 +114,7 @@
 
 # Import the repo
 # Segmented changelog should be rebuild for newly imported commits along the way.
-  $ echo n | repo_import \
+  $ repo_import \
   > import \
   > "$GIT_REPO" \
   > --dest-path "new_dir/new_repo" \
@@ -130,7 +128,6 @@
   > --commit-author user \
   > --commit-message "merging" \
   > --recovery-file-path "$GIT_REPO/recovery_file.json"
-  Does the git repo you're about to merge has multiple heads (unmerged branches)? It's unsafe to use this tool when it does. (y/n) * Let's get this merged! (glob)
   * using repo "repo" repoid RepositoryId(0) (glob)
   * Started importing git commits to Mononoke (glob)
   * GitRepo:$TESTTMP/repo-git commit 1 of 5 - Oid:ce435b03 => Bid:071d73e6 (glob)
@@ -177,21 +174,21 @@
 
 # Check if we derived all the types for imported commits. Checking last one after bookmark move, before setting it to the merge commit.
   $ MERGE_PARENT_GIT="11b1e6976133cca327762371e8c523d3a0cd3ff2abe34385c8253df72cc989a9"
-  $ mononoke_admin derived-data exists changeset_info $MERGE_PARENT_GIT 2> /dev/null
+  $ mononoke_newadmin derived-data -R repo exists -T changeset_info  -i $MERGE_PARENT_GIT
   Derived: 11b1e6976133cca327762371e8c523d3a0cd3ff2abe34385c8253df72cc989a9
-  $ mononoke_admin derived-data exists blame $MERGE_PARENT_GIT 2> /dev/null
+  $ mononoke_newadmin derived-data -R repo exists -T blame  -i $MERGE_PARENT_GIT
   Derived: 11b1e6976133cca327762371e8c523d3a0cd3ff2abe34385c8253df72cc989a9
-  $ mononoke_admin derived-data exists deleted_manifest $MERGE_PARENT_GIT 2> /dev/null
+  $ mononoke_newadmin derived-data -R repo exists -T deleted_manifest  -i $MERGE_PARENT_GIT
   Derived: 11b1e6976133cca327762371e8c523d3a0cd3ff2abe34385c8253df72cc989a9
-  $ mononoke_admin derived-data exists fastlog $MERGE_PARENT_GIT 2> /dev/null
+  $ mononoke_newadmin derived-data -R repo exists -T fastlog  -i $MERGE_PARENT_GIT
   Derived: 11b1e6976133cca327762371e8c523d3a0cd3ff2abe34385c8253df72cc989a9
-  $ mononoke_admin derived-data exists filenodes $MERGE_PARENT_GIT 2> /dev/null
+  $ mononoke_newadmin derived-data -R repo exists -T filenodes  -i $MERGE_PARENT_GIT
   Derived: 11b1e6976133cca327762371e8c523d3a0cd3ff2abe34385c8253df72cc989a9
-  $ mononoke_admin derived-data exists fsnodes $MERGE_PARENT_GIT 2> /dev/null
+  $ mononoke_newadmin derived-data -R repo exists -T fsnodes  -i $MERGE_PARENT_GIT
   Derived: 11b1e6976133cca327762371e8c523d3a0cd3ff2abe34385c8253df72cc989a9
-  $ mononoke_admin derived-data exists hgchangesets $MERGE_PARENT_GIT 2> /dev/null
+  $ mononoke_newadmin derived-data -R repo exists -T hgchangesets  -i $MERGE_PARENT_GIT
   Derived: 11b1e6976133cca327762371e8c523d3a0cd3ff2abe34385c8253df72cc989a9
-  $ mononoke_admin derived-data exists unodes $MERGE_PARENT_GIT 2> /dev/null
+  $ mononoke_newadmin derived-data -R repo exists -T unodes  -i $MERGE_PARENT_GIT
   Derived: 11b1e6976133cca327762371e8c523d3a0cd3ff2abe34385c8253df72cc989a9
 
 # Start Mononoke
@@ -221,6 +218,7 @@
     "hg_sync_check_disabled": true,
     "import_stage": "PushCommit",
     "imported_cs_id": "fea472cdf364ad6499f20e5f32c0ba01cb73fda8cab229c24f456df085b17622",
+    "mark_not_synced_mapping": null,
     "merged_cs_id": * (glob)
     "move_bookmark_commits_done": 4,
     "phab_check_disabled": true,

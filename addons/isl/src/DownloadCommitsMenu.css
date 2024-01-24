@@ -6,7 +6,7 @@
  */
 
 .download-commits-input-row {
-  min-width: 250px;
+  min-width: 400px;
   display: flex;
   gap: var(--pad);
   align-items: center;
@@ -14,4 +14,10 @@
 
 .download-commits-input-row vscode-text-field {
   flex-grow: 1;
+}
+
+.download-commits-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pad);
 }

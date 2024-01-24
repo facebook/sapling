@@ -1,0 +1,299 @@
+# Most of the Mercurial code does not use fbcode-relative includes, so autodeps cannot
+# process it correctly.  Disable autodeps on this file for now.  Eventually we should
+# fix the mercurial code to use fbcode-relative includes.
+#
+
+load("@fbcode//target_determinator/macros:ci_hint.bzl", "ci_hint")
+load("@fbcode_macros//build_defs:cpp_binary.bzl", "cpp_binary")
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbcode_macros//build_defs:export_files.bzl", "export_file")
+load("@fbcode_macros//build_defs:native_rules.bzl", "buck_command_alias", "buck_filegroup", "buck_sh_binary")
+load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
+load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("@fbcode_macros//build_defs:rust_universal_binary.bzl", "rust_universal_binary")
+load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mercurial_release")
+
+cpp_library(
+    # @autodeps-skip
+    name = "core_headers",
+    headers = [
+        "sapling/bitmanipulation.h",
+        "sapling/compat.h",
+    ],
+)
+
+cpp_library(
+    # @autodeps-skip
+    name = "traceprof",
+    srcs = ["sapling/ext/extlib/traceprofimpl.cpp"],
+    cpp_compiler_flags = [
+        "-fno-strict-aliasing",
+    ],
+    deps = [
+        "fbsource//third-party/python:python",
+    ],
+)
+
+cpp_library(
+    name = "libbdiff",
+    srcs = [
+        "sapling/bdiff.c",
+    ],
+    exported_deps = [":core_headers"],
+)
+
+cpp_library(
+    name = "bser",
+    srcs = [
+        "sapling/ext/extlib/pywatchman/bser.c",
+    ],
+    compiler_flags = [
+        "-fno-strict-aliasing",
+        "-Wno-missing-field-initializers",
+    ],
+    deps = [
+        "fbsource//third-party/python:python",
+    ],
+)
+
+cpp_library(
+    name = "libmpatch",
+    srcs = [
+        "sapling/mpatch.c",
+    ],
+    compiler_flags = [
+        "-Wno-deprecated-declarations",
+    ],
+    exported_deps = [":core_headers"],
+)
+
+python_binary(
+    name = "gen_version_py_bin",
+    srcs = ["gen_version.py"],
+    main_module = "eden/scm/gen_version",
+)
+
+# Pure Python first party modules
+buck_filegroup(
+    name = "pure-modules",
+    srcs = glob([
+        "sapling/**/*.py",
+        "ghstack/**/*.py",
+    ]),
+)
+
+python_library(
+    name = "clone",
+    srcs = [
+        "fb/staticfiles/opt/facebook/bin/clone.py",
+    ],
+    resources = glob(["fb/staticfiles/opt/facebook/bin/**"]),
+)
+
+buck_filegroup(
+    name = "etc_mercurial",
+    srcs = glob([
+        "fb/staticfiles/etc/mercurial/**",
+    ]),
+)
+
+# Similar to "hg".
+# The main executable uses argv[0] to decide to run as a Python interpreter.
+buck_sh_binary(
+    name = "hgpython",
+    main = "fb/run_buck_hgpython.sh",
+    resources = [
+        ":hg",
+    ],
+)
+
+export_file(
+    name = "windows-manifest",
+    src = "exec/hgmain/manifest.xml",
+)
+
+rust_binary(
+    name = "hg",
+    srcs = glob(["exec/hgmain/src/**/*.rs"]),
+    autocargo = {
+        "cargo_target_config": {
+            "name": "hgmain",
+        },
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "hgcommands": {"default-features": False},
+                    # Not covered by autocargo, so declare explicitly
+                    "pyblackbox": {"path": "../../saplingnative/bindings/modules/pyblackbox"},
+                },
+                "target": {
+                    """'cfg(target_os = "linux")'""": {
+                        "dependencies": {
+                            "dirs": {"optional": True},
+                            "identity": {"optional": True},
+                        },
+                    },
+                    """'cfg(target_os = "macos")'""": {
+                        "dependencies": {
+                            "dirs": {"optional": True},
+                            "identity": {"optional": True},
+                        },
+                    },
+                },
+            },
+            "extra_buck_dependencies": {
+                "dependencies": [
+                    # Remove rust-shed for Cargo.toml
+                    (None, "//common/rust/shed/fbinit:fbinit"),
+                    ("configparser", "//eden/scm/lib/config/loader:configloader"),
+                ],
+            },
+            "features": {
+                "buildinfo": [],
+                "default": [],
+                "eden": [
+                    "clidispatch/eden",
+                    "hgcommands/eden",
+                ],
+                "fb": ["hgcommands/fb"],
+                "sl_only": ["clidispatch/sl_only"],
+                "with_chg": [
+                    "dirs",
+                    "identity",
+                ],
+            },
+            "package": {
+                "build": "build.rs",
+                "name": "hgmain",
+            },
+            "profile": {
+                "release": {
+                    "debug": True,
+                    "incremental": True,
+                    "lto": False,
+                },
+            },
+        },
+        "cargo_toml_dir": "exec/hgmain",
+    },
+    features = ["with_chg"],
+    link_style = "static",
+    linker_flags = select({
+        "DEFAULT": [],
+        "ovr_config//os:windows": [
+            "/MANIFEST:EMBED",
+            "/MANIFESTINPUT:$(location :windows-manifest)",
+        ],
+    }),
+    os_deps = [
+        (
+            "linux",
+            [
+                "fbsource//third-party/rust:dirs",
+                "fbsource//third-party/rust:libc",
+                ":chg",
+                "//eden/scm/lib/encoding:encoding",
+                "//eden/scm/lib/identity:identity",
+            ],
+        ),
+        (
+            "macos",
+            [
+                "fbsource//third-party/rust:dirs",
+                "fbsource//third-party/rust:libc",
+                ":chg",
+                "//eden/scm/lib/encoding:encoding",
+                "//eden/scm/lib/identity:identity",
+                "//eden/scm/lib/webview-app:webview-app",
+            ],
+        ),
+        (
+            "windows",
+            [
+                "fbsource//third-party/rust:anyhow",
+                "fbsource//third-party/rust:winapi",
+            ],
+        ),
+    ],
+    versions = {"python": "3.10"},
+    deps = [
+        "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/clidispatch:clidispatch",
+        "//eden/scm/lib/hgcommands:hgcommands",
+        "//eden/scm/lib/util/atexit:atexit",
+    ] + ([] if rust_oss.is_oss_build() else [
+        "//common/rust/shed/fbinit:fbinit",
+    ]),
+)
+
+# Try to override target depth so //eden/scm/tests:hg_run_tests and other
+# important test targets reliably pick up Python code changes despite target
+# depth greater than 5.
+ci_hint(
+    ci_deps = ["fbcode//eden/scm/lib/python-modules:python-modules"],
+    reason = "hg is very close to Python source files despite large target depth",
+    target = "hg",
+)
+
+rust_universal_binary(
+    name = "hg_universal_binary",
+    source = ":hg",
+)
+
+cpp_library(
+    # @autodeps-skip
+    name = "chg",
+    srcs = [
+        "contrib/chg/chg.c",
+        "contrib/chg/hgclient.c",
+        "contrib/chg/procutil.c",
+        "contrib/chg/util.c",
+    ],
+    headers = [
+        "contrib/chg/hgclient.h",
+        "contrib/chg/procutil.h",
+        "contrib/chg/util.h",
+    ],
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+)
+
+buck_command_alias(
+    name = "runhg",
+    exe = ":hg",
+)
+
+buck_sh_binary(
+    name = "scm_prompt",
+    main = "contrib/scm-prompt.sh",
+)
+
+cpp_binary(
+    name = "whochanges",
+    srcs = [
+        "contrib/whochanges/whochanges.c",
+    ],
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
+    external_deps = [
+        ("glibc", None, "rt"),
+    ],
+)
+
+python_binary(
+    name = "update_staleness_detectors",
+    srcs = ["fb/update_staleness_detectors.py"],
+    main_module = "eden.scm.fb.update_staleness_detectors",
+    deps = [
+        "fbsource//third-party/pypi/click:click",
+        "//libfb/py/asyncio:limit_concurrency",
+        "//libfb/py/pyre:pyre",
+    ],
+)

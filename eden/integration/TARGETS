@@ -1,0 +1,658 @@
+load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
+load("//eden:defs.bzl", "get_integration_test_env_and_deps", "get_oss_suffix", "get_test_env_and_deps")
+
+oncall("scm_client_infra")
+
+artifacts = get_integration_test_env_and_deps()
+
+python_unittest(
+    name = "basic" + get_oss_suffix(),
+    srcs = ["basic_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "casing",
+    srcs = ["casing_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "chown",
+    srcs = ["chown_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "clone",
+    srcs = ["clone_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "config",
+    srcs = ["config_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/fs/config:config_thrift-py",
+        "//eden/fs/py/eden/thrift:legacy",
+        "//eden/fs/service:thrift-py",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "corrupt_overlay",
+    srcs = ["corrupt_overlay_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/fs/service:thrift-py",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "debug_getpath",
+    srcs = ["debug_getpath_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/fs/service:thrift-py",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "debug_subscribe",
+    srcs = ["debug_subscribe_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "debug",
+    srcs = ["debug_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/fs/py/eden/thrift:legacy",
+        "//eden/fs/service:thrift-py",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "doteden",
+    srcs = ["doteden_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "edenclient_test",
+    srcs = ["edenclient_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "fsck",
+    srcs = ["fsck_test.py"],
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:windows",
+    ],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/lib:lib",
+        "//eden/test_support:py",
+    ],
+)
+
+python_unittest(
+    name = "glob",
+    srcs = ["glob_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/fs/service:thrift-py",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "health",
+    srcs = ["health_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/fs/cli:lib",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "help",
+    srcs = ["help_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "info",
+    srcs = ["info_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/fs/cli:lib",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "invalidate",
+    srcs = ["invalidate_test.py"],
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:windows",
+    ],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/fs/service:thrift-py",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "long_path_test",
+    srcs = ["long_path_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/fs/service:thrift-py",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "materialized_query",
+    srcs = ["materialized_query_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/fs/service:thrift-py",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "mmap_test",
+    srcs = ["mmap_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "mount",
+    srcs = ["mount_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/fs/cli:lib",
+        "//eden/fs/py/eden/thrift:legacy",
+        "//eden/fs/service:thrift-py",
+        "//eden/integration/lib:lib",
+        "//fb303/thrift:fb303_core-py",
+        "//thrift/lib/py:base",
+    ],
+)
+
+python_unittest(
+    name = "oexcl",
+    srcs = ["oexcl_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "patch",
+    srcs = ["patch_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "persistence",
+    srcs = ["persistence_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "prjfs_stress",
+    srcs = ["prjfs_stress.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "prjfs_match_fs",
+    srcs = ["prjfs_match_fs.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/fs/service:thrift-py",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "rage",
+    srcs = ["rage_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "rc",
+    srcs = ["rc_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "readdir",
+    srcs = ["readdir_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/fs/service:thrift-py",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "redirect",
+    srcs = ["redirect_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/fs/cli:lib",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "remount",
+    srcs = ["remount_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "rename",
+    srcs = ["rename_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "restart",
+    srcs = ["restart_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/fs/cli:lib",
+        "//eden/fs/py/eden/thrift:legacy",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "rocksdb_store",
+    srcs = ["rocksdb_store_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/fs/cli:lib",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "sed",
+    srcs = ["sed_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "setattr",
+    srcs = ["setattr_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "service_log",
+    srcs = ["service_log_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "stale",
+    srcs = ["stale_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/fs/py/eden:config",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "stale_inode",
+    srcs = ["stale_inode_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "start",
+    srcs = ["start_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/fs/cli:lib",
+        "//eden/integration/lib:lib",
+        "//fb303/thrift:fb303_core-py",
+    ],
+)
+
+python_unittest(
+    name = "stats",
+    srcs = ["stats_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/fs/service:thrift-py",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "stop",
+    srcs = ["stop_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/fs/cli:lib",
+        "//eden/fs/cli:proc_utils",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "takeover",
+    srcs = ["takeover_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "fbsource//third-party/pypi/pexpect:pexpect",
+        "//eden/fs/cli:lib",
+        "//eden/fs/py/eden/thrift:legacy",
+        "//eden/fs/service:thrift-py",
+        "//eden/integration/lib:lib",
+        "//fb303/thrift:fb303_core-py",
+    ],
+)
+
+python_unittest(
+    name = "thrift",
+    srcs = ["thrift_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/fs/config:config_thrift-py",
+        "//eden/fs/service:thrift-py",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "unicode",
+    srcs = ["unicode_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "unixsocket",
+    srcs = ["unixsocket_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "unlink",
+    srcs = ["unlink_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "userinfo",
+    srcs = ["userinfo_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "windows_fsck",
+    srcs = ["windows_fsck_test.py"],
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:windows",
+    ],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/fs/service:thrift-py",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "xattr",
+    srcs = ["xattr_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "projfs_buffer",
+    srcs = ["projfs_buffer.py"],
+    compatible_with = [
+        "ovr_config//os:linux",  # just so pyre will type check me
+        "ovr_config//os:windows",
+    ],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
+    name = "projfs_enumeration",
+    srcs = ["projfs_enumeration.py"],
+    compatible_with = [
+        "ovr_config//os:linux",  # just so pyre will type check me
+        "ovr_config//os:windows",
+    ],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/lib:lib",
+        "//eden/integration/lib:ntapi",
+    ],
+)
+
+# Also run basic sanity tests on the non-oss build flavor.
+# We don't run all the tests on both flavors since it takes a while, and the
+# two build flavors are almost the same, with only some minor differences in
+# the initialization code.
+full_artifacts = get_test_env_and_deps("")
+
+python_unittest(
+    name = "basic",
+    srcs = [
+        "basic_test.py",
+    ],
+    env = full_artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = full_artifacts["deps"],
+    deps = [
+        "//eden/integration/lib:lib",
+    ],
+)

@@ -18,8 +18,8 @@ use git2::Tree;
 use git2::TreeEntry;
 use mononoke_types::hash;
 use mononoke_types::FileType;
-use mononoke_types::MPath;
 use mononoke_types::MPathElement;
+use mononoke_types::NonRootMPath;
 use mononoke_types::RepoPath;
 use tokio::sync::mpsc;
 
@@ -115,7 +115,8 @@ fn walk_tree(
         if entry.kind() == Some(ObjectType::Tree) {
             let path_element = MPathElement::new(entry.name_bytes().to_vec())?;
             let obj = entry.to_object(repo)?;
-            let subtree_path = RepoPath::dir(MPath::join_opt_element(path.mpath(), &path_element))?;
+            let subtree_path =
+                RepoPath::dir(NonRootMPath::join_opt_element(path.mpath(), &path_element))?;
             let tree = obj.peel_to_tree()?;
 
             walk_tree(git_lfs, subtree_path, tx, repo, tree)?;

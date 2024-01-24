@@ -9,7 +9,7 @@
 
 #include <folly/Conv.h>
 
-#include "eden/common/utils/ProcessNameCache.h"
+#include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
@@ -19,9 +19,9 @@ namespace facebook::eden {
 
 BackingStoreLogger::BackingStoreLogger(
     std::shared_ptr<StructuredLogger> logger,
-    std::shared_ptr<ProcessNameCache> processNameCache)
+    std::shared_ptr<ProcessInfoCache> processInfoCache)
     : logger_{std::move(logger)},
-      processNameCache_{std::move(processNameCache)},
+      processInfoCache_{std::move(processInfoCache)},
       loggingAvailable_{true} {}
 
 void BackingStoreLogger::logImport(
@@ -37,7 +37,7 @@ void BackingStoreLogger::logImport(
 
   std::optional<std::string> cmdline;
   if (pid) {
-    cmdline = processNameCache_->getProcessName(pid.value().get());
+    cmdline = processInfoCache_->getProcessName(pid.value().get());
   }
 
   std::string cause_string = "<invalid>";

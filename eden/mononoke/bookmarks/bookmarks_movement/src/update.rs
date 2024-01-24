@@ -209,7 +209,14 @@ impl<'op> UpdateBookmarkOp<'op> {
             )
             .await?;
 
-        check_repo_lock(repo, kind, self.pushvars, ctx.metadata().identities()).await?;
+        check_repo_lock(
+            repo,
+            kind,
+            self.pushvars,
+            ctx.metadata().identities(),
+            authz,
+        )
+        .await?;
 
         let mut txn = repo.bookmarks().create_transaction(ctx.clone());
         let txn_hook;

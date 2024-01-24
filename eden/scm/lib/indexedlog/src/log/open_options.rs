@@ -356,7 +356,7 @@ impl OpenOptions {
         let dir = dir.into();
         match dir.as_opt_path() {
             None => self.create_in_memory(dir),
-            Some(ref fs_dir) => {
+            Some(fs_dir) => {
                 let span = debug_span!("Log::open", dir = &fs_dir.to_string_lossy().as_ref());
                 let _guard = span.enter();
                 self.open_internal(&dir, None, None)
@@ -492,8 +492,7 @@ impl IndexOutput {
     pub(crate) fn into_cow(self, data: &[u8]) -> crate::Result<Cow<[u8]>> {
         Ok(match self {
             IndexOutput::Reference(range) => Cow::Borrowed(
-                &data
-                    .get(range.start as usize..range.end as usize)
+                data.get(range.start as usize..range.end as usize)
                     .ok_or_else(|| {
                         let msg = format!(
                             "IndexFunc returned range {:?} but the data only has {} bytes",

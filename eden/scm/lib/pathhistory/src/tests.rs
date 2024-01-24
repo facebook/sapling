@@ -24,9 +24,13 @@ use manifest::FileMetadata;
 use manifest::FileType;
 use manifest::Manifest;
 use manifest_tree::TreeManifest;
+use sha1::Digest;
+use sha1::Sha1;
 use storemodel::minibytes::Bytes;
+use storemodel::InsertOpts;
+use storemodel::KeyStore;
 use storemodel::ReadRootTreeIds;
-use storemodel::TreeFormat;
+use storemodel::SerializationFormat;
 use storemodel::TreeStore;
 use types::HgId;
 use types::Key;
@@ -135,11 +139,9 @@ impl TestHistory {
             .map(|s| RepoPath::from_str(s).unwrap().to_owned())
             .collect();
 
-        let path_history =
-            PathHistory::new(set, paths, Arc::new(self.clone()), Arc::new(self.clone()))
-                .await
-                .unwrap();
-        path_history
+        PathHistory::new(set, paths, Arc::new(self.clone()), Arc::new(self.clone()))
+            .await
+            .unwrap()
     }
 
     /// Obtain the access log.
@@ -150,7 +152,7 @@ impl TestHistory {
     fn commit_to_tree(&self, commit_id: HgId) -> HgId {
         let commit_int = hgid_to_int(commit_id);
         let inner = self.inner.lock().unwrap();
-        match inner.commit_to_tree.range(..=commit_int).rev().next() {
+        match inner.commit_to_tree.range(..=commit_int).next_back() {
             Some((_, tree_id)) => *tree_id,
             None => inner.empty_tree_id,
         }
@@ -227,22 +229,41 @@ impl<I: Iterator<Item = u64>> From<(u64, I)> for BuildSetParam {
     }
 }
 
-impl TreeStore for TestHistory {
-    fn get(&self, path: &RepoPath, hgid: HgId) -> Result<Bytes> {
+fn compute_sha1(content: &[u8]) -> HgId {
+    let mut hasher = Sha1::new();
+    hasher.update(format!("tree {}\0", content.len()));
+    hasher.update(content);
+    let buf: [u8; HgId::len()] = hasher.finalize().into();
+    (&buf).into()
+}
+
+#[async_trait]
+impl KeyStore for TestHistory {
+    fn get_local_content(&self, path: &RepoPath, hgid: HgId) -> anyhow::Result<Option<Bytes>> {
         let key = Key::new(path.to_owned(), hgid);
         let inner = self.inner.lock().unwrap();
         if !inner.prefetched_trees.contains(&key) {
             bail!("not prefetched: {:?}", &key);
         }
         match inner.trees.get(&hgid) {
-            Some(v) => Ok(v.clone()),
+            Some(v) => Ok(Some(v.clone())),
             None => bail!("{:?} not found", &key),
         }
     }
 
-    fn insert(&self, _path: &RepoPath, hgid: HgId, data: Bytes) -> Result<()> {
-        self.inner.lock().unwrap().trees.insert(hgid, data);
-        Ok(())
+    fn insert_data(
+        &self,
+        _opts: InsertOpts,
+        _path: &RepoPath,
+        data: &[u8],
+    ) -> anyhow::Result<HgId> {
+        let hgid = compute_sha1(data);
+        self.inner
+            .lock()
+            .unwrap()
+            .trees
+            .insert(hgid, Bytes::copy_from_slice(data));
+        Ok(hgid)
     }
 
     fn prefetch(&self, mut keys: Vec<Key>) -> Result<()> {
@@ -261,10 +282,12 @@ impl TreeStore for TestHistory {
         Ok(())
     }
 
-    fn format(&self) -> TreeFormat {
-        TreeFormat::Git
+    fn format(&self) -> SerializationFormat {
+        SerializationFormat::Git
     }
 }
+
+impl TreeStore for TestHistory {}
 
 #[async_trait]
 impl ReadRootTreeIds for TestHistory {

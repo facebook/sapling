@@ -81,7 +81,7 @@ mod tests {
     fn test_non_blocking_err() {
         let (sender, receiver) = futures::channel::oneshot::channel::<usize>();
         assert_eq!(
-            non_blocking(async { receiver.await }).unwrap_err().kind(),
+            non_blocking(receiver).unwrap_err().kind(),
             io::ErrorKind::WouldBlock
         );
         drop(sender);

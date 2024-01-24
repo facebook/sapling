@@ -84,7 +84,7 @@ fn add_progress_bar_threads(
 ) -> Vec<JoinHandle<()>> {
     let threads: Vec<JoinHandle<_>> = (0..num_threads)
         .map(|_| {
-            let bar = ProgressBar::register_new("Progress", total, "items");
+            let bar = ProgressBar::new_detached("Progress", total, "items");
             thread::spawn(move || {
                 for _i in 0..total {
                     bar.increase_position(1);

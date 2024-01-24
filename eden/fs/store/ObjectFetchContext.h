@@ -86,6 +86,13 @@ class ObjectFetchContext : public RefCounted {
     return kDefaultImportPriority;
   }
 
+  // RequestInfo keys used by ReCasBackingStore
+  inline static const std::string kSessionIdField = "session-id";
+  inline static const std::string kCacheSessionIdField = "cache-session-id";
+  // RequestInfo keys used by SaplingNativeBackingStore
+  inline static const std::string kClientCorrelator = "client-correlator";
+  inline static const std::string kClientEntryPoint = "client-entrypoint";
+
   virtual const std::unordered_map<std::string, std::string>* getRequestInfo()
       const = 0;
 

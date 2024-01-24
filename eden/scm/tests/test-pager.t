@@ -243,7 +243,7 @@ pager is globally set to off using a flag:
 Pager should not override the exit code of other commands
 
   $ cat >> $TESTTMP/fortytwo.py <<'EOF'
-  > from edenscm import commands, registrar
+  > from sapling import commands, registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command('fortytwo', [], 'fortytwo', norepo=True)

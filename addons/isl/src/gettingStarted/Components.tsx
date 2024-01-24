@@ -10,7 +10,7 @@ import platform from '../platform';
 import {themeState} from '../theme';
 import {Ribbon} from './Ribbon';
 import {VSCodeLink, VSCodeButton} from '@vscode/webview-ui-toolkit/react';
-import {useRecoilValue} from 'recoil';
+import {useAtomValue} from 'jotai';
 import {Icon} from 'shared/Icon';
 
 export function DismissButton({dismiss}: {dismiss: () => void}) {
@@ -101,7 +101,7 @@ export function Card({
   side: 'left' | 'right';
   comingSoon?: boolean;
 }) {
-  const theme = useRecoilValue(themeState);
+  const theme = useAtomValue(themeState);
   const imgEl = (
     <img src={theme === 'light' ? imgLight : imgDark} alt={alt} className="card-image" />
   );
@@ -120,6 +120,26 @@ export function Card({
           <T>Coming Soon!</T>
         </Ribbon>
       ) : null}
+    </div>
+  );
+}
+
+export function Callout({
+  title,
+  imgDark,
+  imgLight,
+  alt,
+}: {
+  title: React.ReactNode;
+  imgLight: string;
+  imgDark: string;
+  alt: string;
+}) {
+  const theme = useAtomValue(themeState);
+  return (
+    <div className="callout">
+      <img src={theme === 'light' ? imgLight : imgDark} alt={alt} className="callout-image" />
+      <span>{title}</span>
     </div>
   );
 }

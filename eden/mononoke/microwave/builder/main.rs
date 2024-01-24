@@ -46,7 +46,7 @@ use repo_derived_data::RepoDerivedDataArc;
 use slog::info;
 use slog::o;
 use warm_bookmarks_cache::create_derived_data_warmer;
-use warm_bookmarks_cache::find_latest_derived_and_oldest_underived;
+use warm_bookmarks_cache::find_latest_derived_and_underived;
 use warm_bookmarks_cache::LatestDerivedBookmarkEntry;
 
 use crate::changesets::MicrowaveChangesets;
@@ -62,7 +62,7 @@ async fn cache_warmup_target(
         create_derived_data_warmer::<FilenodesOnlyPublic>(ctx, repo.repo_derived_data_arc()),
     ];
 
-    match find_latest_derived_and_oldest_underived(
+    match find_latest_derived_and_underived(
         ctx,
         repo.bookmarks(),
         repo.bookmark_update_log(),

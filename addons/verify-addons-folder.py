@@ -45,8 +45,9 @@ async def verify(*, use_vendored_grammars=False):
         verify_shared(),
         verify_textmate(),
         verify_isl(),
-        verify_reviewstack(use_vendored_grammars=use_vendored_grammars),
     )
+    # shared depends on reviewstack generated textmate grammars, so can't run concurrently without flakiness
+    await verify_reviewstack(use_vendored_grammars=use_vendored_grammars)
 
 
 async def verify_prettier():

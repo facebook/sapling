@@ -37,24 +37,29 @@ enum Direction {
 /// ```
 /// use drawdag::parse;
 ///
-/// let edges = parse(r#"
+/// let edges = parse(
+///     r#"
 ///             E
 ///              \
 ///     C----B----A
 ///        /
 ///      D-
-/// "#);
-/// let expected = "{\"A\": {\"B\", \"E\"}, \"B\": {\"C\", \"D\"}, \"C\": {}, \"D\": {}, \"E\": {}}";
+/// "#,
+/// );
+/// let expected =
+///     "{\"A\": {\"B\", \"E\"}, \"B\": {\"C\", \"D\"}, \"C\": {}, \"D\": {}, \"E\": {}}";
 /// assert_eq!(format!("{:?}", edges), expected);
 ///
-/// let edges = parse(r#"
+/// let edges = parse(
+///     r#"
 ///   A
 ///  /|
 /// | B
 /// E |
 ///   |\
 ///   C D
-/// "#);
+/// "#,
+/// );
 /// assert_eq!(format!("{:?}", edges), expected);
 /// ```
 pub fn parse(text: &str) -> BTreeMap<String, BTreeSet<String>> {

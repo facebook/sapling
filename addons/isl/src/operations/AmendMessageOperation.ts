@@ -5,56 +5,34 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ApplyPreviewsFuncType, PreviewContext} from '../previews';
-import type {CommandArg, Hash} from '../types';
+import type {Dag} from '../previews';
+import type {CommandArg, ExactRevset, SucceedableRevset} from '../types';
 
-import {SucceedableRevset} from '../types';
 import {Operation} from './Operation';
 
 export class AmendMessageOperation extends Operation {
-  constructor(private hash: Hash, private message: string) {
+  constructor(private revset: SucceedableRevset | ExactRevset, private message: string) {
     super('AmendMessageOperation');
   }
 
   static opName = 'Metaedit';
 
   getArgs() {
-    const args: Array<CommandArg> = [
-      'metaedit',
-      '--rev',
-      SucceedableRevset(this.hash),
-      '--message',
-      this.message,
-    ];
+    const args: Array<CommandArg> = ['metaedit', '--rev', this.revset, '--message', this.message];
     return args;
   }
 
-  makeOptimisticApplier(context: PreviewContext): ApplyPreviewsFuncType | undefined {
-    const commitToMetaedit = context.treeMap.get(this.hash);
-    if (commitToMetaedit == null) {
-      // metaedit succeeds when we no longer see original commit
-      // Note: this assumes we always restack children and never render old commit as obsolete.
-      return undefined;
-    }
-
-    const [title] = this.message.split(/\n+/, 1);
-    const description = this.message.slice(title.length);
-
-    const func: ApplyPreviewsFuncType = (tree, _previewType) => {
-      if (tree.info.hash === this.hash) {
-        // use fake title/description on the changed commit
-        return {
-          info: {
-            ...tree.info,
-            title,
-            description: description ?? '',
-          },
-          children: tree.children,
-        };
-      } else {
-        return {info: tree.info, children: tree.children};
+  optimisticDag(dag: Dag): Dag {
+    const hash = this.revset.revset;
+    return dag.touch(hash).replaceWith(hash, (_h, c) => {
+      if (c === undefined) {
+        // metaedit succeeds when we no longer see original commit
+        // Note: this assumes we always restack children and never render old commit as obsolete.
+        return c;
       }
-    };
-    return func;
+      const [title] = this.message.split(/\n+/, 1);
+      const description = this.message.slice(title.length);
+      return c?.merge({title, description});
+    });
   }
 }

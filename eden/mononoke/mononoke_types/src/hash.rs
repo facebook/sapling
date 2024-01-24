@@ -8,7 +8,6 @@
 use std::fmt;
 use std::fmt::Debug;
 use std::fmt::Display;
-use std::io::Write;
 use std::str::FromStr;
 
 use abomonation_derive::Abomonation;
@@ -17,9 +16,13 @@ use anyhow::Error;
 use anyhow::Result;
 use ascii::AsciiStr;
 use ascii::AsciiString;
+use blake2::digest::typenum::U32;
+use blake2::digest::Digest;
+use blake2::digest::FixedOutput;
+use blake2::digest::KeyInit;
 use blake2::digest::Update;
-use blake2::digest::VariableOutput;
-use blake2::VarBlake2b;
+use blake2::Blake2b;
+use blake2::Blake2bMac;
 use edenapi_types::Blake3 as EdenapiBlake3;
 use edenapi_types::CommitId as EdenapiCommitId;
 use edenapi_types::GitSha1 as EdenapiGitSha1;
@@ -27,6 +30,7 @@ use edenapi_types::Sha1 as EdenapiSha1;
 use edenapi_types::Sha256 as EdenapiSha256;
 use faster_hex::hex_decode;
 use faster_hex::hex_encode;
+use gix_hash::ObjectId;
 use quickcheck::empty_shrinker;
 use quickcheck::Arbitrary;
 use quickcheck::Gen;
@@ -147,13 +151,22 @@ impl Blake2 {
 
 /// Context for incrementally computing a `Blake2` hash.
 #[derive(Clone)]
-pub struct Context(VarBlake2b);
+pub enum Context {
+    Unkeyed(Blake2b<U32>),
+    Keyed(Blake2bMac<U32>),
+}
 
 impl Context {
     /// Construct a `Context`
     #[inline]
     pub fn new(key: &[u8]) -> Self {
-        Context(VarBlake2b::new_keyed(key, BLAKE2_HASH_LENGTH_BYTES))
+        if key.is_empty() {
+            Self::Unkeyed(Blake2b::new())
+        } else {
+            Self::Keyed(
+                Blake2bMac::new_from_slice(key).expect("key should not be bigger than block size"),
+            )
+        }
     }
 
     #[inline]
@@ -161,21 +174,18 @@ impl Context {
     where
         T: AsRef<[u8]>,
     {
-        self.0.update(data.as_ref())
+        match self {
+            Self::Unkeyed(b2) => Digest::update(b2, data.as_ref()),
+            Self::Keyed(b2) => b2.update(data.as_ref()),
+        }
     }
 
     #[inline]
     pub fn finish(self) -> Blake2 {
-        let mut ret = [0u8; BLAKE2_HASH_LENGTH_BYTES];
-        self.0.finalize_variable(|res| {
-            if let Err(e) = ret.as_mut().write_all(res) {
-                panic!(
-                    "{}-byte array must work with {}-byte blake2b: {:?}",
-                    BLAKE2_HASH_LENGTH_BYTES, BLAKE2_HASH_LENGTH_BYTES, e
-                );
-            }
-        });
-        Blake2(ret)
+        match self {
+            Self::Unkeyed(b2) => Blake2(b2.finalize_fixed().into()),
+            Self::Keyed(b2) => Blake2(b2.finalize_fixed().into()),
+        }
     }
 }
 
@@ -491,6 +501,18 @@ impl From<Sha1> for GitSha1 {
     }
 }
 
+impl GitSha1 {
+    pub fn to_object_id(&self) -> Result<ObjectId> {
+        use anyhow::Context;
+        ObjectId::from_hex(self.to_hex().as_bytes()).with_context(|| {
+            format!(
+                "Error in converting GitSha1 {:?} to GitObjectId",
+                self.to_hex()
+            )
+        })
+    }
+}
+
 impl Blake3 {
     #[inline]
     pub fn from_thrift(b: thrift::Blake3) -> Result<Self> {
@@ -532,6 +554,10 @@ pub struct RichGitSha1 {
 }
 
 impl RichGitSha1 {
+    pub fn is_blob(&self) -> bool {
+        self.ty == "blob"
+    }
+
     pub fn from_bytes(bytes: impl AsRef<[u8]>, ty: &'static str, size: u64) -> Result<Self> {
         Ok(Self::from_sha1(GitSha1::from_bytes(bytes)?, ty, size))
     }
@@ -558,6 +584,10 @@ impl RichGitSha1 {
 
     pub fn to_hex(&self) -> AsciiString {
         self.sha1.to_hex()
+    }
+
+    pub fn to_object_id(&self) -> Result<ObjectId> {
+        self.sha1.to_object_id()
     }
 
     /// Return the Git prefix bytes
@@ -703,6 +733,16 @@ mod test {
         let context = Context::new(b"");
         let nil = context.finish();
         assert_eq!(nil, NILHASH);
+    }
+
+    #[test]
+    fn snapshot_hash() {
+        let context = Context::new(b"abc");
+        assert_eq!(
+            context.finish(),
+            Blake2::from_str("7a78f9455f438d36794c4adcf1a499856367dd403ceb8e9ca14a19a173b8f07b")
+                .unwrap()
+        );
     }
 
     #[test]

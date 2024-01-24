@@ -1,0 +1,18 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("scm_client_infra")
+
+rust_library(
+    name = "stack-config-derive",
+    srcs = glob(["src/**/*.rs"]),
+    proc_macro = True,
+    unittests = False,
+    deps = [
+        "fbsource//third-party/rust:darling",
+        "fbsource//third-party/rust:proc-macro-error",
+        "fbsource//third-party/rust:proc-macro2",
+        "fbsource//third-party/rust:quote",
+        "fbsource//third-party/rust:syn1",
+    ],
+)

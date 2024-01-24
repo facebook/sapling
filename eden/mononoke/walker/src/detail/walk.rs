@@ -15,7 +15,6 @@ use anyhow::Context;
 use anyhow::Error;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
-use basename_suffix_skeleton_manifest::RootBasenameSuffixSkeletonManifest;
 use blame::RootBlameV2;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
@@ -62,9 +61,9 @@ use mercurial_types::HgManifestId;
 use mercurial_types::RepoPath;
 use mononoke_types::deleted_manifest_common::DeletedManifestCommon;
 use mononoke_types::fsnode::FsnodeEntry;
+use mononoke_types::path::MPath;
 use mononoke_types::skeleton_manifest::SkeletonManifestEntry;
 use mononoke_types::unode::UnodeEntry;
-use mononoke_types::BasenameSuffixSkeletonManifestId;
 use mononoke_types::BlameV2Id;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
@@ -72,7 +71,6 @@ use mononoke_types::DeletedManifestV2Id;
 use mononoke_types::FastlogBatchId;
 use mononoke_types::FileUnodeId;
 use mononoke_types::FsnodeId;
-use mononoke_types::MPath;
 use mononoke_types::ManifestUnodeId;
 use mononoke_types::SkeletonManifestId;
 use phases::Phase;
@@ -589,14 +587,30 @@ async fn bonsai_changeset_step<V: VisitOne>(
     checker: &Checker<V>,
     key: &ChangesetKey<ChangesetId>,
 ) -> Result<StepOutput, StepError> {
+    const BONSAI_CHANGESET_PARSE_ERROR: &str = "invalid Thrift structure 'BonsaiChangeset'";
     let bcs_id = &key.inner;
-
-    // Get the data, and add direct file data for this bonsai changeset
-    let bcs = bcs_id.load(ctx, repo.repo_blobstore()).await?;
-
     // Build edges, from mostly queue expansion to least
     let mut edges = vec![];
-
+    // Get the data, and add direct file data for this bonsai changeset
+    let bcs = match bcs_id.load(ctx, repo.repo_blobstore()).await {
+        Err(e) => match e {
+            LoadableError::Error(e) if e.to_string().contains(BONSAI_CHANGESET_PARSE_ERROR) => {
+                let mut scuba = ctx.scuba().clone();
+                scuba.add("changeset_key", key.inner.to_string());
+                scuba.add("repo", repo.repo_identity().name());
+                scuba.log_with_msg(
+                    "Invalid BonsaiChangeset",
+                    "Invalid BonsaiChangeset encountered by walker".to_string(),
+                );
+                return Ok(StepOutput::Done(
+                    checker.step_data(NodeType::Changeset, || NodeData::NotRequired),
+                    edges,
+                ));
+            }
+            other_error => Err(other_error),
+        },
+        bcs => bcs,
+    }?;
     // Expands to parents
     checker.add_edge(
         &mut edges,
@@ -629,11 +643,6 @@ async fn bonsai_changeset_step<V: VisitOne>(
     );
     checker.add_edge(
         &mut edges,
-        EdgeType::ChangesetToBasenameSuffixSkeletonManifestMapping,
-        || Node::BasenameSuffixSkeletonManifestMapping(*bcs_id),
-    );
-    checker.add_edge(
-        &mut edges,
         EdgeType::ChangesetToDeletedManifestV2Mapping,
         || Node::DeletedManifestV2Mapping(*bcs_id),
     );
@@ -652,7 +661,7 @@ async fn bonsai_changeset_step<V: VisitOne>(
                     &mut edges,
                     EdgeType::ChangesetToFileContent,
                     || Node::FileContent(tc.content_id()),
-                    || Some(WrappedPath::from(Some(mpath.clone()))),
+                    || Some(WrappedPath::from(MPath::from(mpath.clone()))),
                 );
             }
             None => {}
@@ -915,8 +924,27 @@ async fn hg_changeset_step<V: VisitOne>(
     checker: &Checker<V>,
     key: ChangesetKey<HgChangesetId>,
 ) -> Result<StepOutput, StepError> {
-    let hgchangeset = key.inner.load(ctx, repo.repo_blobstore()).await?;
+    const HGCHANGESET_PARSE_ERROR: &str = "Error while deserializing changeset";
     let mut edges = vec![];
+    let hgchangeset = match key.inner.load(ctx, repo.repo_blobstore()).await {
+        Err(e) => match e {
+            LoadableError::Error(e) if e.to_string().contains(HGCHANGESET_PARSE_ERROR) => {
+                let mut scuba = ctx.scuba().clone();
+                scuba.add("changeset_key", key.inner.to_string());
+                scuba.add("repo", repo.repo_identity().name());
+                scuba.log_with_msg(
+                    "Invalid HgChangset",
+                    "Invalid HgChangset encountered by walker".to_string(),
+                );
+                return Ok(StepOutput::Done(
+                    checker.step_data(NodeType::HgChangeset, || NodeData::NotRequired),
+                    edges,
+                ));
+            }
+            other_error => Err(other_error),
+        },
+        changeset => changeset,
+    }?;
     // 1:1 but will then expand a lot, usually
     checker.add_edge(&mut edges, EdgeType::HgChangesetToHgManifest, || {
         Node::HgManifest(PathKey::new(hgchangeset.manifestid(), WrappedPath::Root))
@@ -1036,7 +1064,7 @@ where
             checker.add_edge(&mut edges, copyfrom_edge, || {
                 build_file_node(PathKey::new(
                     *file_node_id,
-                    WrappedPath::from(repo_path.clone().into_mpath()),
+                    WrappedPath::from(MPath::from(repo_path.clone().into_mpath())),
                 ))
             })
         }
@@ -1123,7 +1151,8 @@ async fn hg_manifest_step<V: VisitOne>(
             .await?
             .yield_every(MANIFEST_YIELD_EVERY_ENTRY_COUNT, |_| 1);
         while let Some((name, entry)) = subentries.try_next().await? {
-            let full_path = WrappedPath::from(Some(MPath::join_opt_element(path.as_ref(), &name)));
+            let path: &MPath = path.as_ref().into();
+            let full_path = WrappedPath::from(path.join_element(Some(&name)));
             match entry {
                 Entry::Leaf((_, hg_child_filenode_id)) => {
                     checker.add_edge_with_path(
@@ -1274,7 +1303,8 @@ async fn fsnode_step<V: VisitOne>(
                         || Node::Fsnode(*fsnode_id),
                         || {
                             path.map(|p| {
-                                WrappedPath::from(MPath::join_element_opt(p.as_ref(), Some(child)))
+                                let path: &MPath = p.as_ref().into();
+                                WrappedPath::from(path.join_element(Some(child)))
                             })
                         },
                     );
@@ -1286,7 +1316,8 @@ async fn fsnode_step<V: VisitOne>(
                         || Node::FileContent(*file.content_id()),
                         || {
                             path.map(|p| {
-                                WrappedPath::from(MPath::join_element_opt(p.as_ref(), Some(child)))
+                                let path: &MPath = p.as_ref().into();
+                                WrappedPath::from(path.join_element(Some(child)))
                             })
                         },
                     );
@@ -1510,7 +1541,8 @@ async fn unode_manifest_step<V: VisitOne>(
                     || Node::UnodeManifest(UnodeKey { inner: *id, flags }),
                     || {
                         path.map(|p| {
-                            WrappedPath::from(MPath::join_element_opt(p.as_ref(), Some(child)))
+                            let path: &MPath = p.as_ref().into();
+                            WrappedPath::from(path.join_element(Some(child)))
                         })
                     },
                 );
@@ -1522,7 +1554,8 @@ async fn unode_manifest_step<V: VisitOne>(
                     || Node::UnodeFile(UnodeKey { inner: *id, flags }),
                     || {
                         path.map(|p| {
-                            WrappedPath::from(MPath::join_element_opt(p.as_ref(), Some(child)))
+                            let path: &MPath = p.as_ref().into();
+                            WrappedPath::from(path.join_element(Some(child)))
                         })
                     },
                 );
@@ -1580,7 +1613,8 @@ async fn deleted_manifest_v2_step<V: VisitOne>(
             || Node::DeletedManifestV2(deleted_manifest_v2_id),
             || {
                 path.map(|p| {
-                    WrappedPath::from(MPath::join_element_opt(p.as_ref(), Some(&child_path)))
+                    let path: &MPath = p.as_ref().into();
+                    WrappedPath::from(path.join_element(Some(&child_path)))
                 })
             },
         );
@@ -1650,10 +1684,8 @@ async fn skeleton_manifest_step<V: VisitOne>(
                         || Node::SkeletonManifest(*subdir.id()),
                         || {
                             path.map(|p| {
-                                WrappedPath::from(MPath::join_element_opt(
-                                    p.as_ref(),
-                                    Some(child_path),
-                                ))
+                                let path: &MPath = p.as_ref().into();
+                                WrappedPath::from(path.join_element(Some(child_path)))
                             })
                         },
                     );
@@ -1700,88 +1732,6 @@ async fn skeleton_manifest_mapping_step<V: VisitOne>(
         Ok(StepOutput::Done(
             checker.step_data(NodeType::SkeletonManifestMapping, || {
                 NodeData::SkeletonManifestMapping(None)
-            }),
-            vec![],
-        ))
-    }
-}
-
-async fn basename_suffix_skeleton_manifest_step<V: VisitOne>(
-    ctx: &CoreContext,
-    repo: &BlobRepo,
-    checker: &Checker<V>,
-    manifest_id: &BasenameSuffixSkeletonManifestId,
-    path: Option<&WrappedPath>,
-) -> Result<StepOutput, StepError> {
-    let manifest = manifest_id.load(ctx, repo.repo_blobstore()).await?;
-    let mut edges = vec![];
-    {
-        let mut children = manifest
-            .list(ctx, repo.repo_blobstore())
-            .await?
-            .yield_every(MANIFEST_YIELD_EVERY_ENTRY_COUNT, |_| 1);
-
-        while let Some((child_path, entry)) = children.try_next().await? {
-            match entry {
-                manifest::Entry::Tree(subdir) => {
-                    checker.add_edge_with_path(
-                    &mut edges,
-                    EdgeType::BasenameSuffixSkeletonManifestToBasenameSuffixSkeletonManifestChild,
-                    || Node::BasenameSuffixSkeletonManifest(subdir.id),
-                    || {
-                        path.map(|p| {
-                            WrappedPath::from(MPath::join_element_opt(
-                                p.as_ref(),
-                                Some(&child_path),
-                            ))
-                        })
-                    },
-                );
-                }
-                manifest::Entry::Leaf(()) => {}
-            }
-        }
-    }
-
-    Ok(StepOutput::Done(
-        checker.step_data(NodeType::BasenameSuffixSkeletonManifest, || {
-            NodeData::BasenameSuffixSkeletonManifest(Some(manifest))
-        }),
-        edges,
-    ))
-}
-
-async fn basename_suffix_skeleton_manifest_mapping_step<V: VisitOne>(
-    ctx: &CoreContext,
-    repo: &BlobRepo,
-    checker: &Checker<V>,
-    bcs_id: ChangesetId,
-    enable_derive: bool,
-) -> Result<StepOutput, StepError> {
-    let root_manifest =
-        maybe_derived::<RootBasenameSuffixSkeletonManifest>(ctx, repo, bcs_id, enable_derive)
-            .await?;
-
-    if let Some(root_manifest) = root_manifest {
-        let mut edges = vec![];
-        let id = root_manifest.into_inner_id();
-
-        checker.add_edge_with_path(
-            &mut edges,
-            EdgeType::BasenameSuffixSkeletonManifestMappingToRootBasenameSuffixSkeletonManifest,
-            || Node::BasenameSuffixSkeletonManifest(id),
-            || Some(WrappedPath::Root),
-        );
-        Ok(StepOutput::Done(
-            checker.step_data(NodeType::BasenameSuffixSkeletonManifestMapping, || {
-                NodeData::BasenameSuffixSkeletonManifestMapping(Some(id))
-            }),
-            edges,
-        ))
-    } else {
-        Ok(StepOutput::Done(
-            checker.step_data(NodeType::BasenameSuffixSkeletonManifestMapping, || {
-                NodeData::BasenameSuffixSkeletonManifestMapping(None)
             }),
             vec![],
         ))
@@ -2226,26 +2176,6 @@ where
         }
         Node::SkeletonManifestMapping(bcs_id) => {
             skeleton_manifest_mapping_step(&ctx, &repo, &checker, bcs_id, enable_derive).await
-        }
-        Node::BasenameSuffixSkeletonManifest(id) => {
-            basename_suffix_skeleton_manifest_step(
-                &ctx,
-                &repo,
-                &checker,
-                &id,
-                walk_item.path.as_ref(),
-            )
-            .await
-        }
-        Node::BasenameSuffixSkeletonManifestMapping(bcs_id) => {
-            basename_suffix_skeleton_manifest_mapping_step(
-                &ctx,
-                &repo,
-                &checker,
-                bcs_id,
-                enable_derive,
-            )
-            .await
         }
         Node::UnodeFile(id) => {
             unode_file_step(&ctx, &repo, &checker, &id, walk_item.path.as_ref()).await

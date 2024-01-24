@@ -11,6 +11,7 @@ html .vscode-light {
   --scm-modified-foreground: #895503;
   --scm-added-foreground: #007100;
   --scm-removed-foreground: #ad0707;
+  --scm-missing-foreground: #418c91;
   --selected-commit-background: rgba(0, 0, 0, 0.1);
   --tooltip-background: var(--vscode-editorWidget-background, #f3f3f3);
   --tooltip-border: var(--vscode-editorWidget-border, #c8c8c8);
@@ -19,6 +20,7 @@ html .vscode-light {
   --error-bg-color: #e3594120;
 
   --hover-darken: rgba(0, 0, 0, 0.1);
+  --subtle-hover-darken: rgba(0, 0, 0, 0.03);
   --highlight-foreground: #2a2a2a;
 
   --selection-mix-mode: darken;
@@ -39,6 +41,16 @@ html .vscode-light {
   --diffEditor-modifiedLineBackground: #f9ec5633;
   --diffEditor-modifiedLineHighlightBackground: #f9ec5666;
   --editor-selectionBackground: #add6ff;
+  --editor-changedBackground: hsla(211, 100%, 87%, 0.3);
+  --editor-changedHighlightBackground: hsla(211, 100%, 87%, 0.5);
+
+  --hint-background: rgba(241, 168, 23, 0.2);
+
+  --banner-fg: rgb(36, 41, 47);
+  --banner-warning-bg: #f9ec5666;
+  --banner-error-bg: #fa7e7c66;
+  --banner-default-bg: var(--tooltip-background);
+  --banner-green-bg: #b0ddbd;
 
   --signal-good-bg: #2da44e;
   --signal-medium-bg: #d5b14e;

@@ -1,0 +1,66 @@
+load("@fbcode_macros//build_defs:cpp_binary.bzl", "cpp_binary")
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+
+oncall("scm_client_infra")
+
+cpp_library(
+    name = "portmap",
+    srcs = ["PortmapClient.cpp"],
+    headers = ["PortmapClient.h"],
+    deps = [
+        "//folly:exception",
+        "//folly:network_address",
+        "//folly:string",
+        "//folly/logging:logging",
+    ],
+    exported_deps = [
+        ":rpcbindrpc",
+        "//eden/fs/nfs/rpc:rpc",
+        "//folly/net:network_socket",
+    ],
+)
+
+cpp_library(
+    name = "portmapserver",
+    srcs = ["Rpcbindd.cpp"],
+    headers = ["Rpcbindd.h"],
+    deps = [
+        ":rpcbindrpc",
+        "//eden/fs/nfs:mountd_rpc",
+        "//eden/fs/nfs/rpc:server",
+        "//eden/fs/utils:immediate_future",
+        "//folly:synchronized",
+        "//folly:utility",
+        "//folly/logging:logging",
+    ],
+    exported_deps = [
+        "//eden/fs/inodes:inode_number",
+        "//eden/fs/utils:path",
+    ],
+)
+
+cpp_library(
+    name = "rpcbindrpc",
+    srcs = ["RpcbindRpc.cpp"],
+    headers = ["RpcbindRpc.h"],
+    exported_deps = [
+        "//eden/fs/nfs:nfsd_rpc",
+        "//eden/fs/nfs/rpc:rpc",
+    ],
+)
+
+cpp_binary(
+    name = "portmap_util",
+    srcs = ["PortmapUtil.cpp"],
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    deps = [
+        ":portmap",
+        "//folly:network_address",
+        "//folly/init:init",
+        "//folly/logging:init",
+        "//folly/logging:logging",
+    ],
+)

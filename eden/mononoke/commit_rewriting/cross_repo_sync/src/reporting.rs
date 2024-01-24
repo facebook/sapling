@@ -12,7 +12,6 @@ use anyhow::Error;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 use scuba_ext::MononokeScubaSampleBuilder;
-use tunables::tunables;
 
 const SCUBA_TABLE: &str = "mononoke_x_repo_mapping";
 
@@ -41,6 +40,7 @@ pub enum CommitSyncContext {
     Tests,
     Unknown,
     XRepoSyncJob,
+    ForwardSyncerInitialImport,
 }
 
 impl fmt::Display for CommitSyncContext {
@@ -57,6 +57,7 @@ impl fmt::Display for CommitSyncContext {
             Self::Tests => write!(f, "tests"),
             Self::Unknown => write!(f, "unknown"),
             Self::XRepoSyncJob => write!(f, "x-repo-sync-job"),
+            Self::ForwardSyncerInitialImport => write!(f, "forward-syncer-initial-import"),
         }
     }
 }
@@ -70,13 +71,6 @@ pub fn log_rewrite(
     duration: Duration,
     sync_result: &Result<Option<ChangesetId>, Error>,
 ) {
-    if !tunables()
-        .enable_logging_commit_rewrite_data()
-        .unwrap_or_default()
-    {
-        return;
-    }
-
     sample
         .add(DURATION_MS, duration.as_millis() as u64)
         .add(SOURCE_CS_ID, format!("{}", source_cs_id))

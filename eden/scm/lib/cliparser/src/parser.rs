@@ -9,12 +9,10 @@ use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 
+use ::serde::Serialize;
 #[cfg(feature = "python")]
 use cpython::*;
-#[cfg(feature = "python")]
-use cpython_ext::Bytes;
-#[cfg(feature = "python")]
-use cpython_ext::Str;
+use indexmap::set::IndexSet;
 use thiserror::Error;
 
 use crate::utils::get_prefix_bounds;
@@ -47,13 +45,13 @@ pub enum ParseError {
     MalformedAlias { name: String, value: String },
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize)]
+#[serde(untagged)]
 pub enum Value {
     Bool(Option<bool>),
-    Str(String),
-    Int(i64),
+    Str(Option<String>),
+    Int(Option<i64>),
     List(Vec<String>),
-    OptStr(Option<String>),
 }
 
 impl Value {
@@ -70,21 +68,19 @@ impl Value {
         match self {
             Value::Bool(_) => unreachable!(),
             Value::Str(ref mut s) => {
-                *s = token.to_string();
-                Ok(())
-            }
-            Value::OptStr(ref mut s) => {
                 *s = Some(token.to_string());
                 Ok(())
             }
             Value::Int(ref mut i) => {
-                *i = token
-                    .parse::<i64>()
-                    .map_err(|_| ParseError::OptionArgumentInvalid {
-                        option_name: "".to_string(),
-                        given: token.to_string(),
-                        expected: "int".to_string(),
-                    })?;
+                *i = Some(
+                    token
+                        .parse::<i64>()
+                        .map_err(|_| ParseError::OptionArgumentInvalid {
+                            option_name: "".to_string(),
+                            given: token.to_string(),
+                            expected: "int".to_string(),
+                        })?,
+                );
                 Ok(())
             }
             Value::List(ref mut vec) => {
@@ -102,21 +98,9 @@ impl ToPyObject for Value {
     fn to_py_object(&self, py: Python) -> Self::ObjectType {
         match self {
             Value::Bool(b) => b.to_py_object(py).into_object(),
-            Value::Str(s) => Str::from(Bytes::from(s.to_string()))
-                .to_py_object(py)
-                .into_object(),
-            Value::OptStr(s) => s
-                .as_ref()
-                .map(|s| Str::from(s.to_string()))
-                .to_py_object(py),
+            Value::Str(s) => s.as_ref().map(|s| s.to_string()).to_py_object(py),
             Value::Int(i) => i.to_py_object(py).into_object(),
-            Value::List(vec) => {
-                let collection: Vec<Str> = vec
-                    .into_iter()
-                    .map(|s: &String| Str::from(Bytes::from(s.to_string())))
-                    .collect();
-                collection.to_py_object(py).into_object()
-            }
+            Value::List(vec) => vec.clone().to_py_object(py).into_object(),
         }
     }
 }
@@ -132,11 +116,11 @@ impl<'source> FromPyObject<'source> for Value {
             return Ok(Value::List(Vec::new()));
         }
         if let Ok(s) = obj.cast_as::<PyString>(py) {
-            return Ok(Value::Str(s.to_string(py).unwrap().to_string()));
+            return Ok(Value::Str(Some(s.to_string(py).unwrap().to_string())));
         }
 
         if let Ok(_i) = obj.cast_as::<PyInt>(py) {
-            return Ok(Value::Int(obj.extract::<i64>(py).unwrap()));
+            return Ok(Value::Int(Some(obj.extract::<i64>(py).unwrap())));
         }
 
         Ok(Value::Bool(None))
@@ -146,7 +130,7 @@ impl<'source> FromPyObject<'source> for Value {
 impl From<Value> for i64 {
     fn from(v: Value) -> Self {
         match v {
-            Value::Int(i) => i,
+            Value::Int(i) => i.unwrap_or_default(),
             _ => panic!("programming error:  {:?} was converted to i64", v),
         }
     }
@@ -155,7 +139,7 @@ impl From<Value> for i64 {
 impl From<Value> for String {
     fn from(v: Value) -> Self {
         match v {
-            Value::Str(s) => s,
+            Value::Str(s) => s.unwrap_or_default(),
             _ => panic!("programming error:  {:?} was converted to String", v),
         }
     }
@@ -164,7 +148,7 @@ impl From<Value> for String {
 impl From<Value> for Option<String> {
     fn from(v: Value) -> Self {
         match v {
-            Value::OptStr(s) => s,
+            Value::Str(s) => s,
             _ => panic!(
                 "programming error:  {:?} was converted to Option<String>",
                 v
@@ -202,7 +186,7 @@ impl From<Value> for Vec<String> {
 
 impl From<i64> for Value {
     fn from(v: i64) -> Self {
-        Value::Int(v)
+        Value::Int(Some(v))
     }
 }
 
@@ -220,19 +204,19 @@ impl From<Option<bool>> for Value {
 
 impl From<&str> for Value {
     fn from(v: &str) -> Self {
-        Value::Str(v.to_string())
+        Value::Str(Some(v.to_string()))
     }
 }
 
 impl From<String> for Value {
     fn from(v: String) -> Self {
-        Value::Str(v)
+        Value::Str(Some(v))
     }
 }
 
 impl From<Option<String>> for Value {
     fn from(v: Option<String>) -> Self {
-        Value::OptStr(v)
+        Value::Str(v)
     }
 }
 
@@ -288,9 +272,23 @@ pub struct Flag {
 /// let flag: Flag = (None, "quiet", "silence output", true, "").into();
 ///
 /// // Accept various types.
-/// let flag: Flag = (Some('r'), format!("rev"), format!("revisions"), "master", "TEMPLATE").into();
+/// let flag: Flag = (
+///     Some('r'),
+///     format!("rev"),
+///     format!("revisions"),
+///     "master",
+///     "TEMPLATE",
+/// )
+///     .into();
 /// let flag: Flag = (Some('r'), "rev", "revisions", &["master", "stable"][..], "").into();
-/// let flag: Flag = (None, format!("sleep"), format!("sleep few seconds (default: {})", 1), 1, "FOOBAR").into();
+/// let flag: Flag = (
+///     None,
+///     format!("sleep"),
+///     format!("sleep few seconds (default: {})", 1),
+///     1,
+///     "FOOBAR",
+/// )
+///     .into();
 /// ```
 impl<S, L, D, V, T> From<(S, L, D, V, T)> for Flag
 where
@@ -332,16 +330,16 @@ impl ToPyObject for Flag {
     type ObjectType = PyObject;
 
     fn to_py_object(&self, py: Python) -> Self::ObjectType {
-        let short_name = Str::from(self.short_name.map(|s| s.to_string()).unwrap_or_default());
-        let long_name = Str::from(self.long_name.to_string());
-        let description = Str::from(self.description.to_string());
+        let short_name = self.short_name.map(|s| s.to_string()).unwrap_or_default();
+        let long_name = self.long_name.to_string();
+        let description = self.description.to_string();
         if let Some(flag_type) = &self.flag_type {
             (
                 short_name,
                 long_name,
                 &self.default_value,
                 description,
-                Str::from(flag_type.to_string()),
+                flag_type.to_string(),
             )
                 .to_py_object(py)
         } else {
@@ -462,13 +460,15 @@ impl Parser {
     ///
     /// ```
     /// use std::env;
+    ///
     /// use cliparser::parser::*;
     ///
     /// let env_args: Vec<String> = env::args().collect();
     ///
-    /// let flags: Vec<Flag> = vec![
-    ///     ('q', "quiet", "silence the output", false, "")
-    /// ].into_iter().map(Into::into).collect();
+    /// let flags: Vec<Flag> = vec![('q', "quiet", "silence the output", false, "")]
+    ///     .into_iter()
+    ///     .map(Into::into)
+    ///     .collect();
     ///
     /// let parser = ParseOptions::new().flags(flags).into_parser();
     ///
@@ -481,6 +481,7 @@ impl Parser {
 
         let mut first_arg_index = args.len();
         let mut opts = self.opts.clone();
+        let mut specified_opts = IndexSet::new();
         let mut iter = args.into_iter().enumerate().peekable();
         let mut positional_args = Vec::new();
 
@@ -503,7 +504,9 @@ impl Parser {
                 positional_args.push(arg);
                 iter.next();
             } else if arg.starts_with("--") {
-                if let Err(msg) = self.parse_double_hyphen_flag(&mut iter, &mut opts) {
+                if let Err(msg) =
+                    self.parse_double_hyphen_flag(&mut iter, &mut opts, &mut specified_opts)
+                {
                     if self.parsing_options.error_on_unknown_opts {
                         return Err(msg);
                     } else {
@@ -511,8 +514,10 @@ impl Parser {
                         positional_args.push(arg);
                     }
                 }
-            } else if arg.starts_with("-") {
-                if let Err(msg) = self.parse_single_hyphen_flag(&mut iter, &mut opts) {
+            } else if arg.starts_with('-') {
+                if let Err(msg) =
+                    self.parse_single_hyphen_flag(&mut iter, &mut opts, &mut specified_opts)
+                {
                     if self.parsing_options.error_on_unknown_opts {
                         return Err(msg);
                     } else {
@@ -527,17 +532,19 @@ impl Parser {
             }
         }
 
-        Ok(ParseOutput::new(
+        Ok(ParseOutput {
             opts,
-            positional_args.iter().map(|s| s.to_string()).collect(),
+            args: positional_args.iter().map(|s| s.to_string()).collect(),
             first_arg_index,
-        ))
+            specified_opts: specified_opts.into_iter().collect(),
+        })
     }
 
     fn parse_double_hyphen_flag<'a>(
         &self,
         iter: &mut impl Iterator<Item = (usize, &'a str)>,
         opts: &mut HashMap<String, Value>,
+        specified_opts: &mut IndexSet<String>,
     ) -> Result<(), ParseError> {
         let arg = iter.next().unwrap().1;
 
@@ -550,17 +557,17 @@ impl Parser {
             (arg, true)
         };
 
-        let mut parts = arg.splitn(2, "=");
+        let mut parts = arg.splitn(2, '=');
         let clean_arg = parts.next().unwrap();
         let clean_arg = self
             .parsing_options
             .flag_aliases
             .get(clean_arg)
-            .map(|name| name.as_ref())
-            .unwrap_or(clean_arg);
+            .map_or(clean_arg, |name| name.as_ref());
 
         if let Some(&known_flag_id) = self.long_map.get(clean_arg) {
             let name = self.parsing_options.flags[known_flag_id].long_name.as_ref();
+            specified_opts.insert(name.to_string());
             match opts.get_mut(name) {
                 Some(Value::Bool(ref mut b)) => *b = Some(positive_flag),
                 Some(ref mut value) => {
@@ -578,6 +585,7 @@ impl Parser {
 
         if let Some(&known_flag_id) = self.long_map.get(&flag_with_no) {
             let name = self.parsing_options.flags[known_flag_id].long_name.as_ref();
+            specified_opts.insert(name.to_string());
             match opts.get_mut(name) {
                 Some(Value::Bool(ref mut b)) => *b = Some(!positive_flag),
                 Some(ref mut value) => {
@@ -601,20 +609,21 @@ impl Parser {
         let prefixed_flag_ids: Vec<usize> = range.map(|(_, flag)| *flag).collect();
 
         if prefixed_flag_ids.len() > 1 {
-            return Err(ParseError::OptionAmbiguous {
+            Err(ParseError::OptionAmbiguous {
                 option_name: "--".to_owned() + clean_arg,
                 possibilities: prefixed_flag_ids
                     .into_iter()
                     .map(|i| self.parsing_options.flags[i].long_name.to_string())
                     .collect(),
-            });
-        } else if prefixed_flag_ids.len() == 0 {
-            return Err(ParseError::OptionNotRecognized {
+            })
+        } else if prefixed_flag_ids.is_empty() {
+            Err(ParseError::OptionNotRecognized {
                 option_name: "--".to_owned() + clean_arg,
-            });
+            })
         } else {
             let matched_flag = &self.parsing_options.flags[prefixed_flag_ids[0]];
             let name = matched_flag.long_name.as_ref();
+            specified_opts.insert(name.to_string());
             match opts.get_mut(name) {
                 Some(Value::Bool(ref mut b)) => *b = Some(positive_flag),
                 Some(ref mut value) => {
@@ -625,7 +634,7 @@ impl Parser {
                 }
                 None => unreachable!(),
             }
-            return Ok(());
+            Ok(())
         }
     }
 
@@ -633,8 +642,9 @@ impl Parser {
         &self,
         iter: &mut impl Iterator<Item = (usize, &'a str)>,
         opts: &mut HashMap<String, Value>,
+        specified_opts: &mut IndexSet<String>,
     ) -> Result<(), ParseError> {
-        let clean_arg = iter.next().unwrap().1.trim_start_matches("-");
+        let clean_arg = iter.next().unwrap().1.trim_start_matches('-');
 
         let mut char_iter = clean_arg.chars().peekable();
 
@@ -643,6 +653,7 @@ impl Parser {
                 let flag_name = self.parsing_options.flags[known_flag_id]
                     .long_name
                     .to_string();
+                specified_opts.insert(flag_name.clone());
                 match opts.get_mut(&flag_name) {
                     Some(Value::Bool(ref mut b)) => *b = Some(true),
                     Some(ref mut value) => {
@@ -712,26 +723,22 @@ pub struct ParseOutput {
     /// The positional args
     pub args: Vec<String>,
     pub first_arg_index: usize,
+
+    // Long name of options actually specified (vs. default value).
+    specified_opts: Vec<String>,
 }
 
 /// ParseOutput represents all of the information successfully parsed from the command-line
 /// arguments, as well as exposing a convenient API for application logic to query results
 /// parsed.
 impl ParseOutput {
-    pub fn new(opts: HashMap<String, Value>, args: Vec<String>, first_arg_index: usize) -> Self {
-        ParseOutput {
-            opts,
-            args,
-            first_arg_index,
-        }
-    }
-
     /// Clone only the "options" part.
     pub fn clone_only_opts(&self) -> ParseOutput {
         ParseOutput {
             opts: self.opts.clone(),
             args: Vec::new(),
             first_arg_index: 0,
+            specified_opts: Vec::new(),
         }
     }
 
@@ -757,6 +764,10 @@ impl ParseOutput {
     /// arguments.
     pub fn first_arg_index(&self) -> usize {
         self.first_arg_index
+    }
+
+    pub fn specified_opts(&self) -> &[String] {
+        &self.specified_opts
     }
 }
 
@@ -788,7 +799,13 @@ mod tests {
                 Value::Bool(Some(false)),
                 "",
             ),
-            ('r', "rev", "revision hash", Value::Str("".to_string()), ""),
+            (
+                'r',
+                "rev",
+                "revision hash",
+                Value::Str(Some("".to_string())),
+                "",
+            ),
         ]
         .into_iter()
         .map(Into::into)
@@ -820,11 +837,16 @@ mod tests {
         let flags = vec![flag];
         let parser = ParseOptions::new().flags(flags).into_parser();
         let mut opts = parser.opts.clone();
+        let mut specified_opts = IndexSet::new();
 
         let args = vec!["-q"];
 
         let _ = parser
-            .parse_single_hyphen_flag(&mut args.into_iter().enumerate().peekable(), &mut opts)
+            .parse_single_hyphen_flag(
+                &mut args.into_iter().enumerate().peekable(),
+                &mut opts,
+                &mut specified_opts,
+            )
             .unwrap();
         let quiet: bool = opts.get("quiet").cloned().unwrap().into();
         assert!(quiet);
@@ -836,18 +858,23 @@ mod tests {
         let flags = vec![flag];
         let parser = ParseOptions::new().flags(flags).into_parser();
         let mut opts = parser.opts.clone();
+        let mut specified_opts = IndexSet::new();
         const PATH: &str = "$HOME/path/to/config/file";
 
         let args = vec!["-c", PATH];
 
-        let _result = parser
-            .parse_single_hyphen_flag(&mut args.into_iter().enumerate().peekable(), &mut opts);
+        let _result = parser.parse_single_hyphen_flag(
+            &mut args.into_iter().enumerate().peekable(),
+            &mut opts,
+            &mut specified_opts,
+        );
     }
 
     #[test]
     fn test_parse_single_cluster_with_end_value() {
         let parser = ParseOptions::new().flags(flags()).into_parser();
         let mut opts = parser.opts.clone();
+        let mut specified_opts = IndexSet::new();
         const PATH: &str = "$HOME/path/to/config/file";
         const CLUSTER: &str = "-qhvc";
 
@@ -857,6 +884,7 @@ mod tests {
             .parse_single_hyphen_flag(
                 &mut clustered_args.into_iter().enumerate().peekable(),
                 &mut opts,
+                &mut specified_opts,
             )
             .unwrap();
 
@@ -869,11 +897,16 @@ mod tests {
         let flags = vec![flag];
         let parser = ParseOptions::new().flags(flags).into_parser();
         let mut opts = parser.opts.clone();
+        let mut specified_opts = IndexSet::new();
 
         let args = vec!["--quiet"];
 
         let _ = parser
-            .parse_double_hyphen_flag(&mut args.into_iter().enumerate().peekable(), &mut opts)
+            .parse_double_hyphen_flag(
+                &mut args.into_iter().enumerate().peekable(),
+                &mut opts,
+                &mut specified_opts,
+            )
             .unwrap();
 
         //assert_eq!(parsed_flag, flag.long_name);
@@ -885,12 +918,17 @@ mod tests {
         let flags = vec![flag];
         let parser = ParseOptions::new().flags(flags).into_parser();
         let mut opts = parser.opts.clone();
+        let mut specified_opts = IndexSet::new();
         const PATH: &str = "$HOME/path/to/config/file";
 
         let args = vec!["--config", PATH];
 
         let _ = parser
-            .parse_double_hyphen_flag(&mut args.into_iter().enumerate().peekable(), &mut opts)
+            .parse_double_hyphen_flag(
+                &mut args.into_iter().enumerate().peekable(),
+                &mut opts,
+                &mut specified_opts,
+            )
             .unwrap();
 
         //assert_eq!(parsed_flag, flag.long_name);
@@ -904,11 +942,16 @@ mod tests {
         let flags = vec![flag];
         let parser = ParseOptions::new().flags(flags).into_parser();
         let mut opts = parser.opts.clone();
+        let mut specified_opts = IndexSet::new();
 
         let args = vec!["--number", "60"];
 
         let _ = parser
-            .parse_double_hyphen_flag(&mut args.into_iter().enumerate().peekable(), &mut opts)
+            .parse_double_hyphen_flag(
+                &mut args.into_iter().enumerate().peekable(),
+                &mut opts,
+                &mut specified_opts,
+            )
             .unwrap();
 
         //assert_eq!(parsed_flag, flag.long_name);
@@ -1419,16 +1462,7 @@ mod tests {
 
     #[test]
     fn test_parse_option_string_value() {
-        let flags = vec![
-            (
-                ' ',
-                "opt_str",
-                "an optional string",
-                Value::OptStr(None),
-                "",
-            )
-                .into(),
-        ];
+        let flags = vec![(' ', "opt_str", "an optional string", Value::Str(None), "").into()];
         let parser = ParseOptions::new().flags(flags).into_parser();
 
         let args: Vec<&str> = Default::default();
@@ -1456,5 +1490,28 @@ mod tests {
 
         let parsed = parser.parse_args(&["--no-opt-bool"]).unwrap();
         assert_eq!(parsed.pick::<Option<bool>>("opt-bool"), Some(false),);
+    }
+
+    #[test]
+    fn test_specified_options() {
+        let flags = vec![
+            ('b', "bool", "a bool", true, "").into(),
+            ('s', "str", "a str", "default", "").into(),
+            ('l', "list", "a list", Value::List(Vec::new()), "").into(),
+        ];
+
+        let parsed = ParseOptions::new()
+            .flags(flags.clone())
+            .into_parser()
+            .parse_args(&Vec::<&str>::new())
+            .unwrap();
+        assert_eq!(parsed.specified_opts().len(), 0);
+
+        let parsed = ParseOptions::new()
+            .flags(flags)
+            .into_parser()
+            .parse_args(&["-l", "one", "--no-bool", "-s=", "--list=two"])
+            .unwrap();
+        assert_eq!(parsed.specified_opts(), &["list", "bool", "str"]);
     }
 }

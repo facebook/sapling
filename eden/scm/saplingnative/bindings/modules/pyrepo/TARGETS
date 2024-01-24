@@ -1,0 +1,44 @@
+load("//eden/scm:targets.bzl", "rust_python_library")
+
+oncall("mercurial_release")
+
+rust_python_library(
+    name = "pyrepo",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "cpython": {
+                        "features": [],
+                        "git": None,
+                        "rev": None,
+                    },
+                },
+            },
+            "extra_buck_dependencies": {
+                "dependencies": [
+                    "//eden/scm/lib/revisionstore:revisionstore",
+                ],
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:parking_lot",
+        "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/cpython-ext:cpython-ext",
+        "//eden/scm/lib/repo:repo",
+        "//eden/scm/lib/repolock:repolock",
+        "//eden/scm/lib/revisionstore:revisionstore_with_ods",
+        "//eden/scm/lib/util:util",
+        "//eden/scm/lib/workingcopy:workingcopy",
+        "//eden/scm/saplingnative/bindings/modules/pyconfigloader:pyconfigloader",
+        "//eden/scm/saplingnative/bindings/modules/pydag:pydag",
+        "//eden/scm/saplingnative/bindings/modules/pyeagerepo:pyeagerepo",
+        "//eden/scm/saplingnative/bindings/modules/pyedenapi:pyedenapi",
+        "//eden/scm/saplingnative/bindings/modules/pymetalog:pymetalog",
+        "//eden/scm/saplingnative/bindings/modules/pyrevisionstore:pyrevisionstore",
+        "//eden/scm/saplingnative/bindings/modules/pyworkingcopy:pyworkingcopy",
+    ],
+)

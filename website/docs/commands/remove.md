@@ -4,7 +4,7 @@ sidebar_position: 32
 
 ## remove | rm
 <!--
-  @generated SignedSource<<8b7776d140c433587dd3376798892d5d>>
+  @generated SignedSource<<bb9c7935b6778f2227b0141654a077b7>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -18,7 +18,7 @@ commit.
 To undo a remove before files have been committed, use `sl revert`.
 To stop tracking files without deleting them, use `sl forget`.
 
-`-A/--after` can be used to remove only files that have already
+`--mark` can be used to remove only files that have already
 been deleted, `-f/--force` can be used to force deletion, and `-Af`
 can be used to remove files from the next revision without
 deleting them from the working directory.
@@ -46,7 +46,7 @@ Returns 0 on success, 1 if any warnings encountered.
 ## arguments
 | shortname | fullname | default | description |
 | - | - | - | - |
-| `-A`| `--after`| | record delete for missing files|
+| | `--mark`| | mark as a deletion for already missing files|
 | `-f`| `--force`| | forget added files, delete modified files|
 | `-I`| `--include`| | include files matching the given patterns|
 | `-X`| `--exclude`| | exclude files matching the given patterns|

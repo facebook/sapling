@@ -144,7 +144,7 @@ Test changes are readable via git:
 
   $ export GIT_DIR="$TESTTMP/gitrepo/.git"
   $ git log foo --pretty='format:%s %an %d'
-  alpha3 test  (refs/visibleheads/57eda5013e068ac543a52ad073cec3d7750113b5, foo)
+  alpha3 test  *foo) (glob)
   beta test  (HEAD -> master)
   alpha test  (no-eol)
   $ git fsck --strict
@@ -213,12 +213,12 @@ Test pull:
   $ hg log -r . -T '{remotenames}\n'
   origin/foo
 
-- pull with -B and --update with wrong tweakdefaults dynamicconfig configuration
+- pull with -B and --update with wrong tweakdefaults internalconfig configuration
   $ cat > "$TESTTMP/buggy.rc" << EOF
   > [tweakdefaults]
   > defaultdest=nonexisted
   > EOF
-  $ HG_TEST_DYNAMICCONFIG="$TESTTMP/buggy.rc" hg pull origin -B master --update --config extensions.tweakdefaults=
+  $ HG_TEST_INTERNALCONFIG="$TESTTMP/buggy.rc" hg pull origin -B master --update --config extensions.tweakdefaults=
   pulling from file:/*/$TESTTMP/gitrepo/.git (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

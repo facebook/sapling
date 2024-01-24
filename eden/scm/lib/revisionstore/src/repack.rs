@@ -6,7 +6,6 @@
  */
 
 use std::collections::HashSet;
-use std::fs;
 use std::io::Error as IoError;
 use std::io::ErrorKind as IoErrorKind;
 use std::path::Path;
@@ -19,6 +18,7 @@ use anyhow::Result;
 use configmodel::convert::ByteCount;
 use configmodel::Config;
 use configmodel::ConfigExt;
+use fs_err as fs;
 use minibytes::Bytes;
 use thiserror::Error;
 use types::Key;
@@ -75,7 +75,7 @@ fn repack_datapack(data_pack: &DataPack, mut_pack: &mut MutableDataPack) -> Resu
 
                 // If we managed to get a delta, the metadata must be present.
                 match data_pack.get_meta(StoreKey::hgid(delta.key.clone()))? {
-                    StoreResult::Found(meta) => mut_pack.add(&delta, &meta)?,
+                    StoreResult::Found(meta) => mut_pack.add(delta, &meta)?,
                     _ => {}
                 }
             }
@@ -269,7 +269,7 @@ fn filter_incrementalpacks(
             let size = p
                 .with_extension(extension)
                 .metadata()
-                .and_then(|m| Ok(m.len()))
+                .map(|m| m.len())
                 .unwrap_or(u64::max_value());
             (p, size)
         })
@@ -362,7 +362,7 @@ fn repack_datapack_to_contentstore(
 
     let new_packs = store
         .commit_pending(location)?
-        .unwrap_or_else(|| vec![])
+        .unwrap_or_else(std::vec::Vec::new)
         .into_iter()
         .collect::<HashSet<PathBuf>>();
 
@@ -422,7 +422,7 @@ fn repack_histpack_to_metadatastore(
 
     let new_packs = store
         .commit_pending(location)?
-        .unwrap_or_else(|| vec![])
+        .unwrap_or_else(std::vec::Vec::new)
         .into_iter()
         .collect::<HashSet<PathBuf>>();
 
@@ -494,11 +494,11 @@ pub fn repack(
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
-    use std::fs::set_permissions;
-    use std::fs::File;
-    use std::fs::OpenOptions;
     use std::io::Write;
 
+    use fs_err::set_permissions;
+    use fs_err::File;
+    use fs_err::OpenOptions;
     use minibytes::Bytes;
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
@@ -664,7 +664,7 @@ mod tests {
 
         let newpath = repack_datapacks(paths.into_iter(), tempdir.path());
         assert!(newpath.is_ok());
-        let newpack = DataPack::new(&newpath.unwrap().unwrap(), ExtStoredPolicy::Use).unwrap();
+        let newpack = DataPack::new(newpath.unwrap().unwrap(), ExtStoredPolicy::Use).unwrap();
         assert_eq!(
             newpack
                 .to_keys()
@@ -684,7 +684,7 @@ mod tests {
         let tempdir = TempDir::new().unwrap();
 
         let paths = vec![PathBuf::from("foo.datapack"), PathBuf::from("bar.datapack")];
-        let res = repack_datapacks(paths.clone().into_iter(), tempdir.path());
+        let res = repack_datapacks(paths.into_iter(), tempdir.path());
 
         assert!(res.unwrap().is_none());
     }
@@ -738,9 +738,9 @@ mod tests {
             .unwrap();
 
         if let Some(RepackFailure::Partial(errors)) = res.downcast_ref() {
-            assert_eq!(errors.iter().count(), 1);
+            assert_eq!(errors.len(), 1);
             to_corrupt.set_extension("");
-            assert!(errors.iter().find(|(p, _)| p == &to_corrupt).is_some());
+            assert!(errors.iter().any(|(p, _)| p == &to_corrupt));
         } else {
             assert!(false);
         }
@@ -761,7 +761,7 @@ mod tests {
         assert!(newpath.is_ok());
         let newpack = HistoryPack::new(&newpath.unwrap().unwrap()).unwrap();
 
-        for (ref key, _) in nodes.iter() {
+        for (key, _) in nodes.iter() {
             let response = newpack.get_node_info(key).unwrap().unwrap();
             assert_eq!(&response, nodes.get(key).unwrap());
         }
@@ -788,7 +788,7 @@ mod tests {
         let newpack = HistoryPack::new(&newpath.unwrap().unwrap()).unwrap();
 
         for (key, _) in nodes.iter() {
-            let response = newpack.get_node_info(&key).unwrap().unwrap();
+            let response = newpack.get_node_info(key).unwrap().unwrap();
             assert_eq!(&response, nodes.get(key).unwrap());
         }
     }

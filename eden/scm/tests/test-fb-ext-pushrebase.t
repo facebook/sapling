@@ -119,7 +119,7 @@ Stack of non-conflicting commits should be accepted
   remote: 1
   sending gettreepack command
   resolving manifests
-   branchmerge: False, force: False, partial: False
+   branchmerge: False, force: False
    ancestor: 0e3997dc0733, local: 0e3997dc0733+, remote: 4cfedb0dc25f
   reusing connection from pool
   sending getpackv1 command
@@ -683,7 +683,7 @@ Test date rewriting
 
   $ cat > $TESTTMP/daterewrite.py <<EOF
   > import sys, time
-  > from edenscm import extensions
+  > from sapling import extensions
   > def extsetup(ui):
   >     def faketime(orig):
   >         return 1000000000

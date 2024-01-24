@@ -219,7 +219,7 @@ impl HybridCommits {
     pub fn enable_lazy_commit_hashes(&mut self) {
         let mut disabled_names: HashSet<Vertex> = Default::default();
         if let Ok(env) = std::env::var(EDENSCM_DISABLE_REMOTE_RESOLVE) {
-            for hex in env.split(",") {
+            for hex in env.split(',') {
                 if let Ok(name) = Vertex::from_hex(hex.as_ref()) {
                     disabled_names.insert(name);
                 }
@@ -244,7 +244,7 @@ impl HybridCommits {
             remote_name_current: Default::default(),
         };
         self.commits.dag.set_remote_protocol(Arc::new(protocol));
-        self.lazy_hash_desc = format!("lazy, using EdenAPI");
+        self.lazy_hash_desc = "lazy, using EdenAPI".to_string();
     }
 
     /// Enable fetching commit hashes lazily via another "segments".
@@ -293,9 +293,11 @@ impl AppendCommits for HybridCommits {
 
     async fn add_graph_nodes(&mut self, graph_nodes: &[crate::GraphNode]) -> Result<()> {
         if self.revlog.is_some() {
-            return Err(crate::Error::Unsupported(
+            return Err(io::Error::new(
+                io::ErrorKind::Unsupported,
                 "add_graph_nodes is not supported for revlog backend",
-            ));
+            )
+            .into());
         }
         self.commits.add_graph_nodes(graph_nodes).await?;
         Ok(())
@@ -303,19 +305,25 @@ impl AppendCommits for HybridCommits {
 
     async fn import_clone_data(&mut self, clone_data: CloneData<Vertex>) -> Result<()> {
         if self.revlog.is_some() {
-            return Err(crate::Error::Unsupported(
+            return Err(io::Error::new(
+                io::ErrorKind::Unsupported,
                 "import_clone_data is not supported for revlog backend",
-            ));
+            )
+            .into());
         }
         if self.commits.dag.all().await?.count().await? > 0 {
-            return Err(crate::Error::Unsupported(
+            return Err(io::Error::new(
+                io::ErrorKind::Unsupported,
                 "import_clone_data can only be used in an empty repo",
-            ));
+            )
+            .into());
         }
         if !self.commits.dag.is_vertex_lazy() {
-            return Err(crate::Error::Unsupported(
+            return Err(io::Error::new(
+                io::ErrorKind::Unsupported,
                 "import_clone_data can only be used in commit graph with lazy vertexes",
-            ));
+            )
+            .into());
         }
         self.commits.dag.import_clone_data(clone_data).await?;
         Ok(())
@@ -327,14 +335,18 @@ impl AppendCommits for HybridCommits {
         heads: &VertexListWithOptions,
     ) -> Result<()> {
         if self.revlog.is_some() {
-            return Err(crate::Error::Unsupported(
+            return Err(io::Error::new(
+                io::ErrorKind::Unsupported,
                 "import_pull_data is not supported for revlog backend",
-            ));
+            )
+            .into());
         }
         if !self.commits.dag.is_vertex_lazy() {
-            return Err(crate::Error::Unsupported(
+            return Err(io::Error::new(
+                io::ErrorKind::Unsupported,
                 "import_pull_data can only be used in commit graph with lazy vertexes",
-            ));
+            )
+            .into());
         }
         self.commits.dag.import_pull_data(clone_data, heads).await?;
         Ok(())
@@ -460,7 +472,7 @@ impl HybridResolver<Vertex, Bytes, anyhow::Error> for Resolver {
             let bytes = &e.revlog_data[Id20::len() * 2..];
             let input_output = (
                 Vertex::copy_from(e.hgid.as_ref()),
-                Bytes::copy_from_slice(&bytes),
+                Bytes::copy_from_slice(bytes),
             );
             Ok(input_output)
         });

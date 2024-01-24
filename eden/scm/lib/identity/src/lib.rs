@@ -207,8 +207,7 @@ impl Identity {
         let paths = self.user_config_paths();
         paths
             .iter()
-            .filter(|p| p.exists())
-            .next()
+            .find(|p| p.exists())
             .cloned()
             .or_else(|| paths.into_iter().next())
     }
@@ -264,10 +263,11 @@ impl Identity {
     }
 }
 
-const RCPATH_SEP: char = if cfg!(windows) { ';' } else { ':' };
-
 /// Split the HGRCPATH. Return items matching at least one of the given prefix.
-fn split_rcpath<'a>(
+///
+/// `;` can be used as the separator on all platforms.
+/// `:` can be used as the separator on non-Windows platforms.
+pub fn split_rcpath<'a>(
     rcpath: &'a str,
     prefix_list: &'static [&'static str],
 ) -> impl Iterator<Item = &'a str> {
@@ -276,18 +276,24 @@ fn split_rcpath<'a>(
     } else {
         &["sys", "user"]
     };
-    let paths = rcpath.split(RCPATH_SEP);
+
+    let sep = if cfg!(windows) {
+        &[';'][..]
+    } else {
+        &[';', ':'][..]
+    };
+    let paths = rcpath.split(sep);
     paths.filter_map(|path| {
+        tracing::trace!("RCPATH component: {}", path);
         let mut split = path.splitn(2, '=');
         if let Some(prefix) = split.next() {
-            if KNOWN_PREFIXES.contains(&prefix) {
-                return if prefix_list.contains(&prefix) {
-                    split.next()
-                } else {
-                    None
-                };
-            }
+            if prefix_list.contains(&prefix) {
+                return split.next();
+            } else if KNOWN_PREFIXES.contains(&prefix) {
+                return None;
+            };
         }
+        // Unknown prefix.
         if prefix_list.contains(&"") {
             Some(path)
         } else {
@@ -317,8 +323,8 @@ impl std::fmt::Display for Identity {
 const HG: Identity = Identity {
     user: UserIdentity {
         cli_name: "hg",
-        product_name: "Mercurial",
-        long_product_name: "Mercurial Distributed SCM",
+        product_name: "Sapling",
+        long_product_name: "Sapling SCM",
         env_prefix: "HG",
         config_user_directory: None,
         config_user_files: &[
@@ -435,8 +441,7 @@ fn compute_default() -> Identity {
         let env_override = all()
             .iter()
             .find_map(|id| id.env_var("IDENTITY"))
-            .map(|v| v.ok())
-            .flatten();
+            .and_then(|v| v.ok());
 
         for ident in all() {
             if Some(ident.user.cli_name) == env_override.as_deref() {
@@ -448,13 +453,6 @@ fn compute_default() -> Identity {
             if file_name.contains(ident.user.cli_name) {
                 return (*ident, "contains");
             }
-        }
-
-        // Special case: for fbcode/eden/testlib/ tests the "current_exe"
-        // could be "python3.8". Use "hg" to maintain test compatibility.
-        // If we updated the tests, the special case can be dropped.
-        if file_name.starts_with("python") {
-            return (HG, "python");
         }
 
         // Fallback to SL if current_exe does not provide information.
@@ -617,7 +615,7 @@ mod test {
         {
             let root = dir.path().join("bad_perms");
             let dot_dir = root.join(default().dot_dir());
-            fs::create_dir_all(&dot_dir)?;
+            fs::create_dir_all(dot_dir)?;
 
             // Sanity.
             assert!(sniff_dir(&root).is_ok());
@@ -641,7 +639,7 @@ mod test {
         assert!(sniff_root(&root)?.is_none());
 
         let dot_dir = root.join(TEST.dot_dir());
-        fs::create_dir_all(&dot_dir)?;
+        fs::create_dir_all(dot_dir)?;
 
         let (sniffed_root, sniffed_ident) = sniff_root(&root)?.unwrap();
         assert_eq!(sniffed_root, root);
@@ -649,7 +647,7 @@ mod test {
         assert_eq!(sniffed_ident.user, default().user);
 
         let abc = root.join("a/b/c");
-        fs::create_dir_all(&abc)?;
+        fs::create_dir_all(abc)?;
 
         let (sniffed_root, sniffed_ident) = sniff_root(&root)?.unwrap();
         assert_eq!(sniffed_root, root);
@@ -664,7 +662,7 @@ mod test {
         let rcpath = [
             "sys=111", "user=222", "sys=333", "user=444", "555", "foo=666",
         ]
-        .join(&RCPATH_SEP.to_string());
+        .join(";");
         let t = |prefix_list| -> Vec<&str> { split_rcpath(&rcpath, prefix_list).collect() };
         assert_eq!(t(&["sys", ""]), ["111", "333", "555", "foo=666"]);
         assert_eq!(t(&["user"]), ["222", "444"]);

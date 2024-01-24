@@ -27,7 +27,6 @@ use sql_ext::SqlConnections;
 pub use self::cache::CacheHandlers;
 pub use self::cache::CachedIdMap;
 pub use self::mem::ConcurrentMemIdMap;
-pub use self::mem::MemIdMap;
 pub use self::shared_traits::cs_id_from_vertex_name;
 pub use self::shared_traits::vertex_name_from_cs_id;
 pub use self::shared_traits::IdMapWrapper;

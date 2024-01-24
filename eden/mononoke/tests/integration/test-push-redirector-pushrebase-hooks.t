@@ -92,11 +92,11 @@ Note that the node is from the small repo, even though the hook is in the large 
   [255]
 
 Let's check that disabling running pushredirected hooks work
-  $ merge_tunables <<EOF
+  $ merge_just_knobs <<EOF
   > {
-  >   "killswitches": {
-  >     "disable_running_hooks_in_pushredirected_repo": true
-  >   }
+  >    "bools": {
+  >      "scm/mononoke:disable_running_hooks_in_pushredirected_repo": true
+  >    }
   > }
   > EOF
 

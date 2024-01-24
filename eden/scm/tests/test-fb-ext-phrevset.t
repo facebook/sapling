@@ -7,13 +7,13 @@
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ cat >> $HGRCPATH << 'EOF'
   > [extensions]
-  > phrevset=
+  > fbcodereview=
   > EOF
   $ hg init repo
   $ cd repo
   $ echo 1 > 1
   $ hg add 1
-  $ hg commit -m 'Differential Revision: http.ololo.com/D1234'
+  $ hg commit -m "$(printf 'title\n\nDifferential Revision: http.ololo.com/D1234')"
   $ hg up -q 0
   $ hg up D1234
   phrevset.callsign is not set - doing a linear search

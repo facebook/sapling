@@ -135,6 +135,12 @@ struct PlainCommitInfo {
     source_hostname: Option<String>,
     #[serde(with = "::chrono::serde::ts_seconds")]
     received_timestamp: DateTime<Utc>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pusher_correlator: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pusher_entry_point: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pusher_main_id: Option<String>,
 }
 
 impl PlainCommitInfo {
@@ -171,6 +177,14 @@ impl PlainCommitInfo {
             (Some(name.to_string()), kind.is_public())
         });
 
+        let (mut pusher_correlator, mut pusher_entry_point, mut pusher_main_id) =
+            (None, None, None);
+        if let Some(cri) = ctx.metadata().client_request_info() {
+            pusher_correlator = Some(cri.correlator.clone());
+            pusher_entry_point = Some(cri.entry_point.to_string());
+            pusher_main_id = cri.main_id.clone();
+        }
+
         Ok(PlainCommitInfo {
             repo_id,
             repo_name,
@@ -187,6 +201,9 @@ impl PlainCommitInfo {
             user_identities,
             source_hostname,
             received_timestamp,
+            pusher_correlator,
+            pusher_entry_point,
+            pusher_main_id,
         })
     }
 }
@@ -230,6 +247,15 @@ impl Loggable for PlainCommitInfo {
         }
         if let Some(source_hostname) = &self.source_hostname {
             logger.set_source_hostname(source_hostname.clone());
+        }
+        if let Some(correlator) = &self.pusher_correlator {
+            logger.set_client_correlator(correlator.clone());
+        }
+        if let Some(entry_point) = &self.pusher_entry_point {
+            logger.set_client_entry_point(entry_point.clone());
+        }
+        if let Some(main_id) = &self.pusher_main_id {
+            logger.set_client_main_id(main_id.clone());
         }
 
         logger.attach_raw_scribe_write_cat()?;
@@ -423,13 +449,13 @@ mod test {
         let mapping = create_from_dag(
             &ctx,
             repo.as_blob_repo(),
-            r##"
+            r"
               B
              /  \
             A    D
              \  /
                C
-            "##,
+            ",
         )
         .await?;
 

@@ -32,7 +32,8 @@ use import_tools::HGGIT_COMMIT_ID_EXTRA;
 use import_tools::HGGIT_MARKER_EXTRA;
 use import_tools::HGGIT_MARKER_VALUE;
 use mononoke_api::repo::git::create_annotated_tag;
-use mononoke_api::repo::upload_git_object;
+use mononoke_api::repo::git::upload_packfile_base_item;
+use mononoke_api::repo::upload_non_blob_git_object;
 use mononoke_types::bonsai_changeset::BonsaiAnnotatedTag;
 use mononoke_types::bonsai_changeset::BonsaiAnnotatedTagTarget;
 use mononoke_types::hash;
@@ -41,7 +42,7 @@ use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
 use mononoke_types::FileType;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
 use slog::debug;
 use slog::info;
@@ -112,11 +113,29 @@ where
             .await
     }
 
+    /// Upload a single packfile item corresponding to a git base object, i.e. commit,
+    /// tree, blob or tag
+    async fn upload_packfile_base_item(
+        &self,
+        ctx: &CoreContext,
+        oid: ObjectId,
+        git_bytes: Bytes,
+    ) -> Result<(), Error> {
+        upload_packfile_base_item(ctx, self.inner.repo_blobstore(), &oid, git_bytes.to_vec())
+            .await
+            .map_err(|e| {
+                anyhow::anyhow!(
+                    "Failure in uploading packfile base item for git object. Cause: {}",
+                    e.to_string()
+                )
+            })
+    }
+
     async fn upload_file(
         &self,
         ctx: &CoreContext,
         lfs: &GitImportLfs,
-        path: &MPath,
+        path: &NonRootMPath,
         ty: FileType,
         oid: ObjectId,
         git_bytes: Bytes,
@@ -182,7 +201,7 @@ where
         _ctx: &CoreContext,
         bonsai_parents: Vec<ChangesetId>,
         metadata: CommitMetadata,
-        changes: SortedVectorMap<MPath, Self::Change>,
+        changes: SortedVectorMap<NonRootMPath, Self::Change>,
         _dry_run: bool,
     ) -> Result<(Self::IntermediateChangeset, ChangesetId), Error> {
         let bcs = generate_bonsai_changeset(metadata, bonsai_parents, changes)?;
@@ -230,7 +249,7 @@ where
         oid: ObjectId,
         git_bytes: Bytes,
     ) -> Result<(), Error> {
-        upload_git_object(ctx, self.inner.repo_blobstore(), &oid, git_bytes.to_vec())
+        upload_non_blob_git_object(ctx, self.inner.repo_blobstore(), &oid, git_bytes.to_vec())
             .await
             .map_err(|e| {
                 anyhow::anyhow!(
@@ -254,6 +273,7 @@ where
         create_annotated_tag(
             ctx,
             &*self.inner,
+            Some(tag.oid),
             tag_name,
             tag.author.take(),
             tag.author_date.take().map(|date| date.into()),
@@ -286,7 +306,7 @@ fn git_store_request(
 fn generate_bonsai_changeset(
     metadata: CommitMetadata,
     parents: Vec<ChangesetId>,
-    file_changes: SortedVectorMap<MPath, FileChange>,
+    file_changes: SortedVectorMap<NonRootMPath, FileChange>,
 ) -> Result<BonsaiChangeset, Error> {
     let CommitMetadata {
         oid,

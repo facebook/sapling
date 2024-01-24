@@ -19,10 +19,10 @@ use futures::try_join;
 use manifest::Entry;
 use maplit::hashset;
 use mononoke_types::hash::Blake2;
+use mononoke_types::path::MPath;
 use mononoke_types::path_bytes_from_mpath;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileUnodeId;
-use mononoke_types::MPath;
 use mononoke_types::ManifestUnodeId;
 use mononoke_types::RepositoryId;
 use path_hash::PathHash;
@@ -65,7 +65,7 @@ pub struct MutableRenameEntry {
     dst_cs_id: ChangesetId,
     dst_path_hash: PathHash,
     src_cs_id: ChangesetId,
-    src_path: Option<MPath>,
+    src_path: MPath,
     src_path_hash: PathHash,
     src_unode: Blake2,
     is_tree: i8,
@@ -78,9 +78,9 @@ impl MutableRenameEntry {
     /// If either path is `None`, this represents the root of the repo
     pub fn new(
         dst_cs_id: ChangesetId,
-        dst_path: Option<MPath>,
+        dst_path: MPath,
         src_cs_id: ChangesetId,
-        src_path: Option<MPath>,
+        src_path: MPath,
         src_unode: Entry<ManifestUnodeId, FileUnodeId>,
     ) -> Result<Self, Error> {
         let (src_unode, is_tree) = match src_unode {
@@ -88,8 +88,8 @@ impl MutableRenameEntry {
             Entry::Leaf(ref leaf_unode_id) => (*leaf_unode_id.blake2(), false),
         };
 
-        let dst_path_hash = PathHash::from_path_and_is_tree(dst_path.as_ref(), is_tree);
-        let src_path_hash = PathHash::from_path_and_is_tree(src_path.as_ref(), is_tree);
+        let dst_path_hash = PathHash::from_path_and_is_tree(&dst_path, is_tree);
+        let src_path_hash = PathHash::from_path_and_is_tree(&src_path, is_tree);
         let is_tree = *dst_path_hash.sql_is_tree();
 
         Ok(Self {
@@ -109,8 +109,8 @@ impl MutableRenameEntry {
 
     /// Get the source path for this entry, or None if the source
     /// is the repo root
-    pub fn src_path(&self) -> Option<&MPath> {
-        self.src_path.as_ref()
+    pub fn src_path(&self) -> &MPath {
+        &self.src_path
     }
 
     fn src_path_hash(&self) -> &PathHash {
@@ -269,7 +269,7 @@ impl MutableRenames {
         &self,
         ctx: &CoreContext,
         dst_cs_id: ChangesetId,
-        dst_path: Option<MPath>,
+        dst_path: MPath,
     ) -> Result<Option<MutableRenameEntry>, Error> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
@@ -278,7 +278,7 @@ impl MutableRenames {
             return Ok(None);
         }
 
-        let dst_path_bytes = path_bytes_from_mpath(dst_path.as_ref());
+        let dst_path_bytes = path_bytes_from_mpath(&dst_path);
         let dst_path_hash = PathHashBytes::new(&dst_path_bytes);
         let mut rows = GetRename::query(
             &self.store.read_connection,
@@ -289,7 +289,7 @@ impl MutableRenames {
         .await?;
         match rows.pop() {
             Some((src_cs_id, src_path_bytes, src_unode, is_tree)) => {
-                let src_path = MPath::new_opt(src_path_bytes)?;
+                let src_path = MPath::new(src_path_bytes)?;
                 let src_unode = if is_tree == 1 {
                     Entry::Tree(ManifestUnodeId::new(src_unode))
                 } else {
@@ -308,7 +308,7 @@ impl MutableRenames {
         &self,
         ctx: &CoreContext,
         dst_cs_id: ChangesetId,
-        dst_path: Option<MPath>,
+        dst_path: MPath,
     ) -> Result<Option<MutableRenameEntry>, Error> {
         match &self.cache_handlers {
             None => self.get_rename_uncached(ctx, dst_cs_id, dst_path).await,
@@ -332,12 +332,12 @@ impl MutableRenames {
     pub async fn get_cs_ids_with_rename_uncached(
         &self,
         ctx: &CoreContext,
-        dst_path: Option<MPath>,
+        dst_path: MPath,
     ) -> Result<HashSet<ChangesetId>, Error> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
 
-        let dst_path_bytes = path_bytes_from_mpath(dst_path.as_ref());
+        let dst_path_bytes = path_bytes_from_mpath(&dst_path);
         let dst_path_hash = PathHashBytes::new(&dst_path_bytes);
         let rows = FindRenames::query(&self.store.read_connection, &self.repo_id, &dst_path_hash.0)
             .await?;
@@ -347,7 +347,7 @@ impl MutableRenames {
     pub async fn get_cs_ids_with_rename(
         &self,
         ctx: &CoreContext,
-        dst_path: Option<MPath>,
+        dst_path: MPath,
     ) -> Result<HashSet<ChangesetId>, Error> {
         match &self.cache_handlers {
             None => self.get_cs_ids_with_rename_uncached(ctx, dst_path).await,

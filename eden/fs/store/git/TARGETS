@@ -1,0 +1,34 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("scm_client_infra")
+
+cpp_library(
+    name = "git",
+    srcs = glob(["*.cpp"]),
+    headers = glob(["*.h"]),
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
+    deps = [
+        "//eden/fs/model:model",
+        "//eden/fs/model/git:git",
+        "//eden/fs/service:thrift_util",
+        "//eden/fs/utils:enum",
+        "//eden/fs/utils:throw",
+        "//folly:conv",
+        "//folly:string",
+        "//folly/futures:core",
+        "//folly/logging:logging",
+        # TODO(T168360028): This dependency comes from third-party/rust/BUCK
+        # which includes a bunch of buck-built libgit2 targets for each
+        # platform. We are only using Linux for now. See task for the real fix.
+        "fbsource//third-party/rust:libgit2-sys-0.13.4+1.4.2-libgit2-linux",  # @manual
+    ],
+    exported_deps = [
+        "//eden/fs/store:backing_store_interface",
+        "//eden/fs/store:context",
+        "//eden/fs/utils:path",
+        "//folly:range",
+    ],
+)

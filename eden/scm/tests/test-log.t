@@ -1504,28 +1504,9 @@
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a
 
-# enable obsolete to test hidden feature
+# compatibility with old tests
 
-  $ cat >> $HGRCPATH << 'EOF'
-  > [experimental]
-  > evolution.createmarkers=True
-  > EOF
-
-  $ hg log '--template={rev}:{node}\n'
-  1:a765632148dc55d38c35c4f247c618701886cb2f
-  0:9f758d63dcde62d547ebfb08e1e7ee96535f2b05
   $ hg debugobsolete a765632148dc55d38c35c4f247c618701886cb2f
-  $ hg up null -q
-  $ hg log '--template={rev}:{node}\n'
-  0:9f758d63dcde62d547ebfb08e1e7ee96535f2b05
-  $ hg log '--template={rev}:{node}\n' --hidden
-  1:a765632148dc55d38c35c4f247c618701886cb2f
-  0:9f758d63dcde62d547ebfb08e1e7ee96535f2b05
-  $ hg log -r a
-  commit:      * (glob)
-  user:        test
-  date:        Thu Jan 01 00:00:01 1970 +0000
-  summary:     a bis
 
 # test that parent prevent a changeset to be hidden
 
@@ -1762,7 +1743,7 @@
   $ cat > ../names.py << 'EOF'
   > """A small extension to test adding arbitrary names to a repo"""
   > from __future__ import absolute_import
-  > from edenscm import namespaces, registrar
+  > from sapling import namespaces, registrar
   > 
   > 
   > namespacepredicate = registrar.namespacepredicate()
@@ -1801,7 +1782,7 @@
 
 # revert side effect of names.py
 
-  >>> from edenscm import namespaces
+  >>> from sapling import namespaces
   >>> del namespaces.namespacetable["bars"]
 
 # Templater parse errors:

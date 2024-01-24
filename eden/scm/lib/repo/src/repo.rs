@@ -6,16 +6,14 @@
  */
 
 use std::collections::BTreeMap;
-use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-#[cfg(feature = "wdir")]
 use anyhow::anyhow;
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use commits_trait::DagCommits;
 use configloader::config::ConfigSet;
 use configloader::Config;
 use configmodel::ConfigExt;
@@ -24,11 +22,11 @@ use eagerepo::EagerRepoStore;
 use edenapi::Builder;
 use edenapi::EdenApi;
 use edenapi::EdenApiError;
-use hgcommits::DagCommits;
+use fs_err as fs;
+use manifest_tree::ReadTreeManifest;
 use metalog::MetaLog;
 use once_cell::sync::Lazy;
-#[cfg(feature = "wdir")]
-use parking_lot::Mutex;
+use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
 use repolock::RepoLocker;
 use revisionstore::scmstore;
@@ -37,31 +35,19 @@ use revisionstore::scmstore::TreeStoreBuilder;
 use revisionstore::trait_impls::ArcFileStore;
 use revisionstore::EdenApiFileStore;
 use revisionstore::EdenApiTreeStore;
-use revisionstore::MemcacheStore;
 use revsets::errors::RevsetLookupError;
 use revsets::utils as revset_utils;
-use storemodel::ReadFileContents;
-use storemodel::RefreshableReadFileContents;
-use storemodel::RefreshableTreeStore;
+use storemodel::FileStore;
+use storemodel::StoreInfo;
+use storemodel::StoreOutput;
 use storemodel::TreeStore;
-#[cfg(feature = "wdir")]
-use treestate::dirstate::Dirstate;
-#[cfg(feature = "wdir")]
-use treestate::dirstate::TreeStateFields;
-#[cfg(feature = "wdir")]
-use treestate::serialization::Serializable;
 use treestate::treestate::TreeState;
 use types::repo::StorageFormat;
 use types::HgId;
 use util::path::absolute;
 #[cfg(feature = "wdir")]
-use vfs::VFS;
-#[cfg(feature = "wdir")]
-use workingcopy::filesystem::FileSystemType;
-#[cfg(feature = "wdir")]
 use workingcopy::workingcopy::WorkingCopy;
 
-use crate::commits::open_dag_commits;
 use crate::constants::SUPPORTED_DEFAULT_REQUIREMENTS;
 use crate::constants::SUPPORTED_STORE_REQUIREMENTS;
 use crate::errors;
@@ -75,19 +61,19 @@ pub struct Repo {
     config: ConfigSet,
     shared_path: PathBuf,
     shared_ident: identity::Identity,
-    store_path: PathBuf,
+    pub(crate) store_path: PathBuf,
     dot_hg_path: PathBuf,
     shared_dot_hg_path: PathBuf,
     pub requirements: Requirements,
     pub store_requirements: Requirements,
     repo_name: Option<String>,
     metalog: Option<Arc<RwLock<MetaLog>>>,
-    eden_api: Option<Arc<dyn EdenApi>>,
-    dag_commits: Option<Arc<RwLock<Box<dyn DagCommits + Send + 'static>>>>,
-    file_store: Option<Arc<dyn RefreshableReadFileContents<Error = anyhow::Error> + Send + Sync>>,
-    file_scm_store: Option<Arc<scmstore::FileStore>>,
-    tree_store: Option<Arc<dyn RefreshableTreeStore + Send + Sync>>,
-    tree_scm_store: Option<Arc<scmstore::TreeStore>>,
+    eden_api: OnceCell<Arc<dyn EdenApi>>,
+    dag_commits: OnceCell<Arc<RwLock<Box<dyn DagCommits + Send + 'static>>>>,
+    file_store: OnceCell<Arc<dyn FileStore>>,
+    file_scm_store: OnceCell<Arc<scmstore::FileStore>>,
+    tree_store: OnceCell<Arc<dyn TreeStore>>,
+    tree_scm_store: OnceCell<Arc<scmstore::TreeStore>>,
     eager_store: Option<EagerRepoStore>,
     locker: Arc<RepoLocker>,
 }
@@ -142,6 +128,8 @@ impl Repo {
     {
         let path = path.into();
         assert!(path.is_absolute());
+
+        constructors::init();
 
         assert!(
             config.is_none() || (extra_config_values.is_empty() && extra_config_files.is_empty()),
@@ -201,23 +189,19 @@ impl Repo {
             store_requirements,
             repo_name,
             metalog: None,
-            eden_api: None,
-            dag_commits: None,
-            file_store: None,
-            file_scm_store: None,
-            tree_store: None,
-            tree_scm_store: None,
+            eden_api: Default::default(),
+            dag_commits: Default::default(),
+            file_store: Default::default(),
+            file_scm_store: Default::default(),
+            tree_store: Default::default(),
+            tree_scm_store: Default::default(),
             eager_store: None,
             locker,
         })
     }
 
-    pub fn lock(&self) -> Result<repolock::RepoLockHandle, repolock::LockError> {
+    pub fn lock(&self) -> Result<repolock::LockedPath, repolock::LockError> {
         self.locker.lock_store()
-    }
-
-    pub fn ensure_locked(&self) -> Result<(), repolock::LockError> {
-        self.locker.ensure_store_locked()
     }
 
     pub fn reload_requires(&mut self) -> Result<()> {
@@ -229,6 +213,14 @@ impl Repo {
             &self.store_path.join("requires"),
             Lazy::force(&SUPPORTED_STORE_REQUIREMENTS),
         )?;
+        Ok(())
+    }
+
+    /// Invalidate all repo state.
+    pub fn invalidate_all(&self) -> Result<()> {
+        self.invalidate_dag_commits()?;
+        self.invalidate_stores()?;
+        self.invalidate_metalog()?;
         Ok(())
     }
 
@@ -282,19 +274,23 @@ impl Repo {
         match &self.metalog {
             Some(metalog) => Ok(metalog.clone()),
             None => {
-                let metalog_path = self.metalog_path();
-                let metalog = MetaLog::open_from_env(metalog_path.as_path())?;
-                let metalog = Arc::new(RwLock::new(metalog));
-                self.metalog = Some(metalog.clone());
-                Ok(metalog)
+                let ml = Arc::new(RwLock::new(self.load_metalog()?));
+                self.metalog = Some(ml.clone());
+                Ok(ml)
             }
         }
     }
 
-    pub fn invalidate_metalog(&mut self) {
-        if self.metalog.is_some() {
-            self.metalog = None;
+    pub fn invalidate_metalog(&self) -> Result<()> {
+        if let Some(ml) = &self.metalog {
+            *ml.write() = self.load_metalog()?;
         }
+        Ok(())
+    }
+
+    fn load_metalog(&self) -> Result<MetaLog> {
+        let metalog_path = self.metalog_path();
+        Ok(MetaLog::open_from_env(metalog_path.as_path())?)
     }
 
     pub fn metalog_path(&self) -> PathBuf {
@@ -305,7 +301,7 @@ impl Repo {
     /// constructed.
     ///
     /// Use `optional_eden_api` if `EdenAPI` is optional.
-    pub fn eden_api(&mut self) -> Result<Arc<dyn EdenApi>, EdenApiError> {
+    pub fn eden_api(&self) -> Result<Arc<dyn EdenApi>, EdenApiError> {
         match self.optional_eden_api()? {
             Some(v) => Ok(v),
             None => Err(EdenApiError::Other(anyhow!(
@@ -316,27 +312,22 @@ impl Repo {
 
     /// Private API used by `optional_eden_api` that bypasses checks about whether
     /// EdenAPI should be used or not.
-    fn force_construct_eden_api(&mut self) -> Result<Arc<dyn EdenApi>, EdenApiError> {
-        match &self.eden_api {
-            Some(eden_api) => Ok(eden_api.clone()),
-            None => {
-                tracing::trace!(target: "repo::eden_api", "creating edenapi");
-                let correlator = edenapi::DEFAULT_CORRELATOR.as_str();
-                tracing::trace!(target: "repo::eden_api", "getting edenapi builder");
-                let eden_api = Builder::from_config(&self.config)?
-                    .correlator(Some(correlator))
-                    .build()?;
-                tracing::info!(url=eden_api.url(), path=?self.path, "EdenApi built");
-                self.eden_api = Some(eden_api.clone());
-                Ok(eden_api)
-            }
-        }
+    fn force_construct_eden_api(&self) -> Result<Arc<dyn EdenApi>, EdenApiError> {
+        let eden_api =
+            self.eden_api
+                .get_or_try_init(|| -> Result<Arc<dyn EdenApi>, EdenApiError> {
+                    tracing::trace!(target: "repo::eden_api", "creating edenapi");
+                    let eden_api = Builder::from_config(&self.config)?.build()?;
+                    tracing::info!(url=eden_api.url(), path=?self.path, "EdenApi built");
+                    Ok(eden_api)
+                })?;
+        Ok(eden_api.clone())
     }
 
     /// Constructs EdenAPI client if it should be constructed.
     ///
     /// Returns `None` if EdenAPI should not be used.
-    pub fn optional_eden_api(&mut self) -> Result<Option<Arc<dyn EdenApi>>, EdenApiError> {
+    pub fn optional_eden_api(&self) -> Result<Option<Arc<dyn EdenApi>>, EdenApiError> {
         if self.store_requirements.contains("git") {
             tracing::trace!(target: "repo::eden_api", "disabled because of git");
             return Ok(None);
@@ -395,23 +386,28 @@ impl Repo {
         Ok(Some(self.force_construct_eden_api()?))
     }
 
-    pub fn dag_commits(&mut self) -> Result<Arc<RwLock<Box<dyn DagCommits + Send + 'static>>>> {
-        match &self.dag_commits {
-            Some(commits) => Ok(commits.clone()),
-            None => {
-                let commits = open_dag_commits(self)?;
-                let commits = Arc::new(RwLock::new(commits));
-                self.dag_commits = Some(commits.clone());
-                Ok(commits)
-            }
-        }
+    pub fn dag_commits(&self) -> Result<Arc<RwLock<Box<dyn DagCommits + Send + 'static>>>> {
+        Ok(self
+            .dag_commits
+            .get_or_try_init(
+                || -> Result<Arc<RwLock<Box<dyn DagCommits + Send + 'static>>>> {
+                    let info: &dyn StoreInfo = self;
+                    let commits: Box<dyn DagCommits + Send + 'static> =
+                        factory::call_constructor(info)?;
+                    let commits = Arc::new(RwLock::new(commits));
+                    Ok(commits)
+                },
+            )?
+            .clone())
     }
 
-    pub fn invalidate_dag_commits(&mut self) -> Result<()> {
-        if let Some(dag_commits) = &mut self.dag_commits {
-            let dag_commits = dag_commits.clone();
+    pub fn invalidate_dag_commits(&self) -> Result<()> {
+        if let Some(dag_commits) = self.dag_commits.get() {
             let mut dag_commits = dag_commits.write();
-            *dag_commits = open_dag_commits(self)?;
+            let info: &dyn StoreInfo = self;
+            let new_commits: Box<dyn DagCommits + Send + 'static> =
+                factory::call_constructor(info)?;
+            *dag_commits = new_commits;
         }
         Ok(())
     }
@@ -463,22 +459,9 @@ impl Repo {
         format
     }
 
-    fn git_dir(&self) -> Result<PathBuf> {
-        if !self.storage_format().is_git() {
-            bail!("repo is not using git");
-        }
-
-        const GIT_DIR_FILE: &str = "gitdir";
-        Ok(self.store_path.join(util::file::read_to_string(
-            self.store_path.join(GIT_DIR_FILE),
-        )?))
-    }
-
-    pub fn file_store(
-        &mut self,
-    ) -> Result<Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>> {
-        if let Some(fs) = &self.file_store {
-            return Ok(Arc::new(fs.clone()));
+    pub fn file_store(&self) -> Result<Arc<dyn FileStore>> {
+        if let Some(fs) = self.file_store.get() {
+            return Ok(Arc::clone(fs));
         }
 
         if let Some((store, _)) = self.try_construct_file_tree_store()? {
@@ -489,9 +472,7 @@ impl Repo {
         let eden_api = self.optional_eden_api()?;
 
         tracing::trace!(target: "repo::file_store", "building filestore");
-        let mut file_builder = FileStoreBuilder::new(self.config())
-            .local_path(self.store_path())
-            .correlator(edenapi::DEFAULT_CORRELATOR.as_str());
+        let mut file_builder = FileStoreBuilder::new(self.config()).local_path(self.store_path());
 
         if let Some(eden_api) = eden_api {
             tracing::trace!(target: "repo::file_store", "enabling edenapi");
@@ -506,24 +487,15 @@ impl Repo {
             file_builder = file_builder.store_aux_data();
         }
 
-        tracing::trace!(target: "repo::file_store", "configuring memcache");
-        if self
-            .config
-            .get_nonempty("remotefilelog", "cachekey")
-            .is_some()
-        {
-            file_builder = file_builder.memcache(Arc::new(MemcacheStore::new(&self.config)?));
-        }
-
         tracing::trace!(target: "repo::file_store", "building file store");
         let file_store = file_builder.build().context("when building FileStore")?;
 
         let fs = Arc::new(file_store);
-        self.file_scm_store = Some(fs.clone());
+        let _ = self.file_scm_store.set(fs.clone());
 
         let fs = Arc::new(ArcFileStore(fs));
 
-        self.file_store = Some(fs.clone());
+        let _ = self.file_store.set(fs.clone());
         tracing::trace!(target: "repo::file_store", "filestore created");
 
         Ok(fs)
@@ -531,12 +503,12 @@ impl Repo {
 
     // This should only be used to share stores with Python.
     pub fn file_scm_store(&self) -> Option<Arc<scmstore::FileStore>> {
-        self.file_scm_store.clone()
+        self.file_scm_store.get().cloned()
     }
 
-    pub fn tree_store(&mut self) -> Result<Arc<dyn TreeStore + Send + Sync>> {
-        if let Some(ts) = &self.tree_store {
-            return Ok(Arc::new(ts.clone()));
+    pub fn tree_store(&self) -> Result<Arc<dyn TreeStore>> {
+        if let Some(ts) = self.tree_store.get() {
+            return Ok(ts.clone());
         }
 
         if let Some((_, store)) = self.try_construct_file_tree_store()? {
@@ -556,26 +528,28 @@ impl Repo {
             tree_builder = tree_builder.override_edenapi(false);
         }
         let ts = Arc::new(tree_builder.build()?);
-        self.tree_scm_store = Some(ts.clone());
-        self.tree_store = Some(ts.clone());
+        let _ = self.tree_scm_store.set(ts.clone());
+        let _ = self.tree_store.set(ts.clone());
         Ok(ts)
     }
 
     // This should only be used to share stores with Python.
     pub fn tree_scm_store(&self) -> Option<Arc<scmstore::TreeStore>> {
-        self.tree_scm_store.clone()
+        self.tree_scm_store.get().cloned()
     }
 
     // This should only be used to share stores with Python.
     pub fn eager_store(&self) -> Option<EagerRepoStore> {
-        self.eager_store.clone()
+        let store = self.file_store.get()?;
+        let store = store.maybe_as_any()?.downcast_ref::<EagerRepoStore>()?;
+        Some(store.clone())
     }
 
-    pub fn tree_resolver(&mut self) -> Result<TreeManifestResolver> {
-        Ok(TreeManifestResolver::new(
+    pub fn tree_resolver(&self) -> Result<Arc<dyn ReadTreeManifest + Send + Sync>> {
+        Ok(Arc::new(TreeManifestResolver::new(
             self.dag_commits()?,
             self.tree_store()?,
-        ))
+        )))
     }
 
     pub fn resolve_commit(
@@ -611,159 +585,69 @@ impl Repo {
         }
     }
 
-    pub fn invalidate_stores(&mut self) -> Result<()> {
-        if let Some(file_store) = &self.file_store {
+    pub fn invalidate_stores(&self) -> Result<()> {
+        if let Some(file_store) = self.file_store.get() {
             file_store.refresh()?;
         }
-        if let Some(tree_store) = &self.tree_store {
+        if let Some(tree_store) = self.tree_store.get() {
             tree_store.refresh()?;
         }
         Ok(())
     }
 
     #[cfg(feature = "wdir")]
-    pub fn working_copy(&mut self, path: &Path) -> Result<WorkingCopy, errors::InvalidWorkingCopy> {
-        let is_eden = self.requirements.contains("eden");
-        let fsmonitor_ext = self.config.get("extensions", "fsmonitor");
-        let fsmonitor_mode = self.config.get_nonempty("fsmonitor", "mode");
-        let is_watchman = if fsmonitor_ext.is_none() || fsmonitor_ext == Some("!".into()) {
-            false
-        } else {
-            fsmonitor_mode.is_none() || fsmonitor_mode == Some("on".into())
-        };
-        let filesystem = match (is_eden, is_watchman) {
-            (true, _) => FileSystemType::Eden,
-            (false, true) => FileSystemType::Watchman,
-            (false, false) => FileSystemType::Normal,
-        };
-
-        tracing::trace!(target: "repo::workingcopy", "initializing vfs at {path:?}");
-        let vfs = VFS::new(path.to_path_buf())?;
-        let case_sensitive = vfs.case_sensitive();
-        tracing::trace!(target: "repo::workingcopy", "case sensitive: {case_sensitive}");
-
-        let dirstate_path = path.join(self.ident.dot_dir()).join("dirstate");
-        tracing::trace!(target: "repo::workingcopy", dirstate_path=?dirstate_path);
-
-        let treestate = match filesystem {
-            FileSystemType::Eden => {
-                tracing::trace!(target: "repo::workingcopy", "loading edenfs dirstate");
-                TreeState::from_eden_dirstate(dirstate_path, case_sensitive)?
-            }
-            _ => {
-                let treestate_path = path.join(self.ident.dot_dir()).join("treestate");
-                if util::file::exists(&dirstate_path)
-                    .map_err(anyhow::Error::from)?
-                    .is_some()
-                {
-                    tracing::trace!(target: "repo::workingcopy", "reading dirstate file");
-                    let mut buf =
-                        util::file::open(dirstate_path, "r").map_err(anyhow::Error::from)?;
-                    tracing::trace!(target: "repo::workingcopy", "deserializing dirstate");
-                    let dirstate = Dirstate::deserialize(&mut buf)?;
-                    let fields = dirstate
-                        .tree_state
-                        .ok_or_else(|| anyhow!("missing treestate fields on dirstate"))?;
-
-                    let filename = fields.tree_filename;
-                    let root_id = fields.tree_root_id;
-                    tracing::trace!(target: "repo::workingcopy", "loading treestate {filename} {root_id:?}");
-                    TreeState::open(treestate_path.join(filename), root_id, case_sensitive)?
-                } else {
-                    tracing::trace!(target: "repo::workingcopy", "creating treestate");
-                    let (treestate, root_id) = TreeState::new(&treestate_path, case_sensitive)?;
-
-                    tracing::trace!(target: "repo::workingcopy", "creating dirstate");
-                    let dirstate = Dirstate {
-                        p1: *HgId::null_id(),
-                        p2: *HgId::null_id(),
-                        tree_state: Some(TreeStateFields {
-                            tree_filename: treestate.file_name()?,
-                            tree_root_id: root_id,
-                            // TODO: set threshold
-                            repack_threshold: None,
-                        }),
-                    };
-
-                    tracing::trace!(target: "repo::workingcopy", "creating dirstate file");
-                    let mut file =
-                        util::file::create(dirstate_path).map_err(anyhow::Error::from)?;
-
-                    tracing::trace!(target: "repo::workingcopy", "serializing dirstate");
-                    dirstate.serialize(&mut file)?;
-                    treestate
-                }
-            }
-        };
-        tracing::trace!(target: "repo::workingcopy", "treestate loaded");
-        let treestate = Arc::new(Mutex::new(treestate));
-
+    pub fn working_copy(&self) -> Result<WorkingCopy, errors::InvalidWorkingCopy> {
         tracing::trace!(target: "repo::workingcopy", "creating file store");
         let file_store = self.file_store()?;
 
         tracing::trace!(target: "repo::workingcopy", "creating tree resolver");
-        let tree_resolver = Arc::new(self.tree_resolver()?);
+        let tree_resolver = self.tree_resolver()?;
+        let has_requirement = |s: &str| self.requirements.contains(s);
 
         Ok(WorkingCopy::new(
-            vfs,
+            &self.path,
+            &self.config,
             self.storage_format(),
-            filesystem,
-            treestate,
             tree_resolver,
             file_store,
-            &self.config,
             self.locker.clone(),
+            &self.dot_hg_path,
+            &has_requirement,
         )?)
-    }
-
-    async fn get_root_tree_id(&mut self, commit_id: HgId) -> Result<HgId> {
-        let commit_store = self.dag_commits()?.read().to_dyn_read_root_tree_ids();
-        let tree_ids = commit_store.read_root_tree_ids(vec![commit_id]).await?;
-        Ok(tree_ids[0].1)
     }
 
     /// Construct both file and tree store if they are backed by the same storage.
     /// Return None if they are not backed by the same storage.
     /// Return Some((file_store, tree_store)) if they are constructed.
     fn try_construct_file_tree_store(
-        &mut self,
-    ) -> Result<
-        Option<(
-            Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
-            Arc<dyn TreeStore + Send + Sync>,
-        )>,
-    > {
-        if self.storage_format().is_git() {
-            let git_store = Arc::new(
-                gitstore::GitStore::open(&self.git_dir()?).context("opening git tree store")?,
-            );
-            // Set both stores to share underlying git store.
-            self.file_store = Some(git_store.clone());
-            self.tree_store = Some(git_store.clone());
-            tracing::trace!(target: "repo::file_store", "creating git file and tree store");
-            return Ok(Some((git_store.clone(), git_store)));
+        &self,
+    ) -> Result<Option<(Arc<dyn FileStore>, Arc<dyn TreeStore>)>> {
+        let info: &dyn StoreInfo = self;
+        match factory::call_constructor::<_, Box<dyn StoreOutput>>(info) {
+            Err(e) => {
+                if factory::is_error_from_constructor(&e) {
+                    Err(e)
+                } else {
+                    // Try other store constructors. Once revisionstore is migrated to
+                    // use factory and abstraction, we can drop this.
+                    Ok(None)
+                }
+            }
+            Ok(out) => {
+                let file_store = out.file_store();
+                let tree_store = out.tree_store();
+                let _ = self.file_store.set(file_store.clone());
+                let _ = self.tree_store.set(tree_store.clone());
+                Ok(Some((file_store, tree_store)))
+            }
         }
-        if self.storage_format().is_eager() {
-            let store = EagerRepoStore::open(&self.store_path.join("hgcommits").join("v1"))?;
-            self.eager_store = Some(store.clone());
-            let store = Arc::new(store);
-            self.file_store = Some(store.clone());
-            self.tree_store = Some(store.clone());
-            tracing::trace!(target: "repo::file_store", "creating EagerRepo file and tree store");
-            return Ok(Some((store.clone(), store)));
-        }
-        return Ok(None);
-    }
-
-    pub fn correlator(&self) -> &'static str {
-        edenapi::DEFAULT_CORRELATOR.as_str()
     }
 }
 
-fn read_sharedpath(dot_path: &Path) -> Result<Option<(PathBuf, identity::Identity)>> {
+pub fn read_sharedpath(dot_path: &Path) -> Result<Option<(PathBuf, identity::Identity)>> {
     let sharedpath = fs::read_to_string(dot_path.join("sharedpath"))
         .ok()
-        .map(|s| PathBuf::from(s))
+        .map(PathBuf::from)
         .and_then(|p| Some(PathBuf::from(p.parent()?)));
 
     if let Some(mut possible_path) = sharedpath {

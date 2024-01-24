@@ -55,7 +55,7 @@
   gap: var(--pad);
 }
 
-.inline-error-badge .tooltip-creator {
+.inline-error-badge > * {
   display: flex;
   flex-direction: row;
   gap: var(--pad);

@@ -1,0 +1,15 @@
+load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
+
+oncall("scm_client_infra")
+
+python_unittest(
+    name = "test",
+    srcs = glob(["*.py"]),
+    resources = {
+        "//opensource/fbcode_builder:manifests": "manifests",
+    },
+    skip_on_mode_mac = False,
+    deps = [
+        "//opensource/fbcode_builder/getdeps:lib",
+    ],
+)

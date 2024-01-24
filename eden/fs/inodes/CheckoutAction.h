@@ -7,13 +7,13 @@
 
 #pragma once
 
-#include <folly/futures/Future.h>
 #include <memory>
 #include <optional>
 #include <vector>
 #include "eden/fs/fuse/Invalidation.h"
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/model/Tree.h"
+#include "eden/fs/utils/ImmediateFuture.h"
 
 namespace folly {
 class exception_wrapper;
@@ -41,7 +41,7 @@ class ObjectStore;
  * CheckoutAction objects are ever created for these cases, since these actions
  * can be taken immediately.
  */
-class CheckoutAction {
+class CheckoutAction : public std::enable_shared_from_this<CheckoutAction> {
  public:
   /**
    * Create a CheckoutAction with an already loaded Inode object.
@@ -57,16 +57,16 @@ class CheckoutAction {
    * yet.
    *
    * (This is a template function purely to avoid ambiguity with the
-   * constructor type above.  Future<InodePtr> is implicitly constructible from
-   * an InodePtr, but we want to prefer the constructor above if we have an
-   * InodePtr.)
+   * constructor type above.  ImmediateFuture<InodePtr> is implicitly
+   * constructible from an InodePtr, but we want to prefer the constructor
+   * above if we have an InodePtr.)
    */
   template <typename InodePtrType>
   CheckoutAction(
       CheckoutContext* ctx,
       const Tree::value_type* oldScmEntry,
       const Tree::value_type* newScmEntry,
-      folly::Future<InodePtrType> inodeFuture)
+      ImmediateFuture<InodePtrType> inodeFuture)
       : CheckoutAction(
             INTERNAL,
             ctx,
@@ -90,18 +90,16 @@ class CheckoutAction {
   /**
    * Run the CheckoutAction.
    *
-   * If this completes successfully, the result returned via the Future
-   * indicates if the change updated the parent directory's entries. Returns
-   * whether the caller is responsible for invalidating the directory's inode
-   * cache in the kernel.
+   * If this completes successfully, the result returned via the
+   * ImmediateFuture indicates if the change updated the parent directory's
+   * entries. Returns whether the caller is responsible for invalidating the
+   * directory's inode cache in the kernel.
    */
-  FOLLY_NODISCARD folly::Future<InvalidationRequired> run(
+  FOLLY_NODISCARD ImmediateFuture<InvalidationRequired> run(
       CheckoutContext* ctx,
       ObjectStore* store);
 
  private:
-  class LoadingRefcount;
-
   enum InternalConstructor {
     INTERNAL,
   };
@@ -110,7 +108,7 @@ class CheckoutAction {
       CheckoutContext* ctx,
       const Tree::value_type* oldScmEntry,
       const Tree::value_type* newScmEntry,
-      folly::Future<InodePtr> inodeFuture);
+      ImmediateFuture<InodePtr> inodeFuture);
 
   void setOldTree(std::shared_ptr<const Tree> tree);
   void setOldBlob(Hash20 blobSha1);
@@ -121,13 +119,13 @@ class CheckoutAction {
 
   void allLoadsComplete() noexcept;
   bool ensureDataReady() noexcept;
-  folly::Future<bool> hasConflict();
+  ImmediateFuture<bool> hasConflict();
 
   /**
    * Return whether the directory's contents have changed and the
    * inode's readdir cache must be flushed.
    */
-  FOLLY_NODISCARD folly::Future<InvalidationRequired> doAction();
+  FOLLY_NODISCARD ImmediateFuture<InvalidationRequired> doAction();
 
   /**
    * The context for the in-progress checkout operation.
@@ -154,7 +152,8 @@ class CheckoutAction {
    * This may be unset if the inode was already available when the
    * CheckoutAction was created (in which case inode_ will be non-null).
    */
-  folly::Future<InodePtr> inodeFuture_ = folly::Future<InodePtr>::makeEmpty();
+  ImmediateFuture<InodePtr> inodeFuture_ =
+      ImmediateFuture<InodePtr>::makeEmpty();
 
   /**
    * A reference count tracking number of outstanding futures still
@@ -186,11 +185,7 @@ class CheckoutAction {
    * The errors vector keeps track of any errors that occurred while trying to
    * load the data needed to perform the checkout action.
    */
+  // TODO: Add locking?
   std::vector<folly::exception_wrapper> errors_;
-
-  /**
-   * The promise that we will fulfil when the CheckoutAction is complete.
-   */
-  folly::Promise<InvalidationRequired> promise_;
 };
 } // namespace facebook::eden

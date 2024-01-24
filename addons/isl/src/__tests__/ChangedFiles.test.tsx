@@ -5,9 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {UncommittedChanges} from '../types';
+
 import App from '../App';
-import {__TEST__} from '../Tooltip';
-import {ignoreRTL} from '../testQueries';
+import {defaultChangedFilesDisplayType} from '../ChangedFileDisplayTypePicker';
+import {ignoreRTL, CommitInfoTestUtils} from '../testQueries';
 import {
   expectMessageSentToServer,
   simulateCommits,
@@ -18,15 +20,20 @@ import {
   resetTestMessages,
   simulateMessageFromServer,
 } from '../testUtils';
+import {leftPad} from '../utils';
 import {fireEvent, render, screen} from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import {act} from 'react-dom/test-utils';
 
 jest.mock('../MessageBus');
 
+jest.mock('shared/OperatingSystem', () => ({
+  isMac: true,
+}));
+
 describe('Changed Files', () => {
   beforeEach(() => {
     resetTestMessages();
-    __TEST__.resetMemoizedTooltipContainer();
     render(<App />);
     act(() => {
       simulateRepoConnected();
@@ -42,6 +49,14 @@ describe('Changed Files', () => {
           COMMIT('a', 'My Commit', '1'),
           COMMIT('b', 'Another Commit', 'a', {isHead: true}),
         ],
+      });
+      // Reset to the default display type.
+      act(() => {
+        simulateMessageFromServer({
+          type: 'gotConfig',
+          name: 'isl.changedFilesDisplayType',
+          value: JSON.stringify(defaultChangedFilesDisplayType),
+        });
       });
       expectMessageSentToServer({
         type: 'subscribe',
@@ -112,8 +127,8 @@ describe('Changed Files', () => {
         ],
       });
     });
-    expect(screen.getByText('\u200E.gitignore')).toBeInTheDocument();
-    expect(screen.getByText('\u200Esrc/.gitignore')).toBeInTheDocument();
+    expect(screen.getByText('\u200E.gitignore\u200E')).toBeInTheDocument();
+    expect(screen.getByText('\u200Esrc/.gitignore\u200E')).toBeInTheDocument();
   });
 
   describe('default changed files', () => {
@@ -134,6 +149,20 @@ describe('Changed Files', () => {
         fireEvent.click(screen.getByText('Full file paths'));
       });
 
+      expect(screen.getByText(ignoreRTL('file1.js'))).toBeInTheDocument();
+      expect(screen.getByText(ignoreRTL('src/file2.js'))).toBeInTheDocument();
+      expect(screen.getByText(ignoreRTL('src/a/foo.js'))).toBeInTheDocument();
+      expect(screen.getByText(ignoreRTL('src/b/foo.js'))).toBeInTheDocument();
+      expect(
+        screen.getByText(ignoreRTL('src/subfolder/another/yet/another/file5.js')),
+      ).toBeInTheDocument();
+    });
+
+    it('shows full paths when holding alt', () => {
+      expect(screen.queryByText(ignoreRTL('src/b/foo.js'))).not.toBeInTheDocument();
+      act(() => {
+        userEvent.keyboard('{Alt>}'); // '>' means keep pressed
+      });
       expect(screen.getByText(ignoreRTL('file1.js'))).toBeInTheDocument();
       expect(screen.getByText(ignoreRTL('src/file2.js'))).toBeInTheDocument();
       expect(screen.getByText(ignoreRTL('src/a/foo.js'))).toBeInTheDocument();
@@ -213,6 +242,124 @@ describe('Changed Files', () => {
       });
       expect(screen.queryByText(ignoreRTL('file1.js'))).not.toBeInTheDocument();
       expect(screen.queryByText(ignoreRTL('file3.js'))).toBeInTheDocument();
+    });
+  });
+
+  describe('truncated list of changed files', () => {
+    function makeFiles(n: number): UncommittedChanges {
+      return new Array(n)
+        .fill(null)
+        .map((_, i) => ({path: `file${leftPad(i, 3, '0')}.txt`, status: 'M'}));
+    }
+
+    it('only first 500 files are shown', () => {
+      act(() => {
+        simulateUncommittedChangedFiles({
+          value: makeFiles(510),
+        });
+      });
+      const files = screen.getAllByText(/file\d+\.txt/);
+      expect(files).toHaveLength(500);
+    });
+
+    it('banner is shown if some files are hidden', () => {
+      act(() => {
+        simulateUncommittedChangedFiles({
+          value: makeFiles(700),
+        });
+      });
+      expect(screen.getByText('Showing first 500 files out of 700 total')).toBeInTheDocument();
+    });
+
+    it('if more than 500 files are provided, there are page navigation buttons', () => {
+      act(() => {
+        simulateUncommittedChangedFiles({
+          value: makeFiles(510),
+        });
+      });
+      expect(screen.getByTestId('changed-files-next-page')).toBeInTheDocument();
+      expect(screen.getByTestId('changed-files-previous-page')).toBeInTheDocument();
+      expect(screen.getByTestId('changed-files-previous-page')).toBeDisabled();
+      expect(screen.getByText('Showing first 500 files out of 510 total')).toBeInTheDocument();
+    });
+
+    it('can click buttons to navigate pages', () => {
+      act(() => {
+        simulateUncommittedChangedFiles({
+          value: makeFiles(1010),
+        });
+      });
+      fireEvent.click(screen.getByTestId('changed-files-next-page'));
+      expect(screen.getByText('Showing files 501 – 1000 out of 1010 total')).toBeInTheDocument();
+      fireEvent.click(screen.getByTestId('changed-files-next-page'));
+      expect(screen.getByText('Showing files 1001 – 1010 out of 1010 total')).toBeInTheDocument();
+
+      expect(screen.getByTestId('changed-files-next-page')).toBeDisabled();
+
+      fireEvent.click(screen.getByTestId('changed-files-previous-page'));
+      expect(screen.getByText('Showing files 501 – 1000 out of 1010 total')).toBeInTheDocument();
+      fireEvent.click(screen.getByTestId('changed-files-previous-page'));
+      expect(screen.getByText('Showing first 500 files out of 1010 total')).toBeInTheDocument();
+    });
+
+    it("if more than 500 files exist, but only 500 are provided, don't show pagination buttons", () => {
+      act(() => {
+        simulateUncommittedChangedFiles({
+          value: [],
+        });
+        simulateCommits({
+          value: [
+            COMMIT('1', 'some public base', '0', {phase: 'public'}),
+            COMMIT('a', 'Commit', '1', {
+              isHead: true,
+              filesSample: makeFiles(500),
+              totalFileCount: 1010,
+            }),
+          ],
+        });
+        CommitInfoTestUtils.openCommitInfoSidebar();
+      });
+
+      const changedFiles = CommitInfoTestUtils.withinCommitInfo().getByTestId('changed-files');
+      expect(changedFiles).toBeInTheDocument();
+
+      // banner shows truncation
+      expect(
+        CommitInfoTestUtils.withinCommitInfo().getByText(
+          'Showing first 500 files out of 1010 total',
+        ),
+      ).toBeInTheDocument();
+
+      // but no pagination buttons, since we only provide first 25 anyway
+      expect(
+        CommitInfoTestUtils.withinCommitInfo().queryByTestId('changed-files-next-page'),
+      ).not.toBeInTheDocument();
+      expect(
+        CommitInfoTestUtils.withinCommitInfo().queryByTestId('changed-files-previous-page'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('if the number of files changes, restrict the page number to fit', () => {
+      act(() => {
+        simulateUncommittedChangedFiles({
+          value: makeFiles(2020),
+        });
+      });
+      fireEvent.click(screen.getByTestId('changed-files-next-page'));
+      fireEvent.click(screen.getByTestId('changed-files-next-page'));
+      fireEvent.click(screen.getByTestId('changed-files-next-page'));
+      fireEvent.click(screen.getByTestId('changed-files-next-page'));
+      expect(screen.getByText('Showing files 2001 – 2020 out of 2020 total')).toBeInTheDocument();
+
+      // now some file changes are removed (e.g. discarded)
+      act(() => {
+        simulateUncommittedChangedFiles({
+          value: makeFiles(700),
+        });
+      });
+
+      // ranges are remapped
+      expect(screen.getByText('Showing files 501 – 700 out of 700 total')).toBeInTheDocument();
     });
   });
 });

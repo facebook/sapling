@@ -20,6 +20,7 @@
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/ParentInodeInfo.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/NotImplemented.h"
 #include "eden/fs/utils/SystemError.h"
@@ -99,8 +100,11 @@ InodeType InodeMap::UnloadedInode::getInodeType() const {
   return S_ISDIR(mode) ? InodeType::TREE : InodeType::FILE;
 }
 
-InodeMap::InodeMap(EdenMount* mount, std::shared_ptr<ReloadableConfig> config)
-    : mount_{mount}, config_{std::move(config)} {}
+InodeMap::InodeMap(
+    EdenMount* mount,
+    std::shared_ptr<ReloadableConfig> config,
+    EdenStatsPtr stats)
+    : mount_{mount}, config_{std::move(config)}, stats_{std::move(stats)} {}
 
 InodeMap::~InodeMap() {
   // TODO: We need to clean up the EdenMount / InodeMap destruction process a
@@ -270,7 +274,11 @@ ImmediateFuture<InodePtr> InodeMap::lookupInode(InodeNumber number) {
   // Check to see if this Inode is already loaded
   auto loadedIter = data->loadedInodes_.find(number);
   if (loadedIter != data->loadedInodes_.end()) {
-    return loadedIter->second.getPtr();
+    auto inode = loadedIter->second.getPtr();
+    stats_->increment(
+        inode->isDir() ? &InodeMapStats::lookupTreeInodeHit
+                       : &InodeMapStats::lookupBlobInodeHit);
+    return inode;
   }
 
   // Look up the data in the unloadedInodes_ map.
@@ -491,6 +499,10 @@ InodeMap::PromiseVector InodeMap::inodeLoadComplete(InodeBase* inode) {
       data->unloadedInodes_.erase(it);
     }
     mount_->publishInodeTraceEvent(std::move(endLoadEvent.value()));
+    stats_->increment(
+        inode->isDir() ? &InodeMapStats::lookupTreeInodeMiss
+                       : &InodeMapStats::lookupBlobInodeMiss,
+        promises.size());
     return promises;
   } catch (...) {
     auto ew = folly::exception_wrapper{std::current_exception()};
@@ -502,6 +514,7 @@ InodeMap::PromiseVector InodeMap::inodeLoadComplete(InodeBase* inode) {
     if (optionalFailEvent.has_value()) {
       mount_->publishInodeTraceEvent(std::move(optionalFailEvent.value()));
     }
+    stats_->increment(&InodeMapStats::lookupInodeError, promises.size());
     return PromiseVector{};
   }
 }
@@ -519,6 +532,7 @@ void InodeMap::inodeLoadFailed(
   if (optionalFailEvent.has_value()) {
     mount_->publishInodeTraceEvent(std::move(optionalFailEvent.value()));
   }
+  stats_->increment(&InodeMapStats::lookupInodeError, promises.size());
 }
 
 InodeTraceEvent InodeMap::createInodeLoadStartEvent(

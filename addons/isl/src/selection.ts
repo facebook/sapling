@@ -6,22 +6,26 @@
  */
 
 import type {ISLCommandName} from './ISLShortcuts';
-import type {CommitInfo} from './types';
+import type {CommitInfo, Hash} from './types';
 import type React from 'react';
 
 import {useCommand} from './ISLShortcuts';
-import {successionTracker} from './SuccessionTracker';
-import {treeWithPreviews} from './previews';
-import {latestCommitTreeMap} from './serverAPIState';
-import {atom, selector, useRecoilCallback, useRecoilValue} from 'recoil';
-import {notEmpty} from 'shared/utils';
+import {useSelectAllCommitsShortcut} from './SelectAllCommits';
+import {latestSuccessorUnlessExplicitlyObsolete, successionTracker} from './SuccessionTracker';
+import {islDrawerState} from './drawerState';
+import {writeAtom} from './jotaiUtils';
+import {HideOperation} from './operations/HideOperation';
+import {dagWithPreviews} from './previews';
+import {latestDag, operationBeingPreviewed} from './serverAPIState';
+import {firstOfIterable} from './utils';
+import {atom, selector, selectorFamily, useRecoilCallback, useRecoilValue} from 'recoil';
 
 /**
  * See {@link selectedCommitInfos}
  * Note: it is possible to be selecting a commit that stops being rendered, and thus has no associated commit info.
  * Prefer to use `selectedCommitInfos` to get the subset of the selection that is visible.
  */
-export const selectedCommits = atom<Set<string>>({
+export const selectedCommits = atom<Set<Hash>>({
   key: 'selectedCommits',
   default: new Set(),
   effects: [
@@ -40,6 +44,14 @@ export const selectedCommits = atom<Set<string>>({
   ],
 });
 
+export const isCommitSelected = selectorFamily({
+  key: 'isCommitSelected',
+  get:
+    (hash: Hash) =>
+    ({get}) =>
+      get(selectedCommits).has(hash),
+});
+
 const previouslySelectedCommit = atom<undefined | string>({
   key: 'previouslySelectedCommit',
   default: undefined,
@@ -56,17 +68,11 @@ export const selectedCommitInfos = selector<Array<CommitInfo>>({
   key: 'selectedCommitInfos',
   get: ({get}) => {
     const selected = get(selectedCommits);
-    const {treeMap} = get(treeWithPreviews);
-    const commits = [...selected]
-      .map(hash => {
-        const tree = treeMap.get(hash);
-        if (tree == null) {
-          return null;
-        }
-        return tree.info;
-      })
-      .filter(notEmpty);
-    return commits;
+    const dag = get(dagWithPreviews);
+    return [...selected].flatMap(h => {
+      const info = dag.get(h);
+      return info === undefined ? [] : [info];
+    });
   },
 });
 
@@ -75,15 +81,16 @@ export function useCommitSelection(hash: string): {
   onClickToSelect: (
     _e: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>,
   ) => unknown;
+  overrideSelection: (newSelected: Array<Hash>) => void;
 } {
-  const selected = useRecoilValue(selectedCommits);
+  const isSelected = useRecoilValue(isCommitSelected(hash));
   const onClickToSelect = useRecoilCallback(
     ({set, snapshot}) =>
       (e: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>) => {
         // previews won't change a commit from draft -> public, so we don't need
         // to use previews here
-        const loadable = snapshot.getLoadable(latestCommitTreeMap);
-        if (loadable.getValue().get(hash)?.info.phase === 'public') {
+        const loadable = snapshot.getLoadable(latestDag);
+        if (loadable.getValue().get(hash)?.phase === 'public') {
           // don't bother selecting public commits
           return;
         }
@@ -138,7 +145,26 @@ export function useCommitSelection(hash: string): {
       },
     [hash],
   );
-  return {isSelected: selected.has(hash), onClickToSelect};
+
+  const overrideSelection = useRecoilCallback(
+    ({set, snapshot}) =>
+      (newSelected: Array<Hash>) => {
+        // previews won't change a commit from draft -> public, so we don't need
+        // to use previews here
+        const loadable = snapshot.getLoadable(latestDag);
+        if (loadable.getValue().get(hash)?.phase === 'public') {
+          // don't bother selecting public commits
+          return;
+        }
+        const nonPublicToSelect = newSelected.filter(
+          hash => loadable.getValue().get(hash)?.phase !== 'public',
+        );
+        set(selectedCommits, new Set(nonPublicToSelect));
+      },
+    [hash],
+  );
+
+  return {isSelected, onClickToSelect, overrideSelection};
 }
 
 /**
@@ -155,34 +181,47 @@ export function useCommitSelection(hash: string): {
 export const linearizedCommitHistory = selector({
   key: 'linearizedCommitHistory',
   get: ({get}) => {
-    const {trees} = get(treeWithPreviews);
-
-    const toProcess = [...trees];
-    const accum = [];
-
-    while (toProcess.length > 0) {
-      const next = toProcess.pop();
-      if (!next) {
-        break;
-      }
-
-      accum.push(next.info);
-      toProcess.push(...next.children);
-    }
-
-    return accum;
+    const dag = get(dagWithPreviews);
+    const sorted: Hash[] = dag.sortAsc(dag, {gap: false});
+    return dag.getBatch(sorted);
   },
 });
 
 export function useArrowKeysToChangeSelection() {
   const cb = useRecoilCallback(({snapshot, set}) => (which: ISLCommandName) => {
-    const lastSelected = snapshot.getLoadable(previouslySelectedCommit).valueMaybe();
+    if (which === 'OpenDetails') {
+      writeAtom(islDrawerState, previous => ({
+        ...previous,
+        right: {
+          ...previous.right,
+          collapsed: false,
+        },
+      }));
+    }
+
     const linearHistory = snapshot.getLoadable(linearizedCommitHistory).valueMaybe();
-    if (lastSelected == null || linearHistory == null) {
+    if (linearHistory == null || linearHistory.length === 0) {
       return;
     }
 
     const linearNonPublicHistory = linearHistory.filter(commit => commit.phase !== 'public');
+
+    const existingSelection = snapshot.getLoadable(selectedCommits).valueMaybe();
+    if (existingSelection == null || existingSelection.size === 0) {
+      if (which === 'SelectDownwards' || which === 'ContinueSelectionDownwards') {
+        const top = linearNonPublicHistory.at(-1)?.hash;
+        if (top != null) {
+          set(selectedCommits, new Set([top]));
+          set(previouslySelectedCommit, top);
+        }
+      }
+      return;
+    }
+
+    const lastSelected = snapshot.getLoadable(previouslySelectedCommit).valueMaybe();
+    if (lastSelected == null) {
+      return;
+    }
 
     let currentIndex = linearNonPublicHistory.findIndex(commit => commit.hash === lastSelected);
     if (currentIndex === -1) {
@@ -227,8 +266,43 @@ export function useArrowKeysToChangeSelection() {
     set(previouslySelectedCommit, newSelected.hash);
   });
 
+  useCommand('OpenDetails', () => cb('OpenDetails'));
   useCommand('SelectUpwards', () => cb('SelectUpwards'));
   useCommand('SelectDownwards', () => cb('SelectDownwards'));
   useCommand('ContinueSelectionUpwards', () => cb('ContinueSelectionUpwards'));
   useCommand('ContinueSelectionDownwards', () => cb('ContinueSelectionDownwards'));
+  useSelectAllCommitsShortcut();
+}
+
+export function useBackspaceToHideSelected(): void {
+  const cb = useRecoilCallback(({snapshot, set}) => () => {
+    // Though you can select multiple commits, our preview system doens't handle that very well.
+    // Just preview hiding the most recently selected commit.
+    // Another sensible behavior would be to inspect the tree of commits selected
+    // and find if there's a single common ancestor to hide. That won't work in all cases though.
+    const mostRecent = snapshot.getLoadable(previouslySelectedCommit).valueMaybe();
+    let hashToHide = mostRecent;
+    if (hashToHide == null) {
+      const selection = snapshot.getLoadable(selectedCommits).valueMaybe();
+      if (selection != null) {
+        hashToHide = firstOfIterable(selection.values());
+      }
+    }
+    if (hashToHide == null) {
+      return;
+    }
+
+    const loadable = snapshot.getLoadable(latestDag);
+    const commitToHide = loadable.getValue().get(hashToHide);
+    if (commitToHide == null) {
+      return;
+    }
+
+    set(
+      operationBeingPreviewed,
+      new HideOperation(latestSuccessorUnlessExplicitlyObsolete(commitToHide)),
+    );
+  });
+
+  useCommand('HideSelectedCommits', () => cb());
 }

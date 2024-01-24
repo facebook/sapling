@@ -1,0 +1,33 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+
+oncall("mononoke")
+
+rust_binary(
+    name = "benchmark_filestore",
+    srcs = ["benchmark_filestore.rs"],
+    unittests = False,
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tokio-util",
+        "//common/rust/shed/cached_config:cached_config",
+        "//common/rust/shed/cachelib_stub:cachelib",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/futures_stats:futures_stats",
+        "//eden/mononoke/blobstore:blobstore",
+        "//eden/mononoke/blobstore:blobstore_factory",
+        "//eden/mononoke/blobstore:cacheblob",
+        "//eden/mononoke/blobstore:memblob",
+        "//eden/mononoke/blobstore:prefixblob",
+        "//eden/mononoke/blobstore:throttledblob",
+        "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
+        "//eden/mononoke/facebook/manifoldblob:manifoldblob",
+        "//eden/mononoke/filestore:filestore",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/server/context:context",
+    ],
+)

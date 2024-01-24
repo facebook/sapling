@@ -28,7 +28,7 @@ mod tests {
             if let Some(result) = _priv {
                 result.push((a1, a2, b1, b2));
             }
-            return 0;
+            0
         }
 
         let a = "a\nb\nc\nd\n".to_owned();

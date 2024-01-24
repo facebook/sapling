@@ -13,6 +13,7 @@ import type {
 } from './types';
 
 import messageBus from './MessageBus';
+import platform from './platform';
 import {deserializeFromString, serializeToString} from './serialize';
 import {defer} from 'shared/utils';
 
@@ -37,6 +38,10 @@ export interface ClientToServerAPI {
  * Use to send and listen for well-typed events with the server
  */
 class ClientToServerAPIImpl implements ClientToServerAPI {
+  constructor() {
+    platform?.registerServerListeners?.(this);
+  }
+
   private listenersByType = new Map<
     string,
     Set<(message: IncomingMessage) => void | Promise<void>>

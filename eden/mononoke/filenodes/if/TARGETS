@@ -1,0 +1,28 @@
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+
+oncall("mononoke")
+
+thrift_library(
+    name = "filenodes-if",
+    languages = [
+        "rust",
+        "cpp2",
+    ],
+    rust_deps = [
+        "fbsource//third-party/rust:smallvec",
+    ],
+    thrift_srcs = {
+        "filenodes.thrift": [],
+    },
+    # The Thrift definitions are private and only used for serialization -- do
+    # not allow other code to use them.
+    visibility = [
+        "//eden/mononoke/derived_data/remote/if:",
+        "//eden/mononoke/filenodes:filenodes",
+        "//eden/mononoke/filenodes:filenodes-unittest",
+    ],
+    deps = [
+        "//eden/mononoke/mercurial/types/if:mercurial-thrift",
+        "//eden/mononoke/mononoke_types/if:mononoke_types-thrift",
+    ],
+)

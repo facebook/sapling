@@ -1,0 +1,30 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mononoke")
+
+rust_library(
+    name = "sql_commit_graph_storage",
+    srcs = glob([
+        "src/**/*.rs",
+        "schemas/**/*.sql",
+    ]),
+    test_deps = [
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/repo_attributes/commit_graph/commit_graph_testlib:commit_graph_testlib",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:vec1",
+        "//common/rust/shed/justknobs_stub:justknobs",
+        "//common/rust/shed/sql:sql",
+        "//eden/mononoke/common/rendezvous:rendezvous",
+        "//eden/mononoke/common/rust/sql_ext:sql_ext",
+        "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/repo_attributes/commit_graph/commit_graph_types:commit_graph_types",
+        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/tunables:tunables",
+    ],
+)

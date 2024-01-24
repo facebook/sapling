@@ -31,7 +31,6 @@ use futures::future::try_join;
 use futures::future::FutureExt;
 use futures::future::TryFutureExt;
 use futures::join;
-use futures::select_biased;
 use futures::stream;
 use futures::stream::FuturesUnordered;
 use futures::stream::StreamExt;
@@ -41,7 +40,6 @@ use futures_stats::TimedTryFutureExt;
 use mononoke_types::ChangesetId;
 use slog::debug;
 use topo_sort::TopoSortedDagTraversal;
-use tunables::tunables;
 
 use super::DerivationAssignment;
 use super::DerivedDataManager;
@@ -203,16 +201,16 @@ impl DerivedDataManager {
                 // We must perform derivation.  Use the appropriate session
                 // class for derivation.
                 let ctx = self.set_derivation_session_class(ctx.clone());
+                let bonsai = bonsai?;
 
                 // The derivation process is additionally logged to the derived
                 // data scuba table.
                 let mut derived_data_scuba = self.derived_data_scuba::<Derivable>();
-                derived_data_scuba.add_changeset(csid);
+                derived_data_scuba.add_changeset(&bonsai);
                 derived_data_scuba.add_discovery_stats(discovery_stats);
                 derived_data_scuba.log_derivation_start(&ctx);
 
                 let (derive_stats, derived) = async {
-                    let bonsai = bonsai?;
                     let parents = derivation_ctx.fetch_parents(&ctx, &bonsai).await?;
                     Derivable::derive_single(&ctx, derivation_ctx, bonsai, parents).await
                 }
@@ -497,6 +495,74 @@ impl DerivedDataManager {
         }
     }
 
+    /// Derive or retrieve derived data for a changeset using other derived data types
+    /// without requiring data to be derived for the parents of the changeset.
+    pub async fn derive_from_predecessor<Derivable>(
+        &self,
+        ctx: &CoreContext,
+        csid: ChangesetId,
+        rederivation: Option<Arc<dyn Rederivation>>,
+    ) -> Result<Derivable, DerivationError>
+    where
+        Derivable: BonsaiDerivable,
+    {
+        if let Some(value) = self.fetch_derived(ctx, csid, rederivation.clone()).await? {
+            return Ok(value);
+        }
+
+        let mut derivation_ctx = self.derivation_context(rederivation.clone());
+        derivation_ctx.enable_write_batching();
+
+        let bonsai = csid
+            .load(ctx, derivation_ctx.blobstore())
+            .await
+            .map_err(Error::from)?;
+
+        let ctx = ctx.clone_and_reset();
+        let ctx = self.set_derivation_session_class(ctx);
+
+        let mut derived_data_scuba = self.derived_data_scuba::<Derivable>();
+        derived_data_scuba.add_changeset(&bonsai);
+        derived_data_scuba.add_metadata(ctx.metadata());
+
+        derived_data_scuba.log_derivation_start(&ctx);
+
+        let (derive_stats, derived) =
+            Derivable::derive_from_predecessor(&ctx, &derivation_ctx, bonsai)
+                .timed()
+                .await;
+        derivation_ctx.flush(&ctx).await?;
+
+        derived_data_scuba.log_derivation_end(&ctx, &derive_stats, derived.as_ref().err());
+
+        let derived = derived?;
+
+        let (persist_stats, persisted) = async {
+            derived
+                .clone()
+                .store_mapping(&ctx, &derivation_ctx, csid)
+                .await?;
+            derivation_ctx.flush(&ctx).await?;
+            if let Some(rederivation) = rederivation {
+                rederivation.mark_derived(Derivable::NAME, csid);
+            }
+            Ok(())
+        }
+        .timed()
+        .await;
+
+        derived_data_scuba.log_mapping_insertion(
+            &ctx,
+            None,
+            &persist_stats,
+            persisted.as_ref().err(),
+        );
+
+        persisted?;
+
+        Ok(derived)
+    }
+
     // Derive remotely if possible.
     //
     // Returns `None` if remote derivation is not enabled, failed or timed out, and
@@ -510,22 +576,22 @@ impl DerivedDataManager {
     where
         Derivable: BonsaiDerivable,
     {
-        // How long to wait between requests to the remote derivation service, either to
-        // check for completion of ongoing remote derivation or after failures.
-        const RETRY_DELAY: Duration = Duration::from_millis(100);
-        // The maximum number of times to try remote derivation before giving up.
-        const RETRY_ATTEMPTS_LIMIT: u32 = 10;
-        // Total time to wait for remote derivation before giving up and deriving locally.
-        const FALLBACK_TIMEOUT: Duration = Duration::from_secs(15);
         if let Some(client) = self.derivation_service_client() {
             let mut attempt = 0;
             let started = Instant::now();
-            let fallback_timeout = tunables()
-                .remote_derivation_fallback_timeout_secs()
-                .map_or(FALLBACK_TIMEOUT, Duration::from_secs);
-            let retry_delay = tunables()
-                .derivation_request_retry_delay()
-                .map_or(RETRY_DELAY, Duration::from_millis);
+            // Total time to wait for remote derivation before giving up (and maybe deriving locally).
+            let overall_timeout = Duration::from_millis(justknobs::get_as::<u64>(
+                "scm/mononoke_timeouts:remote_derivation_client_timeout_ms",
+                None,
+            )?);
+            // The maximum number of times to try remote derivation before giving up.
+            const RETRY_ATTEMPTS_LIMIT: u32 = 10;
+            // How long to wait between requests to the remote derivation service, either to
+            // check for completion of ongoing remote derivation or after failures.
+            let retry_delay = Duration::from_millis(justknobs::get_as::<u64>(
+                "scm/mononoke_timeouts:remote_derivation_client_retry_delay_ms",
+                None,
+            )?);
             let request = DeriveRequest {
                 repo_name: self.repo_name().to_string(),
                 derived_data_type: DerivedDataType {
@@ -537,28 +603,31 @@ impl DerivedDataManager {
             };
             let mut request_state = DerivationState::NotRequested;
             let mut derived_data_scuba = self.derived_data_scuba::<Derivable>();
-            derived_data_scuba.add_changeset(csid);
+            derived_data_scuba.add_changeset_id(csid);
 
             // Try to perform remote derivation.  Capture the error so that we
             // can decide what to do.
             let derivation_error = loop {
-                if !tunables()
-                    .by_repo_enable_remote_derivation(self.repo_name())
-                    .unwrap_or_default()
+                if justknobs::eval(
+                    "scm/mononoke:derived_data_disable_remote_derivation",
+                    None,
+                    Some(self.repo_name()),
+                )
+                .unwrap_or_default()
                 {
                     // Remote derivation has been disabled, fall back to local derivation.
                     return Ok(None);
                 }
 
-                if started.elapsed() >= fallback_timeout {
+                if started.elapsed() >= overall_timeout {
                     derived_data_scuba.log_remote_derivation_end(
                         ctx,
                         Some(format!(
                             "Remote derivation timed out after {:?}",
-                            fallback_timeout
+                            overall_timeout
                         )),
                     );
-                    break DerivationError::Timeout(Derivable::NAME, fallback_timeout);
+                    break DerivationError::Timeout(Derivable::NAME, overall_timeout);
                 }
 
                 let service_response = match request_state {
@@ -571,9 +640,9 @@ impl DerivedDataManager {
                         }
                         // not yet derived, so request derivation
                         derived_data_scuba.log_remote_derivation_start(ctx);
-                        client.derive_remotely(&request).await
+                        client.derive_remotely(ctx, &request).await
                     }
-                    DerivationState::InProgress => client.poll(&request).await,
+                    DerivationState::InProgress => client.poll(ctx, &request).await,
                 };
 
                 match service_response {
@@ -624,9 +693,12 @@ impl DerivedDataManager {
             };
 
             // Derivation has failed or timed out.  Consider falling back to local derivation.
-            if tunables()
-                .remote_derivation_fallback_enabled()
-                .unwrap_or_default()
+            if justknobs::eval(
+                "scm/mononoke:derived_data_enable_remote_derivation_local_fallback",
+                None,
+                Some(self.repo_name()),
+            )
+            .unwrap_or_default()
             {
                 // Discard the error and fall back to local derivation.
                 Ok(None)
@@ -668,19 +740,13 @@ impl DerivedDataManager {
 
         let pc = ctx.clone().fork_perf_counters();
 
-        select_biased! {
-            _ = derivation_disabled_watcher(self.repo_name(), Derivable::NAME).fuse() =>
-            // Derivation was disabled during the derivation process.
-            Err(DerivationError::Disabled(
-                Derivable::NAME,
-                self.repo_id(),
-                self.repo_name().to_string(),
-            )),
-            (stats, res) = self.derive_underived(ctx, Arc::new(derivation_ctx), csid).timed().fuse() => {
-                self.log_slow_derivation(ctx, csid, &stats, &pc, &res);
-                res.map(|r| r.derived)
-            }
-        }
+        let (stats, res) = self
+            .derive_underived(ctx, Arc::new(derivation_ctx), csid)
+            .timed()
+            .fuse()
+            .await;
+        self.log_slow_derivation(ctx, csid, &stats, &pc, &res);
+        Ok(res?.derived)
     }
 
     #[async_recursion]
@@ -845,6 +911,7 @@ impl DerivedDataManager {
         let mut derived_data_scuba = self.derived_data_scuba::<Derivable>();
         derived_data_scuba.add_changesets(&bonsais);
         derived_data_scuba.log_batch_derivation_start(ctx);
+        derived_data_scuba.add_metadata(ctx.metadata());
         let (overall_stats, result) = async {
             let derivation_ctx_ref = &derivation_ctx;
             let (batch_stats, derived) = match batch_options {
@@ -1038,38 +1105,4 @@ pub(super) struct DerivationOutcome<Derivable> {
 enum DerivationState {
     NotRequested,
     InProgress,
-}
-
-fn emergency_disabled(repo_name: &str, derivable_name: &str) -> bool {
-    let disabled_for_repo = tunables::tunables()
-        .by_repo_all_derived_data_disabled(repo_name)
-        .unwrap_or(false);
-
-    if disabled_for_repo {
-        return true;
-    }
-
-    let disabled_for_type = tunables::tunables()
-        .by_repo_derived_data_types_disabled(repo_name)
-        .unwrap_or_else(Vec::new);
-
-    if disabled_for_type
-        .iter()
-        .any(|ty| ty.as_str() == derivable_name)
-    {
-        return true;
-    }
-
-    // Not disabled
-    false
-}
-
-async fn derivation_disabled_watcher(repo_name: &str, derivable_name: &'static str) {
-    const DELAY_DURATION: Duration = Duration::from_secs(10);
-    let delay_duration = tunables()
-        .derived_data_disabled_watcher_delay_secs()
-        .map_or(DELAY_DURATION, Duration::from_secs);
-    while !emergency_disabled(repo_name, derivable_name) {
-        tokio::time::sleep(delay_duration).await;
-    }
 }

@@ -1,0 +1,47 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "mutationstore",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "dag": {
+                        "features": ["render"],
+                    },
+                },
+                "dev-dependencies": {
+                    "types": {
+                        "default-features": False,
+                        "features": ["for-tests"],
+                    },
+                },
+            },
+            "extra_buck_dependencies": {
+                "dev-dependencies": [
+                    "//eden/scm/lib/types:types",
+                ],
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    test_deps = [
+        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:rand_chacha",
+        "fbsource//third-party/rust:tempfile",
+        "//eden/scm/lib/drawdag:drawdag",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:bitflags",
+        "fbsource//third-party/rust:futures",
+        "//eden/scm/lib/dag:dag",
+        "//eden/scm/lib/indexedlog:indexedlog",
+        "//eden/scm/lib/types:types",
+        "//eden/scm/lib/vlqencoding:vlqencoding",
+    ],
+)

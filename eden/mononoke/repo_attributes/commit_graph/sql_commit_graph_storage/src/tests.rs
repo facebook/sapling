@@ -22,11 +22,14 @@ use mononoke_types::RepositoryId;
 use rendezvous::RendezVousOptions;
 use sql_construct::SqlConstruct;
 
+use crate::SqlCommitGraphStorage;
 use crate::SqlCommitGraphStorageBuilder;
+
+impl CommitGraphStorageTest for SqlCommitGraphStorage {}
 
 async fn run_test<Fut>(
     fb: FacebookInit,
-    test_function: impl FnOnce(CoreContext, Arc<dyn CommitGraphStorage>) -> Fut,
+    test_function: impl FnOnce(CoreContext, Arc<dyn CommitGraphStorageTest>) -> Fut,
 ) -> Result<()>
 where
     Fut: Future<Output = Result<()>>,
@@ -105,7 +108,7 @@ pub async fn test_lower_level_api(fb: FacebookInit) -> Result<()> {
     );
 
     let all_edges = storage
-        .fetch_many_edges_required(
+        .fetch_many_edges(
             &ctx,
             &["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"]
                 .into_iter()
@@ -123,7 +126,7 @@ pub async fn test_lower_level_api(fb: FacebookInit) -> Result<()> {
             .into_iter()
             .map(|id| {
                 let cs_id = name_cs_id(id);
-                (cs_id, all_edges.get(&cs_id).unwrap().clone())
+                (cs_id, all_edges.get(&cs_id).unwrap().clone().into())
             })
             .collect::<HashMap<_, _>>(),
     );
@@ -135,7 +138,7 @@ pub async fn test_lower_level_api(fb: FacebookInit) -> Result<()> {
             .into_iter()
             .map(|id| {
                 let cs_id = name_cs_id(id);
-                (cs_id, all_edges.get(&cs_id).unwrap().clone())
+                (cs_id, all_edges.get(&cs_id).unwrap().clone().into())
             })
             .collect::<HashMap<_, _>>(),
     );
@@ -147,7 +150,7 @@ pub async fn test_lower_level_api(fb: FacebookInit) -> Result<()> {
             .into_iter()
             .map(|id| {
                 let cs_id = name_cs_id(id);
-                (cs_id, all_edges.get(&cs_id).unwrap().clone())
+                (cs_id, all_edges.get(&cs_id).unwrap().clone().into())
             })
             .collect::<HashMap<_, _>>(),
     );

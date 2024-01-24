@@ -22,7 +22,7 @@ use manifest_tree::TreeManifest;
 use pathmatcher::Matcher;
 use progress_model::ProgressBar;
 use repolock::RepoLocker;
-use storemodel::ReadFileContents;
+use storemodel::FileStore;
 use tracing::instrument;
 use treestate::dirstate::Dirstate;
 use treestate::dirstate::TreeStateFields;
@@ -36,6 +36,7 @@ use util::path::remove_file;
 use vfs::VFS;
 use workingcopy::sparse;
 
+use crate::errors::CheckoutError;
 use crate::file_state;
 use crate::ActionMap;
 use crate::Checkout;
@@ -72,14 +73,6 @@ impl std::fmt::Display for CheckoutStats {
         Ok(())
     }
 }
-
-#[derive(Debug, thiserror::Error)]
-#[error("checkout error: {source}")]
-pub struct CheckoutError {
-    pub resumable: bool,
-    pub source: anyhow::Error,
-}
-
 /// A somewhat simplified/specialized checkout suitable for use during a clone.
 #[instrument(skip_all, fields(path=%dot_path.display(), %target), err)]
 pub fn checkout(
@@ -87,7 +80,7 @@ pub fn checkout(
     dot_path: &Path,
     source_mf: &TreeManifest,
     target_mf: &TreeManifest,
-    file_store: Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
+    file_store: Arc<dyn FileStore>,
     ts: &mut TreeState,
     target: HgId,
     locker: &RepoLocker,
@@ -115,7 +108,7 @@ impl CheckoutState {
         dot_path: &Path,
         source_mf: &TreeManifest,
         target_mf: &TreeManifest,
-        file_store: Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
+        file_store: Arc<dyn FileStore>,
         ts: &mut TreeState,
         target: HgId,
         locker: &RepoLocker,
@@ -139,7 +132,7 @@ impl CheckoutState {
                     sparse::repo_matcher_with_overrides(
                         &vfs,
                         dot_path,
-                        target_mf.clone(),
+                        target_mf,
                         file_store.clone(),
                         &overrides,
                     )?
@@ -179,7 +172,7 @@ impl CheckoutState {
             f.write_all(target.to_hex().as_bytes())
         })?;
 
-        plan.blocking_apply_store(&file_store)?;
+        plan.apply_store(file_store.as_ref())?;
 
         ts.set_metadata(BTreeMap::from([("p1".to_string(), target.to_hex())]))?;
 
@@ -200,7 +193,7 @@ impl CheckoutState {
 #[instrument(skip_all, err)]
 fn update_dirstate(plan: &CheckoutPlan, ts: &mut TreeState, vfs: &VFS) -> anyhow::Result<()> {
     let (update_count, remove_count) = plan.stats();
-    let bar = ProgressBar::register_new("recording", (update_count + remove_count) as u64, "files");
+    let bar = ProgressBar::new_adhoc("recording", (update_count + remove_count) as u64, "files");
 
     // Probably not required for clone.
     for removed in plan.removed_files() {
@@ -212,7 +205,7 @@ fn update_dirstate(plan: &CheckoutPlan, ts: &mut TreeState, vfs: &VFS) -> anyhow
         .updated_content_files()
         .chain(plan.updated_meta_files())
     {
-        let fstate = file_state(&vfs, updated)?;
+        let fstate = file_state(vfs, updated)?;
         ts.insert(updated, &fstate)?;
         bar.increase_position(1);
     }

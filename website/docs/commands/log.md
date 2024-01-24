@@ -4,7 +4,7 @@ sidebar_position: 23
 
 ## log
 <!--
-  @generated SignedSource<<193144e419e00c8abfb4dcde9485ecb8>>
+  @generated SignedSource<<a726ffd6c682dc3d16b9dee343e5bec5>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -155,7 +155,6 @@ Returns 0 on success.
 | `-r`| `--rev`| | show the specified revision or revset|
 | | `--removed`| | include revisions where files were removed|
 | `-u`| `--user`| | revisions committed by user|
-| `-b`| `--branch`| | show changesets within the given named branch|
 | `-P`| `--prune`| | do not display revision or any of its ancestors|
 | `-p`| `--patch`| | show patch|
 | `-g`| `--git`| | use git extended diff format|

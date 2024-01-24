@@ -1,0 +1,25 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+
+oncall("mononoke")
+
+rust_binary(
+    name = "benchmark_storage_config",
+    srcs = glob(["src/**/*.rs"]),
+    unittests = False,
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:criterion",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:tokio",
+        "//common/rust/shed/fbinit:fbinit",
+        "//eden/mononoke/blobstore:blobstore",
+        "//eden/mononoke/blobstore:blobstore_factory",
+        "//eden/mononoke/blobstore:cacheblob",
+        "//eden/mononoke/cmdlib:environment",
+        "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
+        "//eden/mononoke/repo_factory:repo_factory",
+        "//eden/mononoke/server/context:context",
+    ],
+)

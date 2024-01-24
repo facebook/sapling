@@ -1,0 +1,35 @@
+#include <windows.h>
+#include "../curses.h"
+
+VS_VERSION_INFO    VERSIONINFO
+FILEVERSION        PDC_VER_MAJOR,PDC_VER_MINOR,0,0
+PRODUCTVERSION     PDC_VER_MAJOR,PDC_VER_MINOR,0,0
+FILEFLAGSMASK      VS_FFI_FILEFLAGSMASK
+#ifdef _DEBUG
+  FILEFLAGS        VS_FF_DEBUG | VS_FF_PRERELEASE
+#else
+  FILEFLAGS        0
+#endif
+FILEOS             VOS_NT_WINDOWS32
+FILETYPE           VFT_DLL
+FILESUBTYPE        VFT2_UNKNOWN
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "04090000"
+    BEGIN
+      VALUE "CompanyName", "PDCurses.org"
+      VALUE "FileDescription", "PDCurses Library"
+      VALUE "FileVersion", PDC_VERDOT ".0.0"
+      VALUE "InternalName", "PDCurses"
+      VALUE "LegalCopyright", "Public Domain"
+      VALUE "OriginalFilename", "pdcurses.dll"
+      VALUE "ProductName", "PDCurses"
+      VALUE "ProductVersion", PDC_VERDOT ".0.0"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x409, 0
+  END
+END

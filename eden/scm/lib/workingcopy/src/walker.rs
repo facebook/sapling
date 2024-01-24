@@ -6,8 +6,6 @@
  */
 
 use std::collections::HashSet;
-use std::fs;
-use std::fs::DirEntry;
 use std::fs::Metadata;
 use std::io;
 use std::path::PathBuf;
@@ -25,6 +23,8 @@ use crossbeam::channel::Receiver;
 use crossbeam::channel::RecvError;
 use crossbeam::channel::RecvTimeoutError;
 use crossbeam::channel::Sender;
+use fs_err as fs;
+use fs_err::DirEntry;
 use pathmatcher::DirectoryMatch;
 use pathmatcher::Matcher;
 use thiserror::Error;
@@ -69,7 +69,7 @@ impl WalkError {
             WalkError::IOError(_, error) => error.to_string(),
             WalkError::RepoPathError(_, error) => error.to_string(),
             WalkError::InvalidFileType(_) => "invalid file type".to_string(),
-            WalkError::InvalidMTime(_, error) => format!("invalid mtime - {}", error.to_string()),
+            WalkError::InvalidMTime(_, error) => format!("invalid mtime - {}", error),
             WalkError::ChannelDisconnected(error) => error.to_string(),
             WalkError::ChannelRecvError(error) => error.to_string(),
         }
@@ -324,10 +324,10 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::fs::create_dir_all;
-    use std::fs::OpenOptions;
     use std::path::PathBuf;
 
+    use fs_err::create_dir_all;
+    use fs_err::OpenOptions;
     use pathmatcher::AlwaysMatcher;
     use pathmatcher::NeverMatcher;
     use pathmatcher::TreeMatcher;

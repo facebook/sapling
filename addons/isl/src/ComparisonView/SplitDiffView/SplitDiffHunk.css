@@ -19,10 +19,16 @@
   background-color: var(--tooltip-background);
   padding: var(--halfpad) var(--pad);
   line-height: 2em;
-  border-top-right-radius: 2px;
-  border-top-left-radius: 2px;
-  border-bottom: 1px solid var(--tooltip-border);
+
+  position: sticky;
+  top: 0;
+  margin-left: -1px;
+  margin-right: -1px;
+  border: 1px solid var(--panel-view-border);
+  gap: var(--halfpad);
+  z-index: 1;
 }
+
 .split-diff-view-file-header-toggle-open {
   padding-right: 2px;
   cursor: pointer;
@@ -39,13 +45,27 @@
 .split-diff-view-file-path-parts {
   display: flex;
   flex-grow: 1;
+  flex-shrink: 1;
   font-size: 12px;
+  flex-wrap: wrap;
+  line-height: 1em;
+}
+
+.split-diff-view-file-preamble {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .split-diff-view-file-status-banner {
   background-color: var(--background);
   color: var(--foreground);
-  height: 12px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--halfpad);
 }
 
 .split-diff-view-banner-added {
@@ -110,12 +130,16 @@
   vertical-align: top;
 }
 
-.split-diff-view-hunk-table td {
+.split-diff-view-hunk-table td,
+.split-diff-view-file-preamble {
   font-size: 12px;
   line-height: 16px;
-  padding: 2px 0 2px 6px;
   white-space: pre-wrap;
   word-break: break-all;
+}
+
+.split-diff-view-hunk-table td {
+  padding: 2px 0 2px 6px;
 }
 
 .split-diff-view-hunk-table td.lineNumber {

@@ -6,6 +6,7 @@
  */
 
 import type {Platform} from '../platform';
+import type {ThemeColor} from '../theme';
 import type {OneIndexedLineNumber, RepoRelativePath} from '../types';
 
 declare global {
@@ -13,6 +14,7 @@ declare global {
     __IdeBridge: {
       openFileInAndroidStudio: (path: string) => void;
       clipboardCopy?: (data: string) => void;
+      getIDETheme(): ThemeColor;
     };
   }
 }
@@ -40,6 +42,33 @@ const androidStudioPlatform: Platform = {
 
   clipboardCopy(data: string) {
     window.__IdeBridge.clipboardCopy?.(data);
+  },
+
+  getTemporaryState<T>(_key: string): T | null {
+    // TODO: support local storage, which may require enabling some webview permissions.
+    return null;
+  },
+  setTemporaryState<T>(_key: string, _value: T): void {
+    // TODO: support local storage, which may require enabling some webview permissions.
+  },
+
+  theme: {
+    getTheme(): ThemeColor {
+      return 'dark'; // default to dark, IDE will adjust the theme if necessary
+    },
+    onDidChangeTheme(callback: (theme: ThemeColor) => unknown) {
+      const updateTheme = (data: CustomEvent<ThemeColor>) => {
+        callback(data.detail);
+      };
+
+      window.addEventListener('onIDEThemeChange', updateTheme as EventListener, false);
+
+      return {
+        dispose: () => {
+          window.removeEventListener('onIDEThemeChange', updateTheme as EventListener, false);
+        },
+      };
+    },
   },
 };
 

@@ -1,0 +1,17 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("scm_client_infra")
+
+rust_library(
+    name = "edenfs-config",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:toml",
+        "fbsource//third-party/rust:tracing",
+        "//eden/fs/cli_rs/edenfs-error:edenfs-error",
+        "//eden/fs/cli_rs/stack-config:stack-config",
+    ],
+)

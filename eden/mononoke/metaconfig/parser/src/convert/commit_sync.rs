@@ -18,12 +18,14 @@ use metaconfig_types::CommitSyncConfig;
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::CommonCommitSyncConfig;
 use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
+use metaconfig_types::GitSubmodulesChangesAction;
 use metaconfig_types::SmallRepoCommitSyncConfig;
 use metaconfig_types::SmallRepoPermanentConfig;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use repos::RawCommitSyncConfig;
 use repos::RawCommitSyncSmallRepoConfig;
+use repos::RawGitSubmodulesChangesAction;
 
 use crate::convert::Convert;
 
@@ -154,6 +156,24 @@ impl Convert for RawCommitSyncConfig {
     }
 }
 
+impl Convert for RawGitSubmodulesChangesAction {
+    type Output = GitSubmodulesChangesAction;
+    fn convert(self) -> Result<Self::Output> {
+        let converted = match self {
+            RawGitSubmodulesChangesAction::KEEP => GitSubmodulesChangesAction::Keep,
+            RawGitSubmodulesChangesAction::STRIP => GitSubmodulesChangesAction::Strip,
+            RawGitSubmodulesChangesAction::UNKNOWN => GitSubmodulesChangesAction::default(),
+            v => {
+                return Err(anyhow!(
+                    "Invalid value {} for enum GitSubmodulesChangesAction",
+                    v
+                ));
+            }
+        };
+        Ok(converted)
+    }
+}
+
 impl Convert for RawCommitSyncSmallRepoConfig {
     type Output = SmallRepoCommitSyncConfig;
 
@@ -163,6 +183,7 @@ impl Convert for RawCommitSyncSmallRepoConfig {
             default_action,
             default_prefix,
             mapping,
+            git_submodules_action,
             ..
         } = self;
 
@@ -170,7 +191,7 @@ impl Convert for RawCommitSyncSmallRepoConfig {
             "preserve" => DefaultSmallToLargeCommitSyncPathAction::Preserve,
             "prepend_prefix" => match default_prefix {
                 Some(prefix_to_prepend) => {
-                    let prefix_to_prepend = MPath::new(prefix_to_prepend)?;
+                    let prefix_to_prepend = NonRootMPath::new(prefix_to_prepend)?;
                     DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(prefix_to_prepend)
                 }
                 None => {
@@ -184,12 +205,18 @@ impl Convert for RawCommitSyncSmallRepoConfig {
 
         let map = mapping
             .into_iter()
-            .map(|(k, v)| Ok((MPath::new(k)?, MPath::new(v)?)))
+            .map(|(k, v)| Ok((NonRootMPath::new(k)?, NonRootMPath::new(v)?)))
             .collect::<Result<HashMap<_, _>>>()?;
+
+        let git_submodules_action = match git_submodules_action {
+            Some(git_submodules_action) => git_submodules_action.convert()?,
+            None => GitSubmodulesChangesAction::default(),
+        };
 
         Ok(SmallRepoCommitSyncConfig {
             default_action,
             map,
+            git_submodules_action,
         })
     }
 }
@@ -217,8 +244,17 @@ impl Convert for RawCommonCommitSyncConfig {
                             small_repo_config.bookmark_prefix
                         )
                     })?;
+                let common_pushrebase_bookmarks_map = small_repo_config
+                    .common_pushrebase_bookmarks_map
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(|(k, v)| Ok((BookmarkKey::from_str(&k)?, BookmarkKey::from_str(&v)?)))
+                    .collect::<Result<_>>()?;
 
-                let config = SmallRepoPermanentConfig { bookmark_prefix };
+                let config = SmallRepoPermanentConfig {
+                    bookmark_prefix,
+                    common_pushrebase_bookmarks_map,
+                };
                 Ok((repo_id, config))
             })
             .collect::<Result<_>>()?;

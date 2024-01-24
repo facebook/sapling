@@ -208,7 +208,7 @@ impl<'a, K: 'a, V: 'a> Iterator for Iter<'a, K, V> {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        self.0.next().map(|&(ref k, ref v)| (k, v))
+        self.0.next().map(|(k, v)| (k, v))
     }
 }
 

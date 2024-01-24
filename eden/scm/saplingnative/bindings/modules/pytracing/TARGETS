@@ -1,0 +1,34 @@
+load("//eden/scm:targets.bzl", "rust_python_library")
+
+oncall("mercurial_release")
+
+rust_python_library(
+    name = "pytracing",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "cpython": {
+                        "features": [],
+                        "git": None,
+                        "rev": None,
+                    },
+                },
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    include_python_sys = True,
+    deps = [
+        "fbsource//third-party/rust:lazy_static",
+        "fbsource//third-party/rust:parking_lot",
+        "fbsource//third-party/rust:serde_json",
+        "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/cpython-ext:cpython-ext",
+        "//eden/scm/lib/mincode:mincode",
+        "//eden/scm/lib/tracing-collector:tracing-collector",
+        "//eden/scm/lib/tracing-reload:tracing-reload",
+        "//eden/scm/lib/tracing-runtime-callsite:tracing-runtime-callsite",
+    ],
+)

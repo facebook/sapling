@@ -334,7 +334,7 @@ Test for issue2364
   $ hg up -q -- -2
 
 Test that updated files are treated as "modified", when
-'merge.update()' is aborted before 'merge.recordupdates()' (= parents
+'merge.goto()' is aborted before 'merge.recordupdates()' (= parents
 aren't changed), even if none of mode, size and timestamp of them
 isn't changed on the filesystem (see also issue4583).
 
@@ -342,7 +342,7 @@ isn't changed on the filesystem (see also issue4583).
   > from __future__ import absolute_import
   > # emulate aborting before "recordupdates()". in this case, files
   > # are changed without updating dirstate
-  > from edenscm import (
+  > from sapling import (
   >   error,
   >   extensions,
   >   merge,

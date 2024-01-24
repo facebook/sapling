@@ -11,6 +11,8 @@ use clap_old::App;
 use clap_old::Arg;
 use clap_old::ArgMatches;
 use clap_old::SubCommand;
+use clientinfo::ClientEntryPoint;
+use clientinfo::ClientInfo;
 use cmdlib::args;
 use cmdlib::args::MononokeMatches;
 use cmdlib::helpers;
@@ -22,8 +24,8 @@ use futures::stream::StreamExt;
 use manifest::Entry;
 use manifest::ManifestOps;
 use manifest::PathOrPrefix;
+use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
 use repo_blobstore::RepoBlobstoreRef;
 use slog::info;
 use slog::Logger;
@@ -57,12 +59,16 @@ pub async fn subcommand_fsnodes<'a>(
     sub_matches: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
     let repo: BlobRepo = args::not_shardmanager_compatible::open_repo(fb, &logger, matches).await?;
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    let ctx = CoreContext::new_with_logger_and_client_info(
+        fb,
+        logger.clone(),
+        ClientInfo::default_with_entry_point(ClientEntryPoint::MononokeAdmin),
+    );
 
     match sub_matches.subcommand() {
         (COMMAND_TREE, Some(matches)) => {
             let hash_or_bookmark = String::from(matches.value_of(ARG_CSID).unwrap());
-            let path = matches.value_of(ARG_PATH).map(MPath::new).transpose()?;
+            let path = MPath::new(matches.value_of(ARG_PATH).unwrap())?;
 
             let csid = helpers::csid_resolve(&ctx, repo.clone(), hash_or_bookmark).await?;
             subcommand_tree(&ctx, &repo, csid, path).await?;
@@ -76,7 +82,7 @@ async fn subcommand_tree(
     ctx: &CoreContext,
     repo: &BlobRepo,
     csid: ChangesetId,
-    path: Option<MPath>,
+    path: MPath,
 ) -> Result<(), Error> {
     let root = RootFsnodeId::derive(ctx, repo, csid).await?;
 
@@ -95,7 +101,7 @@ async fn subcommand_tree(
             Entry::Leaf(file) => {
                 println!(
                     "{}\t{}\t{}\t{}",
-                    MPath::display_opt(path.as_ref()),
+                    MPath::display_opt(&path),
                     file.content_id(),
                     file.file_type(),
                     file.size(),

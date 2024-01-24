@@ -145,14 +145,12 @@ impl IdMap {
                         .collect()
                 } else if data.len() >= 8 {
                     vec![log::IndexOutput::Reference(8..(data.len() as u64))]
+                } else if data == Self::MAGIC_CLEAR_NON_MASTER {
+                    vec![log::IndexOutput::RemovePrefix(Box::new([
+                        Group::NON_MASTER.0 as u8,
+                    ]))]
                 } else {
-                    if data == Self::MAGIC_CLEAR_NON_MASTER {
-                        vec![log::IndexOutput::RemovePrefix(Box::new([
-                            Group::NON_MASTER.0 as u8,
-                        ]))]
-                    } else {
-                        panic!("bug: invalid segment {:?}", &data);
-                    }
+                    panic!("bug: invalid segment {:?}", &data);
                 }
             })
             .flush_filter(Some(|_, _| {
@@ -163,7 +161,7 @@ impl IdMap {
     /// Find name by a specified integer id.
     pub fn find_name_by_id(&self, id: Id) -> Result<Option<&[u8]>> {
         let key = id.0.to_be_bytes();
-        let key = self.log.lookup(Self::INDEX_ID_TO_NAME, &key)?.nth(0);
+        let key = self.log.lookup(Self::INDEX_ID_TO_NAME, key)?.nth(0);
         match key {
             Some(Ok(entry)) => {
                 if entry.len() < 8 {
@@ -257,7 +255,7 @@ impl IdMap {
         let mut data = Vec::with_capacity(8 + Group::BYTES + name.len());
         data.extend_from_slice(&id.0.to_be_bytes());
         data.extend_from_slice(&id.group().bytes());
-        data.extend_from_slice(&name);
+        data.extend_from_slice(name);
         self.log.append(data)?;
         self.map_version.bump();
         #[cfg(debug_assertions)]

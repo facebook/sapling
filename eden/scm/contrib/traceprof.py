@@ -14,9 +14,9 @@ from __future__ import absolute_import, print_function
 import os
 import sys
 
-from edenscm import ui as uimod
+from sapling import ui as uimod
 
-from edenscm.ext import traceprof
+from sapling.ext import traceprof
 
 
 if __name__ == "__main__":

@@ -34,11 +34,13 @@ mononoke_app::subcommands! {
     mod commit;
     mod commit_graph;
     mod convert;
+    mod derived_data;
     mod dump_changesets;
     mod ephemeral_store;
     mod fetch;
     mod filestore;
     mod git_bundle;
+    mod git_objects;
     mod git_symref;
     mod hg_sync;
     mod list_repos;

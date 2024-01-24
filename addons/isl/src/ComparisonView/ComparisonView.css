@@ -29,31 +29,18 @@
   align-items: center;
 }
 
+.comparison-view-header vscode-dropdown {
+  z-index: 2;
+}
+
 .comparison-view-details {
   overflow-x: hidden;
   overflow-y: scroll;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--pad);
   padding-bottom: var(--pad);
   align-items: center;
-}
-
-/*
- * Override split diff view file header to be sticky.
- * This also requires adding borders to the file header (previously only on the container)
- */
-.comparison-view .split-diff-view-file-header {
-  position: sticky;
-  top: 0;
-  margin-left: -1px;
-  margin-right: -1px;
-  border: 1px solid var(--panel-view-border);
-  /* Remove all border radius so the sticky header doesn't show any of the diff behind it */
-  border-radius: 0;
-  display: flex;
-  align-items: center;
-  gap: var(--halfpad);
 }
 
 .comparison-view .split-diff-view {
@@ -64,12 +51,25 @@
 .file-header-copyable-path {
   cursor: pointer;
   display: inherit;
+  white-space: nowrap;
 }
 
-.file-header-copyable-path:hover > .tooltip-creator {
-  text-decoration: underline;
+.file-header-copyfrom-path {
+  cursor: default;
+  opacity: 0.5;
+  color: grey;
+  padding: 0 0.5em;
+}
+
+.file-header-copyable-path:hover,
+.file-header-copyable-path:hover ~ .file-header-copyable-path {
+  text-decoration-line: underline;
 }
 
 .file-header-copyable-path-hover {
   font-size: 90%;
+}
+
+.comparison-view-modal {
+  --border-amt: calc(2 * var(--pad));
 }

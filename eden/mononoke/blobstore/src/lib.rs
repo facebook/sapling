@@ -598,7 +598,7 @@ pub struct BlobstoreEnumerationData {
 
 #[derive(Debug, Error)]
 pub enum LoadableError {
-    #[error("Blobstore error")]
+    #[error(transparent)]
     Error(#[from] Error),
     #[error("Blob is missing: {0}")]
     Missing(String),

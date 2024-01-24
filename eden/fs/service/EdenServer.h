@@ -170,6 +170,19 @@ class EdenServer : private TakeoverHandler {
     return runningState_.rlock()->state;
   }
 
+  class LocalStoreOpenError : public std::exception {
+   public:
+    explicit LocalStoreOpenError(std::string&& str)
+        : message_(std::move(str)) {}
+
+    const char* what() const noexcept override {
+      return message_.c_str();
+    }
+
+   private:
+    std::string message_;
+  };
+
   /**
    * Prepare to run the EdenServer.
    *
@@ -207,7 +220,7 @@ class EdenServer : private TakeoverHandler {
    * This function resets the TakeoverServer, resets the shutdownFuture, and
    * sets the state to RUNNING
    */
-  FOLLY_NODISCARD folly::Future<folly::Unit> recover(TakeoverData&& data);
+  FOLLY_NODISCARD ImmediateFuture<folly::Unit> recover(TakeoverData&& data);
 
   /**
    * Shut down the EdenServer after it has stopped running.
@@ -252,7 +265,7 @@ class EdenServer : private TakeoverHandler {
   /**
    * Mount and return an EdenMount.
    */
-  FOLLY_NODISCARD folly::Future<std::shared_ptr<EdenMount>> mount(
+  FOLLY_NODISCARD ImmediateFuture<std::shared_ptr<EdenMount>> mount(
       std::unique_ptr<CheckoutConfig> initialConfig,
       bool readOnly,
       OverlayChecker::ProgressCallback&& progressCallback = [](auto) {},
@@ -316,11 +329,11 @@ class EdenServer : private TakeoverHandler {
    */
   EdenMountHandle getMount(AbsolutePathPiece mountPath) const;
 
-  folly::Future<CheckoutResult> checkOutRevision(
+  ImmediateFuture<CheckoutResult> checkOutRevision(
       AbsolutePathPiece mountPath,
       std::string& rootHash,
       std::optional<folly::StringPiece> rootHgManifest,
-      OptionalProcessId clientPid,
+      const ObjectFetchContextPtr& fetchContext,
       folly::StringPiece callerName,
       CheckoutMode checkoutMode);
 
@@ -540,7 +553,7 @@ class EdenServer : private TakeoverHandler {
   // all mounts.
   void unloadInodes();
 
-  FOLLY_NODISCARD folly::Future<folly::Unit> createThriftServer();
+  FOLLY_NODISCARD folly::SemiFuture<folly::Unit> createThriftServer();
 
   void prepareThriftAddress() const;
 
@@ -549,17 +562,18 @@ class EdenServer : private TakeoverHandler {
    */
   FOLLY_NODISCARD folly::Future<folly::Unit> prepareImpl(
       std::shared_ptr<StartupLogger> logger);
-  FOLLY_NODISCARD std::vector<folly::Future<folly::Unit>> prepareMountsTakeover(
+  FOLLY_NODISCARD std::vector<ImmediateFuture<folly::Unit>>
+  prepareMountsTakeover(
       std::shared_ptr<StartupLogger> logger,
       std::vector<TakeoverData::MountInfo>&& takeoverMounts);
-  FOLLY_NODISCARD std::vector<folly::Future<folly::Unit>> prepareMounts(
+  FOLLY_NODISCARD std::vector<ImmediateFuture<folly::Unit>> prepareMounts(
       std::shared_ptr<StartupLogger> logger);
   static void incrementStartupMountFailures();
 
   /**
    * recoverImpl() contains the bulk of the implementation of recover()
    */
-  FOLLY_NODISCARD folly::Future<folly::Unit> recoverImpl(TakeoverData&& data);
+  FOLLY_NODISCARD ImmediateFuture<folly::Unit> recoverImpl(TakeoverData&& data);
 
   /**
    * Load and parse existing eden config.

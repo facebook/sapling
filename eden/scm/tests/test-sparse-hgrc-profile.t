@@ -108,7 +108,7 @@ Reset
 
 Cleanly crash an update and verify the new config was not applied
   $ cat > ../killer.py << EOF
-  > from edenscm import error, extensions, localrepo
+  > from sapling import error, extensions, localrepo
   > def setparents(orig, repo, *args, **kwargs):
   >     raise error.Abort("bad thing happened")
   > 
@@ -151,7 +151,7 @@ Hard killing the process leaves the pending config file around
 
   $ cat > ../killer.py << EOF
   > import os
-  > from edenscm import extensions, localrepo
+  > from sapling import extensions, localrepo
   > def setparents(orig, repo, *args, **kwargs):
   >     # os._exit skips all cleanup
   >     os._exit(100)

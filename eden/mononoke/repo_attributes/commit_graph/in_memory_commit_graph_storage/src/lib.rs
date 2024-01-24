@@ -8,12 +8,14 @@
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::fmt::Write;
 
 use anyhow::anyhow;
 use anyhow::Result;
 use async_trait::async_trait;
 use commit_graph_types::edges::ChangesetEdges;
 use commit_graph_types::storage::CommitGraphStorage;
+use commit_graph_types::storage::FetchedChangesetEdges;
 use commit_graph_types::storage::Prefetch;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
@@ -106,20 +108,8 @@ impl CommitGraphStorage for InMemoryCommitGraphStorage {
         Ok(added)
     }
 
-    async fn fetch_edges(
-        &self,
-        _ctx: &CoreContext,
-        cs_id: ChangesetId,
-    ) -> Result<Option<ChangesetEdges>> {
-        Ok(self.changesets.read().get(&cs_id).cloned())
-    }
-
-    async fn fetch_edges_required(
-        &self,
-        ctx: &CoreContext,
-        cs_id: ChangesetId,
-    ) -> Result<ChangesetEdges> {
-        self.fetch_edges(ctx, cs_id).await?.ok_or_else(|| {
+    async fn fetch_edges(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<ChangesetEdges> {
+        self.maybe_fetch_edges(ctx, cs_id).await?.ok_or_else(|| {
             anyhow!(
                 "Missing changeset from in-memory commit graph storage: {}",
                 cs_id
@@ -127,29 +117,21 @@ impl CommitGraphStorage for InMemoryCommitGraphStorage {
         })
     }
 
-    async fn fetch_many_edges(
+    async fn maybe_fetch_edges(
         &self,
         _ctx: &CoreContext,
-        cs_ids: &[ChangesetId],
-        _prefetch: Prefetch,
-    ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
-        let mut result = HashMap::with_capacity(cs_ids.len());
-        let changesets = self.changesets.read();
-        for cs_id in cs_ids {
-            if let Some(edges) = changesets.get(cs_id) {
-                result.insert(*cs_id, edges.clone());
-            }
-        }
-        Ok(result)
+        cs_id: ChangesetId,
+    ) -> Result<Option<ChangesetEdges>> {
+        Ok(self.changesets.read().get(&cs_id).cloned())
     }
 
-    async fn fetch_many_edges_required(
+    async fn fetch_many_edges(
         &self,
         ctx: &CoreContext,
         cs_ids: &[ChangesetId],
         prefetch: Prefetch,
-    ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
-        let edges = self.fetch_many_edges(ctx, cs_ids, prefetch).await?;
+    ) -> Result<HashMap<ChangesetId, FetchedChangesetEdges>> {
+        let edges = self.maybe_fetch_many_edges(ctx, cs_ids, prefetch).await?;
         let missing_changesets: Vec<_> = cs_ids
             .iter()
             .filter(|cs_id| !edges.contains_key(cs_id))
@@ -160,12 +142,30 @@ impl CommitGraphStorage for InMemoryCommitGraphStorage {
                 "Missing changesets from in-memory commit graph storage: {}",
                 missing_changesets
                     .into_iter()
-                    .map(|cs_id| format!("{}, ", cs_id))
-                    .collect::<String>()
+                    .fold(String::new(), |mut acc, cs_id| {
+                        let _ = write!(acc, "{}, ", cs_id);
+                        acc
+                    })
             ))
         } else {
             Ok(edges)
         }
+    }
+
+    async fn maybe_fetch_many_edges(
+        &self,
+        _ctx: &CoreContext,
+        cs_ids: &[ChangesetId],
+        _prefetch: Prefetch,
+    ) -> Result<HashMap<ChangesetId, FetchedChangesetEdges>> {
+        let mut result = HashMap::with_capacity(cs_ids.len());
+        let changesets = self.changesets.read();
+        for cs_id in cs_ids {
+            if let Some(edges) = changesets.get(cs_id) {
+                result.insert(*cs_id, edges.clone().into());
+            }
+        }
+        Ok(result)
     }
 
     async fn find_by_prefix(
@@ -200,31 +200,4 @@ impl CommitGraphStorage for InMemoryCommitGraphStorage {
             .into_iter()
             .collect())
     }
-}
-
-#[cfg(test)]
-mod tests {
-    use std::future::Future;
-    use std::sync::Arc;
-
-    use commit_graph_testlib::*;
-    use commit_graph_types::storage::CommitGraphStorage;
-    use context::CoreContext;
-    use fbinit::FacebookInit;
-
-    use super::*;
-
-    async fn run_test<Fut>(
-        fb: FacebookInit,
-        test_function: impl FnOnce(CoreContext, Arc<dyn CommitGraphStorage>) -> Fut,
-    ) -> Result<()>
-    where
-        Fut: Future<Output = Result<()>>,
-    {
-        let ctx = CoreContext::test_mock(fb);
-        let storage = Arc::new(InMemoryCommitGraphStorage::new(RepositoryId::new(1)));
-        test_function(ctx, storage).await
-    }
-
-    impl_commit_graph_tests!(run_test);
 }

@@ -237,6 +237,10 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   apache::thrift::ResponseAndServerStream<ChangesSinceResult, ChangedFileResult>
   streamChangesSince(std::unique_ptr<StreamChangesSinceParams> params) override;
 
+  apache::thrift::ResponseAndServerStream<ChangesSinceResult, ChangedFileResult>
+  streamSelectedChangesSince(
+      std::unique_ptr<StreamSelectedChangesSinceParams> params) override;
+
   folly::SemiFuture<std::unique_ptr<ScmStatus>> semifuture_getScmStatus(
       std::unique_ptr<std::string> mountPoint,
       bool listIgnored,
@@ -407,7 +411,7 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
 
   /**
    * Returns the pid that caused the Thrift request running on the calling
-   * Thrift worker thread and registers it with the ProcessNameCache.
+   * Thrift worker thread and registers it with the ProcessInfoCache.
    *
    * This must be run from a Thrift worker thread, because the calling pid is
    * stored in a thread local variable.
@@ -421,16 +425,6 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   EdenMountHandle lookupMount(
       apache::thrift::field_ref<const std::string&> mountId);
   EdenMountHandle lookupMount(const std::string& mountId);
-
-  ImmediateFuture<Hash20> getSHA1ForPath(
-      const EdenMount& edenMount,
-      RelativePath path,
-      const ObjectFetchContextPtr& fetchContext);
-
-  ImmediateFuture<Hash32> getBlake3ForPath(
-      const EdenMount& edenMount,
-      RelativePath path,
-      const ObjectFetchContextPtr& fetchContext);
 
   void fillDaemonInfo(DaemonInfo& info);
 

@@ -17,7 +17,7 @@ use anyhow::anyhow;
 use anyhow::Context as _;
 use anyhow::Error;
 use async_trait::async_trait;
-use basename_suffix_skeleton_manifest::RootBasenameSuffixSkeletonManifest;
+use basename_suffix_skeleton_manifest_v3::RootBssmV3DirectoryId;
 use blame::RootBlameV2;
 use bookmarks::ArcBookmarkUpdateLog;
 use bookmarks::ArcBookmarks;
@@ -29,6 +29,7 @@ use bookmarks::Bookmarks;
 use bookmarks::BookmarksRef;
 use bookmarks::BookmarksSubscription;
 use bookmarks::Freshness;
+use bookmarks_cache::BookmarksCache;
 use bookmarks_types::Bookmark;
 use bookmarks_types::BookmarkKind;
 use bookmarks_types::BookmarkPagination;
@@ -53,6 +54,9 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures_stats::TimedFutureExt;
 use futures_watchdog::WatchdogExt;
+use git_types::MappedGitCommitId;
+use git_types::RootGitDeltaManifestId;
+use git_types::TreeHandle;
 use itertools::Itertools;
 use lock_ext::RwLockExt;
 use mercurial_derivation::MappedHgChangesetId;
@@ -70,7 +74,6 @@ use slog::warn;
 use stats::prelude::*;
 use tokio::sync::Notify;
 use tokio::task::JoinHandle;
-use tunables::tunables;
 use unodes::RootUnodeManifestId;
 
 mod warmers;
@@ -248,12 +251,33 @@ impl WarmBookmarksCacheBuilder {
                 repo_derived_data.clone(),
             ));
         }
-        if types.contains(RootBasenameSuffixSkeletonManifest::NAME) {
-            self.warmers.push(create_derived_data_warmer::<
-                RootBasenameSuffixSkeletonManifest,
-            >(&self.ctx, repo_derived_data.clone()));
+        if types.contains(RootBssmV3DirectoryId::NAME) {
+            self.warmers
+                .push(create_derived_data_warmer::<RootBssmV3DirectoryId>(
+                    &self.ctx,
+                    repo_derived_data.clone(),
+                ));
         }
-
+        if types.contains(TreeHandle::NAME) {
+            self.warmers.push(create_derived_data_warmer::<TreeHandle>(
+                &self.ctx,
+                repo_derived_data.clone(),
+            ));
+        }
+        if types.contains(MappedGitCommitId::NAME) {
+            self.warmers
+                .push(create_derived_data_warmer::<MappedGitCommitId>(
+                    &self.ctx,
+                    repo_derived_data.clone(),
+                ));
+        }
+        if types.contains(RootGitDeltaManifestId::NAME) {
+            self.warmers
+                .push(create_derived_data_warmer::<RootGitDeltaManifestId>(
+                    &self.ctx,
+                    repo_derived_data.clone(),
+                ));
+        }
         Ok(())
     }
 
@@ -281,27 +305,6 @@ impl WarmBookmarksCacheBuilder {
         )
         .await
     }
-}
-
-#[async_trait]
-#[facet::facet]
-pub trait BookmarksCache: Send + Sync {
-    async fn get(
-        &self,
-        ctx: &CoreContext,
-        bookmark: &BookmarkKey,
-    ) -> Result<Option<ChangesetId>, Error>;
-
-    async fn list(
-        &self,
-        ctx: &CoreContext,
-        prefix: &BookmarkPrefix,
-        pagination: &BookmarkPagination,
-        limit: Option<u64>,
-    ) -> Result<Vec<(BookmarkKey, (ChangesetId, BookmarkKind))>, Error>;
-
-    /// Awaits the completion of any ongoing update.
-    async fn sync(&self, ctx: &CoreContext);
 }
 
 /// A drop-in replacement for warm bookmark cache that doesn't
@@ -592,14 +595,9 @@ async fn move_bookmark_back_in_history_until_derived(
 ) -> Result<Option<ChangesetId>, Error> {
     info!(ctx.logger(), "moving {} bookmark back in history...", book);
 
-    let (latest_derived_entry, _) = find_latest_derived_and_oldest_underived(
-        ctx,
-        bookmarks,
-        bookmark_update_log,
-        book,
-        warmers,
-    )
-    .await?;
+    let (latest_derived_entry, _) =
+        find_latest_derived_and_underived(ctx, bookmarks, bookmark_update_log, book, warmers)
+            .await?;
 
     match latest_derived_entry {
         LatestDerivedBookmarkEntry::Found(maybe_cs_id_and_ts) => {
@@ -627,6 +625,8 @@ pub enum LatestDerivedBookmarkEntry {
 
 #[derive(Default)]
 pub struct LatestUnderivedBookmarkEntry {
+    /// Changeset ID of the latest underived bookmark entry.  This is the next
+    /// thing to try to derive.
     maybe_cs_id: Option<ChangesetId>,
     /// ID and TS for the oldest underived bookmark entry for logging
     maybe_id_ts: Option<(BookmarkUpdateLogId, Timestamp)>,
@@ -636,7 +636,7 @@ pub struct BookmarkUpdateLogId(pub u64);
 
 /// Searches bookmark log for latest entry for which everything is derived. Note that we consider log entry that
 /// deletes a bookmark to be derived.
-pub async fn find_latest_derived_and_oldest_underived(
+pub async fn find_latest_derived_and_underived(
     ctx: &CoreContext,
     bookmarks: &dyn Bookmarks,
     bookmark_update_log: &dyn BookmarkUpdateLog,
@@ -644,6 +644,7 @@ pub async fn find_latest_derived_and_oldest_underived(
     warmers: &[Warmer],
 ) -> Result<(LatestDerivedBookmarkEntry, LatestUnderivedBookmarkEntry), Error> {
     let mut latest_underived = LatestUnderivedBookmarkEntry::default();
+    let mut found_latest_entry = false;
     let history_depth_limits = vec![0, 10, 50, 100, 1000, 10000];
 
     for (prev_limit, limit) in history_depth_limits.into_iter().tuple_windows() {
@@ -676,9 +677,12 @@ pub async fn find_latest_derived_and_oldest_underived(
         }
 
         let log_entries_fetched = log_entries.len();
-        if let Some((maybe_cs_id, _)) = log_entries.first() {
-            latest_underived.maybe_cs_id = *maybe_cs_id;
-        };
+        if !found_latest_entry {
+            if let Some((maybe_cs_id, _)) = log_entries.first() {
+                latest_underived.maybe_cs_id = *maybe_cs_id;
+                found_latest_entry = true;
+            }
+        }
 
         let mut maybe_derived = stream::iter(log_entries.into_iter().map(
             |(maybe_cs_id, id_and_ts)| async move {
@@ -774,39 +778,12 @@ impl BookmarksCoordinator {
 
         let cur_bookmarks = self.bookmarks.with_read(|bookmarks| bookmarks.clone());
 
-        let new_bookmarks = if tunables()
-            .warm_bookmark_cache_disable_subscription()
-            .unwrap_or_default()
-        {
-            let books = self
-                .repo
-                .bookmarks()
-                .list(
-                    ctx.clone(),
-                    Freshness::MaybeStale,
-                    &BookmarkPrefix::empty(),
-                    BookmarkCategory::ALL,
-                    BookmarkKind::ALL_PUBLISHING,
-                    &BookmarkPagination::FromStart,
-                    std::u64::MAX,
-                )
-                .map_ok(|(book, cs_id)| {
-                    let kind = *book.kind();
-                    (book.into_key(), (cs_id, kind))
-                })
-                .try_collect::<HashMap<_, _>>()
-                .await
-                .context("Error fetching bookmarks")?;
+        self.sub
+            .refresh(ctx)
+            .await
+            .context("Error refreshing subscription")?;
 
-            Cow::Owned(books)
-        } else {
-            self.sub
-                .refresh(ctx)
-                .await
-                .context("Error refreshing subscription")?;
-
-            Cow::Borrowed(self.sub.bookmarks())
-        };
+        let new_bookmarks = Cow::Borrowed(self.sub.bookmarks());
 
         let mut changed_bookmarks = vec![];
         // Find bookmarks that were moved/created and spawn an updater
@@ -938,19 +915,19 @@ impl BookmarksCoordinator {
                         notify_sync_complete.notify_waiters();
                     }
 
-                    let delay_ms = match tunables()
-                        .warm_bookmark_cache_poll_interval_ms()
-                        .unwrap_or_default()
-                        .try_into()
-                    {
-                        Ok(duration) if duration > 0 => duration,
-                        _ => 1000,
-                    };
+                    const FALLBACK_WBC_POLL_INTERVAL_MS: u64 = 5000;
+                    let delay = Duration::from_millis(
+                        justknobs::get_as::<u64>(
+                            "scm/mononoke:warm_bookmark_cache_poll_interval_ms",
+                            None,
+                        )
+                        .unwrap_or(FALLBACK_WBC_POLL_INTERVAL_MS),
+                    );
 
                     // Receiving a sync notification interrupts sleep and forces
                     // waiting for all updaters to finish in the next iteration
                     let notified = notify_sync_start.notified();
-                    let sleep = tokio::time::sleep(Duration::from_millis(delay_ms));
+                    let sleep = tokio::time::sleep(delay);
 
                     futures::pin_mut!(notified, sleep);
 
@@ -1075,7 +1052,7 @@ async fn single_bookmark_updater(
     warmers: &Arc<Vec<Warmer>>,
     mut staleness_reporter: impl FnMut(Timestamp),
 ) -> Result<(), Error> {
-    let (latest_derived, latest_underived) = find_latest_derived_and_oldest_underived(
+    let (latest_derived, latest_underived) = find_latest_derived_and_underived(
         ctx,
         repo.bookmarks(),
         repo.bookmark_update_log(),
@@ -1482,7 +1459,14 @@ mod tests {
         .await?;
 
         bookmark(&ctx, &repo.blob_repo, "master").delete().await?;
-        update_and_wait_for_bookmark(&ctx, &mut coordinator, &master_book, None).await?;
+        // This check should not be successful in deleting master because it is protected
+        update_and_wait_for_bookmark(
+            &ctx,
+            &mut coordinator,
+            &master_book,
+            Some((master, BookmarkKind::PullDefaultPublishing)),
+        )
+        .await?;
 
         Ok(())
     }

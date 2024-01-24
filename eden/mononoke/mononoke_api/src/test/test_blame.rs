@@ -12,7 +12,7 @@ use anyhow::Result;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use mononoke_types::DateTime;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use mutable_renames::MutableRenameEntry;
 use pretty_assertions::assert_eq;
 use tests_utils::CreateCommitContext;
@@ -147,9 +147,9 @@ async fn test_immutable_blame(fb: FacebookInit) -> Result<()> {
         assert_eq!(
             b_m1_blame_by_lines,
             vec![
-                (changesets["b1"], MPath::new(b"b")?, 0),
-                (changesets["b2"], MPath::new(b"b")?, 1),
-                (changesets["b3"], MPath::new(b"b")?, 2)
+                (changesets["b1"], NonRootMPath::new(b"b")?, 0),
+                (changesets["b2"], NonRootMPath::new(b"b")?, 1),
+                (changesets["b3"], NonRootMPath::new(b"b")?, 2)
             ]
         );
     }
@@ -169,9 +169,9 @@ async fn test_immutable_blame(fb: FacebookInit) -> Result<()> {
         assert_eq!(
             a_m1_blame_by_lines,
             vec![
-                (changesets["a2"], MPath::new(b"a")?, 0),
-                (changesets["a1"], MPath::new(b"a")?, 0),
-                (changesets["a3"], MPath::new(b"a")?, 2)
+                (changesets["a2"], NonRootMPath::new(b"a")?, 0),
+                (changesets["a1"], NonRootMPath::new(b"a")?, 0),
+                (changesets["a3"], NonRootMPath::new(b"a")?, 2)
             ]
         );
     }
@@ -189,9 +189,9 @@ async fn add_mutable_rename(
 
     let rename_entry = MutableRenameEntry::new(
         dst.changeset().id(),
-        dst.path().as_mpath().cloned(),
+        dst.path().as_mpath().cloned().into(),
         src.changeset().id(),
-        src.path().as_mpath().cloned(),
+        src.path().as_mpath().cloned().into(),
         src_unode,
     )?;
 
@@ -241,9 +241,9 @@ async fn test_linear_mutable_blame(fb: FacebookInit) -> Result<()> {
         assert_eq!(
             b_m1_blame_by_lines,
             vec![
-                (changesets["b1"], MPath::new(b"b")?, 0),
-                (changesets["b2"], MPath::new(b"b")?, 1),
-                (changesets["b3"], MPath::new(b"b")?, 2)
+                (changesets["b1"], NonRootMPath::new(b"b")?, 0),
+                (changesets["b2"], NonRootMPath::new(b"b")?, 1),
+                (changesets["b3"], NonRootMPath::new(b"b")?, 2)
             ]
         );
     }
@@ -255,7 +255,7 @@ async fn test_linear_mutable_blame(fb: FacebookInit) -> Result<()> {
             .await?
             .expect("changeset exists");
         cs_b3
-            .add_mutable_renames(vec![MPath::new(b"b")?.into()].into_iter())
+            .add_mutable_renames(vec![NonRootMPath::new(b"b")?.into()].into_iter())
             .await?;
         let b_b3_with_history = cs_b3.path_with_history("b").await?;
         let b_b3_blame = b_b3_with_history.blame(true).await?;
@@ -267,9 +267,9 @@ async fn test_linear_mutable_blame(fb: FacebookInit) -> Result<()> {
         assert_eq!(
             b_b3_blame_by_lines,
             vec![
-                (changesets["b1"], MPath::new(b"b")?, 0),
-                (changesets["b3"], MPath::new(b"b")?, 1),
-                (changesets["b3"], MPath::new(b"b")?, 2)
+                (changesets["b1"], NonRootMPath::new(b"b")?, 0),
+                (changesets["b3"], NonRootMPath::new(b"b")?, 1),
+                (changesets["b3"], NonRootMPath::new(b"b")?, 2)
             ]
         );
     }
@@ -281,7 +281,7 @@ async fn test_linear_mutable_blame(fb: FacebookInit) -> Result<()> {
             .await?
             .expect("changeset exists");
         cs_m1
-            .add_mutable_renames(vec![MPath::new(b"b")?.into()].into_iter())
+            .add_mutable_renames(vec![NonRootMPath::new(b"b")?.into()].into_iter())
             .await?;
         let b_m1_with_history = cs_m1.path_with_history("b").await?;
         let b_m1_blame = b_m1_with_history.blame(true).await?;
@@ -293,9 +293,9 @@ async fn test_linear_mutable_blame(fb: FacebookInit) -> Result<()> {
         assert_eq!(
             b_m1_blame_by_lines,
             vec![
-                (changesets["b1"], MPath::new(b"b")?, 0),
-                (changesets["b3"], MPath::new(b"b")?, 1),
-                (changesets["b3"], MPath::new(b"b")?, 2)
+                (changesets["b1"], NonRootMPath::new(b"b")?, 0),
+                (changesets["b3"], NonRootMPath::new(b"b")?, 1),
+                (changesets["b3"], NonRootMPath::new(b"b")?, 2)
             ]
         );
     }
@@ -376,9 +376,9 @@ async fn test_merge_commit_mutable_blame(fb: FacebookInit) -> Result<()> {
         assert_eq!(
             b_m1_blame_by_lines,
             vec![
-                (changesets["b1"], MPath::new(b"b")?, 0),
-                (changesets["b2"], MPath::new(b"b")?, 1),
-                (changesets["b3"], MPath::new(b"b")?, 2)
+                (changesets["b1"], NonRootMPath::new(b"b")?, 0),
+                (changesets["b2"], NonRootMPath::new(b"b")?, 1),
+                (changesets["b3"], NonRootMPath::new(b"b")?, 2)
             ]
         );
     }
@@ -397,9 +397,9 @@ async fn test_merge_commit_mutable_blame(fb: FacebookInit) -> Result<()> {
         assert_eq!(
             a_m1_blame_by_lines,
             vec![
-                (changesets["a2"], MPath::new(b"a")?, 0),
-                (changesets["a1"], MPath::new(b"a")?, 0),
-                (changesets["a3"], MPath::new(b"a")?, 2)
+                (changesets["a2"], NonRootMPath::new(b"a")?, 0),
+                (changesets["a1"], NonRootMPath::new(b"a")?, 0),
+                (changesets["a3"], NonRootMPath::new(b"a")?, 2)
             ]
         );
     }
@@ -411,7 +411,7 @@ async fn test_merge_commit_mutable_blame(fb: FacebookInit) -> Result<()> {
             .await?
             .expect("changeset exists");
         cs_b3
-            .add_mutable_renames(vec![MPath::new(b"b")?.into()].into_iter())
+            .add_mutable_renames(vec![NonRootMPath::new(b"b")?.into()].into_iter())
             .await?;
         let b_b3_with_history = cs_b3.path_with_history("b").await?;
         let b_b3_blame = b_b3_with_history.blame(true).await?;
@@ -423,9 +423,9 @@ async fn test_merge_commit_mutable_blame(fb: FacebookInit) -> Result<()> {
         assert_eq!(
             b_b3_blame_by_lines,
             vec![
-                (changesets["a1"], MPath::new(b"a")?, 0),
-                (changesets["b3"], MPath::new(b"b")?, 1),
-                (changesets["b3"], MPath::new(b"b")?, 2)
+                (changesets["a1"], NonRootMPath::new(b"a")?, 0),
+                (changesets["b3"], NonRootMPath::new(b"b")?, 1),
+                (changesets["b3"], NonRootMPath::new(b"b")?, 2)
             ]
         );
     }
@@ -437,7 +437,7 @@ async fn test_merge_commit_mutable_blame(fb: FacebookInit) -> Result<()> {
             .await?
             .expect("changeset exists");
         cs_m1
-            .add_mutable_renames(vec![MPath::new(b"b")?.into()].into_iter())
+            .add_mutable_renames(vec![NonRootMPath::new(b"b")?.into()].into_iter())
             .await?;
         let b_m1_with_history = cs_m1.path_with_history("b").await?;
         let b_m1_blame = b_m1_with_history.blame(true).await?;
@@ -449,9 +449,9 @@ async fn test_merge_commit_mutable_blame(fb: FacebookInit) -> Result<()> {
         assert_eq!(
             b_m1_blame_by_lines,
             vec![
-                (changesets["a1"], MPath::new(b"a")?, 0),
-                (changesets["b3"], MPath::new(b"b")?, 1),
-                (changesets["b3"], MPath::new(b"b")?, 2)
+                (changesets["a1"], NonRootMPath::new(b"a")?, 0),
+                (changesets["b3"], NonRootMPath::new(b"b")?, 1),
+                (changesets["b3"], NonRootMPath::new(b"b")?, 2)
             ]
         );
     }
@@ -509,9 +509,9 @@ async fn test_two_entry_mutable_blame(fb: FacebookInit) -> Result<()> {
         assert_eq!(
             b_m1_blame_by_lines,
             vec![
-                (changesets["b1"], MPath::new(b"b")?, 0),
-                (changesets["b2"], MPath::new(b"b")?, 1),
-                (changesets["b3"], MPath::new(b"b")?, 2)
+                (changesets["b1"], NonRootMPath::new(b"b")?, 0),
+                (changesets["b2"], NonRootMPath::new(b"b")?, 1),
+                (changesets["b3"], NonRootMPath::new(b"b")?, 2)
             ]
         );
     }
@@ -523,7 +523,7 @@ async fn test_two_entry_mutable_blame(fb: FacebookInit) -> Result<()> {
             .await?
             .expect("changeset exists");
         cs_b3
-            .add_mutable_renames(vec![MPath::new(b"b")?.into()].into_iter())
+            .add_mutable_renames(vec![NonRootMPath::new(b"b")?.into()].into_iter())
             .await?;
         let b_b3_with_history = cs_b3.path_with_history("b").await?;
         let b_b3_blame = b_b3_with_history.blame(true).await?;
@@ -535,9 +535,9 @@ async fn test_two_entry_mutable_blame(fb: FacebookInit) -> Result<()> {
         assert_eq!(
             b_b3_blame_by_lines,
             vec![
-                (changesets["b1"], MPath::new(b"b")?, 0),
-                (changesets["b3"], MPath::new(b"b")?, 1),
-                (changesets["b3"], MPath::new(b"b")?, 2)
+                (changesets["b1"], NonRootMPath::new(b"b")?, 0),
+                (changesets["b3"], NonRootMPath::new(b"b")?, 1),
+                (changesets["b3"], NonRootMPath::new(b"b")?, 2)
             ]
         );
     }
@@ -549,7 +549,7 @@ async fn test_two_entry_mutable_blame(fb: FacebookInit) -> Result<()> {
             .await?
             .expect("changeset exists");
         cs_m1
-            .add_mutable_renames(vec![MPath::new(b"b")?.into()].into_iter())
+            .add_mutable_renames(vec![NonRootMPath::new(b"b")?.into()].into_iter())
             .await?;
         let b_m1_with_history = cs_m1.path_with_history("b").await?;
         let b_m1_blame = b_m1_with_history.blame(true).await?;
@@ -561,9 +561,9 @@ async fn test_two_entry_mutable_blame(fb: FacebookInit) -> Result<()> {
         assert_eq!(
             b_m1_blame_by_lines,
             vec![
-                (changesets["b1"], MPath::new(b"b")?, 0),
-                (changesets["b3"], MPath::new(b"b")?, 1),
-                (changesets["b3"], MPath::new(b"b")?, 2)
+                (changesets["b1"], NonRootMPath::new(b"b")?, 0),
+                (changesets["b3"], NonRootMPath::new(b"b")?, 1),
+                (changesets["b3"], NonRootMPath::new(b"b")?, 2)
             ]
         );
     }

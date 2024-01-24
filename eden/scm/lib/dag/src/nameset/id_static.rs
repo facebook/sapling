@@ -387,7 +387,7 @@ pub(crate) mod tests {
                 assert_eq!(f(a1() - z()), "<diff <spans [A:G+0:6]> <static [Z]>>");
 
                 // EMPTY fast paths can still be used.
-                let e = || NameSet::empty();
+                let e = NameSet::empty;
                 assert_eq!(f(e() & a1()), "<empty>");
                 assert_eq!(f(e() | a1()), "<spans [A:G+0:6]>");
                 assert_eq!(f(e() - a1()), "<empty>");

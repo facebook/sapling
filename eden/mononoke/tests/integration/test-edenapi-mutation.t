@@ -16,15 +16,6 @@ Set up local hgrc and Mononoke config, with commit cloud, http pull and upload.
   $ INFINITEPUSH_ALLOW_WRITES=true \
   >   setup_common_config
   $ cd $TESTTMP
-  $ merge_tunables <<EOF
-  > {
-  >   "killswitches": {
-  >     "mutation_advertise_for_infinitepush": true,
-  >     "mutation_accept_for_infinitepush": true,
-  >     "mutation_generate_for_draft": true
-  >   }
-  > }
-  > EOF
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > amend =
@@ -77,7 +68,7 @@ Test mutations on client 1
   DEBUG pull::httpgraph: edenapi fetched 1 graph nodes
   DEBUG pull::httpgraph: edenapi fetched graph with known 0 draft commits
   $ hgedenapi cloud join -q
-  $ mkcommit A
+  $ mkcommitedenapi A
   $ hg log -T{node} -r .
   929f2b9071cf032d9422b3cce9773cbe1c574822 (no-eol)
   $ hgedenapi cloud upload -q

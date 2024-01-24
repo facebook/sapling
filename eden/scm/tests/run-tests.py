@@ -46,7 +46,6 @@ from __future__ import absolute_import, print_function
 import argparse
 import collections
 import difflib
-import distutils.version as version
 import errno
 import hashlib
 import json
@@ -64,7 +63,6 @@ import tempfile
 import threading
 import time
 import unittest
-import uuid
 import xml.dom.minidom as minidom
 
 # If we're running in an embedded Python build, it won't add the test directory
@@ -89,10 +87,7 @@ except (ImportError, AttributeError):
 
     shellquote = pipes.quote
 
-try:
-    from bindings.threading import Condition as RLock
-except ImportError:
-    RLock = threading.RLock
+RLock = threading.RLock
 
 try:
     import libfb.py.pathutils as pathutils
@@ -117,7 +112,6 @@ if os.environ.get("RTUNICODEPEDANTRY", False):
         pass
 
 origenviron = os.environ.copy()
-processlock = threading.Lock()
 
 pygmentspresent = False
 # ANSI color is unsupported prior to Windows 10
@@ -263,19 +257,18 @@ else:
 
 def Popen4(cmd, wd, timeout, env=None):
     shell = not isinstance(cmd, list)
-    with processlock:
-        p = subprocess.Popen(
-            cmd,
-            shell=shell,
-            bufsize=-1,
-            cwd=wd,
-            env=env,
-            close_fds=closefds,
-            preexec_fn=preexec,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-        )
+    p = subprocess.Popen(
+        cmd,
+        shell=shell,
+        bufsize=-1,
+        cwd=wd,
+        env=env,
+        close_fds=closefds,
+        preexec_fn=preexec,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
 
     p.fromchild = p.stdout
     p.tochild = p.stdin
@@ -288,12 +281,12 @@ def Popen4(cmd, wd, timeout, env=None):
         def t():
             start = time.time()
             while time.time() - start < timeout and p.returncode is None:
-                time.sleep(0.1)
+                time.sleep(5)
             p.timeout = True
             if p.returncode is None:
                 terminate(p)
 
-        threading.Thread(target=t).start()
+        threading.Thread(target=t, name=f"Timeout tracker {cmd=}", daemon=True).start()
 
     return p
 
@@ -581,12 +574,6 @@ def getparser():
         help="use IPv4 for network related tests",
     )
     hgconf.add_argument(
-        "-3",
-        "--py3k-warnings",
-        action="store_true",
-        help="enable Py3k warnings on Python 2.7+",
-    )
-    hgconf.add_argument(
         "--record",
         action="store_true",
         help="track $TESTTMP changes in git (implies --keep-tmpdir)",
@@ -598,13 +585,6 @@ def getparser():
     )
     hgconf.add_argument(
         "--with-watchman", metavar="WATCHMAN", help="test using specified watchman"
-    )
-    # This option should be deleted once test-check-py3-compat.t and other
-    # Python 3 tests run with Python 3.
-    hgconf.add_argument(
-        "--with-python3",
-        metavar="PYTHON3",
-        help="Python 3 interpreter (if running under Python 2) (TEMPORARY)",
     )
 
     reporting = parser.add_argument_group("Results Reporting")
@@ -730,9 +710,7 @@ def parseargs(args, parser):
         try:
             import coverage
 
-            covver = version.StrictVersion(coverage.__version__).version
-            if covver < (3, 3):
-                parser.error("coverage options require coverage 3.3 or later")
+            coverage.__version__
         except ImportError:
             parser.error("coverage options now require the coverage package")
 
@@ -746,6 +724,8 @@ def parseargs(args, parser):
     global verbose
     if options.verbose:
         verbose = ""
+
+    setup_sigtrace()
 
     if options.tmpdir:
         options.tmpdir = canonpath(options.tmpdir)
@@ -770,31 +750,6 @@ def parseargs(args, parser):
             "ui.interactive=1",
             "ui.paginate=0",
         ]
-    if options.py3k_warnings:
-        if PYTHON3:
-            parser.error("--py3k-warnings can only be used on Python 2.7")
-    if options.with_python3:
-        if PYTHON3:
-            parser.error("--with-python3 cannot be used when executing with Python 3")
-
-        options.with_python3 = canonpath(options.with_python3)
-        # Verify Python3 executable is acceptable.
-        proc = subprocess.Popen(
-            [options.with_python3, "--version"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-        )
-        out, _err = proc.communicate()
-        ret = proc.wait()
-        if ret != 0:
-            parser.error("could not determine version of python 3")
-        if not out.startswith("Python "):
-            parser.error("unexpected output from python3 --version: %s" % out)
-        vers = version.LooseVersion(out[len("Python ") :])
-        if vers < version.LooseVersion("3.5.0"):
-            parser.error(
-                "--with-python3 version must be 3.5.0 or greater; got %s" % out
-            )
 
     if options.blacklist:
         options.blacklist = parselistfiles(options.blacklist, "blacklist")
@@ -863,6 +818,39 @@ def vlog(*msg):
         return
 
     return log(*msg)
+
+
+def setup_sigtrace():
+    if os.name == "nt":
+        return
+
+    import traceback
+
+    def printstacks(sig, currentframe) -> None:
+        path = os.path.join(
+            tempfile.gettempdir(), f"trace-{os.getpid()}-{int(time.time())}.log"
+        )
+        writesigtrace(path)
+
+    def writesigtrace(path) -> None:
+        content = ""
+        tid_name = {t.ident: t.name for t in threading.enumerate()}
+        for tid, frame in sys._current_frames().items():
+            tb = "".join(traceback.format_stack(frame))
+            content += f"Thread {tid_name.get(tid) or 'unnamed'} {tid}:\n{tb}\n"
+
+        with open(path, "w") as f:
+            f.write(content)
+
+        # Also print to stderr
+        sys.stderr.write(content)
+        sys.stderr.write("\nStacktrace written to %s\n" % path)
+        sys.stderr.flush()
+
+    sig = getattr(signal, "SIGUSR1")
+    if sig is not None:
+        signal.signal(sig, printstacks)
+        vlog("sigtrace: use 'kill -USR1 %d' to dump stacktrace\n" % os.getpid())
 
 
 # Bytes that break XML even in a CDATA block: control characters 0-31
@@ -1030,7 +1018,6 @@ class Test(unittest.TestCase):
         startport=None,
         extraconfigopts=None,
         extrarcpaths=None,
-        py3kwarnings=False,
         shell=None,
         hgcommand=None,
         slowtimeout=None,
@@ -1069,8 +1056,6 @@ class Test(unittest.TestCase):
         extrarcpaths is an iterable for extra hgrc paths (files or
         directories).
 
-        py3kwarnings enables Py3k warnings.
-
         shell is the shell to execute tests in.
         """
         if timeout is None:
@@ -1096,7 +1081,6 @@ class Test(unittest.TestCase):
         self._startport = startport
         self._extraconfigopts = extraconfigopts or []
         self._extrarcpaths = extrarcpaths or []
-        self._py3kwarnings = py3kwarnings
         self._shell = shell
         self._hgcommand = hgcommand or "hg"
         self._usechg = usechg
@@ -1304,13 +1288,12 @@ class Test(unittest.TestCase):
                         f.write(line)
 
             # The result object handles diff calculation for us.
-            with firstlock:
-                if self._result.addOutputMismatch(self, ret, out, self._refout):
-                    # change was accepted, skip failing
-                    return
-                if self._first:
-                    global firsterror
-                    firsterror = True
+            if self._result.addOutputMismatch(self, ret, out, self._refout):
+                # change was accepted, skip failing
+                return
+            if self._first:
+                global firsterror
+                firsterror = True
 
             if ret:
                 msg = "output changed and " + describe(ret)
@@ -1524,7 +1507,6 @@ class Test(unittest.TestCase):
         # the tests produce repeatable output.
         env["LANG"] = env["LC_ALL"] = env["LANGUAGE"] = self._options.locale
         env["TZ"] = "GMT"
-        env["EMAIL"] = "Foo Bar <foo.bar@example.com>"
         env["COLUMNS"] = "80"
 
         # Claim that 256 colors is not supported.
@@ -1539,7 +1521,7 @@ class Test(unittest.TestCase):
         keys_to_del = (
             "HG HGPROF CDPATH GREP_OPTIONS http_proxy no_proxy "
             + "HGPLAIN HGPLAINEXCEPT EDITOR VISUAL PAGER "
-            + "NO_PROXY CHGDEBUG HGDETECTRACE RUST_BACKTRACE RUST_LIB_BACKTRACE "
+            + "NO_PROXY CHGDEBUG RUST_BACKTRACE RUST_LIB_BACKTRACE "
             + " EDENSCM_TRACE_LEVEL EDENSCM_TRACE_OUTPUT"
             + " EDENSCM_TRACE_PY TRACING_DATA_FAKE_CLOCK"
             + " EDENSCM_LOG LOG FAILPOINTS"
@@ -1622,21 +1604,33 @@ class Test(unittest.TestCase):
             killdaemons(env["DAEMON_PIDS"])
             return ret
 
-        output = b""
         proc.tochild.close()
+        lines = []
 
         try:
             f = proc.fromchild
             while True:
-                line = f.readline()
+                # defend against very long line outputs
+                line = f.readline(5000)
                 # Make the test abort faster if other tests are Ctrl+C-ed.
                 # Code path: for test in runtests: test.abort()
                 if self._aborted:
                     raise KeyboardInterrupt()
+                if not line:
+                    break
                 if linecallback:
                     linecallback(line)
-                output += line
-                if not line:
+                lines.append(line)
+                if len(lines) > 50000:
+                    log(f"Test command '{cmd}' outputs too many lines")
+                    cleanup()
+                    break
+
+                # defend against very large outputs
+                # 10_000_000 = 50_000 * 200 (assuming each line has 200 bytes)
+                if sum(len(s) for s in lines) > 10_000_000:
+                    log(f"Test command '{cmd}' outputs too large")
+                    cleanup()
                     break
 
         except KeyboardInterrupt:
@@ -1646,6 +1640,8 @@ class Test(unittest.TestCase):
 
         finally:
             proc.fromchild.close()
+
+        output = b"".join(lines)
 
         ret = proc.wait()
         if wifexited(ret):
@@ -2258,7 +2254,7 @@ class DebugRunTestTest(Test):
             "debugpython",
             "--",
             "-m",
-            "edenscm.testing.single",
+            "sapling.testing.single",
             self.path,
             "-o",
             self.errpath,
@@ -2284,10 +2280,25 @@ class DebugRunTestTest(Test):
         return exitcode, out
 
 
-firstlock = RLock()
 firsterror = False
 
-_iolock = RLock()
+
+class NoopLock:
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        pass
+
+    def acquire(self):
+        pass
+
+    def release(self):
+        pass
+
+
+showprogress = sys.stderr.isatty()
+_iolock = showprogress and RLock() or NoopLock()
 
 
 class Progress:
@@ -2328,7 +2339,6 @@ class Progress:
 
 
 progress = Progress()
-showprogress = sys.stderr.isatty()
 
 if os.name == "nt":
     import ctypes
@@ -2387,16 +2397,19 @@ if showprogress and os.name == "nt":
 class IOLockWithProgress:
     def __enter__(self):
         _iolock.acquire()
-        progress.clear()
+        try:
+            progress.clear()
+        except:  # no re-raises
+            _iolock.release()
 
     def __exit__(self, exc_type, exc_value, traceback):
         _iolock.release()
 
 
-iolock = IOLockWithProgress()
+iolock = showprogress and IOLockWithProgress() or _iolock
 
 
-class TestResult(unittest._TextTestResult):
+class TestResult(unittest.TextTestResult):
     """Holds results when executing via unittest."""
 
     # Don't worry too much about accessing the non-public _TextTestResult.
@@ -2453,7 +2466,7 @@ class TestResult(unittest._TextTestResult):
 
     def addSuccess(self, test):
         if showprogress and not self.showAll:
-            super(unittest._TextTestResult, self).addSuccess(test)
+            super(unittest.TextTestResult, self).addSuccess(test)
         else:
             with iolock:
                 super(TestResult, self).addSuccess(test)
@@ -2461,7 +2474,7 @@ class TestResult(unittest._TextTestResult):
 
     def addError(self, test, err):
         if showprogress and not self.showAll:
-            super(unittest._TextTestResult, self).addError(test, err)
+            super(unittest.TextTestResult, self).addError(test, err)
         else:
             with iolock:
                 super(TestResult, self).addError(test, err)
@@ -3461,9 +3474,6 @@ class TestRunner:
         os.environ["TMPBINDIR"] = self._tmpbindir
         os.environ["PYTHON"] = PYTHON
 
-        if self.options.with_python3:
-            os.environ["PYTHON3"] = self.options.with_python3
-
         runtestdir = os.path.abspath(os.path.dirname(__file__))
         os.environ["RUNTESTDIR"] = runtestdir
         path = [self._bindir, runtestdir] + os.environ["PATH"].split(os.pathsep)
@@ -3518,6 +3528,8 @@ class TestRunner:
                 "extensions.logexceptions=%s" % logexceptions.decode("utf-8")
             )
 
+        vlog(f"# Show progress: {showprogress}")
+        vlog(f"# IO lock: {type(_iolock).__name__}")
         vlog("# Using TESTDIR", self._testdir)
         vlog("# Using RUNTESTDIR", os.environ["RUNTESTDIR"])
         vlog("# Using HGTMP", self._hgtmp)
@@ -3748,7 +3760,6 @@ class TestRunner:
             startport=self._getport(count),
             extraconfigopts=self.options.extra_config_opt,
             extrarcpaths=self.options.extra_rcpath,
-            py3kwarnings=self.options.py3k_warnings,
             shell=self.options.shell,
             hgcommand=self._hgcommand,
             usechg=self.options.chg,
@@ -3901,15 +3912,6 @@ class TestRunner:
 
         self._usecorrectpython()
 
-        if self.options.py3k_warnings and not self.options.anycoverage:
-            vlog("# Updating hg command to enable Py3k Warnings switch")
-            with open(os.path.join(self._bindir, "hg"), "rb") as f:
-                lines = [line.rstrip() for line in f]
-                lines[0] += " -3"
-            with open(os.path.join(self._bindir, "hg"), "wb") as f:
-                for line in lines:
-                    f.write(line + "\n")
-
         hgbat = os.path.join(self._bindir, "hg.bat")
         if os.path.isfile(hgbat):
             # hg.bat expects to be put in bin/scripts while run-tests.py
@@ -3949,7 +3951,7 @@ class TestRunner:
             # The pythondir has been inferred from --with-hg flag.
             # We cannot expect anything sensible here.
             return
-        expecthg = os.path.join(self._pythondir, "edenscm")
+        expecthg = os.path.join(self._pythondir, "sapling")
         actualhg = self._gethgpath()
         if os.path.abspath(actualhg) != os.path.abspath(expecthg):
             sys.stderr.write(
@@ -3963,7 +3965,7 @@ class TestRunner:
         if self._hgpath is not None:
             return self._hgpath
 
-        cmd = '%s -c "from edenscm import mercurial; print (mercurial.__path__[0])"'
+        cmd = '%s -c "from sapling import mercurial; print (mercurial.__path__[0])"'
         cmd = cmd % PYTHON
         pipe = os.popen(cmd)
         try:

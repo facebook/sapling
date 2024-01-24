@@ -42,6 +42,7 @@ use super::Result;
 use crate::HgPython;
 
 static SEGMENTED_CHANGELOG_CAPABILITY: &str = "segmented-changelog";
+static COMMIT_GRAPH_SEGMENTS_CAPABILITY: &str = "commit-graph-segments";
 
 define_flags! {
     pub struct CloneOpts {
@@ -80,7 +81,7 @@ define_flags! {
         /// files to exclude in a sparse profile (DEPRECATED)
         exclude: String,
 
-        /// use EdenFs (EXPERIMENTAL)
+        /// use EdenFS (EXPERIMENTAL)
         eden: bool,
 
         /// location of the backing repo to be used or created (EXPERIMENTAL)
@@ -249,7 +250,7 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &mut ConfigSet) -> Result<u8> {
 
     let reponame = match config.get_opt::<String>("remotefilelog", "reponame")? {
         // This gets the reponame from the --configfile config. Ignore
-        // bogus "no-repo" value that dynamicconfig sets when there is
+        // bogus "no-repo" value that internalconfig sets when there is
         // no repo name.
         Some(c) if c != "no-repo" => {
             logger.verbose(|| format!("Repo name is {} from config", c));
@@ -298,7 +299,11 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &mut ConfigSet) -> Result<u8> {
     ));
 
     let clone_type_str = if ctx.opts.eden {
-        "eden_fs"
+        if config.get_or_default::<bool>("clone", "use-eden-sparse")? {
+            "eden_sparse"
+        } else {
+            "eden_fs"
+        }
     } else if !ctx.opts.enable_profile.is_empty() {
         "sparse"
     } else {
@@ -507,10 +512,16 @@ fn clone_metadata(
     let segmented_changelog = capabilities
         .iter()
         .any(|cap| cap == SEGMENTED_CHANGELOG_CAPABILITY);
+    let commit_graph_segments = capabilities
+        .iter()
+        .any(|cap| cap == COMMIT_GRAPH_SEGMENTS_CAPABILITY)
+        && repo
+            .config()
+            .get_or_default::<bool>("clone", "use-commit-graph")?;
 
     let mut repo_needs_reload = false;
 
-    if segmented_changelog {
+    if segmented_changelog || commit_graph_segments {
         repo.add_store_requirement("lazychangelog")?;
 
         let bookmark_names: Vec<String> = get_selective_bookmarks(&repo)?;
@@ -518,7 +529,7 @@ fn clone_metadata(
         let commits = repo.dag_commits()?;
         tracing::trace!("fetching lazy commit data and bookmarks");
         let bookmark_ids = exchange::clone(
-            config,
+            repo.config(),
             edenapi,
             &mut metalog.write(),
             &mut commits.write(),
@@ -526,7 +537,10 @@ fn clone_metadata(
         )?;
         logger.verbose(|| format!("Pulled bookmarks {:?}", bookmark_ids));
 
-        if config.get_or_default("devel", "segmented-changelog-rev-compat")? {
+        if repo
+            .config()
+            .get_or_default("devel", "segmented-changelog-rev-compat")?
+        {
             // "lazytext" (vs "lazy") is required for rev compat mode, so let's
             // migrate automatically. This migration only works for tests.
             migrate_to_lazytext(ctx, repo.config(), repo.path())?;
@@ -601,7 +615,7 @@ fn eager_clone(
     Ok(repo)
 }
 
-fn recursive_copy(from: &Path, to: &Path) -> std::io::Result<()> {
+fn recursive_copy(from: &Path, to: &Path) -> Result<()> {
     create_shared_dir_all(to)?;
 
     for entry in fs::read_dir(from)? {
@@ -706,7 +720,7 @@ fn get_update_target(
         .clone();
 
     match repo.resolve_commit_opt(None, &main_bookmark)? {
-        Some(id) => return Ok(Some((id, main_bookmark))),
+        Some(id) => Ok(Some((id, main_bookmark))),
         None => {
             logger.info(format!(
                 "Server has no '{}' bookmark - trying tip.",
@@ -717,7 +731,7 @@ fn get_update_target(
                 return Ok(Some((tip, "tip".to_string())));
             }
 
-            logger.info(format!("Skipping checkout - no commits available."));
+            logger.info("Skipping checkout - no commits available.".to_string());
 
             Ok(None)
         }

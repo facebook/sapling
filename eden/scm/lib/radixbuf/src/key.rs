@@ -111,7 +111,7 @@ impl VariantKey {
         if key_buf.len() < end_pos {
             return Err(ErrorKind::InvalidKeyId(key_id));
         }
-        Ok(&key_buf[start_pos as usize..end_pos as usize])
+        Ok(&key_buf[start_pos..end_pos])
     }
 
     #[inline]

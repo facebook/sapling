@@ -372,7 +372,7 @@ mod tests {
 
         // Durable link should result in a directory.
         let durable = Link::durable(hgid("a"));
-        let file = durable.to_file(path.clone());
+        let file = durable.to_file(path);
         assert!(file.is_none());
     }
 
@@ -400,7 +400,7 @@ mod tests {
 
         // If the Link is actually a file, we should get None.
         let leaf = Link::leaf(meta.clone());
-        let dir = DirLink::from_link(&leaf, path.clone());
+        let dir = DirLink::from_link(&leaf, path);
         assert!(dir.is_none());
     }
 

@@ -166,6 +166,12 @@ impl BookmarkKey {
     pub fn into_name(self) -> BookmarkName {
         self.name
     }
+
+    /// Determine if the current BookmarkKey represents a tag (since BookmarkCategory
+    /// is not reliable)
+    pub fn is_tag(&self) -> bool {
+        self.name().as_str().starts_with("tags/")
+    }
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq, Ord, PartialOrd)]

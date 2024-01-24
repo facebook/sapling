@@ -25,13 +25,14 @@ use lazy_static::lazy_static;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::trace;
 use slog::warn;
-use tunables::tunables;
 
 use crate::middleware::RequestContext;
 
 static MAX_BODY_LEN: usize = 16 * 1024; // 16 KB
 static MAX_BODY_LEN_DEBUG: usize = 4 * 1024; // 4 KB
 const UPLOAD_PATH: &str = "/upload/";
+const SAMPLE_RATIO: u64 = 1000;
+const SLOW_REQUEST_THRESHOLD_MS: i64 = 10000;
 
 lazy_static! {
     static ref FILTERED_HEADERS: HashSet<&'static str> = {
@@ -152,6 +153,17 @@ impl RequestDumper {
         self.logger.add("duration_ms_origin", duration);
     }
 
+    // Add client correlator to track this request end to end
+    pub fn add_client_correlator(&mut self, correlator: &str) {
+        self.logger.add("client_correlator", correlator.to_string());
+    }
+
+    // Add the source where the request originated from
+    pub fn add_client_entry_point(&mut self, entry_point: &str) {
+        self.logger
+            .add("client_entry_point", entry_point.to_string());
+    }
+
     pub fn new(fb: FacebookInit) -> Self {
         let scuba = MononokeScubaSampleBuilder::new(fb, "mononoke_replay_logged_edenapi_requests")
             .expect("Couldn't create scuba sample builder");
@@ -219,23 +231,18 @@ impl Middleware for RequestDumperMiddleware {
                     } else {
                         0
                     };
-                    let threshold = tunables::tunables()
-                        .edenapi_req_dumper_unsampled_duration_threshold_ms()
-                        .unwrap_or_default();
-                    let slow_request: bool = (threshold > 0) && (dur_ms > threshold);
-                    let sample_ratio: u64 = tunables()
-                        .edenapi_req_dumper_sample_ratio()
-                        .unwrap_or_default()
-                        .try_into()
-                        .unwrap_or_default();
-                    // Do not sample slow requests if tunables say
-                    if !slow_request
-                        && (sample_ratio == 0 || (rand::random::<u64>() % sample_ratio) != 0)
-                    {
+                    let slow_request: bool = dur_ms > SLOW_REQUEST_THRESHOLD_MS;
+                    // Always log if slow, otherwise use sampling rate
+                    if !slow_request && (rand::random::<u64>() % SAMPLE_RATIO) != 0 {
                         trace!(logger, "Won't record this request");
                         return;
                     }
                     request_dumper.add_duration(dur_ms);
+                    let cri = rctx.ctx.metadata().client_request_info();
+                    if let Some(cri) = cri {
+                        request_dumper.add_client_correlator(cri.correlator.as_str());
+                        request_dumper.add_client_entry_point(cri.entry_point.to_string().as_str());
+                    }
                     if let Err(e) = request_dumper.log() {
                         warn!(logger, "Couldn't dump request: {}", e);
                     }

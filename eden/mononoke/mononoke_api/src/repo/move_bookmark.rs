@@ -15,9 +15,8 @@ use bookmarks_movement::BookmarkUpdatePolicy;
 use bookmarks_movement::BookmarkUpdateTargets;
 use bookmarks_movement::UpdateBookmarkOp;
 use bytes::Bytes;
-use hooks::HookManagerRef;
+use hook_manager::manager::HookManagerRef;
 use mononoke_types::ChangesetId;
-use tunables::tunables;
 
 use crate::errors::MononokeError;
 use crate::repo::RepoContext;
@@ -56,7 +55,7 @@ impl RepoContext {
             allow_non_fast_forward: bool,
             pushvars: Option<&'a HashMap<String, Bytes>>,
         ) -> UpdateBookmarkOp<'a> {
-            let mut op = UpdateBookmarkOp::new(
+            let op = UpdateBookmarkOp::new(
                 bookmark,
                 BookmarkUpdateTargets {
                     old: old_target,
@@ -70,13 +69,7 @@ impl RepoContext {
                 BookmarkUpdateReason::ApiRequest,
             )
             .with_pushvars(pushvars);
-            if !tunables()
-                .disable_commit_scribe_logging_scs()
-                .unwrap_or_default()
-            {
-                op = op.log_new_public_commits_to_scribe();
-            }
-            op
+            op.log_new_public_commits_to_scribe()
         }
         if let Some(redirector) = self.push_redirector.as_ref() {
             let large_bookmark = redirector.small_to_large_bookmark(bookmark).await?;

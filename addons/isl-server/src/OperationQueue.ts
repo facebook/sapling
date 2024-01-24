@@ -13,6 +13,7 @@ import type {
   RunnableOperation,
 } from 'isl/src/types';
 
+import {clearTrackedCache} from 'shared/LRU';
 import {newAbortController} from 'shared/compat';
 
 /**
@@ -32,6 +33,7 @@ export class OperationQueue {
 
   private queuedOperations: Array<RunnableOperation & {tracker: ServerSideTracker}> = [];
   private runningOperation: RunnableOperation | undefined = undefined;
+  private runningOperationStartTime: Date | undefined = undefined;
   private abortController: AbortController | undefined = undefined;
 
   async runOrQueueOperation(
@@ -46,6 +48,7 @@ export class OperationQueue {
       return;
     }
     this.runningOperation = operation;
+    this.runningOperationStartTime = new Date();
 
     const handleCommandProgress: OperationCommandProgressReporter = (...args) => {
       switch (args[0]) {
@@ -80,33 +83,48 @@ export class OperationQueue {
       await tracker.operation(
         operation.trackEventName,
         'RunOperationError',
-        {extras: {args: operation.args, runner: operation.runner}},
+        {extras: {args: operation.args, runner: operation.runner}, operationId: operation.id},
         _p => this.runCallback(operation, cwd, handleCommandProgress, controller.signal),
       );
-      this.runningOperation = undefined;
-
-      // now that we successfully ran this operation, dequeue the next
-      if (this.queuedOperations.length > 0) {
-        const op = this.queuedOperations.shift();
-        if (op != null) {
-          // don't await this, the caller should resolve when the original operation finishes.
-          this.runOrQueueOperation(
-            op,
-            // TODO: we're using the onProgress from the LAST `runOperation`... should we be keeping the newer onProgress in the queued operation?
-            onProgress,
-            op.tracker,
-            cwd,
-          );
-        }
-      }
     } catch (err) {
       const errString = (err as Error).toString();
       this.logger.log('error running operation: ', operation.args[0], errString);
       onProgress({id: operation.id, kind: 'error', error: errString});
       // clear queue to run when we hit an error
       this.queuedOperations = [];
+    } finally {
+      this.runningOperationStartTime = undefined;
       this.runningOperation = undefined;
     }
+
+    // now that we successfully ran this operation, dequeue the next
+    if (this.queuedOperations.length > 0) {
+      const op = this.queuedOperations.shift();
+      if (op != null) {
+        // don't await this, the caller should resolve when the original operation finishes.
+        this.runOrQueueOperation(
+          op,
+          // TODO: we're using the onProgress from the LAST `runOperation`... should we be keeping the newer onProgress in the queued operation?
+          onProgress,
+          op.tracker,
+          cwd,
+        );
+      }
+    } else {
+      // Attempt to free some memory.
+      clearTrackedCache();
+    }
+  }
+
+  /**
+   * Get the running operation start time.
+   * Returns `undefined` if there is no running operation.
+   */
+  getRunningOperationStartTime(): Date | undefined {
+    if (this.runningOperation == null) {
+      return undefined;
+    }
+    return this.runningOperationStartTime;
   }
 
   /**

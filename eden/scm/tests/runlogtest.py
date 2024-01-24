@@ -9,7 +9,7 @@ import os.path
 import sys
 import time
 
-from edenscm import progress, registrar
+from sapling import progress, registrar
 
 
 cmdtable = {}

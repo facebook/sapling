@@ -40,6 +40,8 @@ export type ExportFile = {
   data?: string;
   /** Binary content encoded in base85. */
   dataBase85?: string;
+  /** Reference to other files. */
+  dataRef?: {node: Hash; path: RepoPath};
   /** If present, this file is copied (or renamed) from another file. */
   copyFrom?: RepoPath;
   /** 'x': executable. 'l': symlink. 'm': submodule. */

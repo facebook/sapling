@@ -17,6 +17,8 @@ use anyhow::Error;
 use anyhow::Result;
 use bookmarks::BookmarksRef;
 #[cfg(fbcode_build)]
+use clientinfo::ClientEntryPoint;
+#[cfg(fbcode_build)]
 use clientinfo::ClientInfo;
 #[cfg(fbcode_build)]
 use clientinfo::CLIENT_INFO_HEADER;
@@ -44,7 +46,6 @@ use slog::Logger;
 use thiserror::Error;
 use tokio::io::AsyncReadExt;
 use tunables::force_update_tunables;
-use tunables::tunables;
 
 use crate::connection_acceptor;
 use crate::connection_acceptor::AcceptedConnection;
@@ -235,10 +236,7 @@ where
             .context("Invalid metadata")
             .map_err(HttpError::BadRequest)?;
 
-        let zstd_level: i32 = tunables::tunables()
-            .zstd_compression_level()
-            .unwrap_or_default()
-            .try_into()
+        let zstd_level = justknobs::get_as::<i32>("scm/mononoke:zstd_compression_level", None)
             .unwrap_or_default();
         let compression = match req.headers().get(HEADER_CLIENT_COMPRESSION) {
             Some(header_value) => match header_value.as_bytes() {
@@ -357,17 +355,6 @@ where
         pq: http::uri::PathAndQuery,
         body: Body,
     ) -> Result<Response<Body>, HttpError> {
-        if tunables()
-            .disable_http_service_edenapi()
-            .unwrap_or_default()
-        {
-            let res = Response::builder()
-                .status(http::StatusCode::SERVICE_UNAVAILABLE)
-                .body("EdenAPI service is killswitched".into())
-                .map_err(HttpError::internal)?;
-            return Ok(res);
-        }
-
         let mut uri_parts = req.uri.into_parts();
 
         uri_parts.path_and_query = Some(pq);
@@ -531,7 +518,6 @@ mod h2m {
             metadata
                 .add_raw_encoded_cats(cats.to_str().context("Invalid encoded cats")?.to_string());
         }
-
         let src_region = headers
             .get(HEADER_REVPROXY_REGION)
             .and_then(|r| r.to_str().ok().map(|r| r.to_string()));
@@ -539,16 +525,6 @@ mod h2m {
         if let Some(src_region) = src_region {
             metadata.add_revproxy_region(src_region);
         }
-
-        let client_info: Option<ClientInfo> = headers
-            .get(CLIENT_INFO_HEADER)
-            .and_then(|h| h.to_str().ok())
-            .and_then(|ci| serde_json::from_str(ci).ok());
-
-        if let Some(client_info) = client_info {
-            metadata.add_client_info(client_info);
-        }
-
         Ok(())
     }
 
@@ -560,6 +536,10 @@ mod h2m {
         let debug = headers.contains_key(HEADER_CLIENT_DEBUG);
         let internal_identity = &conn.pending.acceptor.common_config.internal_identity;
         let is_trusted = conn.is_trusted;
+        let client_info: Option<ClientInfo> = headers
+            .get(CLIENT_INFO_HEADER)
+            .and_then(|h| h.to_str().ok())
+            .and_then(|ci| serde_json::from_str(ci).ok());
 
         // CATs are verifiable - we know that only the signer could have
         // generated them. We extract the signer's identity. The connecting
@@ -601,8 +581,12 @@ mod h2m {
                 )
                 .await;
 
-                metadata_populate_trusted(&mut metadata, headers)?;
+                let client_info = client_info.unwrap_or_else(|| {
+                    ClientInfo::default_with_entry_point(ClientEntryPoint::EdenApi)
+                });
+                metadata.add_client_info(client_info);
 
+                metadata_populate_trusted(&mut metadata, headers)?;
                 return Ok(metadata);
             }
         }
@@ -611,7 +595,7 @@ mod h2m {
         identities.extend(conn.identities.iter().cloned());
 
         // Generic fallback
-        Ok(Metadata::new(
+        let mut metadata = Metadata::new(
             Some(&generate_session_id().to_string()),
             identities,
             debug,
@@ -623,6 +607,12 @@ mod h2m {
             })?,
             Some(conn.pending.addr.ip()),
         )
-        .await)
+        .await;
+
+        let client_info = client_info
+            .unwrap_or_else(|| ClientInfo::default_with_entry_point(ClientEntryPoint::EdenApi));
+        metadata.add_client_info(client_info);
+
+        Ok(metadata)
     }
 }

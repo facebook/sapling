@@ -1,0 +1,80 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("scm_server_infra")
+
+rust_binary(
+    name = "bookmark_service_client_cli",
+    srcs = glob(["client/bin/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:prettytable-rs",
+        ":bookmark_service_client",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/bookmarks:bookmarks_cache",
+        "//eden/mononoke/bookmarks:bookmarks_types",
+        "//eden/mononoke/cmdlib:cmdlib_logging",
+        "//eden/mononoke/server/context:context",
+        "//eden/scm/lib/clientinfo:clientinfo",
+    ],
+)
+
+rust_library(
+    name = "bookmark_service_client",
+    srcs = glob([
+        "client/lib/**/*.rs",
+    ]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "//common/rust/shed/facet:facet",
+        "//common/rust/shed/fbinit:fbinit",
+        "//eden/mononoke/bookmarks:bookmarks_cache",
+        "//eden/mononoke/bookmarks:bookmarks_types",
+        "//eden/mononoke/common/facebook/thrift_client:thrift_client",
+        "//eden/mononoke/facebook/bookmark_service/if:bookmark_service_if-rust",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/server/context:context",
+        "//fb303/thrift:fb303_core-rust",
+    ],
+)
+
+rust_binary(
+    name = "bookmark_service_server",
+    srcs = glob([
+        "server/**/*.rs",
+    ]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:serde_json",
+        "fbsource//third-party/rust:slog",
+        "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tokio",
+        "//common/rust/shed/cloned:cloned",
+        "//common/rust/shed/facet:facet",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/shared_error:shared_error",
+        "//common/rust/srserver:srserver",
+        "//eden/mononoke/bookmarks:bookmarks_cache",
+        "//eden/mononoke/bookmarks:bookmarks_types",
+        "//eden/mononoke/cmdlib:environment",
+        "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
+        "//eden/mononoke/common/scuba_ext:scuba_ext",
+        "//eden/mononoke/derived_data:derived_data",
+        "//eden/mononoke/facebook/bookmark_service/if:BookmarkService-metadata-sys",
+        "//eden/mononoke/facebook/bookmark_service/if:bookmark_service_if-rust",
+        "//eden/mononoke/metaconfig:metaconfig_types",
+        "//eden/mononoke/mononoke_repos:mononoke_repos",
+        "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
+        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/server/metadata:metadata",
+        "//eden/scm/lib/clientinfo:clientinfo",
+        "//fb303/thrift:fb303_core-rust",
+    ],
+)

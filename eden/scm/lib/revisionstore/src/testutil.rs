@@ -115,7 +115,7 @@ impl RemoteDataStore for FakeRemoteDataStore {
         for k in keys {
             match k {
                 StoreKey::HgId(k) => {
-                    let (data, flags) = self.map.get(&k).ok_or_else(|| Error::msg("Not found"))?;
+                    let (data, flags) = self.map.get(k).ok_or_else(|| Error::msg("Not found"))?;
                     let delta = Delta {
                         data: data.clone(),
                         base: None,
@@ -178,7 +178,7 @@ impl RemoteHistoryStore for FakeRemoteHistoryStore {
             match k {
                 StoreKey::HgId(k) => self
                     .store
-                    .add(&k, self.map.get(&k).ok_or_else(|| Error::msg("Not found"))?)?,
+                    .add(k, self.map.get(k).ok_or_else(|| Error::msg("Not found"))?)?,
                 StoreKey::Content(_, _) => continue,
             }
         }
@@ -372,10 +372,6 @@ pub fn make_config(dir: impl AsRef<Path>) -> BTreeMap<String, String> {
         (
             "remotefilelog.cachepath",
             dir.as_ref().display().to_string(),
-        ),
-        (
-            "remotefilelog.cachekey",
-            "cca::hg:rust_unittest".to_string(),
         ),
     ]
     .iter()

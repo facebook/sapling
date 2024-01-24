@@ -13,18 +13,18 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Error;
+use anyhow::Result;
 use blobrepo::save_bonsai_changesets;
 use blobrepo_utils::convert_diff_result_into_file_change_for_diamond_merge;
-use blobstore::Loadable;
 use blobsync::copy_content;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarksRef;
 use borrowed::borrowed;
 use changeset_fetcher::ChangesetFetcherArc;
 use changesets::ChangesetsRef;
-use cloned::cloned;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
+use derivative::Derivative;
 use filestore::FilestoreConfigRef;
 use futures::future::try_join_all;
 use futures::stream;
@@ -32,30 +32,65 @@ use futures::StreamExt;
 use futures::TryStreamExt;
 use manifest::get_implicit_deletes;
 use megarepo_configs::types::SourceMappingRules;
-use mercurial_derivation::DeriveHgChangeset;
-use mercurial_types::HgManifestId;
-use mononoke_types::mpath_element_iter;
+use mononoke_types::path::MPath;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::FileChange;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
+use mononoke_types::SkeletonManifestId;
 use mononoke_types::TrackedFileChange;
 use pushrebase::find_bonsai_diff;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
-use slog::info;
+use skeleton_manifest::RootSkeletonManifestId;
+use slog::debug;
 use slog::Logger;
 use sorted_vector_map::SortedVectorMap;
 use thiserror::Error;
-use tunables::tunables;
 
-pub type MultiMover = Arc<dyn Fn(&MPath) -> Result<Vec<MPath>, Error> + Send + Sync + 'static>;
+pub type MultiMover<'a> =
+    Arc<dyn Fn(&NonRootMPath) -> Result<Vec<NonRootMPath>, Error> + Send + Sync + 'a>;
 pub type DirectoryMultiMover =
-    Arc<dyn Fn(&Option<MPath>) -> Result<Vec<Option<MPath>>, Error> + Send + Sync + 'static>;
+    Arc<dyn Fn(&MPath) -> Result<Vec<MPath>, Error> + Send + Sync + 'static>;
+
+/// Determines when a file change filter should be applied.
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub enum FileChangeFilterApplication {
+    /// Filter only before getting the implicit deletes from the bonsai
+    ImplicitDeletes,
+    /// Filter only before calling the multi mover
+    MultiMover,
+    /// Filter both before getting the implicit deletes from the bonsai and
+    /// before calling the multi mover
+    Both,
+}
+
+// Function that can be used to filter out irrelevant file changes from the bonsai
+// before getting its implicit deletes and/or calling the multi mover.
+// Getting implicit deletes requires doing manifest lookups that are O(file changes),
+// so removing unnecessary changes before can significantly speed up rewrites.
+// This can also be used to filter out specific kinds of file changes, e.g.
+// git submodules or untracked changes.
+pub type FileChangeFilterFunc<'a> =
+    Arc<dyn Fn((&NonRootMPath, &FileChange)) -> bool + Send + Sync + 'a>;
+
+/// Specifies a filter to be applied to file changes from a bonsai to remove
+/// unwanted changes before certain stages of the rewrite process, e.g. before
+/// getting the implicit deletes from the bonsai or before calling the multi
+/// mover.
+#[derive(Derivative, Clone)]
+#[derivative(Debug)]
+pub struct FileChangeFilter<'a> {
+    /// Function containing the filter logic
+    #[derivative(Debug = "ignore")]
+    pub func: FileChangeFilterFunc<'a>,
+    /// When to apply the filter
+    pub application: FileChangeFilterApplication,
+}
 
 pub trait Repo = RepoIdentityRef
     + RepoBlobstoreArc
@@ -88,38 +123,40 @@ pub enum ErrorKind {
 
 pub fn create_source_to_target_multi_mover(
     mapping_rules: SourceMappingRules,
-) -> Result<MultiMover, Error> {
+) -> Result<MultiMover<'static>, Error> {
     // We apply the longest prefix first
     let mut overrides = mapping_rules.overrides.into_iter().collect::<Vec<_>>();
     overrides.sort_unstable_by_key(|(ref prefix, _)| prefix.len());
     overrides.reverse();
-    let prefix = MPath::new_opt(mapping_rules.default_prefix)?;
+    let prefix = NonRootMPath::new_opt(mapping_rules.default_prefix)?;
 
-    Ok(Arc::new(move |path: &MPath| -> Result<Vec<MPath>, Error> {
-        for (override_prefix_src, dsts) in &overrides {
-            let override_prefix_src = MPath::new(override_prefix_src.clone())?;
-            if override_prefix_src.is_prefix_of(path) {
-                let suffix: Vec<_> = path
-                    .into_iter()
-                    .skip(override_prefix_src.num_components())
-                    .collect();
+    Ok(Arc::new(
+        move |path: &NonRootMPath| -> Result<Vec<NonRootMPath>, Error> {
+            for (override_prefix_src, dsts) in &overrides {
+                let override_prefix_src = NonRootMPath::new(override_prefix_src.clone())?;
+                if override_prefix_src.is_prefix_of(path) {
+                    let suffix: Vec<_> = path
+                        .into_iter()
+                        .skip(override_prefix_src.num_components())
+                        .collect();
 
-                return dsts
-                    .iter()
-                    .map(|dst| {
-                        let override_prefix = MPath::new_opt(dst)?;
-                        MPath::join_opt(override_prefix.as_ref(), suffix.clone())
-                            .ok_or_else(|| anyhow!("unexpected empty path"))
-                    })
-                    .collect::<Result<_, _>>();
+                    return dsts
+                        .iter()
+                        .map(|dst| {
+                            let override_prefix = NonRootMPath::new_opt(dst)?;
+                            NonRootMPath::join_opt(override_prefix.as_ref(), suffix.clone())
+                                .ok_or_else(|| anyhow!("unexpected empty path"))
+                        })
+                        .collect::<Result<_, _>>();
+                }
             }
-        }
 
-        Ok(vec![
-            MPath::join_opt(prefix.as_ref(), path)
-                .ok_or_else(|| anyhow!("unexpected empty path"))?,
-        ])
-    }))
+            Ok(vec![
+                NonRootMPath::join_opt(prefix.as_ref(), path)
+                    .ok_or_else(|| anyhow!("unexpected empty path"))?,
+            ])
+        },
+    ))
 }
 
 pub fn create_directory_source_to_target_multi_mover(
@@ -129,50 +166,46 @@ pub fn create_directory_source_to_target_multi_mover(
     let mut overrides = mapping_rules.overrides.into_iter().collect::<Vec<_>>();
     overrides.sort_unstable_by_key(|(ref prefix, _)| prefix.len());
     overrides.reverse();
-    let prefix = MPath::new_opt(mapping_rules.default_prefix)?;
+    let prefix = MPath::new(mapping_rules.default_prefix)?;
 
-    Ok(Arc::new(
-        move |path: &Option<MPath>| -> Result<Vec<Option<MPath>>, Error> {
-            for (override_prefix_src, dsts) in &overrides {
-                let override_prefix_src = MPath::new(override_prefix_src.clone())?;
-                if override_prefix_src.is_prefix_of(mpath_element_iter(path)) {
-                    let suffix: Vec<_> = mpath_element_iter(path)
-                        .skip(override_prefix_src.num_components())
-                        .collect();
+    Ok(Arc::new(move |path: &MPath| -> Result<Vec<MPath>, Error> {
+        for (override_prefix_src, dsts) in &overrides {
+            let override_prefix_src = MPath::new(override_prefix_src.clone())?;
+            if override_prefix_src.is_prefix_of(path.into_iter()) {
+                let suffix: Vec<_> = path
+                    .into_iter()
+                    .skip(override_prefix_src.num_components())
+                    .collect();
 
-                    return dsts
-                        .iter()
-                        .map(|dst| {
-                            let override_prefix = MPath::new_opt(dst)?;
-                            Ok(MPath::join_opt(override_prefix.as_ref(), suffix.clone()))
-                        })
-                        .collect::<Result<_, _>>();
-                }
+                return dsts
+                    .iter()
+                    .map(|dst| {
+                        let override_prefix = MPath::new(dst)?;
+                        Ok(override_prefix.join(suffix.clone()))
+                    })
+                    .collect::<Result<_, _>>();
             }
-
-            Ok(vec![MPath::join_opt(
-                prefix.as_ref(),
-                mpath_element_iter(path),
-            )])
-        },
-    ))
+        }
+        Ok(vec![prefix.join(path)])
+    }))
 }
 
-/// Get `HgManifestId`s for a set of `ChangesetId`s
+/// Get `SkeletonManifestId`s for a set of `ChangesetId`s
 /// This is needed for the purposes of implicit delete detection
-async fn get_manifest_ids<'a, I: IntoIterator<Item = ChangesetId>>(
+async fn get_skeleton_manifest_ids<'a, I: IntoIterator<Item = ChangesetId>>(
     ctx: &'a CoreContext,
     repo: &'a impl Repo,
     bcs_ids: I,
-) -> Result<Vec<HgManifestId>, Error> {
+) -> Result<Vec<SkeletonManifestId>, Error> {
     try_join_all(bcs_ids.into_iter().map({
-        |bcs_id| {
-            cloned!(ctx, repo);
-            async move {
-                let cs_id = repo.derive_hg_changeset(&ctx, bcs_id).await?;
-                let hg_blob_changeset = cs_id.load(&ctx, repo.repo_blobstore()).await?;
-                Ok(hg_blob_changeset.manifestid())
-            }
+        |bcs_id| async move {
+            let repo_derived_data = repo.repo_derived_data();
+
+            let root_skeleton_manifest_id = repo_derived_data
+                .derive::<RootSkeletonManifestId>(ctx, bcs_id)
+                .await?;
+
+            Ok(root_skeleton_manifest_id.into_skeleton_manifest_id())
         }
     }))
     .await
@@ -181,15 +214,15 @@ async fn get_manifest_ids<'a, I: IntoIterator<Item = ChangesetId>>(
 /// Take an iterator of file changes, which may contain implicit deletes
 /// and produce a `SortedVectorMap` suitable to be used in the `BonsaiChangeset`,
 /// without any implicit deletes.
-fn minimize_file_change_set<I: IntoIterator<Item = (MPath, FileChange)>>(
+fn minimize_file_change_set<I: IntoIterator<Item = (NonRootMPath, FileChange)>>(
     file_changes: I,
-) -> SortedVectorMap<MPath, FileChange> {
+) -> SortedVectorMap<NonRootMPath, FileChange> {
     let (adds, removes): (Vec<_>, Vec<_>) = file_changes
         .into_iter()
         .partition(|(_, fc)| fc.is_changed());
-    let adds: HashMap<MPath, FileChange> = adds.into_iter().collect();
+    let adds: HashMap<NonRootMPath, FileChange> = adds.into_iter().collect();
 
-    let prefix_path_was_added = |removed_path: MPath| {
+    let prefix_path_was_added = |removed_path: NonRootMPath| {
         removed_path
             .into_parent_dir_iter()
             .any(|parent_dir| adds.contains_key(&parent_dir))
@@ -199,31 +232,36 @@ fn minimize_file_change_set<I: IntoIterator<Item = (MPath, FileChange)>>(
         .into_iter()
         .filter(|(ref mpath, _)| !prefix_path_was_added(mpath.clone()));
     let mut result: SortedVectorMap<_, _> = filtered_removes.collect();
-    result.extend(adds.into_iter());
+    result.extend(adds);
     result
 }
 
 /// Given a changeset and it's parents, get the list of file
 /// changes, which arise from "implicit deletes" as opposed
-/// to naive `MPath` rewriting in `cs.file_changes`. For
+/// to naive `NonRootMPath` rewriting in `cs.file_changes`. For
 /// more information about implicit deletes, please see
 /// `manifest/src/implici_deletes.rs`
-async fn get_renamed_implicit_deletes<'a, I: IntoIterator<Item = ChangesetId>>(
+pub async fn get_renamed_implicit_deletes<'a, I: IntoIterator<Item = ChangesetId>>(
     ctx: &'a CoreContext,
-    cs: BonsaiChangesetMut,
+    file_changes: Vec<(&NonRootMPath, &FileChange)>,
     parent_changeset_ids: I,
-    mover: MultiMover,
+    mover: MultiMover<'a>,
     source_repo: &'a impl Repo,
-) -> Result<Vec<Vec<MPath>>, Error> {
-    let parent_manifest_ids = get_manifest_ids(ctx, source_repo, parent_changeset_ids).await?;
-    let file_adds: Vec<_> = cs
-        .file_changes
-        .iter()
-        .filter_map(|(mpath, file_change)| file_change.is_changed().then(|| mpath.clone()))
+) -> Result<Vec<Vec<NonRootMPath>>, Error> {
+    let parent_manifest_ids =
+        get_skeleton_manifest_ids(ctx, source_repo, parent_changeset_ids).await?;
+
+    // Get all the paths that were added or modified and thus are capable of
+    // implicitly deleting existing directories.
+    let paths_added: Vec<_> = file_changes
+        .into_iter()
+        .filter(|&(_mpath, file_change)| file_change.is_changed())
+        .map(|(mpath, _file_change)| mpath.clone())
         .collect();
+
     let store = source_repo.repo_blobstore().clone();
-    let implicit_deletes: Vec<MPath> =
-        get_implicit_deletes(ctx, store, file_adds, parent_manifest_ids)
+    let implicit_deletes: Vec<NonRootMPath> =
+        get_implicit_deletes(ctx, store, paths_added, parent_manifest_ids)
             .try_collect()
             .await?;
     implicit_deletes.iter().map(|mpath| mover(mpath)).collect()
@@ -277,15 +315,63 @@ pub async fn rewrite_commit<'a>(
     ctx: &'a CoreContext,
     cs: BonsaiChangesetMut,
     remapped_parents: &'a HashMap<ChangesetId, ChangesetId>,
-    mover: MultiMover,
+    mover: MultiMover<'a>,
     source_repo: &'a impl Repo,
     force_first_parent: Option<ChangesetId>,
     rewrite_opts: RewriteOpts,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
-    let renamed_implicit_deletes = if !cs.file_changes.is_empty() {
+    rewrite_commit_with_file_changes_filter(
+        ctx,
+        cs,
+        remapped_parents,
+        mover,
+        source_repo,
+        force_first_parent,
+        rewrite_opts,
+        vec![], // No file change filters by default
+    )
+    .await
+}
+
+/// Implementation of `rewrite_commit` that can take a vector of filters to
+/// apply to the commit's file changes before getting its implicit deletes.
+pub async fn rewrite_commit_with_file_changes_filter<'a>(
+    ctx: &'a CoreContext,
+    cs: BonsaiChangesetMut,
+    remapped_parents: &'a HashMap<ChangesetId, ChangesetId>,
+    mover: MultiMover<'a>,
+    source_repo: &'a impl Repo,
+    force_first_parent: Option<ChangesetId>,
+    rewrite_opts: RewriteOpts,
+    file_change_filters: Vec<FileChangeFilter<'a>>,
+) -> Result<Option<BonsaiChangesetMut>, Error> {
+    // All file change filters that should be applied before getting implicit
+    // deletes.
+    let implicit_deletes_filters = file_change_filters
+        .iter()
+        .filter_map(|filter| match filter.application {
+            FileChangeFilterApplication::ImplicitDeletes | FileChangeFilterApplication::Both => {
+                Some(filter.func.clone())
+            }
+            FileChangeFilterApplication::MultiMover => None,
+        })
+        .collect::<Vec<_>>();
+
+    let filtered_file_changes: Vec<(&NonRootMPath, &FileChange)> = cs
+        .file_changes
+        .iter()
+        // Keep file changes that pass all the filters
+        .filter(|fc| {
+            implicit_deletes_filters
+                .iter()
+                .all(|filter_func| filter_func(*fc))
+        })
+        .collect();
+
+    let renamed_implicit_deletes = if !filtered_file_changes.is_empty() {
         get_renamed_implicit_deletes(
             ctx,
-            cs.clone(),
+            filtered_file_changes,
             remapped_parents.keys().cloned(),
             mover.clone(),
             source_repo,
@@ -295,15 +381,15 @@ pub async fn rewrite_commit<'a>(
         vec![]
     };
 
-    internal_rewrite_commit_with_implicit_deletes(
+    rewrite_commit_with_implicit_deletes(
         ctx.logger(),
         cs,
         remapped_parents,
         mover,
+        file_change_filters,
         force_first_parent,
         renamed_implicit_deletes,
         rewrite_opts,
-        source_repo,
     )
 }
 
@@ -313,7 +399,7 @@ pub async fn rewrite_as_squashed_commit<'a>(
     source_cs_id: ChangesetId,
     (source_parent_cs_id, target_parent_cs_id): (ChangesetId, ChangesetId),
     mut cs: BonsaiChangesetMut,
-    mover: MultiMover,
+    mover: MultiMover<'a>,
     side_commits_info: Vec<String>,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
     let diff_stream = find_bonsai_diff(ctx, source_repo, source_parent_cs_id, source_cs_id).await?;
@@ -360,7 +446,7 @@ pub async fn rewrite_stack_no_merges<'a>(
     ctx: &'a CoreContext,
     css: Vec<BonsaiChangeset>,
     mut rewritten_parent: ChangesetId,
-    mover: MultiMover,
+    mover: MultiMover<'a>,
     source_repo: &'a impl Repo,
     force_first_parent: Option<ChangesetId>,
     mut modify_bonsai_cs: impl FnMut((ChangesetId, BonsaiChangesetMut)) -> BonsaiChangesetMut,
@@ -383,7 +469,7 @@ pub async fn rewrite_stack_no_merges<'a>(
                     let parents = cs.parents();
                     get_renamed_implicit_deletes(
                         ctx,
-                        cs.clone().into_mut(),
+                        cs.file_changes().collect(),
                         parents,
                         mover.clone(),
                         source_repo,
@@ -406,19 +492,19 @@ pub async fn rewrite_stack_no_merges<'a>(
         let from_cs = from_cs.into_mut();
 
         let mut remapped_parents = HashMap::new();
-        if let Some(parent) = from_cs.parents.get(0) {
+        if let Some(parent) = from_cs.parents.first() {
             remapped_parents.insert(*parent, rewritten_parent);
         }
 
-        let maybe_cs = internal_rewrite_commit_with_implicit_deletes(
+        let maybe_cs = rewrite_commit_with_implicit_deletes(
             ctx.logger(),
             from_cs,
             &remapped_parents,
             mover.clone(),
+            vec![],
             force_first_parent,
             renamed_implicit_deletes,
             Default::default(),
-            source_repo,
         )?;
 
         let maybe_cs = maybe_cs
@@ -436,30 +522,46 @@ pub async fn rewrite_stack_no_merges<'a>(
     Ok(res)
 }
 
-pub fn internal_rewrite_commit_with_implicit_deletes<'a>(
+pub fn rewrite_commit_with_implicit_deletes<'a>(
     logger: &Logger,
     mut cs: BonsaiChangesetMut,
     remapped_parents: &'a HashMap<ChangesetId, ChangesetId>,
     mover: MultiMover,
+    file_change_filters: Vec<FileChangeFilter<'a>>,
     force_first_parent: Option<ChangesetId>,
-    renamed_implicit_deletes: Vec<Vec<MPath>>,
+    renamed_implicit_deletes: Vec<Vec<NonRootMPath>>,
     rewrite_opts: RewriteOpts,
-    source_repo: &impl RepoIdentityRef,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
     let empty_commit = cs.file_changes.is_empty();
     if !empty_commit
         || rewrite_opts.empty_commit_from_large_repo == EmptyCommitFromLargeRepo::Discard
     {
+        // All file change filters that should be applied before calling the
+        // multi mover.
+        let multi_mover_filters = file_change_filters
+            .iter()
+            .filter_map(|filter| match filter.application {
+                FileChangeFilterApplication::MultiMover | FileChangeFilterApplication::Both => {
+                    Some(filter.func.clone())
+                }
+                FileChangeFilterApplication::ImplicitDeletes => None,
+            })
+            .collect::<Vec<_>>();
         let path_rewritten_changes = cs
             .file_changes
             .iter()
+            .filter(|fc| {
+                multi_mover_filters
+                    .iter()
+                    .all(|filter_func| filter_func(*fc))
+            })
             .map(|(path, change)| {
                 // Just rewrite copy_from information, when we have it
                 fn rewrite_copy_from(
-                    copy_from: &(MPath, ChangesetId),
+                    copy_from: &(NonRootMPath, ChangesetId),
                     remapped_parents: &HashMap<ChangesetId, ChangesetId>,
                     mover: MultiMover,
-                ) -> Result<Option<(MPath, ChangesetId)>, Error> {
+                ) -> Result<Option<(NonRootMPath, ChangesetId)>, Error> {
                     let (path, copy_from_commit) = copy_from;
                     let new_paths = mover(path)?;
                     let copy_from_commit =
@@ -475,7 +577,7 @@ pub fn internal_rewrite_commit_with_implicit_deletes<'a>(
                     // field in a thrift struct which says which path should be picked
                     // as copy from
                     Ok(new_paths
-                        .get(0)
+                        .first()
                         .cloned()
                         .map(|new_path| (new_path, *copy_from_commit)))
                 }
@@ -498,11 +600,11 @@ pub fn internal_rewrite_commit_with_implicit_deletes<'a>(
 
                 // Rewrite both path and changes
                 fn do_rewrite(
-                    path: &MPath,
+                    path: &NonRootMPath,
                     change: &FileChange,
                     remapped_parents: &HashMap<ChangesetId, ChangesetId>,
                     mover: MultiMover,
-                ) -> Result<Vec<(MPath, FileChange)>, Error> {
+                ) -> Result<Vec<(NonRootMPath, FileChange)>, Error> {
                     let new_paths = mover(path)?;
                     let change = match change {
                         FileChange::Change(tc) => {
@@ -532,7 +634,6 @@ pub fn internal_rewrite_commit_with_implicit_deletes<'a>(
                 logger,
                 &mut cs,
                 LossyConversionReason::FileChanges,
-                source_repo,
             );
         // If any implicit delete in the source bonsai changeset has no equivalent file change in the destination
         // changeset, the conversion was lossy
@@ -544,7 +645,6 @@ pub fn internal_rewrite_commit_with_implicit_deletes<'a>(
                 logger,
                 &mut cs,
                 LossyConversionReason::ImplicitFileChanges,
-                source_repo,
             );
         }
 
@@ -553,13 +653,19 @@ pub fn internal_rewrite_commit_with_implicit_deletes<'a>(
             .flat_map(|changes| changes.into_iter())
             .collect();
 
-        let implicit_delete_file_changes: Vec<(MPath, FileChange)> = renamed_implicit_deletes
-            .into_iter()
-            .flatten()
-            .map(|implicit_delete_mpath| (implicit_delete_mpath, FileChange::Deletion))
-            .collect();
-        path_rewritten_changes.extend(implicit_delete_file_changes.into_iter());
-        let path_rewritten_changes = minimize_file_change_set(path_rewritten_changes.into_iter());
+        // Add the implicit deletes as explicit delete changes.
+        let implicit_delete_file_changes: Vec<(NonRootMPath, FileChange)> =
+            renamed_implicit_deletes
+                .into_iter()
+                .flatten()
+                .map(|implicit_delete_mpath| (implicit_delete_mpath, FileChange::Deletion))
+                .collect();
+        path_rewritten_changes.extend(implicit_delete_file_changes);
+
+        // Then minimize the file changes by removing the deletes that don't
+        // need to be explicit because they'll still be expressed implicitly
+        // after the rewrite.
+        let path_rewritten_changes = minimize_file_change_set(path_rewritten_changes);
 
         let is_merge = cs.parents.len() >= 2;
 
@@ -611,27 +717,21 @@ fn mark_as_created_by_lossy_conversion(
     logger: &Logger,
     cs: &mut BonsaiChangesetMut,
     reason: LossyConversionReason,
-    source_repo: &impl RepoIdentityRef,
 ) {
-    if tunables().by_repo_cross_repo_mark_changesets_as_created_by_lossy_conversion(
-        source_repo.repo_identity().name(),
-    ) == Some(true)
-    {
-        let reason = match reason {
-            LossyConversionReason::FileChanges => {
-                "the file changes from the source changeset don't all have an equivalent file change in the target changeset"
-            }
-            LossyConversionReason::ImplicitFileChanges => {
-                "implicit file changes from the source changeset don't all have an equivalent implicit file change in the target changeset"
-            }
-        };
-        info!(
-            logger,
-            "Marking changeset as created by lossy conversion because {}", reason
-        );
-        cs.hg_extra
-            .insert("created_by_lossy_conversion".to_string(), Vec::new());
-    }
+    let reason = match reason {
+        LossyConversionReason::FileChanges => {
+            "the file changes from the source changeset don't all have an equivalent file change in the target changeset"
+        }
+        LossyConversionReason::ImplicitFileChanges => {
+            "implicit file changes from the source changeset don't all have an equivalent implicit file change in the target changeset"
+        }
+    };
+    debug!(
+        logger,
+        "Marking changeset as created by lossy conversion because {}", reason
+    );
+    cs.hg_extra
+        .insert("created_by_lossy_conversion".to_string(), Vec::new());
 }
 
 pub async fn upload_commits<'a>(
@@ -694,18 +794,20 @@ pub async fn copy_file_contents<'a>(
 #[cfg(test)]
 mod test {
     use std::collections::BTreeMap;
+    use std::collections::HashSet;
 
     use anyhow::bail;
     use blobrepo::save_bonsai_changesets;
+    use blobstore::Loadable;
     use fbinit::FacebookInit;
     use maplit::btreemap;
     use maplit::hashmap;
+    use maplit::hashset;
     use mononoke_types::ContentId;
     use mononoke_types::FileType;
     use test_repo_factory::TestRepoFactory;
     use tests_utils::list_working_copy_utf8;
     use tests_utils::CreateCommitContext;
-    use tunables::MononokeTunables;
 
     use super::*;
 
@@ -717,8 +819,8 @@ mod test {
         };
         let multi_mover = create_source_to_target_multi_mover(mapping_rules)?;
         assert_eq!(
-            multi_mover(&MPath::new("path")?)?,
-            vec![MPath::new("path")?]
+            multi_mover(&NonRootMPath::new("path")?)?,
+            vec![NonRootMPath::new("path")?]
         );
         Ok(())
     }
@@ -731,8 +833,8 @@ mod test {
         };
         let multi_mover = create_source_to_target_multi_mover(mapping_rules)?;
         assert_eq!(
-            multi_mover(&MPath::new("path")?)?,
-            vec![MPath::new("prefix/path")?]
+            multi_mover(&NonRootMPath::new("path")?)?,
+            vec![NonRootMPath::new("prefix/path")?]
         );
         Ok(())
     }
@@ -751,15 +853,15 @@ mod test {
         };
         let multi_mover = create_source_to_target_multi_mover(mapping_rules)?;
         assert_eq!(
-            multi_mover(&MPath::new("path")?)?,
-            vec![MPath::new("prefix/path")?]
+            multi_mover(&NonRootMPath::new("path")?)?,
+            vec![NonRootMPath::new("prefix/path")?]
         );
 
         assert_eq!(
-            multi_mover(&MPath::new("override/path")?)?,
+            multi_mover(&NonRootMPath::new("override/path")?)?,
             vec![
-                MPath::new("overriden_1/path")?,
-                MPath::new("overriden_2/path")?,
+                NonRootMPath::new("overriden_1/path")?,
+                NonRootMPath::new("overriden_2/path")?,
             ]
         );
         Ok(())
@@ -781,20 +883,20 @@ mod test {
         };
         let multi_mover = create_source_to_target_multi_mover(mapping_rules)?;
         assert_eq!(
-            multi_mover(&MPath::new("prefix/path")?)?,
-            vec![MPath::new("prefix_1/path")?]
+            multi_mover(&NonRootMPath::new("prefix/path")?)?,
+            vec![NonRootMPath::new("prefix_1/path")?]
         );
 
         assert_eq!(
-            multi_mover(&MPath::new("prefix/sub/path")?)?,
-            vec![MPath::new("prefix/sub_1/path")?]
+            multi_mover(&NonRootMPath::new("prefix/sub/path")?)?,
+            vec![NonRootMPath::new("prefix/sub_1/path")?]
         );
 
         Ok(())
     }
 
-    fn path(p: &str) -> MPath {
-        MPath::new(p).unwrap()
+    fn path(p: &str) -> NonRootMPath {
+        NonRootMPath::new(p).unwrap()
     }
 
     fn verify_minimized(changes: Vec<(&str, Option<()>)>, expected: BTreeMap<&str, Option<()>>) {
@@ -814,7 +916,7 @@ mod test {
             .map(|(p, c)| (path(p), to_file_change(c)))
             .collect();
         let minimized = minimize_file_change_set(changes);
-        let expected: SortedVectorMap<MPath, FileChange> = expected
+        let expected: SortedVectorMap<NonRootMPath, FileChange> = expected
             .into_iter()
             .map(|(p, c)| (path(p), to_file_change(c)))
             .collect();
@@ -846,19 +948,6 @@ mod test {
     #[fbinit::test]
     async fn test_rewrite_commit_marks_lossy_conversions(fb: FacebookInit) -> Result<(), Error> {
         let repo: blobrepo::BlobRepo = TestRepoFactory::new(fb)?.build().await?;
-        let tunables = MononokeTunables::default();
-        tunables.update_by_repo_bools(&hashmap! {
-            repo.repo_identity().name().to_string() => hashmap! {
-                "cross_repo_mark_changesets_as_created_by_lossy_conversion".to_string() => true,
-            },
-        });
-        tunables::override_tunables(Some(Arc::new(tunables)));
-        assert_eq!(
-            tunables::tunables().by_repo_cross_repo_mark_changesets_as_created_by_lossy_conversion(
-                repo.repo_identity().name(),
-            ),
-            Some(true)
-        );
         let ctx = CoreContext::test_mock(fb);
         let mapping_rules = SourceMappingRules {
             default_prefix: "".to_string(), // Rewrite to root
@@ -993,19 +1082,6 @@ mod test {
         fb: FacebookInit,
     ) -> Result<(), Error> {
         let repo: blobrepo::BlobRepo = TestRepoFactory::new(fb)?.build().await?;
-        let tunables = MononokeTunables::default();
-        tunables.update_by_repo_bools(&hashmap! {
-            repo.repo_identity().name().to_string() => hashmap! {
-                "cross_repo_mark_changesets_as_created_by_lossy_conversion".to_string() => true,
-            },
-        });
-        tunables::override_tunables(Some(Arc::new(tunables)));
-        assert_eq!(
-            tunables::tunables().by_repo_cross_repo_mark_changesets_as_created_by_lossy_conversion(
-                repo.repo_identity().name(),
-            ),
-            Some(true)
-        );
         let ctx = CoreContext::test_mock(fb);
         // This commit is not lossy because all paths will be mapped somewhere.
         let first = CreateCommitContext::new_root(&ctx, &repo)
@@ -1136,8 +1212,8 @@ mod test {
         assert_eq!(
             first_rewritten_wc,
             hashmap! {
-                MPath::new("path_1")? => "path".to_string(),
-                MPath::new("path_2")? => "path".to_string(),
+                NonRootMPath::new("path_1")? => "path".to_string(),
+                NonRootMPath::new("path_2")? => "path".to_string(),
             }
         );
 
@@ -1158,7 +1234,7 @@ mod test {
             .await?;
         let maybe_copy_from = match second_bcs
             .file_changes_map()
-            .get(&MPath::new("prefix/pathsecondcommit")?)
+            .get(&NonRootMPath::new("prefix/pathsecondcommit")?)
             .ok_or_else(|| anyhow!("path not found"))?
         {
             FileChange::Change(tc) => tc.copy_from().cloned(),
@@ -1167,7 +1243,7 @@ mod test {
 
         assert_eq!(
             maybe_copy_from,
-            Some((MPath::new("path_1")?, first_rewritten_bcs_id))
+            Some((NonRootMPath::new("path_1")?, first_rewritten_bcs_id))
         );
 
         let second_rewritten_wc =
@@ -1175,9 +1251,9 @@ mod test {
         assert_eq!(
             second_rewritten_wc,
             hashmap! {
-                MPath::new("path_1")? => "path".to_string(),
-                MPath::new("path_2")? => "path".to_string(),
-                MPath::new("prefix/pathsecondcommit")? => "pathsecondcommit".to_string(),
+                NonRootMPath::new("path_1")? => "path".to_string(),
+                NonRootMPath::new("path_2")? => "path".to_string(),
+                NonRootMPath::new("prefix/pathsecondcommit")? => "pathsecondcommit".to_string(),
             }
         );
 
@@ -1224,18 +1300,352 @@ mod test {
         Ok(())
     }
 
+    /**
+     * Set up a small repo to test multiple scenarios with file change filters.
+     *
+     * The first commit sets the following structure:
+     * foo
+     *  └── bar
+     *      ├── a
+     *      ├── b
+     *      │   ├── d
+     *      │   └── e
+     *      └── c
+     *          ├── f
+     *          └── g
+     *
+     * The second commit adds two files `foo/bar/b` (executable) and `foo/bar/c`
+     * which implicitly deletes some files under `foo/bar`.
+     */
+    async fn test_rewrite_commit_with_file_changes_filter(
+        fb: FacebookInit,
+        file_change_filters: Vec<FileChangeFilter<'_>>,
+        mut expected_affected_paths: HashMap<&str, HashSet<NonRootMPath>>,
+    ) -> Result<(), Error> {
+        let repo: blobrepo::BlobRepo = TestRepoFactory::new(fb)?.build().await?;
+
+        let ctx = CoreContext::test_mock(fb);
+        // This commit is not lossy because all paths will be mapped somewhere.
+        let first = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("foo/bar/a", "a")
+            .add_file("foo/bar/b/d", "d")
+            .add_file("foo/bar/b/e", "e")
+            .add_file("foo/bar/c/f", "f")
+            .add_file("foo/bar/c/g", "g")
+            .commit()
+            .await?;
+
+        // Create files at `foo/bar/b` and `foo/bar/c`, implicitely deleting all
+        // files under those directories.
+        let second = CreateCommitContext::new(&ctx, &repo, vec![first])
+            // Implicitly deletes `foo/bar/b/d` and `foo/bar/b/e`.
+            // Adding it as an executable so we can test filters that apply on
+            // conditions other than paths.
+            .add_file_with_type("foo/bar/b", "new b", FileType::Executable)
+            // Implicitly deletes `foo/bar/c/f` and `foo/bar/c/g`.
+            .add_file("foo/bar/c", "new c")
+            .commit()
+            .await?;
+
+        let identity_multi_mover = Arc::new(
+            move |path: &NonRootMPath| -> Result<Vec<NonRootMPath>, Error> {
+                Ok(vec![path.clone()])
+            },
+        );
+
+        async fn verify_affected_paths(
+            ctx: &CoreContext,
+            repo: &blobrepo::BlobRepo,
+            rewritten_bcs_id: &ChangesetId,
+            expected_affected_paths: HashSet<NonRootMPath>,
+        ) -> Result<()> {
+            let bcs = rewritten_bcs_id.load(ctx, repo.repo_blobstore()).await?;
+
+            let affected_paths = bcs
+                .file_changes()
+                .map(|(p, _fc)| p.clone())
+                .collect::<HashSet<_>>();
+
+            assert_eq!(expected_affected_paths, affected_paths);
+            Ok(())
+        }
+
+        let first_rewritten_bcs_id = test_rewrite_commit_cs_id_with_file_change_filters(
+            &ctx,
+            &repo,
+            first,
+            HashMap::new(),
+            identity_multi_mover.clone(),
+            None,
+            file_change_filters.clone(),
+        )
+        .await?;
+
+        verify_affected_paths(
+            &ctx,
+            &repo,
+            &first_rewritten_bcs_id,
+            expected_affected_paths.remove("first").unwrap(),
+        )
+        .await?;
+
+        let second_rewritten_bcs_id = test_rewrite_commit_cs_id_with_file_change_filters(
+            &ctx,
+            &repo,
+            second,
+            hashmap! {
+                first => first_rewritten_bcs_id
+            },
+            identity_multi_mover.clone(),
+            None,
+            file_change_filters,
+        )
+        .await?;
+
+        verify_affected_paths(
+            &ctx,
+            &repo,
+            &second_rewritten_bcs_id,
+            expected_affected_paths.remove("second").unwrap(),
+        )
+        .await?;
+
+        Ok(())
+    }
+
+    /// Tests applying a file change filter before getting the implicit deletes
+    /// and calling the multi mover.
+    #[fbinit::test]
+    async fn test_rewrite_commit_with_file_changes_filter_on_both_based_on_path(
+        fb: FacebookInit,
+    ) -> Result<(), Error> {
+        let file_change_filter_func: FileChangeFilterFunc<'_> =
+            Arc::new(|(source_path, _): (&NonRootMPath, &FileChange)| -> bool {
+                let ignored_path_prefix: NonRootMPath = NonRootMPath::new("foo/bar/b").unwrap();
+                !ignored_path_prefix.is_prefix_of(source_path)
+            });
+
+        let file_change_filters: Vec<FileChangeFilter<'_>> = vec![FileChangeFilter {
+            func: file_change_filter_func,
+            application: FileChangeFilterApplication::Both,
+        }];
+
+        let expected_affected_paths: HashMap<&str, HashSet<NonRootMPath>> = hashmap! {
+            // Changes to `foo/bar/b/d` and `foo/bar/b/e` are removed in the
+            // final bonsai because the filter ran before the multi-mover.
+            "first" => hashset! {
+                NonRootMPath::new("foo/bar/a").unwrap(),
+                NonRootMPath::new("foo/bar/c/f").unwrap(),
+                NonRootMPath::new("foo/bar/c/g").unwrap()
+            },
+            // We expect only the added file to be affected. The delete of
+            // `foo/bar/c/g` and `foo/bar/c/f` will remain implicit because
+            // the change to `foo/bar/c` is present in the bonsai.
+            "second" => hashset! {
+                NonRootMPath::new("foo/bar/c").unwrap()
+            },
+        };
+
+        test_rewrite_commit_with_file_changes_filter(
+            fb,
+            file_change_filters,
+            expected_affected_paths,
+        )
+        .await?;
+
+        Ok(())
+    }
+
+    /// Tests applying a file change filter before getting the implicit deletes
+    /// and calling the multi mover.
+    #[fbinit::test]
+    async fn test_rewrite_commit_with_file_changes_filter_on_both_based_on_file_type(
+        fb: FacebookInit,
+    ) -> Result<(), Error> {
+        let file_change_filter_func: FileChangeFilterFunc<'_> =
+            Arc::new(|(_, fc): (&NonRootMPath, &FileChange)| -> bool {
+                match fc {
+                    FileChange::Change(tfc) => tfc.file_type() != FileType::Executable,
+                    _ => true,
+                }
+            });
+
+        let file_change_filters: Vec<FileChangeFilter<'_>> = vec![FileChangeFilter {
+            func: file_change_filter_func,
+            application: FileChangeFilterApplication::Both,
+        }];
+
+        let expected_affected_paths: HashMap<&str, HashSet<NonRootMPath>> = hashmap! {
+             // All changes are synced because there are no executable files.
+             "first" => hashset! {
+                NonRootMPath::new("foo/bar/a").unwrap(),
+                NonRootMPath::new("foo/bar/c/f").unwrap(),
+                NonRootMPath::new("foo/bar/c/g").unwrap(),
+                NonRootMPath::new("foo/bar/b/e").unwrap(),
+                NonRootMPath::new("foo/bar/b/d").unwrap(),
+            },
+            // We expect only the added file to be affected. The delete of
+            // `foo/bar/c/g` and `foo/bar/c/f` will remain implicit because
+            // the change to `foo/bar/c` is present in the bonsai.
+            // The files under `foo/bar/b` will not be implicitly or explicitly
+            // deleted because the addition of the executable file was ignored
+            // when getting the implicit deletes and rewriting the changes.
+            "second" => hashset! {
+                NonRootMPath::new("foo/bar/c").unwrap()
+            },
+        };
+
+        test_rewrite_commit_with_file_changes_filter(
+            fb,
+            file_change_filters,
+            expected_affected_paths,
+        )
+        .await?;
+
+        Ok(())
+    }
+
+    /// Tests applying a file change filter only before getting the
+    /// implicit deletes.
+    #[fbinit::test]
+    async fn test_rewrite_commit_with_file_changes_filter_implicit_deletes_only(
+        fb: FacebookInit,
+    ) -> Result<(), Error> {
+        let file_change_filter_func: FileChangeFilterFunc<'_> =
+            Arc::new(|(source_path, _): (&NonRootMPath, &FileChange)| -> bool {
+                let ignored_path_prefix: NonRootMPath = NonRootMPath::new("foo/bar/b").unwrap();
+                !ignored_path_prefix.is_prefix_of(source_path)
+            });
+
+        let file_change_filters: Vec<FileChangeFilter<'_>> = vec![FileChangeFilter {
+            func: file_change_filter_func,
+            application: FileChangeFilterApplication::ImplicitDeletes,
+        }];
+        // Applying the filter only before the implicit deletes should increase
+        // performance because it won't do unnecessary work, but it should NOT
+        // affect which file changes are synced.
+        // That's because even if implicit deletes are found, because no filter
+        // is applied before the multi-mover, they will still be expressed
+        // implicitly in the final bonsai.
+        let expected_affected_paths: HashMap<&str, HashSet<NonRootMPath>> = hashmap! {
+            // Since the filter for `foo/bar/b` is applied only before getting
+            // the implicit deletes, all changes will be synced.
+            "first" => hashset! {
+                NonRootMPath::new("foo/bar/a").unwrap(),
+                NonRootMPath::new("foo/bar/b/d").unwrap(),
+                NonRootMPath::new("foo/bar/b/e").unwrap(),
+                NonRootMPath::new("foo/bar/c/f").unwrap(),
+                NonRootMPath::new("foo/bar/c/g").unwrap()
+            },
+            // The same applies to the second commit. The same paths are synced.
+            "second" => hashset! {
+                NonRootMPath::new("foo/bar/c").unwrap(),
+                // The path file added that implicitly deletes the two above
+                NonRootMPath::new("foo/bar/b").unwrap(),
+                // `foo/bar/b/d` and `foo/bar/b/e` will not be present in the
+                // bonsai, because they're being deleted implicitly.
+                //
+                // WHY: the filter is applied only when getting the implicit deletes.
+                // So `foo/bar/b` is synced via the multi mover, which means that
+                // the delete is already expressed implicitly, so `minimize_file_change_set`
+                // will remove the unnecessary explicit deletes.
+            },
+        };
+
+        test_rewrite_commit_with_file_changes_filter(
+            fb,
+            file_change_filters,
+            expected_affected_paths,
+        )
+        .await?;
+
+        Ok(())
+    }
+
+    /// Tests applying a file change filter only before calling the
+    /// multi mover.
+    /// This test uses the file type as the filter condition, to showcase
+    /// a more realistic scenario where we only want to apply the filter to
+    /// the multi mover.
+    #[fbinit::test]
+    async fn test_rewrite_commit_with_file_changes_filter_multi_mover_only(
+        fb: FacebookInit,
+    ) -> Result<(), Error> {
+        let file_change_filter_func: FileChangeFilterFunc<'_> =
+            Arc::new(|(_, fc): (&NonRootMPath, &FileChange)| -> bool {
+                match fc {
+                    FileChange::Change(tfc) => tfc.file_type() != FileType::Executable,
+                    _ => true,
+                }
+            });
+        let file_change_filters: Vec<FileChangeFilter<'_>> = vec![FileChangeFilter {
+            func: file_change_filter_func,
+            application: FileChangeFilterApplication::MultiMover,
+        }];
+
+        let expected_affected_paths: HashMap<&str, HashSet<NonRootMPath>> = hashmap! {
+            // All changes are synced because there are no executable files.
+            "first" => hashset! {
+                NonRootMPath::new("foo/bar/a").unwrap(),
+                NonRootMPath::new("foo/bar/c/f").unwrap(),
+                NonRootMPath::new("foo/bar/c/g").unwrap(),
+                NonRootMPath::new("foo/bar/b/e").unwrap(),
+                NonRootMPath::new("foo/bar/b/d").unwrap(),
+            },
+            "second" => hashset! {
+                NonRootMPath::new("foo/bar/c").unwrap(),
+                // `foo/bar/b` implicitly deletes these two files below in the
+                // source bonsai. However, because the change to `foo/bar/b`
+                // will not be synced (is't an executable file), these implicit
+                // deletes will be added explicitly to the rewritten bonsai.
+                NonRootMPath::new("foo/bar/b/e").unwrap(),
+                NonRootMPath::new("foo/bar/b/d").unwrap(),
+            },
+        };
+
+        test_rewrite_commit_with_file_changes_filter(
+            fb,
+            file_change_filters,
+            expected_affected_paths,
+        )
+        .await?;
+
+        Ok(())
+    }
+
     async fn test_rewrite_commit_cs_id<'a>(
         ctx: &'a CoreContext,
         repo: &'a impl Repo,
         bcs_id: ChangesetId,
         parents: HashMap<ChangesetId, ChangesetId>,
-        multi_mover: MultiMover,
+        multi_mover: MultiMover<'a>,
         force_first_parent: Option<ChangesetId>,
+    ) -> Result<ChangesetId, Error> {
+        test_rewrite_commit_cs_id_with_file_change_filters(
+            ctx,
+            repo,
+            bcs_id,
+            parents,
+            multi_mover,
+            force_first_parent,
+            vec![],
+        )
+        .await
+    }
+
+    async fn test_rewrite_commit_cs_id_with_file_change_filters<'a>(
+        ctx: &'a CoreContext,
+        repo: &'a impl Repo,
+        bcs_id: ChangesetId,
+        parents: HashMap<ChangesetId, ChangesetId>,
+        multi_mover: MultiMover<'a>,
+        force_first_parent: Option<ChangesetId>,
+        file_change_filters: Vec<FileChangeFilter<'a>>,
     ) -> Result<ChangesetId, Error> {
         let bcs = bcs_id.load(ctx, &repo.repo_blobstore()).await?;
         let bcs = bcs.into_mut();
 
-        let maybe_rewritten = rewrite_commit(
+        let maybe_rewritten = rewrite_commit_with_file_changes_filter(
             ctx,
             bcs,
             &parents,
@@ -1243,6 +1653,7 @@ mod test {
             repo,
             force_first_parent,
             Default::default(),
+            file_change_filters,
         )
         .await?;
         let rewritten =
@@ -1292,11 +1703,11 @@ mod test {
         };
         let multi_mover = create_directory_source_to_target_multi_mover(mapping_rules)?;
         assert_eq!(
-            multi_mover(&Some(MPath::new("path")?))?,
-            vec![Some(MPath::new("prefix/path")?)]
+            multi_mover(&MPath::new("path")?)?,
+            vec![MPath::new("prefix/path")?]
         );
 
-        assert_eq!(multi_mover(&None)?, vec![Some(MPath::new("prefix")?)]);
+        assert_eq!(multi_mover(&MPath::ROOT)?, vec![MPath::new("prefix")?]);
         Ok(())
     }
 }

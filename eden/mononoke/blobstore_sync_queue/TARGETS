@@ -1,0 +1,48 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbcode_macros//build_defs:rust_unittest.bzl", "rust_unittest")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "blobstore_sync_queue",
+    srcs = glob([
+        "src/**/*.rs",
+        "schemas/**/*.sql",
+    ]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:auto_impl",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:uuid",
+        "fbsource//third-party/rust:vec1",
+        "//common/rust/shed/shared_error:shared_error",
+        "//common/rust/shed/sql:sql",
+        "//common/rust/shed/sql:sql_common",
+        "//eden/mononoke/common/rendezvous:rendezvous",
+        "//eden/mononoke/common/rust/sql_ext:sql_ext",
+        "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/metaconfig:metaconfig_types",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/server/context:context",
+    ],
+)
+
+rust_unittest(
+    name = "blobstore_sync_queue_test",
+    srcs = glob(["test/**/*.rs"]),
+    crate = "blobstore_sync_queue_test",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        ":blobstore_sync_queue",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/metaconfig:metaconfig_types",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/server/context:context",
+    ],
+)

@@ -1,0 +1,31 @@
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+
+oncall("mononoke")
+
+thrift_library(
+    name = "mercurial-thrift",
+    languages = [
+        "rust",
+        "cpp2",
+    ],
+    rust_deps = [
+        "fbsource//third-party/rust:smallvec",
+    ],
+    thrift_srcs = {
+        "mercurial_thrift.thrift": [],
+    },
+    # The Thrift definitions are private and only used for serialization -- do
+    # not allow other code to use them.
+    visibility = [
+        "//eden/mononoke/bonsai_hg_mapping/if:",
+        "//eden/mononoke/derived_data/remote/if:",
+        "//eden/mononoke/filenodes/if:",
+        "//eden/mononoke/mercurial:mercurial_types",
+        "//eden/mononoke/mercurial:mercurial_types-unittest",
+        "//eden/mononoke/mercurial/mutation/if:",
+        "//eden/mononoke/microwave/if:",
+    ],
+    deps = [
+        "//eden/mononoke/mononoke_types/if:mononoke_types-thrift",
+    ],
+)

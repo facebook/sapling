@@ -22,20 +22,20 @@ use futures::FutureExt;
 use futures::StreamExt;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
-use mononoke_types::MPath;
+use mononoke_types::path::MPath;
+use mononoke_types::NonRootMPath;
 
 use crate::select::select_path_tree;
 use crate::AsyncManifest as Manifest;
 use crate::Entry;
 use crate::PathOrPrefix;
-use crate::PathTree;
 use crate::StoreLoadable;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Diff<Entry> {
-    Added(Option<MPath>, Entry),
-    Removed(Option<MPath>, Entry),
-    Changed(Option<MPath>, Entry, Entry),
+    Added(MPath, Entry),
+    Removed(MPath, Entry),
+    Changed(MPath, Entry, Entry),
 }
 
 pub trait ManifestOps<Store>
@@ -54,7 +54,7 @@ where
         'static,
         Result<
             (
-                Option<MPath>,
+                MPath,
                 Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::LeafId>,
             ),
             Error,
@@ -66,7 +66,7 @@ where
     {
         let selector = select_path_tree(paths_or_prefixes);
 
-        let init = Some((self.clone(), selector, None, false));
+        let init = Some((self.clone(), selector, MPath::ROOT, false));
         (async_stream::stream! {
             let store = &store;
             borrowed!(ctx, store);
@@ -74,10 +74,7 @@ where
                 256,
                 init,
                 move |(manifest_id, selector, path, recursive)| {
-                    let PathTree {
-                        subentries,
-                        value: select,
-                    } = selector;
+                    let (select, subentries) = selector.deconstruct();
 
                     async move {
                         let manifest = manifest_id.load(ctx, store).await?;
@@ -89,7 +86,7 @@ where
                             output.push((path.clone(), Entry::Tree(manifest_id)));
                             let mut stream = manifest.list(ctx, store).await?;
                             while let Some((name, entry)) = stream.try_next().await? {
-                                let path = Some(MPath::join_opt_element(path.as_ref(), &name));
+                                let path = path.join(&name);
                                 match entry {
                                     Entry::Leaf(_) => {
                                         output.push((path.clone(), entry));
@@ -105,7 +102,7 @@ where
                             }
                             for (name, selector) in subentries {
                                 if let Some(entry) = manifest.lookup(ctx, store, &name).await? {
-                                    let path = Some(MPath::join_opt_element(path.as_ref(), &name));
+                                    let path = path.join(&name);
                                     match entry {
                                         Entry::Leaf(_) => {
                                             if selector.value.is_selected() {
@@ -139,7 +136,7 @@ where
         &self,
         ctx: CoreContext,
         store: Store,
-        path: Option<MPath>,
+        path: MPath,
     ) -> BoxFuture<
         'static,
         Result<
@@ -161,13 +158,13 @@ where
         'static,
         Result<
             (
-                Option<MPath>,
+                MPath,
                 Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::LeafId>,
             ),
             Error,
         >,
     > {
-        self.find_entries(ctx, store, vec![PathOrPrefix::Prefix(None)])
+        self.find_entries(ctx, store, vec![PathOrPrefix::Prefix(MPath::ROOT)])
     }
 
     fn list_leaf_entries(
@@ -178,7 +175,7 @@ where
         'static,
         Result<
             (
-                MPath,
+                NonRootMPath,
                 <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::LeafId,
             ),
             Error,
@@ -187,7 +184,10 @@ where
         self.list_all_entries(ctx, store)
             .filter_map(|result| {
                 let maybe_leaf = match result {
-                    Ok((Some(path), Entry::Leaf(filenode_id))) => Some(Ok((path, filenode_id))),
+                    Ok((path, Entry::Leaf(filenode_id))) => match NonRootMPath::try_from(path) {
+                        Ok(path) => Some(Ok((path, filenode_id))),
+                        Err(e) => Some(Err(e)),
+                    },
                     Err(err) => Some(Err(err)),
                     _ => None,
                 };
@@ -200,12 +200,12 @@ where
         &self,
         ctx: CoreContext,
         store: Store,
-        prefixes: impl IntoIterator<Item = MPath>,
+        prefixes: impl IntoIterator<Item = NonRootMPath>,
     ) -> BoxStream<
         'static,
         Result<
             (
-                MPath,
+                NonRootMPath,
                 <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::LeafId,
             ),
             Error,
@@ -216,11 +216,14 @@ where
             store,
             prefixes
                 .into_iter()
-                .map(|pref| PathOrPrefix::Prefix(Some(pref))),
+                .map(|pref| PathOrPrefix::Prefix(pref.into())),
         )
         .filter_map(|result| {
             let maybe_leaf = match result {
-                Ok((Some(path), Entry::Leaf(filenode_id))) => Some(Ok((path, filenode_id))),
+                Ok((path, Entry::Leaf(filenode_id))) => match NonRootMPath::try_from(path) {
+                    Ok(path) => Some(Ok((path, filenode_id))),
+                    Err(e) => Some(Err(e)),
+                },
                 Err(err) => Some(Err(err)),
                 _ => None,
             };
@@ -237,7 +240,7 @@ where
         'static,
         Result<
             (
-                Option<MPath>,
+                MPath,
                 <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::TreeId,
             ),
             Error,
@@ -305,7 +308,7 @@ where
 
         bounded_traversal::bounded_traversal_stream(
             256,
-            Some(Diff::Changed(None, self.clone(), other)),
+            Some(Diff::Changed(MPath::ROOT, self.clone(), other)),
             move |input| {
                 cloned!(ctx, output_filter, recurse_pruner, store, other_store);
                 async move {
@@ -323,7 +326,7 @@ where
 
                             let mut stream = left_mf.list(ctx, &store).await?;
                             while let Some((name, left)) = stream.try_next().await? {
-                                let path = Some(MPath::join_opt_element(path.as_ref(), &name));
+                                let path = path.join(&name);
                                 if let Some(right) =
                                     right_mf.lookup(ctx, &other_store, &name).await?
                                 {
@@ -357,7 +360,7 @@ where
                             let mut stream = right_mf.list(ctx, &other_store).await?;
                             while let Some((name, right)) = stream.try_next().await? {
                                 if left_mf.lookup(ctx, &store, &name).await?.is_none() {
-                                    let path = Some(MPath::join_opt_element(path.as_ref(), &name));
+                                    let path = path.join(&name);
                                     match right {
                                         Entry::Tree(tree) => recurse.push(Diff::Added(path, tree)),
                                         _ => output.push(Diff::Added(path, right)),
@@ -372,7 +375,7 @@ where
                             let manifest = tree.load(ctx, &other_store).await?;
                             let mut stream = manifest.list(ctx, &other_store).await?;
                             while let Some((name, entry)) = stream.try_next().await? {
-                                let path = Some(MPath::join_opt_element(path.as_ref(), &name));
+                                let path = path.join(&name);
                                 match entry {
                                     Entry::Tree(tree) => recurse.push(Diff::Added(path, tree)),
                                     _ => output.push(Diff::Added(path, entry)),
@@ -385,7 +388,7 @@ where
                             let manifest = tree.load(ctx, &store).await?;
                             let mut stream = manifest.list(ctx, &store).await?;
                             while let Some((name, entry)) = stream.try_next().await? {
-                                let path = Some(MPath::join_opt_element(path.as_ref(), &name));
+                                let path = path.join(&name);
                                 match entry {
                                     Entry::Tree(tree) => recurse.push(Diff::Removed(path, tree)),
                                     _ => output.push(Diff::Removed(path, entry)),
@@ -474,7 +477,7 @@ pub fn find_intersection_of_diffs<TreeId, LeafId, Store>(
     store: Store,
     mf_id: TreeId,
     diff_against: Vec<TreeId>,
-) -> impl Stream<Item = Result<(Option<MPath>, Entry<TreeId, LeafId>), Error>> + 'static
+) -> impl Stream<Item = Result<(MPath, Entry<TreeId, LeafId>), Error>> + 'static
 where
     Store: Sync + Send + Clone + 'static,
     TreeId: StoreLoadable<Store> + Clone + Send + Sync + Eq + Unpin + 'static,
@@ -493,16 +496,8 @@ pub fn find_intersection_of_diffs_and_parents<TreeId, LeafId, Store>(
     store: Store,
     mf_id: TreeId,
     diff_against: Vec<TreeId>,
-) -> impl Stream<
-    Item = Result<
-        (
-            Option<MPath>,
-            Entry<TreeId, LeafId>,
-            Vec<Entry<TreeId, LeafId>>,
-        ),
-        Error,
-    >,
-> + 'static
+) -> impl Stream<Item = Result<(MPath, Entry<TreeId, LeafId>, Vec<Entry<TreeId, LeafId>>), Error>>
++ 'static
 where
     Store: Sync + Send + Clone + 'static,
     TreeId: StoreLoadable<Store> + Clone + Send + Sync + Eq + Unpin + 'static,
@@ -510,7 +505,7 @@ where
         Manifest<Store, TreeId = TreeId, LeafId = LeafId> + Send + Sync,
     LeafId: Clone + Send + Eq + Unpin + 'static,
 {
-    match diff_against.get(0).cloned() {
+    match diff_against.first().cloned() {
         Some(parent) => async move {
             let mut new_entries = Vec::new();
             let mut parent_diff = parent.diff(ctx.clone(), store.clone(), mf_id);

@@ -165,7 +165,7 @@ pub async fn new_batch_derivation(
             ctx,
             derivation_ctx,
             file_changes,
-            parent_fsnode_manifests.get(0).copied(),
+            parent_fsnode_manifests.first().copied(),
         )
         .await
         .with_context(|| format!("failed deriving stack of {:?} to {:?}", first, last,))?;

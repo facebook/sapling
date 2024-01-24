@@ -56,7 +56,7 @@ impl OptionalRepo {
             } else {
                 cwd.join(repository_path)
             };
-        if let Ok(path) = util::path::absolute(&full_repository_path) {
+        if let Ok(path) = util::path::absolute(full_repository_path) {
             if identity::sniff_dir(&path)?.is_some() {
                 let repo = Repo::load(path, &opts.config, &opts.configfile)?;
                 return Ok(OptionalRepo::Some(repo));

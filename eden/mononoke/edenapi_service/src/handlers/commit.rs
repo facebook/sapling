@@ -12,6 +12,7 @@ use std::time::Duration;
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
+use async_stream::try_stream;
 use async_trait::async_trait;
 use blobstore::Loadable;
 use edenapi_types::wire::WireCommitHashToLocationRequestBatch;
@@ -65,6 +66,7 @@ use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
 use mononoke_api::CreateInfo;
 use mononoke_api::MononokeError;
+use mononoke_api::XRepoLookupSyncBehaviour;
 use mononoke_api_hg::HgRepoContext;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::ChangesetId;
@@ -72,7 +74,6 @@ use mononoke_types::DateTime;
 use mononoke_types::FileChange;
 use mononoke_types::Globalrev;
 use serde::Deserialize;
-use tunables::tunables;
 use types::HgId;
 use types::Parents;
 
@@ -285,7 +286,7 @@ impl EdenApiHandler for HashLookupHandler {
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
         use CommitHashLookupRequest::*;
-        Ok(stream::iter(request.batch.into_iter())
+        Ok(stream::iter(request.batch)
             .then(move |request| {
                 let hg_repo_ctx = repo.clone();
                 async move {
@@ -629,9 +630,12 @@ impl EdenApiHandler for GraphHandlerV2 {
             .map(|hg_id| HgChangesetId::new(HgNodeHash::from(hg_id)))
             .collect();
 
-        if tunables()
-            .enable_streaming_commit_graph_edenapi_endpoint()
-            .unwrap_or_default()
+        if justknobs::eval(
+            "scm/mononoke:enable_streaming_commit_graph_edenapi_endpoint",
+            None,
+            None,
+        )
+        .unwrap_or_default()
         {
             // If all the requested heads are public, return stream.
             if heads.len() < PHASES_CHECK_LIMIT && repo.is_all_public(&heads).await? {
@@ -699,30 +703,31 @@ impl EdenApiHandler for GraphSegmentsHandler {
             .map(|hg_id| HgChangesetId::new(HgNodeHash::from(hg_id)))
             .collect();
 
-        let graph_segment_entries =
-            repo.graph_segments(common, heads)
-                .await?
-                .into_iter()
-                .map(|segment| {
-                    Ok(CommitGraphSegmentsEntry {
-                        head: HgId::from(segment.head.into_nodehash()),
-                        base: HgId::from(segment.base.into_nodehash()),
-                        length: segment.length,
-                        parents: segment
-                            .parents
-                            .into_iter()
-                            .map(|parent| CommitGraphSegmentParent {
-                                hgid: HgId::from(parent.hgid.into_nodehash()),
-                                location: parent.location.map(|location| {
-                                    location.map_descendant(|descendant| {
-                                        HgId::from(descendant.into_nodehash())
-                                    })
-                                }),
-                            })
-                            .collect(),
-                    })
-                });
-        Ok(stream::iter(graph_segment_entries).boxed())
+        Ok(try_stream! {
+            let graph_segments = repo.graph_segments(common, heads).await?;
+
+            for await segment in graph_segments {
+                let segment = segment?;
+                yield CommitGraphSegmentsEntry {
+                    head: HgId::from(segment.head.into_nodehash()),
+                    base: HgId::from(segment.base.into_nodehash()),
+                    length: segment.length,
+                    parents: segment
+                        .parents
+                        .into_iter()
+                        .map(|parent| CommitGraphSegmentParent {
+                            hgid: HgId::from(parent.hgid.into_nodehash()),
+                            location: parent.location.map(|location| {
+                                location.map_descendant(|descendant| {
+                                    HgId::from(descendant.into_nodehash())
+                                })
+                            }),
+                        })
+                        .collect(),
+                }
+            }
+        }
+        .boxed())
     }
 }
 
@@ -742,9 +747,7 @@ impl EdenApiHandler for CommitMutationsHandler {
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
-        if !tunables().mutation_generate_for_draft().unwrap_or_default() {
-            return Ok(stream::empty().boxed());
-        }
+
         let commits = request
             .commits
             .into_iter()
@@ -832,7 +835,12 @@ impl EdenApiHandler for CommitTranslateId {
                         (
                             id,
                             from_repo
-                                .xrepo_commit_lookup(&to_repo, bs.clone(), None)
+                                .xrepo_commit_lookup(
+                                    &to_repo,
+                                    bs.clone(),
+                                    None,
+                                    XRepoLookupSyncBehaviour::SyncIfAbsent,
+                                )
                                 .await,
                         )
                     }

@@ -409,17 +409,17 @@ mod tests {
     fn test_struct_parse() {
         let parsed = ParseOptions::new()
             .flags(TestOptions::flags())
-            .parse_args(&vec!["cmdname", "--count", "3"])
+            .parse_args(&["cmdname", "--count", "3"])
             .unwrap();
         let parsed = TestOptions::try_from(parsed).unwrap();
-        assert_eq!(parsed.boo, true);
+        assert!(parsed.boo);
         assert_eq!(parsed.count, 3);
         assert_eq!(parsed.long_name, "alice");
         assert!(parsed.rev.is_empty());
 
         let parsed = ParseOptions::new()
             .flags(TestOptions::flags())
-            .parse_args(&vec![
+            .parse_args(&[
                 "cmdname",
                 "--no-boo",
                 "--long-name=bob",
@@ -429,25 +429,25 @@ mod tests {
             ])
             .unwrap();
         let parsed = TestOptions::try_from(parsed).unwrap();
-        assert_eq!(parsed.boo, false);
-        assert_eq!(parsed.foo, false);
+        assert!(!parsed.boo);
+        assert!(!parsed.foo);
         assert_eq!(parsed.count, 12);
         assert_eq!(parsed.long_name, "bob");
         assert_eq!(parsed.rev, vec!["b", "a"]);
 
         let parsed = ParseOptions::new()
             .flags(TestOptions::flags())
-            .parse_args(&vec!["--no-boo", "arg0", "arg1"])
+            .parse_args(&["--no-boo", "arg0", "arg1"])
             .unwrap();
         // arg1 is unexpected
         assert!(TestOptions::try_from(parsed).is_err());
 
         let parsed = ParseOptions::new()
             .flags(AnotherTestOptions::flags())
-            .parse_args(&vec!["--no-follow", "foo", "b", "--follow", "c"])
+            .parse_args(&["--no-follow", "foo", "b", "--follow", "c"])
             .unwrap();
         let parsed = AnotherTestOptions::try_from(parsed).unwrap();
-        assert_eq!(parsed.follow, true);
+        assert!(parsed.follow);
         assert_eq!(parsed.pats, vec!["b", "c"]);
         assert_eq!(parsed.name, "foo");
     }
@@ -456,7 +456,7 @@ mod tests {
     fn test_composed_options() {
         let parsed = ParseOptions::new()
             .flags(ComposedOptions::flags())
-            .parse_args(&vec![
+            .parse_args(&[
                 "cmdname",
                 "--no-new",
                 "--foo=true",
@@ -467,10 +467,10 @@ mod tests {
             ])
             .unwrap();
         let parsed = ComposedOptions::try_from(parsed).unwrap();
-        assert_eq!(parsed.new, false);
+        assert!(!parsed.new);
         assert_eq!(parsed.test_opts.count, 5);
-        assert_eq!(parsed.test_opts.foo, true);
-        assert_eq!(parsed.foo, true);
+        assert!(parsed.test_opts.foo);
+        assert!(parsed.foo);
         assert_eq!(parsed.args, vec!["1", "6"]);
     }
 }

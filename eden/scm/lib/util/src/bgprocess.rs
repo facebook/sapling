@@ -35,13 +35,13 @@ pub fn run_background(mut command: Command) -> Result<Child> {
 
 #[cfg(test)]
 mod tests {
-    use tempdir::TempDir;
+    use tempfile::TempDir;
 
     use super::*;
 
     #[test]
     fn test_basic() {
-        let dir = TempDir::new("test_hgrcpath").unwrap();
+        let dir = TempDir::with_prefix("test_hgrcpath.").unwrap();
         let file_path = dir.path().join("temp_file");
 
         #[cfg(unix)]

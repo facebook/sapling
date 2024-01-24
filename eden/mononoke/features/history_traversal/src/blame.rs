@@ -18,12 +18,13 @@ use context::CoreContext;
 use futures::stream;
 use futures::stream::TryStreamExt;
 use futures::try_join;
+use futures_stats::TimedFutureExt;
 use manifest::ManifestOps;
 use mononoke_types::blame_v2::BlameParent;
 use mononoke_types::blame_v2::BlameV2;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileUnodeId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use unodes::RootUnodeManifestId;
 
 use crate::common::find_possible_mutable_ancestors;
@@ -34,7 +35,7 @@ async fn fetch_mutable_blame(
     ctx: &CoreContext,
     repo: &impl Repo,
     my_csid: ChangesetId,
-    path: &MPath,
+    path: &NonRootMPath,
     seen: &mut HashSet<ChangesetId>,
 ) -> Result<(BlameV2, FileUnodeId), BlameError> {
     let mutable_renames = repo.mutable_renames();
@@ -45,7 +46,7 @@ async fn fetch_mutable_blame(
 
     // First case. Fix up blame directly if I have a mutable rename attached
     let my_mutable_rename = mutable_renames
-        .get_rename(ctx, my_csid, Some(path.clone()))
+        .get_rename(ctx, my_csid, path.clone().into())
         .await?;
     if let Some(rename) = my_mutable_rename {
         // We have a mutable rename, which replaces our p1 and our path.
@@ -61,12 +62,19 @@ async fn fetch_mutable_blame(
         // and there is a mutable rename saying that a's parent should be e, not b.
         // After this, because we did the blame a->e, and we fetched a mutant blame
         // for e, we're guaranteed to be done, even if there are mutations in e's history.
-        let src_path = rename
-            .src_path()
+        let rename_src_path = rename.src_path().clone().into_optional_non_root_path();
+        let src_path = rename_src_path
+            .as_ref()
             .ok_or_else(|| anyhow!("Mutable rename points file to root directory"))?
             .clone();
-        let (src_blame, src_content) =
-            blame_with_content(ctx, repo, rename.src_cs_id(), rename.src_path(), true).await?;
+        let (src_blame, src_content) = blame_with_content(
+            ctx,
+            repo,
+            rename.src_cs_id(),
+            rename_src_path.as_ref(),
+            true,
+        )
+        .await?;
 
         let blobstore = repo.repo_blobstore_arc();
         let unode = repo
@@ -74,7 +82,7 @@ async fn fetch_mutable_blame(
             .derive::<RootUnodeManifestId>(ctx, my_csid)
             .await?
             .manifest_unode_id()
-            .find_entry(ctx.clone(), blobstore, Some(path.clone()))
+            .find_entry(ctx.clone(), blobstore, path.clone().into())
             .await?
             .context("Unode missing")?
             .into_leaf()
@@ -114,7 +122,7 @@ async fn fetch_mutable_blame(
     // renames attached to d or e; however, if c does not, but d and e do, then we want to consider
     // the mutable renames for both d and e.
     let mut possible_mutable_ancestors =
-        find_possible_mutable_ancestors(ctx, repo, my_csid, Some(path)).await?;
+        find_possible_mutable_ancestors(ctx, repo, my_csid, path.into()).await?;
 
     // Fetch the immutable blame, which we're going to mutate
     let (mut blame, unode) = fetch_immutable_blame(ctx, repo, my_csid, path).await?;
@@ -165,7 +173,7 @@ async fn fetch_immutable_blame(
     ctx: &CoreContext,
     repo: &impl Repo,
     csid: ChangesetId,
-    path: &MPath,
+    path: &NonRootMPath,
 ) -> Result<(BlameV2, FileUnodeId), BlameError> {
     fetch_blame_v2(ctx, repo.as_blob_repo(), csid, path.clone()).await
 }
@@ -174,12 +182,18 @@ pub async fn blame(
     ctx: &CoreContext,
     repo: &impl Repo,
     csid: ChangesetId,
-    path: Option<&MPath>,
+    path: Option<&NonRootMPath>,
     follow_mutable_file_history: bool,
 ) -> Result<(BlameV2, FileUnodeId), BlameError> {
     let path = path.ok_or_else(|| anyhow!("Blame is not available for directory: `/`"))?;
     if follow_mutable_file_history {
-        fetch_mutable_blame(ctx, repo, csid, path, &mut HashSet::new()).await
+        let (stats, result) = fetch_mutable_blame(ctx, repo, csid, path, &mut HashSet::new())
+            .timed()
+            .await;
+        let mut scuba = ctx.scuba().clone();
+        scuba.add_future_stats(&stats);
+        scuba.log_with_msg("Computed mutable blame", None);
+        result
     } else {
         fetch_immutable_blame(ctx, repo, csid, path).await
     }
@@ -192,7 +206,7 @@ pub async fn blame_with_content(
     ctx: &CoreContext,
     repo: &impl Repo,
     csid: ChangesetId,
-    path: Option<&MPath>,
+    path: Option<&NonRootMPath>,
     follow_mutable_file_history: bool,
 ) -> Result<(BlameV2, Bytes), BlameError> {
     let (blame, file_unode_id) = blame(ctx, repo, csid, path, follow_mutable_file_history).await?;

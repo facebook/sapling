@@ -87,6 +87,10 @@ impl<B: Blobstore + BlobstorePutOps> Blobstore for LogBlob<B> {
 
         match result {
             Ok(Some(ref data)) => {
+                ctx.perf_counters().set_max_counter(
+                    PerfCounterType::BlobGetsMaxSize,
+                    data.len().try_into().unwrap_or(0),
+                );
                 ctx.perf_counters().add_to_counter(
                     PerfCounterType::BlobGetsTotalSize,
                     data.len().try_into().unwrap_or(0),
@@ -177,6 +181,10 @@ impl<B: BlobstorePutOps> LogBlob<B> {
         );
 
         if result.is_ok() {
+            ctx.perf_counters().set_max_counter(
+                PerfCounterType::BlobPutsMaxSize,
+                size.try_into().unwrap_or(0),
+            );
             ctx.perf_counters().add_to_counter(
                 PerfCounterType::BlobPutsTotalSize,
                 size.try_into().unwrap_or(0),

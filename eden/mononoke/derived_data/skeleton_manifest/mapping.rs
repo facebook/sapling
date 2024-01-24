@@ -26,7 +26,7 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::FileType;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use mononoke_types::SkeletonManifestId;
 
 use crate::batch::derive_skeleton_manifests_in_batch;
@@ -163,7 +163,9 @@ impl BonsaiDerivable for RootSkeletonManifestId {
 
 impl_bonsai_derived_via_manager!(RootSkeletonManifestId);
 
-pub fn get_file_changes(bcs: &BonsaiChangeset) -> Vec<(MPath, Option<(ContentId, FileType)>)> {
+pub fn get_file_changes(
+    bcs: &BonsaiChangeset,
+) -> Vec<(NonRootMPath, Option<(ContentId, FileType)>)> {
     bcs.file_changes()
         .map(|(mpath, file_change)| {
             (

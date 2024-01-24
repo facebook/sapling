@@ -680,7 +680,7 @@ async fn fetch_single(
         .try_collect::<Vec<_>>()
         .await
         .unwrap()
-        .get(0)
+        .first()
         .unwrap()
         .clone()
 }

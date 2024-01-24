@@ -9,11 +9,14 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 
+use anyhow::anyhow;
 use anyhow::Result;
 use types::RepoPathBuf;
 
+use crate::pattern::explicit_pattern_kind;
 use crate::pattern::normalize_patterns;
 use crate::pattern::Pattern;
+use crate::regex_matcher::SlowRegexMatcher;
 use crate::AlwaysMatcher;
 use crate::DifferenceMatcher;
 use crate::DynMatcher;
@@ -26,7 +29,7 @@ use crate::TreeMatcher;
 use crate::UnionMatcher;
 
 /// Create top level matcher from non-normalized CLI input.
-pub fn cli_matcher(
+pub fn cli_matcher<R>(
     patterns: &[String],
     include: &[String],
     exclude: &[String],
@@ -34,7 +37,15 @@ pub fn cli_matcher(
     case_sensitive: bool,
     root: &Path,
     cwd: &Path,
-) -> Result<HintedMatcher> {
+    stdin: &mut R,
+) -> Result<HintedMatcher>
+where
+    R: std::io::Read,
+{
+    // This expands relpath patterns as globs on Windows to emulate shell expansion.
+    let patterns = expand_globs(patterns, default_pattern_type)?;
+    let patterns = &patterns;
+
     cli_matcher_with_filesets(
         patterns,
         None,
@@ -46,11 +57,15 @@ pub fn cli_matcher(
         case_sensitive,
         root,
         cwd,
+        stdin,
     )
 }
 
-/// Create top level matcher from non-normalized CLI input.
-pub fn cli_matcher_with_filesets(
+/// Create top level matcher from non-normalized CLI input given
+/// expanded filesets. The only intended external caller of this is
+/// Python, where some processing has already happende (e.g. glob
+/// expansion).
+pub fn cli_matcher_with_filesets<R>(
     patterns: &[String],
     patterns_filesets: Option<&[RepoPathBuf]>,
     include: &[String],
@@ -61,7 +76,11 @@ pub fn cli_matcher_with_filesets(
     case_sensitive: bool,
     root: &Path,
     cwd: &Path,
-) -> Result<HintedMatcher> {
+    stdin: &mut R,
+) -> Result<HintedMatcher>
+where
+    R: std::io::Read,
+{
     let mut all_warnings = Vec::new();
 
     let mut normalize = |pats: &[_], default, force_recursive| -> Result<Option<Vec<Pattern>>> {
@@ -69,7 +88,7 @@ pub fn cli_matcher_with_filesets(
             Ok(None)
         } else {
             let (normalized, warnings) =
-                normalize_patterns(pats, default, root, cwd, force_recursive)?;
+                normalize_patterns(pats, default, root, cwd, force_recursive, Some(stdin))?;
 
             all_warnings.extend(warnings);
 
@@ -101,7 +120,7 @@ pub fn cli_matcher_with_filesets(
     for fs in [&patterns_filesets, &include_filesets, &exclude_filesets] {
         if fs.map_or(false, |fs| fs.is_empty()) {
             // TODO: pipe the original fileset string to this warning
-            all_warnings.push(format!("fileset evaluated to zero files"));
+            all_warnings.push("fileset evaluated to zero files".to_string());
             break;
         }
     }
@@ -110,6 +129,47 @@ pub fn cli_matcher_with_filesets(
         .include(&include_matcher)
         .exclude(&exclude_matcher)
         .with_warnings(all_warnings))
+}
+
+// "Manually" expand globs in relpath patterns on Windows.
+// This emulates non-Windows shell expansion.
+fn expand_globs(pats: &[String], default_pattern_type: PatternKind) -> Result<Vec<String>> {
+    if !cfg!(windows) || default_pattern_type != PatternKind::RelPath {
+        return Ok(pats.to_vec());
+    }
+
+    let mut expanded: Vec<String> = Vec::with_capacity(pats.len());
+    for pat in pats {
+        if explicit_pattern_kind(pat).is_some() {
+            // Don't expand paths with explicit "kind". This includes "relpath:*foo".
+            expanded.push(pat.clone());
+        } else {
+            match glob::glob(pat) {
+                Ok(paths) => {
+                    let mut globbed = paths
+                        .map(|p| {
+                            let p = p?;
+                            p.to_str()
+                                .map(|s| s.to_string())
+                                .ok_or_else(|| anyhow!("invalid file path: {}", p.display()))
+                        })
+                        // Propagate permission errors.
+                        .collect::<Result<Vec<_>>>()?;
+                    if globbed.is_empty() {
+                        // Glob didn't match any files - keep original pattern. AFAIK this serves two purposes:
+                        //   1. Avoids "pats" becoming empty and accidentally matching everything.
+                        //   2. Keeps "pat" in list of exact files so user will see warning "{pat}: no such file".
+                        expanded.push(pat.clone());
+                    } else {
+                        expanded.append(&mut globbed);
+                    }
+                }
+                // Invalid glob pattern - assume it wasn't a glob.
+                Err(_) => expanded.push(pat.clone()),
+            }
+        }
+    }
+    Ok(expanded)
 }
 
 /// Build matcher from normalized patterns.
@@ -126,33 +186,36 @@ pub fn build_matcher(
     include: &[Pattern],
     exclude: &[Pattern],
     case_sensitive: bool,
-) -> Result<DynMatcher> {
-    let mut m: DynMatcher = if patterns.is_empty() {
-        Arc::new(AlwaysMatcher::new())
+) -> Result<(DynMatcher, Vec<String>)> {
+    let (mut m, mut warnings) = if patterns.is_empty() {
+        (Arc::new(AlwaysMatcher::new()) as DynMatcher, Vec::new())
     } else {
         build_matcher_from_patterns(patterns, case_sensitive)?
     };
 
     if !include.is_empty() {
-        let im = build_matcher_from_patterns(include, case_sensitive)?;
+        let (im, w) = build_matcher_from_patterns(include, case_sensitive)?;
         m = Arc::new(IntersectMatcher::new(vec![m, im]));
+        warnings.extend(w);
     }
 
     if !exclude.is_empty() {
-        let em = build_matcher_from_patterns(exclude, case_sensitive)?;
+        let (em, w) = build_matcher_from_patterns(exclude, case_sensitive)?;
         m = Arc::new(DifferenceMatcher::new(m, em));
+        warnings.extend(w);
     }
 
-    Ok(m)
+    Ok((m, warnings))
 }
 
 pub(crate) fn build_matcher_from_patterns(
     patterns: &[Pattern],
     case_sensitive: bool,
-) -> Result<DynMatcher> {
+) -> Result<(DynMatcher, Vec<String>)> {
     assert!(!patterns.is_empty(), "patterns should not be empty");
 
     let mut matchers: Vec<DynMatcher> = Vec::new();
+    let mut warnings: Vec<String> = Vec::new();
 
     let grouped_patterns = group_by_pattern_kind(patterns);
     for (kind, pats) in &grouped_patterns {
@@ -160,18 +223,23 @@ pub(crate) fn build_matcher_from_patterns(
             Arc::new(TreeMatcher::from_rules(pats.iter(), case_sensitive)?)
         } else if kind.is_regex() {
             let regex_pat = format!("(?:{})", pats.join("|"));
-            Arc::new(RegexMatcher::new(&regex_pat, case_sensitive)?)
+            match RegexMatcher::new(&regex_pat, case_sensitive) {
+                Ok(m) => Arc::new(m),
+                // regex_automata doesn't export error introspection, so just try fancy on any error.
+                Err(_) => {
+                    let m = Arc::new(SlowRegexMatcher::new(&regex_pat, case_sensitive)?);
+                    tracing::trace!(target: "pathmatcher_info", fancy_regex=true);
+                    warnings.push("fancy regexes are deprecated and may stop working".to_string());
+                    m
+                }
+            }
         } else {
             return Err(Error::UnsupportedPatternKind(kind.name().to_string()).into());
         };
         matchers.push(m);
     }
 
-    if matchers.len() == 1 {
-        Ok(matchers.remove(0))
-    } else {
-        Ok(Arc::new(UnionMatcher::new(matchers)))
-    }
+    Ok((UnionMatcher::new_or_single(matchers), warnings))
 }
 
 fn group_by_pattern_kind(patterns: &[Pattern]) -> HashMap<PatternKind, Vec<String>> {
@@ -201,7 +269,7 @@ mod tests {
     #[test]
     fn test_build_matcher_with_all_empty() {
         // AlwaysMatcher
-        let m = build_matcher(&[], &[], &[], true).unwrap();
+        let m = build_matcher(&[], &[], &[], true).unwrap().0;
 
         assert!(m.matches_file(path!("")).unwrap());
         assert!(m.matches_file(path!("a")).unwrap());
@@ -215,7 +283,7 @@ mod tests {
         let include = &[Pattern::new(PatternKind::Glob, "a/t1*/**".to_string())];
         let exclude = &[Pattern::new(PatternKind::Glob, "a/t11/**".to_string())];
 
-        let m = build_matcher(patterns, include, exclude, true).unwrap();
+        let m = build_matcher(patterns, include, exclude, true).unwrap().0;
 
         assert_eq!(
             m.matches_directory(path!("a")).unwrap(),
@@ -249,7 +317,7 @@ mod tests {
         let include = &[Pattern::new(PatternKind::Glob, "a/t1*/**".to_string())];
         let exclude = &[Pattern::new(PatternKind::Glob, "a/t11/**".to_string())];
 
-        let m = build_matcher(&[], include, exclude, true).unwrap();
+        let m = build_matcher(&[], include, exclude, true).unwrap().0;
 
         assert_eq!(
             m.matches_directory(path!("a/t1a")).unwrap(),
@@ -266,7 +334,7 @@ mod tests {
         let patterns = &[Pattern::new(PatternKind::RE, r"a/t\d+.*\.py".to_string())];
         let exclude = &[Pattern::new(PatternKind::Glob, "a/t11/**".to_string())];
 
-        let m = build_matcher(patterns, &[], exclude, true).unwrap();
+        let m = build_matcher(patterns, &[], exclude, true).unwrap().0;
 
         assert_eq!(
             m.matches_directory(path!("a/t1")).unwrap(),
@@ -283,7 +351,7 @@ mod tests {
         let patterns = &[Pattern::new(PatternKind::RE, r"a/t\d+.*\.py".to_string())];
         let include = &[Pattern::new(PatternKind::Glob, "a/t1*/**".to_string())];
 
-        let m = build_matcher(patterns, include, &[], true).unwrap();
+        let m = build_matcher(patterns, include, &[], true).unwrap().0;
 
         assert_eq!(
             m.matches_directory(path!("a/t1")).unwrap(),
@@ -298,13 +366,14 @@ mod tests {
     #[test]
     fn test_cli_matcher_exact_precedence() -> Result<()> {
         let m = cli_matcher(
-            &vec!["path:foo".to_string()],
+            &["path:foo".to_string()],
             &[],
-            &vec!["path:".to_string()],
+            &["path:".to_string()],
             PatternKind::Glob,
             true,
             "/root".as_ref(),
             "/root/cwd".as_ref(),
+            &mut std::io::empty(),
         )?;
 
         assert!(m.matches_file(RepoPath::from_str("foo")?)?);
@@ -317,16 +386,17 @@ mod tests {
         let dir = tempfile::TempDir::new()?;
 
         let listfile = dir.path().join("listfile");
-        std::fs::write(&listfile, "")?;
+        fs_err::write(&listfile, "")?;
 
         let m = cli_matcher(
-            &vec![format!("listfile:{}", listfile.to_str().unwrap())],
+            &[format!("listfile:{}", listfile.to_str().unwrap())],
             &[],
             &[],
             PatternKind::Glob,
             true,
             "/root".as_ref(),
             "/root/cwd".as_ref(),
+            &mut std::io::empty(),
         )?;
 
         assert!(!m.matches_file(RepoPath::from_str("foo")?)?);
@@ -339,10 +409,10 @@ mod tests {
         let dir = tempfile::TempDir::new()?;
 
         let listfile = dir.path().join("listfile");
-        std::fs::write(&listfile, "")?;
+        fs_err::write(&listfile, "")?;
 
         let m = cli_matcher_with_filesets(
-            &vec![
+            &[
                 format!("listfile:{}", listfile.to_str().unwrap()),
                 "foo*".to_string(),
             ],
@@ -355,6 +425,7 @@ mod tests {
             true,
             "/root".as_ref(),
             "/root/cwd".as_ref(),
+            &mut std::io::empty(),
         )?;
 
         assert_eq!(
@@ -368,6 +439,78 @@ mod tests {
                 "fileset evaluated to zero files".to_string(),
             ]
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_fancy_regex_compat() -> Result<()> {
+        let m = cli_matcher(
+            &["re:(?<!foo)bar".to_string()],
+            &[],
+            &[],
+            PatternKind::RelPath,
+            true,
+            "/root".as_ref(),
+            "/root/cwd".as_ref(),
+            &mut std::io::empty(),
+        )?;
+
+        assert!(m.matches_file(path!("bar"))?);
+        assert!(!m.matches_file(path!("foobar"))?);
+
+        assert_eq!(
+            m.warnings(),
+            &["fancy regexes are deprecated and may stop working".to_string()]
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_expand_globs() -> Result<()> {
+        let dir = tempfile::TempDir::new()?;
+
+        let foo1 = dir.path().join("foo1");
+        fs_err::write(&foo1, "")?;
+
+        let foo2 = dir.path().join("foo2");
+        fs_err::write(&foo2, "")?;
+
+        let foo_glob = dir
+            .path()
+            .join("f*")
+            .into_os_string()
+            .into_string()
+            .unwrap();
+
+        let pats = &[
+            format!("relpath:{}", foo_glob),
+            "no".to_string(),
+            foo_glob.clone(),
+        ];
+
+        let got = expand_globs(pats, PatternKind::RelPath)?;
+
+        if cfg!(windows) {
+            assert_eq!(
+                got,
+                vec![
+                    // Not expanded - has explicit kind.
+                    format!("relpath:{}", foo_glob),
+                    // Not expanded - doesn't match any files.
+                    "no".to_string(),
+                    // Expanded into file names.
+                    foo1.into_os_string().into_string().unwrap(),
+                    foo2.into_os_string().into_string().unwrap(),
+                ]
+            );
+        } else {
+            assert_eq!(got, pats.to_vec());
+        }
+
+        let got = expand_globs(pats, PatternKind::Glob)?;
+        assert_eq!(got, pats.to_vec());
 
         Ok(())
     }

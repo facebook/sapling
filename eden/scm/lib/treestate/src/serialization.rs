@@ -101,7 +101,7 @@ impl Serializable for AggregatedState {
 impl Serializable for Box<[u8]> {
     fn serialize(&self, w: &mut dyn Write) -> Result<()> {
         w.write_vlq(self.len())?;
-        w.write_all(&self)?;
+        w.write_all(self)?;
 
         Ok(())
     }
@@ -122,7 +122,7 @@ impl Serializable for FileStateV2 {
         w.write_vlq(self.mtime)?;
 
         if self.state.contains(StateFlags::COPIED) {
-            if let &Some(ref copied) = &self.copied {
+            if let Some(copied) = &self.copied {
                 copied.serialize(w)?;
             } else {
                 panic!("COPIED flag set without copied path");
@@ -208,11 +208,11 @@ impl<T: Serializable + Clone> Serializable for NodeEntryMap<T> {
         w.write_vlq(self.len())?;
         for (name, entry) in self.iter() {
             match entry {
-                &NodeEntry::File(ref file) => {
+                NodeEntry::File(file) => {
                     w.write_u8(b'f')?;
                     file.serialize(w)?;
                 }
-                &NodeEntry::Directory(ref node) => {
+                NodeEntry::Directory(node) => {
                     w.write_u8(b'd')?;
                     w.write_vlq(node.id.unwrap().0)?;
                 }
@@ -289,7 +289,7 @@ impl Serializable for Metadata {
                 continue;
             }
 
-            if k.contains(&['=', '\0']) || v.contains('\0') {
+            if k.contains(['=', '\0']) || v.contains('\0') {
                 return Err(anyhow!("invalid metadata: {k:?} -> {v:?}"));
             }
 

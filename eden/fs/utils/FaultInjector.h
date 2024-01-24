@@ -73,60 +73,69 @@ class FaultInjector {
    * the location in the code where the fault is being checked.  The value
    * string may contain some additional runtime-specified value to filter the
    * fault to only trigger when this code path is hit with specific arguments.
+   *
+   * keyValues may consist of a single std::string_view which will be passed
+   * directly to checkImpl.  If keyValues is multiple arguments or of another
+   * type, the arguments will be converted to strings using fmt and joined with
+   * ", " as the delimiter.  E.g., calling check("myFault", "foo", "bar") will
+   * use "foo, bar" as the key.
+   *
+   * This string construction is only done if fault injection is enabled,
+   * and so has no extra overhead if fault injection is disabled.
    */
-  void check(std::string_view keyClass, std::string_view keyValue) {
+  template <typename... Args>
+  void check(std::string_view keyClass, Args&&... keyValues) {
     if (UNLIKELY(enabled_)) {
-      return checkImpl(keyClass, keyValue);
+      checkImpl(keyClass, constructKey(std::forward<Args>(keyValues)...));
     }
   }
 
   /**
    * Check for an injected fault with the specified key.
    *
-   * This is an async-aware implementation of check() that returns a SemiFuture.
-   * This can also be used in coroutine contexts, since SemiFuture objects can
-   * be co_await'ed.
+   * This is an async-aware implementation of check() that returns an
+   * ImmediateFuture.
    *
    * If fault injection is disabled or there is no matching fault, this method
-   * will return a SemiFuture that is immediately ready.  However, if there is a
-   * matching fault that would block execution this method immediately returns a
-   * SemiFuture that will not be ready until the fault is complete.
+   * will return an ImmediateFuture that is immediately ready.  However, if
+   * there is a matching fault that would block execution this method
+   * immediately returns an ImmediateFuture that will not be ready until the
+   * fault is complete.
+   *
+   * The keyValues parameters are handled the same as in check(), above.
    */
+  template <typename... Args>
   FOLLY_NODISCARD ImmediateFuture<folly::Unit> checkAsync(
       std::string_view keyClass,
-      std::string_view keyValue) {
+      Args&&... keyValues) {
     if (UNLIKELY(enabled_)) {
-      return checkAsyncImpl(keyClass, keyValue);
+      return checkAsyncImpl(
+          keyClass, constructKey(std::forward<Args>(keyValues)...));
     }
     return folly::unit;
   }
 
   /**
-   * Check a fault, using a dynamically constructed key.
+   * Check for an injected fault with the specified key.
    *
-   * This helper method checks for a fault using multiple arguments to construct
-   * the key value.  The value arguments are converted to strings using
-   * fmt and joined with ", " as the delimiter.  e.g., calling check("myFault",
-   * "foo", "bar") will use "foo, bar" as the key.
+   * This is a synchronous implementation of check() that returns a Try rather
+   * than throw an exception.
    *
-   * This string construction is only done if fault injection is enabled,
-   * and so has no extra overhead if fault injection is disabled.
+   * If fault injection is disabled or there is no matching fault, this method
+   * will return a Try<Unit>.  However, if there is a matching fault that would
+   * block execution this method blocks as with check().
+   *
+   * The keyValues parameters are handled the same as in check(), above.
    */
   template <typename... Args>
-  void check(std::string_view keyClass, Args&&... args) {
-    if (UNLIKELY(enabled_)) {
-      checkImpl(keyClass, constructKey(std::forward<Args>(args)...));
-    }
-  }
-  template <typename... Args>
-  FOLLY_NODISCARD ImmediateFuture<folly::Unit> checkAsync(
+  FOLLY_NODISCARD folly::Try<folly::Unit> checkTry(
       std::string_view keyClass,
-      Args&&... args) {
+      Args&&... keyValues) {
     if (UNLIKELY(enabled_)) {
-      return checkAsyncImpl(
-          keyClass, constructKey(std::forward<Args>(args)...));
+      return checkTryImpl(
+          keyClass, constructKey(std::forward<Args>(keyValues)...));
     }
-    return folly::unit;
+    return folly::Try{folly::unit};
   }
 
   /**
@@ -273,9 +282,20 @@ class FaultInjector {
         fmt::join(std::make_tuple<const Args&...>(args...), ", "));
   }
 
+  // An overload to skip string construction for the degenerate case of a single
+  // string_view argument to the check function templates.
+  std::string_view constructKey(std::string_view s) {
+    return s;
+  }
+
   FOLLY_NODISCARD ImmediateFuture<folly::Unit> checkAsyncImpl(
       std::string_view keyClass,
       std::string_view keyValue);
+
+  folly::Try<folly::Unit> checkTryImpl(
+      std::string_view keyClass,
+      std::string_view keyValue);
+
   void checkImpl(std::string_view keyClass, std::string_view keyValue);
 
   void injectFault(

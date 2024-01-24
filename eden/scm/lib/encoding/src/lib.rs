@@ -52,7 +52,7 @@ pub fn path_to_local_cstring(path: &Path) -> CString {
 /// copies data. This is needed to bridge the gap between
 /// `osstring_to_local_bytes` return values on different OSes
 pub fn osstring_to_local_cstring(os: &OsStr) -> CString {
-    let bytes: Vec<u8> = osstring_to_local_bytes(&os).unwrap().to_vec();
+    let bytes: Vec<u8> = osstring_to_local_bytes(os).unwrap().to_vec();
     unsafe { CString::from_vec_unchecked(bytes) }
 }
 

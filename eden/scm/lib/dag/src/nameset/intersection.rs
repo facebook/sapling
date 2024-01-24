@@ -47,13 +47,13 @@ impl Iter {
         loop {
             let result = self.iter.as_mut().next().await;
             if let Some(Ok(ref name)) = result {
-                match self.rhs.contains(&name).await {
+                match self.rhs.contains(name).await {
                     Err(err) => break Some(Err(err)),
                     Ok(false) => {
                         // Check if we can stop iteration early using hints.
                         if let Some(ref cond) = self.stop_condition {
                             if let Some(id_convert) = self.rhs.id_convert() {
-                                if let Ok(Some(id)) = id_convert.vertex_id_optional(&name).await {
+                                if let Ok(Some(id)) = id_convert.vertex_id_optional(name).await {
                                     if cond.should_stop_with_id(id) {
                                         self.ended = true;
                                         return None;
@@ -155,23 +155,15 @@ impl AsyncNameSetQuery for IntersectionSet {
         let stop_condition = if !self.is_rhs_id_map_comapatible() {
             None
         } else if self.lhs.hints().contains(Flags::ID_ASC) {
-            if let Some(id) = self.rhs.hints().max_id() {
-                Some(StopCondition {
-                    id,
-                    order: Ordering::Greater,
-                })
-            } else {
-                None
-            }
+            self.rhs.hints().max_id().map(|id| StopCondition {
+                id,
+                order: Ordering::Greater,
+            })
         } else if self.lhs.hints().contains(Flags::ID_DESC) {
-            if let Some(id) = self.rhs.hints().min_id() {
-                Some(StopCondition {
-                    id,
-                    order: Ordering::Less,
-                })
-            } else {
-                None
-            }
+            self.rhs.hints().min_id().map(|id| StopCondition {
+                id,
+                order: Ordering::Less,
+            })
         } else {
             None
         };
@@ -189,23 +181,15 @@ impl AsyncNameSetQuery for IntersectionSet {
         let stop_condition = if !self.is_rhs_id_map_comapatible() {
             None
         } else if self.lhs.hints().contains(Flags::ID_DESC) {
-            if let Some(id) = self.rhs.hints().max_id() {
-                Some(StopCondition {
-                    id,
-                    order: Ordering::Greater,
-                })
-            } else {
-                None
-            }
+            self.rhs.hints().max_id().map(|id| StopCondition {
+                id,
+                order: Ordering::Greater,
+            })
         } else if self.lhs.hints().contains(Flags::ID_ASC) {
-            if let Some(id) = self.rhs.hints().min_id() {
-                Some(StopCondition {
-                    id,
-                    order: Ordering::Less,
-                })
-            } else {
-                None
-            }
+            self.rhs.hints().min_id().map(|id| StopCondition {
+                id,
+                order: Ordering::Less,
+            })
         } else {
             None
         };

@@ -15,7 +15,9 @@
 #include <folly/io/IOBuf.h>
 #include <folly/json.h>
 #include <optional>
+
 #include "eden/fs/utils/FileUtils.h"
+#include "eden/fs/utils/FilterUtils.h"
 #include "eden/fs/utils/PathMap.h"
 #include "eden/fs/utils/SystemError.h"
 #include "eden/fs/utils/Throw.h"
@@ -190,6 +192,20 @@ ParentCommit CheckoutConfig::getParentCommit() const {
           "unsupported eden SNAPSHOT file format (version {}): {}",
           uint32_t{version},
           snapshotFile);
+  }
+}
+
+std::optional<std::string> CheckoutConfig::getLastActiveFilter() const {
+  if (toBackingStoreType(repoType_) == BackingStoreType::FILTEREDHG) {
+    auto parent = getParentCommit().getWorkingCopyParent();
+    // It would be better to use the BackingStore to parse the FilterId from the
+    // Snapshot file, but the BackingStore is not available to us because the
+    // CheckoutConfig is created prior to BackingStore creation. Therefore, we
+    // need to use this utility function instead.
+    auto [_, filterId] = parseFilterIdFromRootId(parent);
+    return filterId;
+  } else {
+    return std::nullopt;
   }
 }
 

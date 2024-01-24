@@ -1,0 +1,36 @@
+load("//eden/scm:targets.bzl", "rust_python_library")
+
+oncall("mercurial_release")
+
+rust_python_library(
+    name = "pydag",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "cpython": {
+                        "features": [],
+                        "git": None,
+                        "rev": None,
+                    },
+                },
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:parking_lot",
+        "//eden/scm/lib/async-runtime:async-runtime",
+        "//eden/scm/lib/cpython-ext:cpython-ext",
+        "//eden/scm/lib/dag:dag",
+        "//eden/scm/lib/hgcommits:hgcommits",
+        "//eden/scm/lib/minibytes:minibytes",
+        "//eden/scm/lib/storemodel:storemodel",
+        "//eden/scm/saplingnative/bindings/modules/pyedenapi:pyedenapi",
+        "//eden/scm/saplingnative/bindings/modules/pyio:pyio",
+        "//eden/scm/saplingnative/bindings/modules/pymetalog:pymetalog",
+    ],
+)

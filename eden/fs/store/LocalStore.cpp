@@ -10,7 +10,6 @@
 #include <folly/ExceptionWrapper.h>
 #include <folly/Expected.h>
 #include <folly/String.h>
-#include <folly/futures/Future.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <folly/lang/Bits.h>
@@ -35,20 +34,22 @@ using std::string;
 namespace facebook::eden {
 
 namespace {
-template <typename T, typename C, typename F>
+template <typename T, typename F>
 FOLLY_ALWAYS_INLINE std::shared_ptr<T> parse(
     const ObjectId& id,
     std::string_view context,
     const EdenStatsPtr& stats,
-    C failureCounter,
+    StatsGroupBase::Counter LocalStoreStats::*successCounter,
+    StatsGroupBase::Counter LocalStoreStats::*errorCounter,
     F&& fn) {
   std::shared_ptr<T> def(nullptr);
   if (auto ew = folly::try_and_catch(
           [&def, fn = std::forward<F>(fn)]() { def = fn(); })) {
-    stats->increment(failureCounter);
+    stats->increment(errorCounter);
     XLOGF(ERR, "Failed to get {} for {}: {}", context, id, ew.what());
   }
 
+  stats->increment(successCounter);
   return def;
 }
 } // namespace
@@ -100,10 +101,10 @@ ImmediateFuture<StoreResult> LocalStore::getImmediateFuture(
   return makeImmediateFutureWith([&] { return get(keySpace, id); });
 }
 
-folly::Future<std::vector<StoreResult>> LocalStore::getBatch(
+ImmediateFuture<std::vector<StoreResult>> LocalStore::getBatch(
     KeySpace keySpace,
     const std::vector<folly::ByteRange>& keys) const {
-  return folly::makeFutureWith([keySpace, keys, this] {
+  return makeImmediateFutureWith([keySpace, keys, this] {
     std::vector<StoreResult> results;
     for (auto& key : keys) {
       results.emplace_back(get(keySpace, key));
@@ -123,7 +124,8 @@ ImmediateFuture<TreePtr> LocalStore::getTree(const ObjectId& id) const {
                   id,
                   "Tree",
                   stats,
-                  &LocalStoreStats::getTreeFailure,
+                  &LocalStoreStats::getTreeSuccess,
+                  &LocalStoreStats::getTreeError,
                   [&id, &data]() {
                     auto tree =
                         Tree::tryDeserialize(id, StringPiece{data.bytes()});
@@ -151,7 +153,8 @@ ImmediateFuture<BlobPtr> LocalStore::getBlob(const ObjectId& id) const {
                   id,
                   "Blob",
                   stats,
-                  &LocalStoreStats::getBlobFailure,
+                  &LocalStoreStats::getBlobSuccess,
+                  &LocalStoreStats::getBlobError,
                   [&data]() {
                     auto buf = data.extractIOBuf();
                     return deserializeGitBlob(&buf);
@@ -175,7 +178,8 @@ ImmediateFuture<BlobMetadataPtr> LocalStore::getBlobMetadata(
                   id,
                   "BlobMetadata",
                   stats,
-                  &LocalStoreStats::getBlobMetadataFailure,
+                  &LocalStoreStats::getBlobMetadataSuccess,
+                  &LocalStoreStats::getBlobMetadataError,
                   [&id, &data]() {
                     return SerializedBlobMetadata::parse(id, data);
                   });
@@ -279,7 +283,7 @@ void LocalStore::WriteBatch::putBlob(const ObjectId& id, const Blob* blob) {
   put(KeySpace::BlobFamily, hashSlice, bodySlices);
 }
 
-LocalStore::WriteBatch::~WriteBatch() {}
+LocalStore::WriteBatch::~WriteBatch() = default;
 
 void LocalStore::periodicManagementTask(const EdenConfig& /* config */) {
   // Individual store subclasses can provide their own implementations for

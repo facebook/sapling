@@ -5,7 +5,7 @@ Test namespace registration using registrar
 
   $ newrepo
   $ newext << EOF
-  > from edenscm import registrar, namespaces
+  > from sapling import registrar, namespaces
   > namespacepredicate = registrar.namespacepredicate()
   > @namespacepredicate("a", priority=60)
   > def a(_repo):
@@ -19,10 +19,10 @@ Test namespace registration using registrar
   > EOF
 
   $ hg debugshell -c "ui.write('%s\n' % str(list(repo.names)))"
-  ['bookmarks', 'branches', 'c', 'remotebookmarks', 'a', 'hoistednames']
+  ['bookmarks', 'branches', 'c', 'remotebookmarks', 'a', 'hoistednames', 'titles']
 
   $ newext << EOF
-  > from edenscm import registrar, namespaces
+  > from sapling import registrar, namespaces
   > namespacepredicate = registrar.namespacepredicate()
   > @namespacepredicate("z", priority=99)
   > def z(_repo):
@@ -32,13 +32,13 @@ Test namespace registration using registrar
   >     return namespaces.namespace()
   > EOF
   $ hg debugshell -c "ui.write('%s\n' % str(list(repo.names)))"
-  ['bookmarks', 'd', 'branches', 'c', 'remotebookmarks', 'a', 'hoistednames', 'z']
+  ['bookmarks', 'd', 'branches', 'c', 'remotebookmarks', 'a', 'hoistednames', 'titles', 'z']
 
 Test that not specifying the priority will result in failure to load the
 extension.
 
   $ newext << EOF
-  > from edenscm import registrar, namespaces
+  > from sapling import registrar, namespaces
   > namespacepredicate = registrar.namespacepredicate()
   > @namespacepredicate("x", priority=None)
   > def z(_repo):

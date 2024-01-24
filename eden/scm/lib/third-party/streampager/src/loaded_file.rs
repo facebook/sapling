@@ -677,7 +677,7 @@ impl LoadedFile {
             .map_err(|err| Error::from(err).with_command(command))?;
         let out = process.stdout.take().unwrap();
         let err = process.stderr.take().unwrap();
-        let out_file = LoadedFile::new_streamed(index, out, &title, event_sender.clone());
+        let out_file = LoadedFile::new_streamed(index, out, title, event_sender.clone());
         let err_file = LoadedFile::new_streamed(index + 1, err, &title_err, event_sender.clone());
         thread::Builder::new()
             .name(format!("sp-cmd-{}", index))

@@ -63,8 +63,8 @@ use crate::middleware::RequestContext;
 use crate::utils::cbor_stream_filtered_errors;
 use crate::utils::get_repo;
 
-/// XXX: This number was chosen arbitrarily.
-const MAX_CONCURRENT_FILE_FETCHES_PER_REQUEST: usize = 10;
+// The size is optimized for the batching settings in EdenFs.
+const MAX_CONCURRENT_FILE_FETCHES_PER_REQUEST: usize = 32;
 
 const MAX_CONCURRENT_UPLOAD_FILENODES_PER_REQUEST: usize = 1000;
 
@@ -115,7 +115,7 @@ impl EdenApiHandler for Files2Handler {
                     aux_data: false,
                 },
             })
-            .chain(request.reqs.into_iter());
+            .chain(request.reqs);
         ctx.perf_counters()
             .add_to_counter(PerfCounterType::EdenapiFiles, len as i64);
         let fetches =

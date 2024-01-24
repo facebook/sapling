@@ -11,7 +11,7 @@
   $ cd $TESTTMP
 
   $ newremoterepo
-  $ setconfig remotefilelog.localdatarepack=True lfs.moveafterupload=True
+  $ setconfig lfs.moveafterupload=True
 
 # First, let's generate some LFS blobs on the server
 
@@ -68,7 +68,7 @@
   $ cd ..
 
   $ newremoterepo
-  $ setconfig remotefilelog.localdatarepack=True lfs.moveafterupload=True
+  $ setconfig lfs.moveafterupload=True
 
 # Let's validate that both the LFS extension, and the remotefilelog LFS can co-exist when pulling blobs
   $ setconfig remotefilelog.lfs=True

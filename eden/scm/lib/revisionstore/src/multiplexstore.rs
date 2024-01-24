@@ -69,7 +69,7 @@ impl<T: HgIdMutableDeltaStore> HgIdMutableDeltaStore for MultiplexDeltaStore<T> 
             let opt = store.flush()?;
             // It's non sensical for the MultiplexStore to be built with multiple pack stores,
             // therefore let's assert that only one store can ever return a PathBuf.
-            assert!(opt.is_none() || !ret.is_some());
+            assert!(opt.is_none() || ret.is_none());
             ret = ret.or(opt);
         }
 
@@ -135,7 +135,7 @@ impl<T: HgIdMutableHistoryStore> HgIdMutableHistoryStore for MultiplexHgIdHistor
             let opt = store.flush()?;
             // It's non sensical for the MultiplexStore to be built with multiple pack stores,
             // therefore let's assert that only one store can ever return a PathBuf.
-            assert!(opt.is_none() || !ret.is_some());
+            assert!(opt.is_none() || ret.is_none());
             ret = ret.or(opt);
         }
 

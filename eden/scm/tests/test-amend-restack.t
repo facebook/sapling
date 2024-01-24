@@ -49,11 +49,14 @@
 
 # Test basic case of a single amend in a small stack.
 
+  $ mkcommit SRC
+  $ hg go -q null
+
   $ mkcommit a
   $ mkcommit b
   $ mkcommit c
   $ mkcommit d
-  $ hg up 1
+  $ hg up 'desc("add b")'
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ echo b >> b
   $ hg amend
@@ -69,6 +72,8 @@
   │ x  7c3bad9141dc add b
   ├─╯
   o  1f0dee641bb7 add a
+  
+  o  b22283d0199d add SRC
   $ hg rebase --restack
   rebasing 4538525df7e2 "add c"
   rebasing 47d2a3944de8 "add d"
@@ -80,6 +85,8 @@
   @  743396f58c5c add b
   │
   o  1f0dee641bb7 add a
+  
+  o  b22283d0199d add SRC
 
 # Test multiple amends of same commit.
 
@@ -155,7 +162,8 @@
   [1]
   $ hg rebase --restack
   abort: rebase in progress
-  (use 'hg rebase --continue' or 'hg rebase --abort')
+  (use 'hg rebase --continue' to continue or
+       'hg rebase --abort' to abort)
   [255]
   $ echo merged > d
   $ hg resolve --mark d

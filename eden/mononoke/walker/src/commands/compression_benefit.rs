@@ -8,6 +8,7 @@
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::sync::OnceLock;
 
 use anyhow::Context;
 use anyhow::Error;
@@ -19,7 +20,6 @@ use executor_lib::ShardedProcessExecutor;
 use fbinit::FacebookInit;
 use mononoke_app::args::MultiRepoArgs;
 use mononoke_app::MononokeApp;
-use once_cell::sync::OnceCell;
 use sharding_ext::RepoShard;
 use slog::info;
 use slog::Logger;
@@ -207,7 +207,7 @@ pub async fn run_sharded(
     let sizing_process = WalkerSizingProcess::new(app, args);
     let logger = sizing_process.app.logger().clone();
     // The service name needs to be 'static to satisfy SM contract
-    static SM_SERVICE_NAME: OnceCell<String> = OnceCell::new();
+    static SM_SERVICE_NAME: OnceLock<String> = OnceLock::new();
     let mut executor = ShardedProcessExecutor::new(
         sizing_process.app.fb,
         sizing_process.app.runtime().clone(),

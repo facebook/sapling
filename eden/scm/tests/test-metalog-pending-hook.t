@@ -11,7 +11,7 @@ metalog.
   $ configure modern
 
   $ cat > ext.py << 'EOF'
-  > from edenscm import registrar
+  > from sapling import registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command('showpending')

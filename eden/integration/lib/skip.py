@@ -85,6 +85,9 @@ if sys.platform == "win32":
             "test_writing_untracked_file_bumps_write_counter",  # counter not implemented for PrjFS (T147665665)
             "test_summary_counters_available",  # counter not implemented for PrjFS (T147669123)
         ],
+        "stats_test.ObjectCacheStatsTest": [
+            "test_get_tree_memory",  # unloadInodeForPath not implemented
+        ],
         "stop_test.AutoStopTest": True,
         "stop_test.StopTestAdHoc": True,
         "stop_test.StopTestManaged": True,
@@ -137,9 +140,13 @@ if sys.platform == "win32":
             # Windows doesn't support executable files; mode changes are no-op
             "test_mode_change_with_no_content_change",
         ],
-        "hg.update_test.UpdateTestTreeOnlyInMemory": [
-            # kill and restart Eden
-            "test_resume_interrupted_update"
+        "hg.storage_engine_test.FailsToOpenLocalStoreTest": [
+            # takeover unsupported on Windows
+            "test_restart_eden_with_local_store_that_fails_to_open"
+        ],
+        "hg.storage_engine_test.FailsToOpenLocalStoreTestWithMounts": [
+            # takeover unsupported on Windows
+            "test_restart_eden_with_local_store_that_fails_to_open"
         ],
         "stale_inode_test.StaleInodeTestHgNFS": True,
         "windows_fsck_test.WindowsFsckTestHg": [
@@ -173,9 +180,16 @@ elif sys.platform.startswith("darwin"):
         "test_status_thrift_apis",
     ]
 
-    # update fails because new file created while checkout operation in progress
+    # Times out on macOS
+    TEST_DISABLED["stats_test.ObjectCacheStatsTest"] = [
+        "test_get_tree_memory",
+    ]
+
     TEST_DISABLED["hg.update_test.UpdateTestTreeOnly"] = [
+        # update fails because new file created while checkout operation in progress
         "test_change_casing_with_untracked",
+        # TODO(T163970408)
+        "test_mount_state_during_unmount_with_in_progress_checkout",
     ]
 
     # Assertion error and invalid argument
@@ -275,6 +289,20 @@ elif sys.platform.startswith("darwin"):
 
     # flakey (actual timing doesn't match expected timing)
     TEST_DISABLED["config_test.ConfigTest"] = True
+
+    if "SANDCASTLE" in os.environ:
+        # S362020: Redirect tests leave behind garbage on macOS Sandcastle hosts
+        TEST_DISABLED["redirect_test.RedirectTest"] = True
+
+    # Requires sudo. We don't have access to passwordless `sudo` on macOS
+    # Sandcastle hosts, so we should disable this test.
+    TEST_DISABLED["hg.storage_engine_test.FailsToOpenLocalStoreTestWithMounts"] = [
+        "test_restart_eden_with_local_store_that_fails_to_open"
+    ]
+    TEST_DISABLED["hg.storage_engine_test.FailsToOpenLocalStoreTest"] = [
+        "test_restart_eden_with_local_store_that_fails_to_open"
+    ]
+
 
 # Windows specific tests
 if sys.platform != "win32":
@@ -404,6 +432,72 @@ try:
     add_fb_specific_skips(TEST_DISABLED)
 except ImportError:
     pass
+
+
+# We temporarily need to add skips for FilteredFS mixins. Do not add FilteredFS
+# specific skips here. Add them below to FILTERED_TEST_DISABLED instead.
+FILTEREDFS_PARITY = {}
+for (class_name, value_name) in TEST_DISABLED.items():
+    if class_name.endswith("Hg"):
+        FILTEREDFS_PARITY[class_name.replace("Hg", "FilteredHg")] = value_name
+    elif not class_name.endswith("FilteredHg") and not class_name.endswith("Git"):
+        FILTEREDFS_PARITY[class_name + "FilteredHg"] = value_name
+TEST_DISABLED.update(FILTEREDFS_PARITY)
+
+# Any future FilteredHg skips should be added here
+FILTEREDFS_TEST_DISABLED = {
+    "hg.doctor_test.DoctorTestTreeOnly": [
+        "test_eden_doctor_fixes_bad_dirstate_file",
+        "test_eden_doctor_fixes_valid_mismatched_parents",
+    ],
+    "hg.update_test.UpdateTestTreeOnly": [
+        "test_update_dir_to_file",
+        "test_mount_state_during_unmount_with_in_progress_checkout",
+    ],
+    "readdir_test.ReaddirTest": [
+        "test_get_attributes_symlink",
+        "test_readdir_directory_symlink_and_other",
+        "test_get_attributes_directory",
+        "test_readdir",
+        "test_get_attributes",
+    ],
+    "patch_test.PatchTest": ["test_patch"],
+    "clone_test.CloneTest": ["test_force_case_insensitive"],
+    "update_test.UpdateTest": [
+        "test_merge_update_untracked_file_with_conflict_in_destination",
+        "test_merge_update_added_file_with_conflict_in_destination",
+        "test_merge_update_untracked_file_with_conflict_in_destination",
+    ],
+    # These tests will behave the exact same on FilteredFS. Duplicating them can
+    # cause issues on macOS (too many APFS subvolumes), so we'll disable the
+    # FilteredHg variants for now.
+    "redirect_test.RedirectTest": [
+        "test_list",
+        "test_fixup_mounts_things",
+        "test_add_absolute_target",
+        "test_redirect_no_config_dir",
+        "test_unmount_unmounts_things",
+        "test_list_no_legacy_bind_mounts",
+        "test_disallow_bind_mount_outside_repo",
+    ],
+}
+for (testModule, disabled) in FILTEREDFS_TEST_DISABLED.items():
+    # We should add skips for all combinations of FilteredHg mixins.
+    other_mixins = ["", "NFS"] if sys.platform != "win32" else ["", "InMemory"]
+    for mixin in other_mixins:
+        # We need to be careful that we don't overwrite any pre-existing lists
+        # or bulk disables that were disabled by other criteria.
+        new_class_name = testModule + mixin + "FilteredHg"
+        prev_disabled = TEST_DISABLED.get(new_class_name)
+        if prev_disabled is None:
+            # There are no previously disabled tests, we're free to bulk add
+            TEST_DISABLED[new_class_name] = disabled
+        else:
+            # If there's a list of previously disabled tests, we need to append
+            # our list. Otherwise, we can no-op since all tests (including the
+            # ones we specified) are already disabled.
+            if isinstance(prev_disabled, list):
+                TEST_DISABLED[new_class_name] = prev_disabled + disabled
 
 
 def is_class_disabled(class_name: str) -> bool:

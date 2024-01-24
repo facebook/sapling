@@ -55,25 +55,27 @@ type ExitCode = i32;
 #[clap(
     name = "edenfsctl",
     disable_version_flag = true,
-    disable_help_flag = false
+    disable_help_flag = false,
+    next_help_heading = "GLOBAL OPTIONS"
 )]
 pub struct MainCommand {
-    /// The path to the directory where edenfs stores its internal state.
+    /// Path to directory where edenfs stores its internal state
     #[clap(global = true, long, parse(from_str = expand_path))]
     config_dir: Option<PathBuf>,
 
-    /// Path to directory that holds the system configuration files.
+    /// Path to directory that holds the system configuration files
     #[clap(global = true, long, parse(from_str = expand_path))]
     etc_eden_dir: Option<PathBuf>,
 
-    /// Path to directory where .edenrc config file is stored.
+    /// Path to directory where .edenrc config file is stored
     #[clap(global = true, long, parse(from_str = expand_path))]
     home_dir: Option<PathBuf>,
 
-    /// Path to directory within a checkout.
+    /// Path to directory within a checkout
     #[clap(global = true, long, parse(from_str = expand_path), hide = true)]
     checkout_dir: Option<PathBuf>,
 
+    /// Enable debug mode (more verbose logging, traceback, etc..)
     #[clap(global = true, long)]
     pub debug: bool,
 
@@ -108,6 +110,7 @@ pub enum TopLevelSubcommand {
     PrefetchProfile(crate::prefetch_profile::PrefetchCmd),
     #[clap(subcommand, alias = "redir")]
     Redirect(crate::redirect::RedirectCmd),
+    Reloadconfig(crate::config::ReloadConfigCmd),
     #[clap(alias = "health")]
     Status(crate::status::StatusCmd),
     // Top(crate::top::TopCmd),
@@ -120,6 +123,7 @@ impl TopLevelSubcommand {
 
         match self {
             Config(cmd) => cmd,
+            Reloadconfig(cmd) => cmd,
             Fsconfig(cmd) => cmd,
             Debug(cmd) => cmd,
             Du(cmd) => cmd,
@@ -149,6 +153,7 @@ impl TopLevelSubcommand {
             TopLevelSubcommand::Pid(_) => "pid",
             TopLevelSubcommand::PrefetchProfile(_) => "prefetch-profile",
             TopLevelSubcommand::Redirect(_) => "redirect",
+            TopLevelSubcommand::Reloadconfig(_) => "reloadconfig",
             TopLevelSubcommand::Status(_) => "status",
             //TopLevelSubcommand::Top(_) => "top",
             TopLevelSubcommand::Uptime(_) => "uptime",

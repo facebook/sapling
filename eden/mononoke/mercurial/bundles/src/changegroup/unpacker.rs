@@ -18,7 +18,7 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use bytes_old::BytesMut;
-use mercurial_types::MPath;
+use mercurial_types::NonRootMPath;
 use mercurial_types::RevFlags;
 use slog::Logger;
 use tokio_io::codec::Decoder;
@@ -223,7 +223,7 @@ impl CgUnpacker {
 
     fn decode_filelog_chunk(
         buf: &mut BytesMut,
-        f: MPath,
+        f: NonRootMPath,
         version: &CgVersion,
     ) -> Result<(Option<Part>, State)> {
         match Self::decode_chunk(buf, version)? {
@@ -312,7 +312,7 @@ impl CgUnpacker {
         })))
     }
 
-    fn decode_filename(buf: &mut BytesMut) -> Result<DecodeRes<MPath>> {
+    fn decode_filename(buf: &mut BytesMut) -> Result<DecodeRes<NonRootMPath>> {
         if buf.len() < 4 {
             return Ok(DecodeRes::None);
         }
@@ -353,7 +353,7 @@ enum State {
     Manifest,
     Treemanifest,
     Filename,
-    Filelog(MPath),
+    Filelog(NonRootMPath),
     End,
     Invalid,
 }

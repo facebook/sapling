@@ -37,3 +37,16 @@ export function getRealignedBlameInfo(
 
   return newRevisionInfo;
 }
+
+/**
+ * Shorten a commit's author string to show inline:
+ * John Smith john@company.com -> John Smith
+ * john@company.com -> john@company.com
+ */
+export function shortenAuthorName(author: string): string {
+  const matchLeadingName = /(.*) [<>()a-zA-Z0-9\-_.+]+@.*/.exec(author);
+  if (matchLeadingName?.[1]) {
+    return matchLeadingName?.[1];
+  }
+  return author;
+}

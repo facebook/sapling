@@ -1,0 +1,45 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+load("//antlir/fbpkg:fbpkg.bzl", "fbpkg")
+
+oncall("mononoke")
+
+rust_binary(
+    name = "derived_data_metrics_tailer",
+    srcs = glob(["src/**/*.rs"]),
+    test_deps = [
+        "fbsource//third-party/rust:tokio",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:faster-hex",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:lru",
+        "fbsource//third-party/rust:maplit",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:serde_json",
+        "fbsource//third-party/rust:slog-scope",
+        "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:vec1",
+        "//common/rust/shed/borrowed:borrowed",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//common/rust/shed/services:services",
+        "//common/rust/shed/stats:stats",
+        "//common/rust/thrift/srclient:srclient",
+        "//eden/mononoke/cmdlib:cmdlib_logging",
+        "//eden/mononoke/common/retry:retry",
+        "//eden/mononoke/derived_data:derived_data_constants",
+        "//eden/mononoke/scs/if:source_control-rust",
+    ],
+)
+
+fbpkg.builder(
+    name = "mononoke.derived_data.metrics_tailer",
+    path_actions = {
+        "derived_data_metrics_tailer": ":derived_data_metrics_tailer",
+        "swift": "//scribeutil/swift:swift",
+    },
+)

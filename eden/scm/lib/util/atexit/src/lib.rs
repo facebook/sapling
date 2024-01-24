@@ -9,6 +9,7 @@
 //! Intended to be used as an alternative to Python's
 //! `except KeyboardInterrupt`.
 
+use std::borrow::Cow;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -20,6 +21,7 @@ use once_cell::sync::Lazy;
 /// Call `drop` on drop if `ignored` is `false`.
 pub struct AtExit {
     drop: Option<Box<dyn FnOnce() + Send + Sync>>,
+    name: Cow<'static, str>,
     ignored: AtomicBool,
 }
 
@@ -40,7 +42,10 @@ impl Drop for AtExit {
         std::mem::swap(&mut drop, &mut self.drop);
         if let Some(func) = drop {
             if !self.ignored.load(Ordering::Acquire) {
+                tracing::debug!("running AtExit handler: {}", self.name);
                 func();
+            } else {
+                tracing::debug!("skipping AtExit handler: {}", self.name);
             }
         }
     }
@@ -62,7 +67,14 @@ impl AtExit {
         Self {
             drop: Some(drop),
             ignored: AtomicBool::new(false),
+            name: "unnamed".into(),
         }
+    }
+
+    /// Assign a name to the `AtExit` handler.
+    pub fn named(mut self, name: Cow<'static, str>) -> Self {
+        self.name = name;
+        self
     }
 
     /// Move the `AtExit` to a global queue.
@@ -98,6 +110,7 @@ impl AtExitRef {
 /// This is usually called at the end of a program.
 pub fn drop_queued() {
     if let Ok(mut lock) = AT_EXIT_QUEUED.lock() {
+        tracing::debug!("running {} AtExit handlers by drop_queued()", lock.len());
         let mut to_drop: Vec<_> = lock.drain(..).collect();
         // Unlock first so drop(to_drop) can call `drop_queued`
         // without deadlock.

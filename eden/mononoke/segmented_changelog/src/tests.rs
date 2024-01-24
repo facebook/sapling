@@ -16,7 +16,7 @@ use blobrepo::BlobRepo;
 use bonsai_hg_mapping::BonsaiHgMappingArc;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarksArc;
-use bulkops::PublicChangesetBulkFetch;
+use bulkops::ChangesetBulkFetcher;
 use caching_ext::CacheHandlerFactory;
 use changeset_fetcher::ChangesetFetcherArc;
 use changeset_fetcher::ChangesetFetcherRef;
@@ -38,6 +38,10 @@ use futures::future::try_join_all;
 use futures::future::FutureExt;
 use futures::stream;
 use futures::StreamExt;
+use justknobs::test_helpers::override_just_knobs;
+use justknobs::test_helpers::with_just_knobs_async;
+use justknobs::test_helpers::JustKnobsInMemory;
+use justknobs::test_helpers::KnobVal;
 use maplit::hashmap;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
@@ -51,8 +55,6 @@ use sql_construct::SqlConstruct;
 use sql_ext::replication::NoReplicaLagMonitor;
 use tests_utils::resolve_cs_id;
 use tests_utils::CreateCommitContext;
-use tunables::override_tunables;
-use tunables::with_tunables_async;
 
 use crate::builder::SegmentedChangelogSqlConnections;
 use crate::iddag::IdDagSaveStore;
@@ -130,7 +132,7 @@ async fn new_tailer(
         .await?,
     );
 
-    let bulk_fetcher = Arc::new(PublicChangesetBulkFetch::new(
+    let bulk_fetcher = Arc::new(ChangesetBulkFetcher::new(
         blobrepo.changesets_arc(),
         blobrepo.phases_arc(),
     ));
@@ -1062,18 +1064,12 @@ async fn test_periodic_reload(fb: FacebookInit) -> Result<()> {
     );
 
     // Force the reload should trigger even if there are not updates at all.
-    let tunables_override = Arc::new(tunables::MononokeTunables::default());
-    tunables_override.update_by_repo_ints(&hashmap! {
-        blobrepo.repo_identity().name().to_string() => hashmap! {
-            "segmented_changelog_force_reload".to_string() => 2,
-        },
-    });
-    tunables_override.update_ints(&hashmap! {
-        "segmented_changelog_force_reload_jitter_secs".to_string() => 5,
-    });
-    override_tunables(Some(tunables_override.clone()));
+    override_just_knobs(Some(JustKnobsInMemory::new(hashmap! {
+        "scm/mononoke:segmented_changelog_force_reload".to_string() => KnobVal::Int(2),
+        "scm/mononoke:segmented_changelog_force_reload_jitter_secs".to_string() => KnobVal::Int(5),
+    })));
     tokio::time::timeout(Duration::from_secs(45), sc.wait_for_update()).await?;
-    override_tunables(None);
+    override_just_knobs(None);
     Ok(())
 }
 
@@ -1132,29 +1128,32 @@ async fn test_mismatched_heads(fb: FacebookInit) -> Result<()> {
     // should fail with the small limit for traversing from client heads
     let h2 = resolve_cs_id(&ctx, &blobrepo, "16839021e338500b3cf7c9b871c8a07351697d68").await?;
 
-    let tunables = tunables::MononokeTunables::default();
-    tunables.update_ints(&hashmap! {
-        "segmented_changelog_client_max_commits_to_traverse".to_string() => 2,
-    });
     let f = dag.changeset_id_to_location(&ctx, vec![h1, h2], h1_parent);
 
-    let err = with_tunables_async(tunables, f.boxed())
-        .await
-        .err()
-        .unwrap();
+    let err = with_just_knobs_async(
+        JustKnobsInMemory::new(hashmap! {
+            "scm/mononoke:segmented_changelog_client_max_commits_to_traverse".to_string() => KnobVal::Int(2),
+        }),
+        f.boxed(),
+    )
+    .await
+    .err()
+    .unwrap();
     assert!(err.is::<crate::MismatchedHeadsError>());
 
     // should succeed as the client head not far from the commits in SC IdMap
     let h2 = resolve_cs_id(&ctx, &blobrepo, "16839021e338500b3cf7c9b871c8a07351697d68").await?;
 
-    let tunables = tunables::MononokeTunables::default();
-    tunables.update_ints(&hashmap! {
-        "segmented_changelog_client_max_commits_to_traverse".to_string() => 100,
-    });
     let f = dag.changeset_id_to_location(&ctx, vec![h1, h2], h1_parent);
 
     assert_eq!(
-        with_tunables_async(tunables, f.boxed()).await?,
+        with_just_knobs_async(
+            JustKnobsInMemory::new(hashmap! {
+                "scm/mononoke:segmented_changelog_client_max_commits_to_traverse".to_string() => KnobVal::Int(100),
+            }),
+            f.boxed(),
+        )
+        .await?,
         Some(Location::new(h1, 1))
     );
 

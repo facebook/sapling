@@ -20,7 +20,7 @@ function findAssetWithFilenameSubstr(searchString: string) {
 
 export const latestReleaseVersion = latestReleaseAssets.name;
 
-export const macArmAsset = findAssetWithFilenameSubstr('arm64_monterey.bottle.tar.gz');
+export const macArmAsset = findAssetWithFilenameSubstr('arm64_ventura.bottle.tar.gz');
 
 export const macIntelAsset = findAssetWithFilenameSubstr('.monterey.bottle.tar.gz');
 

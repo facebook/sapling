@@ -1,0 +1,60 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbcode_macros//build_defs:rust_unittest.bzl", "rust_unittest")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "bonsai_hg_mapping",
+    srcs = glob([
+        "src/**/*.rs",
+        "schemas/**/*.sql",
+    ]),
+    deps = [
+        "fbsource//third-party/rust:abomonation",
+        "fbsource//third-party/rust:abomonation_derive",
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:thiserror",
+        "//common/rust/shed/facet:facet",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/justknobs_stub:justknobs",
+        "//common/rust/shed/lock_ext:lock_ext",
+        "//common/rust/shed/memcache_stub:memcache",
+        "//common/rust/shed/sql:sql",
+        "//common/rust/shed/stats:stats",
+        "//eden/mononoke/bonsai_hg_mapping/if:bonsai_hg_mapping_entry_thrift-rust",
+        "//eden/mononoke/common/rendezvous:rendezvous",
+        "//eden/mononoke/common/rust/caching_ext:caching_ext",
+        "//eden/mononoke/common/rust/sql_ext:sql_ext",
+        "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/mercurial:mercurial_types",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/server/context:context",
+        "//thrift/lib/rust:fbthrift",
+    ],
+)
+
+rust_unittest(
+    name = "bonsai_hg_mapping_test",
+    srcs = glob(["test/**/*.rs"]),
+    crate = "bonsai_hg_mapping_test",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:assert_matches",
+        "fbsource//third-party/rust:async-trait",
+        ":bonsai_hg_mapping",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/common/rendezvous:rendezvous",
+        "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/mercurial:mercurial_types",
+        "//eden/mononoke/mercurial:mercurial_types-mocks",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/mononoke_types:mononoke_types-mocks",
+        "//eden/mononoke/server/context:context",
+    ],
+)

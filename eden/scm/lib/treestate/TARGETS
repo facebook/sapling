@@ -1,0 +1,42 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "treestate",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "package": {
+                "authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"],
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    test_deps = [
+        "fbsource//third-party/rust:itertools",
+        "fbsource//third-party/rust:pretty_assertions",
+        "fbsource//third-party/rust:quickcheck",
+        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:rand_chacha",
+        "fbsource//third-party/rust:tempfile",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:bitflags",
+        "fbsource//third-party/rust:byteorder",
+        "fbsource//third-party/rust:fs-err",
+        "fbsource//third-party/rust:fs2",
+        "fbsource//third-party/rust:sha2",
+        "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tracing",
+        "fbsource//third-party/rust:twox-hash",
+        "fbsource//third-party/rust:uuid",
+        "//eden/scm/lib/atomicfile:atomicfile",
+        "//eden/scm/lib/identity:identity",
+        "//eden/scm/lib/repolock:repolock",
+        "//eden/scm/lib/types:types",
+        "//eden/scm/lib/util:util",
+        "//eden/scm/lib/vlqencoding:vlqencoding",
+    ],
+)

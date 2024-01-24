@@ -7,12 +7,14 @@
 
 use std::cmp;
 use std::collections::HashMap;
+use std::ffi::OsStr;
 use std::fmt;
 use std::fmt::Display;
 use std::io;
 use std::io::Write;
 use std::iter::once;
 use std::iter::Once;
+use std::os::unix::ffi::OsStrExt;
 use std::slice::Iter;
 
 use abomonation_derive::Abomonation;
@@ -36,7 +38,6 @@ use crate::errors::MononokeTypeError;
 use crate::hash::Blake2;
 use crate::hash::Context;
 use crate::thrift;
-
 // Filesystems on Linux commonly limit path *elements* to 255 bytes. Enforce this on MPaths as well
 // as a repository that cannot be checked out isn't very useful.
 const MPATH_ELEMENT_MAX_LENGTH: usize = 255;
@@ -49,8 +50,8 @@ pub enum RepoPath {
     // It is now *completely OK* to create a RepoPath directly. All MPaths are valid once
     // constructed.
     RootPath,
-    DirectoryPath(MPath),
-    FilePath(MPath),
+    DirectoryPath(NonRootMPath),
+    FilePath(NonRootMPath),
 }
 
 impl RepoPath {
@@ -61,7 +62,7 @@ impl RepoPath {
 
     pub fn dir<P>(path: P) -> Result<Self>
     where
-        P: TryInto<MPath>,
+        P: TryInto<NonRootMPath>,
         Error: From<P::Error>,
     {
         let path = path.try_into()?;
@@ -70,7 +71,7 @@ impl RepoPath {
 
     pub fn file<P>(path: P) -> Result<Self>
     where
-        P: TryInto<MPath>,
+        P: TryInto<NonRootMPath>,
         Error: From<P::Error>,
     {
         let path = path.try_into()?;
@@ -124,7 +125,7 @@ impl RepoPath {
         }
     }
 
-    pub fn mpath(&self) -> Option<&MPath> {
+    pub fn mpath(&self) -> Option<&NonRootMPath> {
         match *self {
             RepoPath::RootPath => None,
             RepoPath::DirectoryPath(ref path) => Some(path),
@@ -132,7 +133,7 @@ impl RepoPath {
         }
     }
 
-    pub fn into_mpath(self) -> Option<MPath> {
+    pub fn into_mpath(self) -> Option<NonRootMPath> {
         match self {
             RepoPath::RootPath => None,
             RepoPath::DirectoryPath(path) => Some(path),
@@ -155,8 +156,8 @@ impl RepoPath {
     pub fn from_thrift(path: thrift::RepoPath) -> Result<Self> {
         let path = match path {
             thrift::RepoPath::RootPath(_) => Self::root(),
-            thrift::RepoPath::DirectoryPath(path) => Self::dir(MPath::from_thrift(path)?)?,
-            thrift::RepoPath::FilePath(path) => Self::file(MPath::from_thrift(path)?)?,
+            thrift::RepoPath::DirectoryPath(path) => Self::dir(NonRootMPath::from_thrift(path)?)?,
+            thrift::RepoPath::FilePath(path) => Self::file(NonRootMPath::from_thrift(path)?)?,
             thrift::RepoPath::UnknownField(unknown) => bail!(
                 "Unknown field encountered when parsing thrift::RepoPath: {}",
                 unknown,
@@ -171,9 +172,9 @@ impl RepoPath {
             // without payload
             RepoPath::RootPath => thrift::RepoPath::RootPath(false),
             RepoPath::DirectoryPath(path) => {
-                thrift::RepoPath::DirectoryPath(MPath::into_thrift(path))
+                thrift::RepoPath::DirectoryPath(NonRootMPath::into_thrift(path))
             }
-            RepoPath::FilePath(path) => thrift::RepoPath::FilePath(MPath::into_thrift(path)),
+            RepoPath::FilePath(path) => thrift::RepoPath::FilePath(NonRootMPath::into_thrift(path)),
         }
     }
 }
@@ -223,6 +224,11 @@ impl MPathElement {
     }
 
     #[inline]
+    pub fn to_smallvec(self) -> SmallVec<[u8; 24]> {
+        self.0
+    }
+
+    #[inline]
     pub fn new_from_slice(element: &[u8]) -> Result<MPathElement> {
         Self::verify(element)?;
         Ok(MPathElement(SmallVec::from(element)))
@@ -250,7 +256,7 @@ impl MPathElement {
             ));
         }
         if p.contains(&1) {
-            // MPath can not contain '\x01', in particular if mpath ends with '\x01'
+            // NonRootMPath can not contain '\x01', in particular if mpath ends with '\x01'
             // and it is part of move metadata, because key-value pairs are separated
             // by '\n', you will get '\x01\n' which is also metadata separator.
             bail!(MononokeTypeError::InvalidPath(
@@ -323,7 +329,7 @@ impl MPathElement {
         }
     }
 
-    /// Returns the lowercased version of this MPath element if it is valid
+    /// Returns the lowercased version of this NonRootMPath element if it is valid
     /// UTF-8.
     pub fn to_lowercase_utf8(&self) -> Option<String> {
         let s = std::str::from_utf8(self.0.as_ref()).ok()?;
@@ -333,7 +339,6 @@ impl MPathElement {
 
     /// Returns whether this path element is a valid filename on Windows.
     /// ```text
-    ///
     /// Invalid filenames on Windows are:
     ///
     /// * Any filename containing a control character in the range 0-31, or
@@ -397,15 +402,16 @@ impl AsRef<[u8]> for MPathElement {
     }
 }
 
-impl From<MPathElement> for MPath {
+impl From<MPathElement> for NonRootMPath {
     fn from(element: MPathElement) -> Self {
-        MPath {
+        NonRootMPath(MPath {
             elements: vec![element],
-        }
+        })
     }
 }
 
 /// A path or filename within Mononoke (typically within manifests or changegroups).
+/// The path can be root path (i.e. just /) or non-root (i.e. /home/here).
 ///
 /// This is called `MPath` so that it can be differentiated from `std::path::Path`.
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
@@ -414,66 +420,38 @@ pub struct MPath {
     elements: Vec<MPathElement>,
 }
 
-impl Extend<MPathElement> for Option<MPath> {
-    fn extend<T: IntoIterator<Item = MPathElement>>(&mut self, iter: T) {
-        match self {
-            Some(ref mut path) => {
-                path.elements.extend(iter);
-            }
-            None => {
-                let elements = Vec::from_iter(iter);
-                if elements.is_empty() {
-                    *self = None;
-                } else {
-                    *self = Some(MPath { elements });
-                }
-            }
-        }
-    }
-}
-
 impl MPath {
-    pub fn new<P: AsRef<[u8]>>(p: P) -> Result<MPath> {
+    pub const ROOT: MPath = MPath {
+        elements: Vec::new(),
+    };
+
+    /// Constructs a new MPath instance from path bytes subject to correctness checks
+    pub fn new<P: AsRef<[u8]>>(p: P) -> Result<Self> {
         let p = p.as_ref();
         let elements: Vec<_> = p
             .split(|c| *c == b'/')
             .filter(|e| !e.is_empty())
             .map(MPathElement::new_from_slice)
             .collect::<Result<_, _>>()?;
-        if elements.is_empty() {
-            bail!(MononokeTypeError::InvalidPath(
-                String::from_utf8_lossy(p).into_owned(),
-                "path cannot be empty".into()
-            ));
-        }
-        Ok(MPath { elements })
+        Ok(Self { elements })
     }
 
-    /// Same as `MPath::new`, except the input bytes may be empty.
-    pub fn new_opt<P: AsRef<[u8]>>(p: P) -> Result<Option<MPath>> {
-        let p = p.as_ref();
-        if p.is_empty() {
-            Ok(None)
-        } else {
-            Ok(Some(MPath::new(p)?))
-        }
+    /// Returns whether the path is root
+    pub fn is_root(&self) -> bool {
+        self.elements.is_empty()
     }
 
-    pub fn from_thrift(mpath: thrift::MPath) -> Result<MPath> {
+    pub fn from_thrift(mpath: thrift::MPath) -> Result<Self> {
         let elements: Result<Vec<_>> = mpath.0.into_iter().map(MPathElement::from_thrift).collect();
         let elements = elements?;
 
-        if elements.is_empty() {
-            bail!("Unexpected empty path in thrift::MPath")
-        } else {
-            Ok(MPath { elements })
-        }
+        Ok(Self { elements })
     }
 
     pub fn join<'a, Elements: IntoIterator<Item = &'a MPathElement>>(
         &self,
         another: Elements,
-    ) -> MPath {
+    ) -> Self {
         let mut newelements = self.elements.clone();
         newelements.extend(
             another
@@ -481,12 +459,404 @@ impl MPath {
                 .filter(|elem| !elem.0.is_empty())
                 .cloned(),
         );
-        MPath {
+        Self {
             elements: newelements,
         }
     }
 
-    pub fn join_element(&self, element: Option<&MPathElement>) -> MPath {
+    pub fn join_element(&self, element: Option<&MPathElement>) -> Self {
+        match element {
+            Some(element) => self.join(element),
+            None => self.clone(),
+        }
+    }
+
+    /// The final component of this path, if its exists
+    pub fn basename(&self) -> Option<&MPathElement> {
+        self.elements.last()
+    }
+
+    /// The number of components in this path.
+    pub fn num_components(&self) -> usize {
+        self.elements.len()
+    }
+
+    /// The number of leading components that are common.
+    pub fn common_components<'a, E: IntoIterator<Item = &'a MPathElement>>(
+        &self,
+        other: E,
+    ) -> usize {
+        self.elements
+            .iter()
+            .zip(other)
+            .take_while(|&(e1, e2)| e1 == e2)
+            .count()
+    }
+
+    /// Whether this path is a path prefix of the given path.
+    /// `foo` is a prefix of `foo/bar`, but not of `foo1`.
+    #[inline]
+    pub fn is_prefix_of<'a, E: IntoIterator<Item = &'a MPathElement>>(&self, other: E) -> bool {
+        let common_components = self.common_components(other);
+        let total_components = self.num_components();
+        // If all the components of this path are present in the other path, then this path is
+        // considered as a prefix of other path. However, if the current path is empty then the
+        // prefix check should always return false
+        common_components == total_components && !self.is_root()
+    }
+
+    /// Create a new path with the number of leading components specified.
+    pub fn take_prefix_components(&self, components: usize) -> Result<Self> {
+        match components {
+            0 => Ok(Self::ROOT),
+            x if x > self.num_components() => bail!(
+                "taking {} components but path only has {}",
+                components,
+                self.num_components()
+            ),
+            _ => Ok(Self {
+                elements: self.elements[..components].to_vec(),
+            }),
+        }
+    }
+
+    /// Create a new path, removing `prefix`. If the `prefix` is not a strict prefix,
+    /// it returns an empty MPath
+    pub fn remove_prefix_component<'a, E: IntoIterator<Item = &'a MPathElement>>(
+        &self,
+        prefix: E,
+    ) -> Self {
+        let mut self_iter = self.elements.iter();
+        for elem in prefix {
+            // The prefix is not a strict prefix, so return empty MPath
+            if Some(elem) != self_iter.next() {
+                return Self::ROOT;
+            }
+        }
+        let elements: Vec<_> = self_iter.cloned().collect();
+        Self { elements }
+    }
+
+    pub fn generate<W: Write>(&self, out: &mut W) -> io::Result<()> {
+        out.write_all(&self.to_vec())
+    }
+
+    pub fn to_vec(&self) -> Vec<u8> {
+        let ret: Vec<_> = self.elements.iter().map(|e| e.0.as_ref()).collect();
+        ret.join(&b'/')
+    }
+
+    #[allow(clippy::len_without_is_empty)]
+    /// The length of this path, including any slashes in it.
+    pub fn len(&self) -> usize {
+        // n elements means n-1 slashes
+        let slashes = self.elements.len().saturating_sub(1);
+        let elem_len: usize = self.elements.iter().map(|elem| elem.len()).sum();
+        slashes + elem_len
+    }
+
+    /// Create an MPath out of an iterator of elements. If the iterator is empty, we create en
+    /// empty (root) MPath
+    pub fn from_elements<'a, I>(elements: I) -> Self
+    where
+        I: Iterator<Item = &'a MPathElement>,
+    {
+        Self {
+            elements: elements.cloned().collect(),
+        }
+    }
+
+    /// Split a MPath into dirname and file name, if possible. If a split is not possible,
+    /// None is returned
+    pub fn split_dirname(&self) -> Option<(Self, &MPathElement)> {
+        self.elements
+            .split_last()
+            .map(|(last, rest)| (Self::from_elements(rest.iter()), last))
+    }
+
+    /// Split a MPath into first path component and the rest, if possible. If a split is not possible,
+    /// None is returned
+    pub fn split_first(&self) -> Option<(&MPathElement, Self)> {
+        self.elements
+            .split_first()
+            .map(|(first, rest)| (first, Self::from_elements(rest.iter())))
+    }
+
+    pub fn into_thrift(self) -> thrift::MPath {
+        thrift::MPath(
+            self.elements
+                .into_iter()
+                .map(|elem| elem.into_thrift())
+                .collect(),
+        )
+    }
+
+    pub fn get_path_hash(&self) -> MPathHash {
+        let mut context = MPathHashContext::new();
+        let num_el = self.elements.len();
+        if num_el > 0 {
+            if num_el > 1 {
+                for e in &self.elements[..num_el - 1] {
+                    context.update(e.as_ref());
+                    context.update([b'/'])
+                }
+            }
+            context.update(self.elements[num_el - 1].as_ref());
+        } else {
+            context.update([])
+        }
+        context.finish()
+    }
+
+    /// Get an iterator over the parent directories of this `MPath`
+    /// Note: it contains the `self` as the first element
+    pub fn into_parent_dir_iter(self) -> ParentDirIterator {
+        ParentDirIterator {
+            current: self.into_optional_non_root_path(),
+        }
+    }
+
+    pub fn into_optional_non_root_path(self) -> Option<NonRootMPath> {
+        if self.is_root() {
+            None
+        } else {
+            Some(NonRootMPath(self))
+        }
+    }
+
+    pub fn display_opt<'a>(path_opt: &'a Self) -> DisplayOpt<'a> {
+        DisplayOpt(path_opt)
+    }
+
+    /// Convert this path to a null separated bytes sequence. If the path is non-empty, the null-byte
+    /// is used as a separator to combine the elements of the path (i.e. a path with 3 elements will have 2 null bytes).
+    /// However, if the path is empty (root) then simply a null-byte is returned. This helps in providing a storable representation
+    /// of empty paths which is not offered by an empty Vec
+    pub fn to_null_separated_bytes(&self) -> Vec<u8> {
+        // The root path will be represented as a null byte
+        if self.is_root() {
+            vec![b'\0']
+        } else {
+            let ret: Vec<_> = self.elements.iter().map(|e| e.0.as_ref()).collect();
+            ret.join(&b'\0')
+        }
+    }
+
+    /// Create an MPath out of sequence of MPathElement bytes separated by the null byte. If the
+    /// byte sequence just contains the null byte, then the empty (root) path is returned
+    pub fn from_null_separated_bytes(path: Vec<u8>) -> Result<Self> {
+        if path == vec![b'\0'] {
+            return Ok(Self::ROOT);
+        }
+        let segments = path
+            .split(|elem| elem == &b'\0')
+            .map(MPathElement::new_from_slice)
+            .collect::<Result<Vec<_>>>()
+            .with_context(|| format!("Error in creating Vec<MPathElement> from {:?}", path))?;
+        Ok(MPath::from_elements(segments.iter()))
+    }
+}
+
+impl From<Option<NonRootMPath>> for MPath {
+    fn from(value: Option<NonRootMPath>) -> Self {
+        match value {
+            Some(v) => v.0,
+            None => Self::ROOT,
+        }
+    }
+}
+
+impl From<MPath> for Option<NonRootMPath> {
+    fn from(value: MPath) -> Self {
+        if value.is_root() {
+            None
+        } else {
+            Some(NonRootMPath(value))
+        }
+    }
+}
+
+impl<'a> From<Option<&'a NonRootMPath>> for &'a MPath {
+    fn from(value: Option<&'a NonRootMPath>) -> Self {
+        static EMPTY: MPath = MPath::ROOT;
+        match value {
+            Some(v) => &v.0,
+            None => &EMPTY,
+        }
+    }
+}
+
+impl From<NonRootMPath> for MPath {
+    fn from(value: NonRootMPath) -> Self {
+        value.0
+    }
+}
+
+impl<'a> From<&'a NonRootMPath> for &'a MPath {
+    fn from(value: &'a NonRootMPath) -> Self {
+        &value.0
+    }
+}
+
+impl TryFrom<MPath> for NonRootMPath {
+    type Error = anyhow::Error;
+    fn try_from(path: MPath) -> Result<Self> {
+        if path.is_root() {
+            bail!(MononokeTypeError::InvalidPath(
+                path.to_string(),
+                "path cannot be empty".into()
+            ));
+        } else {
+            Ok(NonRootMPath(path))
+        }
+    }
+}
+
+impl AsRef<[MPathElement]> for MPath {
+    fn as_ref(&self) -> &[MPathElement] {
+        &self.elements
+    }
+}
+
+impl IntoIterator for MPath {
+    type Item = MPathElement;
+    type IntoIter = ::std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.elements.into_iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a MPath {
+    type Item = &'a MPathElement;
+    type IntoIter = Iter<'a, MPathElement>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.elements.iter()
+    }
+}
+
+impl<'a> From<&'a MPath> for Vec<u8> {
+    fn from(path: &MPath) -> Self {
+        path.to_vec()
+    }
+}
+
+impl<'a> TryFrom<&'a [u8]> for MPath {
+    type Error = Error;
+
+    fn try_from(value: &[u8]) -> Result<Self> {
+        MPath::new(value)
+    }
+}
+
+impl<'a> TryFrom<&'a str> for MPath {
+    type Error = Error;
+
+    fn try_from(value: &str) -> Result<Self> {
+        MPath::new(value.as_bytes())
+    }
+}
+
+impl<'a> TryFrom<&'a OsStr> for MPath {
+    type Error = Error;
+
+    fn try_from(value: &OsStr) -> Result<Self> {
+        MPath::new(value.as_bytes())
+    }
+}
+
+impl From<Vec<MPathElement>> for MPath {
+    fn from(elements: Vec<MPathElement>) -> Self {
+        Self { elements }
+    }
+}
+
+impl Arbitrary for MPath {
+    #[inline]
+    fn arbitrary(g: &mut Gen) -> Self {
+        let size = g.size();
+        let mut path = Vec::new();
+
+        for i in 0..size {
+            if i > 0 {
+                path.push(b'/');
+            }
+            let element = MPathElement::arbitrary(g);
+            path.extend(&element.0);
+        }
+        MPath::new(path).unwrap()
+    }
+}
+
+/// A path or filename within Mononoke (typically within manifests or changegroups).
+/// The path can ONLY be non-root path (i.e. just / is not allowed)
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
+#[derive(Abomonation, Serialize, Deserialize)]
+pub struct NonRootMPath(MPath);
+
+impl Extend<MPathElement> for MPath {
+    fn extend<T: IntoIterator<Item = MPathElement>>(&mut self, iter: T) {
+        self.elements.extend(iter);
+    }
+}
+
+impl Extend<MPathElement> for Option<NonRootMPath> {
+    fn extend<T: IntoIterator<Item = MPathElement>>(&mut self, iter: T) {
+        match self {
+            Some(ref mut path) => path.0.extend(iter),
+            None => {
+                let elements = Vec::from_iter(iter);
+                if elements.is_empty() {
+                    *self = None;
+                } else {
+                    *self = Some(NonRootMPath::from_elements(elements.iter()));
+                }
+            }
+        }
+    }
+}
+
+impl NonRootMPath {
+    pub fn new<P: AsRef<[u8]>>(p: P) -> Result<Self> {
+        let p = p.as_ref();
+        let mpath = MPath::new(p)?;
+        if mpath.is_root() {
+            bail!(MononokeTypeError::InvalidPath(
+                String::from_utf8_lossy(p).into_owned(),
+                "path cannot be empty".into()
+            ));
+        }
+        Ok(Self(mpath))
+    }
+
+    /// Same as `NonRootMPath::new`, except the input bytes may be empty.
+    pub fn new_opt<P: AsRef<[u8]>>(p: P) -> Result<Option<NonRootMPath>> {
+        let p = p.as_ref();
+        if p.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(NonRootMPath::new(p)?))
+        }
+    }
+
+    pub fn from_thrift(non_root_mpath: thrift::NonRootMPath) -> Result<NonRootMPath> {
+        let mpath = MPath::from_thrift(non_root_mpath.0)?;
+        if mpath.is_root() {
+            bail!("Unexpected empty path in thrift::NonRootMPath")
+        } else {
+            Ok(NonRootMPath(mpath))
+        }
+    }
+
+    pub fn join<'a, Elements: IntoIterator<Item = &'a MPathElement>>(
+        &self,
+        another: Elements,
+    ) -> Self {
+        NonRootMPath(self.0.join(another))
+    }
+
+    pub fn join_element(&self, element: Option<&MPathElement>) -> Self {
         match element {
             Some(element) => self.join(element),
             None => self.clone(),
@@ -508,14 +878,14 @@ impl MPath {
                 if elements.is_empty() {
                     None
                 } else {
-                    Some(MPath { elements })
+                    Some(NonRootMPath::from_elements(elements.iter()))
                 }
             }
         }
     }
 
     pub fn is_prefix_of_opt<'a, E: IntoIterator<Item = &'a MPathElement>>(
-        prefix: Option<&MPath>,
+        prefix: Option<&NonRootMPath>,
         other: E,
     ) -> bool {
         match prefix {
@@ -527,9 +897,7 @@ impl MPath {
     pub fn join_opt_element(path: Option<&Self>, element: &MPathElement) -> Self {
         match path {
             Some(path) => path.join_element(Some(element)),
-            None => MPath {
-                elements: vec![element.clone()],
-            },
+            None => NonRootMPath::from_elements(Some(element).into_iter()),
         }
     }
 
@@ -556,7 +924,7 @@ impl MPath {
 
     /// The number of components in this path.
     pub fn num_components(&self) -> usize {
-        self.elements.len()
+        self.0.num_components()
     }
 
     /// The number of leading components that are common.
@@ -564,40 +932,28 @@ impl MPath {
         &self,
         other: E,
     ) -> usize {
-        self.elements
-            .iter()
-            .zip(other)
-            .take_while(|&(e1, e2)| e1 == e2)
-            .count()
+        self.0.common_components(other)
     }
 
     /// Whether this path is a path prefix of the given path.
     /// `foo` is a prefix of `foo/bar`, but not of `foo1`.
     #[inline]
     pub fn is_prefix_of<'a, E: IntoIterator<Item = &'a MPathElement>>(&self, other: E) -> bool {
-        self.common_components(other.into_iter()) == self.num_components()
+        self.0.is_prefix_of(other)
     }
 
     /// The final component of this path.
     pub fn basename(&self) -> &MPathElement {
-        self.elements
-            .last()
+        self.0
+            .basename()
             .expect("MPaths have at least one component")
     }
 
     /// Create a new path with the number of leading components specified.
-    pub fn take_prefix_components(&self, components: usize) -> Result<Option<MPath>> {
-        match components {
-            0 => Ok(None),
-            x if x > self.num_components() => bail!(
-                "taking {} components but path only has {}",
-                components,
-                self.num_components()
-            ),
-            _ => Ok(Some(MPath {
-                elements: self.elements[..components].to_vec(),
-            })),
-        }
+    pub fn take_prefix_components(&self, components: usize) -> Result<Option<NonRootMPath>> {
+        self.0
+            .take_prefix_components(components)
+            .map(MPath::into_optional_non_root_path)
     }
 
     /// Create a new path, removing `prefix`. Returns `None` if `prefix` is not a strict
@@ -608,19 +964,10 @@ impl MPath {
     pub fn remove_prefix_component<'a, E: IntoIterator<Item = &'a MPathElement>>(
         &self,
         prefix: E,
-    ) -> Option<MPath> {
-        let mut self_iter = self.elements.iter();
-        for elem in prefix {
-            if Some(elem) != self_iter.next() {
-                return None;
-            }
-        }
-        let elements: Vec<_> = self_iter.cloned().collect();
-        if elements.is_empty() {
-            None
-        } else {
-            Some(Self { elements })
-        }
+    ) -> Option<NonRootMPath> {
+        self.0
+            .remove_prefix_component(prefix)
+            .into_optional_non_root_path()
     }
 
     pub fn generate<W: Write>(&self, out: &mut W) -> io::Result<()> {
@@ -628,17 +975,13 @@ impl MPath {
     }
 
     pub fn to_vec(&self) -> Vec<u8> {
-        let ret: Vec<_> = self.elements.iter().map(|e| e.0.as_ref()).collect();
-        ret.join(&b'/')
+        self.0.to_vec()
     }
 
-    #[allow(clippy::len_without_is_empty)]
     /// The length of this path, including any slashes in it.
+    #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> usize {
-        // n elements means n-1 slashes
-        let slashes = self.elements.len() - 1;
-        let elem_len: usize = self.elements.iter().map(|elem| elem.len()).sum();
-        slashes + elem_len
+        self.0.len()
     }
 
     // Private because it does not validate elements - you must ensure that it's non-empty
@@ -646,66 +989,61 @@ impl MPath {
     where
         I: Iterator<Item = &'a MPathElement>,
     {
-        Self {
-            elements: elements.cloned().collect(),
-        }
+        Self(MPath::from_elements(elements))
     }
 
-    /// Split an MPath into dirname (if possible) and file name
-    pub fn split_dirname(&self) -> (Option<MPath>, &MPathElement) {
+    /// Split an NonRootMPath into dirname (if possible) and file name
+    pub fn split_dirname(&self) -> (Option<NonRootMPath>, &MPathElement) {
         let (filename, dirname_elements) = self
+            .0
             .elements
             .split_last()
-            .expect("MPaths should never be empty");
+            .expect("NonRootMPaths should never be empty");
 
         if dirname_elements.is_empty() {
             (None, filename)
         } else {
             (
-                Some(MPath::from_elements(dirname_elements.iter())),
+                Some(NonRootMPath::from_elements(dirname_elements.iter())),
                 filename,
             )
         }
     }
 
     /// Split an MPath into first path component and the rest
-    pub fn split_first(&self) -> (&MPathElement, Option<MPath>) {
+    pub fn split_first(&self) -> (&MPathElement, Option<Self>) {
         let (first, file_elements) = self
+            .0
             .elements
             .split_first()
-            .expect("MPaths should never be empty");
+            .expect("NonRootMPaths should never be empty");
 
         if file_elements.is_empty() {
             (first, None)
         } else {
-            (first, Some(MPath::from_elements(file_elements.iter())))
+            (first, Some(Self::from_elements(file_elements.iter())))
         }
     }
 
-    pub fn into_thrift(self) -> thrift::MPath {
-        thrift::MPath(
-            self.elements
-                .into_iter()
-                .map(|elem| elem.into_thrift())
-                .collect(),
-        )
+    pub fn into_thrift(self) -> thrift::NonRootMPath {
+        thrift::NonRootMPath(self.0.into_thrift())
     }
 
-    pub fn display_opt<'a>(path_opt: Option<&'a MPath>) -> DisplayOpt<'a> {
-        DisplayOpt(path_opt)
+    pub fn display_opt<'a>(path_opt: Option<&'a NonRootMPath>) -> DisplayOpt<'a> {
+        DisplayOpt(path_opt.into())
     }
 
     pub fn get_path_hash(&self) -> MPathHash {
         let mut context = MPathHashContext::new();
-        let num_el = self.elements.len();
+        let num_el = self.0.elements.len();
         if num_el > 0 {
             if num_el > 1 {
-                for e in &self.elements[..num_el - 1] {
+                for e in &self.0.elements[..num_el - 1] {
                     context.update(e.as_ref());
                     context.update([b'/'])
                 }
             }
-            context.update(self.elements[num_el - 1].as_ref());
+            context.update(self.0.elements[num_el - 1].as_ref());
         } else {
             context.update([])
         }
@@ -726,35 +1064,103 @@ impl MPath {
     }
 }
 
-pub fn path_bytes_from_mpath(path: Option<&MPath>) -> Vec<u8> {
-    match path {
-        Some(path) => path.to_vec(),
-        None => vec![],
-    }
+pub fn path_bytes_from_mpath(path: &MPath) -> Vec<u8> {
+    path.to_vec()
 }
 
-impl AsRef<[MPathElement]> for MPath {
+impl AsRef<[MPathElement]> for NonRootMPath {
     fn as_ref(&self) -> &[MPathElement] {
-        &self.elements
+        self.0.as_ref()
     }
 }
 
-pub fn mpath_element_iter<'a>(
-    mpath: &'a Option<MPath>,
+pub fn non_root_mpath_element_iter<'a>(
+    mpath: &'a Option<NonRootMPath>,
 ) -> Box<dyn Iterator<Item = &MPathElement> + 'a> {
     match mpath {
-        Some(ref path) => Box::new(path.into_iter()),
+        Some(path) => Box::new(path.into_iter()),
         None => Box::new(std::iter::empty()),
     }
 }
 
-/// Iterator over parent directories of a given `MPath`
+pub fn mpath_element_iter<'a>(mpath: &'a MPath) -> Box<dyn Iterator<Item = &MPathElement> + 'a> {
+    Box::new(mpath.into_iter())
+}
+
+impl IntoIterator for NonRootMPath {
+    type Item = MPathElement;
+    type IntoIter = ::std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a NonRootMPath {
+    type Item = &'a MPathElement;
+    type IntoIter = Iter<'a, MPathElement>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.as_ref().iter()
+    }
+}
+
+impl<'a> From<&'a NonRootMPath> for Vec<u8> {
+    fn from(path: &NonRootMPath) -> Self {
+        path.to_vec()
+    }
+}
+
+impl<'a> TryFrom<&'a [u8]> for NonRootMPath {
+    type Error = Error;
+
+    fn try_from(value: &[u8]) -> Result<Self> {
+        NonRootMPath::new(value)
+    }
+}
+
+impl<'a> TryFrom<&'a str> for NonRootMPath {
+    type Error = Error;
+
+    fn try_from(value: &str) -> Result<Self> {
+        NonRootMPath::new(value.as_bytes())
+    }
+}
+
+impl<'a> TryFrom<&'a OsStr> for NonRootMPath {
+    type Error = Error;
+
+    fn try_from(value: &OsStr) -> Result<Self> {
+        NonRootMPath::new(value.as_bytes())
+    }
+}
+
+impl TryFrom<Vec<MPathElement>> for NonRootMPath {
+    type Error = Error;
+
+    fn try_from(elements: Vec<MPathElement>) -> Result<Self> {
+        let mpath: MPath = elements.into();
+        if mpath.is_root() {
+            bail!("non-root mpath can not be empty");
+        };
+        Ok(NonRootMPath(mpath))
+    }
+}
+
+impl Arbitrary for NonRootMPath {
+    #[inline]
+    fn arbitrary(g: &mut Gen) -> Self {
+        NonRootMPath(MPath::arbitrary(g))
+    }
+}
+
+/// Iterator over parent directories of a given `NonRootMPath`
 pub struct ParentDirIterator {
-    current: Option<MPath>,
+    current: Option<NonRootMPath>,
 }
 
 impl Iterator for ParentDirIterator {
-    type Item = MPath;
+    type Item = NonRootMPath;
 
     fn next(&mut self) -> Option<Self::Item> {
         let maybe_current = self.current.take();
@@ -822,24 +1228,25 @@ impl MPathHashContext {
     }
 }
 
-pub struct DisplayOpt<'a>(Option<&'a MPath>);
+pub struct DisplayOpt<'a>(&'a MPath);
 
 impl<'a> Display for DisplayOpt<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self.0 {
-            Some(path) => write!(f, "{}", path),
-            None => write!(f, "(none)"),
+        if self.0.is_root() {
+            write!(f, "(none)")
+        } else {
+            write!(f, "{}", self.0)
         }
     }
 }
 
-/// Check that a sorted list of (MPath, is_changed) pairs is path-conflict-free. This means that
+/// Check that a sorted list of (NonRootMPath, is_changed) pairs is path-conflict-free. This means that
 /// no changed path in the list (is_changed is true) is a directory of another path.
 pub fn check_pcf<'a, I>(sorted_paths: I) -> Result<()>
 where
-    I: IntoIterator<Item = (&'a MPath, bool)>,
+    I: IntoIterator<Item = (&'a NonRootMPath, bool)>,
 {
-    let mut last_changed_path: Option<&MPath> = None;
+    let mut last_changed_path: Option<&NonRootMPath> = None;
     // The key observation to make here is that in a sorted list, "foo" will always appear before
     // "foo/bar", which in turn will always appear before "foo1".
     // The loop invariant is that last_changed_path at any point has no prefixes in the list.
@@ -860,63 +1267,12 @@ where
     Ok(())
 }
 
-impl IntoIterator for MPath {
-    type Item = MPathElement;
-    type IntoIter = ::std::vec::IntoIter<Self::Item>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.elements.into_iter()
-    }
-}
-
-impl<'a> IntoIterator for &'a MPath {
-    type Item = &'a MPathElement;
-    type IntoIter = Iter<'a, MPathElement>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.elements.iter()
-    }
-}
-
 impl<'a> IntoIterator for &'a MPathElement {
     type Item = &'a MPathElement;
     type IntoIter = Once<&'a MPathElement>;
 
     fn into_iter(self) -> Self::IntoIter {
         once(self)
-    }
-}
-
-impl<'a> From<&'a MPath> for Vec<u8> {
-    fn from(path: &MPath) -> Self {
-        path.to_vec()
-    }
-}
-
-impl<'a> TryFrom<&'a [u8]> for MPath {
-    type Error = Error;
-
-    fn try_from(value: &[u8]) -> Result<Self> {
-        MPath::new(value)
-    }
-}
-
-impl<'a> TryFrom<&'a str> for MPath {
-    type Error = Error;
-
-    fn try_from(value: &str) -> Result<Self> {
-        MPath::new(value.as_bytes())
-    }
-}
-
-impl TryFrom<Vec<MPathElement>> for MPath {
-    type Error = Error;
-
-    fn try_from(elements: Vec<MPathElement>) -> Result<Self> {
-        if elements.is_empty() {
-            bail!("mpath can not be empty");
-        }
-        Ok(MPath { elements })
     }
 }
 
@@ -944,31 +1300,15 @@ impl Arbitrary for MPathElement {
     }
 }
 
-impl Arbitrary for MPath {
-    #[inline]
-    fn arbitrary(g: &mut Gen) -> Self {
-        let size = g.size();
-        // Up to size components
-        //
-        // TODO: do we really want a uniform distribution over component chars
-        // here?
-        let mut path = Vec::new();
-
-        for i in 0..size {
-            if i > 0 {
-                path.push(b'/');
-            }
-            let element = MPathElement::arbitrary(g);
-            path.extend(&element.0);
-        }
-
-        MPath::new(path).unwrap()
-    }
-}
-
 impl Display for MPathElement {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "{}", String::from_utf8_lossy(&self.0))
+    }
+}
+
+impl Display for NonRootMPath {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "{}", String::from_utf8_lossy(&self.to_vec()))
     }
 }
 
@@ -986,6 +1326,12 @@ impl fmt::Debug for MPathElement {
             "MPathElement(\"{}\")",
             String::from_utf8_lossy(&self.0)
         )
+    }
+}
+
+impl fmt::Debug for NonRootMPath {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "NonRootMPath(\"{}\")", self)
     }
 }
 
@@ -1065,8 +1411,29 @@ impl Default for PrefixTrie {
     }
 }
 
-impl Extend<Option<MPath>> for PrefixTrie {
-    fn extend<T: IntoIterator<Item = Option<MPath>>>(&mut self, iter: T) {
+impl Extend<MPath> for PrefixTrie {
+    fn extend<T: IntoIterator<Item = MPath>>(&mut self, iter: T) {
+        for path in iter {
+            if !path.is_root() {
+                self.add(&path);
+            } else {
+                // The empty path (root) means all paths are included.
+                *self = PrefixTrie::Included;
+            }
+        }
+    }
+}
+
+impl FromIterator<MPath> for PrefixTrie {
+    fn from_iter<I: IntoIterator<Item = MPath>>(iter: I) -> Self {
+        let mut trie = PrefixTrie::new();
+        trie.extend(iter);
+        trie
+    }
+}
+
+impl Extend<Option<NonRootMPath>> for PrefixTrie {
+    fn extend<T: IntoIterator<Item = Option<NonRootMPath>>>(&mut self, iter: T) {
         for path in iter {
             if let Some(path) = path {
                 self.add(&path);
@@ -1078,8 +1445,8 @@ impl Extend<Option<MPath>> for PrefixTrie {
     }
 }
 
-impl FromIterator<Option<MPath>> for PrefixTrie {
-    fn from_iter<I: IntoIterator<Item = Option<MPath>>>(iter: I) -> Self {
+impl FromIterator<Option<NonRootMPath>> for PrefixTrie {
+    fn from_iter<I: IntoIterator<Item = Option<NonRootMPath>>>(iter: I) -> Self {
         let mut trie = PrefixTrie::new();
         trie.extend(iter);
         trie
@@ -1196,21 +1563,21 @@ struct ReverseMPath {
 }
 
 impl ReverseMPath {
-    pub fn into_mpath(self) -> MPath {
+    pub fn into_mpath(self) -> NonRootMPath {
         let Self { mut elements } = self;
         elements.reverse();
-        MPath { elements }
+        NonRootMPath(elements.into())
     }
 }
 
 pub trait CaseConflictTrieUpdate {
     /// Add this to the CaseConflictTrie. If this results in a case conflict, report the two paths
     /// that conflicted, in the order in which they were added to the CaseConflictTrie.
-    fn apply(self, trie: &mut CaseConflictTrie) -> Option<(MPath, MPath)>;
+    fn apply(self, trie: &mut CaseConflictTrie) -> Option<(NonRootMPath, NonRootMPath)>;
 }
 
-impl<'a> CaseConflictTrieUpdate for &'a MPath {
-    fn apply(self, trie: &mut CaseConflictTrie) -> Option<(MPath, MPath)> {
+impl<'a> CaseConflictTrieUpdate for &'a NonRootMPath {
+    fn apply(self, trie: &mut CaseConflictTrie) -> Option<(NonRootMPath, NonRootMPath)> {
         match trie.add(self) {
             Ok(()) => None,
             Err(conflict) => Some((conflict.into_mpath(), self.clone())),
@@ -1218,8 +1585,8 @@ impl<'a> CaseConflictTrieUpdate for &'a MPath {
     }
 }
 
-impl CaseConflictTrieUpdate for MPath {
-    fn apply(self, trie: &mut CaseConflictTrie) -> Option<(MPath, MPath)> {
+impl CaseConflictTrieUpdate for NonRootMPath {
+    fn apply(self, trie: &mut CaseConflictTrie) -> Option<(NonRootMPath, NonRootMPath)> {
         match trie.add(&self) {
             Ok(()) => None,
             Err(conflict) => Some((conflict.into_mpath(), self)),
@@ -1228,7 +1595,7 @@ impl CaseConflictTrieUpdate for MPath {
 }
 
 impl<'a> CaseConflictTrieUpdate for &'a BonsaiChangeset {
-    fn apply(self, trie: &mut CaseConflictTrie) -> Option<(MPath, MPath)> {
+    fn apply(self, trie: &mut CaseConflictTrie) -> Option<(NonRootMPath, NonRootMPath)> {
         // we need apply deletion first
         for (path, change) in self.file_changes() {
             if change.is_removed() {
@@ -1248,7 +1615,10 @@ impl<'a> CaseConflictTrieUpdate for &'a BonsaiChangeset {
 
 /// Returns first path pair that would introduce a case-conflict, if any. The first element is the
 /// first one that was added into the Trie, and the second is the last.
-pub fn check_case_conflicts<P, I>(iter: I, exclusions: &PrefixTrie) -> Option<(MPath, MPath)>
+pub fn check_case_conflicts<P, I>(
+    iter: I,
+    exclusions: &PrefixTrie,
+) -> Option<(NonRootMPath, NonRootMPath)>
 where
     P: CaseConflictTrieUpdate,
     I: IntoIterator<Item = P>,
@@ -1312,10 +1682,6 @@ mod test {
         }
 
         fn elements_to_path(elements: Vec<MPathElement>) -> TestResult {
-            if elements.is_empty() {
-                return TestResult::discard();
-            }
-
             let joined = elements.iter().map(|elem| elem.0.clone())
                 .collect::<Vec<_>>()
                 .join(&b'/');
@@ -1342,6 +1708,13 @@ mod test {
             p == p2
         }
 
+        fn non_root_path_thrift_roundtrip(p: NonRootMPath) -> bool {
+            let thrift_path = p.clone().into_thrift();
+            let p2 = NonRootMPath::from_thrift(thrift_path)
+                .expect("converting a valid Thrift structure should always work");
+            p == p2
+        }
+
         fn pathelement_thrift_roundtrip(p: MPathElement) -> bool {
             let thrift_pathelement = p.clone().into_thrift();
             let p2 = MPathElement::from_thrift(thrift_pathelement)
@@ -1359,7 +1732,7 @@ mod test {
 
     #[test]
     fn repo_path_make() {
-        let path = MPath::new(b"abc").unwrap();
+        let path = NonRootMPath::new(b"abc").unwrap();
         assert_eq!(
             RepoPath::dir(path.clone()).unwrap(),
             RepoPath::dir("abc").unwrap()
@@ -1368,9 +1741,9 @@ mod test {
     }
 
     #[test]
-    fn empty_paths() {
+    fn empty_non_root_paths() {
         fn assert_empty(path: &str) {
-            MPath::new(path).expect_err(&format!(
+            NonRootMPath::new(path).expect_err(&format!(
                 "unexpected OK - path '{}' is logically empty",
                 path,
             ));
@@ -1383,12 +1756,25 @@ mod test {
     }
 
     #[test]
+    fn empty_paths() {
+        fn assert_empty(path: &str) {
+            MPath::new(path).unwrap_or_else(|_| panic!("unexpected err - path '{}' is logically empty which should be allowed for MPath",
+                path));
+        }
+        assert_empty("");
+        assert_empty("/");
+        assert_empty("//");
+        assert_empty("///");
+        assert_empty("////");
+    }
+
+    #[test]
     fn parent_dir_iterator() {
-        fn path(p: &str) -> MPath {
-            MPath::new(p).unwrap()
+        fn path(p: &str) -> NonRootMPath {
+            NonRootMPath::new(p).unwrap()
         }
 
-        fn parent_vec(p: &str) -> Vec<MPath> {
+        fn parent_vec(p: &str) -> Vec<NonRootMPath> {
             path(p).into_parent_dir_iter().collect()
         }
 
@@ -1412,14 +1798,14 @@ mod test {
         assert_eq!(foo.common_components(&foo_bar12), 1);
         assert_eq!(foo_bar1.common_components(&foo_bar1), 2);
         assert_eq!(foo.common_components(&baz), 0);
-        assert_eq!(foo.common_components(MPath::iter_opt(None)), 0);
+        assert_eq!(foo.common_components(None), 0);
 
-        assert_eq!(foo_bar1.take_prefix_components(0).unwrap(), None);
-        assert_eq!(foo_bar1.take_prefix_components(1).unwrap(), Some(foo));
-        assert_eq!(
-            foo_bar1.take_prefix_components(2).unwrap(),
-            Some(foo_bar1.clone())
-        );
+        let root_foo = MPath::new("").unwrap();
+        assert_eq!(root_foo.common_components(&MPath::ROOT), 0);
+
+        assert_eq!(foo_bar1.take_prefix_components(0).unwrap(), MPath::ROOT);
+        assert_eq!(foo_bar1.take_prefix_components(1).unwrap(), foo);
+        assert_eq!(foo_bar1.take_prefix_components(2).unwrap(), foo_bar1);
         foo_bar1
             .take_prefix_components(3)
             .expect_err("unexpected OK - too many components");
@@ -1435,31 +1821,31 @@ mod test {
         let bar12 = MPath::new("bar1/2").unwrap();
         let two = MPath::new("2").unwrap();
 
-        assert_eq!(baz.remove_prefix_component(&foo), None);
-        assert_eq!(foo_bar1.remove_prefix_component(&foo), Some(bar1));
-        assert_eq!(foo_bar12.remove_prefix_component(&foo), Some(bar12));
-        assert_eq!(foo_bar12.remove_prefix_component(&foo_bar1), Some(two));
+        assert_eq!(baz.remove_prefix_component(&foo), MPath::ROOT);
+        assert_eq!(foo_bar1.remove_prefix_component(&foo), bar1);
+        assert_eq!(foo_bar12.remove_prefix_component(&foo), bar12);
+        assert_eq!(foo_bar12.remove_prefix_component(&foo_bar1), two);
     }
 
     #[test]
     fn bad_path() {
-        assert!(MPath::new(b"\0").is_err());
+        assert!(NonRootMPath::new(b"\0").is_err());
     }
     #[test]
     fn bad_path2() {
-        assert!(MPath::new(b"abc\0").is_err());
+        assert!(NonRootMPath::new(b"abc\0").is_err());
     }
     #[test]
     fn bad_path3() {
-        assert!(MPath::new(b"ab\0cde").is_err());
+        assert!(NonRootMPath::new(b"ab\0cde").is_err());
     }
     #[test]
     fn bad_path4() {
         let p = vec![97; 255];
-        assert!(MPath::new(p).is_ok());
+        assert!(NonRootMPath::new(p).is_ok());
 
         let p = vec![97; 256];
-        assert!(MPath::new(p).is_err());
+        assert!(NonRootMPath::new(p).is_err());
     }
 
     #[test]
@@ -1482,8 +1868,8 @@ mod test {
 
     #[test]
     fn path_cmp() {
-        let a = MPath::new(b"a").unwrap();
-        let b = MPath::new(b"b").unwrap();
+        let a = NonRootMPath::new(b"a").unwrap();
+        let b = NonRootMPath::new(b"b").unwrap();
 
         assert!(a < b);
         assert!(a == a);
@@ -1518,8 +1904,8 @@ mod test {
 
     #[test]
     fn case_conflicts() {
-        fn m(mpath: &str) -> MPath {
-            MPath::new(mpath).unwrap()
+        fn m(mpath: &str) -> NonRootMPath {
+            NonRootMPath::new(mpath).unwrap()
         }
 
         let exclusions = Default::default();
@@ -1541,11 +1927,11 @@ mod test {
             m("a/c"),
         ];
         assert_eq!(
-            check_case_conflicts(paths.iter(), &Default::default()), // works from &MPath
+            check_case_conflicts(paths.iter(), &Default::default()), // works from &NonRootMPath
             Some((m("a/b"), m("a/B/d"))),
         );
         assert_eq!(
-            check_case_conflicts(paths.into_iter(), &Default::default()), // works from MPath
+            check_case_conflicts(paths.into_iter(), &Default::default()), // works from NonRootMPath
             Some((m("a/b"), m("a/B/d"))),
         );
     }
@@ -1553,7 +1939,7 @@ mod test {
     fn check_pcf_paths<I, T>(paths: I) -> Result<()>
     where
         I: IntoIterator<Item = (T, bool)>,
-        MPath: TryFrom<T, Error = Error>,
+        NonRootMPath: TryFrom<T, Error = Error>,
     {
         let res: Result<Vec<_>> = paths
             .into_iter()
@@ -1569,7 +1955,7 @@ mod test {
     fn prefix_trie() {
         let mut prefixes = PrefixTrie::new();
 
-        let path = |path| MPath::new(path).unwrap();
+        let path = |path| NonRootMPath::new(path).unwrap();
 
         // Add some paths
         assert!(prefixes.add(&path("a/b/c")));
@@ -1618,7 +2004,7 @@ mod test {
 
     #[test]
     fn has_suffix_suffix() {
-        let path = |path| MPath::new(path).unwrap();
+        let path = |path| NonRootMPath::new(path).unwrap();
 
         // Assert that when the suffix equals the basename the result is
         // correct.

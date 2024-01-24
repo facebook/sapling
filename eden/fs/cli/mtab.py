@@ -15,6 +15,7 @@ import random
 import re
 import subprocess
 import sys
+from multiprocessing import Process
 from typing import List, NamedTuple, Union
 
 
@@ -63,7 +64,46 @@ class MountTable(abc.ABC):
         st = os.lstat(path)
         return MTStat(st_uid=st.st_uid, st_dev=st.st_dev, st_mode=st.st_mode)
 
-    def check_path_access(self, path: bytes, mount_type: bytes) -> None:
+    def create_lstat_process(
+        self,
+        path: bytes,
+    ) -> Process:
+        return multiprocessing.Process(
+            target=lstat_process,
+            args=(os.path.join(path, hex(random.getrandbits(32))[2:].encode()),),
+        )
+
+    def close_hanging_process(self, proc: Process, error: OSError) -> None:
+        """
+        This method closes hanging process if the process hang
+        It returns immediately if it doesn't hang
+        """
+        if proc.is_alive():
+            # timeout, ask the lstat to terminate nicely, this is expected to succeed.
+            proc.terminate()
+            # note we need a timeout here incase the process is miss
+            # behaving and refuses to exit
+            proc.join(timeout=kMountStaleSecondsTimeout)
+            # if terminate didn't work then we fallback to killing the process
+            if proc.is_alive():
+                proc.kill()
+                # note we need a timeout here incase the process blocked on
+                # an uniteruptable syscall and refuses to exit (should not
+                # be the case, but ya know ... caution)
+                proc.join(timeout=kMountStaleSecondsTimeout)
+            # if the process is alive at this point the only thing that we
+            # can hope to kill it is the umount that we will trigger later.
+            # But we can still close all the resources the process might be
+            # holding on to to prevent deadlocks and such.
+            if proc.is_alive():
+                proc.close()
+            raise error
+
+    def check_path_access(
+        self,
+        path: bytes,
+        mount_type: bytes,
+    ) -> None:
         """\
         Attempts to stat the given directory, bypassing the kernel's caches.
         Raises OSError upon failure.
@@ -76,7 +116,22 @@ class MountTable(abc.ABC):
                 # the stat result is cached. Append a random string to avoid that. In a
                 # better world, this code would bypass the cache by opening a handle
                 # with O_DIRECT, but EdenFS does not support O_DIRECT.
-                os.lstat(os.path.join(path, hex(random.getrandbits(32))[2:].encode()))
+                proc = self.create_lstat_process(path)
+                proc.start()
+                proc.join(timeout=kMountStaleSecondsTimeout)
+                if proc.is_alive():
+                    self.close_hanging_process(
+                        proc,
+                        OSError(
+                            errno.ETIMEDOUT,
+                            "Stating the mount timed out, mount point hangs",
+                        ),
+                    )
+                else:
+                    raise OSError(
+                        proc.exitcode,
+                        "Mount point is no longer connected to a running EdenFS -- stale mount",
+                    )
             except OSError as e:
                 if e.errno == errno.ENOENT:
                     return
@@ -86,35 +141,16 @@ class MountTable(abc.ABC):
         # means the mount is stale and ENOENT still means the mount seems to be
         # working properly.
         elif mount_type == b"nfs":
-            proc = multiprocessing.Process(
-                target=lstat_process,
-                args=(os.path.join(path, hex(random.getrandbits(32))[2:].encode()),),
-            )
+            proc = self.create_lstat_process(path)
             proc.start()
             proc.join(timeout=kMountStaleSecondsTimeout)
             if proc.is_alive():
-                # ask the lstat to terminate nicely, this is expected to succeed.
-                proc.terminate()
-                # note we need a timeout here incase the process is miss
-                # behaving and refuses to exit
-                proc.join(timeout=kMountStaleSecondsTimeout)
-                # if terminate didn't work then we fallback to killing the process
-                if proc.is_alive():
-                    proc.kill()
-                    # note we need a timeout here incase the process blocked on
-                    # an uniteruptable syscall and refuses to exit (should not
-                    # be the case, but ya know ... caution)
-                    proc.join(timeout=kMountStaleSecondsTimeout)
-                # if the process is alive at this point the only thing that we
-                # can hope to kill it is the umount that we will trigger later.
-                # But we can still close all the resources the process might be
-                # holding on to to prevent deadlocks and such.
-                if proc.is_alive():
-                    proc.close()
-
-                raise OSError(
-                    errno.ENOTCONN,
-                    "Stating the mount timed out, mount point is not connected",
+                self.close_hanging_process(
+                    proc,
+                    OSError(
+                        errno.ENOTCONN,
+                        "Stating the mount timed out, mount point is not connected",
+                    ),
                 )
             else:
                 if proc.exitcode == errno.ENOENT:

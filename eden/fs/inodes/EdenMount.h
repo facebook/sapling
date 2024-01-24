@@ -251,11 +251,11 @@ struct SetPathObjectIdObjectAndPath {
         "path={}, objectId={}, type={}",
         path.value(),
         id.asString(),
-        convertTypeToString(type));
+        convertTypeToString());
   }
 
  private:
-  std::string_view convertTypeToString(ObjectType type) const {
+  std::string_view convertTypeToString() const {
     switch (type) {
       case ObjectType::TREE:
         return "tree";
@@ -351,7 +351,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    *
    * If takeover data is specified, it is used to initialize the inode map.
    */
-  FOLLY_NODISCARD folly::Future<folly::Unit> initialize(
+  FOLLY_NODISCARD ImmediateFuture<folly::Unit> initialize(
       OverlayChecker::ProgressCallback&& progressCallback = [](auto) {},
       const std::optional<SerializedInodeMap>& takeover = std::nullopt,
       const std::optional<MountProtocol>& takeoverMountProtocol = std::nullopt);
@@ -757,10 +757,10 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * This updates the checkedOutRootId as well as the workingCopyParentRootId to
    * the passed in snapshotHash.
    */
-  folly::Future<CheckoutResult> checkout(
+  ImmediateFuture<CheckoutResult> checkout(
       TreeInodePtr rootInode,
       const RootId& snapshotHash,
-      OptionalProcessId clientPid,
+      const ObjectFetchContextPtr& fetchContext,
       folly::StringPiece thriftMethodCaller,
       CheckoutMode checkoutMode = CheckoutMode::NORMAL);
 
@@ -795,6 +795,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
       TreeInodePtr rootInode,
       const RootId& commitHash,
       folly::CancellationToken cancellation,
+      const ObjectFetchContextPtr& fetchContext,
       bool listIgnored = false,
       bool enforceCurrentParent = true);
 
@@ -1195,6 +1196,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   std::unique_ptr<DiffContext> createDiffContext(
       DiffCallback* callback,
       folly::CancellationToken cancellation,
+      const ObjectFetchContextPtr& fetchContext,
       bool listIgnored = false) const;
 
   /**
@@ -1210,7 +1212,8 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
       const RootId& commitHash,
       bool listIgnored,
       bool enforceCurrentParent,
-      folly::CancellationToken cancellation) const;
+      folly::CancellationToken cancellation,
+      const ObjectFetchContextPtr& fetchContext) const;
 
   /**
    * Signal to unmount() that fsChannelMount() or takeoverFuse() has started.
@@ -1310,7 +1313,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * Any operation that modifies an existing InodeBase's location_ data must
    * hold the rename lock.
    */
-  folly::SharedMutex renameMutex_;
+  mutable folly::SharedMutex renameMutex_;
 
   /**
    * The IDs of the parent commit of the working directory.

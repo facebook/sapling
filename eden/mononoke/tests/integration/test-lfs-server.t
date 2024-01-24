@@ -39,11 +39,15 @@
   IN  > POST /lfs1/objects/batch -
   OUT < POST /lfs1/objects/batch 200 OK
 
+# Try to download without providing the mandatory client info header
+  $ sslcurl_noclientinfo_test "${lfs_uri}/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d" -s
+  {"message:"Error: X-Client-Info header not provided or wrong format (expected json)."} (no-eol)
+
 # Download over a variety of encodings
 
-  $ curl "${lfs_uri}/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d" -s -o identity
-  $ curl "${lfs_uri}/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d" -s -o gzip -H "Accept-Encoding: gzip"
-  $ curl "${lfs_uri}/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d" -s -o zstd -H "Accept-Encoding: zstd"
+  $ curltest "${lfs_uri}/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d" -s -o identity
+  $ curltest "${lfs_uri}/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d" -s -o gzip -H "Accept-Encoding: gzip"
+  $ curltest "${lfs_uri}/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d" -s -o zstd -H "Accept-Encoding: zstd"
 
 # Check that the encoding yield different sizes, but the same content.
 
@@ -64,8 +68,8 @@
 
 # Download with a range
 
-  $ curl "${lfs_uri}/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d" -sf --range 0-10 -o chunk0
-  $ curl "${lfs_uri}/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d" -sf --range 11-2047 -o chunk1
+  $ curltest "${lfs_uri}/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d" -sf --range 0-10 -o chunk0
+  $ curltest "${lfs_uri}/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d" -sf --range 11-2047 -o chunk1
 
   $ wc -c chunk0
   11 chunk0
@@ -74,7 +78,7 @@
   $ cat chunk0 chunk1 | sha256sum
   ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746  -
 
-  $ curl "${lfs_uri}/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d" -sf --range 2048-2049 -o chunk2
+  $ curltest "${lfs_uri}/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d" -sf --range 2048-2049 -o chunk2
   [22]
 
   $ cat > request <<EOF
@@ -89,9 +93,9 @@
   >  ]
   > }
   > EOF
-  $ curl -s -w "\n%{http_code}" -H "Host: abcd" "${lfs_uri}/objects/batch/" --data-binary "@request"
+  $ curltest -s -w "\n%{http_code}" -H "Host: abcd" "${lfs_uri}/objects/batch/" --data-binary "@request"
   {"message":"Host abcd is not allowlisted","request_id":"*"} (glob)
   400 (no-eol)
-  $ curl -s -w "\n%{http_code}" "${lfs_uri}/objects/batch/" --data-binary "@request"
+  $ curltest -s -w "\n%{http_code}" "${lfs_uri}/objects/batch/" --data-binary "@request"
   {"transfer":"basic","objects":[{"oid":"ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746","size":2048,"authenticated":false,"actions":{"download":{"href":"http://$LOCALIP:*/lfs1/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d?server_hostname=*"}}}]} (glob)
   200 (no-eol)

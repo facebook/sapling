@@ -77,7 +77,7 @@
 
 
 # Create Git bundle out of this Git repo
-  $ mononoke_newadmin git-bundle create -o $BUNDLE_OUTPUT --git-repo-path $GIT_REPO_ORIGIN/.git
+  $ mononoke_newadmin git-bundle create from-path -o $BUNDLE_OUTPUT --git-repo-path $GIT_REPO_ORIGIN/.git
 # Ensure that Git considers this a valid bundle
   $ git bundle verify $BUNDLE_OUTPUT
   $TESTTMP/repo.bundle is okay

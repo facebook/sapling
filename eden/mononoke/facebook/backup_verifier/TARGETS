@@ -1,0 +1,27 @@
+load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
+load("//antlir/fbpkg:fbpkg.bzl", "fbpkg")
+
+oncall("mononoke")
+
+python_binary(
+    name = "backup_verifier",
+    srcs = [
+        "main.py",
+    ],
+    main_function = "eden.mononoke.facebook.backup_verifier.main.main_2",
+    deps = [
+        "//configerator/distribution/api/py:configerator_config",
+        "//configerator/structs/scm/mononoke/repos:repos-py",
+        "//libfb/py/asyncio:sandcastle",
+        "//libfb/py/sandcastle:sandcastle",
+    ],
+)
+
+fbpkg.builder(
+    name = "mononoke.backup_verifier",
+    buck_opts = fbpkg.buck_opts(version = "v2"),
+    override_log_paths = ["eden/mononoke/facebook/backup_verifier"],
+    path_actions = {
+        "backup_verifier": ":backup_verifier",
+    },
+)

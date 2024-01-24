@@ -1,0 +1,147 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+
+oncall("scm_client_infra")
+
+cpp_library(
+    name = "mountd",
+    srcs = ["Mountd.cpp"],
+    headers = ["Mountd.h"],
+    deps = [
+        ":mountd_rpc",
+        "//eden/fs/nfs/rpc:server",
+        "//eden/fs/utils:immediate_future",
+        "//folly:synchronized",
+        "//folly:utility",
+        "//folly/logging:logging",
+    ],
+    exported_deps = [
+        "//eden/fs/inodes:inode_number",
+        "//eden/fs/utils:path",
+        "//folly:file",
+        "//folly:network_address",
+        "//folly/futures:core",
+    ],
+)
+
+cpp_library(
+    name = "mountd_rpc",
+    srcs = ["MountdRpc.cpp"],
+    headers = ["MountdRpc.h"],
+    exported_deps = [
+        ":nfsd_rpc",
+        "//eden/fs/nfs/rpc:rpc",
+    ],
+)
+
+cpp_library(
+    name = "nfsd3",
+    srcs = [
+        "NfsRequestContext.cpp",
+        "Nfsd3.cpp",
+    ],
+    headers = [
+        "NfsRequestContext.h",
+        "Nfsd3.h",
+    ],
+    deps = [
+        ":nfs_utils",
+        ":nfsd_rpc",
+        "//eden/fs/privhelper:interface",
+        "//eden/fs/store:context",
+        "//eden/fs/telemetry:fs_event_logger",
+        "//eden/fs/telemetry:log_info",
+        "//eden/fs/telemetry:structured_logger",
+        "//eden/fs/utils:clock",
+        "//eden/fs/utils:static_assert",
+        "//eden/fs/utils:system_error",
+        "//eden/fs/utils:throw",
+        "//eden/fs/utils:utils",
+        "//folly:utility",
+        "//folly/executors:serial_executor",
+        "//folly/futures:core",
+        "//folly/portability:stdlib",
+    ],
+    exported_deps = [
+        ":dispatcher",
+        "//eden/fs/inodes:fs_channel",
+        "//eden/fs/inodes:request_context",
+        "//eden/fs/nfs/rpc:server",
+        "//eden/fs/telemetry:telemetry",
+        "//eden/fs/utils:case_sensitivity",
+        "//eden/fs/utils:process_access_log",
+    ],
+)
+
+cpp_library(
+    name = "nfsd_rpc",
+    srcs = ["NfsdRpc.cpp"],
+    headers = ["NfsdRpc.h"],
+    deps = [
+        "fbsource//third-party/fmt:fmt",
+        "//folly:range",
+        "//folly:string",
+    ],
+    exported_deps = [
+        "//eden/fs/inodes:inode_number",
+        "//eden/fs/nfs/rpc:rpc",
+    ],
+)
+
+cpp_library(
+    name = "nfs_server",
+    srcs = ["NfsServer.cpp"],
+    headers = ["NfsServer.h"],
+    deps = [
+        ":nfsd3",
+        "//eden/fs/nfs/portmap:portmapserver",
+    ],
+    exported_deps = [
+        ":mountd",
+        "//eden/fs/inodes:fs_channel",
+        "//eden/fs/nfs/rpc:server",
+        "//eden/fs/utils:case_sensitivity",
+    ],
+)
+
+cpp_library(
+    name = "dispatcher",
+    srcs = ["NfsDispatcher.cpp"],
+    headers = ["NfsDispatcher.h"],
+    deps = [
+        "//eden/fs/telemetry:telemetry",
+    ],
+    exported_deps = [
+        ":dirlist",
+        "//eden/common/utils:file_utils",
+        "//eden/fs/inodes:inode_metadata",
+        "//eden/fs/inodes:inode_number",
+        "//eden/fs/store:context",
+        "//eden/fs/utils:immediate_future",
+        "//eden/fs/utils:path",
+        "//eden/fs/utils:ref_ptr",
+    ],
+)
+
+cpp_library(
+    name = "dirlist",
+    srcs = ["NfsDirList.cpp"],
+    headers = ["NfsDirList.h"],
+    exported_deps = [
+        ":nfsd_rpc",
+        "//eden/fs/inodes:inode_number",
+    ],
+)
+
+cpp_library(
+    name = "nfs_utils",
+    srcs = ["NfsUtils.cpp"],
+    headers = ["NfsUtils.h"],
+    exported_deps = [
+        ":nfsd_rpc",
+        "//eden/fs/utils:throw",
+        "//eden/fs/utils:utils",
+        "//folly:try",
+        "//folly:utility",
+        "//folly/portability:sys_stat",
+    ],
+)

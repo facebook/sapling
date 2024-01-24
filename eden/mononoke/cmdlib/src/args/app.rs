@@ -8,6 +8,7 @@
 use std::collections::HashSet;
 use std::ffi::OsString;
 use std::num::NonZeroU32;
+use std::sync::OnceLock;
 
 use anyhow::Error;
 use anyhow::Result;
@@ -19,7 +20,6 @@ use clap_old::App;
 use clap_old::Arg;
 use clap_old::ArgGroup;
 use fbinit::FacebookInit;
-use once_cell::sync::OnceCell;
 use repo_factory::ReadOnlyStorage;
 use slog::Record;
 use sql_ext::facebook::SharedConnectionPool;
@@ -57,6 +57,7 @@ pub const MYSQL_SQLBLOB_POOL_AGE_TIMEOUT: &str = "mysql-sqblob-pool-age-timeout"
 pub const MYSQL_SQLBLOB_POOL_IDLE_TIMEOUT: &str = "mysql-sqblob-pool-idle-timeout";
 pub const RUNTIME_THREADS: &str = "runtime-threads";
 pub const TUNABLES_CONFIG: &str = "tunables-config";
+pub const JUST_KNOBS_CONFIG_PATH: &str = "just-knobs-config-path";
 pub const TUNABLES_LOCAL_PATH: &str = "tunables-local-path";
 pub const DISABLE_TUNABLES: &str = "disable-tunables";
 pub const SCRIBE_LOGGING_DIRECTORY: &str = "scribe-logging-directory";
@@ -122,6 +123,8 @@ pub enum ArgType {
     Runtime,
     /// Adds options related to mononoke tunables
     Tunables,
+    /// Adds options related to just knobs
+    JustKnobs,
     /// Adds options to select a repo. If not present then all repos.
     Repo,
     /// Adds options for scrubbing blobstores
@@ -164,6 +167,7 @@ const DEFAULT_ARG_TYPES: &[ArgType] = &[
     ArgType::Repo,
     ArgType::Runtime,
     ArgType::Tunables,
+    ArgType::JustKnobs,
     ArgType::RendezVous,
     ArgType::Derivation,
     ArgType::Acls,
@@ -647,6 +651,9 @@ impl MononokeAppBuilder {
         if self.arg_types.contains(&ArgType::Tunables) {
             app = add_tunables_args(app);
         }
+        if self.arg_types.contains(&ArgType::JustKnobs) {
+            app = add_justknobs_args(app);
+        }
         if self.arg_types.contains(&ArgType::ShutdownTimeouts) {
             app = add_shutdown_timeout_args(app);
         }
@@ -713,7 +720,7 @@ impl MononokeAppBuilder {
 
         if let Some(default) = self.blobstore_read_qps_default {
             // Lazy static is nicer to LeakSanitizer than Box::leak
-            static QPS_FORMATTED: OnceCell<String> = OnceCell::new();
+            static QPS_FORMATTED: OnceLock<String> = OnceLock::new();
             // clap needs &'static str
             read_qps_arg =
                 read_qps_arg.default_value(QPS_FORMATTED.get_or_init(|| format!("{}", default)));
@@ -866,7 +873,7 @@ impl MononokeAppBuilder {
                 .required(false)
                 .help("Number of seconds grace to give for key to arrive in multiple blobstores or the healer queue when scrubbing");
             if let Some(default) = self.scrub_grace_secs_default {
-                static FORMATTED: OnceCell<String> = OnceCell::new(); // Lazy static is nicer to LeakSanitizer than Box::leak
+                static FORMATTED: OnceLock<String> = OnceLock::new(); // Lazy static is nicer to LeakSanitizer than Box::leak
                 scrub_grace_arg =
                     scrub_grace_arg.default_value(FORMATTED.get_or_init(|| format!("{}", default)));
             }
@@ -879,7 +886,7 @@ impl MononokeAppBuilder {
             .requires(BLOBSTORE_SCRUB_ACTION_ARG)
             .help("Number of seconds within which we consider it worth checking the healer queue.");
             if let Some(default) = self.scrub_queue_peek_bound_secs_default {
-                static FORMATTED: OnceCell<String> = OnceCell::new(); // Lazy static is nicer to LeakSanitizer than Box::leak
+                static FORMATTED: OnceLock<String> = OnceLock::new(); // Lazy static is nicer to LeakSanitizer than Box::leak
                 scrub_queue_peek_bound_arg = scrub_queue_peek_bound_arg
                     .default_value(FORMATTED.get_or_init(|| format!("{}", default)));
             };
@@ -923,6 +930,18 @@ fn add_tunables_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             .long(DISABLE_TUNABLES)
             .conflicts_with_all(&[TUNABLES_CONFIG, TUNABLES_LOCAL_PATH])
             .help("Use the default values for all tunables (useful for tests)"),
+    )
+}
+fn add_justknobs_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+    app.arg(
+        Arg::with_name(JUST_KNOBS_CONFIG_PATH)
+            .long(JUST_KNOBS_CONFIG_PATH)
+            .takes_value(true)
+            .help(
+                "Path to a config that contains JustKnob values. Enables
+            cached_config-based JustKnobs implementation instead of the default
+            one",
+            ),
     )
 }
 fn add_runtime_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {

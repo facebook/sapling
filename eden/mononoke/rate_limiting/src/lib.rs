@@ -148,11 +148,18 @@ impl LoadShedLimit {
         let metric = self.raw_config.metric.to_string();
 
         match STATS::load_shed_counter.get_value(fb, (metric.clone(),)) {
-            Some(value) if value > self.raw_config.limit => Err(RateLimitReason::LoadShedMetric(
-                metric,
-                value,
-                self.raw_config.limit,
-            )),
+            Some(value) if value > self.raw_config.limit => match self.raw_config.status {
+                RateLimitStatus::Disabled => Ok(()),
+                // TODO (liubovd): add logging to scuba for reached limits
+                RateLimitStatus::Tracked => Ok(()),
+                RateLimitStatus::Enforced => Err(RateLimitReason::LoadShedMetric(
+                    metric,
+                    value,
+                    self.raw_config.limit,
+                )),
+                // NOTE: Thrift enums aren't real enums once in Rust. We have to account for other values here.
+                _ => Ok(()),
+            },
             _ => Ok(()),
         }
     }
@@ -313,5 +320,59 @@ mod test {
             50.try_into().unwrap(),
             "abc"
         ));
+    }
+
+    #[cfg(fbcode_build)]
+    #[test]
+    fn test_static_slice_of_identity_set() {
+        let test_ident = MononokeIdentity::new("USER", "foo");
+        let test2_ident = MononokeIdentity::new("SERVICE_IDENTITY", "bar");
+        let test3_ident = MononokeIdentity::new("MACHINE", "abc125.abc.facebook.com");
+        let test4_ident = MononokeIdentity::new("MACHINE", "abc124.abc.facebook.com");
+
+        let ident_target = Target::Identity(test2_ident.clone());
+        let twenty_pct_target = Target::StaticSlice(StaticSlice {
+            slice_pct: 20.try_into().unwrap(),
+            nonce: "nonce".into(),
+        });
+        let hundred_pct_target = Target::StaticSlice(StaticSlice {
+            slice_pct: 100.try_into().unwrap(),
+            nonce: "nonce".into(),
+        });
+
+        let mut idents = MononokeIdentitySet::new();
+        idents.insert(test_ident.clone());
+        idents.insert(test2_ident.clone());
+        idents.insert(test3_ident);
+        let idents1 = Some(idents);
+
+        let mut idents = MononokeIdentitySet::new();
+        idents.insert(test_ident);
+        idents.insert(test2_ident);
+        idents.insert(test4_ident);
+        let idents2 = Some(idents);
+
+        // All of SERVICE_IDENTITY: bar
+        assert!(ident_target.matches_client(idents1.as_ref()));
+
+        // 20% of SERVICE_IDENTITY: bar. ratelimited host
+        let twenty_pct_service_identity =
+            Target::AndTarget(vec![ident_target.clone(), twenty_pct_target.clone()]);
+        assert!(twenty_pct_service_identity.matches_client(idents1.as_ref()));
+
+        // 20% of SERVICE_IDENTITY: bar. not ratelimited host
+        let twenty_pct_service_identity =
+            Target::AndTarget(vec![ident_target.clone(), twenty_pct_target]);
+        assert!(!twenty_pct_service_identity.matches_client(idents2.as_ref()));
+
+        // 100% of SERVICE_IDENTITY: bar
+        let hundred_pct_service_identity =
+            Target::AndTarget(vec![ident_target.clone(), hundred_pct_target.clone()]);
+        assert!(hundred_pct_service_identity.matches_client(idents1.as_ref()));
+
+        // 100% of SERVICE_IDENTITY: bar
+        let hundred_pct_service_identity =
+            Target::AndTarget(vec![ident_target.clone(), hundred_pct_target]);
+        assert!(hundred_pct_service_identity.matches_client(idents2.as_ref()));
     }
 }

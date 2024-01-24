@@ -48,7 +48,7 @@
 
 # 4. Make a commit with corrupted file node, Change file node text
   $ echo "hello_world" > file
-  $ hg commit -Aqm "commit"
+  $ hgedenapi commit -Aqm "commit"
 
 Corrupt file contents via an extension:
   $ cat > $TESTTMP/corrupt.py <<EOF
@@ -108,7 +108,7 @@ filenode won't be send at all
   remote:                                 source: SharedError {
   remote:                                     error: InconsistentEntryHashForPath(
   remote:                                         FilePath(
-  remote:                                             MPath("file"),
+  remote:                                             NonRootMPath("file"),
   remote:                                         ),
   remote:                                         HgNodeHash(
   remote:                                             Sha1(979d39e9dea4d1f3f1fea701fd4d3bae43eef76b),

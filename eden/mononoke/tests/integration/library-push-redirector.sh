@@ -31,45 +31,7 @@ function validate_commit_sync() {
 }
 
 function large_small_megarepo_config() {
-cat >> "$TESTTMP/mononoke-config/common/commitsyncmap.toml" <<EOF
-[megarepo_test]
-large_repo_id = 0
-common_pushrebase_bookmarks = ["master_bookmark"]
- [[megarepo_test.small_repos]]
- repoid = 1
- bookmark_prefix = "bookprefix/"
- default_action = "prepend_prefix"
- default_prefix = "smallrepofolder"
- direction = "large_to_small"
-    [megarepo_test.small_repos.mapping]
-    "non_path_shifting" = "non_path_shifting"
-EOF
-
   if [ -n "$COMMIT_SYNC_CONF" ]; then
-    cat > "$COMMIT_SYNC_CONF/current" << EOF
-{
-  "repos": {
-    "megarepo_test": {
-      "large_repo_id": 0,
-      "common_pushrebase_bookmarks": ["master_bookmark"],
-      "small_repos": [
-        {
-          "repoid": 1,
-          "bookmark_prefix": "bookprefix/",
-          "default_action": "prepend_prefix",
-          "default_prefix": "smallrepofolder",
-          "direction": "large_to_small",
-          "mapping": {
-            "non_path_shifting": "non_path_shifting"
-          }
-        }
-      ],
-      "version_name": "test_version"
-    }
-  }
-}
-EOF
-
     cat > "$COMMIT_SYNC_CONF/all" << EOF
 {
   "repos": {
@@ -91,6 +53,12 @@ EOF
             }
           ],
           "version_name": "test_version"
+        },
+        {
+          "large_repo_id": 0,
+          "common_pushrebase_bookmarks": [],
+          "small_repos": [],
+          "version_name": "large_only"
         }
       ],
       "common": {
@@ -106,10 +74,7 @@ EOF
   }
 }
 EOF
-
   fi
-
-
 }
 
 function large_small_config() {
@@ -120,25 +85,23 @@ function large_small_config() {
 }
 
 function large_small_setup() {
-  quiet testtool_drawdag -R small-mon <<'EOF'
+  quiet testtool_drawdag -R small-mon --no-default-files <<'EOF'
 S_B
 |
 S_A
 # message: S_A "pre-move commit"
 # author: S_A test
 # modify: S_A file.txt "1\n"
-# forget: S_A S_A
 # message: S_B "first post-move commit"
 # author: S_B test
 # modify: S_B filetoremove "1\n"
 # bookmark: S_B master_bookmark
-# forget: S_B S_B
 EOF
 
   export SMALL_MASTER_BONSAI
   SMALL_MASTER_BONSAI=$S_B
 
-  quiet testtool_drawdag -R large-mon <<'EOF'
+  quiet testtool_drawdag -R large-mon --no-default-files <<'EOF'
 L_C
 |
 L_B
@@ -149,15 +112,12 @@ L_A
 # modify: L_A file.txt "1\n"
 # message: L_B "move commit"
 # author: L_B test
-# forget: L_A L_A
 # copy: L_B smallrepofolder/file.txt "1\n" L_A file.txt
 # delete: L_B file.txt
-# forget: L_B L_B
 # message: L_C "first post-move commit"
 # author: L_C test
 # modify: L_C smallrepofolder/filetoremove "1\n"
 # bookmark: L_C master_bookmark
-# forget: L_C L_C
 EOF
 
   export LARGE_MASTER_BONSAI
@@ -191,30 +151,6 @@ EOF
 }
 
 function update_commit_sync_map_first_option {
-  cat > "$COMMIT_SYNC_CONF/current" << EOF
-{
-  "repos": {
-    "megarepo_test": {
-      "large_repo_id": 0,
-      "common_pushrebase_bookmarks": ["master_bookmark"],
-      "small_repos": [
-        {
-          "repoid": 1,
-          "bookmark_prefix": "bookprefix/",
-          "default_action": "prepend_prefix",
-          "default_prefix": "smallrepofolder_after",
-          "direction": "large_to_small",
-          "mapping": {
-            "non_path_shifting": "non_path_shifting"
-          }
-        }
-      ],
-      "version_name": "new_version"
-    }
-  }
-}
-EOF
-
   cat > "$COMMIT_SYNC_CONF/all" << EOF
 {
   "repos": {
@@ -272,32 +208,6 @@ EOF
 }
 
 function update_commit_sync_map_second_option {
-  cat > "$COMMIT_SYNC_CONF/current" <<EOF
-{
-  "repos": {
-    "megarepo_test": {
-        "large_repo_id": 0,
-        "common_pushrebase_bookmarks": [
-          "master_bookmark"
-        ],
-        "small_repos": [
-          {
-            "repoid": 1,
-            "default_action": "prepend_prefix",
-            "default_prefix": "smallrepofolder1",
-            "bookmark_prefix": "bookprefix1/",
-            "mapping": {
-              "special": "specialsmallrepofolder_after_change"
-            },
-            "direction": "large_to_small"
-          }
-        ],
-        "version_name": "TEST_VERSION_NAME_LIVE_V2"
-    }
-  }
-}
-EOF
-
   cat > "$COMMIT_SYNC_CONF/all" << EOF
 {
   "repos": {
@@ -346,6 +256,90 @@ EOF
         "small_repos": {
           1: {
             "bookmark_prefix": "bookprefix1/"
+          }
+        }
+      }
+    }
+  }
+}
+EOF
+
+}
+
+function update_commit_sync_map_for_new_repo_import {
+  cat > "$COMMIT_SYNC_CONF/all" << EOF
+{
+  "repos": {
+    "megarepo_test": {
+      "versions": [
+        {
+          "large_repo_id": 0,
+          "common_pushrebase_bookmarks": ["master_bookmark"],
+          "small_repos": [
+            {
+              "repoid": 1,
+              "bookmark_prefix": "bookprefix/",
+              "default_action": "prepend_prefix",
+              "default_prefix": "smallrepofolder",
+              "direction": "large_to_small",
+              "mapping": {
+                "non_path_shifting": "non_path_shifting"
+              }
+            }
+          ],
+          "version_name": "test_version"
+        },
+        {
+          "large_repo_id": 0,
+          "common_pushrebase_bookmarks": ["master_bookmark"],
+          "small_repos": [
+            {
+              "repoid": 2,
+              "bookmark_prefix": "imported_repo/",
+              "default_action": "prepend_prefix",
+              "default_prefix": "imported_repo",
+              "direction": "large_to_small",
+              "mapping": {}
+            }
+          ],
+          "version_name": "imported_noop"
+        },
+        {
+          "large_repo_id": 0,
+          "common_pushrebase_bookmarks": ["master_bookmark"],
+          "small_repos": [
+            {
+              "repoid": 1,
+              "bookmark_prefix": "bookprefix/",
+              "default_action": "prepend_prefix",
+              "default_prefix": "smallrepofolder",
+              "direction": "large_to_small",
+              "mapping": {
+                "non_path_shifting": "non_path_shifting"
+              }
+            },
+            {
+              "repoid": 2,
+              "bookmark_prefix": "imported_repo/",
+              "default_action": "prepend_prefix",
+              "default_prefix": "imported_repo",
+              "direction": "large_to_small",
+              "mapping": {}
+            }
+          ],
+          "version_name": "new_version"
+        }
+      ],
+      "common": {
+        "common_pushrebase_bookmarks": ["master_bookmark"],
+        "large_repo_id": 0,
+        "small_repos": {
+          1: {
+            "bookmark_prefix": "bookprefix/"
+          },
+          2: {
+            "bookmark_prefix": "imported_repo/",
+            "common_pushrebase_bookmarks_map": { "master_bookmark": "heads/master_bookmark" }
           }
         }
       }
@@ -451,7 +445,7 @@ function mononoke_x_repo_sync_forever() {
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
-    --scribe-logging-directory "$TESTTMP/scribe_logs" \
+    --scuba-dataset "file://$TESTTMP/x_repo_sync_scuba_logs" \
     --source-repo-id "$source_repo_id" \
     --target-repo-id "$target_repo_id" \
     "$@" \

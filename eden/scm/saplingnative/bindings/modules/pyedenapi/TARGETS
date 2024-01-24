@@ -1,0 +1,46 @@
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+load("//eden/scm:targets.bzl", "rust_python_library")
+
+oncall("mercurial_release")
+
+rust_python_library(
+    name = "pyedenapi",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "cpython": {
+                        "features": [],
+                        "git": None,
+                        "rev": None,
+                    },
+                },
+            },
+            "extra_buck_dependencies": {
+                "dependencies": [
+                    "//eden/scm/lib/revisionstore:revisionstore",
+                ],
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:futures",
+        "//eden/scm/lib/async-runtime:async-runtime",
+        "//eden/scm/lib/cpython-async:cpython-async",
+        "//eden/scm/lib/cpython-ext:cpython-ext",
+        "//eden/scm/lib/dag/dag-types:dag-types",
+        "//eden/scm/lib/edenapi:edenapi",
+        "//eden/scm/lib/edenapi/ext:edenapi_ext",
+        "//eden/scm/lib/edenapi/types:edenapi_types",
+        "//eden/scm/lib/minibytes:minibytes",
+        "//eden/scm/lib/progress/model:progress-model",
+        "//eden/scm/lib/revisionstore:revisionstore_with_ods",
+        "//eden/scm/lib/storemodel/hgstore:hgstore",
+        "//eden/scm/lib/types:types",
+        "//eden/scm/saplingnative/bindings/modules/pyconfigloader:pyconfigloader",
+        "//eden/scm/saplingnative/bindings/modules/pyrevisionstore:pyrevisionstore",
+    ],
+)

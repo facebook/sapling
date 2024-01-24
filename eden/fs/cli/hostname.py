@@ -4,6 +4,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+import re
 import socket
 
 try:
@@ -18,3 +19,16 @@ def get_normalized_hostname() -> str:
     """Get the system's normalized hostname for logging and telemetry purposes."""
 
     return normalize_hostname(socket.gethostname())
+
+
+def get_host_prefix(hostname: str) -> str:
+    """
+    Get the prefix of a hostname, e.g., "devvm", "od".
+
+    Returns an empty string if no prefix is found.
+    """
+    match = re.match(r"([a-zA-Z\-]+)\d+.*", hostname)
+    if not match:
+        return ""
+
+    return match.group(1)

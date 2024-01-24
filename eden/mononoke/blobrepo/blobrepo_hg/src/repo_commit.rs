@@ -45,7 +45,7 @@ use mercurial_types::nodehash::HgManifestId;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
 use mercurial_types::HgParents;
-use mercurial_types::MPath;
+use mercurial_types::NonRootMPath;
 use mercurial_types::RepoPath;
 use mercurial_types::NULL_HASH;
 use mononoke_types::BlobstoreKey;
@@ -556,7 +556,7 @@ pub fn make_new_changeset(
     parents: HgParents,
     root_hash: HgManifestId,
     cs_metadata: ChangesetMetadata,
-    files: Vec<MPath>,
+    files: Vec<NonRootMPath>,
 ) -> Result<HgBlobChangeset> {
     let changeset = HgChangesetContent::new_from_parts(parents, root_hash, cs_metadata, files);
     HgBlobChangeset::new(changeset)

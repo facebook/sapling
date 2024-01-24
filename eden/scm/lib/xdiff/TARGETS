@@ -1,0 +1,42 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:cram_test.bzl", "cram_test")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "xdiff",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    deps = [
+        "//eden/scm/lib/xdiff-sys:xdiff-sys",
+    ],
+)
+
+# example binary that uses 'xdiff' library to implement `diff` command
+rust_binary(
+    name = "diff",
+    srcs = ["src/bin/diff.rs"],
+    deps = [
+        "fbsource//third-party/rust:structopt",
+        "//eden/scm/lib/xdiff:xdiff",
+    ],
+)
+
+# cram tests that use the example binary to test the library
+cram_test(
+    name = "tests",
+    srcs = glob([
+        "tests/*.t",
+    ]) + [
+        "tests/setup.sh",
+    ],
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    env = {
+        "XDIFF": "$(location :diff)",
+    },
+)

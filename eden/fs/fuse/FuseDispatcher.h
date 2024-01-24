@@ -25,10 +25,10 @@ namespace facebook::eden {
 
 #ifndef _WIN32
 
-#define FUSELL_NOT_IMPL()                                               \
-  do {                                                                  \
-    LOG_FIRST_N(ERROR, 1) << __PRETTY_FUNCTION__ << " not implemented"; \
-    folly::throwSystemErrorExplicit(ENOSYS, __PRETTY_FUNCTION__);       \
+#define FUSELL_NOT_IMPL()                                                 \
+  do {                                                                    \
+    LOG_FIRST_N(WARNING, 1) << __PRETTY_FUNCTION__ << " not implemented"; \
+    folly::throwSystemErrorExplicit(ENOSYS, __PRETTY_FUNCTION__);         \
   } while (0)
 
 class FuseDirList;

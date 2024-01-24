@@ -133,11 +133,11 @@ mod tests {
         fs::write(dir.join("b"), b"2").unwrap();
         fs::write(dir.join("c"), b"3").unwrap();
 
-        assert_eq!(d(fsync_glob(&dir, &[], None)), "[]");
-        assert_eq!(d(fsync_glob(&dir, &["d"], None)), "[]");
-        assert_eq!(d(fsync_glob(&dir, &["?"], None)), "[\"a\", \"b\", \"c\"]");
+        assert_eq!(d(fsync_glob(dir, &[], None)), "[]");
+        assert_eq!(d(fsync_glob(dir, &["d"], None)), "[]");
+        assert_eq!(d(fsync_glob(dir, &["?"], None)), "[\"a\", \"b\", \"c\"]");
         assert_eq!(
-            d(fsync_glob(&dir, &["a*", "c"], None)),
+            d(fsync_glob(dir, &["a*", "c"], None)),
             "[\"a\", \"a1\", \"c\"]"
         );
     }
@@ -153,7 +153,7 @@ mod tests {
         let newer_than = SystemTime::now()
             .checked_add(Duration::from_secs(10))
             .unwrap();
-        assert_eq!(d(fsync_glob(&dir, &["*"], Some(newer_than))), "[]");
+        assert_eq!(d(fsync_glob(dir, &["*"], Some(newer_than))), "[]");
     }
 
     fn d(value: impl std::fmt::Debug) -> String {

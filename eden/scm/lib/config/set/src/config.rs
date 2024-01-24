@@ -260,7 +260,7 @@ impl ConfigSet {
         let section = Text::copy_from_slice(section.as_ref());
         let name = Text::copy_from_slice(name.as_ref());
         let value = value.map(|v| Text::copy_from_slice(v.as_ref()));
-        self.set_internal(section, name, value, None, &opts)
+        self.set_internal(section, name, value, None, opts)
     }
 
     fn set_internal(
@@ -439,7 +439,7 @@ impl ConfigSet {
                         // entry is trimmed. In order for the serialized config to be parsable, we
                         // need some indentation after each newline. Since this whitespace will be
                         // stripped on load, it shouldn't hurt anything.
-                        let value = value.replace("\n", "\n ");
+                        let value = value.replace('\n', "\n ");
                         result.push_str(&value);
                         result.push('\n');
                     } else {
@@ -451,7 +451,7 @@ impl ConfigSet {
                 }
             }
 
-            result.push_str("\n");
+            result.push('\n');
         }
 
         result
@@ -597,7 +597,7 @@ pub(crate) mod tests {
     use std::io::Write;
 
     use configmodel::ConfigExt;
-    use tempdir::TempDir;
+    use tempfile::TempDir;
 
     use super::*;
     use crate::convert::ByteCount;
@@ -688,7 +688,7 @@ pub(crate) mod tests {
         assert_eq!(cfg.get("x", "n"), Some(Text::new()));
         assert_eq!(
             cfg.get("x", "m"),
-            Some(Text::from(&"this\nvalue has\nmulti lines"[..]))
+            Some(Text::from("this\nvalue has\nmulti lines"))
         );
 
         let sources = cfg.get_sources("y", "a");
@@ -905,7 +905,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_parse_include() {
-        let dir = TempDir::new("test_parse_include").unwrap();
+        let dir = TempDir::with_prefix("test_parse_include.").unwrap();
         write_file(
             dir.path().join("rootrc"),
             "[x]\n\
@@ -970,7 +970,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_parse_include_builtin() {
-        let dir = TempDir::new("test_parse_include").unwrap();
+        let dir = TempDir::with_prefix("test_parse_include.").unwrap();
         write_file(dir.path().join("rootrc"), "%include builtin:git.rc\n");
 
         let mut cfg = ConfigSet::new();
@@ -988,7 +988,7 @@ pub(crate) mod tests {
         use std::env;
         env::set_var("FOO", "f");
 
-        let dir = TempDir::new("test_parse_include_expand").unwrap();
+        let dir = TempDir::with_prefix("test_parse_include_expand.").unwrap();
         write_file(
             dir.path().join("rootrc"),
             "%include ./${FOO}1/$FOO/3.rc\n\
@@ -1230,7 +1230,7 @@ x = 2
         );
 
         assert_eq!(cfg.get_or("foo", "bar", || 3).unwrap(), 3);
-        assert_eq!(cfg.get_or("foo", "bool1", || false).unwrap(), true);
+        assert!(cfg.get_or("foo", "bool1", || false).unwrap());
         assert_eq!(
             format!("{}", cfg.get_or("foo", "bool2", || true).unwrap_err()),
             "invalid bool: unknown"
@@ -1246,7 +1246,7 @@ x = 2
             vec![2, 3, 1]
         );
 
-        assert_eq!(cfg.get_or_default::<bool>("foo", "bool1").unwrap(), true);
+        assert!(cfg.get_or_default::<bool>("foo", "bool1").unwrap());
         assert_eq!(
             cfg.get_or_default::<Vec<bool>>("foo", "bools").unwrap(),
             vec![true, true, true, true, false, false, false, false]

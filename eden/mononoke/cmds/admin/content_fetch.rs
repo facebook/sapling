@@ -12,6 +12,8 @@ use blobstore::Loadable;
 use clap_old::App;
 use clap_old::ArgMatches;
 use clap_old::SubCommand;
+use clientinfo::ClientEntryPoint;
+use clientinfo::ClientInfo;
 use cmdlib::args;
 use cmdlib::args::MononokeMatches;
 use cmdlib::helpers;
@@ -23,8 +25,8 @@ use manifest::ManifestOps;
 use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
-use mercurial_types::MPath;
 use mononoke_types::hash::GitSha1;
+use mononoke_types::path::MPath;
 use mononoke_types::FileType;
 use repo_blobstore::RepoBlobstoreRef;
 use slog::Logger;
@@ -51,7 +53,11 @@ pub async fn subcommand_content_fetch<'a>(
     let rev = sub_m.value_of("CHANGESET_ID").unwrap().to_string();
     let path = sub_m.value_of("PATH").unwrap().to_string();
 
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    let ctx = CoreContext::new_with_logger_and_client_info(
+        fb,
+        logger.clone(),
+        ClientInfo::default_with_entry_point(ClientEntryPoint::MononokeAdmin),
+    );
 
     let repo = args::not_shardmanager_compatible::open_repo(fb, &logger, matches).await?;
     let entry = fetch_entry(&ctx, &repo, &rev, &path).await?;
@@ -159,7 +165,7 @@ async fn fetch_entry(
 
     let ret = hg_cs
         .manifestid()
-        .find_entry(ctx.clone(), repo.repo_blobstore().clone(), Some(mpath))
+        .find_entry(ctx.clone(), repo.repo_blobstore().clone(), mpath)
         .await?
         .ok_or_else(|| format_err!("Path does not exist: {}", path))?;
 

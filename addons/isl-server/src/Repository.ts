@@ -6,9 +6,10 @@
  */
 
 import type {CodeReviewProvider} from './CodeReviewProvider';
+import type {KindOfChange, PollKind} from './WatchForChanges';
+import type {TrackEventName} from './analytics/eventNames';
 import type {ServerSideTracker} from './analytics/serverSideTracker';
 import type {Logger} from './logger';
-import type {ExecaError} from 'execa';
 import type {
   CommitInfo,
   CommitPhaseType,
@@ -33,6 +34,10 @@ import type {
   RepoRelativePath,
   FetchedUncommittedChanges,
   FetchedCommits,
+  ShelvedChange,
+  CommitCloudSyncState,
+  Hash,
+  ConfigName,
 } from 'isl/src/types';
 import type {Comparison} from 'shared/Comparison';
 
@@ -43,9 +48,9 @@ import {WatchForChanges} from './WatchForChanges';
 import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD, ErrorShortMessages} from './constants';
 import {GitHubCodeReviewProvider} from './github/githubCodeReviewProvider';
 import {isGithubEnterprise} from './github/queryGraphQL';
-import {handleAbortSignalOnProcess, serializeAsyncCall} from './utils';
+import {handleAbortSignalOnProcess, isExecaError, serializeAsyncCall} from './utils';
 import execa from 'execa';
-import {CommandRunner} from 'isl/src/types';
+import {allConfigNames, CommitCloudBackupStatus, CommandRunner} from 'isl/src/types';
 import os from 'os';
 import path from 'path';
 import {revsetArgsForComparison} from 'shared/Comparison';
@@ -54,7 +59,7 @@ import {RateLimiter} from 'shared/RateLimiter';
 import {TypedEventEmitter} from 'shared/TypedEventEmitter';
 import {exists} from 'shared/fs';
 import {removeLeadingPathSep} from 'shared/pathUtils';
-import {notEmpty, unwrap} from 'shared/utils';
+import {notEmpty, randomId, unwrap} from 'shared/utils';
 
 export const COMMIT_END_MARK = '<<COMMIT_END_MARK>>';
 export const NULL_CHAR = '\0';
@@ -71,7 +76,9 @@ const FIELDS = {
   hash: '{node}',
   title: '{desc|firstline}',
   author: '{author}',
-  date: '{date|isodatesec}',
+  // We prefer committerdate over authordate as authordate sometimes makes
+  // amended or rebased commits look stale
+  date: '{committerdate|isodatesec}',
   phase: '{phase}',
   bookmarks: `{bookmarks % '{bookmark}${ESCAPED_NULL_CHAR}'}`,
   remoteBookmarks: `{remotenames % '{remotename}${ESCAPED_NULL_CHAR}'}`,
@@ -130,8 +137,35 @@ function fromEntries<V>(entries: Array<[string, V]>): {
 const FIELD_INDEX = fromEntries(Object.keys(FIELDS).map((key, i) => [key, i])) as {
   [key in Required<keyof typeof FIELDS>]: number;
 };
-
 const FETCH_TEMPLATE = [...Object.values(FIELDS), COMMIT_END_MARK].join('\n');
+
+const SHELVE_FIELDS = {
+  hash: '{node}',
+  name: '{shelvename}',
+  author: '{author}',
+  date: '{date|isodatesec}',
+  filesAdded: '{file_adds|json}',
+  filesModified: '{file_mods|json}',
+  filesRemoved: '{file_dels|json}',
+  description: '{desc}',
+};
+const SHELVE_FIELD_INDEX = fromEntries(Object.keys(SHELVE_FIELDS).map((key, i) => [key, i])) as {
+  [key in Required<keyof typeof SHELVE_FIELDS>]: number;
+};
+const SHELVE_FETCH_TEMPLATE = [...Object.values(SHELVE_FIELDS), COMMIT_END_MARK].join('\n');
+
+const CHANGED_FILES_FIELDS = {
+  hash: '{node}',
+  filesAdded: '{file_adds|json}',
+  filesModified: '{file_mods|json}',
+  filesRemoved: '{file_dels|json}',
+};
+const CHANGED_FILES_INDEX = fromEntries(
+  Object.keys(CHANGED_FILES_FIELDS).map((key, i) => [key, i]),
+) as {
+  [key in Required<keyof typeof CHANGED_FILES_FIELDS>]: number;
+};
+const CHANGED_FILES_TEMPLATE = [...Object.values(CHANGED_FILES_FIELDS), COMMIT_END_MARK].join('\n');
 
 /**
  * This class is responsible for providing information about the working copy
@@ -173,6 +207,18 @@ export class Repository {
   private pageFocusTracker = new PageFocusTracker();
   public codeReviewProvider?: CodeReviewProvider;
 
+  /**
+   * Config: milliseconds to hold off log/status refresh during the start of a command.
+   * This is to avoid showing messy indeterminate states (like millions of files changed
+   * during a long distance checkout, or commit graph changed but '.' is out of sync).
+   *
+   * Default: 10 seconds. Can be set by the `isl.hold-off-refresh-ms` setting.
+   */
+  public configHoldOffRefreshMs = 10000;
+
+  public knownConfigs: ReadonlyMap<ConfigName, string> | undefined = undefined;
+  private configRateLimiter = new RateLimiter(1);
+
   private currentVisibleCommitRangeIndex = 0;
   private visibleCommitRanges: Array<number | undefined> = [
     DEFAULT_DAYS_OF_COMMITS_TO_LOAD,
@@ -181,7 +227,16 @@ export class Repository {
   ];
 
   /**  Prefer using `RepositoryCache.getOrCreate()` to access and dispose `Repository`s. */
-  constructor(public info: ValidatedRepoInfo, public logger: Logger) {
+  constructor(
+    public info: ValidatedRepoInfo,
+    public logger: Logger,
+    /** Analytics Tracker that was valid when this repo was created. Since Repository's can be reused,
+     * there may be other trackers associated with this repo, which are not accounted for.
+     * This tracker should only be used for things that are shared among multiple consumers of this repo,
+     * like uncommitted changes.
+     */
+    public trackerBestEffort: ServerSideTracker,
+  ) {
     const remote = info.codeReviewSystem;
     if (remote.type === 'github') {
       this.codeReviewProvider = new GitHubCodeReviewProvider(remote, logger);
@@ -191,7 +246,31 @@ export class Repository {
       this.codeReviewProvider = new Internal.PhabricatorCodeReviewProvider(remote, logger);
     }
 
-    this.watchForChanges = new WatchForChanges(info, logger, this.pageFocusTracker, kind => {
+    const shouldWait = (): boolean => {
+      const startTime = this.operationQueue.getRunningOperationStartTime();
+      if (startTime == null) {
+        return false;
+      }
+      // Prevent auto-refresh during the first 10 seconds of a running command.
+      // When a command is running, the intermediate state can be messy:
+      // - status errors out (edenfs), is noisy (long distance goto)
+      // - commit graph and the `.` are updated separately and hard to predict
+      // Let's just rely on optimistic state to provide the "clean" outcome.
+      // In case the command takes a long time to run, allow refresh after
+      // the time period.
+      // Fundementally, the intermediate states have no choice but have to
+      // be messy because filesystems are not transactional (and reading in
+      // `sl` is designed to be lock-free).
+      const elapsedMs = Date.now() - startTime.valueOf();
+      const result = elapsedMs < this.configHoldOffRefreshMs;
+      return result;
+    };
+    const callback = (kind: KindOfChange, pollKind?: PollKind) => {
+      if (pollKind !== 'force' && shouldWait()) {
+        // Do nothing. This is fine because after the operation
+        // there will be a refresh.
+        return;
+      }
       if (kind === 'uncommitted changes') {
         this.fetchUncommittedChanges();
       } else if (kind === 'commits') {
@@ -209,7 +288,8 @@ export class Repository {
           this.getAllDiffIds(),
         );
       }
-    });
+    };
+    this.watchForChanges = new WatchForChanges(info, logger, this.pageFocusTracker, callback);
 
     this.operationQueue = new OperationQueue(
       this.logger,
@@ -239,7 +319,10 @@ export class Repository {
           );
         } else if (operation.runner === CommandRunner.InternalArcanist) {
           const normalizedArgs = this.normalizeOperationArgs(cwd, operation.args);
-          Internal.runArcanistCommand?.(cwd, normalizedArgs, handleCommandProgress, signal);
+          return (
+            Internal.runArcanistCommand?.(cwd, normalizedArgs, handleCommandProgress, signal) ??
+            Promise.resolve()
+          );
         }
         return Promise.resolve();
       },
@@ -273,6 +356,8 @@ export class Repository {
     this.checkForMergeConflicts();
 
     this.disposables.push(() => subscription.dispose());
+
+    this.applyConfigInBackground();
   }
 
   public nextVisibleCommitRangeInDays(): number | undefined {
@@ -335,7 +420,10 @@ export class Repository {
     try {
       // TODO: is this command fast on large files? it includes full conflicting file contents!
       // `sl resolve --list --all` does not seem to give any way to disambiguate (all conflicts resolved) and (not in merge)
-      const proc = await this.runCommand(['resolve', '--tool', 'internal:dumpjson', '--all']);
+      const proc = await this.runCommand(
+        ['resolve', '--tool', 'internal:dumpjson', '--all'],
+        'GetConflictsCommand',
+      );
       output = JSON.parse(proc.stdout) as ResolveCommandConflictOutput;
     } catch (err) {
       this.logger.error(`failed to check for merge conflicts: ${err}`);
@@ -368,18 +456,21 @@ export class Repository {
    * Throws if `command` is not found.
    */
   static async getRepoInfo(command: string, logger: Logger, cwd: string): Promise<RepoInfo> {
-    const [repoRoot, dotdir, pathsDefault, pullRequestDomain, preferredSubmitCommand] =
-      await Promise.all([
-        findRoot(command, logger, cwd).catch((err: Error) => err),
-        findDotDir(command, logger, cwd),
-        // TODO: This should actually use expanded paths, since the config won't handle custom schemes.
-        // However, `sl debugexpandpaths` is currently too slow and impacts startup time.
-        getConfig(command, logger, cwd, 'paths.default').then(value => value ?? ''),
-        getConfig(command, logger, cwd, 'github.pull_request_domain'),
-        getConfig(command, logger, cwd, 'github.preferred_submit_command').then(
-          value => value || undefined,
-        ),
-      ]);
+    const [repoRoot, dotdir, configs] = await Promise.all([
+      findRoot(command, logger, cwd).catch((err: Error) => err),
+      findDotDir(command, logger, cwd),
+      // TODO: This should actually use expanded paths, since the config won't handle custom schemes.
+      // However, `sl debugexpandpaths` is currently too slow and impacts startup time.
+      getConfigs(command, logger, cwd, [
+        'paths.default',
+        'github.pull_request_domain',
+        'github.preferred_submit_command',
+      ]),
+    ]);
+    const pathsDefault = configs.get('paths.default') ?? '';
+    const pullRequestDomain = configs.get('github.pull_request_domain');
+    const preferredSubmitCommand = configs.get('github.preferred_submit_command');
+
     if (repoRoot instanceof Error) {
       return {type: 'invalidCommand', command};
     }
@@ -452,13 +543,17 @@ export class Repository {
 
   private normalizeOperationArgs(cwd: string, args: Array<CommandArg>): Array<string> {
     const repoRoot = unwrap(this.info.repoRoot);
-    return args.map(arg => {
+    return args.flatMap(arg => {
       if (typeof arg === 'object') {
         switch (arg.type) {
+          case 'config':
+            return ['--config', `${arg.key}=${arg.value}`];
           case 'repo-relative-file':
-            return path.normalize(path.relative(cwd, path.join(repoRoot, arg.path)));
+            return [path.normalize(path.relative(cwd, path.join(repoRoot, arg.path)))];
+          case 'exact-revset':
+            return [arg.revset];
           case 'succeedable-revset':
-            return `max(successors(${arg.revset}))`;
+            return [`max(successors(${arg.revset}))`];
         }
       }
       return arg;
@@ -469,11 +564,7 @@ export class Repository {
    * Called by this.operationQueue in response to runOrQueueOperation when an operation is ready to actually run.
    */
   private async runOperation(
-    operation: {
-      id: string;
-      args: Array<CommandArg>;
-      stdin?: string;
-    },
+    operation: RunnableOperation,
     onProgress: OperationCommandProgressReporter,
     cwd: string,
     signal: AbortSignal,
@@ -485,6 +576,7 @@ export class Repository {
       cwdRelativeArgs,
       cwd,
       stdin ? {input: stdin} : undefined,
+      Internal.additionalEnvForCommand?.(operation),
     );
 
     this.logger.log('run operation: ', command, cwdRelativeArgs.join(' '));
@@ -535,7 +627,7 @@ export class Repository {
     try {
       this.uncommittedChangesBeginFetchingEmitter.emit('start');
       // Note `status -tjson` run with PLAIN are repo-relative
-      const proc = await this.runCommand(['status', '-Tjson', '--copies']);
+      const proc = await this.runCommand(['status', '-Tjson', '--copies'], 'StatusCommand');
       const files = (JSON.parse(proc.stdout) as UncommittedChanges).map(change => ({
         ...change,
         path: removeLeadingPathSep(change.path),
@@ -607,7 +699,10 @@ export class Repository {
         ? 'smartlog()'
         : // filter default smartlog query by date range
           `smartlog(((interestingbookmarks() + heads(draft())) & date(-${visibleCommitDayRange})) + .)`;
-      const proc = await this.runCommand(['log', '--template', FETCH_TEMPLATE, '--rev', revset]);
+      const proc = await this.runCommand(
+        ['log', '--template', FETCH_TEMPLATE, '--rev', revset],
+        'LogCommand',
+      );
       const commits = parseCommitInfoOutput(this.logger, proc.stdout.trim());
       if (commits.length === 0) {
         throw new Error(ErrorShortMessages.NoCommitsFetched);
@@ -665,8 +760,14 @@ export class Repository {
     return this.catLimiter.enqueueRun(async () => {
       // For `sl cat`, we want the output of the command verbatim.
       const options = {stripFinalNewline: false};
-      return (await this.runCommand(['cat', file, '--rev', rev], /*cwd=*/ undefined, options))
-        .stdout;
+      return (
+        await this.runCommand(
+          ['cat', file, '--rev', rev],
+          'CatCommand',
+          /*cwd=*/ undefined,
+          options,
+        )
+      ).stdout;
     });
   }
 
@@ -682,6 +783,7 @@ export class Repository {
     const t1 = Date.now();
     const output = await this.runCommand(
       ['blame', filePath, '-Tjson', '--change', '--rev', hash],
+      'BlameCommand',
       undefined,
       undefined,
       /* don't timeout */ 0,
@@ -711,6 +813,101 @@ export class Repository {
     return blame[0].lines.map(({node, line}) => [line, commits.get(node)]);
   }
 
+  public async getCommitCloudState(cwd: string): Promise<CommitCloudSyncState> {
+    const lastChecked = new Date();
+
+    const [backupStatuses, cloudStatus] = await Promise.allSettled([
+      this.fetchCommitCloudBackupStatuses(cwd),
+      this.fetchCommitCloudStatus(cwd),
+    ]);
+
+    if (backupStatuses.status === 'rejected') {
+      return {
+        lastChecked,
+        syncError: backupStatuses.reason,
+      };
+    } else if (cloudStatus.status === 'rejected') {
+      return {
+        lastChecked,
+        workspaceError: cloudStatus.reason,
+      };
+    }
+
+    return {
+      lastChecked,
+      ...cloudStatus.value,
+      commitStatuses: backupStatuses.value,
+    };
+  }
+
+  private async fetchCommitCloudBackupStatuses(
+    cwd: string,
+  ): Promise<Map<Hash, CommitCloudBackupStatus>> {
+    const revset = 'draft() - backedup()';
+    const commitCloudBackupStatusTemplate = `{dict(
+      hash="{node}",
+      backingup="{backingup}",
+      date="{date|isodatesec}"
+      )|json}\n`;
+
+    const output = await this.runCommand(
+      ['log', '--rev', revset, '--template', commitCloudBackupStatusTemplate],
+      'CommitCloudSyncBackupStatusCommand',
+      cwd,
+    );
+
+    const rawObjects = output.stdout.trim().split('\n');
+    const parsedObjects = rawObjects
+      .map(rawObject => {
+        try {
+          return JSON.parse(rawObject) as {hash: Hash; backingup: 'True' | 'False'; date: string};
+        } catch (err) {
+          return null;
+        }
+      })
+      .filter(notEmpty);
+
+    const now = new Date();
+    const TEN_MIN = 10 * 60 * 1000;
+    const statuses = new Map<Hash, CommitCloudBackupStatus>(
+      parsedObjects.map(obj => [
+        obj.hash,
+        obj.backingup === 'True'
+          ? CommitCloudBackupStatus.InProgress
+          : now.valueOf() - new Date(obj.date).valueOf() < TEN_MIN
+          ? CommitCloudBackupStatus.Pending
+          : CommitCloudBackupStatus.Failed,
+      ]),
+    );
+    return statuses;
+  }
+
+  private async fetchCommitCloudStatus(cwd: string): Promise<{
+    lastBackup: Date | undefined;
+    currentWorkspace: string;
+    workspaceChoices: Array<string>;
+  }> {
+    const [cloudStatusOutput, cloudListOutput] = await Promise.all([
+      this.runCommand(['cloud', 'status'], 'CommitCloudStatusCommand', cwd),
+      this.runCommand(['cloud', 'list'], 'CommitCloudListCommand', cwd),
+    ]);
+
+    const currentWorkspace =
+      /Workspace: ([a-zA-Z/0-9._-]+)/.exec(cloudStatusOutput.stdout)?.[1] ?? 'default';
+    const lastSyncTimeStr = /Last Sync Time: (.*)/.exec(cloudStatusOutput.stdout)?.[1];
+    const lastBackup = lastSyncTimeStr != null ? new Date(lastSyncTimeStr) : undefined;
+    const workspaceChoices = cloudListOutput.stdout
+      .split('\n')
+      .map(line => /^ {8}([a-zA-Z/0-9._-]+)(?: \(connected\))?/.exec(line)?.[1] as string)
+      .filter(l => l != null);
+
+    return {
+      lastBackup,
+      currentWorkspace,
+      workspaceChoices,
+    };
+  }
+
   private commitCache = new LRU<string, CommitInfo>(100); // TODO: normal commits fetched from smartlog() aren't put in this cache---this is mostly for blame right now.
   public async lookupCommits(hashes: Array<string>): Promise<Map<string, CommitInfo>> {
     const hashesToFetch = hashes.filter(hash => this.commitCache.get(hash) == undefined);
@@ -718,13 +915,10 @@ export class Repository {
     const commits =
       hashesToFetch.length === 0
         ? [] // don't bother running log
-        : await this.runCommand([
-            'log',
-            '--template',
-            FETCH_TEMPLATE,
-            '--rev',
-            hashesToFetch.join('+'),
-          ]).then(output => {
+        : await this.runCommand(
+            ['log', '--template', FETCH_TEMPLATE, '--rev', hashesToFetch.join('+')],
+            'LookupCommitsCommand',
+          ).then(output => {
             return parseCommitInfoOutput(this.logger, output.stdout.trim());
           });
 
@@ -746,6 +940,53 @@ export class Repository {
     return result;
   }
 
+  public async getAllChangedFiles(hash: Hash): Promise<Array<ChangedFile>> {
+    const output = (
+      await this.runCommand(
+        ['log', '--template', CHANGED_FILES_TEMPLATE, '--rev', hash],
+        'LookupAllCommitChangedFilesCommand',
+      )
+    ).stdout;
+
+    const [chunk] = output.split(COMMIT_END_MARK, 1);
+
+    const lines = chunk.trim().split('\n');
+    if (lines.length < Object.keys(CHANGED_FILES_FIELDS).length) {
+      return [];
+    }
+
+    const files: Array<ChangedFile> = [
+      ...(JSON.parse(lines[CHANGED_FILES_INDEX.filesModified]) as Array<string>).map(path => ({
+        path,
+        status: 'M' as const,
+      })),
+      ...(JSON.parse(lines[CHANGED_FILES_INDEX.filesAdded]) as Array<string>).map(path => ({
+        path,
+        status: 'A' as const,
+      })),
+      ...(JSON.parse(lines[CHANGED_FILES_INDEX.filesRemoved]) as Array<string>).map(path => ({
+        path,
+        status: 'R' as const,
+      })),
+    ];
+
+    return files;
+  }
+
+  public async getShelvedChanges(): Promise<Array<ShelvedChange>> {
+    const output = (
+      await this.runCommand(
+        ['log', '--rev', 'shelved()', '--template', SHELVE_FETCH_TEMPLATE],
+        'GetShelvesCommand',
+      )
+    ).stdout;
+
+    const shelves = parseShelvedCommitsOutput(this.logger, output.trim());
+    // sort by date ascending
+    shelves.sort((a, b) => b.date.getTime() - a.date.getTime());
+    return shelves;
+  }
+
   public getAllDiffIds(): Array<DiffId> {
     return (
       this.getSmartlogCommits()
@@ -755,50 +996,107 @@ export class Repository {
   }
 
   public async runDiff(comparison: Comparison, contextLines = 4): Promise<string> {
-    const output = await this.runCommand([
-      'diff',
-      ...revsetArgsForComparison(comparison),
-      // don't include a/ and b/ prefixes on files
-      '--noprefix',
-      '--no-binary',
-      '--nodate',
-      '--unified',
-      String(contextLines),
-    ]);
+    const output = await this.runCommand(
+      [
+        'diff',
+        ...revsetArgsForComparison(comparison),
+        // don't include a/ and b/ prefixes on files
+        '--noprefix',
+        '--no-binary',
+        '--nodate',
+        '--unified',
+        String(contextLines),
+      ],
+      'DiffCommand',
+    );
     return output.stdout;
   }
 
   public runCommand(
     args: Array<string>,
+    /** Which event name to track for this command. If undefined, generic 'RunCommand' is used. */
+    eventName: TrackEventName | undefined,
     cwd?: string,
     options?: execa.Options,
-    timeout: number = READ_COMMAND_TIMEOUT_MS,
+    timeout?: number,
+    /**
+     * Optionally provide a more specific tracker. If not provided, the best-effort tracker for the repo is used.
+     * Prefer passing an exact tracker when available, or else cwd/session id/platform/version could be inaccurate.
+     */
+    tracker: ServerSideTracker = this.trackerBestEffort,
   ) {
-    return runCommand(
-      this.info.command,
-      args,
-      this.logger,
-      unwrap(cwd ?? this.info.repoRoot),
-      options,
-      timeout,
+    const id = randomId();
+    return tracker.operation(
+      eventName ?? 'RunCommand',
+      'RunCommandError',
+      {
+        // if we don't specify a specific eventName, provide the command arguments in logging
+        extras: eventName == null ? {args} : undefined,
+        operationId: `isl:${id}`,
+      },
+      () =>
+        runCommand(
+          this.info.command,
+          args,
+          this.logger,
+          unwrap(cwd ?? this.info.repoRoot),
+          {
+            ...options,
+            env: {...options?.env, ...Internal.additionalEnvForCommand?.(id)} as NodeJS.ProcessEnv,
+          },
+          timeout ?? READ_COMMAND_TIMEOUT_MS,
+        ),
     );
   }
 
-  public getConfig(configName: string): Promise<string | undefined> {
-    return getConfig(this.info.command, this.logger, this.info.repoRoot, configName);
+  /** Read a config. The config name must be part of `allConfigNames`. */
+  public async getConfig(configName: ConfigName): Promise<string | undefined> {
+    return (await this.getKnownConfigs()).get(configName);
   }
+
+  /** Load all "known" configs. Cached on `this`. */
+  public getKnownConfigs(): Promise<ReadonlyMap<ConfigName, string | undefined>> {
+    if (this.knownConfigs != null) {
+      return Promise.resolve(this.knownConfigs);
+    }
+    return this.configRateLimiter.enqueueRun(async () => {
+      if (this.knownConfigs == null) {
+        // Fetch all configs using one command.
+        const knownConfig = new Map<ConfigName, string>(
+          await getConfigs<ConfigName>(
+            this.info.command,
+            this.logger,
+            this.info.repoRoot,
+            allConfigNames,
+          ),
+        );
+        this.knownConfigs = knownConfig;
+      }
+      return this.knownConfigs;
+    });
+  }
+
   public setConfig(level: ConfigLevel, configName: string, configValue: string): Promise<void> {
-    return setConfig(
-      this.info.command,
-      this.logger,
-      this.info.repoRoot,
-      level,
-      configName,
-      configValue,
+    // Attempt to avoid racy config read/write.
+    return this.configRateLimiter.enqueueRun(() =>
+      setConfig(this.info.command, this.logger, this.info.repoRoot, level, configName, configValue),
     );
+  }
+
+  /** Load and apply configs to `this` in background. */
+  private applyConfigInBackground() {
+    this.getConfig('isl.hold-off-refresh-ms').then(configValue => {
+      if (configValue != null) {
+        const numberValue = parseInt(configValue, 10);
+        if (numberValue >= 0) {
+          this.configHoldOffRefreshMs = numberValue;
+        }
+      }
+    });
   }
 }
 
+/** Run an sl command (without analytics). */
 async function runCommand(
   command_: string,
   args_: Array<string>,
@@ -812,8 +1110,9 @@ async function runCommand(
   const result = execa(command, args, options);
 
   let timedOut = false;
+  let timeoutId: NodeJS.Timeout | undefined;
   if (timeout > 0) {
-    const timeoutId = setTimeout(() => {
+    timeoutId = setTimeout(() => {
       result.kill('SIGTERM', {forceKillAfterTimeout: 5_000});
       logger.error(`Timed out waiting for ${command} ${args[0]} to finish`);
       timedOut = true;
@@ -836,11 +1135,9 @@ async function runCommand(
       }
     }
     throw err;
+  } finally {
+    clearTimeout(timeoutId);
   }
-}
-
-function isExecaError(err: unknown): err is ExecaError {
-  return typeof err === 'object' && err != null && 'exitCode' in err;
 }
 
 export const __TEST__ = {
@@ -886,19 +1183,50 @@ async function findDotDir(
   }
 }
 
-async function getConfig(
+/**
+ * Read multiple configs.
+ * Return a Map from config name to config value for present configs.
+ * Missing configs will not be returned.
+ * Errors are silenced.
+ */
+async function getConfigs<T extends string>(
   command: string,
   logger: Logger,
   cwd: string,
-  configName: string,
-): Promise<string | undefined> {
-  try {
-    return (await runCommand(command, ['config', configName], logger, cwd)).stdout.trim();
-  } catch {
-    // `config` exits with status 1 if config is not set. This is not an error.
-    return undefined;
+  configNames: ReadonlyArray<T>,
+): Promise<Map<T, string>> {
+  if (configOverride !== undefined) {
+    // Use the override to answer config questions.
+    const configMap = new Map(
+      configNames.flatMap(name => {
+        const value = configOverride?.get(name);
+        return value === undefined ? [] : [[name, value]];
+      }),
+    );
+    return configMap;
   }
+  const configMap: Map<T, string> = new Map();
+  try {
+    // config command does not support multiple configs yet, but supports multiple sections.
+    // (such limitation makes sense for non-JSON output, which can be ambigious)
+    const sections = new Set<string>(configNames.flatMap(name => name.split('.').at(0) ?? []));
+    const result = await runCommand(
+      command,
+      ['config', '-Tjson'].concat([...sections]),
+      logger,
+      cwd,
+    );
+    const configs: [{name: T; value: string}] = JSON.parse(result.stdout);
+    for (const config of configs) {
+      configMap.set(config.name, config.value);
+    }
+  } catch (e) {
+    logger.error(`failed to read configs from ${cwd}: ${e}`);
+  }
+  logger.info(`loaded configs from ${cwd}:`, configMap);
+  return configMap;
 }
+
 type ConfigLevel = 'user' | 'system' | 'local';
 async function setConfig(
   command: string,
@@ -916,6 +1244,7 @@ function getExecParams(
   args_: Array<string>,
   cwd: string,
   options_?: execa.Options,
+  env?: NodeJS.ProcessEnv | Record<string, string>,
 ): {
   command: string;
   args: Array<string>;
@@ -932,21 +1261,32 @@ function getExecParams(
   if (EXCLUDE_FROM_BLACKBOX_COMMANDS.has(commandName)) {
     args.push('--config', 'extensions.blackbox=!');
   }
+  const newEnv = {
+    ...options_?.env,
+    ...env,
+    // TODO: remove when SL_ENCODING is used everywhere
+    HGENCODING: 'UTF-8',
+    SL_ENCODING: 'UTF-8',
+    // override any custom aliases a user has defined.
+    SL_AUTOMATION: 'true',
+    SL_AUTOMATION_EXCEPT: 'phrevset', // allow looking up diff numbers even in plain mode
+    // Prevent user-specified merge tools from attempting to
+    // open interactive editors.
+    HGMERGE: ':merge3',
+    SL_MERGE: ':merge3',
+    EDITOR: undefined,
+    VISUAL: undefined,
+    HGUSER: undefined,
+    HGEDITOR: undefined,
+  } as unknown as NodeJS.ProcessEnv;
+  let langEnv = newEnv.LANG ?? process.env.LANG;
+  if (langEnv === undefined || !langEnv.toUpperCase().endsWith('UTF-8')) {
+    langEnv = 'C.UTF-8';
+  }
+  newEnv.LANG = langEnv;
   const options: execa.Options = {
     ...options_,
-    env: {
-      LANG: 'en_US.utf-8', // make sure to use unicode if user hasn't set LANG themselves
-      // TODO: remove when SL_ENCODING is used everywhere
-      HGENCODING: 'UTF-8',
-      SL_ENCODING: 'UTF-8',
-      // override any custom aliases a user has defined.
-      SL_AUTOMATION: 'true',
-      // Prevent user-specified merge tools from attempting to
-      // open interactive editors.
-      HGMERGE: ':merge3',
-      SL_MERGE: ':merge3',
-      EDITOR: undefined,
-    } as unknown as NodeJS.ProcessEnv,
+    env: newEnv,
     cwd,
   };
 
@@ -1017,6 +1357,45 @@ export function parseCommitInfoOutput(logger: Logger, output: string): SmartlogC
   }
   return commitInfos;
 }
+
+export function parseShelvedCommitsOutput(logger: Logger, output: string): Array<ShelvedChange> {
+  const shelves = output.split(COMMIT_END_MARK);
+  const commitInfos: Array<ShelvedChange> = [];
+  for (const chunk of shelves) {
+    try {
+      const lines = chunk.trim().split('\n');
+      if (lines.length < Object.keys(SHELVE_FIELDS).length) {
+        continue;
+      }
+      const files: Array<ChangedFile> = [
+        ...(JSON.parse(lines[SHELVE_FIELD_INDEX.filesModified]) as Array<string>).map(path => ({
+          path,
+          status: 'M' as const,
+        })),
+        ...(JSON.parse(lines[SHELVE_FIELD_INDEX.filesAdded]) as Array<string>).map(path => ({
+          path,
+          status: 'A' as const,
+        })),
+        ...(JSON.parse(lines[SHELVE_FIELD_INDEX.filesRemoved]) as Array<string>).map(path => ({
+          path,
+          status: 'R' as const,
+        })),
+      ];
+      commitInfos.push({
+        hash: lines[SHELVE_FIELD_INDEX.hash],
+        name: lines[SHELVE_FIELD_INDEX.name],
+        date: new Date(lines[SHELVE_FIELD_INDEX.date]),
+        filesSample: files.slice(0, MAX_FETCHED_FILES_PER_COMMIT),
+        totalFileCount: files.length,
+        description: lines.slice(SHELVE_FIELD_INDEX.description).join('\n'),
+      });
+    } catch (err) {
+      logger.error('failed to parse shelved change');
+    }
+  }
+  return commitInfos;
+}
+
 export function parseSuccessorData(successorData: string): SuccessorInfo | undefined {
   const [successorString] = successorData.split(',', 1); // we're only interested in the first available mutation
   if (!successorString) {
@@ -1137,4 +1516,26 @@ function computeNewConflicts(
   }
 
   return conflicts;
+}
+
+/**
+ * By default, detect "jest" and enable config override to avoid shelling out.
+ * See also `getConfigs`.
+ */
+let configOverride: undefined | Map<string, string> =
+  typeof jest === 'undefined' ? undefined : new Map();
+
+/**
+ * Set the "knownConfig" used by new repos.
+ * This is useful in tests and prevents shelling out to config commands.
+ */
+export function setConfigOverrideForTests(configs: Iterable<[string, string]>, override = true) {
+  if (override) {
+    configOverride = new Map(configs);
+  } else {
+    configOverride ??= new Map();
+    for (const [key, value] of configs) {
+      configOverride.set(key, value);
+    }
+  }
 }

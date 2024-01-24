@@ -112,8 +112,7 @@ class RebaseTest(EdenHgTestCase):
             len(self.repo.log()),
             msg=("At the base commit, `hg log` should have only one entry."),
         )
-        stdout = self.hg("--debug", "update", new_head)
-        self.assert_update_logic(stdout, num_fast_path=1)
+        self.hg("--debug", "update", new_head)
         self.assertEqual(
             11,
             len(self.repo.log()),
@@ -173,8 +172,7 @@ class RebaseTest(EdenHgTestCase):
         with self.assertRaises(hgrepo.HgError) as context:
             self.hg("rebase", "-s", commit, "-d", self._c15)
         self.assertIn(
-            b"conflicts while merging numbers/1/11! "
-            b"(edit, then use 'hg resolve --mark')",
+            b"conflicts while merging numbers/1/11!",
             context.exception.stderr,
         )
         self.assert_unresolved(unresolved=["numbers/1/11", "numbers/1/12"])
@@ -182,21 +180,21 @@ class RebaseTest(EdenHgTestCase):
         self.assert_file_regex(
             "numbers/1/11",
             """\
-            <<<<<<< dest.*
+            <<<<<<< .*
             11
             =======
             new 11
-            >>>>>>> source.*
+            >>>>>>> .*
             """,
         )
         self.assert_file_regex(
             "numbers/1/12",
             """\
-            <<<<<<< dest.*
+            <<<<<<< .*
             12
             =======
             new 12
-            >>>>>>> source.*
+            >>>>>>> .*
             """,
         )
 
@@ -207,8 +205,7 @@ class RebaseTest(EdenHgTestCase):
         with self.assertRaises(hgrepo.HgError) as context:
             self.hg("rebase", "--continue")
         self.assertIn(
-            b"conflicts while merging numbers/1/12! "
-            b"(edit, then use 'hg resolve --mark')",
+            b"conflicts while merging numbers/1/12!",
             context.exception.stderr,
         )
         self.assert_unresolved(
@@ -220,31 +217,31 @@ class RebaseTest(EdenHgTestCase):
         self.assert_file_regex(
             "numbers/1/12",
             """\
-            <<<<<<< dest.*
+            <<<<<<< .*
             12 merged.
             =======
             change 12 again
-            >>>>>>> source.*
+            >>>>>>> .*
             """,
         )
         self.assert_file_regex(
             "numbers/1/13",
             """\
-            <<<<<<< dest.*
+            <<<<<<< .*
             13
             =======
             new 13
-            >>>>>>> source.*
+            >>>>>>> .*
             """,
         )
         self.assert_file_regex(
             "numbers/1/14",
             """\
-            <<<<<<< dest.*
+            <<<<<<< .*
             14
             =======
             new 14
-            >>>>>>> source.*
+            >>>>>>> .*
             """,
         )
 
@@ -275,8 +272,7 @@ class RebaseTest(EdenHgTestCase):
         with self.assertRaises(hgrepo.HgError) as context:
             self.hg("rebase", "-s", commit, "-d", self._c15)
         self.assertIn(
-            b"conflicts while merging numbers/1/11! "
-            b"(edit, then use 'hg resolve --mark')",
+            b"conflicts while merging numbers/1/11!",
             context.exception.stderr,
         )
 

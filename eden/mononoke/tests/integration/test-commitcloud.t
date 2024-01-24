@@ -13,16 +13,6 @@ setup configuration
   >   setup_common_config
   $ cd $TESTTMP
 
-  $ merge_tunables <<EOF
-  > {
-  >   "killswitches": {
-  >     "mutation_advertise_for_infinitepush": true,
-  >     "mutation_accept_for_infinitepush": true,
-  >     "mutation_generate_for_draft": true
-  >   }
-  > }
-  > EOF
-
 setup common configuration for these tests
 mononoke + local commit cloud backend
   $ cat >> $HGRCPATH <<EOF

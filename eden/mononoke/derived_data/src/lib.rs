@@ -172,9 +172,13 @@ macro_rules! impl_bonsai_derived_via_manager {
 }
 
 pub fn override_ctx(mut ctx: CoreContext, repo: impl RepoIdentityRef) -> CoreContext {
-    let use_bg_class = tunables::tunables()
-        .by_repo_derived_data_use_background_session_class(repo.repo_identity().name());
-    if let Some(true) = use_bg_class {
+    let use_bg_class = justknobs::eval(
+        "scm/mononoke:derived_data_use_background_session_class",
+        None,
+        Some(repo.repo_identity().name()),
+    )
+    .unwrap_or_default();
+    if use_bg_class {
         ctx.session_mut()
             .override_session_class(SessionClass::BackgroundUnlessTooSlow);
         ctx

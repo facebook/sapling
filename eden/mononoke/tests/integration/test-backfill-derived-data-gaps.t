@@ -49,51 +49,51 @@ but doesn't run forever.
   $ backfill_derived_data backfill-all --parallel --batch-size=10 --gap-size=3 &>/dev/null
 
 Heads should all be derived
-  $ mononoke_admin --log-level ERROR derived-data exists fsnodes main
+  $ mononoke_newadmin derived-data -R repo exists -T fsnodes -B main
   Derived: 8ea58cff262ad56732037fb42189d6262dacdaf8032c18ddebcb6b5b310d1298
-  $ mononoke_admin --log-level ERROR derived-data exists unodes main
+  $ mononoke_newadmin derived-data -R repo exists -T unodes -B main
   Derived: 8ea58cff262ad56732037fb42189d6262dacdaf8032c18ddebcb6b5b310d1298
-  $ mononoke_admin --log-level ERROR derived-data exists --backfill blame main
+  $ mononoke_newadmin derived-data -R repo exists --backfill -T blame -B main
   Derived: 8ea58cff262ad56732037fb42189d6262dacdaf8032c18ddebcb6b5b310d1298
-  $ mononoke_admin --log-level ERROR derived-data exists --backfill skeleton_manifests main
+  $ mononoke_newadmin derived-data -R repo exists --backfill -T skeleton_manifests -B main
   Derived: 8ea58cff262ad56732037fb42189d6262dacdaf8032c18ddebcb6b5b310d1298
 
 Commits at the gap boundaries should be derived
-  $ mononoke_admin --log-level ERROR derived-data exists fsnodes $C
+  $ mononoke_newadmin derived-data -R repo exists -T fsnodes --hg-id $C
   Derived: c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd
-  $ mononoke_admin --log-level ERROR derived-data exists fsnodes $F
+  $ mononoke_newadmin derived-data -R repo exists -T fsnodes --hg-id $F
   Derived: 3eb8abc0587595debd43ac6f36b0e6fbb6404c3bb810015f0224c2653ee6b195
-  $ mononoke_admin --log-level ERROR derived-data exists unodes $C
+  $ mononoke_newadmin derived-data -R repo exists -T unodes --hg-id $C
   Derived: c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd
-  $ mononoke_admin --log-level ERROR derived-data exists unodes $F
+  $ mononoke_newadmin derived-data -R repo exists -T unodes --hg-id $F
   Derived: 3eb8abc0587595debd43ac6f36b0e6fbb6404c3bb810015f0224c2653ee6b195
-  $ mononoke_admin --log-level ERROR derived-data exists --backfill blame $C
+  $ mononoke_newadmin derived-data -R repo exists --backfill -T blame --hg-id $C
   Derived: c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd
-  $ mononoke_admin --log-level ERROR derived-data exists --backfill blame $F
+  $ mononoke_newadmin derived-data -R repo exists --backfill -T blame --hg-id $F
   Derived: 3eb8abc0587595debd43ac6f36b0e6fbb6404c3bb810015f0224c2653ee6b195
-  $ mononoke_admin --log-level ERROR derived-data exists --backfill skeleton_manifests $C
+  $ mononoke_newadmin derived-data -R repo exists --backfill -T skeleton_manifests --hg-id $C
   Derived: c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd
-  $ mononoke_admin --log-level ERROR derived-data exists --backfill skeleton_manifests $F
+  $ mononoke_newadmin derived-data -R repo exists --backfill -T skeleton_manifests --hg-id $F
   Derived: 3eb8abc0587595debd43ac6f36b0e6fbb6404c3bb810015f0224c2653ee6b195
 
 Other commits should not be derived, for types where gaps are supported
-  $ mononoke_admin --log-level ERROR derived-data exists fsnodes $B
+  $ mononoke_newadmin derived-data -R repo exists -T fsnodes --hg-id $B
   Not Derived: 459f16ae564c501cb408c1e5b60fc98a1e8b8e97b9409c7520658bfa1577fb66
-  $ mononoke_admin --log-level ERROR derived-data exists fsnodes $G
+  $ mononoke_newadmin derived-data -R repo exists -T fsnodes --hg-id $G
   Not Derived: da6d6ff8b30c472a08a1252ccb81dd4a0f9f3212af2e631a6a9a6b78ad78f6f4
-  $ mononoke_admin --log-level ERROR derived-data exists --backfill skeleton_manifests $B
+  $ mononoke_newadmin derived-data -R repo exists --backfill -T skeleton_manifests --hg-id $B
   Not Derived: 459f16ae564c501cb408c1e5b60fc98a1e8b8e97b9409c7520658bfa1577fb66
-  $ mononoke_admin --log-level ERROR derived-data exists --backfill skeleton_manifests $G
+  $ mononoke_newadmin derived-data -R repo exists --backfill -T skeleton_manifests --hg-id $G
   Not Derived: da6d6ff8b30c472a08a1252ccb81dd4a0f9f3212af2e631a6a9a6b78ad78f6f4
 
 They should be derived for types that don't support gaps
-  $ mononoke_admin --log-level ERROR derived-data exists unodes $B
+  $ mononoke_newadmin derived-data -R repo exists -T unodes --hg-id $B
   Derived: 459f16ae564c501cb408c1e5b60fc98a1e8b8e97b9409c7520658bfa1577fb66
-  $ mononoke_admin --log-level ERROR derived-data exists unodes $G
+  $ mononoke_newadmin derived-data -R repo exists -T unodes --hg-id $G
   Derived: da6d6ff8b30c472a08a1252ccb81dd4a0f9f3212af2e631a6a9a6b78ad78f6f4
-  $ mononoke_admin --log-level ERROR derived-data exists --backfill blame $B
+  $ mononoke_newadmin derived-data -R repo exists --backfill -T blame --hg-id $B
   Derived: 459f16ae564c501cb408c1e5b60fc98a1e8b8e97b9409c7520658bfa1577fb66
-  $ mononoke_admin --log-level ERROR derived-data exists --backfill blame $G
+  $ mononoke_newadmin derived-data -R repo exists --backfill -T blame --hg-id $G
   Derived: da6d6ff8b30c472a08a1252ccb81dd4a0f9f3212af2e631a6a9a6b78ad78f6f4
 
 Skeleton manifest blob keys should have their prefix

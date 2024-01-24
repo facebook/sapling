@@ -11,6 +11,7 @@ use blobrepo::BlobRepo;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
+use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
 use bonsai_tag_mapping::BonsaiTagMapping;
 use bookmarks::BookmarkUpdateLog;
 use bookmarks::Bookmarks;
@@ -20,6 +21,7 @@ use commit_graph::CommitGraph;
 use ephemeral_blobstore::RepoEphemeralStore;
 use filenodes::Filenodes;
 use filestore::FilestoreConfig;
+use git_symbolic_refs::GitSymbolicRefs;
 use mercurial_mutation::HgMutationStore;
 use metaconfig_types::RepoConfig;
 use mutable_counters::MutableCounters;
@@ -53,6 +55,7 @@ pub struct InnerRepo {
         dyn BonsaiTagMapping,
         dyn BonsaiGlobalrevMapping,
         dyn BonsaiHgMapping,
+        dyn BonsaiSvnrevMapping,
         dyn BookmarkUpdateLog,
         dyn Bookmarks,
         dyn ChangesetFetcher,
@@ -65,6 +68,7 @@ pub struct InnerRepo {
         dyn RepoPermissionChecker,
         dyn RepoLock,
         CommitGraph,
+        dyn GitSymbolicRefs,
     )]
     pub blob_repo: BlobRepo,
 

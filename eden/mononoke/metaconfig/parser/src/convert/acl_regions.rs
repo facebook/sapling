@@ -11,8 +11,8 @@ use anyhow::Result;
 use metaconfig_types::AclRegion;
 use metaconfig_types::AclRegionConfig;
 use metaconfig_types::AclRegionRule;
+use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
 use repos::RawAclRegion;
 use repos::RawAclRegionConfig;
 use repos::RawAclRegionRule;
@@ -37,7 +37,7 @@ impl Convert for RawAclRegion {
             path_prefixes: self
                 .path_prefixes
                 .into_iter()
-                .map(|b| MPath::new_opt(&*b))
+                .map(|b| MPath::new(&*b))
                 .collect::<Result<Vec<_>>>()?,
         })
     }

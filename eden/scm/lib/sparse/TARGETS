@@ -1,0 +1,61 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "sparse",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "extra_buck_dependencies": {
+                "dependencies": [
+                    "fbsource//third-party/rust:futures",
+                ],
+                "dev-dependencies": [
+                    "fbsource//third-party/rust:tokio",
+                ],
+            },
+            "features": {
+                "async": [
+                    "futures",
+                ],
+                "default": [],
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:globset",
+        "fbsource//third-party/rust:once_cell",
+        "fbsource//third-party/rust:regex",
+        "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/pathmatcher:pathmatcher",
+        "//eden/scm/lib/types:types",
+        "//eden/scm/lib/util/syncify:syncify",
+    ],
+)
+
+rust_library(
+    name = "sparse-async",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {"ignore_rule": True},
+    crate = "sparse",
+    crate_root = "src/lib.rs",
+    features = ["async"],
+    test_deps = [
+        "fbsource//third-party/rust:tokio",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:globset",
+        "fbsource//third-party/rust:once_cell",
+        "fbsource//third-party/rust:regex",
+        "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/pathmatcher:pathmatcher",
+        "//eden/scm/lib/types:types",
+    ],
+)

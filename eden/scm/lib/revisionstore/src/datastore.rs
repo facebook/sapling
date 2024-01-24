@@ -103,7 +103,6 @@ pub trait HgIdMutableDeltaStore: HgIdDataStore + Send + Sync {
 
 pub trait LegacyStore: HgIdMutableDeltaStore + RemoteDataStore + Send + Sync {
     fn get_file_content(&self, key: &Key) -> Result<Option<Bytes>>;
-    fn get_logged_fetches(&self) -> HashSet<RepoPathBuf>;
     fn get_shared_mutable(&self) -> Arc<dyn HgIdMutableDeltaStore>;
     fn add_pending(
         &self,

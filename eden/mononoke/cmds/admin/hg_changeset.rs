@@ -18,6 +18,8 @@ use bonsai_hg_mapping::BonsaiHgMappingRef;
 use clap_old::App;
 use clap_old::ArgMatches;
 use clap_old::SubCommand;
+use clientinfo::ClientEntryPoint;
+use clientinfo::ClientInfo;
 use cmdlib::args;
 use cmdlib::args::MononokeMatches;
 use commit_graph::CommitGraphRef;
@@ -30,7 +32,7 @@ use manifest::BonsaiDiffFileChange;
 use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgManifestId;
-use mercurial_types::MPath;
+use mercurial_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
 use serde_derive::Serialize;
 use slog::Logger;
@@ -68,7 +70,11 @@ pub async fn subcommand_hg_changeset<'a>(
     matches: &'a MononokeMatches<'_>,
     sub_m: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    let ctx = CoreContext::new_with_logger_and_client_info(
+        fb,
+        logger.clone(),
+        ClientInfo::default_with_entry_point(ClientEntryPoint::MononokeAdmin),
+    );
 
     match sub_m.subcommand() {
         (HG_CHANGESET_DIFF, Some(sub_m)) => {
@@ -219,7 +225,7 @@ fn slice_to_str(slice: &[u8]) -> String {
     String::from_utf8_lossy(slice).into_owned()
 }
 
-fn mpath_to_str<P: Borrow<MPath>>(mpath: P) -> String {
+fn mpath_to_str<P: Borrow<NonRootMPath>>(mpath: P) -> String {
     let bytes = mpath.borrow().to_vec();
     String::from_utf8_lossy(bytes.as_ref()).into_owned()
 }

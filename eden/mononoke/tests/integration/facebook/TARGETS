@@ -1,0 +1,376 @@
+load("@fbcode_macros//build_defs:native_rules.bzl", "buck_filegroup", "buck_sh_binary")
+load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
+load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+load(
+    "//eden/mononoke/tests/integration/facebook:fb_manifest_deps.bzl",
+    "dott_test",
+)
+load(
+    "//eden/mononoke/tests/integration/facebook:symlink.bzl",
+    "symlink",
+)
+
+oncall("mononoke")
+
+python_library(
+    name = "lib_buck",
+    srcs = ["lib_buck.py"],
+)
+
+python_library(
+    name = "lib_runner",
+    srcs = ["lib_runner.py"],
+    deps = [
+        "fbsource//third-party/pypi/click:click",
+        ":lib_buck",
+        "//common/db/tests:DbDef",
+        "//configerator/distribution/api/py:configerator_client",
+        "//configerator/structs/mysql:table_schema-py",
+        "//dba/ephemeral_shards/if:ephemeral_shards_thrift-py",
+        "//libfb/py:db_locator",
+    ],
+)
+
+symlink(
+    name = "facebook_tests",
+    srcs = glob(["*.t"]),
+    visibility = ["PUBLIC"],
+)
+
+buck_filegroup(
+    name = "facebook_test_fixtures",
+    srcs = [
+        "fb_library.sh",
+        "verify_integrity_mocked_diff_info.json",
+    ],
+)
+
+python_binary(
+    name = "generate_manifest",
+    srcs = ["generate_manifest.py"],
+    main_function = "eden.mononoke.tests.integration.facebook.generate_manifest.main",
+    deps = [
+        ":lib_buck",
+    ],
+)
+
+buck_sh_binary(
+    name = "disable-all-network-access",
+    main = "disable-all-network-access.sh",
+)
+
+dott_test(
+    name = "derived-data-service",
+    disable_all_network_access_target = False,
+    dott_files = glob(["test-derived-data-service*.t"]),
+    deps = [
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke/facebook/derived_data_service:2ds_client",
+        "//eden/mononoke/facebook/derived_data_service:derivation_worker",
+        "//eden/mononoke/facebook/derived_data_service:derived_data_service",
+        "//eden/mononoke/scs/client:scsc",
+        "//eden/mononoke/scs_server:scs_server",
+        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/facebook/backfill_bonsai_blob_mapping:backfill_bonsai_blob_mapping",
+        "//eden/mononoke/tools/testtool:testtool",
+        "//zeus/zelos/interactive_cli:zeloscli",
+    ],
+)
+
+dott_test(
+    name = "test-bookmark-service",
+    disable_all_network_access_target = False,
+    dott_files = glob(["test-bookmark-service*.t"]),
+    deps = [
+        "//eden/mononoke/facebook/bookmark_service:bookmark_service_client_cli",
+        "//eden/mononoke/facebook/bookmark_service:bookmark_service_server",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)
+
+dott_test(
+    name = "test-server-and-bookmark-service",
+    disable_all_network_access_target = False,
+    dott_files = glob(["test-bookmark-service*.t"]),
+    deps = [
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke:segmented_changelog_tailer",
+        "//eden/mononoke/facebook/bookmark_service:bookmark_service_client_cli",
+        "//eden/mononoke/facebook/bookmark_service:bookmark_service_server",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)
+
+dott_test(
+    name = "gitbundle",
+    dott_files =
+        glob([
+            "test-gitbundle*.t",
+        ]),
+    deps = [
+        "//eden/mononoke:admin",
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke/git/facebook/git_move_bookmark:git_move_bookmark",
+        "//eden/mononoke/git/facebook/remote_gitimport:remote_gitimport",
+        "//eden/mononoke/git/gitimport:gitimport",
+        "//eden/mononoke/lfs_server:lfs_server",
+        "//eden/mononoke/scs/client:scsc",
+        "//eden/mononoke/scs_server:scs_server",
+        "//eden/mononoke/tools/admin:newadmin",
+    ],
+)
+
+dott_test(
+    name = "verify-integrity",
+    disable_all_network_access_target = False,
+    dott_files = [
+        "test-hook-verify-integrity.t",
+    ],
+    deps = [
+        "//common/tools/thriftdbg:thriftdbg",
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:mononoke",
+        "//security/source_control/verify_integrity:verify_integrity",
+        "//security/source_control/verify_integrity/service:verify_integrity_service",
+    ],
+)
+
+dott_test(
+    name = "hooks",
+    dott_files =
+        glob(
+            [
+                "test-hook-*.t",
+            ],
+            exclude = [
+                "test-hook-verify-integrity.t",
+            ],
+        ),
+    deps = [
+        "//common/tools/thriftdbg:thriftdbg",
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:mononoke",
+        "//signedsources:fixtures",
+    ],
+)
+
+dott_test(
+    name = "lfs-server",
+    dott_files = glob(["test-lfs-server*.t"]),
+    deps = [
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke/lfs_server:lfs_server",
+    ],
+)
+
+dott_test(
+    name = "mirror-hg-commits",
+    # Components linked with SM library invoke some network calls to loopback
+    # address for configerator and ODS even without being part of actual execution.
+    # Skip the below tests until RCA is completed for SM integration so
+    # that integration tests do not time-out due to failed network call retries.
+    # TODO(rajshar): Investigate root cause for network calls from SM Client.
+    # Post: https://fb.workplace.com/groups/sm.users/permalink/2490367831097595/
+    disable_all_network_access_target = False,
+    dott_files = glob([
+        "test-mirror-hg-commits*.t",
+    ]),
+    deps = [
+        "//eden/mononoke:backfill_derived_data",
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke/commit_rewriting/megarepo:megarepotool",
+        "//eden/mononoke/facebook/mirror_hg_commits:mirror_hg_commits",
+        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)
+
+dott_test(
+    name = "server-needs-network",
+    disable_all_network_access_target = False,
+    dott_files = [
+        # Purposely not disabling network as this tests reverse dns lookups
+        "test-metadata-fb-host.t",
+        "test-metadata.t",
+        # Purposely not disabling network as this needs to make TLS connections.
+        "test-cat-auth.t",
+    ],
+    deps = [
+        "//eden/mononoke:admin",
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)
+
+dott_test(
+    name = "server",
+    dott_files = glob(
+        [
+            "test-metadata*.t",
+            "test-untrusted-env*.t",
+        ],
+        exclude = [
+            "test-metadata-fb-host.t",
+            "test-metadata.t",
+        ],
+    ) + [
+        "test-per-repo-acl.t",
+        "test-post-push-logging-identities.t",
+        "test-readonly-server.t",
+        "test-server.t",
+        "test-server-mononokepeer-proxy.t",
+    ],
+    deps = [
+        "//eden/mononoke:admin",
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)
+
+dott_test(
+    name = "scs",
+    disable_all_network_access_target = False,
+    dott_files = glob(
+        ["test-scs*.t"],
+        exclude = ["test-scs-git*.t"],
+    ),
+    deps = [
+        "//eden/mononoke:admin",
+        "//eden/mononoke:backfill_mapping",
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke:segmented_changelog_tailer",
+        "//eden/mononoke/commit_rewriting/backsyncer:backsyncer_cmd",
+        "//eden/mononoke/mononoke_hg_sync_job:mononoke_hg_sync_job",
+        "//eden/mononoke/scs/client:scsc",
+        "//eden/mononoke/scs_server:scs_server",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)
+
+dott_test(
+    name = "scs-git",
+    disable_all_network_access_target = False,
+    dott_files = glob(["test-scs-git*.t"]),
+    deps = [
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke/git/gitimport:gitimport",
+        "//eden/mononoke/scs/client:scsc",
+        "//eden/mononoke/scs_server:scs_server",
+        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)
+
+dott_test(
+    name = "land_service",
+    disable_all_network_access_target = False,
+    dott_files = glob(["test-land-service*.t"]),
+    deps = [
+        "//eden/mononoke:admin",
+        "//eden/mononoke:backfill_mapping",
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke:segmented_changelog_tailer",
+        "//eden/mononoke/commit_rewriting/backsyncer:backsyncer_cmd",
+        "//eden/mononoke/land_service:land_service",
+        "//eden/mononoke/mononoke_hg_sync_job:mononoke_hg_sync_job",
+        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)
+
+dott_test(
+    name = "snapshot",
+    disable_all_network_access_target = False,
+    dott_files = glob(["test-snapshot*.t"]),
+    deps = [
+        "//eden/mononoke:admin",
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke/scs/client:scsc",
+        "//eden/mononoke/scs_server:scs_server",
+        "//eden/mononoke/tools/admin:newadmin",
+    ],
+)
+
+dott_test(
+    name = "slow-bookmark-mover",
+    dott_files = glob([
+        "test-mononoke-slow-bookmark-mover*.t",
+    ]),
+    deps = [
+        "//eden/mononoke:admin",
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:bonsai_verify",
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke:segmented_changelog_tailer",
+        "//eden/mononoke/commit_rewriting/megarepo:megarepotool",
+        "//eden/mononoke/facebook/slow_bookmark_mover:slow_bookmark_mover",
+        "//eden/mononoke/mononoke_hg_sync_job:mononoke_hg_sync_job",
+        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)
+
+dott_test(
+    name = "remote-gitimport",
+    disable_all_network_access_target = False,
+    dott_files = glob(["test-remote-gitimport*.t"]),
+    deps = [
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke/git/facebook/git_move_bookmark:git_move_bookmark",
+        "//eden/mononoke/git/facebook/remote_gitimport:remote_gitimport",
+        "//eden/mononoke/git/gitimport:gitimport",
+        "//eden/mononoke/lfs_server:lfs_server",
+        "//eden/mononoke/scs/client:scsc",
+        "//eden/mononoke/scs_server:scs_server",
+    ],
+)
+
+dott_test(
+    name = "cross-repo-and-scs",
+    disable_all_network_access_target = False,
+    dott_files = glob(["test-cross-repo-and-scs-*.t"]),
+    deps = [
+        "//eden/mononoke:admin",
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke:segmented_changelog_tailer",
+        "//eden/mononoke/commit_rewriting/backsyncer:backsyncer_cmd",
+        "//eden/mononoke/commit_rewriting/commit_validator:commit_validator",
+        "//eden/mononoke/commit_rewriting/mononoke_x_repo_sync_job:mononoke_x_repo_sync_job",
+        "//eden/mononoke/mononoke_hg_sync_job:mononoke_hg_sync_job",
+        "//eden/mononoke/scs/client:scsc",
+        "//eden/mononoke/scs_server:scs_server",
+        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)
+
+dott_test(
+    name = "newadmin",
+    dott_files = glob(["test-newadmin-*.t"]),
+    deps = [
+        "//eden/mononoke:admin",
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/facebook/backfill_bonsai_blob_mapping:backfill_bonsai_blob_mapping",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)
+
+dott_test(
+    name = "backfill-bonsai-blob-mapping",
+    disable_all_network_access_target = False,
+    dott_files = glob(["test-backfill-bonsai-blob-mapping-*.t"]),
+    deps = [
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/facebook/backfill_bonsai_blob_mapping:backfill_bonsai_blob_mapping",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)

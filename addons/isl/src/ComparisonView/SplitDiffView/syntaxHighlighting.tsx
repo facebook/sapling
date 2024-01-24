@@ -15,8 +15,8 @@ import {grammars, languages} from '../../generated/textmate/TextMateGrammarManif
 import {themeState} from '../../theme';
 import VSCodeDarkPlusTheme from './VSCodeDarkPlusTheme';
 import VSCodeLightPlusTheme from './VSCodeLightPlusTheme';
+import {useAtomValue} from 'jotai';
 import {useEffect, useState} from 'react';
-import {useRecoilValue} from 'recoil';
 import {CancellationToken} from 'shared/CancellationToken';
 import FilepathClassifier from 'shared/textmate-lib/FilepathClassifier';
 import createTextMateRegistry from 'shared/textmate-lib/createTextMateRegistry';
@@ -42,7 +42,7 @@ export function useTokenizedHunks(
   path: string,
   hunks: ParsedDiff['hunks'],
 ): TokenizedDiffHunks | undefined {
-  const theme = useRecoilValue(themeState);
+  const theme = useAtomValue(themeState);
 
   const [tokenized, setTokenized] = useState<TokenizedDiffHunks | undefined>(undefined);
 
@@ -65,7 +65,7 @@ export function useTokenizedContents(
   path: string,
   content: Array<string> | undefined,
 ): TokenizedHunk | undefined {
-  const theme = useRecoilValue(themeState);
+  const theme = useAtomValue(themeState);
 
   const [tokenized, setTokenized] = useState<TokenizedHunk | undefined>(undefined);
 
@@ -82,6 +82,63 @@ export function useTokenizedContents(
     return () => token.cancel();
   }, [theme, path, content]);
   return tokenized;
+}
+
+/**
+ * Given file content of a change before & after, return syntax highlighted versions of those changes.
+ * Also takes a parent HTML Element. Sets up an interaction observer to only try syntax highlighting once
+ * the container is visible.
+ * Note: if parsing contentBefore/After in the caller, it's easy for these to change each render, causing
+ * an infinite loop. Memoize contentBefore/contentAfter from the string content in the caller to avoid this.
+ */
+export function useTokenizedContentsOnceVisible(
+  path: string,
+  contentBefore: Array<string> | undefined,
+  contentAfter: Array<string> | undefined,
+  parentNode: React.MutableRefObject<HTMLElement | null>,
+): [TokenizedHunk, TokenizedHunk] | undefined {
+  const theme = useAtomValue(themeState);
+  const [tokenized, setTokenized] = useState<[TokenizedHunk, TokenizedHunk] | undefined>(undefined);
+  const [hasBeenVisible, setHasBeenVisible] = useState(false);
+
+  useEffect(() => {
+    if (hasBeenVisible || parentNode.current == null) {
+      // no need to start observing again after we've been visible.
+      return;
+    }
+    const observer = new IntersectionObserver((entries, observer) => {
+      entries.forEach(entry => {
+        if (entry.intersectionRatio > 0) {
+          setHasBeenVisible(true);
+          // no need to keep observing once we've been visible once and computed the highlights.
+          observer.disconnect();
+        }
+      });
+    }, {});
+    observer.observe(parentNode.current);
+    return () => observer.disconnect();
+  }, [parentNode, hasBeenVisible]);
+
+  useEffect(() => {
+    if (!hasBeenVisible || contentBefore == null || contentAfter == null) {
+      return;
+    }
+    const token = new CancellationToken();
+    Promise.all([
+      tokenizeContent(theme, path, contentBefore, token),
+      tokenizeContent(theme, path, contentAfter, token),
+    ]).then(([a, b]) => {
+      if (a == null || b == null) {
+        return;
+      }
+      setTokenized([a, b]);
+    });
+    return () => token.cancel();
+  }, [hasBeenVisible, theme, path, contentBefore, contentAfter]);
+  return tokenized?.[0].length === contentBefore?.length &&
+    tokenized?.[1].length === contentAfter?.length
+    ? tokenized
+    : undefined;
 }
 
 async function tokenizeHunks(

@@ -32,11 +32,14 @@ Run sqlblob_gc generation size report
   Generation | Size
   -----------------
            2 | 199 B
+  Total size: 199 B
 
 Run sqlblob_gc generation size report again, just to check mark has not broken it
 Run sqlblob_gc mark
   $ mononoke_sqlblob_gc --storage-config-name=blobstore --shard-count=2 mark 2>&1 | strip_glog
   Starting initial generation set
+  Completed initial generation handling on shard * (glob)
+  Completed initial generation handling on shard * (glob)
   Completed initial generation set
   Starting marking generation 1
   Starting mark on data keys from shard 0
@@ -48,7 +51,9 @@ Run sqlblob_gc generation size report again, just to check mark has not broken i
   Generation | Size
   -----------------
            2 | 199 B
+  Total size: 199 B
 
 Check the sizes are logged
-  $ jq -r '.int | [ .shard, .generation, .size, .chunk_id_count ] | @csv' < scuba.json | sort
-  1,2,199,1
+  $ jq -r '.int | [ .shard, .generation, .size, .chunk_id_count, .storage_total_footprint ] | @csv' < scuba.json | sort
+  ,,,,199
+  1,2,199,1,

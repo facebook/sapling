@@ -4,6 +4,7 @@
   $ eagerepo
   $ enable progress
   $ setconfig extensions.rustprogresstest="$TESTDIR/runlogtest.py" runlog.enable=True runlog.progress-refresh=0
+  $ export LOG=runlog=warn
 
   $ waitforrunlog() {
   >   while ! cat .hg/runlog/*.json 2> /dev/null; do
@@ -36,6 +37,7 @@ Check basic command start/end.
     "progress": []
   } (no-eol)
 
+  $ wait
   $ waitforrunlog
   {
     "id": ".*", (re)
@@ -123,6 +125,7 @@ Make sure runlog works with progress disabled.
       }
     ]
   } (no-eol)
+  $ wait
   $ waitforrunlog
   {
     "id": ".*", (re)
@@ -144,7 +147,7 @@ Make sure runlog works with progress disabled.
 
 Make sure runlog works with rust renderer.
   $ rm $TESTTMP/go
-  $ hg progresstest --waitfile=$TESTTMP/go --config progress.renderer=rust:simple 2 &
+  $ hg progresstest --waitfile=$TESTTMP/go --config progress.renderer=simple 2 &
   $ waitforrunlog
   {
     "id": ".*", (re)
@@ -152,7 +155,7 @@ Make sure runlog works with rust renderer.
       "progresstest",
       "--waitfile=$TESTTMP/go",
       "--config",
-      "progress.renderer=rust:simple",
+      "progress.renderer=simple",
       "2"
     ],
     "pid": \d+, (re)
@@ -170,7 +173,7 @@ Make sure runlog works with rust renderer.
       "progresstest",
       "--waitfile=$TESTTMP/go",
       "--config",
-      "progress.renderer=rust:simple",
+      "progress.renderer=simple",
       "2"
     ],
     "pid": \d+, (re)
@@ -195,7 +198,7 @@ Make sure runlog works with rust renderer.
       "progresstest",
       "--waitfile=$TESTTMP/go",
       "--config",
-      "progress.renderer=rust:simple",
+      "progress.renderer=simple",
       "2"
     ],
     "pid": \d+, (re)
@@ -213,6 +216,7 @@ Make sure runlog works with rust renderer.
       }
     ]
   } (no-eol)
+  $ wait
   $ waitforrunlog
   {
     "id": ".*", (re)
@@ -220,7 +224,7 @@ Make sure runlog works with rust renderer.
       "progresstest",
       "--waitfile=$TESTTMP/go",
       "--config",
-      "progress.renderer=rust:simple",
+      "progress.renderer=simple",
       "2"
     ],
     "pid": \d+, (re)

@@ -17,7 +17,6 @@ class ObjectId;
 class Hash20;
 class Tree;
 class DiffContext;
-class GitIgnoreStack;
 class RootId;
 
 /**
@@ -50,9 +49,7 @@ ImmediateFuture<folly::Unit> diffTrees(
     DiffContext* context,
     RelativePathPiece currentPath,
     ObjectId scmHash,
-    ObjectId wdHash,
-    const GitIgnoreStack* parentIgnore,
-    bool isIgnored);
+    ObjectId wdHash);
 
 /**
  * Process an added tree (present locally but not present in the source control
@@ -71,9 +68,7 @@ ImmediateFuture<folly::Unit> diffTrees(
 ImmediateFuture<folly::Unit> diffAddedTree(
     DiffContext* context,
     RelativePathPiece currentPath,
-    ObjectId wdHash,
-    const GitIgnoreStack* ignore,
-    bool isIgnored);
+    ObjectId wdHash);
 
 /**
  * Process a removed tree (not present locally but present in the source control

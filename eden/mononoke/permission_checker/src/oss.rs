@@ -11,6 +11,7 @@ use anyhow::bail;
 use anyhow::Result;
 use async_trait::async_trait;
 use fbinit::FacebookInit;
+use itertools::Itertools;
 use openssl::x509::X509;
 
 use crate::checker::AlwaysAllow;
@@ -78,6 +79,18 @@ impl MononokeIdentitySetExt for MononokeIdentitySet {
     }
 
     fn username(&self) -> Option<&str> {
+        None
+    }
+
+    fn main_client_identity(&self) -> String {
+        String::from("PLACEHOLDER_CLIENT_IDENTITY")
+    }
+
+    fn to_string(&self) -> String {
+        self.iter().map(ToString::to_string).join(",")
+    }
+
+    fn identity_type_filtered_concat(&self, _id_type: &str) -> Option<String> {
         None
     }
 }

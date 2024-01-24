@@ -23,7 +23,11 @@ export function getUsername(): string {
   }
 }
 
-export function generateAnalyticsInfo(platformName: string, version: string): ApplicationInfo {
+export function generateAnalyticsInfo(
+  platformName: string,
+  version: string,
+  sessionId?: string,
+): ApplicationInfo {
   return {
     platform: platformName,
     version,
@@ -31,8 +35,9 @@ export function generateAnalyticsInfo(platformName: string, version: string): Ap
     /**
      * Random id for this ISL session, created at startup.
      * Note: this is only generated on the server, so client-logged events share the ID with the server.
+     * May be manually specified instead of randomly created, e.g. if your platform has a well-defined session ID already.
      */
-    sessionId: randomId(),
+    sessionId: sessionId ?? randomId(),
     unixname: getUsername(),
     osArch: os.arch(),
     osType: os.platform(),

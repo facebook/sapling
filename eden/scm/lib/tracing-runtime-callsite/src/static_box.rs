@@ -46,7 +46,7 @@ impl<T> ops::Deref for StaticBox<T> {
 
 impl std::borrow::Borrow<str> for StaticBox<String> {
     fn borrow(&self) -> &str {
-        &**self.0
+        &self.0
     }
 }
 

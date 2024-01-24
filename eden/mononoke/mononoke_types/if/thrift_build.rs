@@ -45,7 +45,7 @@ fn main() {
 
         conf.types_crate("mononoke_types-thrift__types");
 
-        let options = "";
+        let options = "deprecated_default_enum_min_i32";
         if !options.is_empty() {
             conf.options(options);
         }

@@ -21,7 +21,7 @@ use manifest::Manifest;
 use mercurial_types::HgChangesetId;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
 
 pub async fn bonsai_changeset_from_hg(
@@ -43,7 +43,7 @@ pub fn iterate_all_manifest_entries<'a, MfId, LId>(
     ctx: &'a CoreContext,
     repo: &'a (impl RepoBlobstoreRef + Send + Sync),
     entry: Entry<MfId, LId>,
-) -> impl Stream<Item = Result<(Option<MPath>, Entry<MfId, LId>)>> + 'a
+) -> impl Stream<Item = Result<(Option<NonRootMPath>, Entry<MfId, LId>)>> + 'a
 where
     MfId: Loadable + Send + Sync + Clone + 'a,
     LId: Send + Clone + 'static,
@@ -58,7 +58,7 @@ where
                     let recurse = mf
                         .list()
                         .map(|(basename, new_entry)| {
-                            let path = MPath::join_opt_element(path.as_ref(), &basename);
+                            let path = NonRootMPath::join_opt_element(path.as_ref(), &basename);
                             (Some(path), new_entry)
                         })
                         .collect();

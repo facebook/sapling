@@ -72,8 +72,9 @@ else:
 CONFIG_DOT_D = "config.d"
 # USER_CONFIG is relative to the HOME dir for the user
 USER_CONFIG = ".edenrc"
-# SYSTEM_CONFIG is relative to the etc eden dir
+# SYSTEM_CONFIG and DYNAMIC_CONFIG are relative to the etc eden dir
 SYSTEM_CONFIG = "edenfs.rc"
+DYNAMIC_CONFIG = "edenfs_dynamic.rc"
 
 # These paths are relative to the user's client directory.
 CLIENTS_DIR = "clients"
@@ -89,12 +90,18 @@ SNAPSHOT_MAGIC_2 = b"eden\x00\x00\x00\x02"
 SNAPSHOT_MAGIC_3 = b"eden\x00\x00\x00\x03"
 SNAPSHOT_MAGIC_4 = b"eden\x00\x00\x00\x04"
 
+# List of supported repository types. This should stay in sync with the list
+# in the Rust CLI at fs/cli_rs/edenfs-client/src/checkout.rs and the list in
+# the Daemon's CheckoutConfig at fs/config/CheckoutConfig.h.
 DEFAULT_REVISION = {  # supported repo name -> default bookmark
     "git": "refs/heads/master",
     "hg": "first(present(master) + .)",
+    "filteredhg": "first(present(master) + .)",
     "recas": "",
     "http": "",
 }
+
+HG_REPO_TYPES = ["hg", "filteredhg"]
 
 SUPPORTED_REPOS: KeysView[str] = DEFAULT_REVISION.keys()
 
@@ -104,11 +111,7 @@ SUPPORTED_MOUNT_PROTOCOLS: Set[str] = {
     PRJFS_MOUNT_PROTOCOL_STRING,
 }
 
-SUPPORTED_INODE_CATALOG_TYPES: Set[str] = {
-    "legacy",
-    "sqlite",
-    "inmemory",
-}
+SUPPORTED_INODE_CATALOG_TYPES: Set[str] = {"legacy", "sqlite", "inmemory", "lmdb"}
 
 # Create a readme file with this name in the mount point directory.
 # The intention is for this to contain instructions telling users what to do if their
@@ -162,7 +165,7 @@ class CheckoutConfig(typing.NamedTuple):
 
     - backing_repo: The path where the true repo resides on disk.  For mercurial backing
         repositories this does not include the final ".hg" directory component.
-    - scm_type: "hg" or "git"
+    - scm_type: "hg", "filteredhg", or "git"
     - mount_protocol: "fuse", "nfs" or "prjfs"
     - case_sensitive: whether the mount point is case sensitive. Default to
       false on Windows and macOS.
@@ -248,6 +251,7 @@ class EdenInstance(AbstractEdenInstance):
     _telemetry_logger: Optional[telemetry.TelemetryLogger] = None
     _home_dir: Path
     _user_config_path: Path
+    _dynamic_config_path: Path
     _system_config_path: Path
     _config_dir: Path
 
@@ -261,6 +265,7 @@ class EdenInstance(AbstractEdenInstance):
         self._etc_eden_dir = Path(etc_eden_dir or DEFAULT_ETC_EDEN_DIR)
         self._home_dir = Path(home_dir) if home_dir is not None else util.get_home_dir()
         self._user_config_path = self._home_dir / USER_CONFIG
+        self._dynamic_config_path = self._etc_eden_dir / DYNAMIC_CONFIG
         self._system_config_path = self._etc_eden_dir / SYSTEM_CONFIG
         self._interpolate_dict = interpolate_dict
 
@@ -372,6 +377,7 @@ class EdenInstance(AbstractEdenInstance):
                 result.append(config_d / name)
         result.sort()
         result.append(self._system_config_path)
+        result.append(self._dynamic_config_path)
         result.append(self._user_config_path)
         return result
 
@@ -611,7 +617,11 @@ Do you want to run `eden mount %s` instead?"""
         # Store snapshot ID
         checkout = EdenCheckout(self, Path(path), Path(client_dir))
         if snapshot_id:
-            checkout.save_snapshot(snapshot_id)
+            if checkout_config.scm_type == "filteredhg":
+                filtered_root_id = util.create_filtered_rootid(snapshot_id)
+                checkout.save_snapshot(filtered_root_id)
+            else:
+                checkout.save_snapshot(snapshot_id.encode())
         else:
             raise Exception("snapshot id not provided")
 
@@ -725,14 +735,14 @@ Do you want to run `eden mount %s` instead?"""
         # before.
         clone_success_path = checkout.state_dir / CLONE_SUCCEEDED
         is_initial_mount = not clone_success_path.is_file()
-        if is_initial_mount and checkout.get_config().scm_type == "hg":
+        if is_initial_mount and checkout.get_config().scm_type in HG_REPO_TYPES:
             from . import hg_util
 
             hg_util.setup_hg_dir(checkout, commit_id)
 
         clone_success_path.touch()
 
-        if checkout.get_config().scm_type == "hg":
+        if checkout.get_config().scm_type in HG_REPO_TYPES:
             env = os.environ.copy()
             # These are set by the par machinery and interfere with Mercurial's
             # own dynamic library loading.
@@ -748,6 +758,23 @@ Do you want to run `eden mount %s` instead?"""
                 ],
                 env=env,
             )
+
+            configs = dict()
+            if checkout.get_config().scm_type == "filteredhg":
+                configs["extensions.edensparse"] = ""
+                configs["extensions.sparse"] = "!"
+            for k, v in configs.items():
+                subprocess.check_call(
+                    [
+                        os.environ.get("EDEN_HG_BINARY", "hg"),
+                        "config",
+                        "--local",
+                        f"{k}={v}",
+                        "-R",
+                        str(checkout.path),
+                    ],
+                    env=env,
+                )
 
     def mount(self, path: Union[Path, str], read_only: bool) -> int:
         # Load the config info for this client, to make sure we
@@ -1471,6 +1498,9 @@ class EdenCheckout:
                 parent = f.read(bodyLength)
                 if len(parent) != bodyLength:
                     raise RuntimeError("SNAPSHOT file too short")
+                if self.get_config().scm_type == "filteredhg":
+                    hash_len, varint_len = util.decode_varint(parent)
+                    parent = parent[varint_len : hash_len + 1]
                 decoded_parent = parent.decode()
                 return SnapshotState(
                     working_copy_parent=decoded_parent,
@@ -1500,6 +1530,14 @@ class EdenCheckout:
                 checked_out_revision = f.read(checked_out_length)
                 if len(checked_out_revision) != checked_out_length:
                     raise RuntimeError("SNAPSHOT file too short")
+
+                if self.get_config().scm_type == "filteredhg":
+                    hash_len, varint_len = util.decode_varint(working_copy_parent)
+                    working_copy_parent = working_copy_parent[varint_len : hash_len + 1]
+                    hash_len, varint_len = util.decode_varint(checked_out_revision)
+                    checked_out_revision = checked_out_revision[
+                        varint_len : hash_len + 1
+                    ]
                 return SnapshotState(
                     working_copy_parent=working_copy_parent.decode(),
                     last_checkout_hash=checked_out_revision.decode(),
@@ -1507,12 +1545,12 @@ class EdenCheckout:
             else:
                 raise RuntimeError("SNAPSHOT file has invalid header")
 
-    def save_snapshot(self, commit_id: str) -> None:
+    def save_snapshot(self, commit_id: bytes) -> None:
         """Write a new parent commit ID into the SNAPSHOT file."""
         snapshot_path = self.state_dir / SNAPSHOT
-        encoded = commit_id.encode()
         write_file_atomically(
-            snapshot_path, SNAPSHOT_MAGIC_2 + struct.pack(">L", len(encoded)) + encoded
+            snapshot_path,
+            SNAPSHOT_MAGIC_2 + struct.pack(">L", len(commit_id)) + commit_id,
         )
 
     def get_backing_repo(self) -> util.HgRepo:
@@ -1532,6 +1570,19 @@ class EdenCheckout:
         old_config = self.get_config()
 
         new_config = old_config._replace(mount_protocol=new_mount_protocol)
+
+        self.save_config(new_config)
+
+    def migrate_inode_catalog(self, new_inode_catalog_type: str) -> None:
+        """
+        Migrate this checkout to the new_inode_catalog_type. This will only take
+        effect if EdenFS is restarted. It is recommended to only run this while
+        EdenFS is stopped.
+        """
+
+        old_config = self.get_config()
+
+        new_config = old_config._replace(inode_catalog_type=new_inode_catalog_type)
 
         self.save_config(new_config)
 
@@ -1560,10 +1611,38 @@ def should_migrate_mount_protocol_to_nfs(instance: AbstractEdenInstance) -> bool
     return False
 
 
+_MIGRATE_EXISTING_TO_IN_MEMORY_CATALOG = "core.migrate_existing_to_in_memory_catalog"
+
+
+def should_migrate_inode_catalog_to_in_memory(instance: AbstractEdenInstance) -> bool:
+    if sys.platform != "win32":
+        return False
+
+    if util.is_sandcastle():
+        return False
+
+    # default to migration, allow override in Eden config
+    if instance.get_config_bool(_MIGRATE_EXISTING_TO_IN_MEMORY_CATALOG, default=True):
+        return True
+
+    return False
+
+
 def count_non_nfs_mounts(instance: AbstractEdenInstance) -> int:
     count = 0
     for checkout in instance.get_checkouts():
         if checkout.get_config().mount_protocol != util.NFS_MOUNT_PROTOCOL_STRING:
+            count += 1
+    return count
+
+
+def count_non_in_memory_inode_catalogs(instance: AbstractEdenInstance) -> int:
+    count = 0
+    for checkout in instance.get_checkouts():
+        if (
+            checkout.get_config().inode_catalog_type
+            != util.INODE_CATALOG_TYPE_IN_MEMORY_STRING
+        ):
             count += 1
     return count
 
@@ -1595,6 +1674,26 @@ def _do_nfs_migration(
 
     instance.log_sample("migrate_existing_clones_to_nfs")
     print(get_migration_success_message(util.NFS_MOUNT_PROTOCOL_STRING))
+
+
+# Checks for any non in memory catalogs and migrates them to in memory.
+def _do_in_memory_inode_catalog_migration(instance: EdenInstance) -> None:
+    if count_non_in_memory_inode_catalogs(instance) == 0:
+        # most the time this should be the case. we only need to migrate catalogs
+        # once, and then we should just be able to skip this all other times.
+        return
+
+    print("migrating mounts to inmemory inode catalog...")
+
+    for checkout in instance.get_checkouts():
+        if (
+            checkout.get_config().inode_catalog_type
+            != util.INODE_CATALOG_TYPE_IN_MEMORY_STRING
+        ):
+            checkout.migrate_inode_catalog(util.INODE_CATALOG_TYPE_IN_MEMORY_STRING)
+
+    instance.log_sample("migrate_existing_clones_to_in_memory")
+    print("Successfully migrated all your mounts to inmemory inode catalog.\n")
 
 
 def _do_manual_migration(
@@ -1814,4 +1913,6 @@ def load_toml_config(path: Path) -> TomlConfigDict:
     except FileNotFoundError:
         raise
     except Exception as e:
-        raise FileError(f"toml config is either missing or corrupted : {str(e)}")
+        raise FileError(
+            f"toml config file {str(path)} is either missing or corrupted: {str(e)}"
+        )

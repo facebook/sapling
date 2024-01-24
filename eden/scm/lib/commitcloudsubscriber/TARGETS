@@ -1,0 +1,47 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "commitcloudsubscriber",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "package": {
+                "description": """\
+    Cross platform client for subscribing to Commit Cloud eventsource (http server-sent events)
+    The workflow is the following:
+    * define 'subscription' as a unique [repo_name, workspace] pair
+    * read set of 'subscribers', defined as [repo_name, workspace, repo_root]
+    * runs a Commit Cloud eventsource listener in a separate thread for every 'subscription'
+        (and a set of 'subscribers' (repo_roots))
+    * triggers `hg cloud sync` command on notifications in all 'subscribers' (repo_roots)
+        for a given 'subscription'
+    * the library also contains a module to find OAuth token,
+        this logic should be in sync with `hg cloud auth` command.
+""",
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    test_deps = ["fbsource//third-party/rust:tempfile"],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:base64",
+        "fbsource//third-party/rust:filetime",
+        "fbsource//third-party/rust:lazy_static",
+        "fbsource//third-party/rust:log",
+        "fbsource//third-party/rust:mime",
+        "fbsource//third-party/rust:parking_lot",
+        "fbsource//third-party/rust:regex",
+        "fbsource//third-party/rust:reqwest",
+        "fbsource//third-party/rust:rust-ini",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:serde_json",
+        "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tokio",
+        "//common/rust/shed/hostcaps:hostcaps",
+        "//eden/scm/lib/identity:identity",
+    ],
+)

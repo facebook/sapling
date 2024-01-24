@@ -8,7 +8,9 @@
 import type {FieldConfig} from './types';
 import type {ReactNode} from 'react';
 
+import {Copyable} from '../Copyable';
 import {T} from '../i18n';
+import {RenderMarkup} from './RenderMarkup';
 import {SeeMoreContainer} from './SeeMoreContainer';
 import {CommitInfoTextArea} from './TextArea';
 import {CommitInfoTextField} from './TextField';
@@ -80,34 +82,75 @@ export function CommitInfoField({
       // don't render empty read-only fields, since you can't "click to edit"
       return null;
     }
-    return field.type !== 'read-only' && isBeingEdited ? (
-      <Section className="commit-info-field-section">
-        <SmallCapsTitle>
-          <Icon icon={field.icon} />
-          {field.key}
-        </SmallCapsTitle>
-        {field.type === 'field' ? (
-          <CommitInfoTextField
-            name={field.key}
-            autoFocus={autofocus ?? false}
-            editedMessage={editedFieldContent}
-            setEditedCommitMessage={setEditedField}
-            typeaheadKind={field.typeaheadKind}
-            maxTokens={field.maxTokens}
-          />
-        ) : (
-          <CommitInfoTextArea
-            kind={field.type}
-            fieldConfig={field}
-            name={field.key}
-            autoFocus={autofocus ?? false}
-            editedMessage={editedFieldContent}
-            setEditedCommitMessage={setEditedField}
-          />
-        )}
-        {extra}
-      </Section>
-    ) : (
+
+    if (field.type !== 'read-only' && isBeingEdited) {
+      return (
+        <Section className="commit-info-field-section">
+          <SmallCapsTitle>
+            <Icon icon={field.icon} />
+            {field.key}
+          </SmallCapsTitle>
+          {field.type === 'field' ? (
+            <CommitInfoTextField
+              name={field.key}
+              autoFocus={autofocus ?? false}
+              editedMessage={editedFieldContent}
+              setEditedCommitMessage={setEditedField}
+              typeaheadKind={field.typeaheadKind}
+              maxTokens={field.maxTokens}
+            />
+          ) : (
+            <CommitInfoTextArea
+              kind={field.type}
+              fieldConfig={field}
+              name={field.key}
+              autoFocus={autofocus ?? false}
+              editedMessage={editedFieldContent}
+              setEditedCommitMessage={setEditedField}
+            />
+          )}
+          {extra}
+        </Section>
+      );
+    }
+
+    let renderedContent;
+    if (content) {
+      if (field.type === 'field') {
+        const tokens = Array.isArray(content) ? content : extractTokens(content)[0];
+        renderedContent = (
+          <div className="commit-info-tokenized-field">
+            <TokensList tokens={tokens} />
+            {field.maxTokens === 1 && tokens.length > 0 && (
+              <Copyable iconOnly>{tokens[0]}</Copyable>
+            )}
+          </div>
+        );
+      } else {
+        if (Array.isArray(content) || !field.isRenderableMarkup) {
+          renderedContent = content;
+        } else {
+          renderedContent = <RenderMarkup>{content}</RenderMarkup>;
+        }
+      }
+    } else {
+      renderedContent = (
+        <span className="empty-description subtle">
+          {readonly ? (
+            <>
+              <T replace={{$name: field.key}}> No $name</T>
+            </>
+          ) : (
+            <>
+              <Icon icon="add" />
+              <T replace={{$name: field.key}}> Click to add $name</T>
+            </>
+          )}
+        </span>
+      );
+    }
+
+    return (
       <Section>
         <Wrapper>
           <ClickToEditField
@@ -123,30 +166,7 @@ export function CommitInfoField({
                 </span>
               )}
             </SmallCapsTitle>
-            {content ? (
-              field.type === 'field' ? (
-                <div className="commit-info-tokenized-field">
-                  <TokensList
-                    tokens={Array.isArray(content) ? content : extractTokens(content)[0]}
-                  />
-                </div>
-              ) : (
-                <div>{content}</div>
-              )
-            ) : (
-              <span className="empty-description subtle">
-                {readonly ? (
-                  <>
-                    <T replace={{$name: field.key}}> No $name</T>
-                  </>
-                ) : (
-                  <>
-                    <Icon icon="add" />
-                    <T replace={{$name: field.key}}> Click to add $name</T>
-                  </>
-                )}
-              </span>
-            )}
+            {renderedContent}
           </ClickToEditField>
           {extra}
         </Wrapper>

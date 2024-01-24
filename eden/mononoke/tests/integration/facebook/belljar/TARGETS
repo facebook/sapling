@@ -1,0 +1,35 @@
+load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
+load("@fbsource//tools/build_defs:scrut_test.bzl", "scrut_test")
+load("//belljar/buck:defs.bzl", "belljar_scrut_test")
+
+oncall("mononoke")
+
+python_library(
+    name = "scsc_allowlist",
+    srcs = ["scsc_allowlist.py"],
+    deps = [
+        "//belljar/if:dependencies-py3-types",
+    ],
+)
+
+belljar_scrut_test(
+    name = "scsc_belljar_scrut",
+    srcs = ["scsc_scrut.md"],
+    allowlist_module = "eden.mononoke.tests.integration.facebook.belljar.allowlist",
+    fbcode_path_prefix_triggers = [
+        "eden/mononoke/scs/client",
+    ],
+    oncall = "scm_server_infra",
+    rpms = ["fb-scsc"],
+    deps = [":scsc_allowlist"],
+)
+
+scrut_test(
+    name = "scsc_scrut",
+    srcs = [
+        "scsc_scrut.md",
+    ],
+    env = {
+        "scsc": "$(exe //eden/mononoke/scs/client:scsc)",
+    },
+)

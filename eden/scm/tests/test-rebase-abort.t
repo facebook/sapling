@@ -59,37 +59,39 @@ Conflicting rebase:
 
 Insert unsupported advisory merge record:
 
-  $ hg --config extensions.fakemergerecord=$TESTDIR/fakemergerecord.py fakemergerecord -x
+  $ hg debugmergestate --add-unsupported-advisory-record
   $ hg debugmergestate
   local: 3e046f2ecedb793b97ed32108086edd1a162f8bc
   other: 46f0b057b5c061d276b91491c22151f78698abd2
   labels:
     local: dest
     other: source
-  unrecognized entry: x	advisory record
-  file extras: common (ancestorlinknode = 3163e20567cc93074fbb7a53c8b93312e59dbf2c)
+    base: base
   file: common (record type "F", state "u", hash 94c8c21d08740f5da9eaa38d1f175c592692f0d1)
     local path: common (flags "")
     ancestor path: common (node de0a666fdd9c1a0b0698b90d85064d8bd34f74b6)
     other path: common (node 2f6411de53677f6f1048fef5bf888d67a342e0a5)
+    extras: ancestorlinknode=3163e20567cc93074fbb7a53c8b93312e59dbf2c
+  unsupported record "x" (data ["advisory record"])
   $ hg resolve -l
   U common
 
 Insert unsupported mandatory merge record:
 
-  $ hg --config extensions.fakemergerecord=$TESTDIR/fakemergerecord.py fakemergerecord -X
+  $ hg debugmergestate --add-unsupported-mandatory-record
   $ hg debugmergestate
   local: 3e046f2ecedb793b97ed32108086edd1a162f8bc
   other: 46f0b057b5c061d276b91491c22151f78698abd2
   labels:
     local: dest
     other: source
-  file extras: common (ancestorlinknode = 3163e20567cc93074fbb7a53c8b93312e59dbf2c)
+    base: base
   file: common (record type "F", state "u", hash 94c8c21d08740f5da9eaa38d1f175c592692f0d1)
     local path: common (flags "")
     ancestor path: common (node de0a666fdd9c1a0b0698b90d85064d8bd34f74b6)
     other path: common (node 2f6411de53677f6f1048fef5bf888d67a342e0a5)
-  unrecognized entry: X	mandatory record
+    extras: ancestorlinknode=3163e20567cc93074fbb7a53c8b93312e59dbf2c
+  unsupported record "X" (data ["mandatory record"])
   $ hg resolve -l
   abort: unsupported merge state records: X
   (see https://mercurial-scm.org/wiki/MergeStateRecords for more information)
@@ -302,7 +304,8 @@ user has somehow managed to update to a different revision (issue4009)
   $ echo new > a
   $ hg up 1               # user gets an error saying to run hg rebase --abort
   abort: rebase in progress
-  (use 'hg rebase --continue' or 'hg rebase --abort')
+  (use 'hg rebase --continue' to continue or
+       'hg rebase --abort' to abort)
   [255]
 
   $ cat a

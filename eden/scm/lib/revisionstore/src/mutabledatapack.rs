@@ -10,7 +10,6 @@ use std::io::Read;
 use std::io::Seek;
 use std::io::SeekFrom;
 use std::io::Write;
-use std::mem::replace;
 use std::path::Path;
 use std::path::PathBuf;
 use std::u16;
@@ -83,12 +82,12 @@ impl MutableDataPackInner {
             return Err(format_err!("cannot create a v0 datapack"));
         }
 
-        let tempfile = Builder::new().append(true).tempfile_in(&dir)?;
+        let tempfile = Builder::new().append(true).tempfile_in(dir)?;
         let mut data_file = PackWriter::new(tempfile);
         let mut hasher = Sha1::new();
         let version_u8: u8 = version.into();
         data_file.write_u8(version_u8)?;
-        hasher.update(&[version_u8]);
+        hasher.update([version_u8]);
 
         Ok(Self {
             dir: dir.to_path_buf(),
@@ -233,7 +232,7 @@ impl HgIdMutableDeltaStore for MutableDataPack {
 
     fn flush(&self) -> Result<Option<Vec<PathBuf>>> {
         let mut guard = self.inner.lock();
-        let old_inner = replace(&mut *guard, None);
+        let old_inner = (*guard).take();
 
         if let Some(old_inner) = old_inner {
             Ok(match old_inner.close_pack()? {
@@ -258,7 +257,7 @@ impl MutablePack for MutableDataPackInner {
         Ok((
             self.data_file.into_inner()?,
             index_file.into_inner()?,
-            self.dir.join(&hex::encode(self.hasher.finalize())),
+            self.dir.join(hex::encode(self.hasher.finalize())),
         ))
     }
 
@@ -353,10 +352,10 @@ impl LocalStore for MutableDataPack {
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
-    use std::fs::File;
     use std::io::Read;
 
+    use fs_err as fs;
+    use fs_err::File;
     use minibytes::Bytes;
     use tempfile::tempdir;
     use types::testutil::*;
@@ -434,7 +433,7 @@ mod tests {
         assert_eq!(&vec![delta.clone()], &chain.unwrap());
 
         let chain = mutdatapack.get_delta_chain(&delta2.key).unwrap();
-        assert_eq!(&vec![delta2.clone(), delta.clone()], &chain.unwrap());
+        assert_eq!(&vec![delta2, delta], &chain.unwrap());
     }
 
     #[test]
@@ -508,7 +507,7 @@ mod tests {
 
         let not = key("not", "10000");
         let missing = mutdatapack
-            .get_missing(&vec![StoreKey::from(delta.key), StoreKey::from(&not)])
+            .get_missing(&[StoreKey::from(delta.key), StoreKey::from(&not)])
             .unwrap();
         assert_eq!(missing, vec![StoreKey::from(not)]);
     }

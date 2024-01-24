@@ -57,10 +57,7 @@ class GraftTest(EdenHgTestCase):
         with self.assertRaises(hgrepo.HgError) as context:
             self.hg("graft", commit2)
         self.assertIn(
-            (
-                "warning: 1 conflicts while merging first.txt!"
-                " (edit, then use 'hg resolve --mark')\n"
-            ),
+            "warning: 1 conflicts while merging first.txt!",
             str(context.exception),
         )
         self.assertIn(

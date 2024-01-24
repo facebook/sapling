@@ -1,0 +1,29 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "webview-app",
+    srcs = glob(["src/*"]),
+    crate_root = "src/lib.rs",
+    os_deps = [
+        (
+            "macos",
+            [
+                "//eden/scm/lib/third-party/webview-sys:webview-sys",
+                "//eden/scm/lib/version:rust_version",
+                "fbsource//third-party/rust:base64",
+                "fbsource//third-party/rust:open",
+                "fbsource//third-party/rust:tinyfiledialogs",
+                "fbsource//third-party/rust:tracing",
+            ],
+        ),
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:dirs",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:serde_json",
+    ],
+)

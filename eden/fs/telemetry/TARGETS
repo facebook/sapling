@@ -1,0 +1,183 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+
+oncall("scm_client_infra")
+
+cpp_library(
+    name = "telemetry",
+    srcs = [
+        "EdenStats.cpp",
+        "RequestMetricsScope.cpp",
+        "Tracing.cpp",
+    ],
+    headers = [
+        "TraceBus.h",
+        "TraceBus-inl.h",
+    ],
+    deps = [
+        "//eden/fs/utils:enum",
+        "//folly:string",
+    ],
+    exported_deps = [
+        "//eden/fs:config",
+        "//eden/fs/utils:ref_ptr",
+        "//eden/fs/utils:utils",
+        "//fb303/detail:quantile_stat_wrappers",
+        "//folly:clock_gettime_wrappers",
+        "//folly:range",
+        "//folly:singleton",
+        "//folly:spin_lock",
+        "//folly:stop_watch",
+        "//folly:synchronized",
+        "//folly:thread_local",
+        "//folly:utility",
+        "//folly/io/async:request_context",
+        "//folly/lang:aligned",
+        "//folly/logging:logging",
+        "//folly/synchronization:call_once",
+        "//folly/system:thread_name",
+    ],
+)
+
+cpp_library(
+    name = "task_trace",
+    srcs = [
+        "TaskTrace.cpp",
+    ],
+    headers = [
+        "TaskTrace.h",
+    ],
+    deps = [
+        "//folly/system:thread_id",
+        "//folly/system:thread_name",
+    ],
+    exported_deps = [
+        ":telemetry",
+    ],
+)
+
+cpp_library(
+    name = "hive_logger",
+    headers = [
+        "IHiveLogger.h",
+        "SessionInfo.h",
+    ],
+    exported_deps = [
+        "//eden/fs/config:config",
+        "//eden/fs/inodes:inode_number",
+        "//eden/fs/store:context",
+        "//eden/fs/utils:path",
+    ],
+)
+
+cpp_library(
+    name = "activity_recorder",
+    headers = [
+        "IActivityRecorder.h",
+    ],
+    exported_deps = [
+        "//eden/fs/utils:path",
+    ],
+)
+
+cpp_library(
+    name = "fs_event_logger",
+    srcs = [
+        "FsEventLogger.cpp",
+    ],
+    headers = [
+        "FsEventLogger.h",
+    ],
+    deps = [
+        ":hive_logger",
+        "//eden/fs/config:config",
+        "//folly:random",
+    ],
+    exported_deps = [
+        "//folly:range",
+        "//folly:synchronized",
+    ],
+)
+
+cpp_library(
+    name = "log_info",
+    srcs = [
+        "LogEvent.cpp",
+        "SessionId.cpp",
+        "SessionInfo.cpp",
+    ],
+    headers = [
+        "LogEvent.h",
+        "SessionId.h",
+        "SessionInfo.h",
+    ],
+    deps = [
+        "//eden/fs/utils:sysctl_util",
+        "//eden/fs/utils:throw",
+        "//folly:conv",
+        "//folly:exception",
+        "//folly:unicode",
+        "//folly/logging:logging",
+        "//folly/portability:unistd",
+    ],
+    exported_deps = [
+        "//eden/common/os:os",
+        "//folly/portability:sys_types",
+    ],
+)
+
+cpp_library(
+    name = "scribe_logger",
+    srcs = [
+        "SubprocessScribeLogger.cpp",
+    ],
+    headers = [
+        "ScribeLogger.h",
+    ],
+    deps = [
+        "//folly/logging:logging",
+        "//folly/system:thread_name",
+    ],
+    exported_deps = [
+        "//eden/fs/utils:process",
+        "//folly:range",
+        "//folly:synchronized",
+    ],
+)
+
+cpp_library(
+    name = "structured_logger",
+    srcs = [
+        "ScubaStructuredLogger.cpp",
+        "StructuredLogger.cpp",
+        "StructuredLoggerFactory.cpp",
+    ],
+    headers = [
+        "NullStructuredLogger.h",
+    ],
+    deps = [
+        ":scribe_logger",
+        ":telemetry",
+        "//eden/fs/config:config",
+        "//fb303:service_data",
+        "//folly:dynamic",
+        "//folly/logging:logging",
+    ],
+    exported_deps = [
+        ":log_info",
+        "//eden/fs/utils:ref_ptr",
+    ],
+    external_deps = [
+        ("glibc", None, "rt"),
+    ],
+)
+
+cpp_library(
+    name = "activity_buffer",
+    headers = [
+        "ActivityBuffer.h",
+    ],
+    exported_deps = [
+        "//eden/fs/utils:ring_buffer",
+        "//folly:synchronized",
+    ],
+)

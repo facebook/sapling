@@ -10,7 +10,10 @@
 #include <folly/Expected.h>
 #include <folly/File.h>
 #include <folly/portability/SysUio.h>
+#include <variant>
+
 #include "eden/common/utils/FileOffset.h"
+#include "eden/fs/inodes/InodeNumber.h"
 
 namespace folly {
 class File;
@@ -20,10 +23,21 @@ namespace facebook::eden {
 
 class Overlay;
 
+/**
+ * Class to manage IO reference counting for an Overlay to support closing the
+ * Overlay class even if it is still in use.
+ *
+ * If an OverlayFile was created from a folly::File, this class will manage
+ * reference counting for the underlying on-disk Overlay storage.
+ */
 class OverlayFile {
  public:
   OverlayFile() = default;
   explicit OverlayFile(folly::File file, std::weak_ptr<Overlay> overlay);
+  explicit OverlayFile(InodeNumber ino, std::weak_ptr<Overlay> overlay);
+  explicit OverlayFile(
+      std::variant<folly::File, InodeNumber> data,
+      std::weak_ptr<Overlay> overlay);
 
   OverlayFile(OverlayFile&&) = default;
   OverlayFile& operator=(OverlayFile&&) = default;
@@ -45,7 +59,12 @@ class OverlayFile {
   OverlayFile(const OverlayFile&) = delete;
   OverlayFile& operator=(const OverlayFile&) = delete;
 
-  folly::File file_;
+  /**
+   * This will contain a folly::File if created from an Overlay with type
+   * InodeCatalogType::Legacy or an InodeNumber if created from an Overlay with
+   * type InodeCatalogType::LMDB
+   */
+  std::variant<folly::File, InodeNumber> data_;
   std::weak_ptr<Overlay> overlay_;
 };
 } // namespace facebook::eden

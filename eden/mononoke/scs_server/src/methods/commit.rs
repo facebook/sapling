@@ -38,6 +38,7 @@ use mononoke_api::MononokePath;
 use mononoke_api::RepoContext;
 use mononoke_api::UnifiedDiff;
 use mononoke_api::UnifiedDiffMode;
+use mononoke_api::XRepoLookupSyncBehaviour;
 use source_control as thrift;
 
 use crate::commit_id::map_commit_identities;
@@ -518,7 +519,7 @@ impl SourceControlServiceImpl {
         params: &thrift::CommitCompareParams,
     ) -> Result<Option<ChangesetContext>, errors::ServiceError> {
         let commit_parents = base_changeset.parents().await?;
-        let mut other_changeset_id = commit_parents.get(0).copied();
+        let mut other_changeset_id = commit_parents.first().copied();
 
         if params.follow_mutable_file_history.unwrap_or(false) {
             let mutable_parents = base_changeset.mutable_parents();
@@ -989,11 +990,17 @@ impl SourceControlServiceImpl {
             None => None,
         };
 
+        let sync_behaviour = if params.no_ondemand_sync {
+            XRepoLookupSyncBehaviour::NeverSync
+        } else {
+            XRepoLookupSyncBehaviour::SyncIfAbsent
+        };
         match repo
             .xrepo_commit_lookup(
                 &other_repo,
                 ChangesetSpecifier::from_request(&commit.id)?,
                 candidate_selection_hint,
+                sync_behaviour,
             )
             .await?
         {

@@ -35,7 +35,7 @@ use itertools::Itertools;
 use maplit::hashset;
 use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use phases::Phase;
 use phases::Phases;
 use repo_identity::RepoIdentityRef;
@@ -700,9 +700,15 @@ fn scuba_log_node(
         .add(type_key, Into::<&'static str>::into(n.get_type()))
         .add(key_key, n.stats_key());
     if let Some(path) = n.stats_path() {
-        scuba.add(path_key, MPath::display_opt(path.as_ref()).to_string());
+        scuba.add(
+            path_key,
+            NonRootMPath::display_opt(path.as_ref()).to_string(),
+        );
     } else if let Some(path) = n_path {
-        scuba.add(path_key, MPath::display_opt(path.as_ref()).to_string());
+        scuba.add(
+            path_key,
+            NonRootMPath::display_opt(path.as_ref()).to_string(),
+        );
     }
 }
 

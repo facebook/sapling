@@ -1,0 +1,31 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mononoke")
+
+rust_library(
+    name = "protocol",
+    srcs = glob(["src/**/*.rs"]),
+    unittests = True,
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-stream",
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:gix-hash",
+        "fbsource//third-party/rust:rustc-hash",
+        "//eden/mononoke/blobrepo:repo_blobstore",
+        "//eden/mononoke/blobstore:blobstore",
+        "//eden/mononoke/bonsai_git_mapping:bonsai_git_mapping",
+        "//eden/mononoke/bonsai_tag_mapping:bonsai_tag_mapping",
+        "//eden/mononoke/bookmarks:bookmarks",
+        "//eden/mononoke/git/git_types:git_types",
+        "//eden/mononoke/git/packfile:packfile",
+        "//eden/mononoke/git_symbolic_refs:git_symbolic_refs",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/repo_attributes/commit_graph/commit_graph:commit_graph",
+        "//eden/mononoke/repo_attributes/repo_derived_data:repo_derived_data",
+        "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
+        "//eden/mononoke/server/context:context",
+    ],
+)

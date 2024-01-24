@@ -1,0 +1,70 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "repo",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "constructors": {"default-features": False},
+                },
+            },
+            "extra_buck_dependencies": {
+                "dependencies": [
+                    "//eden/scm/lib/revisionstore:revisionstore",
+                ],
+            },
+            "features": {
+                "default": [],
+                "fb": [
+                    "configloader/fb",
+                    "revisionstore/ods",
+                ],
+                "wdir": [
+                    "workingcopy",
+                ],
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    features = [
+        "fb",
+        "wdir",
+    ],
+    test_deps = [
+        "fbsource//third-party/rust:tempfile",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:fail",
+        "fbsource//third-party/rust:fs-err",
+        "fbsource//third-party/rust:once_cell",
+        "fbsource//third-party/rust:parking_lot",
+        "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/async-runtime:async-runtime",
+        "//eden/scm/lib/config/loader:configloader",
+        "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/constructors:constructors",
+        "//eden/scm/lib/eagerepo:eagerepo",
+        "//eden/scm/lib/edenapi:edenapi",
+        "//eden/scm/lib/hgcommits/trait:commits-trait",
+        "//eden/scm/lib/identity:identity",
+        "//eden/scm/lib/manifest-tree:manifest-tree",
+        "//eden/scm/lib/metalog:metalog",
+        "//eden/scm/lib/refencode:refencode",
+        "//eden/scm/lib/repolock:repolock",
+        "//eden/scm/lib/revisionstore:revisionstore_with_ods",
+        "//eden/scm/lib/revsets:revsets",
+        "//eden/scm/lib/storemodel:storemodel",
+        "//eden/scm/lib/treestate:treestate",
+        "//eden/scm/lib/types:types",
+        "//eden/scm/lib/util:util",
+        "//eden/scm/lib/util/factory:factory",
+        "//eden/scm/lib/workingcopy:workingcopy",
+    ],
+)

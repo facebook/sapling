@@ -94,6 +94,9 @@ fn log_request_slog(logger: &Logger, state: &mut State, entry: LogEntry) -> Opti
     if uri.path() == "/health_check" {
         return None;
     }
+    if uri.path() == "/proxygen/health_check" {
+        return None;
+    }
     let uri = uri.to_string();
 
     let load = *RequestLoad::borrow_from(state);

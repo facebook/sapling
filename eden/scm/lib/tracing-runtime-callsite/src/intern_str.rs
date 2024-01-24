@@ -57,10 +57,10 @@ impl Intern for str {
 impl Intern for Option<&str> {
     type Target = Option<&'static str>;
     fn intern(&self) -> Self::Target {
-        self.map(|s| intern(s))
+        self.map(intern)
     }
 }
 
 /// Collection of interned strings.
 pub(crate) static INTERNED_STRINGS: Lazy<RwLock<HashSet<StaticBox<String>>>> =
-    Lazy::new(|| Default::default());
+    Lazy::new(Default::default);

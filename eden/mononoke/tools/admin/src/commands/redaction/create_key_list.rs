@@ -22,6 +22,7 @@ use bookmarks::BookmarkKey;
 use bookmarks::BookmarksRef;
 use clap::ArgGroup;
 use clap::Args;
+use commit_id::parse_commit_id;
 use context::CoreContext;
 use fsnodes::RootFsnodeId;
 use futures::stream::TryStreamExt;
@@ -33,13 +34,12 @@ use mononoke_app::MononokeApp;
 use mononoke_types::typed_hash::RedactionKeyListId;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedDataRef;
 
 use super::list::paths_for_content_keys;
 use super::Repo;
-use crate::commit_id::parse_commit_id;
 
 #[derive(Args)]
 #[clap(group(ArgGroup::new("files-input=file").args(&["files", "input_file"]).required(true)))]
@@ -163,7 +163,7 @@ async fn content_keys_for_paths(
     ctx: &CoreContext,
     repo: &Repo,
     cs_id: ChangesetId,
-    paths: Vec<MPath>,
+    paths: Vec<NonRootMPath>,
 ) -> Result<HashSet<String>> {
     let root_fsnode_id = repo
         .repo_derived_data()
@@ -173,7 +173,7 @@ async fn content_keys_for_paths(
         .fsnode_id()
         .find_entries(ctx.clone(), repo.repo_blobstore_arc(), paths.clone())
         .try_filter_map(|(path, entry)| async move {
-            match (path, entry) {
+            match (path.into_optional_non_root_path(), entry) {
                 (Some(path), Entry::Leaf(fsnode_file)) => {
                     Ok(Some((path, fsnode_file.content_id().blobstore_key())))
                 }
@@ -205,13 +205,13 @@ pub async fn create_key_list_from_commit_files(
     let mut files = create_args
         .files
         .iter()
-        .map(MPath::new)
+        .map(NonRootMPath::new)
         .collect::<Result<Vec<_>>>()?;
     if let Some(input_file) = create_args.input_file {
         let input_file =
             BufReader::new(File::open(input_file).context("Failed to open input file")?);
         for line in input_file.lines() {
-            files.push(MPath::new(line?)?);
+            files.push(NonRootMPath::new(line?)?);
         }
     }
     if files.is_empty() {

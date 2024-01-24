@@ -144,7 +144,7 @@ impl RevlogIndex {
         }
 
         for rev in (0..self.len()).rev() {
-            let phase = phases[rev as usize];
+            let phase = phases[rev];
             match phase {
                 Phase::Public => public_set.push(Id(rev as u64)),
                 Phase::Draft => draft_set.push(Id(rev as u64)),
@@ -678,7 +678,7 @@ impl RevlogIndex {
         file.read_exact(&mut chunk)?;
         drop(locked);
 
-        let decompressed = match chunk.get(0) {
+        let decompressed = match chunk.first() {
             None => chunk,
             Some(b'\0') => chunk,
             Some(b'u') => {
@@ -714,8 +714,8 @@ impl RevlogIndex {
             return;
         }
         let parent_revs = if parents.len() <= 2 {
-            let p1 = parents.get(0).map(|r| *r as i32).unwrap_or(-1);
-            let p2 = parents.get(1).map(|r| *r as i32).unwrap_or(-1);
+            let p1 = parents.first().map_or(-1, |r| *r as i32);
+            let p2 = parents.get(1).map_or(-1, |r| *r as i32);
             ParentRevs::from_p1p2(p1, p2)
         } else {
             ParentRevs::from_vec(parents.into_iter().map(|i| i as i32).collect())
@@ -833,7 +833,7 @@ impl RevlogIndex {
                 continue;
             }
             let raw_len = raw.len();
-            let compressed = lz4_pyframe::compress(&raw)?;
+            let compressed = lz4_pyframe::compress(raw)?;
             let chunk = if compressed.len() < raw.len() {
                 // Use LZ4 compression ('4' header).
                 let mut chunk = vec![b'4'];
@@ -858,7 +858,7 @@ impl RevlogIndex {
             }
 
             let mut flags = 0;
-            if parents.len() > 2 || find_bytes_in_bytes(&raw, b"stepparents:").is_some() {
+            if parents.len() > 2 || find_bytes_in_bytes(raw, b"stepparents:").is_some() {
                 flags |= REVIDX_OCTOPUS_MERGE;
             };
             let entry = RevlogEntry {
@@ -946,7 +946,7 @@ fn apply_deltas(base_text: &[u8], delta_text: &[u8]) -> Result<Vec<u8>> {
         data: Vec<u8>,
     }
     let mut deltas = Vec::new();
-    let mut cursor = &delta_text[..];
+    let mut cursor = delta_text;
     while !cursor.is_empty() {
         let start = cursor.read_u32::<BE>()?;
         let end = cursor.read_u32::<BE>()?;
@@ -1392,7 +1392,7 @@ impl DagAlgorithm for RevlogIndex {
         if ancestor_rev == descendant_rev {
             return Ok(true);
         }
-        Ok(self.gca_revs(&[ancestor_rev, descendant_rev], 1)?.get(0) == Some(&ancestor_rev))
+        Ok(self.gca_revs(&[ancestor_rev, descendant_rev], 1)?.first() == Some(&ancestor_rev))
     }
 
     /// Calculates "heads" of the ancestors of the given set. That is,
@@ -1969,7 +1969,7 @@ mod tests {
         let changelog_i_path = dir.join("00changelog.i");
         fs::write(&changelog_i_path, changelog_i)?;
         let changelog_d_path = dir.join("00changelog.d");
-        fs::write(&changelog_d_path, changelog_d)?;
+        fs::write(changelog_d_path, changelog_d)?;
         let nodemap_path = dir.join("00changelog.nodemap");
         let index = RevlogIndex::new(&changelog_i_path, &nodemap_path)?;
 
@@ -2085,7 +2085,7 @@ commit 3"#
         let i_path = dir.join("util.py.i");
         fs::write(&i_path, util_py_i)?;
         let d_path = dir.join("util.py.d");
-        fs::write(&d_path, util_py_d)?;
+        fs::write(d_path, util_py_d)?;
         let nodemap_path = dir.join("util.py.nodemap");
         let index = RevlogIndex::new(&i_path, &nodemap_path)?;
         let read = |rev: u32| index.raw_data(rev);
@@ -2317,7 +2317,7 @@ commit 3"#
         // Read commit data.
         let read = |rev: u32| -> Result<String> {
             let raw = revlog3.raw_data(rev)?;
-            for index in vec![&revlog1, &revlog2] {
+            for index in &[&revlog1, &revlog2] {
                 assert!(index.raw_data(rev)? == raw, "index read mismatch");
             }
             Ok(std::str::from_utf8(&raw)?.to_string())
@@ -2344,12 +2344,12 @@ commit 3"#
         s.lines()
             .flat_map(|line| {
                 line.split("  ")
-                    .nth(0)
+                    .next()
                     .unwrap_or("")
                     .split(": ")
                     .nth(1)
                     .unwrap_or("")
-                    .split(" ")
+                    .split(' ')
                     .flat_map(|s| {
                         (0..(s.len() / 2))
                             .map(|i| u8::from_str_radix(&s[i * 2..i * 2 + 2], 16).unwrap())
@@ -2372,7 +2372,7 @@ commit 3"#
                 }
             }
             result += &"     ".repeat(8 - (chunk.len() + 1) / 2);
-            result += &" ";
+            result += " ";
             for &byte in chunk {
                 let ch = match byte {
                     0x20..=0x7e => byte as char,
@@ -2432,7 +2432,7 @@ commit 3"#
 
         // Convert nodemap to a non-symlink file.
         let nodemap_bytes = fs::read(&nodemap_path)?;
-        assert!(nodemap_bytes.len() > 0);
+        assert!(!nodemap_bytes.is_empty());
         fs::remove_file(&nodemap_path)?;
         assert_eq!(
             nodemap_path.symlink_metadata().unwrap_err().kind(),

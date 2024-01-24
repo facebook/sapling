@@ -22,6 +22,8 @@ use clap_old::App;
 use clap_old::Arg;
 use clap_old::ArgMatches;
 use clap_old::SubCommand;
+use clientinfo::ClientEntryPoint;
+use clientinfo::ClientInfo;
 use cloned::cloned;
 use cmdlib::args;
 use cmdlib::args::MononokeMatches;
@@ -44,7 +46,7 @@ use mononoke_types::BlameV2Id;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
 use mononoke_types::FileUnodeId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
 use slog::Logger;
@@ -117,7 +119,11 @@ pub async fn subcommand_blame<'a>(
     toplevel_matches: &'a MononokeMatches<'_>,
     sub_matches: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    let ctx = CoreContext::new_with_logger_and_client_info(
+        fb,
+        logger.clone(),
+        ClientInfo::default_with_entry_point(ClientEntryPoint::MononokeAdmin),
+    );
 
     match sub_matches.subcommand() {
         (COMMAND_DERIVE, Some(matches)) => {
@@ -193,11 +199,11 @@ async fn with_changeset_and_path<F, FOut>(
     fun: F,
 ) -> Result<(), SubcommandError>
 where
-    F: FnOnce(CoreContext, BlobRepo, ChangesetId, MPath) -> FOut + Send + 'static,
+    F: FnOnce(CoreContext, BlobRepo, ChangesetId, NonRootMPath) -> FOut + Send + 'static,
     FOut: Future<Output = Result<(), Error>> + Send + 'static,
 {
     let hash_or_bookmark = String::from(matches.value_of(ARG_CSID).unwrap());
-    let path = MPath::new(matches.value_of(ARG_PATH).unwrap())?;
+    let path = NonRootMPath::new(matches.value_of(ARG_PATH).unwrap())?;
     let csid = helpers::csid_resolve(&ctx, &repo, hash_or_bookmark).await?;
     fun(ctx, repo, csid, path).await?;
     Ok(())
@@ -207,7 +213,7 @@ async fn subcommand_show_blame(
     ctx: CoreContext,
     repo: BlobRepo,
     csid: ChangesetId,
-    path: MPath,
+    path: NonRootMPath,
     line_number: bool,
 ) -> Result<(), Error> {
     let (blame, unode_id) = fetch_blame_v2(&ctx, &repo, csid, path.clone()).await?;
@@ -225,13 +231,13 @@ async fn find_leaf(
     ctx: CoreContext,
     repo: BlobRepo,
     csid: ChangesetId,
-    path: MPath,
+    path: NonRootMPath,
 ) -> Result<FileUnodeId, Error> {
     let mf_root = RootUnodeManifestId::derive(&ctx, &repo, csid).await?;
     let entry_opt = mf_root
         .manifest_unode_id()
         .clone()
-        .find_entry(ctx, repo.repo_blobstore().clone(), Some(path.clone()))
+        .find_entry(ctx, repo.repo_blobstore().clone(), path.clone().into())
         .await?;
     let entry = entry_opt.ok_or_else(|| format_err!("No such path: {}", path))?;
     match entry.into_leaf() {
@@ -248,13 +254,13 @@ async fn try_find_leaf(
     ctx: CoreContext,
     repo: BlobRepo,
     csid: ChangesetId,
-    path: MPath,
+    path: NonRootMPath,
 ) -> Result<Option<FileUnodeId>, Error> {
     let mf_root = RootUnodeManifestId::derive(&ctx, &repo, csid).await?;
     let entry_opt = mf_root
         .manifest_unode_id()
         .clone()
-        .find_entry(ctx, repo.repo_blobstore().clone(), Some(path.clone()))
+        .find_entry(ctx, repo.repo_blobstore().clone(), path.clone().into())
         .await?;
     Ok(entry_opt.and_then(|entry| entry.into_leaf()))
 }
@@ -263,7 +269,7 @@ async fn subcommand_show_diffs(
     ctx: CoreContext,
     repo: BlobRepo,
     csid: ChangesetId,
-    path: MPath,
+    path: NonRootMPath,
 ) -> Result<(), Error> {
     let file_unode_id = find_leaf(ctx.clone(), repo.clone(), csid, path).await?;
     let file_unode = file_unode_id.load(&ctx, repo.repo_blobstore()).await?;
@@ -313,7 +319,7 @@ async fn subcommand_compute_blame(
     ctx: CoreContext,
     repo: BlobRepo,
     csid: ChangesetId,
-    path: MPath,
+    path: NonRootMPath,
     line_number: bool,
 ) -> Result<(), Error> {
     let blobstore = repo.repo_blobstore_arc();
@@ -390,7 +396,7 @@ async fn subcommand_compute_blame(
         {
             |(csid, parent_index, path, file_unode_id),
              parents: Iter<
-                Result<(Option<usize>, MPath, bytes::Bytes, BlameV2), BlameRejected>,
+                Result<(Option<usize>, NonRootMPath, bytes::Bytes, BlameV2), BlameRejected>,
             >| {
                 cloned!(ctx, repo);
                 async move {
@@ -400,14 +406,9 @@ async fn subcommand_compute_blame(
                             let parents = parents
                                 .into_iter()
                                 .filter_map(|parent| match parent {
-                                    Ok((Some(parent_index), parent_path, content, blame)) => {
-                                        Some(BlameParent::new(
-                                            parent_index,
-                                            parent_path,
-                                            content,
-                                            blame,
-                                        ))
-                                    }
+                                    Ok((Some(parent_index), parent_path, content, blame)) => Some(
+                                        BlameParent::new(parent_index, parent_path, content, blame),
+                                    ),
                                     _ => None,
                                 })
                                 .collect();

@@ -650,7 +650,7 @@ verify pathauditor blocks evil filepaths
   $ cp -R . $TESTTMP/audit3
   $ cat > evil-commit.py <<EOF
   > from __future__ import absolute_import
-  > from edenscm import context, hg, node, pycompat, ui as uimod
+  > from sapling import context, hg, node, pycompat, ui as uimod
   > notrc = pycompat.ensurestr(u".h\u200cg/hgrc")
   > u = uimod.ui.load()
   > r = hg.repository(u, '.')
@@ -675,7 +675,7 @@ verify pathauditor blocks evil filepaths
   $ cd $TESTTMP/audit2
   $ cat > evil-commit.py <<EOF
   > from __future__ import absolute_import
-  > from edenscm import context, hg, node, ui as uimod
+  > from sapling import context, hg, node, ui as uimod
   > notrc = "HG~1/hgrc"
   > u = uimod.ui.load()
   > r = hg.repository(u, '.')
@@ -694,7 +694,7 @@ verify pathauditor blocks evil filepaths
   $ cd $TESTTMP/audit3
   $ cat > evil-commit.py <<EOF
   > from __future__ import absolute_import
-  > from edenscm import context, hg, node, ui as uimod
+  > from sapling import context, hg, node, ui as uimod
   > notrc = "HG8B6C~2/hgrc"
   > u = uimod.ui.load()
   > r = hg.repository(u, '.')

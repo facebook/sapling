@@ -8,14 +8,17 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use anyhow::format_err;
 use anyhow::Result;
 use manifest::testutil::*;
 use manifest::Manifest;
 use minibytes::Bytes;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
-use storemodel::TreeFormat;
+use sha1::Digest;
+use sha1::Sha1;
+use storemodel::InsertOpts;
+use storemodel::KeyStore;
+use storemodel::SerializationFormat;
 use types::testutil::*;
 use types::HgId;
 use types::Key;
@@ -53,7 +56,7 @@ pub fn make_tree_manifest_from_meta(
 pub struct TestStore {
     entries: RwLock<HashMap<RepoPathBuf, HashMap<HgId, Bytes>>>,
     pub prefetched: Mutex<Vec<Vec<Key>>>,
-    format: TreeFormat,
+    format: SerializationFormat,
 }
 
 impl TestStore {
@@ -61,11 +64,11 @@ impl TestStore {
         TestStore {
             entries: RwLock::new(HashMap::new()),
             prefetched: Mutex::new(Vec::new()),
-            format: TreeFormat::Hg,
+            format: SerializationFormat::Hg,
         }
     }
 
-    pub fn with_format(mut self, format: TreeFormat) -> Self {
+    pub fn with_format(mut self, format: SerializationFormat) -> Self {
         self.format = format;
         self
     }
@@ -76,23 +79,34 @@ impl TestStore {
     }
 }
 
-impl TreeStore for TestStore {
-    fn get(&self, path: &RepoPath, hgid: HgId) -> Result<Bytes> {
+fn compute_sha1(content: &[u8]) -> HgId {
+    let mut hasher = Sha1::new();
+    hasher.update(content);
+    let buf: [u8; HgId::len()] = hasher.finalize().into();
+    (&buf).into()
+}
+
+impl KeyStore for TestStore {
+    fn get_local_content(&self, path: &RepoPath, hgid: HgId) -> anyhow::Result<Option<Bytes>> {
         let underlying = self.entries.read();
         let result = underlying
             .get(path)
             .and_then(|hgid_hash| hgid_hash.get(&hgid))
-            .map(|entry| entry.clone());
-        result.ok_or_else(|| format_err!("Could not find manifest entry for ({}, {})", path, hgid))
+            .cloned();
+        Ok(result)
     }
 
-    fn insert(&self, path: &RepoPath, hgid: HgId, data: Bytes) -> Result<()> {
+    fn insert_data(&self, opts: InsertOpts, path: &RepoPath, data: &[u8]) -> anyhow::Result<HgId> {
         let mut underlying = self.entries.write();
+        let hgid = match opts.forced_id {
+            Some(id) => *id,
+            None => compute_sha1(data),
+        };
         underlying
             .entry(path.to_owned())
             .or_insert(HashMap::new())
-            .insert(hgid, data);
-        Ok(())
+            .insert(hgid, Bytes::copy_from_slice(data));
+        Ok(hgid)
     }
 
     fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
@@ -100,7 +114,9 @@ impl TreeStore for TestStore {
         Ok(())
     }
 
-    fn format(&self) -> TreeFormat {
+    fn format(&self) -> SerializationFormat {
         self.format
     }
 }
+
+impl TreeStore for TestStore {}

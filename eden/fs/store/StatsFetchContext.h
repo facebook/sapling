@@ -46,7 +46,7 @@ class StatsFetchContext : public ObjectFetchContext {
   StatsFetchContext(
       OptionalProcessId pid,
       Cause cause,
-      std::string_view causeDetail,
+      std::optional<std::string_view> causeDetail,
       const std::unordered_map<std::string, std::string>* requestInfo);
   StatsFetchContext(const StatsFetchContext& other);
 
@@ -83,7 +83,7 @@ class StatsFetchContext : public ObjectFetchContext {
                                [ObjectFetchContext::kOriginEnumMax] = {};
   OptionalProcessId clientPid_;
   Cause cause_ = Cause::Unknown;
-  std::string_view causeDetail_;
+  std::optional<std::string_view> causeDetail_;
   std::unordered_map<std::string, std::string> requestInfo_;
 };
 

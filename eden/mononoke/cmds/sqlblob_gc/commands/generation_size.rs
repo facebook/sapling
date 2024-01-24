@@ -33,6 +33,7 @@ fn print_sizes(sizes: &HashMap<Option<u64>, u64>) {
     println!("Generation | Size");
     println!("-----------------");
 
+    let mut total_size = ByteSize::b(0);
     for generation in generations {
         let size = ByteSize::b(sizes[generation]);
         let generation = match generation {
@@ -40,7 +41,9 @@ fn print_sizes(sizes: &HashMap<Option<u64>, u64>) {
             Some(g) => g.to_string(),
         };
         println!("{:>10} | {}", generation, size.to_string_as(true));
+        total_size += size;
     }
+    println!("Total size: {}", total_size.to_string_as(true));
 }
 
 pub async fn run(app: MononokeApp, _args: CommandArgs) -> Result<()> {
@@ -63,6 +66,7 @@ pub async fn run(app: MononokeApp, _args: CommandArgs) -> Result<()> {
         .await?;
 
     let mut size_summary = HashMap::new();
+    let mut total_size: u64 = 0;
     for (shard, sizes) in shard_sizes {
         for (generation, (size, chunk_id_count)) in sizes.into_iter() {
             let mut sample = scuba_sample_builder.clone();
@@ -72,7 +76,13 @@ pub async fn run(app: MononokeApp, _args: CommandArgs) -> Result<()> {
             sample.add("chunk_id_count", chunk_id_count);
             sample.log();
             *size_summary.entry(generation).or_insert(0u64) += size;
+            total_size += size;
         }
+    }
+    if total_size > 0 {
+        let mut sample = scuba_sample_builder.clone();
+        sample.add("storage_total_footprint", total_size);
+        sample.log();
     }
 
     if scuba_sample_builder.is_discard() {

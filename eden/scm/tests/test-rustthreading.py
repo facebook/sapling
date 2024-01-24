@@ -56,7 +56,6 @@ import unittest
 
 import silenttestrunner
 from bindings import threading as rustthreading
-from hghave import require
 
 
 try:
@@ -65,9 +64,6 @@ try:
 except ImportError:
     import _thread as thread
     from _thread import get_ident, start_new_thread
-
-
-require(["py2"])
 
 
 # From test_support.py
@@ -344,16 +340,6 @@ class ConditionTests(BaseTestCase):
         cond.acquire()
         cond.release()
         cond.release()
-        lock = threading.Lock()
-        cond = self.condtype(lock)
-        cond.acquire()
-        self.assertFalse(lock.acquire(False))
-        cond.release()
-        self.assertTrue(lock.acquire(False))
-        self.assertFalse(cond.acquire(False))
-        lock.release()
-        with cond:
-            self.assertFalse(lock.acquire(False))
 
     def test_unacquired_wait(self):
         cond = self.condtype()

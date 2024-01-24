@@ -6,17 +6,21 @@
  */
 
 import type {Logger} from 'isl-server/src/logger';
+import type {ClientToServerMessage, ServerToClientMessage} from 'isl/src/types';
 
 import packageJson from '../package.json';
 import {executeVSCodeCommand} from './commands';
 import {getCLICommand} from './config';
 import {locale, t} from './i18n';
 import {VSCodePlatform} from './vscodePlatform';
+import crypto from 'crypto';
 import {onClientConnection} from 'isl-server/src';
+import {deserializeFromString, serializeToString} from 'isl/src/serialize';
 import {unwrap} from 'shared/utils';
 import * as vscode from 'vscode';
 
 let islPanelOrView: vscode.WebviewPanel | vscode.WebviewView | undefined = undefined;
+let hasOpenedISLWebviewBeforeState = false;
 
 const viewType = 'sapling.isl';
 
@@ -54,6 +58,10 @@ function getWebviewOptions(
 
 function shouldUseWebviewView(): boolean {
   return vscode.workspace.getConfiguration('sapling.isl').get<boolean>('showInSidebar') ?? false;
+}
+
+export function hasOpenedISLWebviewBefore() {
+  return hasOpenedISLWebviewBeforeState;
 }
 
 export function registerISLCommands(
@@ -147,6 +155,7 @@ function populateAndSetISLWebview<W extends vscode.WebviewPanel | vscode.Webview
   logger: Logger,
 ): W {
   logger.info(`Populating ISL webview ${isPanel(panelOrView) ? 'panel' : 'view'}`);
+  hasOpenedISLWebviewBeforeState = true;
   if (isPanel(panelOrView)) {
     islPanelOrView = panelOrView;
     panelOrView.iconPath = vscode.Uri.joinPath(
@@ -189,6 +198,31 @@ function populateAndSetISLWebview<W extends vscode.WebviewPanel | vscode.Webview
   });
 
   return panelOrView;
+}
+
+export function fetchUIState(): Promise<{state: string} | undefined> {
+  if (islPanelOrView == null) {
+    return Promise.resolve(undefined);
+  }
+
+  return new Promise(resolve => {
+    let dispose: vscode.Disposable | undefined = islPanelOrView?.webview.onDidReceiveMessage(
+      (m: string) => {
+        try {
+          const data = deserializeFromString(m) as ClientToServerMessage;
+          if (data.type === 'platform/gotUiState') {
+            dispose?.dispose();
+            dispose = undefined;
+            resolve({state: data.state});
+          }
+        } catch {}
+      },
+    );
+
+    islPanelOrView?.webview.postMessage(
+      serializeToString({type: 'platform/getUiState'} as ServerToClientMessage),
+    );
+  });
 }
 
 function htmlForISLWebview(
@@ -246,10 +280,5 @@ function htmlForISLWebview(
 }
 
 function getNonce(): string {
-  let text = '';
-  const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  for (let i = 0; i < 32; i++) {
-    text += possible.charAt(Math.floor(Math.random() * possible.length));
-  }
-  return text;
+  return crypto.randomBytes(16).toString('base64');
 }

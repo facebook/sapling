@@ -29,7 +29,7 @@ pub struct ResponseStreams {
 pub struct ChannelReceiver {
     headers_tx: mpsc::UnboundedSender<Header>,
     body_tx: mpsc::UnboundedSender<Vec<u8>>,
-    done_tx: oneshot::Sender<Result<(), HttpClientError>>,
+    done_tx: Option<oneshot::Sender<Result<(), HttpClientError>>>,
 }
 
 impl ChannelReceiver {
@@ -41,7 +41,7 @@ impl ChannelReceiver {
         let senders = Self {
             headers_tx,
             body_tx,
-            done_tx,
+            done_tx: Some(done_tx),
         };
 
         let streams = ResponseStreams {
@@ -63,8 +63,10 @@ impl Receiver for ChannelReceiver {
         self.headers_tx.unbounded_send(header).map_err(|e| e.into())
     }
 
-    fn done(self, res: Result<(), HttpClientError>) -> Result<(), Abort> {
-        let _ = self.done_tx.send(res);
+    fn done(&mut self, res: Result<(), HttpClientError>) -> Result<(), Abort> {
+        if let Some(done_tx) = self.done_tx.take() {
+            let _ = done_tx.send(res);
+        }
         Ok(())
     }
 }

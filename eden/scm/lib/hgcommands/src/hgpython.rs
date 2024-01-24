@@ -7,7 +7,7 @@
 
 use std::cell::RefCell;
 use std::env;
-use std::path::PathBuf;
+use std::path::Path;
 use std::sync::RwLock;
 use std::sync::Weak;
 
@@ -19,12 +19,10 @@ use configloader::config::ConfigSet;
 use cpython::*;
 use cpython_ext::convert::Serde;
 use cpython_ext::format_py_error;
-use cpython_ext::wrap_pyio;
-use cpython_ext::Bytes;
 use cpython_ext::ResultPyErrExt;
-use cpython_ext::Str;
-use cpython_ext::WrappedIO;
 use nodeipc::NodeIpc;
+use pyio::wrap_pyio;
+use pyio::WrappedIO;
 use tracing::debug_span;
 use tracing::info_span;
 
@@ -34,10 +32,8 @@ use crate::python::py_init_threads;
 use crate::python::py_initialize;
 use crate::python::py_is_initialized;
 use crate::python::py_main;
-use crate::python::py_set_argv;
-use crate::python::py_set_program_name;
 
-const HGPYENTRYPOINT_MOD: &str = "edenscm";
+const HGPYENTRYPOINT_MOD: &str = "sapling";
 pub struct HgPython {
     py_initialized_by_us: bool,
 }
@@ -57,10 +53,11 @@ impl HgPython {
         let span = info_span!("Initialize Python");
         let _guard = span.enter();
         let args = Self::prepare_args(args);
-        let executable_name = &args[0];
-        py_set_program_name(executable_name);
-        py_initialize();
-        py_set_argv(&args);
+
+        let home = Self::sapling_python_home();
+
+        py_initialize(&args, home.as_ref());
+
         py_init_threads();
 
         let gil = Python::acquire_gil();
@@ -68,52 +65,45 @@ impl HgPython {
 
         // Putting the module in sys.modules makes it importable.
         let sys = py.import("sys").unwrap();
-        HgPython::update_path(py, &sys);
 
         // If this fails, it's a fatal error.
         let name = "bindings";
-        let bindings_module = PyModule::new(py, &name).unwrap();
+        let bindings_module = PyModule::new(py, name).unwrap();
         prepare_builtin_modules(py, &bindings_module).unwrap();
+
         let sys_modules = PyDict::extract(py, &sys.get(py, "modules").unwrap()).unwrap();
         sys_modules.set_item(py, name, bindings_module).unwrap();
+        Self::update_meta_path(py, home, &sys);
     }
 
-    fn update_path(py: Python, sys: &PyModule) {
-        // In homebrew and other environments, the python modules may be installed isolated
-        // alongside the binary. Let's setup the PATH so we discover those python modules.
-        // An example layout:
-        //   $PREFIX/usr/local/bin/hg
-        //   $PREFIX/usr/local/lib/python3.8/site-packages/edenscmnative
-        //   $PREFIX/usr/local/lib/python3.8/site-packages/edenscmdeps3.zip
-        //   $PREFIX/usr/local/lib/python3.8/site-packages/edenscm
-        let py_version: (i32, i32, i32, String, i32) =
-            sys.get(py, "version_info").unwrap().extract(py).unwrap();
+    fn sapling_python_home() -> Option<String> {
+        if let Ok(v) = std::env::var("SAPLING_PYTHON_HOME") {
+            if !v.is_empty() && Path::new(&v).is_dir() {
+                Some(v)
+            } else {
+                None
+            }
+        } else {
+            infer_python_home()
+        }
+    }
 
-        let path_for_prefix = |prefix: &str| -> String {
-            let rel_path = PathBuf::from(format!(
-                "{}/python{}.{}/site-packages",
-                prefix, py_version.0, py_version.1
-            ));
-            std::env::current_exe()
-                .unwrap()
-                .parent()
-                .unwrap()
-                .parent()
-                .unwrap()
-                .join(rel_path)
-                .into_os_string()
-                .into_string()
-                .unwrap()
-        };
-        let py_path: PyList = sys.get(py, "path").unwrap().extract(py).unwrap();
-        py_path.append(
-            py,
-            PyUnicode::new(py, &path_for_prefix("lib")).into_object(),
-        );
-        py_path.append(
-            py,
-            PyUnicode::new(py, &path_for_prefix("lib64")).into_object(),
-        );
+    fn update_meta_path(py: Python, home: Option<String>, sys: &PyModule) {
+        if let Some(dir) = home.as_ref() {
+            // Append the Python home to sys.path.
+            tracing::debug!(
+                "Python modules will be imported from filesystem {} (SAPLING_PYTHON_HOME)",
+                dir
+            );
+
+            // NB: This has no effect for "debugpython" on Python 3.10 (see py_initialize).
+            let sys_path = PyList::extract(py, &sys.get(py, "path").unwrap()).unwrap();
+            sys_path.append(py, PyString::new(py, dir).into_object());
+        }
+
+        let meta_path_finder = pymodules::BindingsModuleFinder::new(py, home).unwrap();
+        let meta_path = PyList::extract(py, &sys.get(py, "meta_path").unwrap()).unwrap();
+        meta_path.insert(py, 0, meta_path_finder.into_object());
     }
 
     fn prepare_args(args: &[String]) -> Vec<String> {
@@ -151,7 +141,7 @@ impl HgPython {
         config: &ConfigSet,
     ) -> PyResult<()> {
         let entry_point_mod =
-            info_span!("import edenscm").in_scope(|| py.import(HGPYENTRYPOINT_MOD))?;
+            info_span!("import sapling").in_scope(|| py.import(HGPYENTRYPOINT_MOD))?;
         let call_args = {
             let fin = io.with_input(|i| read_to_py_object(py, i));
             let fout = io.with_output(|o| write_to_py_object(py, o));
@@ -159,7 +149,6 @@ impl HgPython {
                 None => fout.clone_ref(py),
                 Some(error) => write_to_py_object(py, error),
             });
-            let args: Vec<Str> = args.into_iter().map(Str::from).collect();
             let config =
                 pyconfigloader::config::create_instance(py, RefCell::new(config.clone())).unwrap();
             (args, fin, fout, ferr, config).to_py_object(py)
@@ -194,7 +183,7 @@ impl HgPython {
                 } else {
                     let message =
                         format_py_error(py, &err).unwrap_or("unknown python exception".to_string());
-                    let _ = io.write_err(&message);
+                    let _ = io.write_err(message);
                     1
                 }
             }
@@ -203,7 +192,7 @@ impl HgPython {
     }
 
     /// Setup ad-hoc tracing with `pattern` about modules.
-    /// See `edenscm/traceimport.py` for details.
+    /// See `sapling/traceimport.py` for details.
     ///
     /// Call this before `run_python`, or `run_hg`.
     ///
@@ -213,7 +202,7 @@ impl HgPython {
     pub fn setup_tracing(&mut self, pattern: String) -> PyResult<()> {
         let gil = Python::acquire_gil();
         let py = gil.python();
-        let traceimport = py.import("edenscm.traceimport")?;
+        let traceimport = py.import("sapling.traceimport")?;
         traceimport.call(py, "enable", (pattern,), None)?;
         Ok(())
     }
@@ -243,7 +232,7 @@ impl HgPython {
         // cpython_ext::PyErr can render traceback when RUST_BACKTRACE=1.
         let gil = Python::acquire_gil();
         let py = gil.python();
-        let dispatch = py.import("edenscm.dispatch")?;
+        let dispatch = py.import("sapling.dispatch")?;
         dispatch.call(py, "_preimportmodules", NoArgs, None)?;
         Ok(())
     }
@@ -296,18 +285,18 @@ impl HgPython {
 impl Drop for HgPython {
     fn drop(&mut self) {
         if self.py_initialized_by_us {
-            info_span!("Finalize Python").in_scope(|| py_finalize())
+            info_span!("Finalize Python").in_scope(py_finalize)
         }
     }
 }
 
 fn read_to_py_object(py: Python, reader: &dyn clidispatch::io::Read) -> PyObject {
     let any = reader.as_any();
-    if let Some(_) = any.downcast_ref::<std::io::Stdin>() {
+    if any.downcast_ref::<std::io::Stdin>().is_some() {
         // The Python code accepts None, and will use its default input stream.
         py.None()
     } else if let Some(obj) = any.downcast_ref::<WrappedIO>() {
-        obj.0.clone_ref(py)
+        obj.obj.clone_ref(py)
     } else {
         unimplemented!(
             "converting non-stdio Read ({}) from Rust to Python is not implemented",
@@ -318,12 +307,12 @@ fn read_to_py_object(py: Python, reader: &dyn clidispatch::io::Read) -> PyObject
 
 fn write_to_py_object(py: Python, writer: &dyn clidispatch::io::Write) -> PyObject {
     let any = writer.as_any();
-    if let Some(_) = any.downcast_ref::<std::io::Stdout>() {
+    if any.downcast_ref::<std::io::Stdout>().is_some() {
         py.None()
-    } else if let Some(_) = any.downcast_ref::<std::io::Stderr>() {
+    } else if any.downcast_ref::<std::io::Stderr>().is_some() {
         py.None()
     } else if let Some(obj) = any.downcast_ref::<WrappedIO>() {
-        obj.0.clone_ref(py)
+        obj.obj.clone_ref(py)
     } else {
         unimplemented!(
             "converting non-stdio Write ({}) from Rust to Python is not implemented",
@@ -342,14 +331,14 @@ fn init_bindings_commands(py: Python, package: &str) -> PyResult<PyModule> {
         ferr: Option<PyObject>,
     ) -> PyResult<i32> {
         if let (Some(fin), Some(fout), Some(ferr)) = (fin, fout, ferr) {
-            let fin = wrap_pyio(fin);
-            let fout = wrap_pyio(fout);
-            let ferr = wrap_pyio(ferr);
+            let fin = wrap_pyio(py, fin);
+            let fout = wrap_pyio(py, fout);
+            let ferr = wrap_pyio(py, ferr);
             let old_io = IO::main();
             let io = IO::new(fin, fout, Some(ferr));
             io.set_main();
             let result = Ok(crate::run_command(args, &io));
-            if let Ok(old_io) = old_io {
+            if let (Ok(old_io), true) = (old_io, io.is_main()) {
                 old_io.set_main();
             }
             result
@@ -364,17 +353,14 @@ fn init_bindings_commands(py: Python, package: &str) -> PyResult<PyModule> {
         let table = commands::table();
         let py_table: PyDict = PyDict::new(py);
         for def in table.values() {
-            let doc = Str::from(Bytes::from(def.doc().to_string()));
+            let doc = def.doc().to_string();
 
             // Key entry by primary command name which Python knows to
             // look for. This avoids having to make the alias list
             // match exactly between Python and Rust.
             let primary_name = def.aliases().split('|').next().unwrap();
 
-            if let Some(synopsis) = def
-                .synopsis()
-                .map(|s| Str::from(Bytes::from(s.to_string())))
-            {
+            if let Some(synopsis) = def.synopsis().map(|s| s.to_string()) {
                 py_table.set_item(py, primary_name, (doc, def.flags(), synopsis))?;
             } else {
                 py_table.set_item(py, primary_name, (doc, def.flags()))?;
@@ -423,6 +409,44 @@ pub fn prepare_builtin_modules(py: Python<'_>, module: &PyModule) -> PyResult<()
         "commands",
         init_bindings_commands(py, module.name(py)?)?,
     )?;
-    bindings::populate_module(py, &module)?;
+    bindings::populate_module(py, module)?;
     Ok(())
+}
+
+fn infer_python_home() -> Option<String> {
+    let exe_path = match std::env::current_exe() {
+        Ok(path) => path,
+        _ => return None,
+    };
+
+    if cfg!(unix) && (exe_path.starts_with("/usr/") || exe_path.starts_with("/opt/")) {
+        // Unlikely an in-repo path. Skip repo discovery.
+        return None;
+    }
+
+    // resolve symbolic links
+    let exe_path = exe_path.canonicalize().ok()?;
+
+    // Try to locate the repo root and check the known "home" path.
+    let prefix = if cfg!(feature = "fb") {
+        // fbsource
+        "fbcode/eden/scm"
+    } else {
+        // github: facebook/sapling
+        "eden/scm"
+    };
+    let mut path: &Path = exe_path.as_path();
+    while let Some(parent) = path.parent() {
+        path = parent;
+        if path.join(".hg").is_dir() || path.join(".sl").is_dir() {
+            let maybe_home = path.join(prefix);
+            if maybe_home.is_dir() {
+                tracing::debug!("Discovered SAPLING_PYTHON_HOME at {}", maybe_home.display());
+                return Some(maybe_home.display().to_string());
+            }
+            break;
+        }
+    }
+
+    None
 }

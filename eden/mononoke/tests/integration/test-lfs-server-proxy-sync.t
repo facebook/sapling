@@ -38,7 +38,7 @@
 # do this we send an empty write to lfs2 with the blog that is in lfs1, and we
 # expect the proxy to get it from upstream.
 
-  $ curl -sf -XPUT --data-binary "@/dev/null" "${lfs_proxy}/lfs2/upload/ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746/2048"
+  $ curltest -sf -XPUT --data-binary "@/dev/null" "${lfs_proxy}/lfs2/upload/ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746/2048"
   $ cat "$log_proxy"
   IN  > PUT /lfs2/upload/ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746/2048 -
   OUT < PUT /lfs2/upload/ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746/2048 200 OK
@@ -55,7 +55,7 @@
 # so to do this, we send an empty write for the blob in lfs2, and we expect the
 # proxy to push it to upstream.
 
-  $ curl -sf -XPUT --data-binary "@/dev/null" "${lfs_proxy}/lfs2/upload/a1bcf2c963bec9588aaa30bd33ef07873792e3ec241453b0d21635d1c4bbae84/2048"
+  $ curltest -sf -XPUT --data-binary "@/dev/null" "${lfs_proxy}/lfs2/upload/a1bcf2c963bec9588aaa30bd33ef07873792e3ec241453b0d21635d1c4bbae84/2048"
   $ cat "$log_proxy"
   IN  > PUT /lfs2/upload/a1bcf2c963bec9588aaa30bd33ef07873792e3ec241453b0d21635d1c4bbae84/2048 -
   OUT < PUT /lfs2/upload/a1bcf2c963bec9588aaa30bd33ef07873792e3ec241453b0d21635d1c4bbae84/2048 200 OK
@@ -71,7 +71,7 @@
 # Finally, check that this mechanism returns an error if the blob we are
 # looking for is not available in either backend.
 
-  $ curl --silent -XPUT --data-binary "@/dev/null" "${lfs_proxy}/lfs2/upload/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/2048" | jq -S .
+  $ curltest --silent -XPUT --data-binary "@/dev/null" "${lfs_proxy}/lfs2/upload/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/2048" | jq -S .
   {
     "message": "Upstream batch response included an invalid object: ResponseObject { object: RequestObject { oid: Sha256(aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa), size: 2048 }, status: Err { error: ObjectError { code: 404, message: \"Object does not exist\" } } }",
     "request_id": "*" (glob)
@@ -79,12 +79,12 @@
 
 # At this point, we expect both repos to have both blobs.
 
-  $ curl -sf -w '%{http_code}\n' -o /dev/null "${lfs_upstream}/lfs1/download_sha256/ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746"
+  $ curltest -sf -w '%{http_code}\n' -o /dev/null "${lfs_upstream}/lfs1/download_sha256/ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746"
   200
-  $ curl -sf -w '%{http_code}\n' -o /dev/null "${lfs_upstream}/lfs2/download_sha256/ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746"
+  $ curltest -sf -w '%{http_code}\n' -o /dev/null "${lfs_upstream}/lfs2/download_sha256/ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746"
   200
 
-  $ curl -sf -w '%{http_code}\n' -o /dev/null "${lfs_upstream}/lfs1/download_sha256/a1bcf2c963bec9588aaa30bd33ef07873792e3ec241453b0d21635d1c4bbae84"
+  $ curltest -sf -w '%{http_code}\n' -o /dev/null "${lfs_upstream}/lfs1/download_sha256/a1bcf2c963bec9588aaa30bd33ef07873792e3ec241453b0d21635d1c4bbae84"
   200
-  $ curl -sf -w '%{http_code}\n' -o /dev/null "${lfs_upstream}/lfs2/download_sha256/a1bcf2c963bec9588aaa30bd33ef07873792e3ec241453b0d21635d1c4bbae84"
+  $ curltest -sf -w '%{http_code}\n' -o /dev/null "${lfs_upstream}/lfs2/download_sha256/a1bcf2c963bec9588aaa30bd33ef07873792e3ec241453b0d21635d1c4bbae84"
   200

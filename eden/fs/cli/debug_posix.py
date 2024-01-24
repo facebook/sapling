@@ -120,6 +120,8 @@ class OverlayCmd(subcmd_mod.Subcmd):
                 )
 
     def _print_file(self, f: BinaryIO) -> None:
+        # pyre-fixme[6]: For 1st argument expected `SupportsRead[Variable[AnyStr <:
+        #  [str, bytes]]]` but got `BinaryIO`.
         shutil.copyfileobj(f, sys.stdout.buffer)
 
     def _process_overlay(self, inode_number: int, path: Path, level: int = 0) -> None:

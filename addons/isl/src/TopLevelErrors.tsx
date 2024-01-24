@@ -11,6 +11,7 @@ import type {TrackErrorName} from 'isl-server/src/analytics/eventNames';
 import type {ReactNode} from 'react';
 
 import {ErrorNotice} from './ErrorNotice';
+import {Internal} from './Internal';
 import {tracker} from './analytics';
 import {allDiffSummaries} from './codeReview/CodeReviewInfo';
 import {t, T} from './i18n';
@@ -60,7 +61,12 @@ function computeTopLevelError(
       // no use tracking, since we can't reach the server anyway.
     };
   } else if (diffFetchError) {
-    if (repoInfo?.type === 'success' && repoInfo.codeReviewSystem.type === 'github') {
+    const internalResult = Internal.findInternalError?.(diffFetchError) as
+      | TopLevelErrorInfo
+      | undefined;
+    if (internalResult != null) {
+      return internalResult;
+    } else if (repoInfo?.type === 'success' && repoInfo.codeReviewSystem.type === 'github') {
       const learnAboutGhButton = (
         <VSCodeButton
           appearance="secondary"

@@ -13,6 +13,7 @@ use type_macros::auto_wire;
 use types::hgid::HgId;
 
 use crate::land::PushVar;
+use crate::ServerError;
 
 #[auto_wire]
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
@@ -47,4 +48,13 @@ pub struct SetBookmarkRequest {
 
     #[id(4)]
     pub pushvars: Vec<PushVar>,
+}
+
+#[auto_wire]
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct SetBookmarkResponse {
+    #[id(0)]
+    #[no_default]
+    pub data: Result<(), ServerError>,
 }

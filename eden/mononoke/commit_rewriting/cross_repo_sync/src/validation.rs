@@ -35,7 +35,7 @@ use mononoke_types::fsnode::FsnodeEntry;
 use mononoke_types::typed_hash::FsnodeId;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use movers::Mover;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
@@ -52,6 +52,11 @@ use super::CommitSyncer;
 use super::Repo;
 use crate::types::Source;
 use crate::types::Target;
+
+// NOTE: Occurrences of Option<NonRootMPath> in this file have not been replaced with MPath since such a
+// replacement is only possible in cases where Option<NonRootMPath> is used to represent a path that can also
+// be root. However, in this case the Some(_) and None variant of Option<NonRootMPath> are used to represent
+// conditional logic, i.e. the code either does something or skips it based on None or Some.
 
 pub async fn verify_working_copy<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
     ctx: CoreContext,
@@ -170,7 +175,7 @@ pub async fn verify_working_copy_with_version_fast_path<
             let target_prefixes_to_visit = source_prefixes_to_visit
                 .into_iter()
                 .map(|prefix| wrap_mover_result(&mover, &prefix))
-                .collect::<Result<Vec<Option<Option<MPath>>>, Error>>()?;
+                .collect::<Result<Vec<Option<Option<NonRootMPath>>>, Error>>()?;
             let target_prefixes_to_visit = target_prefixes_to_visit.into_iter().flatten().collect();
             verify_working_copy_fast_path_inner(
                 ctx,
@@ -210,7 +215,7 @@ pub async fn verify_working_copy_with_version_fast_path<
             let source_prefixes_to_visit = target_prefixes_to_visit
                 .into_iter()
                 .map(|prefix| wrap_mover_result(&reverse_mover, &prefix))
-                .collect::<Result<Vec<Option<Option<MPath>>>, Error>>()?
+                .collect::<Result<Vec<Option<Option<NonRootMPath>>>, Error>>()?
                 .into_iter()
                 .flatten()
                 .collect();
@@ -290,8 +295,8 @@ enum ValidationOutputElement {
 }
 
 type ValidationOutput = Vec<(
-    Source<(Option<MPath>, ValidationOutputElement)>,
-    Target<(Option<MPath>, ValidationOutputElement)>,
+    Source<(Option<NonRootMPath>, ValidationOutputElement)>,
+    Target<(Option<NonRootMPath>, ValidationOutputElement)>,
 )>;
 
 struct PrintableValidationOutput(Source<String>, Target<String>, ValidationOutput);
@@ -396,7 +401,7 @@ async fn verify_working_copy_fast_path_inner<'a>(
     >,
     target_root_fsnode_id: FsnodeId,
     mover: &Mover,
-    prefixes_to_visit: Vec<Option<MPath>>,
+    prefixes_to_visit: Vec<Option<NonRootMPath>>,
 ) -> Result<(), Error> {
     let prefix_set: HashSet<_> = prefixes_to_visit
         .iter()
@@ -458,7 +463,10 @@ async fn verify_working_copy_fast_path_inner<'a>(
 //
 // Also, the function assumes that the repo root always rewrites to repo root.
 // (which is true in the only usecase here: preserve mode)
-fn wrap_mover_result(mover: &Mover, path: &Option<MPath>) -> Result<Option<Option<MPath>>, Error> {
+fn wrap_mover_result(
+    mover: &Mover,
+    path: &Option<NonRootMPath>,
+) -> Result<Option<Option<NonRootMPath>>, Error> {
     match path {
         Some(mpath) => match mover(mpath) {
             Ok(opt_mpath) => Ok(opt_mpath.map(Some)),
@@ -489,7 +497,7 @@ async fn verify_dir<'a>(
                 + Sync
             ),
     >,
-    source_path: Option<MPath>,
+    source_path: Option<NonRootMPath>,
     source_root_fsnode_id: FsnodeId,
     target_repo: Target<
         &'a (
@@ -503,12 +511,16 @@ async fn verify_dir<'a>(
     >,
     target_root_fsnode_id: FsnodeId,
     mover: &Mover,
-    prefixes_to_visit: &HashSet<MPath>,
+    prefixes_to_visit: &HashSet<NonRootMPath>,
 ) -> Result<ValidationOutput, Error> {
     let source_blobstore = source_repo.repo_blobstore_arc();
     let target_blobstore = target_repo.repo_blobstore_arc();
     let maybe_source_manifest_entry = source_root_fsnode_id
-        .find_entry(ctx.clone(), source_blobstore.clone(), source_path.clone())
+        .find_entry(
+            ctx.clone(),
+            source_blobstore.clone(),
+            source_path.clone().into(),
+        )
         .await?;
 
     let inits = match maybe_source_manifest_entry {
@@ -525,7 +537,10 @@ async fn verify_dir<'a>(
                     .into_subentries()
                     .into_iter()
                     .map(|(elem, entry)| {
-                        (MPath::join_opt_element(source_path.as_ref(), &elem), entry)
+                        (
+                            NonRootMPath::join_opt_element(source_path.as_ref(), &elem),
+                            entry,
+                        )
                     })
                     .collect::<Vec<_>>()
             }
@@ -558,7 +573,11 @@ async fn verify_dir<'a>(
                     };
 
                     let target_fsnode = target_root_fsnode_id
-                        .find_entry(ctx.clone(), target_blobstore.clone(), target_path.clone())
+                        .find_entry(
+                            ctx.clone(),
+                            target_blobstore.clone(),
+                            target_path.clone().into(),
+                        )
                         .await?;
 
                     if let (
@@ -697,8 +716,8 @@ async fn get_fast_path_prefixes<'a, M: SyncedCommitMapping + Clone + 'static, R:
 
 #[derive(Default)]
 pub struct PrefixesToVisit {
-    source_prefixes_to_visit: Option<Vec<Option<MPath>>>,
-    target_prefixes_to_visit: Option<Vec<Option<MPath>>>,
+    source_prefixes_to_visit: Option<Vec<Option<NonRootMPath>>>,
+    target_prefixes_to_visit: Option<Vec<Option<NonRootMPath>>>,
 }
 
 pub async fn verify_working_copy_inner<'a>(
@@ -758,8 +777,8 @@ async fn verify_type_content_mapping_equivalence<'a>(
     source_hash: Source<ChangesetId>,
     source_repo: Source<&'a impl RepoIdentityRef>,
     target_repo: Target<&'a impl RepoIdentityRef>,
-    moved_source_repo_entries: &'a Source<HashMap<MPath, (FileType, ContentId)>>,
-    target_repo_entries: &'a Target<HashMap<MPath, (FileType, ContentId)>>,
+    moved_source_repo_entries: &'a Source<HashMap<NonRootMPath, (FileType, ContentId)>>,
+    target_repo_entries: &'a Target<HashMap<NonRootMPath, (FileType, ContentId)>>,
     reverse_mover: &'a Mover,
 ) -> Result<(), Error> {
     info!(
@@ -846,8 +865,8 @@ async fn get_maybe_moved_contents_and_types<'a>(
     repo: &'a (impl RepoIdentityRef + RepoDerivedDataRef + RepoBlobstoreRef + Send + Sync),
     hash: ChangesetId,
     maybe_mover_policy: Option<GetMaybeMovedFilenodesPolicy<'a>>,
-    prefixes: Option<Vec<MPath>>,
-) -> Result<HashMap<MPath, (FileType, ContentId)>, Error> {
+    prefixes: Option<Vec<NonRootMPath>>,
+) -> Result<HashMap<NonRootMPath, (FileType, ContentId)>, Error> {
     let content_ids_and_types = list_content_ids_and_types(ctx, repo, hash, prefixes).await?;
 
     match maybe_mover_policy {
@@ -948,8 +967,8 @@ async fn list_content_ids_and_types(
     ctx: &CoreContext,
     repo: &(impl RepoIdentityRef + RepoDerivedDataRef + RepoBlobstoreRef + Send + Sync),
     cs_id: ChangesetId,
-    prefixes: Option<Vec<MPath>>,
-) -> Result<HashMap<MPath, (FileType, ContentId)>, Error> {
+    prefixes: Option<Vec<NonRootMPath>>,
+) -> Result<HashMap<NonRootMPath, (FileType, ContentId)>, Error> {
     info!(
         ctx.logger(),
         "fetching content ids and types for {} in {}",
@@ -978,16 +997,16 @@ async fn compare_contents_and_types(
     ctx: CoreContext,
     (source_repo, source_types_and_content_ids): (
         Source<&impl RepoIdentityRef>,
-        &Source<HashMap<MPath, (FileType, ContentId)>>,
+        &Source<HashMap<NonRootMPath, (FileType, ContentId)>>,
     ),
     (target_repo, target_types_and_content_ids): (
         Target<&impl RepoIdentityRef>,
-        &Target<HashMap<MPath, (FileType, ContentId)>>,
+        &Target<HashMap<NonRootMPath, (FileType, ContentId)>>,
     ),
     source_hash: Source<ChangesetId>,
 ) -> Result<(), Error> {
     // Both of these sets have three-element tuples as their elements:
-    // `(MPath, SourceThing, TargetThing)`, where `Thing` is a `FileType`
+    // `(NonRootMPath, SourceThing, TargetThing)`, where `Thing` is a `FileType`
     // or a `ContentId` for different sets
     let mut different_content_ids = HashSet::new();
     let mut different_filetypes = HashSet::new();
@@ -1088,7 +1107,7 @@ async fn compare_contents_and_types(
 /// report them in the logs and return an appropriate result
 pub fn report_different<
     T: Debug,
-    E: ExactSizeIterator<Item = (MPath, Source<T>, Target<T>)>,
+    E: ExactSizeIterator<Item = (NonRootMPath, Source<T>, Target<T>)>,
     I: IntoIterator<IntoIter = E, Item = <E as Iterator>::Item>,
 >(
     ctx: &CoreContext,
@@ -1146,9 +1165,9 @@ pub fn report_different<
 }
 
 pub fn move_all_paths<V: Clone>(
-    path_to_values: &HashMap<MPath, V>,
+    path_to_values: &HashMap<NonRootMPath, V>,
     mover: &Mover,
-) -> Result<HashMap<MPath, V>, Error> {
+) -> Result<HashMap<NonRootMPath, V>, Error> {
     let mut moved_entries = HashMap::new();
     for (path, value) in path_to_values {
         let moved_path = mover(path)?;
@@ -1162,9 +1181,9 @@ pub fn move_all_paths<V: Clone>(
 
 // Drop all paths which `mover` rewrites into `None`
 fn keep_movable_paths<V: Clone>(
-    path_to_values: &HashMap<MPath, V>,
+    path_to_values: &HashMap<NonRootMPath, V>,
     mover: &Mover,
-) -> Result<HashMap<MPath, V>, Error> {
+) -> Result<HashMap<NonRootMPath, V>, Error> {
     let mut res = HashMap::new();
     for (path, value) in path_to_values {
         if mover(path)?.is_some() {
@@ -1312,7 +1331,7 @@ mod test {
     use metaconfig_types::CommonCommitSyncConfig;
     use metaconfig_types::SmallRepoCommitSyncConfig;
     use metaconfig_types::SmallRepoPermanentConfig;
-    use mononoke_types::MPath;
+    use mononoke_types::NonRootMPath;
     use mononoke_types::RepositoryId;
     use revset::AncestorsNodeStream;
     use sql_construct::SqlConstruct;
@@ -1323,7 +1342,6 @@ mod test {
     use tests_utils::CreateCommitContext;
 
     use super::*;
-    use crate::CommitSyncDataProvider;
     use crate::CommitSyncRepos;
 
     #[fbinit::test]
@@ -1527,10 +1545,13 @@ mod test {
         };
 
         let live_commit_sync_config = get_live_commit_sync_config();
-        let commit_sync_data_provider =
-            CommitSyncDataProvider::Live(live_commit_sync_config.clone());
-        let commit_syncer =
-            CommitSyncer::new_with_provider(&ctx, mapping, repos, commit_sync_data_provider);
+
+        let commit_syncer = CommitSyncer::new_with_live_commit_sync_config(
+            &ctx,
+            mapping,
+            repos,
+            live_commit_sync_config.clone(),
+        );
 
         println!("checking root commit");
         for version in &["first_version", "second_version"] {
@@ -1601,13 +1622,13 @@ mod test {
         Ok(())
     }
 
-    fn prefix_mover(v: &MPath) -> Result<Option<MPath>, Error> {
-        let prefix = MPath::new("prefix").unwrap();
-        Ok(Some(MPath::join(&prefix, v)))
+    fn prefix_mover(v: &NonRootMPath) -> Result<Option<NonRootMPath>, Error> {
+        let prefix = NonRootMPath::new("prefix").unwrap();
+        Ok(Some(NonRootMPath::join(&prefix, v)))
     }
 
-    fn reverse_prefix_mover(v: &MPath) -> Result<Option<MPath>, Error> {
-        let prefix = MPath::new("prefix").unwrap();
+    fn reverse_prefix_mover(v: &NonRootMPath) -> Result<Option<NonRootMPath>, Error> {
+        let prefix = NonRootMPath::new("prefix").unwrap();
         if prefix.is_prefix_of(v) {
             Ok(v.remove_prefix_component(&prefix))
         } else {
@@ -1672,6 +1693,7 @@ mod test {
             small_repos: hashmap! {
                 small_repo.repo_identity().id() => SmallRepoPermanentConfig {
                     bookmark_prefix: AsciiString::from_str("prefix/").unwrap(),
+                    common_pushrebase_bookmarks_map: HashMap::new(),
                 }
             },
             large_repo_id: large_repo.repo_identity().id(),
@@ -1684,7 +1706,7 @@ mod test {
                 small_repo.repo_identity().id() => SmallRepoCommitSyncConfig {
                     default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
                     map: hashmap! { },
-
+                    git_submodules_action: Default::default(),
                 },
             },
             version_name: current_version.clone(),
@@ -1693,13 +1715,13 @@ mod test {
         lv_cfg_src.add_common_config(common_config);
         lv_cfg_src.add_config(current_version_config);
 
-        let commit_sync_data_provider = CommitSyncDataProvider::Live(Arc::new(lv_cfg));
+        let live_commit_sync_config = Arc::new(lv_cfg);
 
-        Ok(CommitSyncer::new_with_provider(
+        Ok(CommitSyncer::new_with_live_commit_sync_config(
             &ctx,
             mapping,
             repos,
-            commit_sync_data_provider,
+            live_commit_sync_config,
         ))
     }
 }

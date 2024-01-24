@@ -1,0 +1,36 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "eagerepo",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    test_deps = [
+        "fbsource//third-party/rust:tempfile",
+        "fbsource//third-party/rust:tokio",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:fail",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:http",
+        "fbsource//third-party/rust:parking_lot",
+        "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/dag:dag",
+        "//eden/scm/lib/edenapi/trait:edenapi_trait",
+        "//eden/scm/lib/identity:identity",
+        "//eden/scm/lib/manifest-tree:manifest-tree",
+        "//eden/scm/lib/metalog:metalog",
+        "//eden/scm/lib/minibytes:minibytes",
+        "//eden/scm/lib/nonblocking:nonblocking",
+        "//eden/scm/lib/storemodel:storemodel",
+        "//eden/scm/lib/storemodel/hgstore:hgstore",
+        "//eden/scm/lib/util/factory:factory",
+        "//eden/scm/lib/zstore:zstore",
+    ],
+)

@@ -10,8 +10,8 @@ from pathlib import Path
 from typing import Optional
 
 import silenttestrunner
-from edenscm import ui as uimod
-from edenscm.rcutil import editconfig
+from sapling import ui as uimod
+from sapling.rcutil import editconfig
 
 
 class testeditconfig(unittest.TestCase):

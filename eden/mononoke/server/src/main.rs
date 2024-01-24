@@ -19,7 +19,9 @@ use cache_warmup::cache_warmup;
 use clap::Parser;
 use cloned::cloned;
 use cmdlib_logging::ScribeLoggingArgs;
-use environment::WarmBookmarksCacheDerivedData;
+use environment::BookmarkCacheDerivedData;
+use environment::BookmarkCacheKind;
+use environment::BookmarkCacheOptions;
 use executor_lib::args::ShardedExecutorArgs;
 use executor_lib::RepoShardedProcess;
 use executor_lib::RepoShardedProcessExecutor;
@@ -215,7 +217,10 @@ impl RepoShardedProcessExecutor for MononokeServerProcessExecutor {
 fn main(fb: FacebookInit) -> Result<()> {
     let app = MononokeAppBuilder::new(fb)
         .with_default_scuba_dataset("mononoke_test_perf")
-        .with_warm_bookmarks_cache(WarmBookmarksCacheDerivedData::HgOnly)
+        .with_bookmarks_cache(BookmarkCacheOptions {
+            cache_kind: BookmarkCacheKind::Local,
+            derived_data: BookmarkCacheDerivedData::HgOnly,
+        })
         .with_app_extension(WarmBookmarksCacheExtension {})
         .with_app_extension(McrouterAppExtension {})
         .with_app_extension(Fb303AppExtension {})

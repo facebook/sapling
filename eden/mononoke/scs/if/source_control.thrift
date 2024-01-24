@@ -13,7 +13,7 @@ namespace php SourceControlService
 namespace py scm.service.thrift.source_control
 namespace py3 scm.service.thrift
 
-typedef binary (rust.type = "bytes::Bytes") binary_bytes
+typedef binary (rust.type = "Bytes") binary_bytes
 typedef binary small_binary (
   rust.newtype,
   rust.type = "smallvec::SmallVec<[u8; 24]>",
@@ -807,6 +807,18 @@ struct RepoStackInfoParams {
   3: i64 limit;
 }
 
+/// The parameter for the repo_stack_git_bundle_store method
+struct RepoStackGitBundleStoreParams {
+  /// The changeset ID of the commit which is the head of the stack of draft commits
+  1: CommitId head;
+  /// The changeset ID of the base commit (public or draft) that serves as the base
+  /// of the stack of commits and is present in the user repo, i.e. the repo that will
+  /// unbundle this bundle, already has this commit
+  2: CommitId base;
+  /// The identity of the service making the repo_stack_git_bundle_store request.
+  3: optional string service_identity;
+}
+
 enum RepoCreateCommitParamsFileType {
   /// Normal file
   FILE = 1,
@@ -1454,6 +1466,9 @@ struct CommitLookupXRepoParams {
   /// Candidate selection hint for resolving plural
   /// mapping situations
   3: optional CandidateSelectionHint candidate_selection_hint;
+  /// Do not sync the requests commit on-demand. Returns quicker with result or not-existing mapped
+  /// commit if the commit wasn't synced yet.
+  4: bool no_ondemand_sync;
 }
 
 /// Synchronization target
@@ -1622,14 +1637,25 @@ struct MegarepoRemergeSourceParams {
   5: optional string message;
 }
 
-/// Params for upload_git_object method
-struct UploadGitObjectParams {
+/// Params for repo_upload_non_blob_git_object method
+struct RepoUploadNonBlobGitObjectParams {
   /// The raw bytes of the hash of the git object that is being uploaded.
   /// In git terminology, this is the git object_id in bytes
   1: binary git_hash;
   /// The raw content of the git object that is being uploaded.
   2: binary raw_content;
   /// The identity of the service making the upload git object request.
+  3: optional string service_identity;
+}
+
+/// Params for upload_packfile_base_item method
+struct RepoUploadPackfileBaseItemParams {
+  /// The raw bytes of the hash of the git object that is being uploaded as packfile base item.
+  /// In git terminology, this is the git object_id in bytes
+  1: binary git_hash;
+  /// The raw content of the git object that is being uploaded as packfile base item.
+  2: binary raw_content;
+  /// The identity of the service making the upload packfile base item request.
   3: optional string service_identity;
 }
 
@@ -1654,10 +1680,12 @@ struct CreateGitTagParams {
   4: optional binary pgp_signature;
   /// The changeset corresponding to the commit that was pointed at by the tag.
   5: binary target_changeset;
-  /// The identity of the service making the create git tree request.
+  /// The identity of the service making the create git tag request.
   6: optional string service_identity;
   /// The name of the tag for which the changeset is getting created
   7: string tag_name;
+  /// The git SHA1 hash of the tag
+  8: optional binary tag_hash;
 }
 
 /// Method response structures
@@ -1711,6 +1739,11 @@ struct RepoStackInfoResponse {
   /// list of heads.  Note that shared ancestry may result in duplicate
   /// commits in subsequent calls.
   3: list<map<CommitIdentityScheme, CommitId>> leftover_heads;
+}
+
+/// The response of the repo_stack_git_bundle_store method
+struct RepoStackGitBundleStoreResponse {
+  1: string everstore_handle;
 }
 
 struct RepoCreateCommitResponse {
@@ -1999,7 +2032,9 @@ struct MegarepoRemergeSourcePollResponse {
   1: optional MegarepoRemergeSourceResult result;
 }
 
-struct UploadGitObjectResponse {}
+struct RepoUploadNonBlobGitObjectResponse {}
+
+struct RepoUploadPackfileBaseItemResponse {}
 
 struct CreateGitTreeResponse {}
 
@@ -2131,6 +2166,14 @@ service SourceControlService extends fb303_core.BaseService {
   RepoStackInfoResponse repo_stack_info(
     1: RepoSpecifier repo,
     2: RepoStackInfoParams params,
+  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+
+  /// Generate Git bundle for the given stack of commits with the ref BUNDLE_HEAD
+  /// pointing to the top of the stack. Store the bundle in everstore and return
+  /// the everstore handle associated with it.
+  RepoStackGitBundleStoreResponse repo_stack_git_bundle_store(
+    1: RepoSpecifier repo,
+    2: RepoStackGitBundleStoreParams params,
   ) throws (1: RequestError request_error, 2: InternalError internal_error);
 
   /// Repository write methods
@@ -2472,9 +2515,15 @@ service SourceControlService extends fb303_core.BaseService {
 
   /// Upload raw git object to Mononoke data store for back-and-forth translation.
   /// Not to be used for uploading raw file content blobs.
-  UploadGitObjectResponse upload_git_object(
+  RepoUploadNonBlobGitObjectResponse repo_upload_non_blob_git_object(
     1: RepoSpecifier repo,
-    2: UploadGitObjectParams params,
+    2: RepoUploadNonBlobGitObjectParams params,
+  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+
+  /// Upload packfile base item corresponding to git object to Mononoke data store
+  RepoUploadPackfileBaseItemResponse repo_upload_packfile_base_item(
+    1: RepoSpecifier repo,
+    2: RepoUploadPackfileBaseItemParams params,
   ) throws (1: RequestError request_error, 2: InternalError internal_error);
 
   /// Create Mononoke counterpart of git tree object in the form of a bonsai changeset.

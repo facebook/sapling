@@ -5,4 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-export const isMac = window.navigator.userAgent.includes('Macintosh');
+const userAgent = typeof navigator === 'object' ? navigator.userAgent : '';
+
+export const isWindows = userAgent.indexOf('Windows') >= 0;
+export const isMac = userAgent.indexOf('Macintosh') >= 0;

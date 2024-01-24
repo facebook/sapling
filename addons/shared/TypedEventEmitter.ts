@@ -31,9 +31,6 @@ export declare interface TypedEventEmitter<EventName extends string, EventType> 
   emit(event: 'error', error: Error): boolean;
 }
 
-export class TypedEventEmitter<
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  EventName extends string,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  EventType,
-> extends EventEmitter {}
+/* eslint-disable */
+export class TypedEventEmitter<EventName extends string, EventType> extends EventEmitter {}
+/* eslint-enable */

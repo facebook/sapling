@@ -45,7 +45,6 @@
   o  11eb9c356adf draft 'C2'
   │
   o  178f1774564f draft 'C1'
-  
 Try to call --continue:
 
   $ hg rebase --continue
@@ -75,7 +74,6 @@ Conflicting rebase:
   
   # To continue:                hg rebase --continue
   # To abort:                   hg rebase --abort
-  
 
 Try to continue without solving the conflict:
 
@@ -106,7 +104,6 @@ Conclude rebase:
   o  11eb9c356adf draft 'C2'
   │
   o  178f1774564f draft 'C1'
-  
 Check correctness:
 
   $ hg cat -r 'desc(C1)' common
@@ -163,10 +160,10 @@ Test minimization of merge conflicts
   @@ -1,2 +1,6 @@
    a
    b
-  +<<<<<<< dest (rebasing onto):   328e4ab1f7cc ab - test: ab
+  +<<<<<<< dest (rebasing onto):    328e4ab1f7cc ab - test: ab
   +=======
   +c
-  +>>>>>>> source (being rebased): 7bc217434fc1 - test: abc
+  +>>>>>>> source (being rebased):  7bc217434fc1 - test: abc
   $ hg rebase --abort
   rebase aborted
   $ hg up -q -C 7bc217434fc1
@@ -182,13 +179,13 @@ Test minimization of merge conflicts
   +++ b/a	* (glob)
   @@ -1,2 +1,8 @@
    a
-  +<<<<<<< dest (rebasing onto):   328e4ab1f7cc ab - test: ab
+  +<<<<<<< dest (rebasing onto):    328e4ab1f7cc ab - test: ab
    b
-  +||||||| base
+  +||||||| base (parent of source): cb9a9f314b8b - test: a
   +=======
   +b
   +c
-  +>>>>>>> source (being rebased): 7bc217434fc1 - test: abc
+  +>>>>>>> source (being rebased):  7bc217434fc1 - test: abc
 
 Test rebase with obsstore turned on and off (issue5606)
 
@@ -235,4 +232,3 @@ Test rebase with obsstore turned on and off (issue5606)
   │ x  112478962961 draft 'B'
   ├─╯
   o  426bada5c675 draft 'A' A
-  

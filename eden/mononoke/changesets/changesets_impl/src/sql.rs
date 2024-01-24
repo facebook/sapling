@@ -30,10 +30,10 @@ use mononoke_types::ChangesetIdsResolvedFromPrefix;
 use mononoke_types::Generation;
 use mononoke_types::RepositoryId;
 use rand::Rng;
+use rendezvous::ConfigurableRendezVousController;
 use rendezvous::RendezVous;
 use rendezvous::RendezVousOptions;
 use rendezvous::RendezVousStats;
-use rendezvous::TunablesRendezVousController;
 use sql::Connection;
 use sql::Transaction;
 use sql_construct::SqlConstruct;
@@ -71,7 +71,7 @@ impl RendezVousConnection {
         Self {
             conn,
             rdv: RendezVous::new(
-                TunablesRendezVousController::new(opts),
+                ConfigurableRendezVousController::new(opts),
                 Arc::new(RendezVousStats::new(format!("changesets.{}", name,))),
             ),
         }

@@ -11,38 +11,39 @@ import type {Comparison} from 'shared/Comparison';
 
 import {ErrorNotice} from '../ErrorNotice';
 import {Internal} from '../Internal';
-import {ThoughtBubbleIcon} from '../ThoughtBubbleIcon';
 import {Tooltip} from '../Tooltip';
-import {tracker as originalTracker} from '../analytics';
+import {tracker} from '../analytics';
 import {useFeatureFlagSync} from '../featureFlags';
 import {T, t} from '../i18n';
 import {uncommittedChangesWithPreviews} from '../previews';
 import {commitByHash} from '../serverAPIState';
-import {commitInfoViewCurrentCommits, commitMode, editedCommitMessages} from './CommitInfoState';
+import {
+  commitInfoViewCurrentCommits,
+  commitMode,
+  latestCommitMessageFieldsWithEdits,
+} from './CommitInfoState';
 import {getInnerTextareaForVSCodeTextArea} from './utils';
 import {VSCodeButton, VSCodeTextArea} from '@vscode/webview-ui-toolkit/react';
 import {
+  atomFamily,
   selectorFamily,
   useRecoilCallback,
   useRecoilRefresher_UNSTABLE,
   useRecoilValue,
   useRecoilValueLoadable,
+  useSetRecoilState,
 } from 'recoil';
 import {ComparisonType} from 'shared/Comparison';
 import {Icon} from 'shared/Icon';
 import {useThrottledEffect} from 'shared/hooks';
-import {unwrap} from 'shared/utils';
+import {randomId, unwrap} from 'shared/utils';
 
 import './GenerateWithAI.css';
-
-// We want to log the user id for all generated AI events,
-// use this special tracker to do it. But we can't make this null, or else tracker.operation won't run.
-const tracker = Internal?.trackerWithUserInfo ?? originalTracker;
 
 /** Either a commit hash or "commit/aaaaa" when making a new commit on top of hash aaaaa  */
 type HashKey = `commit/${string}` | string;
 
-export function GenerateAICommitMesageButton({
+export function GenerateAICommitMessageButton({
   textAreaRef,
   appendToTextArea,
 }: {
@@ -53,30 +54,32 @@ export function GenerateAICommitMesageButton({
   const mode = useRecoilValue(commitMode);
   const featureEnabled = useFeatureFlagSync(Internal.featureFlags?.GeneratedAICommitMessages);
 
-  useThrottledEffect(
-    () => {
-      if (currentCommit != null && featureEnabled) {
-        tracker.track('GenerateAICommitMessageButtonImpression');
-      }
-    },
-    100,
-    [currentCommit?.hash, mode, featureEnabled],
-  );
-
   const hashKey: HashKey | undefined =
     currentCommit == null
       ? undefined
       : mode === 'commit'
       ? `commit/${currentCommit.hash}`
       : currentCommit.hash;
+
+  useThrottledEffect(
+    () => {
+      if (currentCommit != null && featureEnabled && hashKey != null) {
+        FunnelTracker.get(hashKey)?.track(GeneratedMessageTrackEventName.ButtonImpression);
+      }
+    },
+    100,
+    [hashKey, featureEnabled],
+  );
+
   const onDismiss = useRecoilCallback(
     ({snapshot}) =>
       () => {
         if (hashKey != null) {
-          const content = snapshot.getLoadable(generatedCommitMessages(hashKey));
-          if (content.state !== 'hasValue') {
-            tracker.track('DismissGeneratedAICommitMessageModal');
+          const hasAcceptedState = snapshot.getLoadable(hasAcceptedAIMessageSuggestion(hashKey));
+          if (hasAcceptedState.valueMaybe() === true) {
+            return;
           }
+          FunnelTracker.get(hashKey)?.track(GeneratedMessageTrackEventName.Dismiss);
         }
       },
     [hashKey],
@@ -101,7 +104,7 @@ export function GenerateAICommitMesageButton({
         onDismiss={onDismiss}
         title={t('Generate a commit message suggestion with AI')}>
         <VSCodeButton appearance="icon" data-testid="generate-commit-message-button">
-          <ThoughtBubbleIcon />
+          <Icon icon="sparkle" />
         </VSCodeButton>
       </Tooltip>
     </span>
@@ -142,14 +145,15 @@ const generatedCommitMessages = selectorFamily<Result<string>, HashKey>({
       }
 
       const hashOrHead = hashKey.startsWith('commit/') ? 'head' : hashKey;
-      const editedFields = get(editedCommitMessages(hashOrHead));
-      const latestWrittenTitle =
-        editedFields.type === 'optimistic' ? '(none)' : (editedFields.fields.Title as string);
+      const latestFields = get(latestCommitMessageFieldsWithEdits(hashOrHead));
+      const latestWrittenTitle = latestFields.Title as string;
 
+      // Note: we don't use the FunnelTracker because this event is not needed for funnel analysis,
+      // only for our own duration / error rate tracking.
       const resultPromise = tracker.operation(
         'GenerateAICommitMessage',
         'FetchError',
-        undefined,
+        {},
         async () => {
           const comparison: Comparison = hashKey.startsWith('commit/')
             ? {type: ComparisonType.UncommittedChanges}
@@ -172,6 +176,11 @@ const generatedCommitMessages = selectorFamily<Result<string>, HashKey>({
     },
 });
 
+const hasAcceptedAIMessageSuggestion = atomFamily<boolean, HashKey>({
+  key: 'hasAcceptedAIMessageSuggestion',
+  default: false,
+});
+
 function GenerateAICommitMessageModal({
   hashKey,
   dismiss,
@@ -185,7 +194,28 @@ function GenerateAICommitMessageModal({
   const content = useRecoilValueLoadable(generatedCommitMessages(hashKey));
   const refetch = useRecoilRefresher_UNSTABLE(generatedCommitMessages(hashKey));
 
+  const setHasAccepted = useSetRecoilState(hasAcceptedAIMessageSuggestion(hashKey));
+
   const error = content.state === 'hasError' ? content.errorOrThrow() : content.valueMaybe()?.error;
+  const suggestionId = FunnelTracker.suggestionIdForHashKey(hashKey);
+
+  useThrottledEffect(
+    () => {
+      FunnelTracker.get(hashKey)?.track(GeneratedMessageTrackEventName.SuggestionRequested);
+    },
+    100,
+    [suggestionId], // ensure we track again if the hash key hasn't changed but a new suggestionID was generated
+  );
+
+  useThrottledEffect(
+    () => {
+      if (content.state === 'hasValue' && content.valueMaybe()?.value != null) {
+        FunnelTracker.get(hashKey)?.track(GeneratedMessageTrackEventName.ResponseImpression);
+      }
+    },
+    100,
+    [hashKey, content],
+  );
 
   return (
     <div className="generated-ai-commit-message-modal">
@@ -206,8 +236,10 @@ function GenerateAICommitMessageModal({
           disabled={content.state === 'loading' || error != null}
           appearance="secondary"
           onClick={() => {
-            tracker.track('RetryGeneratedAICommitMessage');
+            FunnelTracker.get(hashKey)?.track(GeneratedMessageTrackEventName.RetryClick);
             cachedSuggestions.delete(hashKey); // make sure we don't re-use cached value
+            setHasAccepted(false);
+            FunnelTracker.restartFunnel(hashKey);
             refetch();
           }}>
           <Icon icon="refresh" slot="start" />
@@ -220,7 +252,8 @@ function GenerateAICommitMessageModal({
             if (value) {
               appendToTextArea(value);
             }
-            tracker.track('AcceptGeneratedAICommitMessage');
+            FunnelTracker.get(hashKey)?.track(GeneratedMessageTrackEventName.InsertClick);
+            setHasAccepted(true);
             dismiss();
           }}>
           <Icon icon="check" slot="start" />
@@ -230,3 +263,110 @@ function GenerateAICommitMessageModal({
     </div>
   );
 }
+
+export enum FunnelEvent {
+  Opportunity = 'opportunity',
+  Shown = 'shown',
+  Accepted = 'accepted',
+  Rejected = 'rejected',
+}
+export enum GeneratedMessageTrackEventName {
+  ButtonImpression = 'generate_button_impression',
+  SuggestionRequested = 'suggestion_requested',
+  ResponseImpression = 'response_impression',
+  InsertClick = 'insert_button_click',
+  RetryClick = 'retry_button_click',
+  Dismiss = 'dismiss_button_click',
+}
+
+/**
+ * Manage tracking events and including a suggestion identifier according to the analytics funnel:
+ *
+ * (O) Opporunity - The dropdown has rendered and a suggestion has begun being rendered
+ * (S) Shown - A complete suggestion has been rendered
+ * (A) Accepted - The suggestion was accepted
+ * (R) Rejected - The suggestion was rejected, retried, or dismissed
+ *
+ * Each funnel instance has a unique suggestion identifier associated with it.
+ * We should log at most one funnel action per suggestion identifier.
+ * We still log all events, but if the funnel action has already happened for this suggestion id,
+ * we log the funnel event name as undefined.
+ *
+ * Since it's possible to have multiple suggestions generated for different commits simultaneously,
+ * there is one FunnelTracker per funnel / hashKey / suggestion identifier, indexed by HashKey.
+ *
+ * Note: After retrying a suggestion, we destroy the FunnelTracker so that it is recreated with a new
+ * suggestion identifier, aka acts as a new funnel entirely from then on.
+ */
+class FunnelTracker {
+  static trackersByHashKey = new Map<string, FunnelTracker>();
+
+  /** Get or create the funnel tracker for this hashKey */
+  static get(hashKey: HashKey): FunnelTracker {
+    if (this.trackersByHashKey.has(hashKey)) {
+      return unwrap(this.trackersByHashKey.get(hashKey));
+    }
+    const tracker = new FunnelTracker();
+    this.trackersByHashKey.set(hashKey, tracker);
+    return tracker;
+  }
+
+  static suggestionIdForHashKey(hashKey: HashKey): string {
+    const tracker = FunnelTracker.get(hashKey);
+    return tracker.suggestionId;
+  }
+
+  /** Restart the funnel for a given `hashKey`, so it generates a new suggestion identifier  */
+  static restartFunnel(hashKey: HashKey): void {
+    this.trackersByHashKey.delete(hashKey);
+  }
+
+  /** Reset internal storage, useful for resetting between tests */
+  static resetAllState() {
+    this.trackersByHashKey.clear();
+  }
+
+  private alreadyTrackedFunnelEvents = new Set<FunnelEvent>();
+  private suggestionId = randomId();
+
+  public track(eventName: GeneratedMessageTrackEventName) {
+    let funnelEventName: FunnelEvent | undefined = this.mapToFunnelEvent(eventName);
+    if (funnelEventName != null && !this.alreadyTrackedFunnelEvents.has(funnelEventName)) {
+      // prevent tracking this funnel event again for this suggestion ID
+      this.alreadyTrackedFunnelEvents.add(funnelEventName);
+    } else {
+      funnelEventName = undefined;
+    }
+
+    // log all events into the same event, which can be extracted for funnel analysis
+    Internal?.trackerWithUserInfo?.track('GenerateAICommitMessageFunnelEvent', {
+      extras: {
+        eventName,
+        suggestionIdentifier: this.suggestionId,
+        funnelEventName,
+      },
+    });
+  }
+
+  /** Convert from our internal names to the funnel event names */
+  private mapToFunnelEvent(eventName: GeneratedMessageTrackEventName): FunnelEvent | undefined {
+    switch (eventName) {
+      case GeneratedMessageTrackEventName.ButtonImpression:
+        return undefined;
+      case GeneratedMessageTrackEventName.SuggestionRequested:
+        return FunnelEvent.Opportunity;
+      case GeneratedMessageTrackEventName.ResponseImpression:
+        return FunnelEvent.Shown;
+      case GeneratedMessageTrackEventName.InsertClick:
+        return FunnelEvent.Accepted;
+      case GeneratedMessageTrackEventName.RetryClick:
+        return FunnelEvent.Rejected;
+      case GeneratedMessageTrackEventName.Dismiss:
+        return FunnelEvent.Rejected;
+    }
+  }
+}
+
+export const __TEST__ = {
+  FunnelTracker,
+};

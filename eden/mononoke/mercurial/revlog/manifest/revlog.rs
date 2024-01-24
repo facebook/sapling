@@ -37,8 +37,8 @@ use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::HgNodeHash;
 use mercurial_types::HgParents;
-use mercurial_types::MPath;
 use mercurial_types::MPathElement;
+use mercurial_types::NonRootMPath;
 use mercurial_types::RepoPath;
 
 use crate::errors::ErrorKind;
@@ -64,14 +64,14 @@ pub enum EntryContent {
     File(file::File),       // TODO stream
     Executable(file::File), // TODO stream
     // Symlinks typically point to files but can have arbitrary content, so represent them as
-    // blobs rather than as MPath instances.
+    // blobs rather than as NonRootMPath instances.
     Symlink(file::File),
     Tree(RevlogManifest),
 }
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct ManifestContent {
-    pub files: BTreeMap<MPath, Details>,
+    pub files: BTreeMap<NonRootMPath, Details>,
 }
 
 impl ManifestContent {
@@ -82,7 +82,10 @@ impl ManifestContent {
     // Source: mercurial/parsers.c:parse_manifest()
     //
     // NB: filenames are sequences of non-zero bytes, not strings
-    fn parse_impl(data: &[u8], prefix: Option<&MPath>) -> Result<BTreeMap<MPath, Details>> {
+    fn parse_impl(
+        data: &[u8],
+        prefix: Option<&NonRootMPath>,
+    ) -> Result<BTreeMap<NonRootMPath, Details>> {
         let mut files = BTreeMap::new();
 
         for line in data.split(|b| *b == b'\n') {
@@ -103,9 +106,9 @@ impl ManifestContent {
             };
 
             let path = if let Some(prefix) = prefix {
-                prefix.join(&MPath::new(name).context("invalid path in manifest")?)
+                prefix.join(&NonRootMPath::new(name).context("invalid path in manifest")?)
             } else {
-                MPath::new(name).context("invalid path in manifest")?
+                NonRootMPath::new(name).context("invalid path in manifest")?
             };
             let details = Details::parse(rest)?;
 
@@ -122,7 +125,7 @@ impl ManifestContent {
         })
     }
 
-    pub fn parse_with_prefix(data: &[u8], prefix: &MPath) -> Result<Self> {
+    pub fn parse_with_prefix(data: &[u8], prefix: &NonRootMPath) -> Result<Self> {
         Ok(Self {
             files: Self::parse_impl(data, Some(prefix))?,
         })
@@ -167,7 +170,7 @@ impl RevlogManifest {
         repo: RevlogRepo,
         parents: &HgParents,
         data: &[u8],
-        prefix: &MPath,
+        prefix: &NonRootMPath,
     ) -> Result<RevlogManifest> {
         ManifestContent::parse_with_prefix(data, prefix).map(|content| RevlogManifest {
             repo: Some(repo),
@@ -184,11 +187,11 @@ impl RevlogManifest {
         self.content.generate(out)
     }
 
-    pub fn manifest(&self) -> Vec<(&MPath, &Details)> {
+    pub fn manifest(&self) -> Vec<(&NonRootMPath, &Details)> {
         self.content.files.iter().collect()
     }
 
-    pub fn lookup(&self, path: &MPath) -> BoxFuture<Option<RevlogEntry>, Error> {
+    pub fn lookup(&self, path: &NonRootMPath) -> BoxFuture<Option<RevlogEntry>, Error> {
         let repo = match self.repo {
             Some(ref repo) => repo.clone(),
             None => return future::ok(None).boxify(),
@@ -298,7 +301,7 @@ pub struct RevlogEntry {
     details: Details,
 }
 
-pub struct RevlogListStream(vec::IntoIter<(MPath, Details)>, RevlogRepo);
+pub struct RevlogListStream(vec::IntoIter<(NonRootMPath, Details)>, RevlogRepo);
 
 impl Stream for RevlogListStream {
     type Item = RevlogEntry;
@@ -317,7 +320,7 @@ impl Stream for RevlogListStream {
 }
 
 impl RevlogEntry {
-    fn new(repo: RevlogRepo, path: MPath, details: Details) -> Result<Self> {
+    fn new(repo: RevlogRepo, path: NonRootMPath, details: Details) -> Result<Self> {
         let name = (&path).into_iter().next_back().cloned();
         let path = match details.flag() {
             Type::Tree => RepoPath::dir(path)
@@ -511,7 +514,7 @@ mod test {
             Ok(m) => {
                 assert_eq!(m.parents(), &HgParents::One(THREES_HASH));
                 let expect = vec![(
-                    MPath::new(b"hello123").unwrap(),
+                    NonRootMPath::new(b"hello123").unwrap(),
                     Details {
                         hash: "da39a3ee5e6b4b0d3255bfef95601890afd80709".parse().unwrap(),
                         flag: Type::File(FileType::Symlink),

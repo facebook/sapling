@@ -10,6 +10,8 @@ use std::sync::Arc;
 use anyhow::Result;
 use async_runtime::block_on;
 use async_runtime::spawn_blocking;
+use clientinfo::get_client_request_info_thread_local;
+use clientinfo_async::with_client_request_info_scope;
 use futures::prelude::*;
 use progress_model::ProgressBar;
 use tracing::field;
@@ -53,7 +55,7 @@ impl RemoteDataStore for EdenApiDataStore<File> {
         let hgidkeys = hgid_keys(keys);
 
         let response = async move {
-            let prog = ProgressBar::register_new(
+            let prog = ProgressBar::new_adhoc(
                 "Downloading files over HTTP",
                 hgidkeys.len() as u64,
                 "files",
@@ -101,7 +103,12 @@ impl RemoteDataStore for EdenApiDataStore<File> {
             scmstore = false,
         );
         let _enter = span.enter();
-        let (keys, stats) = block_on(response)?;
+        // Fetch ClientRequestInfo from a thread local and pass to async code
+        let maybe_client_request_info = get_client_request_info_thread_local();
+        let (keys, stats) = block_on(with_client_request_info_scope(
+            maybe_client_request_info,
+            response,
+        ))?;
         util::record_edenapi_stats(&span, &stats);
         Ok(keys)
     }
@@ -118,7 +125,7 @@ impl RemoteDataStore for EdenApiDataStore<Tree> {
         let hgidkeys = hgid_keys(keys);
 
         let response = async move {
-            let prog = ProgressBar::register_new(
+            let prog = ProgressBar::new_adhoc(
                 "Downloading trees over HTTP",
                 hgidkeys.len() as u64,
                 "trees",
@@ -146,7 +153,12 @@ impl RemoteDataStore for EdenApiDataStore<Tree> {
             scmstore = false,
         );
         let _enter = span.enter();
-        let (keys, stats) = block_on(response)?;
+        // Fetch ClientRequestInfo from a thread local and pass to async code
+        let maybe_client_request_info = get_client_request_info_thread_local();
+        let (keys, stats) = block_on(with_client_request_info_scope(
+            maybe_client_request_info,
+            response,
+        ))?;
         util::record_edenapi_stats(&span, &stats);
         Ok(keys)
     }
@@ -262,7 +274,7 @@ mod tests {
         assert_eq!(fetched.file_content()?.to_vec(), d.data.as_ref().to_vec());
 
         // Check that data was written to the local store.
-        let mut fetched = cache.get_entry(k.clone())?.expect("key not found");
+        let fetched = cache.get_entry(k)?.expect("key not found");
         assert_eq!(fetched.content()?.to_vec(), d.data.as_ref().to_vec());
 
         Ok(())
@@ -307,7 +319,7 @@ mod tests {
         );
 
         // Check that data was written to the local store.
-        let mut fetched = cache.get_entry(k.clone())?.expect("key not found");
+        let fetched = cache.get_entry(k)?.expect("key not found");
         assert_eq!(fetched.content()?.to_vec(), d.data.as_ref().to_vec());
 
         Ok(())
@@ -338,7 +350,7 @@ mod tests {
         // Set up mocked EdenAPI file and tree stores.
         let k = key("a", "def6f29d7b61f9cb70b2f14f79cd5c43c38e21b2");
         let d = delta("1234", None, k.clone());
-        let files = hashmap! { k.clone() => d.data.clone() };
+        let files = hashmap! { k.clone() => d.data };
 
         let client = FakeEdenApi::new().files(files).into_arc();
         let remote_files = EdenApiRemoteStore::<File>::new(client);
@@ -350,7 +362,7 @@ mod tests {
         // Empty aux cache
         let tmp = TempDir::new()?;
         let aux_cache = Arc::new(AuxStore::new(&tmp, &empty_config(), StoreType::Shared)?);
-        store.aux_cache = Some(aux_cache.clone());
+        store.aux_cache = Some(aux_cache);
 
         // Empty content cache
         let tmp = TempDir::new()?;
@@ -372,11 +384,13 @@ mod tests {
             content_id: ContentId::from_str(
                 "aa6ab85da77ca480b7624172fe44aa9906b6c3f00f06ff23c3e5f60bfd0c414e",
             )?,
-            content_sha1: Sha1::from_str("7110eda4d09e062aa5e4a390b0a572ac0d2c0220")?,
-            content_sha256: Sha256::from_str(
+            sha1: Sha1::from_str("7110eda4d09e062aa5e4a390b0a572ac0d2c0220")?,
+            sha256: Sha256::from_str(
                 "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
-            )?,
-            content_seeded_blake3: Some(Blake3::from_str(
+            )?
+            .into_inner()
+            .into(),
+            seeded_blake3: Some(Blake3::from_str(
                 "2078b4229b5353de0268efc7f64b68f3c99fb8829e9c052117b4e1e090b2603a",
             )?),
         };
@@ -406,7 +420,7 @@ mod tests {
         assert_eq!(fetched.aux_data().expect("no aux data found"), expected);
 
         // Content shouldn't have been cached
-        assert_eq!(cache.get_entry(k.clone())?, None);
+        assert_eq!(cache.get_entry(k)?, None);
 
         Ok(())
     }

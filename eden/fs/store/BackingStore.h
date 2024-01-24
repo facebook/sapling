@@ -16,6 +16,7 @@
 #include "eden/fs/model/ObjectId.h"
 #include "eden/fs/model/RootId.h"
 #include "eden/fs/model/TreeFwd.h"
+#include "eden/fs/store/BackingStoreType.h"
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/utils/ImmediateFuture.h"
@@ -30,8 +31,6 @@ namespace facebook::eden {
 
 class TreeEntry;
 enum class TreeEntryType : uint8_t;
-
-enum BackingStoreType : uint8_t { EMPTY, GIT, HG, RECAS, HTTP };
 
 enum class ObjectComparison : uint8_t {
   /// Given the IDs alone, it's not possible to know whether the contents are
@@ -54,8 +53,8 @@ enum class ObjectComparison : uint8_t {
  */
 class BackingStore : public RootIdCodec, public ObjectIdCodec {
  public:
-  BackingStore() {}
-  virtual ~BackingStore() {}
+  BackingStore() = default;
+  virtual ~BackingStore() = default;
 
   /**
    * A BackingStore may support multiple object ID encodings. To help EdenFS
@@ -199,9 +198,10 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
    * Hash is widened to variable-width, eliminating the need for proxy hashes,
    * this API should be removed.
    */
-  virtual folly::SemiFuture<folly::Unit> importManifestForRoot(
+  virtual ImmediateFuture<folly::Unit> importManifestForRoot(
       const RootId& /*rootId*/,
-      const Hash20& /*manifest*/) {
+      const Hash20& /*manifest*/,
+      const ObjectFetchContextPtr& /*context*/) {
     return folly::unit;
   }
 

@@ -26,7 +26,7 @@ class File;
 namespace facebook::eden {
 
 class InodeCatalog;
-class FileContentStore;
+class FsFileContentStore;
 
 /**
  * OverlayChecker performs "fsck" operations on the on-disk overlay data.
@@ -58,13 +58,13 @@ class OverlayChecker {
    * Create a new OverlayChecker.
    *
    * The OverlayChecker stores a raw pointer to the InodeCatalog and
-   * FileContentStore for the duration of the check operation.  The caller is
-   * responsible for ensuring that the InodeCatalog and FileContentStore objects
-   * exist for at least as long as the OverlayChecker object.
+   * FsFileContentStore for the duration of the check operation.  The caller is
+   * responsible for ensuring that the InodeCatalog and FsFileContentStore
+   * objects exist for at least as long as the OverlayChecker object.
    */
   OverlayChecker(
       InodeCatalog* inodeCatalog,
-      FileContentStore* fcs,
+      FsFileContentStore* fcs,
       std::optional<InodeNumber> nextInodeNumber,
       InodeCatalog::LookupCallback& lookupCallback);
 

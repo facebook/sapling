@@ -113,7 +113,7 @@ class BuilderBase(object):
         patchfile = os.path.join(
             self.build_opts.fbcode_builder_dir, "patches", self.patchfile
         )
-        patchcmd = ["git", "apply"]
+        patchcmd = ["git", "apply", "--ignore-space-change"]
         if self.patchfile_opts:
             patchcmd.append(self.patchfile_opts)
         try:
@@ -135,6 +135,16 @@ class BuilderBase(object):
         self._apply_patchfile()
         self._prepare(install_dirs=install_dirs, reconfigure=reconfigure)
         self._build(install_dirs=install_dirs, reconfigure=reconfigure)
+
+        if self.build_opts.free_up_disk:
+            # don't clean --src-dir=. case as user may want to build again or run tests on the build
+            if self.src_dir.startswith(self.build_opts.scratch_dir) and os.path.isdir(
+                self.build_dir
+            ):
+                if os.path.islink(self.build_dir):
+                    os.remove(self.build_dir)
+                else:
+                    shutil.rmtree(self.build_dir)
 
         # On Windows, emit a wrapper script that can be used to run build artifacts
         # directly from the build directory, without installing them.  On Windows $PATH
@@ -354,27 +364,12 @@ class Iproute2Builder(BuilderBase):
             build_opts, ctx, manifest, src_dir, build_dir, inst_dir
         )
 
-    def _patch(self) -> None:
-        # FBOSS build currently depends on an old version of iproute2 (commit
-        # 7ca63aef7d1b0c808da0040c6b366ef7a61f38c1). This is missing a commit
-        # (ae717baf15fb4d30749ada3948d9445892bac239) needed to build iproute2
-        # successfully. Apply it viz.: include stdint.h
-        # Reference: https://fburl.com/ilx9g5xm
-        with open(self.build_dir + "/tc/tc_core.c", "r") as f:
-            data = f.read()
-
-        with open(self.build_dir + "/tc/tc_core.c", "w") as f:
-            f.write("#include <stdint.h>\n")
-            f.write(data)
-
     def _build(self, install_dirs, reconfigure) -> None:
         configure_path = os.path.join(self.src_dir, "configure")
-
         env = self.env.copy()
         self._run_cmd([configure_path], env=env)
         shutil.rmtree(self.build_dir)
         shutil.copytree(self.src_dir, self.build_dir)
-        self._patch()
         self._run_cmd(["make", "-j%s" % self.num_jobs], env=env)
         install_cmd = ["make", "install", "DESTDIR=" + self.inst_dir]
 
@@ -478,7 +473,7 @@ def main():
                 "--target",
                 target,
                 "--config",
-                "Release",
+                "{build_type}",
                 get_jobs_argument(args.num_jobs),
         ] + args.cmake_args
     elif args.mode == "test":
@@ -600,8 +595,9 @@ if __name__ == "__main__":
             # unspecified.  Some of the deps fail to compile in release mode
             # due to warning->error promotion.  RelWithDebInfo is the happy
             # medium.
-            "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+            "CMAKE_BUILD_TYPE": self.build_opts.build_type,
         }
+
         if "SANDCASTLE" not in os.environ:
             # We sometimes see intermittent ccache related breakages on some
             # of the FB internal CI hosts, so we prefer to disable ccache
@@ -698,6 +694,7 @@ if __name__ == "__main__":
                 build_dir=self.build_dir,
                 install_dir=self.inst_dir,
                 sys=sys,
+                build_type=self.build_opts.build_type,
             )
 
             self._invalidate_cache()
@@ -711,7 +708,7 @@ if __name__ == "__main__":
                 "--target",
                 self.cmake_target,
                 "--config",
-                "Release",
+                self.build_opts.build_type,
                 "-j",
                 str(self.num_jobs),
             ],
@@ -1184,7 +1181,7 @@ install(FILES sqlite3.h sqlite3ext.h DESTINATION include)
                 "--target",
                 "install",
                 "--config",
-                "Release",
+                self.build_opts.build_type,
                 "-j",
                 str(self.num_jobs),
             ],

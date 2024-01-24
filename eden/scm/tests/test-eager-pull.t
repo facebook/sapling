@@ -1,8 +1,16 @@
 #debugruntest-compatible
+#testcases pulllazy-python pulllazy-rust commitgraphsegments
 
   $ configure modern
 
   $ setconfig paths.default=test:e1
+
+#if pulllazy-rust
+  $ setconfig clone.use-rust=true
+#endif
+#if commitgraphsegments
+  $ setconfig clone.use-rust=true clone.use-commit-graph=true pull.use-commit-graph=true
+#endif
 
 Disable SSH:
 
@@ -33,6 +41,45 @@ Prepare Repo:
   $ hg push -r $C --to master --create -q
   $ hg push -r $E --to master --create -q --config paths.default=test:e2
   $ hg push -r $H --to master --create -q --config paths.default=test:e3
+
+Clone:
+
+  $ cd $TESTTMP
+#if pulllazy-python
+  $ hg clone test:e3 cloned
+  fetching lazy changelog
+  populating main commit graph
+  tip commit: 7b3a68e117f183a6da8e60779d8fbeeed22382bb
+  fetching selected remote bookmarks
+  updating to branch default
+  9 files updated, 0 files merged, 0 files removed, 0 files unresolved
+#else
+  $ hg clone test:e3 cloned
+  Cloning reponame-default into $TESTTMP/cloned
+  Checking out 'master'
+  9 files updated
+#endif
+  $ cd cloned
+  $ hg log -Gr 'all()' -T '{desc} {remotenames}'
+  @    H remote/master
+  ├─╮
+  │ o  I
+  │ │
+  │ o  J
+  │
+  o  G
+  │
+  o  F
+  │
+  o  E
+  │
+  o  D
+  │
+  o  C
+  │
+  o  B
+  │
+  o  A
 
 Pull:
 
@@ -166,7 +213,7 @@ If fast path is broken, use fallback pull path:
   $ hg pull -qB master
 
   $ setconfig paths.default=test:e2
-  $ FAILPOINTS=eagerepo::api::pulllazy=return LOG=pull::fastpath=debug hg pull
+  $ FAILPOINTS="eagerepo::api::pulllazy=return;eagerepo::api::commitgraphsegments=return" LOG=pull::fastpath=debug hg pull
   pulling from test:e2
   DEBUG pull::fastpath: master: 26805aba1e600a82e93661149f2313866a221a7b => 9bc730a19041f9ec7cb33c626e811aa233efb18c
   failed to get fast pull data (not supported by the server), using fallback path

@@ -8,7 +8,7 @@ import signal
 import socket
 import sys
 
-from edenscm import server, util
+from sapling import server, util
 
 
 """

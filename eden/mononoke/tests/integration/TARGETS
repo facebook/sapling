@@ -1,0 +1,625 @@
+load("@fbcode_macros//build_defs:native_rules.bzl", "buck_filegroup")
+load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
+load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
+load(
+    "//eden/mononoke/tests/integration/facebook:fb_manifest_deps.bzl",
+    "dott_test",
+)
+load(
+    "//eden/mononoke/tests/integration/facebook:symlink.bzl",
+    "symlink",
+)
+
+oncall("mononoke")
+
+symlink(
+    name = "public_tests",
+    srcs = glob(["*.t"]),
+    visibility = ["PUBLIC"],
+)
+
+buck_filegroup(
+    name = "test_fixtures",
+    srcs = [
+        "commitsync/all.json",
+        "commitsync/all_with_flipped_config.json",
+        "commitsync/current.json",
+        "commitsync/current.toml",
+        "commitsync/flipped_config.json",
+        "commitsync/flipped_config.toml",
+        "gitexport_library.sh",
+        "just_knobs.json",
+        "library.sh",
+        "library-commit.sh",
+        "library-push-redirector.sh",
+        "library-snapshot.sh",
+        "library-xrepo-sync-with-git-submodules.sh",
+        "raw_text.txt",
+    ],
+)
+
+python_binary(
+    # @autodeps-skip
+    name = "integration_runner_real",
+    srcs = ["integration_runner_real.py"],
+    main_function = "eden.mononoke.tests.integration.integration_runner_real.run",
+    deps = [
+        "fbsource//third-party/pypi/click:click",
+        "//eden/mononoke/tests/integration/facebook:lib_buck",
+        "//libfb/py:log",
+    ] if rust_oss.is_oss_build() else [
+        "fbsource//third-party/pypi/click:click",
+        "//eden/mononoke/tests/integration/facebook:lib_buck",
+        "//eden/mononoke/tests/integration/facebook:lib_runner",
+        "//libfb/py:log",
+    ],
+)
+
+python_binary(
+    name = "get_free_socket",
+    srcs = ["get_free_socket.py"],
+    main_module = "eden.mononoke.tests.integration.get_free_socket",
+)
+
+python_binary(
+    name = "urlencode",
+    srcs = ["urlencode.py"],
+    main_module = "eden.mononoke.tests.integration.urlencode",
+)
+
+dott_test(
+    name = "admin",
+    dott_files = glob([
+        "test-admin-*.t",
+        "test-mononoke-admin*.t",
+    ]),
+    deps = [
+        "//eden/mononoke:admin",
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:blobstore_healer",
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke/git/gitimport:gitimport",
+    ],
+)
+
+dott_test(
+    name = "newadmin",
+    disable_all_network_access_target = False,
+    dott_files = glob([
+        "test-newadmin-*.t",
+    ]),
+    deps = [
+        "//eden/mononoke:backfill_derived_data",
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke/git/gitimport:gitimport",
+        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)
+
+dott_test(
+    name = "import",
+    dott_files = glob([
+        "test-import-*.t",
+    ]),
+    deps = [
+        "//eden/mononoke:backfill_derived_data",
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke/tools/import:import",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)
+
+dott_test(
+    name = "ephemeral-store",
+    dott_files = glob([
+        "test-ephemeral-store-*.t",
+    ]),
+    deps = [
+        "//eden/mononoke:backfill_derived_data",
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)
+
+dott_test(
+    name = "admin-mysql",
+    dott_files = [
+        "test-mononoke-admin.t",
+    ],
+    use_mysql = True,
+    deps = [
+        "//eden/mononoke:admin",
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:blobstore_healer",
+    ],
+)
+
+dott_test(
+    name = "aliasverify",
+    disable_all_network_access_target = False,
+    dott_files = ["test-alias-verify.t"],
+    deps = [
+        "//eden/mononoke:aliasverify",
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:mononoke",
+    ],
+)
+
+dott_test(
+    name = "backfill-derived-data-with-shardmanager",
+    # Components linked with SM library invoke some network calls to loopback
+    # address for configerator and ODS even without being part of actual execution.
+    # Skip the below tests until RCA is completed for SM integration so
+    # that integration tests do not time-out due to failed network call retries.
+    # TODO(rajshar): Investigate root cause for network calls from SM Client.
+    # Post: https://fb.workplace.com/groups/sm.users/permalink/2490367831097595/
+    disable_all_network_access_target = False,
+    dott_files = ["test-backfill-derived-data.t"],
+    deps = [
+        "//eden/mononoke:backfill_derived_data",
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)
+
+dott_test(
+    name = "backfill-derived",
+    dott_files = glob(
+        ["test-backfill-*.t"],
+        exclude = [
+            "test-backfill-derived-data.t",
+        ],
+    ),
+    deps = [
+        "//eden/mononoke:backfill_derived_data",
+        "//eden/mononoke:backfill_mapping",
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)
+
+dott_test(
+    name = "backsyncer",
+    dott_files = glob(["test-backsyncer-*.t"]),
+    deps = [
+        "//eden/mononoke:admin",
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke/commit_rewriting/backsyncer:backsyncer_cmd",
+        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)
+
+dott_test(
+    name = "benchmark-filestore",
+    dott_files = ["test-benchmark-filestore.t"],
+    deps = [
+        "//eden/mononoke/benchmarks/filestore:benchmark_filestore",
+    ],
+)
+
+dott_test(
+    name = "blobimport",
+    dott_files = glob(["test-blobimport*.t"]),
+    deps = [
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)
+
+dott_test(
+    name = "blobstore-healer",
+    dott_files = ["test-blobstore-healer.t"],
+    deps = [
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:blobstore_healer",
+    ],
+)
+
+dott_test(
+    name = "blobstore-healer-mysql",
+    dott_files = ["test-blobstore-healer.t"],
+    use_mysql = True,
+    deps = [
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:blobstore_healer",
+    ],
+)
+
+dott_test(
+    name = "bonsai-verify",
+    dott_files = ["test-bonsai-verify.t"],
+    deps = [
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:bonsai_verify",
+    ],
+)
+
+dott_test(
+    name = "check-git-wc",
+    dott_files = ["test-check-git-wc.t"],
+    deps = [
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:check_git_wc",
+    ],
+)
+
+dott_test(
+    name = "cross-repo",
+    dott_files = glob(["test-cross-repo-*.t"]),
+    deps = [
+        "//eden/mononoke:admin",
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke/commit_rewriting/backsyncer:backsyncer_cmd",
+        "//eden/mononoke/commit_rewriting/commit_validator:commit_validator",
+        "//eden/mononoke/commit_rewriting/megarepo:megarepotool",
+        "//eden/mononoke/commit_rewriting/mononoke_x_repo_sync_job:mononoke_x_repo_sync_job",
+        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)
+
+dott_test(
+    name = "dump-changesets",
+    dott_files = glob(["test-dump-changesets*.t"]),
+    deps = [
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke/tools/admin:newadmin",
+    ],
+)
+
+dott_test(
+    name = "edenapi",
+    dott_files =
+        glob([
+            "test-edenapi-*.t",
+        ]),
+    deps = [
+        "//eden/mononoke:admin",
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke:segmented_changelog_tailer",
+        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)
+
+dott_test(
+    name = "filenodes",
+    dott_files = ["test-db-filenodes.t"] + glob([
+        "test-filenodes*.t",
+    ]),
+    deps = [
+        "//eden/mononoke:admin",
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:mononoke",
+    ],
+)
+
+dott_test(
+    name = "gitimport",
+    dott_files =
+        glob([
+            "test-gitimport*.t",
+        ]),
+    deps = [
+        "//eden/mononoke:admin",
+        "//eden/mononoke:bonsai_verify",
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke/git/gitimport:gitimport",
+        "//eden/mononoke/tools/admin:newadmin",
+    ],
+)
+
+dott_test(
+    name = "gitbundle",
+    dott_files =
+        glob([
+            "test-gitbundle*.t",
+        ]),
+    deps = [
+        "//eden/mononoke:admin",
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke/git/gitimport:gitimport",
+        "//eden/mononoke/tools/admin:newadmin",
+    ],
+)
+
+dott_test(
+    name = "hooks",
+    dott_files =
+        glob(
+            [
+                "test-hooks*.t",
+                "test-hook-*.t",
+            ],
+            exclude = ["test-hook-tailer.t"],
+        ),
+    deps = [
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:mononoke",
+    ],
+)
+
+dott_test(
+    name = "lfs-server",
+    dott_files = glob(["test-lfs-server*.t"]),
+    deps = [
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke/lfs_server:lfs_server",
+        "//eden/mononoke/tools/import:import",
+    ],
+)
+
+dott_test(
+    name = "lfs",
+    dott_files =
+        [
+            "test-push-protocol-lfs.t",
+        ] + glob(
+            [
+                "test-infinitepush-*lfs.t",
+                "test-lfs*.t",
+                "test-remotefilelog-lfs*.t",
+            ],
+            exclude = ["test-lfs-server*.t"],
+        ),
+    deps = [
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke/lfs_server:lfs_server",
+    ],
+)
+
+dott_test(
+    name = "mega-repo",
+    dott_files = glob(["test-megarepo*.t"]),
+    deps = [
+        "//eden/mononoke:admin",
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke/commit_rewriting/megarepo:megarepotool",
+        "//eden/mononoke/commit_rewriting/mononoke_x_repo_sync_job:mononoke_x_repo_sync_job",
+        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)
+
+dott_test(
+    name = "microwave",
+    dott_files =
+        [
+            "test-cache-warmup-microwave.t",
+        ],
+    deps = [
+        "//eden/mononoke:backfill_derived_data",
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke/microwave:builder",
+        "//eden/mononoke/tools/admin:newadmin",
+    ],
+)
+
+dott_test(
+    name = "mononoke-hg-sync",
+    disable_all_network_access_target = False,
+    dott_files = glob([
+        "test-mononoke-hg-sync-job*.t",
+        "test-mononoke-sync-to-backup*.t",
+    ]),
+    deps = [
+        "//eden/mononoke:admin",
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:bonsai_verify",
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke/lfs_server:lfs_server",
+        "//eden/mononoke/mononoke_hg_sync_job:mononoke_hg_sync_job",
+        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)
+
+dott_test(
+    name = "mononoke-hg-sync-mysql",
+    dott_files = ["test-mononoke-hg-sync-job-generate-bundles-loop.t"],
+    use_mysql = True,
+    deps = [
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke/mononoke_hg_sync_job:mononoke_hg_sync_job",
+    ],
+)
+
+dott_test(
+    name = "packer",
+    dott_files = ["test-packer.t"],
+    deps = [
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:packer",
+    ],
+)
+
+dott_test(
+    name = "push-redirector",
+    dott_files = glob(["test-push-redirector-*.t"]),
+    deps = [
+        "//eden/mononoke:admin",
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke/commit_rewriting/backsyncer:backsyncer_cmd",
+        "//eden/mononoke/commit_rewriting/megarepo:megarepotool",
+        "//eden/mononoke/commit_rewriting/mononoke_x_repo_sync_job:mononoke_x_repo_sync_job",
+        "//eden/mononoke/mononoke_hg_sync_job:mononoke_hg_sync_job",
+        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)
+
+dott_test(
+    name = "redaction",
+    dott_files = glob(["test-redaction*.t"]),
+    deps = [
+        "//eden/mononoke:admin",
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke/tools/admin:newadmin",
+    ],
+)
+
+dott_test(
+    name = "repo-import",
+    dott_files = glob(["test-repo-import*.t"]),
+    deps = [
+        "//eden/mononoke:admin",
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke:segmented_changelog_tailer",
+        "//eden/mononoke/commit_rewriting/backsyncer:backsyncer_cmd",
+        "//eden/mononoke/repo_import:repo_import",
+        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)
+
+dott_test(
+    name = "restore-keys",
+    dott_files = glob(["test-restore-keys*.t"]),
+    deps = [
+        "//eden/mononoke:admin",
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke/cmds/copy_blobstore_keys:copy_blobstore_keys",
+        "//eden/mononoke/walker:walker",
+    ],
+)
+
+dott_test(
+    name = "segmented-changelog",
+    dott_files = glob(["test-cmd-segmented-changelog-*.t"]),
+    deps = [
+        "//eden/mononoke:admin",
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke:segmented_changelog_tailer",
+        "//eden/mononoke/tools/admin:newadmin",
+    ],
+)
+
+dott_test(
+    name = "server",
+    dott_files =
+        glob(
+            [
+                "test-bookmark-*.t",
+                "test-commitcloud*.t",
+                "test-getpack*.t",
+                "test-gettreepack*.t",
+                "test-infinitepush*.t",
+                "test-multiplexed-*.t",
+                "test-push-*.t",
+                "test-pushrebase*.t",
+                "test-server-*.t",
+            ],
+            exclude = [
+                "test-infinitepush-*lfs.t",
+                "test-push-protocol-lfs.t",
+                "test-push-redirector-*.t",
+            ],
+        ),
+    deps = [
+        "//eden/mononoke:admin",
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:mononoke",
+        # TODO: This is required for test-getpackv2-multibyte-filenames.t, as
+        # hg can't handle UTF-8 file names correctly. Once that is fixed, this
+        # dep can be removed.
+        "//eden/mononoke/git/gitimport:gitimport",
+        "//eden/mononoke/tests/integration:urlencode",
+        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/testtool:testtool",
+        "//eden/mononoke:blobstore_healer",
+    ],
+)
+
+dott_test(
+    name = "server-mysql",
+    dott_files =
+        [
+            "test-infinitepush-mutation.t",
+            "test-pushrebase.t",
+            "test-server-init.t",
+            "test-server-lookup.t",
+        ],
+    use_mysql = True,
+    deps = [
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:mononoke",
+    ],
+)
+
+dott_test(
+    name = "sqlblob",
+    dott_files = glob(["test-sqlblob*.t"]),
+    deps = [
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke:sqlblob_gc",
+    ],
+)
+
+dott_test(
+    name = "testtool",
+    dott_files = glob([
+        "test-testtool-*.t",
+    ]),
+    deps = [
+        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)
+
+dott_test(
+    name = "streaming-clone",
+    dott_files = glob(["test-streaming-clone*.t"]),
+    deps = [
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke/streaming_clone:new_streaming_clone",
+    ],
+)
+
+dott_test(
+    name = "walker",
+    disable_all_network_access_target = False,
+    dott_files = glob(["test-new-walker-*.t"]),
+    deps = [
+        "//eden/mononoke:admin",
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke:packer",
+        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/walker:walker",
+    ],
+)
+
+dott_test(
+    name = "gitexport",
+    disable_all_network_access_target = False,
+    dott_files = glob(
+        ["test-gitexport*.t"],
+    ),
+    deps = [
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke/git/gitexport:gitexport",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)

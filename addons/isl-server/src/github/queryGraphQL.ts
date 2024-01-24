@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ExecaError} from 'execa';
-
+import {isExecaError} from '../utils';
 import execa from 'execa';
 
 export default async function queryGraphQL<TData, TVariables>(
@@ -38,8 +37,17 @@ export default async function queryGraphQL<TData, TVariables>(
   args.push('--hostname', hostname);
   args.push('-f', `query=${query}`);
 
-  const {stdout} = await execa('gh', args, {stdout: 'pipe', stderr: 'pipe'}).catch(
-    (error: ExecaError & {code?: string}) => {
+  try {
+    const {stdout} = await execa('gh', args, {stdout: 'pipe', stderr: 'pipe'});
+    const json = JSON.parse(stdout);
+
+    if (Array.isArray(json.errors)) {
+      return Promise.reject(`Error: ${json.errors[0].message}`);
+    }
+
+    return json.data;
+  } catch (error: unknown) {
+    if (isExecaError(error)) {
       if (error.code === 'ENOENT' || error.code === 'EACCES') {
         // `gh` not installed on path
         throw new Error(`GhNotInstalledError: ${(error as Error).stack}`);
@@ -47,16 +55,9 @@ export default async function queryGraphQL<TData, TVariables>(
         // `gh` CLI exit code 4 => authentication issue
         throw new Error(`NotAuthenticatedError: ${(error as Error).stack}`);
       }
-      throw error;
-    },
-  );
-  const json = JSON.parse(stdout);
-
-  if (Array.isArray(json.errors)) {
-    return Promise.reject(`Error: ${json.errors[0].message}`);
+    }
+    throw error;
   }
-
-  return json.data;
 }
 
 /**

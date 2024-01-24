@@ -7,7 +7,6 @@
 
 use std::collections::BTreeMap;
 use std::collections::HashMap;
-use std::fs::File;
 use std::io::Read;
 use std::io::Write;
 use std::path::Path;
@@ -18,6 +17,7 @@ use anyhow::Result;
 use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
+use fs_err::File;
 use sha2::Digest;
 use sha2::Sha256;
 use types::hgid::WriteHgIdExt;
@@ -191,6 +191,13 @@ fn serialize_entry(mut dirstate: impl Write, path: &[u8], state: &FileStateV2) -
                 String::from_utf8_lossy(path)
             )
         })?;
+
+        tracing::trace!(
+            source_path = util::utf8::escape_non_utf8(&source_path),
+            dest_path = util::utf8::escape_non_utf8(path),
+            "serializing copy",
+        );
+
         dirstate.write_u16::<BigEndian>(source_path.len().try_into()?)?;
         dirstate.write_all(source_path)?;
     }
@@ -224,6 +231,13 @@ fn serialize_entry(mut dirstate: impl Write, path: &[u8], state: &FileStateV2) -
             ));
         }
     };
+
+    tracing::trace!(
+        path = util::utf8::escape_non_utf8(path),
+        state_char,
+        merge_state,
+        "serializing entry",
+    );
 
     dirstate.write_u8(state_char)?;
     dirstate.write_u32::<BigEndian>(0)?;
@@ -287,6 +301,12 @@ fn deserialize_entry(mut dirstate: impl Read) -> Result<Option<(Box<[u8]>, FileS
         let source_size = dirstate.read_u16::<BigEndian>()?;
         let source_path = read_path(&mut dirstate, source_size)?;
 
+        tracing::trace!(
+            source_path = util::utf8::escape_non_utf8(source_path.as_ref()),
+            dest_path = util::utf8::escape_non_utf8(dest_path.as_ref()),
+            "deserializing copy entry",
+        );
+
         return Ok(Some((
             dest_path,
             FileStateV2 {
@@ -321,6 +341,13 @@ fn deserialize_entry(mut dirstate: impl Read) -> Result<Option<(Box<[u8]>, FileS
     };
 
     let path = read_path(&mut dirstate, size)?;
+
+    tracing::trace!(
+        path = util::utf8::escape_non_utf8(path.as_ref()),
+        ?state,
+        "deserializing dirstate entry",
+    );
+
     Ok(Some((
         path,
         FileStateV2 {

@@ -28,7 +28,7 @@ use mononoke_types::BlobstoreBytes;
 use sqlblob::get_test_config_store;
 use sqlblob::Sqlblob;
 use strum::IntoEnumIterator;
-use tempdir::TempDir;
+use tempfile::TempDir;
 
 async fn overwrite<B: Blobstore + BlobstorePutOps>(
     fb: FacebookInit,
@@ -239,7 +239,7 @@ blobstore_test_impl! {
 
 blobstore_test_impl! {
     fileblob_test => {
-        state: Arc::new(TempDir::new("fileblob_test").unwrap()),
+        state: Arc::new(TempDir::with_prefix("fileblob_test.").unwrap()),
         new: move |dir: Arc<TempDir>, put_behaviour,| Fileblob::open(&*dir, put_behaviour),
         persistent: true,
         has_ctime: true,

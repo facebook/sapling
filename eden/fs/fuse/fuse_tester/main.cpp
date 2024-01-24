@@ -14,9 +14,9 @@
 #include <folly/logging/LogConfigParser.h>
 #include <folly/logging/xlog.h>
 #include <folly/portability/GFlags.h>
-#include <signal.h>
 #include <sysexits.h>
-#include "eden/common/utils/ProcessNameCache.h"
+#include <csignal>
+#include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/fuse/FuseDispatcher.h"
 #include "eden/fs/privhelper/PrivHelper.h"
@@ -133,10 +133,11 @@ int main(int argc, char** argv) {
       privHelper.get(),
       std::move(fuseDevice),
       mountPath,
+      folly::getUnsafeMutableGlobalCPUExecutor(),
       FLAGS_numFuseThreads,
       std::move(dispatcher),
       &straceLogger,
-      std::make_shared<ProcessNameCache>(),
+      std::make_shared<ProcessInfoCache>(),
       /*fsEventLogger=*/nullptr,
       std::chrono::seconds(60),
       /*notifications=*/nullptr,

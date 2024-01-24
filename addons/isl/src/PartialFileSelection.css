@@ -21,7 +21,8 @@
 }
 
 .partial-file-selection-border {
-  border: 1px solid var(--tooltip-border);
+  border-left: 1px solid var(--tooltip-border);
+  width: fit-content;
 }
 
 .partial-file-selection-width-min-content {
@@ -29,10 +30,36 @@
 }
 
 .partial-file-selection {
-  background: var(--background);
-  display: flex;
-  flex-direction: row;
-  flex-wrap: nowrap;
+  border-left: 1px solid var(--tooltip-border);
+  font-family: var(--monospace-fontFamily);
+  font-size: 12px;
+  border-spacing: 0;
+  table-layout: fixed;
+  margin-bottom: var(--pad);
+  user-select: none;
+}
+
+.partial-file-selection .line {
+  user-select: text;
+  padding-inline: var(--halfpad) var(--pad);
+  max-width: 1200px;
+  white-space: pre-wrap;
+}
+
+.partial-file-selection .column-a-number,
+.partial-file-selection .column-b-number {
+  background-color: var(--subtle-hover-darken);
+  vertical-align: top;
+}
+
+.partial-file-selection tr {
+  white-space: pre;
+}
+.partial-file-selection td {
+  padding: 0;
+}
+.partial-file-selection td {
+  padding: 0;
 }
 
 .partial-file-selection pre {
@@ -42,17 +69,26 @@
   width: fit-content;
   /* Set line-height explicitly to avoid dynamic line heights based on (different) fonts decided by text content. */
   line-height: 1.2;
+  font-family: var(--monospace-fontFamily);
+  font-size: 12px;
 }
 
 .partial-file-selection .line-context {
   user-select: none;
   text-align: center;
-  margin-top: var(--halfpad);
-  margin-bottom: var(--halfpad);
 }
 
 .partial-file-selection .line-context {
   height: var(--pad);
+}
+
+.partial-file-selection .column-unified {
+  min-width: 100%;
+}
+
+.partial-file-selection .column-a-number,
+.partial-file-selection .column-b-number {
+  min-width: 3em;
 }
 
 .partial-file-selection.checkboxes .line.line-context,
@@ -93,12 +129,6 @@
   user-select: none;
 }
 
-.partial-file-selection .line {
-  padding-left: var(--halfpad);
-  padding-right: var(--halfpad);
-  min-width: 100px;
-}
-
 .partial-file-selection .column-a .region-same,
 .partial-file-selection .column-b .region-same {
   opacity: 0.3;
@@ -120,6 +150,7 @@
 
 .partial-file-selection .line-number.selectable {
   cursor: pointer;
+  background: var(--hover-darken);
 }
 
 .partial-file-selection .line-number.selectable.selected {
@@ -133,11 +164,14 @@
 
 .partial-file-selection .checkbox-anchor {
   position: relative;
-  height: 0;
+  height: 14px;
+  display: block;
+  width: 40px;
 }
 
 .partial-file-selection .checkbox-container {
   position: absolute;
   padding-left: var(--pad);
   white-space: normal; /* needed for <VSCodeCheckbox /> */
+  top: calc(9px - 1em);
 }

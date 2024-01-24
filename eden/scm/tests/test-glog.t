@@ -91,7 +91,7 @@
 
   $ cat > printrevset.py << 'EOF'
   > from __future__ import absolute_import
-  > from edenscm import (
+  > from sapling import (
   >   cmdutil,
   >   commands,
   >   extensions,
@@ -1556,9 +1556,9 @@
 
   $ echo 'fc281d8ff18d999ad6497b3d27390bcd695dcc73 foo-bar' >> .hgtags
   $ hg commit -Aqm 'Added tag foo-bar for changeset fc281d8ff18d'
-  $ hg book foo-bar
-  $ hg log -G --print-revset -r foo-bar
-  ['foo-bar']
+  $ hg book foo-bar-book
+  $ hg log -G --print-revset -r foo-bar-book
+  ['foo-bar-book']
   []
 
 # Test --follow and forward --rev

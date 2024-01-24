@@ -12,11 +12,13 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Error;
+use clientinfo::ClientEntryPoint;
+use clientinfo::ClientInfo;
+use clientinfo::CLIENT_INFO_HEADER;
 use fbinit::FacebookInit;
 use sharding_ext::encode_repo_name;
-use source_control::client::make_SourceControlService;
 use source_control::client::SourceControlService;
-use x2pclient::X2pClientBuilder;
+use source_control_x2pclients::make_SourceControlService_x2pclient;
 
 const DEFAULT_TIER: &str = "shardmanager:mononoke.scs";
 
@@ -32,15 +34,17 @@ impl Connection {
     /// Build a connection from a `host:port` string.
     #[cfg(not(target_os = "windows"))]
     pub fn from_host_port(fb: FacebookInit, host_port: impl AsRef<str>) -> Result<Self, Error> {
-        use thriftclient::ThriftChannelBuilder;
+        use source_control_thriftclients::make_SourceControlService_thriftclient;
 
         let mut addrs = host_port.as_ref().to_socket_addrs()?;
         let addr = addrs.next().expect("no address found");
-        let client = ThriftChannelBuilder::from_sock_addr(fb, addr)?
-            .with_conn_timeout(CONN_TIMEOUT_MS)
-            .with_recv_timeout(RECV_TIMEOUT_MS)
-            .with_secure(true)
-            .build_client(make_SourceControlService)?;
+        let client = make_SourceControlService_thriftclient!(
+            fb,
+            from_sock_addr = addr,
+            with_conn_timeout = CONN_TIMEOUT_MS,
+            with_recv_timeout = RECV_TIMEOUT_MS,
+            with_secure = true
+        )?;
         Ok(Self { client })
     }
 
@@ -61,36 +65,36 @@ impl Connection {
         shardmanager_domain: Option<&str>,
     ) -> Result<Self, Error> {
         use maplit::hashmap;
-        use rand::distributions::Alphanumeric;
-        use rand::Rng;
+        use source_control_srclients::make_SourceControlService_srclient;
         use srclient::ClientParams;
-        use srclient::SRChannelBuilder;
 
-        let correlator: String = rand::thread_rng()
-            .sample_iter(&Alphanumeric)
-            .take(16)
-            .map(char::from)
-            .collect();
+        let client_info = ClientInfo::new_with_entry_point(ClientEntryPoint::ScsClient)?;
         let headers = hashmap! {
-            String::from("client_type") => String::from("scsc CLI"),
-            String::from("client_correlator") => correlator,
+            String::from(CLIENT_INFO_HEADER) => client_info.to_json()?,
         };
         let conn_config = hashmap! {
             String::from("client_id") => client_id,
         };
 
-        let client = SRChannelBuilder::from_service_name(fb, tier.as_ref())?
-            .with_conn_config(&conn_config)
-            .with_persistent_headers(headers);
-
         let client = if let Some(shardmanager_domain) = shardmanager_domain {
             let client_params = ClientParams::new()
                 .with_shard_manager_domain(encode_repo_name(shardmanager_domain));
-            client.with_client_params(client_params)
+            make_SourceControlService_srclient!(
+                fb,
+                tiername = tier.as_ref(),
+                with_conn_config = &conn_config,
+                with_persistent_headers = headers,
+                with_client_params = client_params,
+            )?
         } else {
-            client
-        }
-        .build_client(make_SourceControlService)?;
+            make_SourceControlService_srclient!(
+                fb,
+                tiername = tier.as_ref(),
+                with_conn_config = &conn_config,
+                with_persistent_headers = headers,
+            )?
+        };
+
         Ok(Self { client })
     }
 
@@ -114,13 +118,15 @@ impl Connection {
         tier: impl AsRef<str>,
         shardmanager_domain: Option<&str>,
     ) -> Result<Self, Error> {
-        let client = X2pClientBuilder::from_service_name(fb, tier.as_ref());
-        let client = if let Some(sm_domain) = shardmanager_domain {
-            client.with_shard_manager_domain(encode_repo_name(sm_domain))
+        let client = if let Some(shardmanager_domain) = shardmanager_domain {
+            make_SourceControlService_x2pclient!(
+                fb,
+                tiername = tier.as_ref(),
+                with_shard_manager_domain = encode_repo_name(shardmanager_domain)
+            )?
         } else {
-            client
-        }
-        .build_client(make_SourceControlService)?;
+            make_SourceControlService_x2pclient!(fb, tiername = tier.as_ref())?
+        };
 
         Ok(Self { client })
     }

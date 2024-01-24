@@ -422,7 +422,7 @@ mod tests {
             let take = if take > 12 {
                 None
             } else {
-                Some(take as u64)
+                Some(take)
             };
             let orig = NameSet::from("a c b d e f g i h j");
             let set = SliceSet::new(orig, skip, take);

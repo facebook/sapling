@@ -35,7 +35,7 @@ use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::HgNodeHash;
 use mercurial_types::HgNodeKey;
-use mercurial_types::MPath;
+use mercurial_types::NonRootMPath;
 use mercurial_types::RepoPath;
 use mercurial_types::NULL_HASH;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -126,18 +126,18 @@ impl NewBlobs {
             }
         };
 
-        let buffer_size = tunables::tunables()
-            .repo_client_concurrent_blob_uploads()
-            .unwrap_or_default();
-        let s = if buffer_size <= 0 {
+        let mb_buffer_size =
+            justknobs::get_as::<usize>("scm/mononoke:repo_client_concurrent_blob_uploads", None);
+
+        let s = if let Ok(buffer_size) = mb_buffer_size {
+            stream::iter(entries)
+                .buffer_unordered(buffer_size)
+                .right_stream()
+        } else {
             entries
                 .into_iter()
                 .collect::<FuturesUnordered<_>>()
                 .left_stream()
-        } else {
-            stream::iter(entries)
-                .buffer_unordered(buffer_size as usize)
-                .right_stream()
         };
 
         Ok(Self {
@@ -185,7 +185,7 @@ impl NewBlobs {
             }
 
             let nodehash = details.entryid().clone().into_nodehash();
-            let next_path = MPath::join_opt(path_taken.mpath(), name);
+            let next_path = NonRootMPath::join_opt(path_taken.mpath(), name);
             let next_path = match next_path {
                 Some(path) => path,
                 None => bail!("internal error: joined root path with root manifest"),
@@ -251,7 +251,7 @@ fn get_manifest_parent_content(
 
 fn is_entry_present_in_parent(
     p: Option<&ManifestContent>,
-    name: &MPath,
+    name: &NonRootMPath,
     details: &Details,
 ) -> bool {
     match p.and_then(|p| p.files.get(name)) {

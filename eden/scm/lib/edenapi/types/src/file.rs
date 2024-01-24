@@ -65,7 +65,7 @@ impl FileError {
 
 /// File "aux data", requires an additional mononoke blobstore lookup. See mononoke_types::ContentMetadataV2.
 #[auto_wire]
-#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct FileAuxData {
     #[id(0)]
@@ -123,7 +123,7 @@ impl FileContent {
             return Err(FileError::Lfs(key.clone(), data.clone()));
         }
 
-        let computed = HgId::from_content(&data, parents);
+        let computed = HgId::from_content(data, parents);
         if computed != key.hgid {
             let err = InvalidHgId {
                 expected: key.hgid,
@@ -165,6 +165,57 @@ pub struct FileEntry {
     pub parents: Parents,
     pub content: Option<FileContent>,
     pub aux_data: Option<FileAuxData>,
+}
+
+impl FileAuxData {
+    /// Calculate `FileAuxData` from file content.
+    pub fn from_content(data: &[u8]) -> Self {
+        let sha256 = {
+            use sha2::Digest;
+            let mut hash = sha2::Sha256::new();
+            hash.update(data);
+            let bytes: [u8; Sha256::len()] = hash.finalize().into();
+            Sha256::from(bytes)
+        };
+        let content_id = {
+            use blake2::digest::FixedOutput;
+            use blake2::digest::Mac;
+            use blake2::Blake2bMac;
+            let mut hash = Blake2bMac::new_from_slice(b"content").expect("key < 32 bytes");
+            hash.update(data);
+            let mut ret = [0; ContentId::len()];
+            hash.finalize_into((&mut ret).into());
+            ContentId::from_byte_array(ret)
+        };
+        let sha1 = {
+            use sha1::Digest;
+            let mut hash = sha1::Sha1::new();
+            hash.update(data);
+            let bytes: [u8; Sha1::len()] = hash.finalize().into();
+            Sha1::from(bytes)
+        };
+        let seeded_blake3 = {
+            use blake3::Hasher;
+            #[cfg(not(fbcode_build))]
+            let key = "20220728-2357111317192329313741#".as_bytes();
+            #[cfg(fbcode_build)]
+            let key = blake3_constant::BLAKE3_HASH_KEY.as_bytes();
+            let mut ret = [0; Blake3::len()];
+            ret.copy_from_slice(key);
+            let mut hasher = Hasher::new_keyed(&ret);
+            hasher.update(data.as_ref());
+            let hashed_bytes: [u8; Blake3::len()] = hasher.finalize().into();
+            Blake3::from(hashed_bytes)
+        };
+        let total_size = data.len() as _;
+        Self {
+            total_size,
+            content_id,
+            sha1,
+            sha256,
+            seeded_blake3: Some(seeded_blake3),
+        }
+    }
 }
 
 impl FileEntry {
@@ -288,4 +339,24 @@ pub struct UploadHgFilenodeRequest {
 pub struct UploadTokensResponse {
     #[id(2)]
     pub token: UploadToken,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn snapshot_blake2() {
+        let aux = FileAuxData::from_content(b"abc");
+        #[rustfmt::skip]
+        assert_eq!(
+            aux.content_id.as_ref(),
+            &[
+                0x22, 0x8d, 0x7e, 0xfd, 0x5e, 0x3c, 0x1a, 0xcd,
+                0xf4, 0x0e, 0x52, 0x43, 0x3f, 0x72, 0x8f, 0x53,
+                0x78, 0x90, 0x0e, 0x41, 0xd4, 0xea, 0xe7, 0x14,
+                0x64, 0x1f, 0x6f, 0x04, 0x0d, 0xee, 0x69, 0x3e,
+            ]
+        );
+    }
 }

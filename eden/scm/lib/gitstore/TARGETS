@@ -1,0 +1,30 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "gitstore",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "bench": [
+                {
+                    "harness": False,
+                    "name": "read_obj",
+                },
+            ],
+        },
+    },
+    crate_root = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:fs-err",
+        "fbsource//third-party/rust:git2",
+        "//eden/scm/lib/minibytes:minibytes",
+        "//eden/scm/lib/storemodel:storemodel",
+        "//eden/scm/lib/types:types",
+        "//eden/scm/lib/util/factory:factory",
+    ],
+)

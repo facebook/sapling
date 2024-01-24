@@ -11,6 +11,10 @@
 
 # Editing a new file causes a treestate flush.
   $ echo >> file1
+
+Defeat same-second behavior difference
+  $ sleep 1
+
   $ EDENSCM_LOG=treestate::dirstate=debug hg status
   DEBUG treestate::dirstate: flushing dirty treestate
   M file1

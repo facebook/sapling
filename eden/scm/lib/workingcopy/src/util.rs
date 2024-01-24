@@ -30,6 +30,7 @@ pub fn walk_treestate(
     treestate: &mut TreeState,
     matcher: DynMatcher,
     state_all: StateFlags,
+    state_any: StateFlags,
     state_none: StateFlags,
     mut callback: impl FnMut(RepoPathBuf, &FileStateV2) -> Result<()>,
 ) -> Result<Vec<ParseError>> {
@@ -52,7 +53,9 @@ pub fn walk_treestate(
         &|components, dir| {
             let state_matches = match dir.get_aggregated_state() {
                 Some(state) => {
-                    state.union.contains(state_all) && !state.intersection.intersects(state_none)
+                    state.union.contains(state_all)
+                        && !state.intersection.intersects(state_none)
+                        && (state_any.is_empty() || state.union.intersects(state_any))
                 }
                 None => true,
             };
@@ -72,7 +75,10 @@ pub fn walk_treestate(
 
             true
         },
-        &|_path, file| file.state & file_mask == state_all,
+        &|_path, file| {
+            file.state & file_mask == state_all
+                && (state_any.is_empty() || file.state & state_any != StateFlags::empty())
+        },
     )?;
 
     Ok(path_errors)

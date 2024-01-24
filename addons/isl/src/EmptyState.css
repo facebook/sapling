@@ -19,6 +19,13 @@
   letter-spacing: 2px;
 }
 
+.empty-state-small {
+  font-size: initial;
+  width: initial;
+  letter-spacing: initial;
+  padding: 0 calc(3 * var(--pad));
+}
+
 /* Use <p> as a byline within the empty state */
 .empty-state p {
   font-size: initial;

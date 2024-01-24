@@ -38,7 +38,7 @@ use mercurial_types::Delta;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgNodeHash;
 use mercurial_types::HgNodeKey;
-use mercurial_types::MPath;
+use mercurial_types::NonRootMPath;
 use mercurial_types::RepoPath;
 use mercurial_types::RevFlags;
 use mercurial_types::NULL_HASH;
@@ -53,7 +53,7 @@ use crate::upload_blobs::UploadableHgBlob;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct FilelogDeltaed {
-    pub path: MPath,
+    pub path: NonRootMPath,
     pub chunk: CgDeltaChunk,
 }
 
@@ -276,7 +276,7 @@ impl Arbitrary for Filelog {
     fn arbitrary(g: &mut Gen) -> Self {
         Filelog {
             node_key: HgNodeKey {
-                path: RepoPath::FilePath(MPath::arbitrary(g)),
+                path: RepoPath::FilePath(NonRootMPath::arbitrary(g)),
                 hash: HgNodeHash::arbitrary(g),
             },
             p1: HgNodeHash::arbitrary(g).into_option(),
@@ -469,7 +469,7 @@ mod tests {
         let ctx = CoreContext::test_mock(fb);
         let f1 = Filelog {
             node_key: HgNodeKey {
-                path: RepoPath::FilePath(MPath::new(b"test").unwrap()),
+                path: RepoPath::FilePath(NonRootMPath::new(b"test").unwrap()),
                 hash: ONES_HASH,
             },
             p1: Some(TWOS_HASH),
@@ -481,7 +481,7 @@ mod tests {
 
         let f2 = Filelog {
             node_key: HgNodeKey {
-                path: RepoPath::FilePath(MPath::new(b"test2").unwrap()),
+                path: RepoPath::FilePath(NonRootMPath::new(b"test2").unwrap()),
                 hash: FIVES_HASH,
             },
             p1: Some(SIXES_HASH),
@@ -502,7 +502,7 @@ mod tests {
     async fn files_check_order(ctx: CoreContext, correct_order: bool) {
         let f1 = Filelog {
             node_key: HgNodeKey {
-                path: RepoPath::FilePath(MPath::new(b"test").unwrap()),
+                path: RepoPath::FilePath(NonRootMPath::new(b"test").unwrap()),
                 hash: ONES_HASH,
             },
             p1: Some(TWOS_HASH),
@@ -514,7 +514,7 @@ mod tests {
 
         let f2 = Filelog {
             node_key: HgNodeKey {
-                path: RepoPath::FilePath(MPath::new(b"test2").unwrap()),
+                path: RepoPath::FilePath(NonRootMPath::new(b"test2").unwrap()),
                 hash: FIVES_HASH,
             },
             p1: Some(SIXES_HASH),

@@ -22,6 +22,8 @@ class JournalTest(EdenHgTestCase):
 
     def test_journal(self) -> None:
         self.assert_journal_empty()
+        # TODO(sggutier): Remove this once the journal is implemented for Rust commands
+        self.repo.hg("config", "--local", "checkout.use-rust=false")
 
         # Create a new commit
         self.assert_status_empty()

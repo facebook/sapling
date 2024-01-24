@@ -69,9 +69,10 @@ class FilteredBackingStore
 
   std::unordered_set<std::string> stopRecordingFetch() override;
 
-  folly::SemiFuture<folly::Unit> importManifestForRoot(
+  ImmediateFuture<folly::Unit> importManifestForRoot(
       const RootId& rootId,
-      const Hash20& manifest) override;
+      const Hash20& manifest,
+      const ObjectFetchContextPtr& context) override;
 
   RootId parseRootId(folly::StringPiece rootId) override;
   std::string renderRootId(const RootId& rootId) override;
@@ -79,6 +80,28 @@ class FilteredBackingStore
   std::string renderObjectId(const ObjectId& objectId) override;
 
   std::optional<folly::StringPiece> getRepoName() override;
+
+  /**
+   * Encodes an underlying RootId in the RootId format used by
+   * FilteredBackingStore. This format is as follows:
+   *
+   * <originalRootIdLength><originalRootId><filterId>
+   *
+   * Where originalRootIdLength is a varint representing the length of the
+   * original RootId. This is used so we can properly parse out the filterId
+   * from the RootID at a later point in time.
+   */
+  static std::string createFilteredRootId(
+      std::string_view originalRootId,
+      std::string_view filterId);
+
+  /**
+   * Similar to createFilteredRootId, but uses the null filter ID instead of a
+   * user provided filter ID.
+   */
+  static std::string createNullFilteredRootId(std::string_view originalRootId) {
+    return createFilteredRootId(originalRootId, kNullFilterId);
+  }
 
   /**
    * Get the underlying BackingStore. This should only be used for operations
@@ -107,16 +130,17 @@ class FilteredBackingStore
   /*
    * Does the actual filtering logic for tree and root-tree objects.
    */
-  PathMap<TreeEntry> filterImpl(
+  ImmediateFuture<std::unique_ptr<PathMap<TreeEntry>>> filterImpl(
       const TreePtr unfilteredTree,
       RelativePathPiece treePath,
-      folly::StringPiece filterId);
+      folly::StringPiece filterId,
+      FilteredObjectIdType treeType);
 
   /*
    * Determine whether a path is affected by a filter change from One -> Two or
    * vice versa.
    */
-  bool pathAffectedByFilterChange(
+  ImmediateFuture<ObjectComparison> pathAffectedByFilterChange(
       RelativePathPiece pathOne,
       RelativePathPiece pathTwo,
       folly::StringPiece filterIdOne,

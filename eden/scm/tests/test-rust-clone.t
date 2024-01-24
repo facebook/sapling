@@ -271,3 +271,10 @@ Default to "tip" if selectivepulldefault not available.
    INFO get_update_target: hgcommands::commands::clone: exit
   Checking out 'tip'
   5 files updated
+
+Don't perform any queries for null commit id.
+  $ LOG= hg clone -Uq ./e1 no_workingcopy
+  $ cd no_workingcopy
+  $ LOG=trace hg status -m 2>trace
+  $ grep 0000000000000000000000000000000000000000 trace
+  [1]

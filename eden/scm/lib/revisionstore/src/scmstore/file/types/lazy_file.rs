@@ -9,7 +9,7 @@ use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
 use edenapi_types::FileEntry;
-use hgstore::strip_metadata;
+use hgstore::strip_hg_file_metadata;
 use minibytes::Bytes;
 use types::HgId;
 use types::Key;
@@ -17,9 +17,7 @@ use types::Key;
 use crate::indexedlogdatastore::Entry;
 use crate::lfs::rebuild_metadata;
 use crate::lfs::LfsPointersEntry;
-use crate::memcache::McData;
 use crate::scmstore::file::FileAuxData;
-use crate::ContentHash;
 use crate::Metadata;
 
 /// A minimal file enum that simply wraps the possible underlying file types,
@@ -37,9 +35,6 @@ pub(crate) enum LazyFile {
 
     /// An EdenApi FileEntry.
     EdenApi(FileEntry),
-
-    /// A memcache entry, convertable to Entry. In this case the Key's path should match the requested Key's path.
-    Memcache(McData),
 }
 
 impl LazyFile {
@@ -51,7 +46,6 @@ impl LazyFile {
             IndexedLog(ref entry) => Some(entry.key().hgid),
             Lfs(_, ref ptr) => Some(ptr.hgid()),
             EdenApi(ref entry) => Some(entry.key().hgid),
-            Memcache(ref entry) => Some(entry.key.hgid),
         }
     }
 
@@ -59,13 +53,7 @@ impl LazyFile {
     pub(crate) fn aux_data(&mut self) -> Result<FileAuxData> {
         // TODO(meyer): Implement the rest of the aux data fields
         let aux_data = match self {
-            LazyFile::Lfs(content, ref ptr) => FileAuxData {
-                total_size: content.len() as u64,
-                content_id: ContentHash::content_id(&content),
-                content_sha1: ContentHash::sha1(&content),
-                content_sha256: ptr.sha256(),
-                content_seeded_blake3: Some(ContentHash::seeded_blake3(content)),
-            },
+            LazyFile::Lfs(content, _) => FileAuxData::from_content(&content),
             LazyFile::EdenApi(entry) if entry.aux_data.is_some() => entry
                 .aux_data()
                 .cloned()
@@ -75,13 +63,7 @@ impl LazyFile {
                 .into(),
             _ => {
                 let content = self.file_content()?;
-                FileAuxData {
-                    total_size: content.len() as u64,
-                    content_id: ContentHash::content_id(&content),
-                    content_sha1: ContentHash::sha1(&content),
-                    content_sha256: ContentHash::sha256(&content).unwrap_sha256(),
-                    content_seeded_blake3: Some(ContentHash::seeded_blake3(&content)),
-                }
+                FileAuxData::from_content(&content)
             }
         };
         Ok(aux_data)
@@ -91,12 +73,11 @@ impl LazyFile {
     pub(crate) fn file_content(&mut self) -> Result<Bytes> {
         use LazyFile::*;
         Ok(match self {
-            IndexedLog(ref mut entry) => strip_metadata(&entry.content()?)?.0,
+            IndexedLog(ref mut entry) => strip_hg_file_metadata(&entry.content()?)?.0,
             Lfs(ref blob, _) => blob.clone(),
-            ContentStore(ref blob, _) => strip_metadata(blob)?.0,
+            ContentStore(ref blob, _) => strip_hg_file_metadata(blob)?.0,
             // TODO(meyer): Convert EdenApi to use minibytes
-            EdenApi(ref entry) => strip_metadata(&entry.data()?.into())?.0,
-            Memcache(ref entry) => strip_metadata(&entry.data)?.0,
+            EdenApi(ref entry) => strip_hg_file_metadata(&entry.data()?.into())?.0,
         })
     }
 
@@ -104,23 +85,21 @@ impl LazyFile {
     pub(crate) fn file_content_with_copy_info(&mut self) -> Result<(Bytes, Option<Key>)> {
         use LazyFile::*;
         Ok(match self {
-            IndexedLog(ref mut entry) => strip_metadata(&entry.content()?)?,
+            IndexedLog(ref mut entry) => strip_hg_file_metadata(&entry.content()?)?,
             Lfs(ref blob, ref ptr) => (blob.clone(), ptr.copy_from().clone()),
-            ContentStore(ref blob, _) => strip_metadata(blob)?,
-            EdenApi(ref entry) => strip_metadata(&entry.data()?.into())?,
-            Memcache(ref entry) => strip_metadata(&entry.data)?,
+            ContentStore(ref blob, _) => strip_hg_file_metadata(blob)?,
+            EdenApi(ref entry) => strip_hg_file_metadata(&entry.data()?.into())?,
         })
     }
 
     /// The file content, as would be encoded in the Mercurial blob (with copy header)
-    pub(crate) fn hg_content(&mut self) -> Result<Bytes> {
+    pub(crate) fn hg_content(&self) -> Result<Bytes> {
         use LazyFile::*;
         Ok(match self {
-            IndexedLog(ref mut entry) => entry.content()?,
+            IndexedLog(ref entry) => entry.content()?,
             Lfs(ref blob, ref ptr) => rebuild_metadata(blob.clone(), ptr),
             ContentStore(ref blob, _) => blob.clone(),
             EdenApi(ref entry) => entry.data()?.into(),
-            Memcache(ref entry) => entry.data.clone(),
         })
     }
 
@@ -134,7 +113,6 @@ impl LazyFile {
             },
             ContentStore(_, ref meta) => meta.clone(),
             EdenApi(ref entry) => entry.metadata()?.clone(),
-            Memcache(ref entry) => entry.metadata.clone(),
         })
     }
 
@@ -148,11 +126,6 @@ impl LazyFile {
                 entry.data()?.into(),
                 entry.metadata()?.clone(),
             )),
-            // TODO(meyer): We shouldn't ever need to replace the key with Memcache, can probably just clone this.
-            Memcache(ref entry) => Some({
-                let entry: Entry = entry.clone().into();
-                entry.with_key(key)
-            }),
             // LFS Files should be written to LfsCache instead
             Lfs(_, _) => None,
             // ContentStore handles caching internally
@@ -161,22 +134,10 @@ impl LazyFile {
     }
 }
 
-impl TryFrom<McData> for LfsPointersEntry {
-    type Error = Error;
-
-    fn try_from(e: McData) -> Result<Self, Self::Error> {
-        if e.metadata.is_lfs() {
-            Ok(LfsPointersEntry::from_bytes(e.data, e.key.hgid)?)
-        } else {
-            bail!("failed to convert McData entry to LFS pointer, is_lfs is false")
-        }
-    }
-}
-
 impl TryFrom<Entry> for LfsPointersEntry {
     type Error = Error;
 
-    fn try_from(mut e: Entry) -> Result<Self, Self::Error> {
+    fn try_from(e: Entry) -> Result<Self, Self::Error> {
         if e.metadata().is_lfs() {
             Ok(LfsPointersEntry::from_bytes(e.content()?, e.key().hgid)?)
         } else {

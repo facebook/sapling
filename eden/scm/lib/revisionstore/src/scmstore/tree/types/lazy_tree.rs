@@ -12,12 +12,11 @@ use edenapi_types::TreeChildEntry;
 use edenapi_types::TreeEntry;
 use manifest_tree::TreeEntry as ManifestTreeEntry;
 use minibytes::Bytes;
-use storemodel::TreeFormat;
+use storemodel::SerializationFormat;
 use types::HgId;
 use types::Key;
 
 use crate::indexedlogdatastore::Entry;
-use crate::memcache::McData;
 use crate::scmstore::file::FileAuxData;
 use crate::Metadata;
 
@@ -33,9 +32,6 @@ pub(crate) enum LazyTree {
 
     /// An EdenApi TreeEntry.
     EdenApi(TreeEntry),
-
-    /// A memcache entry, convertable to Entry. In this case the Key's path should match the requested Key's path.
-    Memcache(McData),
 }
 
 impl LazyTree {
@@ -46,18 +42,16 @@ impl LazyTree {
             ContentStore(_, _) => None,
             IndexedLog(ref entry) => Some(entry.key().hgid),
             EdenApi(ref entry) => Some(entry.key().hgid),
-            Memcache(ref entry) => Some(entry.key.hgid),
         }
     }
 
     /// The tree content, as would be encoded in the Mercurial blob
-    pub(crate) fn hg_content(&mut self) -> Result<Bytes> {
+    pub(crate) fn hg_content(&self) -> Result<Bytes> {
         use LazyTree::*;
         Ok(match self {
-            IndexedLog(ref mut entry) => entry.content()?,
+            IndexedLog(ref entry) => entry.content()?,
             ContentStore(ref blob, _) => blob.clone(),
             EdenApi(ref entry) => entry.data()?.into(),
-            Memcache(ref entry) => entry.data.clone(),
         })
     }
 
@@ -67,11 +61,6 @@ impl LazyTree {
         Ok(match self {
             IndexedLog(ref entry) => Some(entry.clone().with_key(key)),
             EdenApi(ref entry) => Some(Entry::new(key, entry.data()?.into(), Metadata::default())),
-            // TODO(meyer): We shouldn't ever need to replace the key with Memcache, can probably just clone this.
-            Memcache(ref entry) => Some({
-                let entry: Entry = entry.clone().into();
-                entry.with_key(key)
-            }),
             // ContentStore handles caching internally
             ContentStore(_, _) => None,
         })
@@ -80,11 +69,8 @@ impl LazyTree {
     pub fn manifest_tree_entry(&mut self) -> Result<ManifestTreeEntry> {
         // TODO(meyer): Make manifest-tree crate use minibytes::Bytes
         // Currently revisionstore is only for hg format.
-        let format = TreeFormat::Hg;
-        Ok(ManifestTreeEntry(
-            self.hg_content()?.into_vec().into(),
-            format,
-        ))
+        let format = SerializationFormat::Hg;
+        Ok(ManifestTreeEntry(self.hg_content()?, format))
     }
 
     pub fn aux_data(&self) -> HashMap<HgId, FileAuxData> {
@@ -112,14 +98,13 @@ impl LazyTree {
                                         FileAuxData {
                                             total_size: file_metadata.size.unwrap(),
                                             content_id: file_metadata.content_id.unwrap(),
-                                            content_sha1: file_metadata.content_sha1.unwrap(),
-                                            content_sha256: file_metadata
+                                            sha1: file_metadata.content_sha1.unwrap(),
+                                            sha256: file_metadata
                                                 .content_sha256
                                                 .unwrap()
                                                 .into_byte_array()
                                                 .into(),
-                                            content_seeded_blake3: file_metadata
-                                                .content_seeded_blake3,
+                                            seeded_blake3: file_metadata.content_seeded_blake3,
                                         },
                                     )
                                 })

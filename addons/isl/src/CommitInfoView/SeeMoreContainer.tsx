@@ -16,25 +16,36 @@ import './SeeMoreContainer.css';
 
 const MAX_NON_EXPANDBLE_HEIGHT_PX = 275;
 
-export function SeeMoreContainer({children}: {children: ReactNode}) {
+export function SeeMoreContainer({
+  children,
+  maxHeight,
+  className,
+}: {
+  children: ReactNode;
+  maxHeight?: number;
+  className?: string;
+}) {
   const ref = useRef<null | HTMLDivElement>(null);
   const [shouldShowExpandButton, setShouldShowExpandbutton] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
 
   useLayoutEffect(() => {
     const element = ref.current;
-    if (element != null && element.scrollHeight > MAX_NON_EXPANDBLE_HEIGHT_PX) {
+    if (element != null && element.scrollHeight > (maxHeight ?? MAX_NON_EXPANDBLE_HEIGHT_PX)) {
       shouldShowExpandButton === false && setShouldShowExpandbutton(true);
     } else {
       shouldShowExpandButton === true && setShouldShowExpandbutton(false);
     }
     // Weird: we pass children to trick it to rerun this effect when the selected commit changes
     // We could also do this by passing a new key to <SeeMoreContainer> in the caller
-  }, [ref, shouldShowExpandButton, children]);
+  }, [ref, shouldShowExpandButton, children, maxHeight]);
 
   return (
-    <div className="see-more-container">
-      <div className={`see-more-container-${isExpanded ? 'expanded' : 'collapsed'}`} ref={ref}>
+    <div className={'see-more-container ' + (className ?? '')}>
+      <div
+        className={`see-more-container-${isExpanded ? 'expanded' : 'collapsed'}`}
+        ref={ref}
+        style={{maxHeight: isExpanded ? undefined : maxHeight}}>
         {children}
       </div>
       {shouldShowExpandButton ? (

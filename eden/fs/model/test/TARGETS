@@ -1,0 +1,21 @@
+load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("scm_client_infra")
+
+cpp_unittest(
+    name = "test",
+    srcs = glob(["*Test.cpp"]),
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/model:model",
+        "//eden/fs/testharness:test_util",
+        "//eden/fs/utils:eden_error",
+        "//eden/fs/utils:path",
+        "//folly:range",
+        "//folly:string",
+        "//folly/container:array",
+        "//folly/io:iobuf",
+        "//folly/portability:gtest",
+    ],
+)

@@ -14,10 +14,13 @@ use anyhow::Result;
 use async_runtime::block_on;
 use async_runtime::spawn_blocking;
 use async_runtime::stream_to_iter;
+use clientinfo::get_client_request_info_thread_local;
+use clientinfo_async::with_client_request_info_scope;
 use crossbeam::channel::Sender;
 use edenapi_types::FileResponse;
 use edenapi_types::FileSpec;
 use futures::StreamExt;
+use futures::TryFutureExt;
 use progress_model::AggregatingProgressBar;
 use tracing::debug;
 use tracing::field;
@@ -38,7 +41,6 @@ use crate::lfs::LfsPointersEntry;
 use crate::lfs::LfsRemoteInner;
 use crate::lfs::LfsStore;
 use crate::lfs::LfsStoreEntry;
-use crate::memcache::McData;
 use crate::scmstore::attrs::StoreAttrs;
 use crate::scmstore::fetch::CommonFetchState;
 use crate::scmstore::fetch::FetchErrors;
@@ -46,6 +48,7 @@ use crate::scmstore::fetch::KeyFetchError;
 use crate::scmstore::file::metrics::FileStoreFetchMetrics;
 use crate::scmstore::file::LazyFile;
 use crate::scmstore::value::StoreValue;
+use crate::scmstore::FetchMode;
 use crate::scmstore::FileAttributes;
 use crate::scmstore::FileAuxData;
 use crate::scmstore::FileStore;
@@ -55,7 +58,6 @@ use crate::ContentHash;
 use crate::ContentStore;
 use crate::EdenApiFileStore;
 use crate::ExtStoredPolicy;
-use crate::MemcacheStore;
 use crate::Metadata;
 use crate::StoreKey;
 
@@ -96,9 +98,10 @@ impl FetchState {
         file_store: &FileStore,
         found_tx: Sender<Result<(Key, StoreFile), KeyFetchError>>,
         lfs_enabled: bool,
+        mode: FetchMode,
     ) -> Self {
         FetchState {
-            common: CommonFetchState::new(keys, attrs, found_tx),
+            common: CommonFetchState::new(keys, attrs, found_tx, mode),
             errors: FetchErrors::new(),
             metrics: FileStoreFetchMetrics::default(),
 
@@ -204,14 +207,12 @@ impl FetchState {
         key: Key,
         file: LazyFile,
         indexedlog_cache: &IndexedLogHgIdDataStore,
-        memcache: Option<Arc<MemcacheStore>>,
     ) -> Result<LazyFile> {
         let cache_entry = file.indexedlog_cache_entry(key.clone())?.ok_or_else(|| {
-            anyhow!("expected LazyFile::EdenApi or LazyFile::Memcache, other LazyFile variants should not be written to cache")
+            anyhow!(
+                "expected LazyFile::EdenApi, other LazyFile variants should not be written to cache"
+            )
         })?;
-        if let Some(memcache) = memcache.as_ref() {
-            memcache.add_mcdata(cache_entry.clone().try_into()?);
-        }
         indexedlog_cache.put_entry(cache_entry)?;
         let mmap_entry = indexedlog_cache
             .get_entry(key)?
@@ -266,6 +267,8 @@ impl FetchState {
             return;
         }
 
+        let fetch_start = std::time::Instant::now();
+
         debug!(
             "Checking store Indexedlog ({cache}) for {key}{more}",
             cache = match typ {
@@ -286,7 +289,7 @@ impl FetchState {
 
         self.metrics.indexedlog.store(typ).fetch(pending.len());
         for key in pending.into_iter() {
-            let res = store.get_raw_entry(&key);
+            let res = store.get_raw_entry(&key.hgid);
             match res {
                 Ok(Some(entry)) => {
                     self.metrics.indexedlog.store(typ).hit(1);
@@ -306,6 +309,12 @@ impl FetchState {
                 }
             }
         }
+
+        self.metrics
+            .indexedlog
+            .store(typ)
+            .time_from_duration(fetch_start.elapsed())
+            .ok();
 
         if found != 0 {
             debug!(
@@ -333,6 +342,8 @@ impl FetchState {
         if pending.is_empty() {
             return;
         }
+
+        let fetch_start = std::time::Instant::now();
 
         debug!(
             "Checking store AUX ({cache}) - Count = {count}",
@@ -371,6 +382,12 @@ impl FetchState {
             }
         }
 
+        self.metrics
+            .aux
+            .store(typ)
+            .time_from_duration(fetch_start.elapsed())
+            .ok();
+
         if found != 0 {
             debug!("    Found = {found}", found = found);
         }
@@ -397,6 +414,8 @@ impl FetchState {
         if pending.is_empty() {
             return;
         }
+
+        let fetch_start = std::time::Instant::now();
 
         debug!(
             "Checking store LFS ({cache}) - Count = {count}",
@@ -442,6 +461,12 @@ impl FetchState {
             }
         }
 
+        self.metrics
+            .lfs
+            .store(typ)
+            .time_from_duration(fetch_start.elapsed())
+            .ok();
+
         if found != 0 {
             debug!("    Found = {found}", found = found);
         }
@@ -460,75 +485,11 @@ impl FetchState {
         }
     }
 
-    fn found_memcache(
-        &mut self,
-        entry: McData,
-        indexedlog_cache: Option<&IndexedLogHgIdDataStore>,
-    ) {
-        let key = entry.key.clone();
-        if entry.metadata.is_lfs() {
-            match entry.try_into() {
-                Ok(ptr) => self.found_pointer(key, ptr, StoreType::Shared, true),
-                Err(err) => self.errors.keyed_error(key, err),
-            }
-        } else if let Some(indexedlog_cache) = indexedlog_cache {
-            match Self::evict_to_cache(
-                key.clone(),
-                LazyFile::Memcache(entry),
-                indexedlog_cache,
-                None,
-            ) {
-                Ok(cached) => {
-                    self.found_attributes(key, cached.into(), None);
-                }
-                Err(err) => self.errors.keyed_error(key, err),
-            }
-        } else {
-            self.found_attributes(key, LazyFile::Memcache(entry).into(), None);
-        }
-    }
-
-    fn fetch_memcache_inner(
-        &mut self,
-        store: &MemcacheStore,
-        indexedlog_cache: Option<&IndexedLogHgIdDataStore>,
-    ) -> Result<()> {
-        let pending = self.pending_nonlfs(FileAttributes::CONTENT);
-        if pending.is_empty() {
-            return Ok(());
-        }
-
-        debug!("Fetching Memcache - Count = {count}", count = pending.len());
-
-        self.fetch_logger
-            .as_ref()
-            .map(|fl| fl.report_keys(pending.iter()));
-
-        for res in store.get_data_iter(&pending)?.into_iter() {
-            match res {
-                Ok(mcdata) => self.found_memcache(mcdata, indexedlog_cache),
-                Err(err) => self.errors.other_error(err),
-            }
-        }
-        Ok(())
-    }
-
-    pub(crate) fn fetch_memcache(
-        &mut self,
-        store: &MemcacheStore,
-        indexedlog_cache: Option<&IndexedLogHgIdDataStore>,
-    ) {
-        if let Err(err) = self.fetch_memcache_inner(store, indexedlog_cache) {
-            self.errors.other_error(err);
-        }
-    }
-
     fn found_edenapi(
         entry: FileResponse,
         indexedlog_cache: Option<Arc<IndexedLogHgIdDataStore>>,
         lfs_cache: Option<Arc<LfsStore>>,
         aux_cache: Option<Arc<AuxStore>>,
-        memcache: Option<Arc<MemcacheStore>>,
     ) -> Result<(StoreFile, Option<LfsPointersEntry>)> {
         let entry = entry.result?;
 
@@ -556,7 +517,6 @@ impl FetchState {
                     key,
                     LazyFile::EdenApi(entry),
                     indexedlog_cache,
-                    memcache,
                 )?);
             } else {
                 file.content = Some(LazyFile::EdenApi(entry));
@@ -572,7 +532,6 @@ impl FetchState {
         indexedlog_cache: Option<Arc<IndexedLogHgIdDataStore>>,
         lfs_cache: Option<Arc<LfsStore>>,
         aux_cache: Option<Arc<AuxStore>>,
-        memcache: Option<Arc<MemcacheStore>>,
     ) {
         let fetchable = FileAttributes::CONTENT | FileAttributes::AUX;
 
@@ -583,16 +542,17 @@ impl FetchState {
 
         let mut fetching_keys: HashSet<Key> = pending.iter().cloned().collect();
 
-        debug!("Fetching EdenAPI - Count = {count}", count = pending.len());
+        let count = pending.len();
+        debug!("Fetching EdenAPI - Count = {}", count);
 
         let mut found = 0;
         let mut found_pointers = 0;
         let mut errors = 0;
         let mut error: Option<String> = None;
 
-        self.fetch_logger
-            .as_ref()
-            .map(|fl| fl.report_keys(pending.iter()));
+        if let Some(fl) = self.fetch_logger.as_ref() {
+            fl.report_keys(pending.iter())
+        }
 
         // TODO(meyer): Iterators or otherwise clean this up
         let pending_attrs: Vec<_> = pending
@@ -606,8 +566,15 @@ impl FetchState {
             })
             .collect();
 
-        let response = match block_on(store.files_attrs(pending_attrs)).map_err(|e| e.tag_network())
-        {
+        // Fetch ClientRequestInfo from a thread local and pass to async code
+        let maybe_client_request_info = get_client_request_info_thread_local();
+        let response = match block_on(
+            with_client_request_info_scope(
+                maybe_client_request_info,
+                store.files_attrs(pending_attrs),
+            )
+            .map_err(|e| e.tag_network()),
+        ) {
             Ok(r) => r,
             Err(err) => {
                 let err = ClonableError::new(err);
@@ -624,18 +591,11 @@ impl FetchState {
                 let lfs_cache = lfs_cache.clone();
                 let indexedlog_cache = indexedlog_cache.clone();
                 let aux_cache = aux_cache.clone();
-                let memcache = memcache.clone();
                 spawn_blocking(move || {
                     res_entry.map(move |entry| {
                         (
                             entry.key.clone(),
-                            Self::found_edenapi(
-                                entry,
-                                indexedlog_cache,
-                                lfs_cache,
-                                aux_cache,
-                                memcache,
-                            ),
+                            Self::found_edenapi(entry, indexedlog_cache, lfs_cache, aux_cache),
                         )
                     })
                 })
@@ -736,7 +696,18 @@ impl FetchState {
 
         if let Ok(stats) = block_on(response.stats) {
             util::record_edenapi_stats(&span, &stats);
+            // Mononoke already records the time it takes to send the request
+            // (from first byte to last byte sent). We are more interested in
+            // the total time since it includes time not recorded by Mononoke
+            // (routing, cross regional latency, etc).
+            self.metrics.edenapi.time_from_duration(stats.time).ok();
         }
+
+        // We subtract any lfs pointers that were found -- these requests were
+        // fulfiled by LFS, not EdenAPI
+        self.metrics.edenapi.fetch(count - found_pointers);
+        self.metrics.edenapi.err(errors);
+        self.metrics.edenapi.hit(found);
     }
 
     pub(crate) fn fetch_lfs_remote(
@@ -773,9 +744,9 @@ impl FetchState {
 
         debug!("Fetching LFS - Count = {count}", count = pending.len());
 
-        self.fetch_logger
-            .as_ref()
-            .map(|fl| fl.report_keys(self.lfs_pointers.keys()));
+        if let Some(fl) = self.fetch_logger.as_ref() {
+            fl.report_keys(self.lfs_pointers.keys())
+        }
 
         let prog = self.lfs_progress.create_or_extend(pending.len() as u64);
 
@@ -869,6 +840,8 @@ impl FetchState {
         store: &ContentStore,
         pending: &mut Vec<StoreKey>,
     ) -> Result<()> {
+        let fetch_start = std::time::Instant::now();
+
         debug!(
             "ContentStore Fallback  - Count = {count}",
             count = pending.len()
@@ -877,7 +850,7 @@ impl FetchState {
         let mut errors = 0;
         let mut error: Option<String> = None;
 
-        store.prefetch(&pending)?;
+        store.prefetch(pending)?;
 
         for store_key in pending.drain(..) {
             let key = store_key.clone().maybe_into_key().expect(
@@ -919,6 +892,11 @@ impl FetchState {
                 }
             }
         }
+
+        self.metrics
+            .contentstore
+            .time_from_duration(fetch_start.elapsed())
+            .ok();
 
         if found != 0 {
             debug!("    Found = {found}", found = found);
@@ -982,14 +960,14 @@ impl FetchState {
 
                             match self.key_origin.get(&key).unwrap_or(&StoreType::Shared) {
                                 StoreType::Shared => {
-                                    if let Some(ref aux_cache) = aux_cache {
+                                    if let Some(aux_cache) = aux_cache {
                                         if let Some(aux_data) = new.aux_data {
                                             let _ = aux_cache.put(key.hgid, &aux_data.into());
                                         }
                                     }
                                 }
                                 StoreType::Local => {
-                                    if let Some(ref aux_local) = aux_local {
+                                    if let Some(aux_local) = aux_local {
                                         if let Some(aux_data) = new.aux_data {
                                             let _ = aux_local.put(key.hgid, &aux_data.into());
                                         }

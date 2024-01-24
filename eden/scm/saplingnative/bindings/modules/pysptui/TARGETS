@@ -1,0 +1,29 @@
+load("//eden/scm:targets.bzl", "rust_python_library")
+
+oncall("mercurial_release")
+
+rust_python_library(
+    name = "pysptui",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "cpython": {
+                        "features": [],
+                        "git": None,
+                        "rev": None,
+                    },
+                },
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:cpython",
+        "fbsource//third-party/rust:pipe",
+        "//eden/scm/lib/clidispatch:clidispatch",
+        "//eden/scm/lib/cpython-ext:cpython-ext",
+        "//eden/scm/lib/third-party/streampager:streampager",
+    ],
+)

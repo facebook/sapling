@@ -16,6 +16,7 @@ use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
 use clientinfo::ClientInfo;
+use clientinfo::ClientRequestInfo;
 use permission_checker::MononokeIdentitySet;
 use permission_checker::MononokeIdentitySetExt;
 use session_id::generate_session_id;
@@ -116,6 +117,21 @@ impl Metadata {
 
     pub fn add_client_info(&mut self, client_info: ClientInfo) -> &mut Self {
         self.client_info = Some(client_info);
+        self.set_main_id()
+    }
+
+    pub fn client_info(&self) -> Option<&ClientInfo> {
+        self.client_info.as_ref()
+    }
+
+    pub fn set_main_id(&mut self) -> &mut Self {
+        self.client_info.as_mut().map(|x| {
+            x.request_info.as_mut().map(|client_request_info| {
+                if !client_request_info.has_main_id() {
+                    client_request_info.set_main_id(self.identities.main_client_identity())
+                }
+            })
+        });
         self
     }
 
@@ -198,14 +214,16 @@ impl Metadata {
             .and_then(|ci| ci.fb.sandcastle_alias())
     }
 
-    pub fn clientinfo_u64tag(&self) -> Option<u64> {
-        self.client_info.as_ref()?.u64token
-    }
-
     pub fn sandcastle_nonce(&self) -> Option<&str> {
         self.client_info
             .as_ref()
             .and_then(|ci| ci.fb.sandcastle_nonce())
+    }
+
+    pub fn client_request_info(&self) -> Option<&ClientRequestInfo> {
+        self.client_info
+            .as_ref()
+            .and_then(|ci| ci.request_info.as_ref())
     }
 
     pub fn clientinfo_tw_job(&self) -> Option<&str> {

@@ -12,90 +12,31 @@ import {DropdownFields} from './DropdownFields';
 import {ErrorBoundary, ErrorNotice} from './ErrorNotice';
 import {Internal} from './Internal';
 import {Tooltip} from './Tooltip';
-import {tracker} from './analytics';
 import {DEFAULT_HEARTBEAT_TIMEOUT_MS, useHeartbeat} from './heartbeat';
 import {t, T} from './i18n';
 import platform from './platform';
 import {applicationinfo} from './serverAPIState';
 import {VSCodeButton, VSCodeDivider} from '@vscode/webview-ui-toolkit/react';
-import {Suspense, useEffect} from 'react';
-import {atom, DefaultValue, useRecoilState, useRecoilValue, useSetRecoilState} from 'recoil';
+import {Suspense} from 'react';
+import {useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 
 import './BugButton.css';
 
 export function BugButton() {
   return (
-    <MaybeBugButtonNux>
-      <Tooltip
-        trigger="click"
-        component={dismiss => <BugDropdown dismiss={dismiss} />}
-        placement="bottom">
-        <VSCodeButton appearance="icon" data-testid="bug-button">
-          <Icon icon="bug" />
-        </VSCodeButton>
-      </Tooltip>
-    </MaybeBugButtonNux>
-  );
-}
-
-export const bugButtonNux = atom<string | null>({
-  key: 'bugButtonNux',
-  default: null,
-  effects: [
-    // track how long the nux is shown
-    ({onSet}) => {
-      let start: number | undefined;
-      onSet((value, previousValue) => {
-        if (value != null) {
-          // starting to show nux
-          start = Date.now();
-        } else {
-          // stopped showing nux by clearing value
-          tracker.track('ShowBugButtonNux', {
-            extras: {nux: previousValue instanceof DefaultValue ? null : previousValue},
-            duration: start == null ? undefined : Date.now() - start,
-          });
-        }
-      });
-    },
-  ],
-});
-
-/**
- * Allow other actions to show a new-user ("nux") tooltip on the bug icon.
- * This is useful to explain how to file a bug or opt out.
- */
-function MaybeBugButtonNux({children}: {children: JSX.Element}) {
-  const [nux, setNux] = useRecoilState(bugButtonNux);
-  if (nux == null) {
-    return children;
-  }
-
-  function Nux() {
-    return (
-      <div className="bug-button-nux">
-        {nux}
-        <VSCodeButton appearance="icon" onClick={() => setNux(null)}>
-          <Icon icon="x" />
-        </VSCodeButton>
-      </div>
-    );
-  }
-  return (
-    <Tooltip trigger="manual" shouldShow component={Nux} placement="bottom">
-      {children}
+    <Tooltip
+      trigger="click"
+      component={dismiss => <BugDropdown dismiss={dismiss} />}
+      placement="bottom">
+      <VSCodeButton appearance="icon" data-testid="bug-button">
+        <Icon icon="bug" />
+      </VSCodeButton>
     </Tooltip>
   );
 }
 
 function BugDropdown({dismiss}: {dismiss: () => void}) {
-  const setBugButtonNux = useSetRecoilState(bugButtonNux);
-  useEffect(() => {
-    // unset nux if you open the bug menu
-    setBugButtonNux(null);
-  }, [setBugButtonNux]);
-
   const heartbeat = useHeartbeat();
 
   const AdditionalDebugContent = platform.AdditionalDebugContent;

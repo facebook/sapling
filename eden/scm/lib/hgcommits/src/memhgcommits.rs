@@ -106,18 +106,21 @@ impl AppendCommits for MemHgCommits {
 #[async_trait::async_trait]
 impl ReadCommitText for MemHgCommits {
     async fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
-        self.commits.get_commit_raw_text(vertex).await
+        Ok(self.commits.get(vertex).cloned())
     }
 
     fn to_dyn_read_commit_text(&self) -> Arc<dyn ReadCommitText + Send + Sync> {
-        self.commits.to_dyn_read_commit_text()
+        Arc::new(ArcHashMapVertexBytes(Arc::new(self.commits.clone())))
     }
 }
 
+#[derive(Clone)]
+struct ArcHashMapVertexBytes(Arc<HashMap<Vertex, Bytes>>);
+
 #[async_trait::async_trait]
-impl ReadCommitText for HashMap<Vertex, Bytes> {
+impl ReadCommitText for ArcHashMapVertexBytes {
     async fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
-        Ok(self.get(vertex).cloned())
+        Ok(self.0.get(vertex).cloned())
     }
 
     fn to_dyn_read_commit_text(&self) -> Arc<dyn ReadCommitText + Send + Sync> {

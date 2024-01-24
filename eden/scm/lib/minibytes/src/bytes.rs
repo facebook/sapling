@@ -215,6 +215,13 @@ impl Bytes {
     }
 }
 
+#[cfg(feature = "non-zerocopy-into")]
+impl From<Bytes> for Vec<u8> {
+    fn from(value: Bytes) -> Vec<u8> {
+        value.into_vec()
+    }
+}
+
 pub trait SliceLike: 'static {
     type Owned;
     const EMPTY: &'static Self;

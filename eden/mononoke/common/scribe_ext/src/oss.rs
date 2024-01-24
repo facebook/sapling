@@ -19,3 +19,7 @@ impl ScribeClientImplementation {
         Ok(())
     }
 }
+
+pub fn new_scribe_client(fb: FacebookInit) -> ScribeClientImplementation {
+    ScribeClientImplementation::new(fb)
+}

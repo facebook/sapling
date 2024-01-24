@@ -23,8 +23,8 @@ use xdiff_sys::xdl_diff_vendored;
 use xdiff_sys::xpparam_t;
 
 extern "C" fn hunk_func(a1: i64, a2: i64, b1: i64, b2: i64, _priv: *mut c_void) -> c_int {
-    print!("@@ -{},{} +{},{} @@\n", a1, a2, b1, b2);
-    return 0;
+    println!("@@ -{},{} +{},{} @@", a1, a2, b1, b2);
+    0
 }
 
 fn main() -> Result<(), std::io::Error> {

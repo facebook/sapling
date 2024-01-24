@@ -85,7 +85,7 @@ impl NodeMap {
     pub fn iter<'a>(&'a self) -> Result<Box<dyn Iterator<Item = Result<(Node, Node)>> + 'a>> {
         let iter = self.log.iter().map(move |entry| match entry {
             Ok(data) => {
-                let mut first = self.log.index_func(0, &data)?;
+                let mut first = self.log.index_func(0, data)?;
                 if first.len() != 1 {
                     return Err(NodeMapError(format!(
                         "invalid index 1 keys in {:?}",
@@ -94,7 +94,7 @@ impl NodeMap {
                     .into());
                 }
                 let first = first.pop().unwrap();
-                let mut second = self.log.index_func(1, &data)?;
+                let mut second = self.log.index_func(1, data)?;
                 if second.len() != 1 {
                     return Err(NodeMapError(format!(
                         "invalid index 2 keys in {:?}",
@@ -122,7 +122,7 @@ mod tests {
     quickcheck! {
         fn test_roundtrip(pairs: Vec<(Node, Node)>) -> bool {
             let mut pairs = pairs;
-            if pairs.len() == 0 {
+            if pairs.is_empty() {
                 return true;
             }
 
@@ -130,7 +130,7 @@ mod tests {
             let mut map = NodeMap::open(dir).unwrap();
             let last = pairs.pop().unwrap();
             for (first, second) in pairs.iter() {
-                map.add(&first, &second).unwrap();
+                map.add(first, second).unwrap();
             }
 
             for (first, second) in pairs.iter() {
@@ -143,10 +143,10 @@ mod tests {
             }
 
             for value in vec![last.0, last.1].iter() {
-                if !map.lookup_by_first(value).unwrap().is_none() {
+                if map.lookup_by_first(value).unwrap().is_some() {
                     return false;
                 }
-                if !map.lookup_by_second(value).unwrap().is_none() {
+                if map.lookup_by_second(value).unwrap().is_some() {
                     return false;
                 }
 

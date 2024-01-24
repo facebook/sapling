@@ -1,0 +1,87 @@
+# Borland Makefile for PDCurses - Windows console
+#
+# Usage: make -f [path\]Makefile.bcc [DEBUG=Y] [WIDE=Y] [UTF8=Y]
+#        [INFOEX=N] [target]
+#
+# where target can be any of:
+# [all|demos|pdcurses.lib|testcurs.exe...]
+
+O = obj
+E = .exe
+RM = del
+
+!ifndef PDCURSES_SRCDIR
+PDCURSES_SRCDIR = ..
+!endif
+
+!include $(PDCURSES_SRCDIR)\common\libobjs.mif
+
+osdir		= $(PDCURSES_SRCDIR)\wincon
+
+CC		= bcc32c -q
+
+!ifdef DEBUG
+CFLAGS		= -N -v -y -DPDCDEBUG
+!else
+CFLAGS		= -O
+!endif
+
+!ifdef WIDE
+WIDEOPT		= -DPDC_WIDE
+!endif
+
+!ifdef UTF8
+UTF8OPT		= -DPDC_FORCE_UTF8
+!endif
+
+!ifdef INFOEX
+INFOPT          = -DHAVE_NO_INFOEX
+!endif
+
+BUILD		= $(CC) -I$(PDCURSES_SRCDIR) -c -Tpe $(CFLAGS) \
+$(WIDEOPT) $(UTF8OPT) $(INFOPT)
+BUILD_OS	= $(BUILD) -Xdriver -Wno-deprecated-declarations
+
+LIBEXE		= tlib /C /E /0 /a
+
+LIBCURSES	= pdcurses.lib
+
+all:	$(LIBCURSES)
+
+clean:
+	-$(RM) *.obj
+	-$(RM) *.lib
+	-$(RM) *.tds
+	-$(RM) *.exe
+
+demos:	$(LIBCURSES) $(DEMOS)
+
+$(LIBCURSES) : $(LIBOBJS) $(PDCOBJS)
+	-$(RM) $@
+	$(LIBEXE) $@ $(LIBOBJS) $(PDCOBJS)
+
+.autodepend
+
+{$(srcdir)\}.c.obj:
+	$(BUILD) $<
+
+{$(osdir)\}.c.obj:
+	$(BUILD_OS) $<
+
+{$(demodir)\}.c.obj:
+	$(BUILD) $<
+
+.c.obj:
+	$(BUILD_OS) $<
+
+.obj.exe:
+	$(CC) -e$@ $** $(LIBCURSES)
+
+tuidemo.exe:	tuidemo.obj tui.obj $(LIBCURSES)
+	$(CC) -e$@ $**
+
+tui.obj: $(demodir)\tui.c $(demodir)\tui.h $(PDCURSES_CURSES_H)
+	$(BUILD) -I$(demodir) $(demodir)\tui.c
+
+tuidemo.obj: $(demodir)\tuidemo.c $(PDCURSES_CURSES_H)
+	$(BUILD) -I$(demodir) $(demodir)\tuidemo.c

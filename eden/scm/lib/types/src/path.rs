@@ -778,7 +778,7 @@ impl RepoPathRelativizer {
 
     fn new_impl(cwd: &Path, repo_root: &Path) -> Self {
         use self::RepoPathRelativizerConfig::*;
-        let config = if cwd.starts_with(&repo_root) {
+        let config = if cwd.starts_with(repo_root) {
             CwdUnderRepo {
                 relative_cwd: util::path::relativize(repo_root, cwd),
             }
@@ -962,7 +962,7 @@ mod tests {
 
     #[test]
     fn test_component_initialization_with_invalid_utf8() {
-        assert!(PathComponent::from_utf8(&vec![0x80, 0x80]).is_err());
+        assert!(PathComponent::from_utf8(&[0x80, 0x80]).is_err());
     }
 
     #[test]

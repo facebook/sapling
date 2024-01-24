@@ -162,3 +162,31 @@ async fn test_get_multiple(_: FacebookInit) -> Result<(), Error> {
     );
     Ok(())
 }
+
+#[fbinit::test]
+async fn test_list_all(_: FacebookInit) -> Result<(), Error> {
+    let symrefs = SqlGitSymbolicRefsBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
+    let entry = GitSymbolicRefsEntry::new(
+        "HEAD".to_string(),
+        "master".to_string(),
+        "branch".to_string(),
+    )?;
+    let tag_entry = GitSymbolicRefsEntry::new(
+        "TAG_HEAD".to_string(),
+        "master".to_string(),
+        "tag".to_string(),
+    )?;
+    let adhoc_entry =
+        GitSymbolicRefsEntry::new("ADHOC".to_string(), "master".to_string(), "tag".to_string())?;
+    symrefs
+        .add_or_update_entries(vec![entry.clone(), tag_entry.clone(), adhoc_entry.clone()])
+        .await?;
+
+    let result: HashSet<GitSymbolicRefsEntry> =
+        symrefs.list_all_symrefs().await?.into_iter().collect();
+    assert_eq!(
+        result,
+        HashSet::from_iter(vec![entry.clone(), tag_entry.clone(), adhoc_entry.clone()].into_iter())
+    );
+    Ok(())
+}

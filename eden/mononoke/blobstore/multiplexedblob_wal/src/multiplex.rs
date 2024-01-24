@@ -135,6 +135,14 @@ impl Scuba {
         self.inner_blobstores_scuba.sampled(self.sample_rate);
         self.multiplex_scuba.sampled(self.sample_rate);
     }
+
+    pub fn add_client_request_info(&mut self, ctx: &CoreContext) {
+        if let Some(client_info) = ctx.metadata().client_request_info() {
+            self.multiplex_scuba.add_client_request_info(client_info);
+            self.inner_blobstores_scuba
+                .add_client_request_info(client_info);
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -330,6 +338,8 @@ impl WalMultiplexedBlobstore {
             stats.completion_time.as_millis_unchecked() as i64,
         );
         ctx.perf_counters()
+            .set_max_counter(PerfCounterType::BlobPutsMaxSize, blob_size as i64);
+        ctx.perf_counters()
             .add_to_counter(PerfCounterType::BlobPutsTotalSize, blob_size as i64);
 
         result.map_err(|put_errors| {
@@ -495,6 +505,8 @@ impl WalMultiplexedBlobstore {
         match result {
             Ok(Some(ref data)) => {
                 ctx.perf_counters()
+                    .set_max_counter(PerfCounterType::BlobGetsMaxSize, data.len() as i64);
+                ctx.perf_counters()
                     .add_to_counter(PerfCounterType::BlobGetsTotalSize, data.len() as i64);
             }
             Ok(None) => {
@@ -601,6 +613,7 @@ impl Blobstore for WalMultiplexedBlobstore {
     ) -> Result<Option<BlobstoreGetData>> {
         let mut scuba = self.scuba.clone();
         scuba.sampled();
+        scuba.add_client_request_info(ctx);
         let (stats, result) = self.get_impl(ctx, key, &scuba).timed().await;
         scuba::record_get(
             ctx,
@@ -620,6 +633,7 @@ impl Blobstore for WalMultiplexedBlobstore {
     ) -> Result<BlobstoreIsPresent> {
         let mut scuba = self.scuba.clone();
         scuba.sampled();
+        scuba.add_client_request_info(ctx);
         let (stats, result) = self.is_present_impl(ctx, key, &scuba).timed().await;
         scuba::record_is_present(
             ctx,
@@ -652,14 +666,16 @@ impl BlobstorePutOps for WalMultiplexedBlobstore {
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
     ) -> Result<OverwriteStatus> {
+        let mut scuba = self.scuba.clone();
+        scuba.add_client_request_info(ctx);
         let size = value.len();
         let (stats, result) = self
-            .put_impl(ctx, key.clone(), value, Some(put_behaviour), &self.scuba)
+            .put_impl(ctx, key.clone(), value, Some(put_behaviour), &scuba)
             .timed()
             .await;
         scuba::record_put(
             ctx,
-            &mut self.scuba.multiplex_scuba.clone(),
+            &mut scuba.multiplex_scuba,
             &self.multiplex_id,
             &key,
             size,
@@ -676,13 +692,15 @@ impl BlobstorePutOps for WalMultiplexedBlobstore {
         value: BlobstoreBytes,
     ) -> Result<OverwriteStatus> {
         let size = value.len();
+        let mut scuba = self.scuba.clone();
+        scuba.add_client_request_info(ctx);
         let (stats, result) = self
-            .put_impl(ctx, key.clone(), value, None, &self.scuba)
+            .put_impl(ctx, key.clone(), value, None, &scuba)
             .timed()
             .await;
         scuba::record_put(
             ctx,
-            &mut self.scuba.multiplex_scuba.clone(),
+            &mut scuba.multiplex_scuba,
             &self.multiplex_id,
             &key,
             size,
@@ -696,10 +714,12 @@ impl BlobstorePutOps for WalMultiplexedBlobstore {
 #[async_trait]
 impl BlobstoreUnlinkOps for WalMultiplexedBlobstore {
     async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
-        let (stats, result) = self.unlink_impl(ctx, key, &self.scuba).timed().await;
+        let mut scuba = self.scuba.clone();
+        scuba.add_client_request_info(ctx);
+        let (stats, result) = self.unlink_impl(ctx, key, &scuba).timed().await;
         scuba::record_unlink(
             ctx,
-            &mut self.scuba.multiplex_scuba.clone(),
+            &mut scuba.multiplex_scuba,
             &self.multiplex_id,
             key,
             stats,

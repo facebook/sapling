@@ -1,0 +1,50 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("scm_client_infra")
+
+cpp_library(
+    name = "fuse",
+    srcs = glob(["*.cpp"]),
+    headers = glob(["*.h"]),
+    deps = [
+        "fbsource//third-party/fmt:fmt",
+        "//eden/common/utils:synchronized",
+        "//eden/fs/notifications:notifier",
+        "//eden/fs/privhelper:interface",
+        "//eden/fs/telemetry:fs_event_logger",
+        "//eden/fs/utils:static_assert",
+        "//eden/fs/utils:system_error",
+        "//eden/fs/utils:thread",
+        "//folly:exception",
+        "//folly/executors:global_executor",
+        "//folly/logging:logging",
+        "//folly/system:thread_name",
+    ],
+    exported_deps = [
+        "//eden/common/os:os",
+        "//eden/fs/inodes:fs_channel",
+        "//eden/fs/inodes:inode_number",
+        "//eden/fs/inodes:request_context",
+        "//eden/fs/store:context",
+        "//eden/fs/store:store",
+        "//eden/fs/telemetry:telemetry",
+        "//eden/fs/utils:bufvec",
+        "//eden/fs/utils:case_sensitivity",
+        "//eden/fs/utils:fs_channel_types",
+        "//eden/fs/utils:immediate_future",
+        "//eden/fs/utils:path",
+        "//eden/fs/utils:process_access_log",
+        "//eden/fs/utils:ref_ptr",
+        "//eden/fs/utils:utils",
+        "//folly:file",
+        "//folly:portability",
+        "//folly:range",
+        "//folly:synchronized",
+        "//folly/futures:core",
+        "//folly/synchronization:call_once",
+    ],
+    external_deps = [
+        "boost",
+    ],
+)

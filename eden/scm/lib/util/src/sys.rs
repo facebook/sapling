@@ -5,10 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use crate::errors::IOContext;
-use crate::errors::IOResult;
+use std::io;
 
-pub fn hostname() -> IOResult<String> {
+use crate::errors::IOContext;
+
+pub fn hostname() -> io::Result<String> {
     Ok(hostname::get()
         .io_context("error getting hostname")?
         .to_string_lossy()

@@ -1,0 +1,48 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "copytrace",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "manifest": {"features": ["for-tests"]},
+                },
+                "dev-dependencies": {
+                    "manifest-tree": {"features": ["for-tests"]},
+                },
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    test_deps = [
+        "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tracing-test",
+        "//eden/scm/lib/manifest-tree:manifest-tree",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:git2",
+        "fbsource//third-party/rust:lru-cache",
+        "fbsource//third-party/rust:parking_lot",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/async-runtime:async-runtime",
+        "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/dag:dag",
+        "//eden/scm/lib/hg-metrics:hg-metrics",
+        "//eden/scm/lib/manifest:manifest",
+        "//eden/scm/lib/manifest-tree:manifest-tree",
+        "//eden/scm/lib/pathhistory:pathhistory",
+        "//eden/scm/lib/pathmatcher:pathmatcher",
+        "//eden/scm/lib/storemodel:storemodel",
+        "//eden/scm/lib/types:types",
+        "//eden/scm/lib/xdiff:xdiff",
+    ],
+)

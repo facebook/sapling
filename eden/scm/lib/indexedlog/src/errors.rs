@@ -316,7 +316,7 @@ impl<T> IoResultExt<T> for std::io::Result<T> {
                     err = add_stat_context(path, err);
                     // For EPERM on mkdir, parent directory stat is useful.
                     if let Some(parent) = path.parent() {
-                        err = add_stat_context(&parent, err);
+                        err = add_stat_context(parent, err);
                     }
                 }
             }

@@ -89,12 +89,19 @@ mononoke_queries! {
         >list kinds: BookmarkKind
         >list categories: BookmarkCategory
     ) -> (BookmarkName, BookmarkCategory, BookmarkKind, ChangesetId, Option<u64>, i32) {
-        "SELECT name, category, hg_kind, changeset_id, log_id, {tok}
+        mysql("SELECT name, category, hg_kind, changeset_id, log_id, {tok}
+         FROM bookmarks
+         FORCE INDEX(repo_id_hg_kind_category)
+         WHERE repo_id = {repo_id}
+           AND category IN {categories}
+           AND hg_kind IN {kinds}
+         LIMIT {limit}")
+        sqlite("SELECT name, category, hg_kind, changeset_id, log_id, {tok}
          FROM bookmarks
          WHERE repo_id = {repo_id}
            AND category IN {categories}
            AND hg_kind IN {kinds}
-         LIMIT {limit}"
+         LIMIT {limit}")
     }
 
     read SelectAllAfter(

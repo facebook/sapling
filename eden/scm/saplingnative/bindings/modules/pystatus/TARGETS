@@ -1,0 +1,28 @@
+load("//eden/scm:targets.bzl", "rust_python_library")
+
+oncall("mercurial_release")
+
+rust_python_library(
+    name = "pystatus",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "cpython": {
+                        "features": [],
+                        "git": None,
+                        "rev": None,
+                    },
+                },
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    deps = [
+        "//eden/scm/lib/cpython-ext:cpython-ext",
+        "//eden/scm/lib/status:status",
+        "//eden/scm/lib/types:types",
+        "//eden/scm/lib/util:util",
+    ],
+)

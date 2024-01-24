@@ -14,6 +14,8 @@ const platforms = {
   androidStudio: 'src/platform/androidStudioPlatform.ts',
   androidStudioRemote: 'src/platform/androidStudioRemotePlatform.ts',
   standalone: 'src/platform/standalonePlatform.ts',
+  webview: 'src/platform/webviewPlatform.ts',
+  chromelike_app: 'src/platform/chromelikeAppPlatform.ts',
 };
 
 module.exports = {

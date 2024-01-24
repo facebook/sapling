@@ -75,7 +75,6 @@ pub struct ChangesetInfo {
 /// to make fetching changesets faster if there is no need in the whole description.
 /// For example:
 ///     Handler((String /* title */, ChangesetMessageId /* message blob id */))
-///
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum ChangesetMessage {
     Message(String),
@@ -288,7 +287,7 @@ mod test {
     use mononoke_types::BonsaiChangesetMut;
     use mononoke_types::DateTime;
     use mononoke_types::FileChange;
-    use mononoke_types::MPath;
+    use mononoke_types::NonRootMPath;
     use sorted_vector_map::sorted_vector_map;
 
     use super::*;
@@ -339,7 +338,7 @@ mod test {
             hg_extra: Default::default(),
             git_extra_headers: Some(sorted_vector_map! { SmallVec::new() => Bytes::from_static(b"world")}),
             git_tree_hash: None,
-            file_changes: sorted_vector_map! { MPath::new("file").unwrap() => FileChange::Deletion },
+            file_changes: sorted_vector_map! { NonRootMPath::new("file").unwrap() => FileChange::Deletion },
             is_snapshot: false,
             git_annotated_tag: None,
         }

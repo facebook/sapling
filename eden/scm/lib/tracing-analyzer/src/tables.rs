@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
-//! Analyze tracing data for edenscm
+//! Analyze tracing data for sapling
 //!
-//! This is edenscm application specific. It's not a general purposed library.
+//! This is sapling application specific. It's not a general purposed library.
 
 // use std::borrow::Cow;
 use std::collections::BTreeMap as Map;
@@ -80,7 +80,7 @@ fn extract_dev_command_timers<'a>(tables: &mut Tables, tid_spans: &TidSpans) {
                                             full += " (truncated)";
                                             break;
                                         }
-                                        full += &" ";
+                                        full += " ";
                                         // TODO: Use shell_escape once in tp2.
                                         // full += &shell_escape::unix::escape(Cow::Owned(arg));
                                         full += &arg;
@@ -96,7 +96,7 @@ fn extract_dev_command_timers<'a>(tables: &mut Tables, tid_spans: &TidSpans) {
                 // The "log:command-row" event is used by code that wants to
                 // log to columns of the main command row easily.
                 "log:command-row" if span.is_event => {
-                    extract_span(&span, &mut row);
+                    extract_span(span, &mut row);
                 }
 
                 _ => {}

@@ -7,7 +7,7 @@
   $ eagerepo
   $ cat >> $HGRCPATH << 'EOF'
   > [extensions]
-  > arcconfig=$TESTDIR/../edenscm/ext/extlib/phabricator/arcconfig.py
+  > arcconfig=$TESTDIR/../sapling/ext/extlib/phabricator/arcconfig.py
   > EOF
 
 # Sanity check expectations when there is no arcconfig

@@ -32,7 +32,7 @@ This is the code under test - we need to notice things were deleted while watchm
   R removed
   ! missing
   $ hg debugtree list
-  .gitignore: 0100644 8 * EXIST_P1 EXIST_NEXT  (glob)
+  .gitignore: 0100644 8 * EXIST_P1 EXIST_NEXT * (glob)
   added: 00 -1 * EXIST_NEXT NEED_CHECK  (glob)
   missing: 0100644 0 * EXIST_P1 EXIST_NEXT NEED_CHECK  (glob)
   modified: 0100644 0 * EXIST_P1 EXIST_NEXT NEED_CHECK  (glob)

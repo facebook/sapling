@@ -17,11 +17,18 @@ use std::sync::Arc;
 use std::time::Duration;
 use std::time::Instant;
 
+use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
+use anyhow::Result;
 use blobstore::Loadable;
+use bonsai_git_mapping::BonsaiGitMapping;
+use bonsai_git_mapping::BonsaiGitMappingArc;
+use bonsai_git_mapping::BonsaiGitMappingRef;
+use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
+use bonsai_globalrev_mapping::BonsaiGlobalrevMappingArc;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmark_renaming::BookmarkRenamer;
@@ -32,6 +39,7 @@ use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::Bookmarks;
 use bookmarks::BookmarksArc;
 use bookmarks::BookmarksRef;
+use borrowed::borrowed;
 use cacheblob::InProcessLease;
 use cacheblob::LeaseOps;
 use cacheblob::MemcacheOps;
@@ -43,10 +51,13 @@ use changesets::Changesets;
 use changesets::ChangesetsRef;
 use commit_graph::CommitGraph;
 use commit_graph::CommitGraphRef;
-use commit_transformation::rewrite_commit as multi_mover_rewrite_commit;
+use commit_transformation::rewrite_commit_with_file_changes_filter;
 use commit_transformation::upload_commits;
 pub use commit_transformation::CommitRewrittenToEmpty;
 pub use commit_transformation::EmptyCommitFromLargeRepo;
+use commit_transformation::FileChangeFilter;
+use commit_transformation::FileChangeFilterApplication;
+use commit_transformation::FileChangeFilterFunc;
 use commit_transformation::MultiMover;
 pub use commit_transformation::RewriteOpts;
 use context::CoreContext;
@@ -69,6 +80,7 @@ use maplit::hashset;
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::CommitSyncDirection;
 use metaconfig_types::CommonCommitSyncConfig;
+use metaconfig_types::GitSubmodulesChangesAction;
 use metaconfig_types::PushrebaseFlags;
 use metaconfig_types::RepoConfig;
 use metaconfig_types::RepoConfigRef;
@@ -76,7 +88,8 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
-use mononoke_types::MPath;
+use mononoke_types::FileType;
+use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use movers::Mover;
 use mutable_counters::MutableCounters;
@@ -85,9 +98,16 @@ use phases::Phases;
 use phases::PhasesRef;
 use pushrebase::do_pushrebase_bonsai;
 use pushrebase::PushrebaseError;
+use pushrebase_hooks::get_pushrebase_hooks;
+use pushrebase_mutation_mapping::PushrebaseMutationMapping;
+use pushrebase_mutation_mapping::PushrebaseMutationMappingRef;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_bookmark_attrs::RepoBookmarkAttrs;
+use repo_bookmark_attrs::RepoBookmarkAttrsRef;
+use repo_cross_repo::RepoCrossRepo;
+use repo_cross_repo::RepoCrossRepoRef;
 use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentity;
@@ -101,6 +121,7 @@ use static_assertions::assert_impl_all;
 use sync_config_version_utils::get_mapping_change_version;
 use sync_config_version_utils::get_version;
 use sync_config_version_utils::get_version_for_merge;
+use sync_config_version_utils::set_mapping_change_version;
 pub use sync_config_version_utils::CHANGE_XREPO_MAPPING_EXTRA;
 use synced_commit_mapping::EquivalentWorkingCopyEntry;
 use synced_commit_mapping::SyncedCommitMapping;
@@ -108,13 +129,12 @@ use synced_commit_mapping::SyncedCommitMappingEntry;
 use synced_commit_mapping::SyncedCommitSourceRepo;
 use thiserror::Error;
 use topo_sort::sort_topological;
-use tunables::tunables;
 use types::Source;
 use types::Target;
 
 use crate::pushrebase_hook::CrossRepoSyncPushrebaseHook;
 
-mod commit_sync_data_provider;
+mod commit_sync_config_utils;
 pub mod commit_sync_outcome;
 mod pushrebase_hook;
 mod reporting;
@@ -122,7 +142,14 @@ mod sync_config_version_utils;
 pub mod types;
 pub mod validation;
 
-pub use commit_sync_data_provider::CommitSyncDataProvider;
+pub use commit_sync_config_utils::get_bookmark_renamer;
+pub use commit_sync_config_utils::get_common_pushrebase_bookmarks;
+pub use commit_sync_config_utils::get_mover;
+pub use commit_sync_config_utils::get_reverse_bookmark_renamer;
+pub use commit_sync_config_utils::get_reverse_mover;
+pub use commit_sync_config_utils::get_small_repos_for_version;
+pub use commit_sync_config_utils::get_strip_git_submodules_by_version;
+pub use commit_sync_config_utils::version_exists;
 
 pub use crate::commit_sync_outcome::commit_sync_outcome_exists;
 pub use crate::commit_sync_outcome::get_commit_sync_outcome;
@@ -247,8 +274,26 @@ pub async fn rewrite_commit<'a>(
     mover: Mover,
     source_repo: &impl Repo,
     rewrite_opts: RewriteOpts,
+    git_submodules_action: GitSubmodulesChangesAction,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
-    multi_mover_rewrite_commit(
+    // TODO(T169695293): add filter to only keep submodules for implicit deletes?
+    let file_changes_filters: Vec<FileChangeFilter<'a>> = match git_submodules_action {
+        GitSubmodulesChangesAction::Strip => {
+            let filter_func: FileChangeFilterFunc<'a> = Arc::new(move |(_path, fc)| match fc {
+                FileChange::Change(tfc) => tfc.file_type() != FileType::GitSubmodule,
+                _ => true,
+            });
+            let filter: FileChangeFilter<'a> = FileChangeFilter {
+                func: filter_func,
+                application: FileChangeFilterApplication::MultiMover,
+            };
+
+            vec![filter]
+        }
+        GitSubmodulesChangesAction::Keep => vec![],
+    };
+
+    rewrite_commit_with_file_changes_filter(
         ctx,
         cs,
         remapped_parents,
@@ -256,16 +301,19 @@ pub async fn rewrite_commit<'a>(
         source_repo,
         None,
         rewrite_opts,
+        file_changes_filters,
     )
     .await
 }
 
 /// Mover moves a path to at most a single path, while MultiMover can move a
 /// path to multiple.
-pub fn mover_to_multi_mover(mover: Mover) -> MultiMover {
-    Arc::new(move |path: &MPath| -> Result<Vec<MPath>, Error> {
-        Ok(mover(path)?.into_iter().collect())
-    })
+pub fn mover_to_multi_mover(mover: Mover) -> MultiMover<'static> {
+    Arc::new(
+        move |path: &NonRootMPath| -> Result<Vec<NonRootMPath>, Error> {
+            Ok(mover(path)?.into_iter().collect())
+        },
+    )
 }
 
 async fn remap_parents<'a, M: SyncedCommitMapping + Clone + 'static, R: Repo>(
@@ -297,10 +345,10 @@ async fn remap_parents<'a, M: SyncedCommitMapping + Clone + 'static, R: Repo>(
     Ok(remapped_parents)
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct SyncedAncestorsVersions {
     // Versions of all synced ancestors
-    versions: HashSet<CommitSyncConfigVersion>,
+    pub versions: HashSet<CommitSyncConfigVersion>,
 }
 
 impl SyncedAncestorsVersions {
@@ -420,12 +468,105 @@ where
     ))
 }
 
+/// Same as `find_toposorted_unsynced_ancestors` but uses the skew binary commit
+/// graph to find the oldest unsynced ancestor quicker.
+/// NOTE: because this is used to run initial imports of small repos into large
+/// repos, this function DOES NOT take into account hardcoded mappings in
+/// hg extra metadata, as `find_toposorted_unsynced_ancestors` does.
+pub async fn find_toposorted_unsynced_ancestors_with_commit_graph<'a, M, R>(
+    ctx: &'a CoreContext,
+    commit_syncer: &'a CommitSyncer<M, R>,
+    start_cs_id: ChangesetId,
+) -> Result<(Vec<ChangesetId>, SyncedAncestorsVersions)>
+where
+    M: SyncedCommitMapping + Clone + 'static,
+    R: Repo,
+{
+    let source_repo = commit_syncer.get_source_repo();
+
+    let commit_graph = source_repo.commit_graph();
+
+    // Monotonic property function that will be used to traverse the commit
+    // graph to find the latest synced ancestors (if any).
+    let is_synced = |cs_id: ChangesetId| {
+        borrowed!(ctx, commit_syncer);
+
+        async move {
+            let maybe_plural_outcome = commit_syncer
+                .get_plural_commit_sync_outcome(ctx, cs_id)
+                .await?;
+
+            match maybe_plural_outcome {
+                Some(_plural) => Ok(true),
+                None => Ok(false),
+            }
+        }
+    };
+
+    let synced_ancestors_frontier = commit_graph
+        .ancestors_frontier_with(ctx, vec![start_cs_id], is_synced)
+        .await?;
+
+    // Get the config versions from all synced ancestors
+    let synced_ancestors_versions = stream::iter(&synced_ancestors_frontier)
+        .then(|cs_id| {
+            borrowed!(ctx, commit_syncer);
+
+            async move {
+                let maybe_plural_outcome = commit_syncer
+                    .get_plural_commit_sync_outcome(ctx, *cs_id)
+                    .await?;
+
+                match maybe_plural_outcome {
+                    Some(plural) => {
+                        use PluralCommitSyncOutcome::*;
+                        match plural {
+                            NotSyncCandidate(version) => Ok(vec![version]),
+                            RewrittenAs(cs_ids_versions) => {
+                                Ok(cs_ids_versions.into_iter().map(|(_, v)| v).collect())
+                            }
+                            EquivalentWorkingCopyAncestor(_, version) => Ok(vec![version]),
+                        }
+                    }
+                    None => Err(anyhow!("Failed to get config version from synced ancestor")),
+                }
+            }
+        })
+        .try_collect::<HashSet<_>>()
+        .await?
+        .into_iter()
+        .flatten()
+        .collect::<HashSet<_>>();
+
+    // Get the oldest unsynced ancestors by getting the difference between the
+    // ancestors from the starting changeset and its synced ancestors.
+    let mut commits_to_sync = commit_graph
+        .ancestors_difference(ctx, vec![start_cs_id], synced_ancestors_frontier)
+        .await?;
+
+    // `ancestors_difference` returns the commits in reverse topological order
+    commits_to_sync.reverse();
+
+    Ok((
+        commits_to_sync,
+        SyncedAncestorsVersions {
+            versions: synced_ancestors_versions,
+        },
+    ))
+}
+
 pub trait Repo = BookmarksArc
     + BookmarksRef
     + BookmarkUpdateLogArc
     + BookmarkUpdateLogRef
     + RepoBlobstoreArc
     + BonsaiHgMappingRef
+    + BonsaiGlobalrevMappingArc
+    + RepoCrossRepoRef
+    + PushrebaseMutationMappingRef
+    + RepoBookmarkAttrsRef
+    + BonsaiGitMappingRef
+    + BonsaiGitMappingArc
     + FilestoreConfigRef
     + ChangesetsRef
     + RepoIdentityRef
@@ -456,6 +597,15 @@ pub struct ConcreteRepo {
     bonsai_hg_mapping: dyn BonsaiHgMapping,
 
     #[facet]
+    bonsai_git_mapping: dyn BonsaiGitMapping,
+
+    #[facet]
+    bonsai_globalrev_mapping: dyn BonsaiGlobalrevMapping,
+
+    #[facet]
+    pushrebase_mutation_mapping: dyn PushrebaseMutationMapping,
+
+    #[facet]
     filestore_config: FilestoreConfig,
 
     #[facet]
@@ -466,6 +616,12 @@ pub struct ConcreteRepo {
 
     #[facet]
     phases: dyn Phases,
+
+    #[facet]
+    repo_cross_repo: RepoCrossRepo,
+
+    #[facet]
+    repo_bookmark_attrs: RepoBookmarkAttrs,
 
     #[facet]
     changeset_fetcher: dyn ChangesetFetcher,
@@ -554,7 +710,7 @@ pub struct CommitSyncer<M, R> {
     // TODO: Finish refactor and remove pub
     pub mapping: M,
     pub repos: CommitSyncRepos<R>,
-    pub commit_sync_data_provider: CommitSyncDataProvider,
+    pub live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     pub scuba_sample: MononokeScubaSampleBuilder,
     pub x_repo_sync_lease: Arc<dyn LeaseOps>,
 }
@@ -583,30 +739,35 @@ where
         live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
         lease: Arc<dyn LeaseOps>,
     ) -> Self {
-        let commit_sync_data_provider = CommitSyncDataProvider::Live(live_commit_sync_config);
-        Self::new_with_provider_impl(ctx, mapping, repos, commit_sync_data_provider, lease)
-    }
-
-    pub fn new_with_provider(
-        ctx: &CoreContext,
-        mapping: M,
-        repos: CommitSyncRepos<R>,
-        commit_sync_data_provider: CommitSyncDataProvider,
-    ) -> Self {
-        Self::new_with_provider_impl(
+        Self::new_with_live_commit_sync_config_impl(
             ctx,
             mapping,
             repos,
-            commit_sync_data_provider,
+            live_commit_sync_config,
+            lease,
+        )
+    }
+
+    pub fn new_with_live_commit_sync_config(
+        ctx: &CoreContext,
+        mapping: M,
+        repos: CommitSyncRepos<R>,
+        live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
+    ) -> Self {
+        Self::new_with_live_commit_sync_config_impl(
+            ctx,
+            mapping,
+            repos,
+            live_commit_sync_config,
             Arc::new(InProcessLease::new()),
         )
     }
 
-    fn new_with_provider_impl(
+    fn new_with_live_commit_sync_config_impl(
         ctx: &CoreContext,
         mapping: M,
         repos: CommitSyncRepos<R>,
-        commit_sync_data_provider: CommitSyncDataProvider,
+        live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
         x_repo_sync_lease: Arc<dyn LeaseOps>,
     ) -> Self {
         let scuba_sample = reporting::get_scuba_sample(
@@ -614,10 +775,11 @@ where
             repos.get_source_repo().repo_identity().name(),
             repos.get_target_repo().repo_identity().name(),
         );
+
         Self {
             mapping,
             repos,
-            commit_sync_data_provider,
+            live_commit_sync_config,
             scuba_sample,
             x_repo_sync_lease,
         }
@@ -663,14 +825,13 @@ where
         &self.mapping
     }
 
-    pub fn get_commit_sync_data_provider(&self) -> &CommitSyncDataProvider {
-        &self.commit_sync_data_provider
-    }
-
     pub async fn version_exists(&self, version: &CommitSyncConfigVersion) -> Result<bool, Error> {
-        self.commit_sync_data_provider
-            .version_exists(self.get_target_repo_id(), version)
-            .await
+        version_exists(
+            Arc::clone(&self.live_commit_sync_config),
+            self.get_target_repo_id(),
+            version,
+        )
+        .await
     }
 
     pub async fn get_mover_by_version(
@@ -679,7 +840,7 @@ where
     ) -> Result<Mover, Error> {
         get_mover_by_version(
             version,
-            &self.commit_sync_data_provider,
+            Arc::clone(&self.live_commit_sync_config),
             Source(self.repos.get_source_repo().repo_identity().id()),
             Target(self.repos.get_target_repo().repo_identity().id()),
         )
@@ -691,35 +852,35 @@ where
         version: &CommitSyncConfigVersion,
     ) -> Result<Mover, Error> {
         let (source_repo, target_repo) = self.get_source_target();
-        self.commit_sync_data_provider
-            .get_reverse_mover(
-                version,
-                source_repo.repo_identity().id(),
-                target_repo.repo_identity().id(),
-            )
-            .await
+        get_reverse_mover(
+            Arc::clone(&self.live_commit_sync_config),
+            version,
+            source_repo.repo_identity().id(),
+            target_repo.repo_identity().id(),
+        )
+        .await
     }
 
     pub async fn get_bookmark_renamer(&self) -> Result<BookmarkRenamer, Error> {
         let (source_repo, target_repo) = self.get_source_target();
 
-        self.commit_sync_data_provider
-            .get_bookmark_renamer(
-                source_repo.repo_identity().id(),
-                target_repo.repo_identity().id(),
-            )
-            .await
+        get_bookmark_renamer(
+            Arc::clone(&self.live_commit_sync_config),
+            source_repo.repo_identity().id(),
+            target_repo.repo_identity().id(),
+        )
+        .await
     }
 
     pub async fn get_reverse_bookmark_renamer(&self) -> Result<BookmarkRenamer, Error> {
         let (source_repo, target_repo) = self.get_source_target();
 
-        self.commit_sync_data_provider
-            .get_reverse_bookmark_renamer(
-                source_repo.repo_identity().id(),
-                target_repo.repo_identity().id(),
-            )
-            .await
+        get_reverse_bookmark_renamer(
+            Arc::clone(&self.live_commit_sync_config),
+            source_repo.repo_identity().id(),
+            target_repo.repo_identity().id(),
+        )
+        .await
     }
 
     pub async fn rename_bookmark(
@@ -741,7 +902,7 @@ where
             Source(source_cs_id),
             &self.mapping,
             self.repos.get_direction(),
-            &self.commit_sync_data_provider,
+            Arc::clone(&self.live_commit_sync_config),
         )
         .await
     }
@@ -758,7 +919,7 @@ where
             Source(source_cs_id),
             &self.mapping,
             self.repos.get_direction(),
-            &self.commit_sync_data_provider,
+            Arc::clone(&self.live_commit_sync_config),
         )
         .await
     }
@@ -775,7 +936,7 @@ where
             source_cs_id,
             &self.mapping,
             self.repos.get_direction(),
-            &self.commit_sync_data_provider,
+            Arc::clone(&self.live_commit_sync_config),
         )
         .await
     }
@@ -794,7 +955,7 @@ where
             &self.mapping,
             hint,
             self.repos.get_direction(),
-            &self.commit_sync_data_provider,
+            Arc::clone(&self.live_commit_sync_config),
         )
         .await
     }
@@ -818,7 +979,13 @@ where
     ) -> Result<Option<ChangesetId>, Error> {
         let before = Instant::now();
         let res = self
-            .sync_commit_impl(ctx, source_cs_id, ancestor_selection_hint, disable_lease)
+            .sync_commit_impl(
+                ctx,
+                source_cs_id,
+                commit_sync_context,
+                ancestor_selection_hint,
+                disable_lease,
+            )
             .await;
         let elapsed = before.elapsed();
         log_rewrite(
@@ -837,6 +1004,7 @@ where
         &self,
         ctx: &CoreContext,
         source_cs_id: ChangesetId,
+        commit_sync_context: CommitSyncContext,
         ancestor_selection_hint: CandidateSelectionHint<R>,
         disable_lease: bool,
     ) -> Result<Option<ChangesetId>, Error> {
@@ -862,8 +1030,8 @@ where
             if !public_unsynced_ancestors.is_empty() {
                 return Err(format_err!(
                     "unexpected sync lookup attempt - trying to sync \
-                     a public commit from small repo to a large repo. Syncing public commits is \
-                     only supported from a large repo to a small repo"
+                      a public commit from small repo to a large repo. Syncing public commits is \
+                      only supported from a large repo to a small repo"
                 ));
             }
         }
@@ -902,6 +1070,7 @@ where
                         ctx,
                         ancestor,
                         ancestor_selection_hint.clone(),
+                        commit_sync_context,
                         Some(version),
                     )
                     .await?;
@@ -910,18 +1079,17 @@ where
                         ctx,
                         ancestor,
                         ancestor_selection_hint.clone(),
+                        commit_sync_context,
                         None,
                     )
                     .await?;
                 }
                 Ok(())
             };
-
-            if tunables()
-                .xrepo_disable_commit_sync_lease()
-                .unwrap_or_default()
-                || disable_lease
-            {
+            let xrepo_disable_commit_sync_lease =
+                justknobs::eval("scm/mononoke:xrepo_disable_commit_sync_lease", None, None)
+                    .unwrap_or_default();
+            if xrepo_disable_commit_sync_lease || disable_lease {
                 sync().await?;
             } else {
                 run_with_lease(ctx, &self.x_repo_sync_lease, lease_key, checker, sync).await?;
@@ -977,10 +1145,20 @@ where
         source_cs_id: ChangesetId,
         parent_mapping_selection_hint: CandidateSelectionHint<R>,
         commit_sync_context: CommitSyncContext,
+        // For commits that have at least a single parent it checks that these commits
+        // will be rewritten with this version, and for commits with no parents
+        // this expected version will be used for rewriting.
+        expected_version: Option<CommitSyncConfigVersion>,
     ) -> Result<Option<ChangesetId>, Error> {
         let before = Instant::now();
         let res = self
-            .unsafe_sync_commit_impl(ctx, source_cs_id, parent_mapping_selection_hint, None)
+            .unsafe_sync_commit_impl(
+                ctx,
+                source_cs_id,
+                parent_mapping_selection_hint,
+                commit_sync_context,
+                expected_version,
+            )
             .await;
         let elapsed = before.elapsed();
         log_rewrite(
@@ -995,45 +1173,12 @@ where
         res
     }
 
-    /// Just like unsafe_sync_commit, but sets an expected version i.e.
-    /// for commits that have at least a single parent it checks that these commits
-    /// will be rewritten with this version, and for commits with no parents
-    /// this expected version will be used for rewriting.
-    pub async fn unsafe_sync_commit_with_expected_version(
-        &self,
-        ctx: &CoreContext,
-        source_cs_id: ChangesetId,
-        parent_mapping_selection_hint: CandidateSelectionHint<R>,
-        expected_version: CommitSyncConfigVersion,
-        commit_sync_context: CommitSyncContext,
-    ) -> Result<Option<ChangesetId>, Error> {
-        let before = Instant::now();
-        let res = self
-            .unsafe_sync_commit_impl(
-                ctx,
-                source_cs_id,
-                parent_mapping_selection_hint,
-                Some(expected_version),
-            )
-            .await;
-        let elapsed = before.elapsed();
-        log_rewrite(
-            ctx,
-            self.scuba_sample.clone(),
-            source_cs_id,
-            "unsafe_sync_commit_with_expected_version",
-            commit_sync_context,
-            elapsed,
-            &res,
-        );
-        res
-    }
-
     async fn unsafe_sync_commit_impl<'a>(
         &'a self,
         ctx: &'a CoreContext,
         source_cs_id: ChangesetId,
         mut parent_mapping_selection_hint: CandidateSelectionHint<R>,
+        commit_sync_context: CommitSyncContext,
         expected_version: Option<CommitSyncConfigVersion>,
     ) -> Result<Option<ChangesetId>, Error> {
         debug!(
@@ -1067,10 +1212,10 @@ where
             source_repo: Source(self.get_source_repo()),
             mapped_parents: &mapped_parents,
             target_repo_id: Target(self.get_target_repo_id()),
-            provider: &self.commit_sync_data_provider,
+            live_commit_sync_config: Arc::clone(&self.live_commit_sync_config),
             small_to_large: matches!(self.repos, CommitSyncRepos::SmallToLarge { .. }),
         }
-        .unsafe_sync_commit_in_memory(cs, expected_version)
+        .unsafe_sync_commit_in_memory(cs, commit_sync_context, expected_version)
         .await?
         .write(ctx, self)
         .await
@@ -1132,6 +1277,13 @@ where
     ) -> Result<Option<ChangesetId>, Error> {
         let (source_repo, target_repo) = self.get_source_target();
         let mover = self.get_mover_by_version(sync_config_version).await?;
+
+        let git_submodules_action = get_strip_git_submodules_by_version(
+            Arc::clone(&self.live_commit_sync_config),
+            sync_config_version,
+            self.repos.get_source_repo().repo_identity().id(),
+        )
+        .await?;
         let source_cs = source_cs_id.load(ctx, source_repo.repo_blobstore()).await?;
 
         let source_cs = source_cs.clone().into_mut();
@@ -1147,6 +1299,7 @@ where
             mover,
             &source_repo,
             Default::default(),
+            git_submodules_action,
         )
         .await?;
         match rewritten_commit {
@@ -1176,18 +1329,29 @@ where
     /// This function is prefixed with unsafe because it requires that ancestors commits are
     /// already synced and because there should be exactly one sync job that uses this function
     /// for a (small repo -> large repo) pair.
+    ///
+    /// Validation that the version is applicable is done by the caller.
     pub async fn unsafe_sync_commit_pushrebase<'a>(
         &'a self,
         ctx: &'a CoreContext,
         source_cs: BonsaiChangeset,
-        bookmark: BookmarkKey,
+        target_bookmark: Target<BookmarkKey>,
         commit_sync_context: CommitSyncContext,
         rewritedates: PushrebaseRewriteDates,
+        version: CommitSyncConfigVersion,
+        change_mapping_version: Option<CommitSyncConfigVersion>,
     ) -> Result<Option<ChangesetId>, Error> {
         let source_cs_id = source_cs.get_changeset_id();
         let before = Instant::now();
         let res = self
-            .unsafe_sync_commit_pushrebase_impl(ctx, source_cs, bookmark, rewritedates)
+            .unsafe_sync_commit_pushrebase_impl(
+                ctx,
+                source_cs,
+                target_bookmark,
+                rewritedates,
+                version,
+                change_mapping_version,
+            )
             .await;
         let elapsed = before.elapsed();
 
@@ -1204,23 +1368,27 @@ where
     }
 
     pub async fn get_common_pushrebase_bookmarks(&self) -> Result<Vec<BookmarkKey>, Error> {
-        self.commit_sync_data_provider
-            .get_common_pushrebase_bookmarks(self.get_small_repo().repo_identity().id())
-            .await
+        get_common_pushrebase_bookmarks(
+            Arc::clone(&self.live_commit_sync_config),
+            self.get_small_repo().repo_identity().id(),
+        )
+        .await
     }
 
     async fn unsafe_sync_commit_pushrebase_impl<'a>(
         &'a self,
         ctx: &'a CoreContext,
         source_cs: BonsaiChangeset,
-        bookmark: BookmarkKey,
+        target_bookmark: Target<BookmarkKey>,
         rewritedates: PushrebaseRewriteDates,
+        version: CommitSyncConfigVersion,
+        change_mapping_version: Option<CommitSyncConfigVersion>,
     ) -> Result<Option<ChangesetId>, Error> {
         let hash = source_cs.get_changeset_id();
         let (source_repo, target_repo) = self.get_source_target();
 
         let parent_selection_hint = CandidateSelectionHint::OnlyOrAncestorOfBookmark(
-            Target(bookmark.clone()),
+            target_bookmark.clone(),
             Target(self.get_target_repo().clone()),
         );
 
@@ -1240,42 +1408,18 @@ where
             remapped_parents_outcome.push(commit_sync_outcome);
         }
 
-        let p1 = remapped_parents_outcome.get(0);
-        let p2 = remapped_parents_outcome.get(1);
-        let version_name = match (p1, p2) {
-            (None, None) => {
-                return Err(format_err!("cannot pushrebase a commit with no parents"));
-            }
-            (Some((sync_outcome, _)), None) => {
-                use CommitSyncOutcome::*;
+        let mover = self.get_mover_by_version(&version).await?;
 
-                let version_name = match sync_outcome {
-                    NotSyncCandidate(_) => {
-                        return Err(ErrorKind::ParentNotSyncCandidate(hash).into());
-                    }
-                    RewrittenAs(_, version_name)
-                    | EquivalentWorkingCopyAncestor(_, version_name) => version_name.clone(),
-                };
-
-                let maybe_version =
-                    get_version(ctx, self.get_source_repo(), hash, &[version_name]).await?;
-                maybe_version.ok_or_else(|| {
-                    format_err!("unexpected can not find commit sync version for {}", hash)
-                })?
-            }
-            _ => {
-                // FIXME: Had to turn it to a vector to avoid "One type is more general than the other"
-                // errors
-                let outcomes = remapped_parents_outcome
-                    .iter()
-                    .map(|(outcome, _)| outcome)
-                    .collect::<Vec<_>>();
-                get_version_for_merge(ctx, self.get_source_repo(), hash, outcomes).await?
-            }
-        };
-
-        let mover = self.get_mover_by_version(&version_name).await?;
-        let source_cs_mut = source_cs.clone().into_mut();
+        let git_submodules_action = get_strip_git_submodules_by_version(
+            Arc::clone(&self.live_commit_sync_config),
+            &version,
+            self.repos.get_source_repo().repo_identity().id(),
+        )
+        .await?;
+        let mut source_cs_mut = source_cs.clone().into_mut();
+        if let Some(change_mapping_version) = change_mapping_version {
+            set_mapping_change_version(&mut source_cs_mut, change_mapping_version)?;
+        }
         let remapped_parents =
             remap_parents(ctx, &source_cs_mut, self, parent_selection_hint).await?;
         let rewritten = rewrite_commit(
@@ -1285,13 +1429,14 @@ where
             mover,
             &source_repo,
             Default::default(),
+            git_submodules_action,
         )
         .await?;
 
         match rewritten {
             None => {
                 if remapped_parents_outcome.is_empty() {
-                    self.set_no_sync_candidate(ctx, hash, version_name).await?;
+                    self.set_no_sync_candidate(ctx, hash, version).await?;
                 } else if remapped_parents_outcome.len() == 1 {
                     use CommitSyncOutcome::*;
                     let (sync_outcome, _) = &remapped_parents_outcome[0];
@@ -1339,18 +1484,28 @@ where
                     recursion_limit: None,
                     ..Default::default()
                 };
+                // We need to run all pushrebase hooks because the're not only validating if the
+                // commit should be pushed. Some of them do important housekeeping that we shouldn't
+                // pass on.
+                let mut pushrebase_hooks = get_pushrebase_hooks(
+                    ctx,
+                    &target_repo,
+                    &target_bookmark,
+                    &target_repo.repo_config().pushrebase,
+                )?;
+                pushrebase_hooks.push(CrossRepoSyncPushrebaseHook::new(
+                    hash,
+                    self.repos.clone(),
+                    version.clone(),
+                ));
 
                 let pushrebase_res = do_pushrebase_bonsai(
                     ctx,
                     &target_repo,
                     &pushrebase_flags,
-                    &bookmark,
+                    &target_bookmark,
                     &rewritten_list,
-                    &[CrossRepoSyncPushrebaseHook::new(
-                        hash,
-                        self.repos.clone(),
-                        version_name.clone(),
-                    )],
+                    pushrebase_hooks.as_slice(),
                 )
                 .await;
                 let pushrebase_res =
@@ -1419,7 +1574,10 @@ where
         maybe_target_bcs_id: Option<ChangesetId>,
         version_name: CommitSyncConfigVersion,
     ) -> Result<(), Error> {
-        if tunables().xrepo_sync_disable_all_syncs().unwrap_or(false) {
+        let xrepo_sync_disable_all_syncs =
+            justknobs::eval("scm/mononoke:xrepo_sync_disable_all_syncs", None, None)
+                .unwrap_or_default();
+        if xrepo_sync_disable_all_syncs {
             return Err(ErrorKind::XRepoSyncDisabled.into());
         }
 
@@ -1519,7 +1677,7 @@ pub struct CommitInMemorySyncer<'a, R: Repo> {
     pub ctx: &'a CoreContext,
     pub source_repo: Source<&'a R>,
     pub target_repo_id: Target<RepositoryId>,
-    pub provider: &'a CommitSyncDataProvider,
+    pub live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     pub mapped_parents: &'a HashMap<ChangesetId, CommitSyncOutcome>,
     pub small_to_large: bool,
 }
@@ -1533,25 +1691,82 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
         Source(self.source_repo.repo_identity().name())
     }
 
+    /// Determine what should happen to commits that would be empty when synced
+    /// to the target repo.
+    fn get_empty_rewritten_commit_action(
+        &self,
+        maybe_mapping_change_version: &Option<CommitSyncConfigVersion>,
+        commit_sync_context: CommitSyncContext,
+    ) -> CommitRewrittenToEmpty {
+        // If a commit is changing mapping let's always rewrite it to
+        // small repo regardless if outcome is empty. This is to ensure
+        // that efter changing mapping there's a commit in small repo
+        // with new mapping on top.
+        if maybe_mapping_change_version.is_some()
+            ||
+            // Initial imports only happen from small to large and might remove
+            // file changes to git submodules, which would lead to empty commits.
+            // These commits should still be written to the large repo.
+            commit_sync_context == CommitSyncContext::ForwardSyncerInitialImport
+        {
+            return CommitRewrittenToEmpty::Keep;
+        }
+
+        CommitRewrittenToEmpty::Discard
+    }
+
     pub async fn unsafe_sync_commit_in_memory(
         self,
         cs: BonsaiChangeset,
+        commit_sync_context: CommitSyncContext,
         expected_version: Option<CommitSyncConfigVersion>,
     ) -> Result<CommitSyncInMemoryResult, Error> {
+        let maybe_mapping_change_version = get_mapping_change_version(
+            &ChangesetInfo::derive(self.ctx, self.source_repo.0, cs.get_changeset_id()).await?,
+        )?;
+
+        let commit_rewritten_to_empty = self
+            .get_empty_rewritten_commit_action(&maybe_mapping_change_version, commit_sync_context);
+
+        // During backsyncing we provide an option to skip emmpty commits but we
+        // can only do that when they're not changing the mapping.
+        let empty_commit_from_large_repo = if !self.small_to_large
+            && maybe_mapping_change_version.is_none()
+            && justknobs::eval(
+                "scm/mononoke:cross_repo_skip_backsyncing_ordinary_empty_commits",
+                None,
+                Some(self.source_repo_name().0),
+            )
+            .unwrap_or(false)
+        {
+            EmptyCommitFromLargeRepo::Discard
+        } else {
+            EmptyCommitFromLargeRepo::Keep
+        };
+
+        let rewrite_opts = RewriteOpts {
+            commit_rewritten_to_empty,
+            empty_commit_from_large_repo,
+        };
         let parent_count = cs.parents().count();
         if parent_count == 0 {
             match expected_version {
-                Some(version) => self.sync_commit_no_parents_in_memory(cs, version).await,
+                Some(version) => {
+                    self.sync_commit_no_parents_in_memory(cs, version, rewrite_opts)
+                        .await
+                }
                 None => bail!(
                     "no version specified for remapping commit {} with no parents",
                     cs.get_changeset_id(),
                 ),
             }
         } else if parent_count == 1 {
-            self.sync_commit_single_parent_in_memory(cs, expected_version)
+            self.sync_commit_single_parent_in_memory(cs, expected_version, rewrite_opts)
                 .await
         } else {
-            self.sync_merge_in_memory(cs, expected_version).await
+            // Syncing merge doesn't take rewrite_opts because merges are always rewritten.
+            self.sync_merge_in_memory(cs, commit_sync_context, expected_version)
+                .await
         }
     }
 
@@ -1559,6 +1774,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
         self,
         cs: BonsaiChangeset,
         expected_version: CommitSyncConfigVersion,
+        rewrite_opts: RewriteOpts,
     ) -> Result<CommitSyncInMemoryResult, Error> {
         let source_cs_id = cs.get_changeset_id();
         let maybe_version = get_version(self.ctx, self.source_repo.0, source_cs_id, &[]).await?;
@@ -1575,9 +1791,15 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
 
         let mover = get_mover_by_version(
             &expected_version,
-            self.provider,
+            Arc::clone(&self.live_commit_sync_config),
             self.source_repo_id(),
             self.target_repo_id,
+        )
+        .await?;
+        let git_submodules_action = get_strip_git_submodules_by_version(
+            Arc::clone(&self.live_commit_sync_config),
+            &expected_version,
+            self.source_repo_id().0,
         )
         .await?;
 
@@ -1587,7 +1809,8 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
             &HashMap::new(),
             mover,
             self.source_repo.0,
-            Default::default(),
+            rewrite_opts,
+            git_submodules_action,
         )
         .await?
         {
@@ -1608,6 +1831,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
         self,
         cs: BonsaiChangeset,
         expected_version: Option<CommitSyncConfigVersion>,
+        rewrite_opts: RewriteOpts,
     ) -> Result<CommitSyncInMemoryResult, Error> {
         let source_cs_id = cs.get_changeset_id();
         let cs = cs.into_mut();
@@ -1650,7 +1874,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
 
                 let rewrite_paths = get_mover_by_version(
                     &version,
-                    self.provider,
+                    Arc::clone(&self.live_commit_sync_config),
                     self.source_repo_id(),
                     self.target_repo_id,
                 )
@@ -1659,32 +1883,12 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                 let mut remapped_parents = HashMap::new();
                 remapped_parents.insert(p, remapped_p);
 
-                // If a commit is changing mapping let's always rewrite it to
-                // small repo regardless if outcome is empty. This is to ensure
-                // that efter changing mapping there's a commit in small repo
-                // with new mapping on top.
-                let maybe_mapping_change_version = get_mapping_change_version(
-                    &ChangesetInfo::derive(self.ctx, self.source_repo.0, source_cs_id).await?,
-                )?;
-                let commit_rewritten_to_empty = if maybe_mapping_change_version.is_some() {
-                    CommitRewrittenToEmpty::Keep
-                } else {
-                    CommitRewrittenToEmpty::Discard
-                };
-                // During backsyncing we provide an option to skip emmpty commits but we
-                // can only do that when they're not changing the mapping.
-                let empty_commit_from_large_repo = if !self.small_to_large
-                    && maybe_mapping_change_version.is_none()
-                    && tunables::tunables()
-                        .by_repo_cross_repo_skip_backsyncing_ordinary_empty_commits(
-                            self.source_repo_name().0,
-                        )
-                        .unwrap_or(false)
-                {
-                    EmptyCommitFromLargeRepo::Discard
-                } else {
-                    EmptyCommitFromLargeRepo::Keep
-                };
+                let git_submodules_action = get_strip_git_submodules_by_version(
+                    Arc::clone(&self.live_commit_sync_config),
+                    &version,
+                    self.source_repo_id().0,
+                )
+                .await?;
 
                 let maybe_rewritten = rewrite_commit(
                     self.ctx,
@@ -1692,10 +1896,8 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                     &remapped_parents,
                     rewrite_paths,
                     self.source_repo.0,
-                    RewriteOpts {
-                        commit_rewritten_to_empty,
-                        empty_commit_from_large_repo,
-                    },
+                    rewrite_opts,
+                    git_submodules_action,
                 )
                 .await?;
                 match maybe_rewritten {
@@ -1737,7 +1939,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
 
         let mover = get_mover_by_version(
             &version,
-            self.provider,
+            Arc::clone(&self.live_commit_sync_config),
             self.source_repo_id(),
             self.target_repo_id,
         )
@@ -1754,9 +1956,14 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
     async fn sync_merge_in_memory(
         self,
         cs: BonsaiChangeset,
+        commit_sync_context: CommitSyncContext,
         expected_version: Option<CommitSyncConfigVersion>,
     ) -> Result<CommitSyncInMemoryResult, Error> {
-        if self.small_to_large {
+        // It's safe to sync merges during initial import because there's no pushrebase going on
+        // which allows us to avoid the edge-cases.
+        if self.small_to_large
+            && commit_sync_context != CommitSyncContext::ForwardSyncerInitialImport
+        {
             bail!("syncing merge commits is supported only in large to small direction");
         }
 
@@ -1838,6 +2045,13 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                 }
             }
 
+            let git_submodules_action = get_strip_git_submodules_by_version(
+                Arc::clone(&self.live_commit_sync_config),
+                &version,
+                self.source_repo_id().0,
+            )
+            .await?;
+
             match rewrite_commit(
                 self.ctx,
                 cs,
@@ -1845,6 +2059,7 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
                 mover,
                 self.source_repo.0,
                 Default::default(),
+                git_submodules_action,
             )
             .await?
             {
@@ -1925,13 +2140,17 @@ fn strip_removed_parents(
 
 async fn get_mover_by_version(
     version: &CommitSyncConfigVersion,
-    provider: &CommitSyncDataProvider,
+    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     source_id: Source<RepositoryId>,
     target_repo_id: Target<RepositoryId>,
 ) -> Result<Mover, Error> {
-    provider
-        .get_mover(version, source_id.0, target_repo_id.0)
-        .await
+    get_mover(
+        live_commit_sync_config,
+        version,
+        source_id.0,
+        target_repo_id.0,
+    )
+    .await
 }
 
 pub async fn update_mapping_with_version<'a, M: SyncedCommitMapping + Clone + 'static, R: Repo>(
@@ -1940,10 +2159,10 @@ pub async fn update_mapping_with_version<'a, M: SyncedCommitMapping + Clone + 's
     syncer: &'a CommitSyncer<M, R>,
     version_name: &CommitSyncConfigVersion,
 ) -> Result<(), Error> {
-    if tunables()
-        .xrepo_sync_disable_all_syncs()
-        .unwrap_or_default()
-    {
+    let xrepo_sync_disable_all_syncs =
+        justknobs::eval("scm/mononoke:xrepo_sync_disable_all_syncs", None, None)
+            .unwrap_or_default();
+    if xrepo_sync_disable_all_syncs {
         return Err(ErrorKind::XRepoSyncDisabled.into());
     }
 
@@ -2072,8 +2291,7 @@ where
             break;
         }
 
-        let leased = if tunables()
-            .xrepo_disable_commit_sync_lease()
+        let leased = if justknobs::eval("scm/mononoke:xrepo_disable_commit_sync_lease", None, None)
             .unwrap_or_default()
         {
             true

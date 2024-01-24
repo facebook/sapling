@@ -8,7 +8,6 @@
 use std::cmp::min;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::fs::File;
 use std::io::ErrorKind;
 use std::io::Read;
 use std::io::Write;
@@ -35,16 +34,21 @@ use anyhow::Error;
 use anyhow::Result;
 use async_runtime::block_on;
 use async_runtime::stream_to_iter;
+use clientinfo::get_client_request_info_thread_local;
+use clientinfo::ClientInfo;
+use clientinfo_async::get_client_request_info_task_local;
+use clientinfo_async::with_client_request_info_scope;
 use configmodel::convert::ByteCount;
 use configmodel::Config;
 use configmodel::ConfigExt;
+use fs_err::File;
 use futures::future::FutureExt;
 use futures::stream::iter;
 use futures::stream::FuturesUnordered;
 use futures::stream::StreamExt;
 use hg_http::http_client;
 use hg_http::http_config;
-use hgstore::strip_metadata;
+use hgstore::strip_hg_file_metadata;
 use http::status::StatusCode;
 use http_client::Encoding;
 use http_client::HttpClient;
@@ -122,7 +126,6 @@ struct LfsPointersStore(Store);
 pub(crate) struct LfsIndexedLogBlobsStore {
     inner: RwLock<Store>,
     chunk_size: usize,
-    skip_hash_on_read: bool,
 }
 
 /// The `LfsBlobsStore` holds the actual blobs. Lookup is done via the content hash (sha256) of the
@@ -150,7 +153,6 @@ struct HttpOptions {
     accept_zstd: bool,
     http_version: HttpVersion,
     min_transfer_speed: Option<MinTransferSpeed>,
-    correlator: Option<String>,
     user_agent: String,
     backoff_times: Vec<f32>,
     throttle_backoff_times: Vec<f32>,
@@ -300,8 +302,18 @@ impl LfsPointersStore {
         self.entry(key)
     }
 
+    /// Find the pointer corresponding to the passed in `HgId`.
+    fn get_by_hgid(&self, hgid: &HgId) -> Result<Option<LfsPointersEntry>> {
+        let mut iter = self.0.lookup(Self::INDEX_NODE, &hgid)?;
+        let buf = match iter.next() {
+            None => return Ok(None),
+            Some(buf) => buf?,
+        };
+        Self::get_from_slice(buf).map(Some)
+    }
+
     fn add(&mut self, entry: LfsPointersEntry) -> Result<()> {
-        Ok(self.0.append(serialize(&entry)?)?)
+        self.0.append(serialize(&entry)?)
     }
 }
 
@@ -354,7 +366,6 @@ impl LfsIndexedLogBlobsStore {
         Ok(Self {
             inner: RwLock::new(LfsIndexedLogBlobsStore::open_options(config)?.shared(path)?),
             chunk_size: LfsIndexedLogBlobsStore::chunk_size(config)?,
-            skip_hash_on_read: config.get_or("lfs", "skiphashonread", || false)?,
         })
     }
 
@@ -415,22 +426,12 @@ impl LfsIndexedLogBlobsStore {
         }
 
         let data: Bytes = res.into();
-        if self.skip_hash_on_read {
-            if data.len() as u64 == total_size || is_redacted(&data) {
-                Ok(Some(data))
-            } else {
-                Ok(None)
-            }
+        // Skip SHA256 hash check on reading. Data integrity is checked by indexedlog xxhash and
+        // length. The SHA256 check can be slow (~90% of data reading time!).
+        if data.len() as u64 == total_size || is_redacted(&data) {
+            Ok(Some(data))
         } else {
-            let apparent_hash = ContentHash::sha256(&data).unwrap_sha256();
-            if &apparent_hash == hash || is_redacted(&data) {
-                Ok(Some(data))
-            } else {
-                if data.len() as u64 == total_size {
-                    tracing::debug!(target: "lfs_read_hash_mismatch", lfs_read_hash_mismatch=&hash.to_hex()[..]);
-                }
-                Ok(None)
-            }
+            Ok(None)
         }
     }
 
@@ -493,7 +494,7 @@ impl LfsBlobsStore {
     /// format.
     pub fn shared(path: &Path, config: &dyn Config) -> Result<Self> {
         let indexedlog = Box::new(LfsBlobsStore::IndexedLog(LfsIndexedLogBlobsStore::shared(
-            &path, config,
+            path, config,
         )?));
         let loose = Box::new(LfsBlobsStore::Loose(get_lfs_objects_path(path)?, false));
 
@@ -527,7 +528,7 @@ impl LfsBlobsStore {
     pub fn get(&self, hash: &Sha256, size: u64) -> Result<Option<Bytes>> {
         let blob = match self {
             LfsBlobsStore::Loose(path, _) => {
-                let path = LfsBlobsStore::path(&path, hash);
+                let path = LfsBlobsStore::path(path, hash);
                 let mut file = match File::open(path) {
                     Ok(file) => file,
                     Err(e) => {
@@ -566,7 +567,7 @@ impl LfsBlobsStore {
     /// Test whether the blob store contains the hash.
     pub fn contains(&self, hash: &Sha256) -> Result<bool> {
         match self {
-            LfsBlobsStore::Loose(path, _) => Ok(LfsBlobsStore::path(&path, hash).is_file()),
+            LfsBlobsStore::Loose(path, _) => Ok(LfsBlobsStore::path(path, hash).is_file()),
             LfsBlobsStore::IndexedLog(log) => log.contains(hash),
             LfsBlobsStore::Union(first, second) => {
                 Ok(first.contains(hash)? || second.contains(hash)?)
@@ -578,7 +579,7 @@ impl LfsBlobsStore {
     pub fn add(&self, hash: &Sha256, blob: Bytes) -> Result<()> {
         match self {
             LfsBlobsStore::Loose(path, is_local) => {
-                let path = LfsBlobsStore::path(&path, hash);
+                let path = LfsBlobsStore::path(path, hash);
                 let parent_path = path.parent().unwrap();
 
                 if *is_local {
@@ -606,7 +607,7 @@ impl LfsBlobsStore {
     pub fn remove(&self, hash: &Sha256) -> Result<()> {
         match self {
             LfsBlobsStore::Loose(path, _) => {
-                let path = LfsBlobsStore::path(&path, hash);
+                let path = LfsBlobsStore::path(path, hash);
                 remove_file(path).with_context(|| format!("Cannot remove LFS blob {}", hash))?;
             }
 
@@ -722,6 +723,19 @@ impl LfsStore {
         }
     }
 
+    /// Directly get the local content. Do not ask remote servers.
+    pub(crate) fn get_local_content_direct(&self, id: &HgId) -> Result<Option<Bytes>> {
+        let pointer = match self.pointers.read().get_by_hgid(id)? {
+            None => return Ok(None),
+            Some(v) => v,
+        };
+        let hash = match pointer.content_hashes.get(&ContentHashType::Sha256) {
+            None => return Ok(None),
+            Some(v) => v,
+        };
+        self.blobs.get(hash.sha256_ref(), pointer.size)
+    }
+
     pub fn add_blob(&self, hash: &Sha256, blob: Bytes) -> Result<()> {
         self.blobs.add(hash, blob)
     }
@@ -757,7 +771,7 @@ impl LocalStore for LfsStore {
                     }
                 }
                 StoreKey::Content(content_hash, _) => match content_hash {
-                    ContentHash::Sha256(hash) => match self.blobs.contains(&hash) {
+                    ContentHash::Sha256(hash) => match self.blobs.contains(hash) {
                         Ok(true) => None,
                         Ok(false) | Err(_) => Some(k.clone()),
                     },
@@ -784,15 +798,13 @@ pub(crate) fn rebuild_metadata(data: Bytes, entry: &LfsPointersEntry) -> Bytes {
         ret.extend_from_slice(&b"\x01\n"[..]);
         ret.extend_from_slice(data.as_ref());
         ret.into()
+    } else if data.as_ref().starts_with(b"\x01\n") {
+        let mut ret = Vec::with_capacity(data.len() + 4);
+        ret.extend_from_slice(&b"\x01\n\x01\n"[..]);
+        ret.extend_from_slice(data.as_ref());
+        ret.into()
     } else {
-        if data.as_ref().starts_with(b"\x01\n") {
-            let mut ret = Vec::with_capacity(data.len() + 4);
-            ret.extend_from_slice(&b"\x01\n\x01\n"[..]);
-            ret.extend_from_slice(data.as_ref());
-            ret.into()
-        } else {
-            data
-        }
+        data
     }
 }
 
@@ -801,7 +813,7 @@ pub(crate) fn lfs_from_hg_file_blob(
     hgid: HgId,
     raw_content: &Bytes,
 ) -> Result<(LfsPointersEntry, Bytes)> {
-    let (data, copy_from) = strip_metadata(raw_content)?;
+    let (data, copy_from) = strip_hg_file_metadata(raw_content)?;
     let pointer = LfsPointersEntry::from_file_content(hgid, &data, copy_from)?;
     Ok((pointer, data))
 }
@@ -933,7 +945,7 @@ impl LfsPointersEntry {
     /// can be found at https://github.com/git-lfs/git-lfs/blob/master/docs/spec.md
     pub(crate) fn from_bytes(data: impl AsRef<[u8]>, hgid: HgId) -> Result<Self> {
         let data = str::from_utf8(data.as_ref())?;
-        Ok(LfsPointersEntry::from_str(data, hgid)?)
+        LfsPointersEntry::from_str(data, hgid)
     }
 
     /// Parse the text representation of an LFS pointer.
@@ -1149,10 +1161,6 @@ impl LfsRemoteInner {
                     )
                     .http_version(http_options.http_version);
 
-                if let Some(ref correlator) = http_options.correlator {
-                    req.set_header("X-Client-Correlator", correlator.clone());
-                }
-
                 if http_options.accept_zstd {
                     req.set_accept_encoding([Encoding::Zstd]);
                 }
@@ -1164,7 +1172,18 @@ impl LfsRemoteInner {
                 let res = async {
                     let request_timeout = http_options.request_timeout;
 
-                    let req = add_extra(req);
+                    let mut req = add_extra(req);
+
+                    // Set up client_request_info fetched from a task local
+                    if let Some(client_request_info) = get_client_request_info_task_local() {
+                        if let Ok(client_info) =
+                            ClientInfo::new_with_client_request_info(client_request_info)
+                        {
+                            if let Ok(client_info_json) = client_info.to_json() {
+                                req.set_client_info(&Some(client_info_json));
+                            }
+                        }
+                    }
 
                     let (responses, _) = client.send_async(vec![req])?;
                     let mut stream = responses.into_iter().collect::<FuturesUnordered<_>>();
@@ -1238,7 +1257,7 @@ impl LfsRemoteInner {
                         RetryStrategy::from_http_status(*status)
                     }
                     TransferError::HttpClientError(http_error) => {
-                        RetryStrategy::from_http_error(&http_error)
+                        RetryStrategy::from_http_error(http_error)
                     }
                     TransferError::EndOfStream => RetryStrategy::NoRetry,
                     TransferError::Timeout(..) => RetryStrategy::NoRetry,
@@ -1325,7 +1344,12 @@ impl LfsRemoteInner {
             .await
         };
 
-        let response = block_on(response_fut)?;
+        // Fetch ClientRequestInfo from a thread local and pass to async code
+        let maybe_client_request_info = get_client_request_info_thread_local();
+        let response = block_on(with_client_request_info_scope(
+            maybe_client_request_info,
+            response_fut,
+        ))?;
         Ok(Some(serde_json::from_slice(response.as_ref())?))
     }
 
@@ -1465,6 +1489,8 @@ impl LfsRemoteInner {
         };
 
         let mut futures = Vec::new();
+        // Fetch ClientRequestInfo from a thread local and pass to async code
+        let maybe_client_request_info = get_client_request_info_thread_local();
 
         for object in response.objects {
             let oid = object.object.oid;
@@ -1482,7 +1508,7 @@ impl LfsRemoteInner {
                 }
             };
 
-            for (op, action) in actions.into_iter().map(|h| h.into_iter()).flatten() {
+            for (op, action) in actions.into_iter().flat_map(|h| h.into_iter()) {
                 let oid = Sha256::from(oid.0);
 
                 let fut = match op {
@@ -1508,7 +1534,10 @@ impl LfsRemoteInner {
                     .right_future(),
                 };
 
-                futures.push(fut);
+                futures.push(with_client_request_info_scope(
+                    maybe_client_request_info.clone(),
+                    fut,
+                ));
             }
         }
 
@@ -1561,7 +1590,6 @@ impl LfsRemote {
         shared: Arc<LfsStore>,
         local: Option<Arc<LfsStore>>,
         config: &dyn Config,
-        correlator: Option<String>,
     ) -> Result<Self> {
         let mut url: String = config.must_get("lfs", "url")?;
         // A trailing '/' needs to be present so that `Url::join` doesn't remove the reponame
@@ -1589,7 +1617,7 @@ impl LfsRemote {
             }
 
             let user_agent = config.get_or("experimental", "lfs.user-agent", || {
-                format!("EdenSCM/{}", ::version::VERSION)
+                format!("Sapling/{}", ::version::VERSION)
             })?;
 
             let concurrent_fetches = config.get_or("lfs", "concurrentfetches", || 4)?;
@@ -1660,7 +1688,6 @@ impl LfsRemote {
                         accept_zstd,
                         http_version,
                         min_transfer_speed,
-                        correlator,
                         user_agent,
                         backoff_times,
                         throttle_backoff_times,
@@ -1698,7 +1725,7 @@ impl HgIdRemoteStore for LfsRemote {
     ) -> Arc<dyn RemoteDataStore> {
         Arc::new(LfsRemoteStore {
             store,
-            remote: self.clone(),
+            remote: self,
         })
     }
 
@@ -1817,7 +1844,7 @@ impl RemoteDataStore for LfsRemoteStore {
             },
             |_, _| {},
         )?;
-        span.record("size", &size.load(Ordering::Relaxed));
+        span.record("size", size.load(Ordering::Relaxed));
 
         let obj_set = mem::take(&mut *obj_set.lock());
         not_found.extend(obj_set.into_iter().map(|(sha256, (k, _))| match k {
@@ -1881,7 +1908,7 @@ impl RemoteDataStore for LfsRemoteStore {
                 |_, _| {},
             )?;
 
-            span.record("size", &size.load(Ordering::Relaxed));
+            span.record("size", size.load(Ordering::Relaxed));
         }
 
         if self.remote.move_after_upload {
@@ -2121,13 +2148,13 @@ mod tests {
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
             base: None,
-            key: k1.clone(),
+            key: k1,
         };
 
         store.add(&delta, &Default::default())?;
         store.flush()?;
 
-        let indexedlog_blobs = LfsIndexedLogBlobsStore::shared(&dir.path(), &config)?;
+        let indexedlog_blobs = LfsIndexedLogBlobsStore::shared(dir.path(), &config)?;
         let hash = ContentHash::sha256(&delta.data).unwrap_sha256();
 
         assert!(indexedlog_blobs.contains(&hash)?);
@@ -2410,7 +2437,7 @@ mod tests {
             };
 
             let with_metadata = rebuild_metadata(data.clone(), &pointer);
-            let (without, copy) = strip_metadata(&with_metadata)?;
+            let (without, copy) = strip_hg_file_metadata(&with_metadata)?;
 
             Ok(data == without && copy == copy_from)
         }
@@ -2511,10 +2538,7 @@ mod tests {
         let k = StoreKey::hgid(k1);
         let stored = multiplexer.get(k.clone())?;
         assert_eq!(stored, StoreResult::Found(delta.data.as_ref().to_vec()));
-        assert_eq!(
-            indexedlog.get_missing(&[k.clone()])?,
-            vec![StoreKey::from(k)]
-        );
+        assert_eq!(indexedlog.get_missing(&[k.clone()])?, vec![k]);
 
         Ok(())
     }
@@ -2586,7 +2610,7 @@ mod tests {
 
         assert_eq!(entry.hgid, k1.hgid);
         assert_eq!(entry.size, size);
-        assert_eq!(entry.is_binary, false);
+        assert!(!entry.is_binary);
         assert_eq!(entry.copy_from, None);
         assert_eq!(
             entry.content_hashes[&ContentHashType::Sha256],
@@ -2658,7 +2682,7 @@ mod tests {
         multiplexer.flush()?;
 
         let lfs = LfsStore::shared(&lfsdir, &config)?;
-        let entry = lfs.pointers.read().get(&k.clone())?;
+        let entry = lfs.pointers.read().get(&k)?;
 
         assert!(entry.is_some());
 
@@ -2666,7 +2690,7 @@ mod tests {
 
         assert_eq!(entry.hgid, k1.hgid);
         assert_eq!(entry.size, size);
-        assert_eq!(entry.is_binary, true);
+        assert!(entry.is_binary);
         assert_eq!(entry.copy_from, Some(copy_from));
         assert_eq!(
             entry.content_hashes[&ContentHashType::Sha256],
@@ -2696,9 +2720,7 @@ mod tests {
         )?);
 
         let blob = Bytes::from(&b"\x01\nTHIS IS A BLOB WITH A HEADER"[..]);
-        let sha256 = match ContentHash::sha256(&blob) {
-            ContentHash::Sha256(sha256) => sha256,
-        };
+        let ContentHash::Sha256(sha256) = ContentHash::sha256(&blob);
         let size = blob.len();
         lfs.blobs.add(&sha256, blob)?;
 
@@ -2785,7 +2807,7 @@ mod tests {
             let _m2 = get_lfs_download_mock(200, blob);
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-            let remote = LfsRemote::new(lfs, None, &config, None)?;
+            let remote = LfsRemote::new(lfs, None, &config)?;
 
             let objs = [(blob.sha, blob.size)]
                 .iter()
@@ -2809,7 +2831,7 @@ mod tests {
             set_var("https_proxy", "fwdproxy:8082");
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-            let remote = LfsRemote::new(lfs, None, &config, None)?;
+            let remote = LfsRemote::new(lfs, None, &config)?;
 
             let blob = example_blob();
             let objs = [(blob.sha, blob.size)]
@@ -2836,7 +2858,7 @@ mod tests {
             set_var("https_proxy", "http://fwdproxy:8082");
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-            let remote = LfsRemote::new(lfs, None, &config, None)?;
+            let remote = LfsRemote::new(lfs, None, &config)?;
 
             let blob = example_blob();
             let objs = [(blob.sha, blob.size)]
@@ -2867,7 +2889,7 @@ mod tests {
             set_var("NO_PROXY", "localhost,127.0.0.1");
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-            let remote = LfsRemote::new(lfs, None, &config, None)?;
+            let remote = LfsRemote::new(lfs, None, &config)?;
 
             let objs = [(blob.sha, blob.size)]
                 .iter()
@@ -2890,7 +2912,7 @@ mod tests {
             let mut config = make_lfs_config(&cachedir, "test_download");
             configure(&mut config);
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-            let remote = LfsRemote::new(lfs, None, &config, None)?;
+            let remote = LfsRemote::new(lfs, None, &config)?;
 
             let _mocks: Vec<_> = blobs
                 .iter()
@@ -2998,7 +3020,7 @@ mod tests {
             setconfig(&mut config, "lfs", "http-version", "3");
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config).unwrap());
-            let result = LfsRemote::new(lfs, None, &config, None);
+            let result = LfsRemote::new(lfs, None, &config);
 
             assert!(result.is_err());
 
@@ -3016,7 +3038,7 @@ mod tests {
             setconfig(&mut config, "lfs", "requesttimeout", "0");
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-            let remote = LfsRemote::new(lfs, None, &config, None)?;
+            let remote = LfsRemote::new(lfs, None, &config)?;
 
             let blob = (
                 Sha256::from_str(
@@ -3047,7 +3069,7 @@ mod tests {
             let _m2 = get_lfs_download_mock(200, blob);
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-            let remote = Arc::new(LfsRemote::new(lfs.clone(), None, &config, None)?);
+            let remote = Arc::new(LfsRemote::new(lfs.clone(), None, &config)?);
 
             let key = key("a/b", "1234");
 
@@ -3065,7 +3087,7 @@ mod tests {
             // Populate the pointer store. Usually, this would be done via a previous remotestore call.
             lfs.pointers.write().add(pointer)?;
 
-            let remotedatastore = remote.datastore(lfs.clone());
+            let remotedatastore = remote.datastore(lfs);
 
             let expected_delta = Delta {
                 data: blob.content.clone(),
@@ -3106,7 +3128,7 @@ mod tests {
                 .create();
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-            let remote = LfsRemote::new(lfs, None, &config, None)?;
+            let remote = LfsRemote::new(lfs, None, &config)?;
 
             let objs = [(blob.sha, blob.size)]
                 .iter()
@@ -3156,7 +3178,7 @@ mod tests {
         let url = Url::from_file_path(&remote).unwrap();
         setconfig(&mut config, "lfs", "url", url.as_str());
 
-        let remote = LfsRemote::new(lfs, None, &config, None)?;
+        let remote = LfsRemote::new(lfs, None, &config)?;
 
         let objs = [(blob1.0, blob1.1), (blob2.0, blob2.1)]
             .iter()
@@ -3216,7 +3238,7 @@ mod tests {
         let url = Url::from_file_path(&remote_dir).unwrap();
         setconfig(&mut config, "lfs", "url", url.as_str());
 
-        let remote = LfsRemote::new(shared_lfs, Some(local_lfs.clone()), &config, None)?;
+        let remote = LfsRemote::new(shared_lfs, Some(local_lfs.clone()), &config)?;
 
         let objs = [(blob1.0, blob1.1), (blob2.0, blob2.1)]
             .iter()
@@ -3253,7 +3275,7 @@ mod tests {
 
         let k1 = key("a", "2");
         let delta = Delta {
-            data: Bytes::from(&"THIS IS A LARGE BLOB"[..]),
+            data: Bytes::from("THIS IS A LARGE BLOB"),
             base: None,
             key: k1.clone(),
         };
@@ -3268,7 +3290,6 @@ mod tests {
             shared_lfs.clone(),
             Some(local_lfs.clone()),
             &config,
-            None,
         )?);
         let remote = remote.datastore(shared_lfs.clone());
         let k = StoreKey::hgid(k1.clone());
@@ -3278,10 +3299,7 @@ mod tests {
 
         // The blob was moved from the local store to the shared store.
         assert_eq!(local_lfs.get(k.clone())?, StoreResult::NotFound(contentk));
-        assert_eq!(
-            shared_lfs.get(k.clone())?,
-            StoreResult::Found(delta.data.to_vec())
-        );
+        assert_eq!(shared_lfs.get(k)?, StoreResult::Found(delta.data.to_vec()));
 
         Ok(())
     }
@@ -3351,7 +3369,7 @@ mod tests {
         setconfig(&mut config, "lfs", "url", "http://192.0.2.0/");
 
         let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-        let remote = Arc::new(LfsRemote::new(lfs, None, &config, None)?);
+        let remote = Arc::new(LfsRemote::new(lfs, None, &config)?);
 
         let resp = remote.datastore(store).prefetch(&[]);
         assert!(resp.is_ok());
@@ -3424,7 +3442,7 @@ mod tests {
 
             let lfsdir = TempDir::new()?;
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-            let remote = LfsRemote::new(lfs, None, &config, None)?;
+            let remote = LfsRemote::new(lfs, None, &config)?;
             let objs = [(blobs[0].sha, blobs[0].size)]
                 .iter()
                 .cloned()

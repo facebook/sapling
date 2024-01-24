@@ -1319,14 +1319,14 @@ PrjfsChannel::PrjfsChannel(
     std::unique_ptr<PrjfsDispatcher> dispatcher,
     std::shared_ptr<ReloadableConfig> config,
     const folly::Logger* straceLogger,
-    std::shared_ptr<ProcessNameCache> processNameCache,
+    std::shared_ptr<ProcessInfoCache> processInfoCache,
     Guid guid,
     bool enableWindowsSymlinks,
     std::shared_ptr<Notifier> notifier)
     : mountPath_(mountPath),
       mountId_(std::move(guid)),
       enableSymlinks_(enableWindowsSymlinks),
-      processAccessLog_(std::move(processNameCache)),
+      processAccessLog_(std::move(processInfoCache)),
       config_{std::move(config)} {
   auto [innerDeletedPromise, innerDeletedFuture] =
       folly::makePromiseContract<folly::Unit>();

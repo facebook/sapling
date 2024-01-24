@@ -5,11 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::io::Write;
-
-use edenapi_types::Blake3;
-use edenapi_types::ContentId;
-use edenapi_types::Sha1;
 use minibytes::Bytes;
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck_arbitrary_derive::Arbitrary;
@@ -56,65 +51,13 @@ impl ContentHash {
         ContentHash::Sha256(Sha256::from(bytes))
     }
 
-    pub(crate) fn content_id(data: &Bytes) -> ContentId {
-        use blake2::digest::Update;
-        use blake2::digest::VariableOutput;
-        use blake2::VarBlake2b;
-
-        // cribbed from pyedenapi
-        let mut hash = VarBlake2b::new_keyed(b"content", ContentId::len());
-        hash.update(data);
-        let mut ret = [0u8; ContentId::len()];
-        hash.finalize_variable(|res| {
-            if let Err(e) = ret.as_mut().write_all(res) {
-                panic!(
-                    "{}-byte array must work with {}-byte blake2b: {:?}",
-                    ContentId::len(),
-                    ContentId::len(),
-                    e
-                );
-            }
-        });
-        ContentId::from(ret)
-    }
-
-    pub(crate) fn sha1(data: &Bytes) -> Sha1 {
-        use sha1::Digest;
-
-        let mut hash = sha1::Sha1::new();
-        hash.update(data);
-
-        let bytes: [u8; Sha1::len()] = hash.finalize().into();
-        Sha1::from(bytes)
-    }
-
-    pub(crate) fn seeded_blake3(data: &Bytes) -> Blake3 {
-        #[cfg(not(fbcode_build))]
-        {
-            use blake3::Hasher;
-            let key = "20220728-2357111317192329313741#".as_bytes();
-            let mut ret = [0; Blake3::len()];
-            ret.copy_from_slice(key);
-            let mut hasher = Hasher::new_keyed(&ret);
-            hasher.update(data.as_ref());
-            let hashed_bytes: [u8; Blake3::len()] = hasher.finalize().into();
-            Blake3::from(hashed_bytes)
-        }
-        #[cfg(fbcode_build)]
-        {
-            use blake3_c_ffi::Hasher;
-            let key = blake3_constant::BLAKE3_HASH_KEY.as_bytes();
-            let mut ret = [0; Blake3::len()];
-            ret.copy_from_slice(key);
-            let mut hasher = Hasher::new_keyed(&ret);
-            hasher.update(data.as_ref());
-            let mut hashed_bytes = [0; Blake3::len()];
-            hasher.finalize(&mut hashed_bytes);
-            Blake3::from(hashed_bytes)
-        }
-    }
-
     pub fn unwrap_sha256(self) -> Sha256 {
+        match self {
+            ContentHash::Sha256(hash) => hash,
+        }
+    }
+
+    pub(crate) fn sha256_ref(&self) -> &Sha256 {
         match self {
             ContentHash::Sha256(hash) => hash,
         }

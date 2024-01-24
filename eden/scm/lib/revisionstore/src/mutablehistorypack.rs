@@ -84,7 +84,7 @@ impl MutableHistoryPackInner {
 
         // Write section header
         FileSectionHeader {
-            file_name: &file_name,
+            file_name,
             count: hgid_map.len() as u32,
         }
         .write(writer)?;
@@ -101,7 +101,7 @@ impl MutableHistoryPackInner {
                 None
             };
 
-            let hgid_offset = section_offset + writer.len() as usize;
+            let hgid_offset = section_offset + writer.len();
             HistoryEntry::write(
                 writer,
                 &key.hgid,
@@ -195,7 +195,7 @@ impl MutablePack for MutableHistoryPackInner {
         // Write the header
         let version_u8: u8 = self.version.clone().into();
         data_file.write_u8(version_u8)?;
-        hasher.update(&[version_u8]);
+        hasher.update([version_u8]);
 
         // Store data for the index
         let mut file_sections: Vec<(&RepoPath, FileSectionLocation)> = Default::default();
@@ -367,8 +367,7 @@ impl LocalStore for MutableHistoryPack {
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
-
+    use fs_err as fs;
     use quickcheck::quickcheck;
     use rand::seq::SliceRandom;
     use rand::SeedableRng;
@@ -427,10 +426,10 @@ mod tests {
         // Add them in random order, so we can verify they get sorted correctly
         entries.shuffle(&mut rng);
         for (key, info) in entries.iter() {
-            muthistorypack.add(&key, &info).unwrap();
+            muthistorypack.add(key, info).unwrap();
         }
         let path = &muthistorypack.flush().unwrap().unwrap()[0];
-        let pack = HistoryPack::new(&path).unwrap();
+        let pack = HistoryPack::new(path).unwrap();
 
         let actual_order = pack
             .to_keys()
@@ -483,7 +482,7 @@ mod tests {
                 MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One);
 
             for (key, info) in insert.iter() {
-                muthistorypack.add(&key, &info).unwrap();
+                muthistorypack.add(key, info).unwrap();
             }
 
             for (key, info) in insert.iter() {
@@ -507,11 +506,11 @@ mod tests {
                 MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One);
 
             for (key, info) in insert.iter() {
-                muthistorypack.add(&key, &info).unwrap();
+                muthistorypack.add(key, info).unwrap();
             }
 
             let mut lookup = notinsert.clone();
-            lookup.extend(insert.keys().map(|k| StoreKey::from(k)));
+            lookup.extend(insert.keys().map(StoreKey::from));
 
             let missing = muthistorypack.get_missing(&lookup).unwrap();
             missing == notinsert

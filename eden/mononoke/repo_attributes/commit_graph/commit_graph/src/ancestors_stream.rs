@@ -147,7 +147,7 @@ impl AncestorsStreamBuilder {
             Some(descendants_of) => Some((
                 descendants_of,
                 self.commit_graph
-                    .changeset_generation_required(&self.ctx, descendants_of)
+                    .changeset_generation(&self.ctx, descendants_of)
                     .await?,
             )),
             None => None,
@@ -191,7 +191,7 @@ impl AncestorsStreamBuilder {
 
                     let all_edges = commit_graph
                         .storage
-                        .fetch_many_edges_required(
+                        .fetch_many_edges(
                             ctx,
                             &cs_ids_not_excluded,
                             Prefetch::for_p1_linear_traversal(),

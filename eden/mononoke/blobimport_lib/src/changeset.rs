@@ -62,7 +62,7 @@ use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::HgNodeHash;
-use mercurial_types::MPath;
+use mercurial_types::NonRootMPath;
 use mercurial_types::RepoPath;
 use mercurial_types::Type;
 use mercurial_types::NULL_HASH;
@@ -81,7 +81,7 @@ struct ParseChangeset {
     revlogcs: BoxFuture<SharedItem<RevlogChangeset>, Error>,
     rootmf:
         BoxFuture<Option<(HgManifestId, HgBlob, Option<HgNodeHash>, Option<HgNodeHash>)>, Error>,
-    entries: BoxStream<(Option<MPath>, RevlogEntry), Error>,
+    entries: BoxStream<(Option<NonRootMPath>, RevlogEntry), Error>,
 }
 
 // Extracts all the data from revlog repo that commit API may need.
@@ -203,13 +203,13 @@ fn upload_entry(
     blobrepo: &BlobRepo,
     lfs_uploader: Arc<JobProcessor<LFSContent, ContentMetadataV2>>,
     entry: RevlogEntry,
-    path: Option<MPath>,
+    path: Option<NonRootMPath>,
 ) -> BoxFuture<(Entry<HgManifestId, HgFileNodeId>, RepoPath), Error> {
     let blobrepo = blobrepo.clone();
 
     let ty = entry.get_type();
 
-    let path = MPath::join_element_opt(path.as_ref(), entry.get_name());
+    let path = NonRootMPath::join_element_opt(path.as_ref(), entry.get_name());
     let path = match path {
         // XXX this shouldn't be possible -- encode this in the type system
         None => {
@@ -242,7 +242,7 @@ fn upload_entry(
                         path: RepoPath::DirectoryPath(path),
                     };
                     let (_, upload_fut) = try_boxfuture!(upload.upload_as_entry(ctx, blobstore));
-                    upload_fut
+                    upload_fut.boxed().compat().boxify()
                 }
                 (Type::Tree, true) => Err(Error::msg("Inconsistent data: externally stored Tree"))
                     .into_future()
@@ -402,7 +402,7 @@ impl UploadChangesets {
                                     upload
                                         .upload(ctx, blobrepo.repo_blobstore_arc())
                                         .into_future()
-                                        .and_then(|(_, entry)| entry)
+                                        .and_then(|(_, entry)| entry.boxed().compat())
                                         .map(Some)
                                         .boxify()
                                 }

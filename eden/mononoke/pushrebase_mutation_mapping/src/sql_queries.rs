@@ -18,7 +18,6 @@ use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
-use tunables::tunables;
 
 use crate::save_mapping_pushrebase_hook::SaveMappingPushrebaseHook;
 use crate::PushrebaseMutationMapping;
@@ -144,9 +143,12 @@ impl SqlConstructFromMetadataDatabaseConfig for SqlPushrebaseMutationMappingConn
 #[async_trait]
 impl PushrebaseMutationMapping for SqlPushrebaseMutationMapping {
     fn get_hook(&self) -> Option<Box<dyn PushrebaseHook>> {
-        if tunables()
-            .disable_save_mapping_pushrebase_hook()
-            .unwrap_or_default()
+        if justknobs::eval(
+            "scm/mononoke:disable_save_mapping_pushrebase_hook",
+            None,
+            None,
+        )
+        .unwrap_or_default()
         {
             None
         } else {

@@ -81,7 +81,7 @@ impl Logger {
         };
         logger.write(&logger.entry.lock(), false)?;
 
-        return Ok(Arc::new(logger));
+        Ok(Arc::new(logger))
     }
 
     pub fn close(&self, exit_code: i32) -> Result<()> {
@@ -163,12 +163,16 @@ pub struct Progress {
 
 impl Entry {
     fn new(command: Vec<String>) -> Self {
+        let rng_id: String = thread_rng()
+            .sample_iter(Alphanumeric)
+            .take(16)
+            .map(char::from)
+            .collect();
+        // Note: rng_id can be the same after fork.
+        // So we append it with the pid.
+        let id = format!("{}{}", rng_id, std::process::id());
         Self {
-            id: thread_rng()
-                .sample_iter(Alphanumeric)
-                .take(16)
-                .map(char::from)
-                .collect(),
+            id,
             command,
             pid: std::process::id(),
             download_bytes: 0,

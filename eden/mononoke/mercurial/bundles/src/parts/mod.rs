@@ -9,7 +9,6 @@ use std::collections::HashMap;
 use std::fmt;
 use std::io::Write;
 
-use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use byteorder::BigEndian;
@@ -34,10 +33,11 @@ use mercurial_types::HgBlobNode;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgNodeHash;
-use mercurial_types::MPath;
+use mercurial_types::NonRootMPath;
 use mercurial_types::RepoPath;
 use mercurial_types::RevFlags;
 use mercurial_types::NULL_HASH;
+use mononoke_types::path::MPath;
 use mononoke_types::DateTime;
 use phases::Phase;
 
@@ -116,7 +116,7 @@ where
 
 pub fn changegroup_part<CS>(
     changelogentries: CS,
-    filenodeentries: Option<BoxStream<(MPath, Vec<FilenodeEntry>), Error>>,
+    filenodeentries: Option<BoxStream<(NonRootMPath, Vec<FilenodeEntry>), Error>>,
     version: CgVersion,
 ) -> Result<PartEncodeBuilder>
 where
@@ -202,7 +202,7 @@ fn convert_file_stream<FS>(
     cg_version: CgVersion,
 ) -> impl Stream<Item = Part, Error = Error>
 where
-    FS: Stream<Item = (MPath, Vec<FilenodeEntry>), Error = Error> + Send + 'static,
+    FS: Stream<Item = (NonRootMPath, Vec<FilenodeEntry>), Error = Error> + Send + 'static,
 {
     filenodeentries
         .map(move |(path, nodes)| {
@@ -265,7 +265,7 @@ pub struct TreepackPartInput {
     pub p1: Option<HgNodeHash>,
     pub p2: Option<HgNodeHash>,
     pub content: Bytes,
-    pub fullpath: Option<MPath>,
+    pub fullpath: MPath,
     pub linknode: HgNodeHash,
 }
 
@@ -315,19 +315,14 @@ where
 
     builder.add_mparam("category", "manifests")?;
 
-    let mut buffer_size = tunables::tunables()
-        .repo_client_gettreepack_buffer_size()
-        .unwrap_or_default();
-    if buffer_size <= 0 {
-        buffer_size = 1000
-    }
-    let buffer_size: usize = buffer_size
-        .try_into()
-        .with_context(|| format!("invalid buffer size {}", buffer_size))?;
+    let buffer_size =
+        justknobs::get_as::<usize>("scm/mononoke:repo_client_gettreepack_buffer_size", None)
+            .unwrap_or(1000);
+
     let wirepack_parts = entries
         .buffered(buffer_size)
         .map(|input| {
-            let path = match input.fullpath {
+            let path = match input.fullpath.into_optional_non_root_path() {
                 Some(path) => RepoPath::DirectoryPath(path),
                 None => RepoPath::RootPath,
             };
@@ -358,7 +353,7 @@ where
                 metadata: None,
             });
 
-            iter_ok(vec![history_meta, history, data_meta, data].into_iter())
+            iter_ok(vec![history_meta, history, data_meta, data])
         })
         .flatten()
         .chain(once(Ok(wirepack::Part::End)));

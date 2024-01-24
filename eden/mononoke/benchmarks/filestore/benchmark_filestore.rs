@@ -183,7 +183,7 @@ async fn run_benchmark_filestore<'a>(
 
     match args.delay {
         Some(delay) => {
-            tokio_shim::time::sleep(Duration::from_secs(delay)).await;
+            tokio::time::sleep(Duration::from_secs(delay)).await;
         }
         None => {}
     }

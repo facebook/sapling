@@ -1,0 +1,57 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "http-client",
+    srcs = glob(["src/**/*.rs"]),
+    test_deps = [
+        "fbsource//third-party/rust:assert_matches",
+        "fbsource//third-party/rust:crossbeam",
+        "fbsource//third-party/rust:mockito",
+        "fbsource//third-party/rust:zstd",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-compression",
+        "fbsource//third-party/rust:auto_impl",
+        "fbsource//third-party/rust:curl",
+        "fbsource//third-party/rust:curl-sys",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:http",
+        "fbsource//third-party/rust:lru-cache",
+        "fbsource//third-party/rust:maplit",
+        "fbsource//third-party/rust:once_cell",
+        "fbsource//third-party/rust:openssl",
+        "fbsource//third-party/rust:parking_lot",
+        "fbsource//third-party/rust:paste",
+        "fbsource//third-party/rust:pin-project",
+        "fbsource//third-party/rust:regex",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:serde_cbor",
+        "fbsource//third-party/rust:serde_json",
+        "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tokio-util",
+        "fbsource//third-party/rust:tracing",
+        "fbsource//third-party/rust:url",
+        "//eden/scm/lib/async-runtime:async-runtime",
+        "//eden/scm/lib/clientinfo:clientinfo",
+    ],
+)
+
+rust_binary(
+    name = "http-cli",
+    srcs = ["src/bin/cli.rs"],
+    crate_root = "src/bin/cli.rs",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:env_logger",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:structopt",
+        "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:url",
+        "//eden/scm/lib/http-client:http-client",
+    ],
+)

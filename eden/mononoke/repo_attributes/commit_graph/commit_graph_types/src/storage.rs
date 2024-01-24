@@ -10,6 +10,8 @@
 //! Trait for the storage back-end for the commit graph.
 
 use std::collections::HashMap;
+use std::ops::Deref;
+use std::ops::DerefMut;
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -124,6 +126,97 @@ impl Prefetch {
             Prefetch::Include(target) => Some(target),
         }
     }
+
+    /// Target edge type that is being prefetched, if prefetching should included.
+    ///
+    /// If prefetching is merely hinted, this won't return the target edge
+    /// type, as prefetching should not be performed.
+    pub fn target_edge(self) -> Option<PrefetchEdge> {
+        match self {
+            Prefetch::None | Prefetch::Hint(..) => None,
+            Prefetch::Include(target) => Some(target.edge),
+        }
+    }
+}
+
+/// Wrapper for `ChangesetEdges` indicating why it was fetched.
+///
+/// This is used to populate the memcache cache entries for prefetches.  In
+/// the memcache cache, we store prefetched edges alongside the changeset that
+/// they were fetched for, so that memcache hits also benefit from caching the
+/// prefetch.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum FetchedChangesetEdges {
+    /// These edges were fetched directly.
+    ///
+    /// When cached, they will be stored in cachelib and memcache by the key
+    /// of the target changeset.
+    Fetched { edges: ChangesetEdges },
+    /// These edges were prefetched.
+    ///
+    /// When cached, they will be stored in cachelib directly, but in memcache
+    /// they will be stored alongside the edges for the target they were
+    /// originally prefetched for.
+    Prefetched {
+        edges: ChangesetEdges,
+
+        /// The changeset these edges were prefetched for.  These edges will
+        /// be stored alongside the edges for this changeset in memcache.
+        cs_id: ChangesetId,
+    },
+}
+
+impl Deref for FetchedChangesetEdges {
+    type Target = ChangesetEdges;
+
+    fn deref(&self) -> &Self::Target {
+        match self {
+            Self::Fetched { edges } | Self::Prefetched { edges, .. } => edges,
+        }
+    }
+}
+
+impl DerefMut for FetchedChangesetEdges {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        match self {
+            Self::Fetched { edges } | Self::Prefetched { edges, .. } => edges,
+        }
+    }
+}
+
+impl From<ChangesetEdges> for FetchedChangesetEdges {
+    fn from(edges: ChangesetEdges) -> Self {
+        Self::Fetched { edges }
+    }
+}
+
+impl From<FetchedChangesetEdges> for ChangesetEdges {
+    fn from(fetched: FetchedChangesetEdges) -> Self {
+        match fetched {
+            FetchedChangesetEdges::Fetched { edges }
+            | FetchedChangesetEdges::Prefetched { edges, .. } => edges,
+        }
+    }
+}
+
+impl FetchedChangesetEdges {
+    pub fn new(prefetch_target_cs_id: Option<ChangesetId>, edges: ChangesetEdges) -> Self {
+        match prefetch_target_cs_id {
+            Some(cs_id) if cs_id != edges.node.cs_id => Self::Prefetched { cs_id, edges },
+            _ => Self::Fetched { edges },
+        }
+    }
+
+    pub fn edges(self) -> ChangesetEdges {
+        ChangesetEdges::from(self)
+    }
+
+    pub fn prefetched_for(&self) -> Option<ChangesetId> {
+        match self {
+            Self::Fetched { .. } => None,
+            Self::Prefetched { cs_id, .. } => Some(*cs_id),
+        }
+    }
 }
 
 /// Commit Graph Storage.
@@ -141,22 +234,20 @@ pub trait CommitGraphStorage: Send + Sync {
     /// Add many changesets at once. Used for low level stuff like backfilling.
     async fn add_many(&self, ctx: &CoreContext, many_edges: Vec1<ChangesetEdges>) -> Result<usize>;
 
-    /// Returns the changeset graph edges for this changeset.
-    async fn fetch_edges(
+    /// Returns the changeset graph edges for this changeset, or an error if
+    /// this changeset is missing from the commit graph.
+    async fn fetch_edges(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<ChangesetEdges>;
+
+    /// Returns the changeset graph edges for this changeset, or None if
+    /// it doesn't exist in the commit graph.
+    async fn maybe_fetch_edges(
         &self,
         ctx: &CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Option<ChangesetEdges>>;
 
-    /// Returns the changeset graph edges for this changeset, or an error of
-    /// this changeset is missing in the commit graph.
-    async fn fetch_edges_required(
-        &self,
-        ctx: &CoreContext,
-        cs_id: ChangesetId,
-    ) -> Result<ChangesetEdges>;
-
-    /// Returns the changeset graph edges for multiple changesets.
+    /// Returns the changeset graph edges for multiple changesets, or an error
+    /// if any of the changesets are missing from the commit graph.
     ///
     /// Prefetch indicates that this request is part of a larger request
     /// involving commits down to a particular generation number, and so
@@ -166,16 +257,17 @@ pub trait CommitGraphStorage: Send + Sync {
         ctx: &CoreContext,
         cs_ids: &[ChangesetId],
         prefetch: Prefetch,
-    ) -> Result<HashMap<ChangesetId, ChangesetEdges>>;
+    ) -> Result<HashMap<ChangesetId, FetchedChangesetEdges>>;
 
-    /// Same as fetch_many_edges but returns an error if any of
-    /// the changesets are missing in the commit graph.
-    async fn fetch_many_edges_required(
+    /// Same as fetch_many_edges but doesn't return an error if any of
+    /// the changesets are missing from the commit graph and instead
+    /// only returns edges for found changesets.
+    async fn maybe_fetch_many_edges(
         &self,
         ctx: &CoreContext,
         cs_ids: &[ChangesetId],
         prefetch: Prefetch,
-    ) -> Result<HashMap<ChangesetId, ChangesetEdges>>;
+    ) -> Result<HashMap<ChangesetId, FetchedChangesetEdges>>;
 
     /// Find all changeset ids with a given prefix.
     async fn find_by_prefix(

@@ -38,11 +38,18 @@ export const CommitInfoTestUtils = {
     return within(screen.getByTestId('commit-info-actions-bar'));
   },
 
-  clickToSelectCommit(hash: string) {
+  openCommitInfoSidebar() {
+    screen.queryAllByTestId('drawer-label').forEach(el => {
+      const commitInfoTab = within(el).queryByText('Commit Info');
+      commitInfoTab?.click();
+    });
+  },
+
+  clickToSelectCommit(hash: string, cmdClick?: boolean) {
     const commit = within(screen.getByTestId(`commit-${hash}`)).queryByTestId('draggable-commit');
     expect(commit).toBeInTheDocument();
     act(() => {
-      fireEvent.click(unwrap(commit));
+      fireEvent.click(unwrap(commit), {metaKey: cmdClick === true});
     });
   },
 
@@ -226,5 +233,5 @@ function isInternalMessageFields(): boolean {
  * RTL marks at path boundaries.
  */
 export function ignoreRTL(s: string): RegExp {
-  return new RegExp(`^\u200E?${s}$`);
+  return new RegExp(`^\u200E?${s}\u200E?$`);
 }

@@ -1,0 +1,30 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "constructors",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "features": {
+                "default": ["git"],
+                "git": [
+                    "gitstore",
+                    "commits-git",
+                ],
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    features = ["git"],
+    deps = [
+        "fbsource//third-party/rust:once_cell",
+        "//eden/scm/lib/eagerepo:eagerepo",
+        "//eden/scm/lib/edenapi:edenapi",
+        "//eden/scm/lib/gitstore:gitstore",
+        "//eden/scm/lib/hgcommits:hgcommits",
+        "//eden/scm/lib/hgcommits/git:commits-git",
+        "//eden/scm/lib/manifest-tree:manifest-tree",
+    ],
+)

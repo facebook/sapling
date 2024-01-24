@@ -6,8 +6,6 @@
 import os
 import re
 
-from hghave import require
-
 
 def checkpath(path, dllnames):
     content = open(path).read()
@@ -22,6 +20,6 @@ def checkpath(path, dllnames):
 
 
 checkpath(
-    "%s/../edenscm/win32.py" % os.environ.get("RUNTESTDIR", "."),
+    "%s/../sapling/win32.py" % os.environ.get("RUNTESTDIR", "."),
     ["_kernel32", "_advapi32", "_user32", "_crypt32"],
 )

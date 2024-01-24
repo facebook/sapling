@@ -7,7 +7,7 @@
 
 fn main() {
     cc::Build::new()
-        .file("../../edenscm/mpatch.c")
+        .file("../../sapling/mpatch.c")
         .include("../../../../")
         .compile("mpatch");
 }

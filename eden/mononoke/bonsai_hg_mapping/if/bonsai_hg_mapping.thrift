@@ -8,10 +8,11 @@
 include "eden/mononoke/mercurial/types/if/mercurial_thrift.thrift"
 include "eden/mononoke/mononoke_types/if/mononoke_types_thrift.thrift"
 
-# Memcache constants. Should be change when we want to invalidate memcache
-# entries
+/// Code version used in memcache keys.  This should be changed whenever
+/// the layout of memcache entries is changed in an incompatible way.
+/// The corresponding sitever, which can be used to flush memcache, is
+/// in the JustKnob scm/mononoke_memcache_sitevers:bonsai_hg_mapping.
 const i32 MC_CODEVER = 0;
-const i32 MC_SITEVER = 3;
 
 typedef i32 RepoId (rust.newtype)
 

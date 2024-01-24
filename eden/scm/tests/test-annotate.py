@@ -12,8 +12,8 @@ from __future__ import absolute_import, print_function
 
 import unittest
 
-from edenscm import mdiff
-from edenscm.annotate import _annotatepair
+from sapling import mdiff
+from sapling.annotate import _annotatepair
 
 
 try:

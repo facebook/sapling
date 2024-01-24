@@ -1,0 +1,59 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "streampager",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "smallvec": {
+                        "default-features": False,
+                        "features": [],
+                    },
+                },
+            },
+            "package": {
+                "authors": [
+                    "Mark Juggurnauth-Thomas <markbt@efaref.net>",
+                    "Facebook Source Control Team <sourcecontrol-dev@fb.com>",
+                ],
+                "categories": [
+                    "command-line-utilities",
+                    "text-processing",
+                ],
+                "description": "streampager is a pager for command output or large files",
+                "keywords": [
+                    "pager",
+                    "less",
+                    "more",
+                ],
+                "license": "MIT",
+                "version": "0.10.3",
+            },
+        },
+    },
+    deps = [
+        "fbsource//third-party/rust:bit-set",
+        "fbsource//third-party/rust:dirs",
+        "fbsource//third-party/rust:enum_dispatch",
+        "fbsource//third-party/rust:indexmap",
+        "fbsource//third-party/rust:lazy_static",
+        "fbsource//third-party/rust:lru",
+        "fbsource//third-party/rust:memmap2",
+        "fbsource//third-party/rust:regex",
+        "fbsource//third-party/rust:scopeguard",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:smallvec",
+        "fbsource//third-party/rust:tempfile",
+        "fbsource//third-party/rust:terminfo",
+        "fbsource//third-party/rust:termwiz",
+        "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:toml",
+        "fbsource//third-party/rust:unicode-segmentation",
+        "fbsource//third-party/rust:unicode-width",
+        "fbsource//third-party/rust:vec_map",
+    ],
+)

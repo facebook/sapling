@@ -42,6 +42,8 @@ export function makeServerSideTracker(
     Internal.trackToScribe ??
     noOp,
 ): ServerSideTracker {
+  const analyticsInfo = generateAnalyticsInfo(platform.platformName, version, platform.sessionId);
+  logger.info('Setup analytics, session: ', analyticsInfo.sessionId);
   return new Tracker((data: TrackDataWithEventName, context: ServerSideContext) => {
     const {logger} = context;
     // log track event, since tracking events can be used as datapoints when reviewing logs
@@ -52,5 +54,5 @@ export function makeServerSideTracker(
       data.extras != null ? JSON.stringify(data.extras) : '',
     );
     writeToServer({...data, ...context.data}, logger);
-  }, new ServerSideContext(logger, generateAnalyticsInfo(platform.platformName, version)));
+  }, new ServerSideContext(logger, analyticsInfo));
 }

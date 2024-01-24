@@ -20,10 +20,10 @@ use mercurial_types::HgChangesetIdsResolvedFromPrefix;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use rand::Rng;
+use rendezvous::ConfigurableRendezVousController;
 use rendezvous::RendezVous;
 use rendezvous::RendezVousOptions;
 use rendezvous::RendezVousStats;
-use rendezvous::TunablesRendezVousController;
 use sql::Connection;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
@@ -167,14 +167,14 @@ impl RendezVousConnection {
         Self {
             conn,
             bonsai: RendezVous::new(
-                TunablesRendezVousController::new(opts),
+                ConfigurableRendezVousController::new(opts),
                 Arc::new(RendezVousStats::new(format!(
                     "bonsai_hg_mapping.bonsai.{}",
                     name,
                 ))),
             ),
             hg: RendezVous::new(
-                TunablesRendezVousController::new(opts),
+                ConfigurableRendezVousController::new(opts),
                 Arc::new(RendezVousStats::new(format!(
                     "bonsai_hg_mapping.hg.{}",
                     name,

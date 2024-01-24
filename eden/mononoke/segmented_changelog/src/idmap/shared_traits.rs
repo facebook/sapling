@@ -13,7 +13,6 @@ use context::CoreContext;
 use mononoke_types::ChangesetId;
 use slog::trace;
 use stats::prelude::*;
-use tunables::tunables;
 
 use crate::dag::errors;
 use crate::dag::errors::programming;
@@ -112,13 +111,15 @@ impl IdMap for IdMapMemWrites {
         if res.is_ok() {
             let new_size = self.mem.len();
             let old_size = new_size - mappings_size;
-            let sampling_rate = tunables()
-                .segmented_changelog_idmap_log_sampling_rate()
-                .unwrap_or_default();
-            let sampling_rate = if sampling_rate <= 0 {
+            let sampling_rate = justknobs::get_as::<usize>(
+                "scm/mononoke:segmented_changelog_idmap_log_sampling_rate",
+                None,
+            )
+            .unwrap_or_default();
+            let sampling_rate = if sampling_rate == 0 {
                 DEFAULT_LOG_SAMPLING_RATE
             } else {
-                sampling_rate as usize
+                sampling_rate
             };
             if new_size / sampling_rate != old_size / sampling_rate {
                 trace!(

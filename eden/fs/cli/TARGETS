@@ -1,0 +1,237 @@
+load("@fbcode//eden:defs.bzl", "get_dev_edenfsctl_env", "get_oss_suffix")
+load("@fbcode_macros//build_defs:native_rules.bzl", "buck_command_alias")
+load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
+load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
+
+oncall("scm_client_infra")
+
+# This exists to compile and bake the correct locations of helper binaries
+# into the environment so `buck run edenfsctl` works from source. Uses the
+# system privhelper for privileged actions (such as mounting) as long as no
+# external sources set the EDENFS_PRIVHELPER_PATH environment variable.
+buck_command_alias(
+    name = "edenfsctl-run",
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    env = get_dev_edenfsctl_env(),
+    exe = ":edenfsctl",
+)
+
+buck_command_alias(
+    name = "edenfsctl-run-oss",
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    env = get_dev_edenfsctl_env(suffix = get_oss_suffix()),
+    exe = ":edenfsctl",
+)
+
+# Similar to above alias, but this target will utilize a development privhelper
+# instead of the system (setuid-root) privhelper. This will require the use of
+# passwordless sudo when starting EdenFS.
+buck_command_alias(
+    name = "edenfsctl-dev-run",
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    env = get_dev_edenfsctl_env({"EDENFS_PRIVHELPER_PATH": "$(location //eden/fs/service:edenfs_privhelper)"}),
+    exe = ":edenfsctl-with-privhelper",
+)
+
+python_binary(
+    name = "edenfsctl-with-privhelper",
+    srcs = [],
+    main_function = "eden.fs.cli.main.zipapp_main",
+    deps = [
+        ":main_lib",
+        "//eden/fs/privhelper:privhelper",
+    ],
+)
+
+python_binary(
+    name = "edenfsctl",
+    srcs = [],
+    main_function = "eden.fs.cli.main.zipapp_main",
+    deps = [
+        ":main_lib",
+    ],
+)
+
+python_binary(
+    name = "repl",
+    srcs = ["repl.py"],
+    main_function = "eden.fs.cli.repl.main",
+    deps = [
+        "fbsource//third-party/pypi/ipython:ipython",
+        ":main_lib",  # @manual
+    ],
+)
+
+python_library(
+    name = "main_lib",
+    srcs = [
+        "main.py",
+    ],
+    deps = [
+        ":constants",
+        ":lib",
+        ":telemetry",
+        ":trace",
+        ":version",
+        "//cli/py/par_telemetry:lib",
+        "//eden/fs/cli/facebook:util",
+        "//eden/fs/py/eden/thrift:legacy",
+        "//eden/fs/service:thrift-py",
+        "//fb303/thrift:fb303_core-py",
+        "//thrift/lib/py:server_base",
+    ],
+)
+
+python_library(
+    name = "constants",
+    srcs = [
+        "constants.py",
+    ],
+)
+
+python_library(
+    name = "hostname",
+    srcs = [
+        "hostname.py",
+    ],
+    deps = [
+        "//eden/fs/cli/facebook:hostcaps",
+    ],
+)
+
+python_library(
+    name = "lib",
+    srcs = [
+        "buck.py",
+        "cmd_util.py",
+        "config.py",
+        "configinterpolator.py",
+        "configutil.py",
+        "daemon.py",
+        "daemon_util.py",
+        "debug.py",
+        "debug_posix.py",
+        "debug_windows.py",
+        "doctor/__init__.py",
+        "doctor/check_filesystems.py",
+        "doctor/check_hg.py",
+        "doctor/check_kerberos.py",
+        "doctor/check_os.py",
+        "doctor/check_recent_writes.py",
+        "doctor/check_redirections.py",
+        "doctor/check_rogue_edenfs.py",
+        "doctor/check_stale_mounts.py",
+        "doctor/check_watchman.py",
+        "doctor/facebook/__init__.py",
+        "doctor/facebook/check_backing_repos.py",
+        "doctor/facebook/check_connectivity.py",
+        "doctor/facebook/check_mdatp.py",
+        "doctor/facebook/check_vscode_extensions.py",
+        "doctor/facebook/check_x509.py",
+        "doctor/facebook/internal_error_messages.py",
+        "doctor/facebook/lib/fake_vscode_extensions_checker.py",
+        "doctor/problem.py",
+        "doctor/util.py",
+        "filesystem.py",
+        "hg_util.py",
+        "logfile.py",
+        "mtab.py",
+        "overlay.py",
+        "prefetch.py",
+        "prjfs.py",
+        "rage.py",
+        "redirect.py",
+        "stats.py",
+        "stats_print.py",
+        "subcmd.py",
+        "tabulate.py",
+        "top.py",
+        "trace_cmd.py",
+        "ui.py",
+        "util.py",
+        "win_ui.py",
+    ],
+    os_deps = [
+        (
+            "linux",
+            [
+                "//eden/fs/cli/facebook:telemetry",
+            ],
+        ),
+    ],
+    deps = [
+        "fbsource//third-party/pypi/filelock:filelock",
+        "fbsource//third-party/pypi/toml:toml",
+        "fbsource//third-party/pypi/tqdm:tqdm",
+        ":hostname",
+        ":proc_utils",
+        ":telemetry",
+        ":version",
+        "//eden/fs/cli/facebook:hostcaps",
+        "//eden/fs/cli/facebook:rage",
+        "//eden/fs/inodes/overlay:serialization-py",
+        "//eden/fs/py/eden:dirstate",
+        "//eden/fs/py/eden/thrift:legacy",
+        "//eden/fs/service:thrift-py",
+        "//fb303/thrift:fb303_core-py",
+        "//thrift/lib/py:base",
+        "//thrift/lib/py:server_base",
+        "//thrift/lib/py/util:inspect",
+        "//thrift/lib/py/util:py_util",
+    ],
+)
+
+python_library(
+    name = "proc_utils",
+    srcs = [
+        "proc_utils.py",
+        "proc_utils_win.py",
+    ],
+    os_deps = [(
+        "linux",
+        ["//common/base/pid_info/py:build_info_lib"],
+    )],
+    deps = [
+        "//eden/fs/py/eden/thrift:legacy",
+    ],
+)
+
+python_library(
+    name = "telemetry",
+    srcs = [
+        "telemetry.py",
+    ],
+    deps = [
+        ":hostname",
+        ":version",
+    ],
+)
+
+python_library(
+    name = "version",
+    srcs = [
+        "version.py",
+    ],
+    deps = [
+        "//eden/fs/py/eden:config",
+    ],
+)
+
+python_library(
+    name = "trace",
+    srcs = [
+        "trace.py",
+    ],
+    deps = [
+        ":lib",
+    ],
+)

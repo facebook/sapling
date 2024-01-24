@@ -6,7 +6,7 @@
  */
 
 use anyhow::Error;
-use mercurial_types::MPath;
+use mercurial_types::NonRootMPath;
 
 pub type Chunker<T> = Box<dyn Fn(Vec<T>) -> Vec<Vec<T>>>;
 
@@ -14,20 +14,20 @@ pub type Chunker<T> = Box<dyn Fn(Vec<T>) -> Vec<Vec<T>>>;
 /// lists of ','-separated lists of path prefixes
 /// The intended use-case is to run something like:
 /// `parse_chunking_hint(read_to_string(path)?)?`
-/// Chunking hint is a list of lists of `MPath`, which
-/// allows a `Chunker` to group `MPath`s which start with prefixes
+/// Chunking hint is a list of lists of `NonRootMPath`, which
+/// allows a `Chunker` to group `NonRootMPath`s which start with prefixes
 /// from a given list into a single chunk.
-pub fn parse_chunking_hint(hint: String) -> Result<Vec<Vec<MPath>>, Error> {
+pub fn parse_chunking_hint(hint: String) -> Result<Vec<Vec<NonRootMPath>>, Error> {
     hint.split('\n')
         .filter_map(|line| {
             let line = line.trim_matches(|c| c == ' ' || c == '\n');
             if !line.is_empty() {
-                let v: Result<Vec<MPath>, Error> = line
+                let v: Result<Vec<NonRootMPath>, Error> = line
                     .split(',')
                     .filter_map(|prefix| {
                         let trimmed = prefix.trim_matches(|c| c == ' ' || c == '\n');
                         if !trimmed.is_empty() {
-                            Some(MPath::new(trimmed))
+                            Some(NonRootMPath::new(trimmed))
                         } else {
                             None
                         }
@@ -42,13 +42,15 @@ pub fn parse_chunking_hint(hint: String) -> Result<Vec<Vec<MPath>>, Error> {
         .collect()
 }
 
-/// Build a `Chunker<MPath>` from a "chunking hint"
+/// Build a `Chunker<NonRootMPath>` from a "chunking hint"
 /// See `parse_chunking_hint` docstrign for details
-pub fn path_chunker_from_hint(prefix_lists: Vec<Vec<MPath>>) -> Result<Chunker<MPath>, Error> {
+pub fn path_chunker_from_hint(
+    prefix_lists: Vec<Vec<NonRootMPath>>,
+) -> Result<Chunker<NonRootMPath>, Error> {
     Ok(Box::new(move |mpaths| {
         // In case some paths don't match any prefix, let's just put
         // them all in a separate commit
-        let mut res: Vec<Vec<MPath>> = vec![vec![]; prefix_lists.len() + 1];
+        let mut res: Vec<Vec<NonRootMPath>> = vec![vec![]; prefix_lists.len() + 1];
         let last_index = prefix_lists.len();
 
         for mpath in mpaths {
@@ -56,7 +58,7 @@ pub fn path_chunker_from_hint(prefix_lists: Vec<Vec<MPath>>) -> Result<Chunker<M
             match prefix_lists.iter().position(|prefix_list| {
                 prefix_list
                     .iter()
-                    .any(|prefix| MPath::is_prefix_of_opt(Some(prefix), &mpath))
+                    .any(|prefix| NonRootMPath::is_prefix_of_opt(Some(prefix), &mpath))
             }) {
                 Some(chunk_index) => {
                     // we need to put this `mpath` into `chunk_index` position
@@ -71,7 +73,7 @@ pub fn path_chunker_from_hint(prefix_lists: Vec<Vec<MPath>>) -> Result<Chunker<M
         }
 
         // Let's clean up potential empty chunks
-        let res: Vec<Vec<MPath>> = res.into_iter().filter(|v| !v.is_empty()).collect();
+        let res: Vec<Vec<NonRootMPath>> = res.into_iter().filter(|v| !v.is_empty()).collect();
 
         res
     }))
@@ -103,14 +105,17 @@ mod test {
         assert_eq!(
             parsed,
             vec![
-                vec![MPath::new("/a/b").unwrap(), MPath::new("/a/c").unwrap()],
-                vec![MPath::new("/a/d").unwrap()]
+                vec![
+                    NonRootMPath::new("/a/b").unwrap(),
+                    NonRootMPath::new("/a/c").unwrap()
+                ],
+                vec![NonRootMPath::new("/a/d").unwrap()]
             ]
         );
 
         let hint = "/a/b";
         let parsed = parse_chunking_hint(hint.to_string()).unwrap();
-        assert_eq!(parsed, vec![vec![MPath::new("/a/b").unwrap()]]);
+        assert_eq!(parsed, vec![vec![NonRootMPath::new("/a/b").unwrap()]]);
     }
 
     #[test]
@@ -125,23 +130,23 @@ mod test {
         .unwrap();
 
         let chunker = path_chunker_from_hint(hint).unwrap();
-        let mpaths: Vec<MPath> = vec!["/d/e/f", "/a", "/a/b/c", "/a/c", "/b/w/z", "/a/d"]
+        let mpaths: Vec<NonRootMPath> = vec!["/d/e/f", "/a", "/a/b/c", "/a/c", "/b/w/z", "/a/d"]
             .into_iter()
-            .map(|p| MPath::new(p).unwrap())
+            .map(|p| NonRootMPath::new(p).unwrap())
             .collect();
         let chunked = chunker(mpaths);
 
-        let expeected_chunk_0: Vec<MPath> = vec!["/a/b/c", "/a/c"]
+        let expeected_chunk_0: Vec<NonRootMPath> = vec!["/a/b/c", "/a/c"]
             .into_iter()
-            .map(|p| MPath::new(p).unwrap())
+            .map(|p| NonRootMPath::new(p).unwrap())
             .collect();
-        let expeected_chunk_1: Vec<MPath> = vec!["/b/w/z", "/a/d"]
+        let expeected_chunk_1: Vec<NonRootMPath> = vec!["/b/w/z", "/a/d"]
             .into_iter()
-            .map(|p| MPath::new(p).unwrap())
+            .map(|p| NonRootMPath::new(p).unwrap())
             .collect();
-        let expeected_chunk_2: Vec<MPath> = vec!["/d/e/f", "/a"]
+        let expeected_chunk_2: Vec<NonRootMPath> = vec!["/d/e/f", "/a"]
             .into_iter()
-            .map(|p| MPath::new(p).unwrap())
+            .map(|p| NonRootMPath::new(p).unwrap())
             .collect();
         assert_eq!(
             chunked,
@@ -163,23 +168,23 @@ mod test {
         .unwrap();
 
         let chunker = path_chunker_from_hint(hint).unwrap();
-        let mpaths: Vec<MPath> = vec!["/d/e/f", "/a", "/a/b/c", "/a/c", "/b/w/z", "/a/d"]
+        let mpaths: Vec<NonRootMPath> = vec!["/d/e/f", "/a", "/a/b/c", "/a/c", "/b/w/z", "/a/d"]
             .into_iter()
-            .map(|p| MPath::new(p).unwrap())
+            .map(|p| NonRootMPath::new(p).unwrap())
             .collect();
         let chunked = chunker(mpaths);
 
-        let expeected_chunk_0: Vec<MPath> = vec!["/a/b/c", "/a/c"]
+        let expeected_chunk_0: Vec<NonRootMPath> = vec!["/a/b/c", "/a/c"]
             .into_iter()
-            .map(|p| MPath::new(p).unwrap())
+            .map(|p| NonRootMPath::new(p).unwrap())
             .collect();
-        let expeected_chunk_1: Vec<MPath> = vec!["/b/w/z", "/a/d"]
+        let expeected_chunk_1: Vec<NonRootMPath> = vec!["/b/w/z", "/a/d"]
             .into_iter()
-            .map(|p| MPath::new(p).unwrap())
+            .map(|p| NonRootMPath::new(p).unwrap())
             .collect();
-        let expeected_chunk_2: Vec<MPath> = vec!["/d/e/f", "/a"]
+        let expeected_chunk_2: Vec<NonRootMPath> = vec!["/d/e/f", "/a"]
             .into_iter()
-            .map(|p| MPath::new(p).unwrap())
+            .map(|p| NonRootMPath::new(p).unwrap())
             .collect();
         assert_eq!(
             chunked,

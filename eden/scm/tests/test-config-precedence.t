@@ -35,7 +35,7 @@ Make sure --config options are available when loading config itself.
 "root" is not material - the important thing is that the regen-command is respected:
 
   $ echo > "$TESTTMP/test_hgrc"
-  $ HG_TEST_DYNAMICCONFIG="$TESTTMP/test_hgrc" LOG=configloader::hg=debug hg root --config "configs.regen-command=false" --config configs.generationtime=0 2>&1 | grep '^DEBUG.* spawn '
+  $ HG_TEST_INTERNALCONFIG="$TESTTMP/test_hgrc" LOG=configloader::hg=debug hg root --config "configs.regen-command=false" --config configs.generationtime=0 2>&1 | grep '^DEBUG.* spawn '
   DEBUG configloader::hg: spawn ["false"] because * (glob)
 
 Only load config a single time.

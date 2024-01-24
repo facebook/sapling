@@ -15,6 +15,8 @@ use clap_old::App;
 use clap_old::Arg;
 use clap_old::ArgMatches;
 use clap_old::SubCommand;
+use clientinfo::ClientEntryPoint;
+use clientinfo::ClientInfo;
 use cmdlib::args;
 use cmdlib::args::MononokeMatches;
 use cmdlib::helpers;
@@ -26,7 +28,7 @@ use copy_utils::Options;
 use fbinit::FacebookInit;
 use futures::future::try_join;
 use mononoke_types::ChangesetId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use regex::Regex;
 use slog::warn;
 use slog::Logger;
@@ -171,7 +173,7 @@ async fn parse_common_args<'a>(
     (
         ChangesetId,
         ChangesetId,
-        Vec<(MPath, MPath)>,
+        Vec<(NonRootMPath, NonRootMPath)>,
         String,
         String,
     ),
@@ -206,7 +208,7 @@ async fn parse_common_args<'a>(
             if dirs.len() != 2 {
                 return Err(anyhow!("invalid format of {}", ARG_FROM_TO_DIRS));
             }
-            res.push((MPath::new(dirs[0])?, MPath::new(dirs[1])?));
+            res.push((NonRootMPath::new(dirs[0])?, NonRootMPath::new(dirs[1])?));
         }
 
         res
@@ -214,12 +216,12 @@ async fn parse_common_args<'a>(
         let from_dir = matches
             .value_of(ARG_FROM_DIR)
             .ok_or_else(|| anyhow!("{} arg is not specified", ARG_FROM_DIR))?;
-        let from_dir = MPath::new(from_dir)?;
+        let from_dir = NonRootMPath::new(from_dir)?;
 
         let to_dir = matches
             .value_of(ARG_TO_DIR)
             .ok_or_else(|| anyhow!("{} arg is not specified", ARG_TO_DIR))?;
-        let to_dir = MPath::new(to_dir)?;
+        let to_dir = NonRootMPath::new(to_dir)?;
 
         vec![(from_dir, to_dir)]
     };
@@ -247,7 +249,12 @@ pub async fn subcommand_rsync<'a>(
     matches: &'a MononokeMatches<'_>,
     sub_matches: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    let ctx = CoreContext::new_with_logger_and_client_info(
+        fb,
+        logger.clone(),
+        ClientInfo::default_with_entry_point(ClientEntryPoint::MononokeAdmin),
+    );
+
     let (source_repo, target_repo, _) =
         get_source_target_repos_and_mapping(fb, logger, matches).await?;
 

@@ -1,0 +1,15 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.edit-stack-modal-panels vscode-panel-tab {
+  font-size: 110%;
+  margin: 0px calc(2 * var(--pad));
+}
+
+.edit-stack-modal-panels vscode-panel-view:not([hidden]) {
+  margin-top: var(--pad);
+}

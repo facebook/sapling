@@ -13,7 +13,6 @@ use dashmap::DashMap;
 use crate::RendezVous;
 use crate::RendezVousController;
 use crate::RendezVousStats;
-use crate::TunablesMultiRendezVousController;
 
 pub trait MultiRendezVousController: Send + Sync + 'static {
     type Controller: RendezVousController;
@@ -24,12 +23,7 @@ pub trait MultiRendezVousController: Send + Sync + 'static {
 /// A wrapper around RendezVous that can be keyed by a grouping key (G). This is useful when you
 /// want multiple RendezVous instances for a set of groups but you don't know the groups ahead of
 /// time (e.g. the groups might be repository ids).
-pub struct MultiRendezVous<
-    G,
-    K,
-    V,
-    C: MultiRendezVousController = TunablesMultiRendezVousController,
-> {
+pub struct MultiRendezVous<G, K, V, C: MultiRendezVousController> {
     inner: Arc<DashMap<G, RendezVous<K, V, <C as MultiRendezVousController>::Controller>>>,
     multi_controller: C,
     stats: Arc<RendezVousStats>,

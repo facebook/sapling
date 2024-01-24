@@ -39,7 +39,15 @@ pub(crate) trait RetryableStreamRequest: Sized + Sync + Send + 'static {
         max: usize,
     ) -> Option<Duration> {
         if error.is_retryable() && attempt < max {
-            Some(Duration::from_secs(attempt as u64 + 1))
+            // Retrying for a longer period of time is simply a
+            // way to wait until whatever surge of traffic is happening ends.
+            if error.is_rate_limiting() {
+                Some(Duration::from_secs(
+                    u32::pow(2, std::cmp::min(3, attempt as u32 + 1)) as u64,
+                ))
+            } else {
+                Some(Duration::from_secs(attempt as u64 + 1))
+            }
         } else {
             None
         }
@@ -237,7 +245,7 @@ mod tests {
         let retryable_move = retryable.clone();
         let response = block_on(retryable_move.perform_with_retries(client))?;
 
-        let results: Vec<_> = stream_to_iter(response.entries).into_iter().collect();
+        let results: Vec<_> = stream_to_iter(response.entries).collect();
 
         assert_eq!(retryable.lock().attempts, fails + 1);
         assert_eq!(retryable.lock().keys.len(), 0);

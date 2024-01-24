@@ -19,8 +19,14 @@ output.split('\n').forEach(line => {
   }
 });
 
-const child = spawn(executable, {stdio: ['inherit', 'inherit', 'inherit', 'ipc']} );
+const stdin_opt = process.argv.includes('--stdin=pipe') ? 'pipe': 'inherit';
+
+const child = spawn(executable, {stdio: [stdin_opt, 'inherit', 'inherit', 'ipc']} );
 const responses = ['HELLO FROM PARENT 1', 'HELLO FROM PARENT 2', 'BYE'];
+if (stdin_opt === 'pipe') {
+  child.stdin.write('stdin content from node');
+  child.stdin.end();
+}
 child.on('message', message => {
   console.log('[Parent] Got message from child:', message);
   const response = responses.shift();

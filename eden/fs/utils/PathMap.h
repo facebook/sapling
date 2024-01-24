@@ -328,4 +328,53 @@ bool operator!=(const PathMap<V, K>& lhs, const PathMap<V, K>& rhs) {
   const folly::fbvector<std::pair<K, V>>& vector = lhs;
   return vector != rhs;
 }
+
+/**
+ * Collate two path maps with different value types.
+ *
+ * Given two PathMaps with the same key type, produces a new PathMap where
+ * entries from both are collated by key.  The resulting PathMap's value type
+ * will be a pair of optionals, where one or both optionals will be present
+ * depending on whether there was a corresponding entry in the inputs.
+ */
+template <typename A, typename B, typename P = PathComponent>
+PathMap<std::pair<std::optional<A>, std::optional<B>>, P> collatePathMaps(
+    PathMap<A, P> a,
+    PathMap<B, P> b) {
+  auto caseSensitivity = CaseSensitivity::Insensitive;
+  if (a.getCaseSensitivity() == b.getCaseSensitivity()) {
+    caseSensitivity = a.getCaseSensitivity();
+  } else {
+    XLOG(WARN) << "Comparing path maps with disjoint case sensitivity";
+  }
+
+  auto result = PathMap<std::pair<std::optional<A>, std::optional<B>>, P>{
+      {}, caseSensitivity};
+
+  auto aIt = a.begin();
+  auto bIt = b.begin();
+  while (aIt != a.end() && bIt != b.end()) {
+    if (isPathPieceEqual(aIt->first, bIt->first, caseSensitivity)) {
+      result.emplace(aIt->first, std::make_pair(aIt->second, bIt->second));
+      ++aIt;
+      ++bIt;
+    } else if (isPathPieceLess(aIt->first, bIt->first, caseSensitivity)) {
+      result.emplace(aIt->first, std::make_pair(aIt->second, std::nullopt));
+      ++aIt;
+    } else {
+      result.emplace(bIt->first, std::make_pair(std::nullopt, bIt->second));
+      ++bIt;
+    }
+  }
+  while (aIt != a.end()) {
+    result.emplace(aIt->first, std::make_pair(aIt->second, std::nullopt));
+    ++aIt;
+  }
+  while (bIt != b.end()) {
+    result.emplace(bIt->first, std::make_pair(std::nullopt, bIt->second));
+    ++bIt;
+  }
+  return result;
+}
+
 } // namespace facebook::eden

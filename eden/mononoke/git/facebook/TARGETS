@@ -1,0 +1,11 @@
+load("//antlir/fbpkg:fbpkg.bzl", "fbpkg")
+
+oncall("mononoke")
+
+fbpkg.builder(
+    name = "mononoke.remotegitimport",
+    path_actions = {
+        "git_move_bookmark": "//eden/mononoke/git/facebook/git_move_bookmark:git_move_bookmark",
+        "remote_gitimport": "//eden/mononoke/git/facebook/remote_gitimport:remote_gitimport",
+    },
+)

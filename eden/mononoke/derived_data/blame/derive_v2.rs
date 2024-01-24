@@ -28,7 +28,7 @@ use mononoke_types::blame_v2::BlameV2Id;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileUnodeId;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 use unodes::find_unode_rename_sources;
 use unodes::RootUnodeManifestId;
 use unodes::UnodeRenameSource;
@@ -69,7 +69,7 @@ pub(crate) async fn derive_blame_v2(
         root_manifest.manifest_unode_id().clone(),
         parent_manifests,
     )
-    .map_ok(|(path, entry)| Some((path?, entry.into_leaf()?)))
+    .map_ok(|(path, entry)| Some((Option::<NonRootMPath>::from(path)?, entry.into_leaf()?)))
     .try_filter_map(future::ok)
     .map(move |path_and_file_unode| {
         cloned!(ctx, blobstore, renames);
@@ -100,9 +100,9 @@ pub(crate) async fn derive_blame_v2(
 async fn create_blame_v2(
     ctx: &CoreContext,
     blobstore: &Arc<dyn Blobstore>,
-    renames: Arc<HashMap<MPath, UnodeRenameSource>>,
+    renames: Arc<HashMap<NonRootMPath, UnodeRenameSource>>,
     csid: ChangesetId,
-    path: MPath,
+    path: NonRootMPath,
     file_unode_id: FileUnodeId,
     filesize_limit: u64,
 ) -> Result<BlameV2Id, Error> {
@@ -153,7 +153,7 @@ async fn fetch_blame_parent(
     ctx: &CoreContext,
     blobstore: &Arc<dyn Blobstore>,
     parent_index: usize,
-    path: MPath,
+    path: NonRootMPath,
     unode_id: FileUnodeId,
     filesize_limit: u64,
 ) -> Result<BlameParent<Bytes>, Error> {

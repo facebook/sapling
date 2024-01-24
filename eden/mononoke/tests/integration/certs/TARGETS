@@ -1,0 +1,12 @@
+load("@fbcode_macros//build_defs:native_rules.bzl", "buck_filegroup")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+buck_filegroup(
+    name = "oss_test_certs",
+    srcs = glob([
+        "*.crt",
+        "*.key",
+    ]),
+)

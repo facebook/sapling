@@ -1,0 +1,22 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("mononoke")
+
+rust_library(
+    name = "generation_derivation",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:tokio",
+        "//common/rust/shed/fbinit:fbinit",
+        "//eden/mononoke/blobstore:blobstore",
+        "//eden/mononoke/derived_data:derived_data_manager",
+        "//eden/mononoke/derived_data/remote/if:derived_data_service_if-rust",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/repo_factory:test_repo_factory",
+        "//eden/mononoke/server/context:context",
+    ],
+)

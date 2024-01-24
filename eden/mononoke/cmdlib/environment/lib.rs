@@ -43,11 +43,60 @@ pub enum Caching {
     Disabled,
 }
 
-#[derive(Copy, Clone, Debug, ValueEnum, EnumString, strum::Display)]
-pub enum WarmBookmarksCacheDerivedData {
+#[derive(
+    Copy,
+    Clone,
+    Debug,
+    ValueEnum,
+    EnumString,
+    strum::Display,
+    PartialEq,
+    Eq
+)]
+
+/// Which derived data types should the cache wait for before
+/// exposing the bookmark move to the users.
+pub enum BookmarkCacheDerivedData {
+    /// Only wait for hg derived data - the option used mainly by Mononoke EdenAPI Server.
     HgOnly,
+    /// Wait for all derived data types - mainly used by Mononoke SCS Server.
     AllKinds,
+    /// Don't wait for any derived data - advance bookmarks as they move.
     NoDerivation,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum BookmarkCacheAddress {
+    SmcTier(String),
+    HostPort(String),
+}
+
+impl Default for BookmarkCacheAddress {
+    fn default() -> Self {
+        Self::SmcTier("mononoke-bookmark-cache".to_string())
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum BookmarkCacheKind {
+    Disabled,
+    Local,
+    Remote(BookmarkCacheAddress),
+}
+
+#[derive(Clone, Debug)]
+pub struct BookmarkCacheOptions {
+    pub cache_kind: BookmarkCacheKind,
+    pub derived_data: BookmarkCacheDerivedData,
+}
+
+impl Default for BookmarkCacheOptions {
+    fn default() -> Self {
+        Self {
+            cache_kind: BookmarkCacheKind::Disabled,
+            derived_data: BookmarkCacheDerivedData::NoDerivation,
+        }
+    }
 }
 
 /// Struct representing the configuration associated with a MononokeApp instance which
@@ -69,7 +118,7 @@ pub struct MononokeEnvironment {
     pub remote_derivation_options: RemoteDerivationOptions,
     pub disabled_hooks: HashMap<String, HashSet<String>>,
     pub acl_provider: Arc<dyn AclProvider>,
-    pub warm_bookmarks_cache_derived_data: Option<WarmBookmarksCacheDerivedData>,
+    pub bookmark_cache_options: BookmarkCacheOptions,
     /// Function determining whether given repo (identified by name) should be loaded
     pub filter_repos: Option<Arc<dyn Fn(&str) -> bool + Send + Sync + 'static>>,
 }

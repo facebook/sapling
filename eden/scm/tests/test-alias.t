@@ -779,8 +779,8 @@ documented aliases
       When REV is not given, print a summary of the current state of the
       repository.
   
-      Specifying a path to a repository root or Mercurial bundle will cause
-      lookup to operate on that repository/bundle.
+      Specifying a path to a repository root or Sapling bundle will cause lookup
+      to operate on that repository/bundle.
   
       See 'hg log' for generating more information about specific revisions,
       including full hash identifiers.

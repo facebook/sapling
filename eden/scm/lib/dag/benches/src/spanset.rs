@@ -13,7 +13,7 @@ use minibench::elapsed;
 pub fn main() {
     // Ruby code to generate random IdSet:
     // 119.times.map{rand(8)+1}.reduce([0]){|a,b|a+[b+a[-1]]}.each_slice(2).map{|x|"#{x*'..='}"}*', '
-    #[cfg_attr(rustfmt, rustfmt_skip)]
+    #[rustfmt::skip]
     let span1 = IdSet::from_spans(vec![
         4..=6, 8..=10, 12..=13, 19..=20, 25..=30, 35..=43, 51..=52, 60..=67, 75..=81, 89..=93,
         94..=97, 105..=111, 116..=121, 129..=135, 136..=144, 146..=147, 155..=157, 164..=172,
@@ -25,7 +25,7 @@ pub fn main() {
         549..=553, 557..=563
     ].into_iter().map(|r| Id(*r.start())..=Id(*r.end())));
 
-    #[cfg_attr(rustfmt, rustfmt_skip)]
+    #[rustfmt::skip]
     let span2 = IdSet::from_spans(vec![
         0..=1, 6..=9, 16..=22, 26..=33, 38..=45, 51..=54, 61..=68, 71..=78, 85..=91, 94..=98,
         102..=105, 106..=111, 112..=114, 117..=121, 124..=128, 130..=132, 138..=140, 142..=143,

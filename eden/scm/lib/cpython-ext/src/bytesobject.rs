@@ -48,7 +48,7 @@ pub fn allocate_pybytes(py: RustPythonGILGuard<'_>, size: usize) -> (RustPyObjec
         (*typed).ob_sval[0] = 0;
         // Set the byte after the slice to '\0' If the caller does populate the
         // slice, PyBytes_AsString would return a C string with tailing '\0'.
-        *((*typed).ob_sval.as_mut_ptr().offset(size as isize)) = 0;
+        *(*typed).ob_sval.as_mut_ptr().add(size) = 0;
         let pptr: *mut *mut PyObject = &mut ptr;
         ptr = *pptr;
         assert!(!ptr.is_null(), "out of memory");

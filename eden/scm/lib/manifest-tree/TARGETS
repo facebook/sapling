@@ -1,0 +1,73 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "manifest-tree",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "bench": [
+                {
+                    "harness": False,
+                    "name": "bench",
+                    "required-features": ["for-tests"],
+                },
+            ],
+            "dependencies_override": {
+                "dev-dependencies": {
+                    "manifest": {
+                        "default-features": False,
+                        "features": ["for-tests"],
+                    },
+                    "types": {
+                        "default-features": False,
+                        "features": ["for-tests"],
+                    },
+                },
+            },
+            "extra_buck_dependencies": {
+                "dependencies": [
+                    "fbsource//third-party/rust:quickcheck",
+                    "fbsource//third-party/rust:rand",
+                ],
+                "dev-dependencies": [
+                    "fbsource//third-party/rust:rand",
+                    "fbsource//third-party/rust:rand_chacha",
+                    "//eden/scm/lib/manifest:manifest",
+                    "//eden/scm/lib/minibench:minibench",
+                    "//eden/scm/lib/types:types",
+                ],
+            },
+            "features": {
+                "default": [],
+                "for-tests": [
+                    "quickcheck",
+                    "rand",
+                ],
+            },
+            "package": {
+                "authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"],
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    features = ["for-tests"],
+    test_deps = ["fbsource//third-party/rust:quickcheck"],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:crossbeam",
+        "fbsource//third-party/rust:once_cell",
+        "fbsource//third-party/rust:parking_lot",
+        "fbsource//third-party/rust:sha1",
+        "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/manifest:manifest",
+        "//eden/scm/lib/minibytes:minibytes",
+        "//eden/scm/lib/pathmatcher:pathmatcher",
+        "//eden/scm/lib/progress/model:progress-model",
+        "//eden/scm/lib/storemodel:storemodel",
+        "//eden/scm/lib/types:types",
+        "//eden/scm/lib/util/factory:factory",
+    ],
+)

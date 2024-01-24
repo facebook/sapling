@@ -19,7 +19,6 @@ use land_service_if::types::*;
 use mononoke_api::CoreContext;
 use parking_lot::Mutex;
 use srserver::RequestContext;
-use tunables::tunables;
 
 use crate::errors;
 use crate::errors::LandChangesetsError;
@@ -81,7 +80,8 @@ impl LandService for LandServiceThriftImpl {
             land_changesets.clone(),
         );
 
-        if tunables().batching_to_land_service().unwrap_or_default() {
+        if justknobs::eval("scm/mononoke:batching_to_land_service", None, None).unwrap_or_default()
+        {
             let (sender, receiver) =
                 oneshot::channel::<Result<LandChangesetsResponse, LandChangesetsError>>();
 

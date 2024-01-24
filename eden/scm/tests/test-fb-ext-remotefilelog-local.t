@@ -181,7 +181,7 @@
 test the file size limit by changing it to something really small
   $ cat > ../sizelimit.py <<EOF
   > from __future__ import absolute_import
-  > import edenscm.ext.remotefilelog.remotefilelog as remotefilelog
+  > import sapling.ext.remotefilelog.remotefilelog as remotefilelog
   > 
   > def uisetup(ui):
   >     remotefilelog._maxentrysize = ui.configint('sizelimit', 'sizelimit')

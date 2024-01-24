@@ -1,0 +1,92 @@
+load("@fbcode//eden:defs.bzl", "make_rule_compatible_with")
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
+
+oncall("scm_client_infra")
+
+cpp_library(
+    name = "config",
+    srcs = glob(["*.cpp"]),
+    headers = glob(["*.h"]),
+    deps = [
+        "//eden/fs/utils:enum",
+        "//eden/fs/utils:file_utils",
+        "//eden/fs/utils:filter_utils",
+        "//eden/fs/utils:system_error",
+        "//eden/fs/utils:user_info",
+        "//folly:map_util",
+        "//folly:range",
+        "//folly:string",
+        "//folly/io:iobuf",
+        "//thrift/lib/cpp/util:enum_utils",
+    ],
+    exported_deps = [
+        "fbsource//third-party/cpptoml:cpptoml",
+        "fbsource//third-party/fmt:fmt",
+        ":config_thrift-cpp2-types",
+        "//common/rust/shed/hostcaps:hostcaps_ffi",
+        "//eden/common/utils:option_set",
+        "//eden/fs:config",
+        "//eden/fs/model:model",
+        "//eden/fs/store:store_type",
+        "//eden/fs/utils:case_sensitivity",
+        "//eden/fs/utils:chrono",
+        "//eden/fs/utils:path",
+        "//eden/fs/utils:throw",
+        "//eden/fs/utils:utils",
+        "//folly:dynamic",
+        "//folly:expected",
+        "//folly:file",
+        "//folly:file_util",
+        "//folly:portability",
+        "//folly:synchronized",
+        "//folly:utility",
+        "//folly/logging:logging",
+        "//folly/portability:sys_types",
+        "//thrift/lib/cpp/concurrency:thread_manager",
+    ],
+    external_deps = [
+        ("boost", None, "boost_filesystem"),
+    ],
+    exported_external_deps = [
+        "re2",
+    ],
+)
+
+thrift_library(
+    name = "config_thrift",
+    languages = [
+        "cpp2",
+        "py",
+        "py3",
+        "python",
+        "rust",
+    ],
+    py_base_module = "facebook.eden",
+    thrift_rust_options = ["deprecated_default_enum_min_i32"],
+    thrift_srcs = {
+        "eden_config.thrift": [],
+    },
+)
+
+# The Java bindings are only used by Buck, and since Buck is in a separate repo,
+# they are manually compiled and copied. See the build instructions in
+# eden/fs/service/TARGETS.
+#
+# TODO: Sandcastle macOS is not yet configured to build Java targets, so disable
+# this on macOS.
+make_rule_compatible_with(
+    name = "config_thrift_buck",
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
+    languages = [
+        "javadeprecated",
+    ],
+    rule = thrift_library,
+    tags = ["noautodeps"],
+    thrift_srcs = {
+        "eden_config.thrift": [],
+    },
+)

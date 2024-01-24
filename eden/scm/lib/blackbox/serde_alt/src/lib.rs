@@ -60,7 +60,7 @@ pub fn serde_alt(_attr: TokenStream, item: TokenStream) -> TokenStream {
                     };
                     Ident::new(&new_name, id.span()).into()
                 }
-                _ => tt.into(),
+                _ => tt,
             };
             let new_stream: TokenStream = new_tt.into();
             result.extend(new_stream);

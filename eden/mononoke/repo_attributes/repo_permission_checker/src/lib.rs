@@ -20,7 +20,6 @@ use permission_checker::PermissionCheckerBuilder;
 use slog::trace;
 use slog::Logger;
 use tokio::join;
-use tunables::tunables;
 
 /// Repository permissions checks
 ///
@@ -81,8 +80,10 @@ pub trait RepoPermissionChecker: Send + Sync + 'static {
         ctx: &CoreContext,
         identities: &MononokeIdentitySet,
     ) -> bool {
-        let log = tunables().log_draft_acl_failures().unwrap_or_default();
-        let enforce = tunables().enforce_draft_acl().unwrap_or_default();
+        let log = justknobs::eval("scm/mononoke:mononoke_log_draft_acl_failures", None, None)
+            .unwrap_or_default();
+        let enforce = justknobs::eval("scm/mononoke:mononoke_enforce_draft_acl", None, None)
+            .unwrap_or_default();
         if log || enforce {
             let (draft_result, write_result) = join!(
                 self.check_if_draft_access_allowed(identities),

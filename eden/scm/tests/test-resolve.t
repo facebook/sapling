@@ -105,7 +105,7 @@ don't allow marking or unmarking driver-resolved files
 
   $ cat > $TESTTMP/markdriver.py << EOF
   > '''mark and unmark files as driver-resolved'''
-  > from edenscm import merge, registrar, scmutil
+  > from sapling import merge, registrar, scmutil
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > @command('markdriver',
@@ -213,12 +213,11 @@ can not update or merge when there are unresolved conflicts
   use 'hg resolve' to retry unresolved file merges
   [1]
   $ hg up 99726c03216e233810a2564cbc0adfe395007eac
-  abort: outstanding merge conflicts
+  abort: unresolved merge state
+  (use 'hg resolve' to continue or
+       'hg goto --clean' to abort - WARNING: will destroy uncommitted changes)
   [255]
   $ hg merge 'max(desc(append))'
-  abort: outstanding merge conflicts
-  [255]
-  $ hg merge --force 'max(desc(append))'
   abort: outstanding merge conflicts
   [255]
 
@@ -305,48 +304,48 @@ resolve <file> should do nothing if 'file' was marked resolved
 
 insert unsupported advisory merge record
 
-  $ hg --config extensions.fakemergerecord=$TESTDIR/fakemergerecord.py fakemergerecord -x
+  $ hg debugmergestate --add-unsupported-advisory-record
   $ hg debugmergestate
   local: 57653b9f834a4493f7240b0681efcb9ae7cab745
   other: dc77451844e37f03f5c559e3b8529b2b48d381d1
   labels:
     local: working copy
     other: merge rev
-  unrecognized entry: x	advisory record
-  file extras: file1 (ancestorlinknode = 99726c03216e233810a2564cbc0adfe395007eac)
   file: file1 (record type "F", state "r", hash 60b27f004e454aca81b0480209cce5081ec52390)
     local path: file1 (flags "")
     ancestor path: file1 (node 2ed2a3912a0b24502043eae84ee4b279c18b90dd)
     other path: file1 (node 6f4310b00b9a147241b071a60c28a650827fb03d)
-  file extras: file2 (ancestorlinknode = 99726c03216e233810a2564cbc0adfe395007eac)
+    extras: ancestorlinknode=99726c03216e233810a2564cbc0adfe395007eac
   file: file2 (record type "F", state "u", hash cb99b709a1978bd205ab9dfd4c5aaa1fc91c7523)
     local path: file2 (flags "")
     ancestor path: file2 (node 2ed2a3912a0b24502043eae84ee4b279c18b90dd)
     other path: file2 (node 6f4310b00b9a147241b071a60c28a650827fb03d)
+    extras: ancestorlinknode=99726c03216e233810a2564cbc0adfe395007eac
+  unsupported record "x" (data ["advisory record"])
   $ hg resolve -l
   R file1
   U file2
 
 insert unsupported mandatory merge record
 
-  $ hg --config extensions.fakemergerecord=$TESTDIR/fakemergerecord.py fakemergerecord -X
+  $ hg debugmergestate --add-unsupported-mandatory-record
   $ hg debugmergestate
   local: 57653b9f834a4493f7240b0681efcb9ae7cab745
   other: dc77451844e37f03f5c559e3b8529b2b48d381d1
   labels:
     local: working copy
     other: merge rev
-  file extras: file1 (ancestorlinknode = 99726c03216e233810a2564cbc0adfe395007eac)
   file: file1 (record type "F", state "r", hash 60b27f004e454aca81b0480209cce5081ec52390)
     local path: file1 (flags "")
     ancestor path: file1 (node 2ed2a3912a0b24502043eae84ee4b279c18b90dd)
     other path: file1 (node 6f4310b00b9a147241b071a60c28a650827fb03d)
-  file extras: file2 (ancestorlinknode = 99726c03216e233810a2564cbc0adfe395007eac)
+    extras: ancestorlinknode=99726c03216e233810a2564cbc0adfe395007eac
   file: file2 (record type "F", state "u", hash cb99b709a1978bd205ab9dfd4c5aaa1fc91c7523)
     local path: file2 (flags "")
     ancestor path: file2 (node 2ed2a3912a0b24502043eae84ee4b279c18b90dd)
     other path: file2 (node 6f4310b00b9a147241b071a60c28a650827fb03d)
-  unrecognized entry: X	mandatory record
+    extras: ancestorlinknode=99726c03216e233810a2564cbc0adfe395007eac
+  unsupported record "X" (data ["mandatory record"])
   $ hg resolve -l
   abort: unsupported merge state records: X
   (see https://mercurial-scm.org/wiki/MergeStateRecords for more information)

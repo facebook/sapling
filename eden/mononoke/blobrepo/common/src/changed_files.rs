@@ -21,7 +21,7 @@ use manifest::ManifestOps;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mononoke_types::FileType;
-use mononoke_types::MPath;
+use mononoke_types::NonRootMPath;
 
 /// NOTE: To be used only for generating list of files for old, Mercurial format of Changesets.
 ///
@@ -29,14 +29,14 @@ use mononoke_types::MPath;
 /// compared to the provided p1 and p2 parents.
 /// A files is considered new when it was not present in neither of parent manifests or it was
 /// present, but with a different content.
-/// It sorts the returned Vec<MPath> in the order expected by Mercurial.
+/// It sorts the returned Vec<NonRootMPath> in the order expected by Mercurial.
 pub async fn compute_changed_files(
     ctx: CoreContext,
     blobstore: Arc<dyn Blobstore>,
     root: HgManifestId,
     p1: Option<HgManifestId>,
     p2: Option<HgManifestId>,
-) -> Result<Vec<MPath>, Error> {
+) -> Result<Vec<NonRootMPath>, Error> {
     let files = match (p1, p2) {
         (None, None) => {
             root.list_leaf_entries(ctx, blobstore)
@@ -68,7 +68,7 @@ pub async fn compute_changed_files(
         }
     };
 
-    let mut files: Vec<MPath> = files.into_iter().collect();
+    let mut files: Vec<NonRootMPath> = files.into_iter().collect();
     files.sort_unstable_by(mercurial_mpath_comparator);
     Ok(files)
 }
@@ -78,7 +78,7 @@ async fn compute_changed_files_pair(
     blobstore: Arc<dyn Blobstore>,
     to: HgManifestId,
     from: HgManifestId,
-) -> Result<HashSet<MPath>, Error> {
+) -> Result<HashSet<NonRootMPath>, Error> {
     from.diff(ctx, blobstore, to)
         .try_filter_map(|diff| async move {
             let (path, entry) = match diff {
@@ -88,7 +88,7 @@ async fn compute_changed_files_pair(
 
             match entry {
                 Entry::Tree(_) => Ok(None),
-                Entry::Leaf(_) => Ok(path),
+                Entry::Leaf(_) => Ok(Option::<NonRootMPath>::from(path)),
             }
         })
         .try_collect()
@@ -100,10 +100,10 @@ async fn compute_removed_files(
     blobstore: Arc<dyn Blobstore>,
     child: HgManifestId,
     parent: Option<HgManifestId>,
-) -> Result<Vec<MPath>, Error> {
+) -> Result<Vec<NonRootMPath>, Error> {
     compute_files_with_status(ctx, blobstore, child, parent, move |diff| match diff {
         Diff::Removed(path, entry) => match entry {
-            Entry::Leaf(_) => path,
+            Entry::Leaf(_) => path.into(),
             Entry::Tree(_) => None,
         },
         _ => None,
@@ -116,8 +116,8 @@ async fn compute_files_with_status(
     blobstore: Arc<dyn Blobstore>,
     child: HgManifestId,
     parent: Option<HgManifestId>,
-    filter_map: impl Fn(Diff<Entry<HgManifestId, (FileType, HgFileNodeId)>>) -> Option<MPath>,
-) -> Result<Vec<MPath>, Error> {
+    filter_map: impl Fn(Diff<Entry<HgManifestId, (FileType, HgFileNodeId)>>) -> Option<NonRootMPath>,
+) -> Result<Vec<NonRootMPath>, Error> {
     let s = match parent {
         Some(parent) => parent.diff(ctx.clone(), blobstore, child).left_stream(),
         None => child
@@ -131,7 +131,7 @@ async fn compute_files_with_status(
         .await
 }
 
-fn mercurial_mpath_comparator(a: &MPath, b: &MPath) -> ::std::cmp::Ordering {
+fn mercurial_mpath_comparator(a: &NonRootMPath, b: &NonRootMPath) -> ::std::cmp::Ordering {
     a.to_vec().cmp(&b.to_vec())
 }
 
@@ -149,7 +149,7 @@ mod tests {
 
         let mut mpaths: Vec<_> = paths
             .iter()
-            .map(|path| MPath::new(path).expect("invalid path"))
+            .map(|path| NonRootMPath::new(path).expect("invalid path"))
             .collect();
 
         {

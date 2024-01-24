@@ -284,7 +284,7 @@ Now test :merge-other and :merge-local
   1 other heads for branch "default"
   $ hg merge --tool :merge-local
   merging a
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ cat a
   Start of file

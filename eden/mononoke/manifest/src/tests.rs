@@ -31,11 +31,12 @@ use futures::future::FutureExt;
 use futures::stream::TryStreamExt;
 use maplit::btreemap;
 use memblob::Memblob;
+use mononoke_types::path::MPath;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileType;
-use mononoke_types::MPath;
 use mononoke_types::MPathElement;
+use mononoke_types::NonRootMPath;
 use mononoke_types_mocks::changesetid::ONES_CSID;
 use mononoke_types_mocks::changesetid::THREES_CSID;
 use mononoke_types_mocks::changesetid::TWOS_CSID;
@@ -48,6 +49,7 @@ pub(crate) use crate::derive_batch::derive_manifests_for_simple_stack_of_commits
 pub(crate) use crate::derive_batch::ManifestChanges;
 pub(crate) use crate::derive_manifest;
 pub(crate) use crate::find_intersection_of_diffs;
+pub(crate) use crate::flatten_subentries;
 pub(crate) use crate::Diff;
 pub(crate) use crate::Entry;
 pub(crate) use crate::Manifest;
@@ -196,7 +198,7 @@ async fn derive_test_manifest(
     let changes: Result<_> = (|| {
         let mut changes = Vec::new();
         for (path, change) in changes_str {
-            let path = MPath::new(path)?;
+            let path = NonRootMPath::new(path)?;
             changes.push((path, change.map(|leaf| TestLeaf(leaf.to_string()))));
         }
         Ok(changes)
@@ -209,13 +211,16 @@ async fn derive_test_manifest(
         {
             cloned!(ctx, blobstore);
             move |TreeInfo { subentries, .. }| {
-                let subentries = subentries
-                    .into_iter()
-                    .map(|(path, (_, id))| (path, id))
-                    .collect();
                 cloned!(ctx, blobstore);
                 async move {
-                    let id = TestManifestU64(subentries).store(&ctx, &blobstore).await?;
+                    let id = TestManifestU64(
+                        flatten_subentries(&ctx, &(), subentries)
+                            .await?
+                            .map(|(path, (_ctx, entry))| (path, entry))
+                            .collect(),
+                    )
+                    .store(&ctx, &blobstore)
+                    .await?;
                     Ok(((), id))
                 }
             }
@@ -250,7 +255,7 @@ async fn derive_test_stack_of_manifests(
     for (cs_id, changes_str) in changes_str_per_cs_id {
         let mut changes = Vec::new();
         for (path, change) in changes_str {
-            let path = MPath::new(path)?;
+            let path = NonRootMPath::new(path)?;
             changes.push((path, change.map(|leaf| TestLeaf(leaf.to_string()))));
         }
         let mf_changes = ManifestChanges { cs_id, changes };
@@ -266,13 +271,16 @@ async fn derive_test_stack_of_manifests(
         {
             cloned!(ctx, blobstore);
             move |TreeInfo { subentries, .. }, _| {
-                let subentries = subentries
-                    .into_iter()
-                    .map(|(path, (_, id))| (path, id))
-                    .collect();
                 cloned!(ctx, blobstore);
                 async move {
-                    let id = TestManifestU64(subentries).store(&ctx, &blobstore).await?;
+                    let id = TestManifestU64(
+                        flatten_subentries(&ctx, &(), subentries)
+                            .await?
+                            .map(|(path, (_ctx, entry))| (path, entry))
+                            .collect(),
+                    )
+                    .store(&ctx, &blobstore)
+                    .await?;
                     Ok(((), id))
                 }
             }
@@ -306,7 +314,7 @@ struct Files(TestManifestIdU64);
 
 #[async_trait]
 impl Loadable for Files {
-    type Value = BTreeMap<MPath, String>;
+    type Value = BTreeMap<NonRootMPath, String>;
 
     async fn load<'a, B: Blobstore>(
         &'a self,
@@ -315,7 +323,7 @@ impl Loadable for Files {
     ) -> Result<Self::Value, LoadableError> {
         bounded_traversal_stream(
             256,
-            Some((None, Entry::Tree(self.0))),
+            Some((MPath::ROOT, Entry::Tree(self.0))),
             move |(path, entry)| {
                 async move {
                     let content = Loadable::load(&entry, ctx, blobstore).await?;
@@ -324,9 +332,7 @@ impl Loadable for Files {
                         Entry::Tree(tree) => {
                             let recurse = tree
                                 .list()
-                                .map(|(name, entry)| {
-                                    (Some(MPath::join_opt_element(path.as_ref(), &name)), entry)
-                                })
+                                .map(|(name, entry)| (path.join(&name), entry))
                                 .collect();
                             (None, recurse)
                         }
@@ -336,7 +342,8 @@ impl Loadable for Files {
             },
         )
         .try_filter_map(|item| {
-            let item = item.and_then(|(path, leaf)| Some((path?, leaf.0)));
+            let item =
+                item.and_then(|(path, leaf)| Some((Option::<NonRootMPath>::from(path)?, leaf.0)));
             future::ok(item)
         })
         .try_fold(BTreeMap::new(), |mut acc, (path, leaf)| {
@@ -347,10 +354,10 @@ impl Loadable for Files {
     }
 }
 
-fn files_reference(files: BTreeMap<&str, &str>) -> Result<BTreeMap<MPath, String>> {
+fn files_reference(files: BTreeMap<&str, &str>) -> Result<BTreeMap<NonRootMPath, String>> {
     files
         .into_iter()
-        .map(|(path, content)| Ok((MPath::new(path)?, content.to_string())))
+        .map(|(path, content)| Ok((NonRootMPath::new(path)?, content.to_string())))
         .collect()
 }
 
@@ -364,12 +371,12 @@ fn test_path_tree() -> Result<()> {
     ]);
 
     let reference = vec![
-        (None, false),
-        (Some(MPath::new("one")?), false),
-        (Some(MPath::new("one/two")?), true),
-        (Some(MPath::new("one/two/three")?), true),
-        (Some(MPath::new("one/two/four")?), true),
-        (Some(MPath::new("five")?), true),
+        (MPath::ROOT, false),
+        (MPath::new("one")?, false),
+        (MPath::new("one/two")?, true),
+        (MPath::new("one/two/three")?, true),
+        (MPath::new("one/two/four")?, true),
+        (MPath::new("five")?, true),
     ];
 
     assert_eq!(Vec::from_iter(tree), reference);
@@ -384,14 +391,14 @@ fn test_path_insert_and_merge() -> Result<()> {
         (MPath::new("/one/two/three")?, false),
     ];
     for (path, value) in items {
-        tree.insert_and_merge(Some(path), value);
+        tree.insert_and_merge(path, value);
     }
 
     let reference = vec![
-        (None, vec![]),
-        (Some(MPath::new("one")?), vec![]),
-        (Some(MPath::new("one/two")?), vec![]),
-        (Some(MPath::new("one/two/three")?), vec![true, false]),
+        (MPath::ROOT, vec![]),
+        (MPath::new("one")?, vec![]),
+        (MPath::new("one/two")?, vec![]),
+        (MPath::new("one/two/three")?, vec![true, false]),
     ];
 
     assert_eq!(Vec::from_iter(tree), reference);
@@ -1038,12 +1045,12 @@ async fn test_derive_stack_of_manifests(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-fn make_paths(paths_str: &[&str]) -> Result<BTreeSet<Option<MPath>>> {
+fn make_paths(paths_str: &[&str]) -> Result<BTreeSet<MPath>> {
     paths_str
         .iter()
         .map(|path_str| match path_str {
-            &"/" => Ok(None),
-            _ => MPath::new(path_str).map(Some),
+            &"/" => Ok(MPath::ROOT),
+            _ => MPath::new(path_str),
         })
         .collect()
 }
@@ -1052,17 +1059,17 @@ fn describe_diff_item(diff: Diff<Entry<TestManifestIdU64, TestLeafId>>) -> Strin
     match diff {
         Diff::Added(path, entry) => format!(
             "A {}{}",
-            MPath::display_opt(path.as_ref()),
+            MPath::display_opt(&path),
             if entry.is_tree() { "/" } else { "" }
         ),
         Diff::Removed(path, entry) => format!(
             "R {}{}",
-            MPath::display_opt(path.as_ref()),
+            MPath::display_opt(&path),
             if entry.is_tree() { "/" } else { "" }
         ),
         Diff::Changed(path, entry, _) => format!(
             "C {}{}",
-            MPath::display_opt(path.as_ref()),
+            MPath::display_opt(&path),
             if entry.is_tree() { "/" } else { "" }
         ),
     }
@@ -1126,9 +1133,9 @@ async fn test_find_entries(fb: FacebookInit) -> Result<()> {
     // use prefix + single select
     {
         let paths = vec![
-            PathOrPrefix::Path(Some(MPath::new("two/three/5")?)),
-            PathOrPrefix::Path(Some(MPath::new("five/seven/11")?)),
-            PathOrPrefix::Prefix(Some(MPath::new("five/seven/eight")?)),
+            PathOrPrefix::Path(MPath::new("two/three/5")?),
+            PathOrPrefix::Path(MPath::new("five/seven/11")?),
+            PathOrPrefix::Prefix(MPath::new("five/seven/eight")?),
         ];
 
         let results: Vec<_> = mf0
@@ -1162,7 +1169,9 @@ async fn test_find_entries(fb: FacebookInit) -> Result<()> {
 
     // find entry
     {
-        let mf_root = mf0.find_entry(ctx.clone(), blobstore.clone(), None).await?;
+        let mf_root = mf0
+            .find_entry(ctx.clone(), blobstore.clone(), MPath::ROOT)
+            .await?;
         assert_eq!(mf_root, Some(Entry::Tree(mf0)));
 
         let paths = make_paths(&[
@@ -1322,11 +1331,7 @@ async fn test_diff(fb: FacebookInit) -> Result<()> {
                 };
 
                 let badpath = MPath::new("dir/added_dir/3").unwrap();
-                if &Some(badpath) != path {
-                    Some(diff)
-                } else {
-                    None
-                }
+                if &badpath != path { Some(diff) } else { None }
             },
             |diff| {
                 let path = match diff {
@@ -1336,7 +1341,7 @@ async fn test_diff(fb: FacebookInit) -> Result<()> {
                 };
 
                 let badpath = MPath::new("dir/removed_dir").unwrap();
-                &Some(badpath) != path
+                &badpath != path
             },
         )
         .try_collect()
@@ -1379,7 +1384,7 @@ async fn test_diff(fb: FacebookInit) -> Result<()> {
             blobstore.clone(),
             mf1,
             blobstore.clone(),
-            Some(Some(MPath::new("dir")?)),
+            Some(MPath::new("dir")?),
             |diff| {
                 let path = match &diff {
                     Diff::Added(path, ..) | Diff::Removed(path, ..) | Diff::Changed(path, ..) => {
@@ -1388,11 +1393,7 @@ async fn test_diff(fb: FacebookInit) -> Result<()> {
                 };
 
                 let badpath = MPath::new("dir/added_dir/3").unwrap();
-                if &Some(badpath) != path {
-                    Some(diff)
-                } else {
-                    None
-                }
+                if &badpath != path { Some(diff) } else { None }
             },
             |diff| {
                 let path = match diff {
@@ -1402,7 +1403,7 @@ async fn test_diff(fb: FacebookInit) -> Result<()> {
                 };
 
                 let badpath = MPath::new("dir/removed_dir").unwrap();
-                &Some(badpath) != path
+                &badpath != path
             },
         )
         .map_ok(describe_diff_item)
@@ -1577,8 +1578,8 @@ pub(crate) fn element(s: &str) -> MPathElement {
     MPathElement::new(s.as_bytes().to_vec()).unwrap()
 }
 
-pub(crate) fn path(s: &str) -> MPath {
-    MPath::new(s).unwrap()
+pub(crate) fn path(s: &str) -> NonRootMPath {
+    NonRootMPath::new(s).unwrap()
 }
 
 pub(crate) fn file(ty: FileType, name: &'static str) -> BonsaiEntry<TestManifestIdStr, TestFileId> {

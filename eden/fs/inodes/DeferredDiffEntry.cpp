@@ -143,12 +143,7 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
         auto contentsHash = contents->treeHash.value();
         contents.unlock();
         return diffTrees(
-            context_,
-            getPath(),
-            scmEntries_[0].getHash(),
-            contentsHash,
-            ignore_,
-            isIgnored_);
+            context_, getPath(), scmEntries_[0].getHash(), contentsHash);
       }
     }
 
@@ -253,47 +248,30 @@ class ModifiedScmDiffEntry : public DeferredDiffEntry {
       DiffContext* context,
       RelativePath path,
       ObjectId scmHash,
-      ObjectId wdHash,
-      const GitIgnoreStack* ignore,
-      bool isIgnored)
+      ObjectId wdHash)
       : DeferredDiffEntry{context, std::move(path)},
-        ignore_{ignore},
-        isIgnored_{isIgnored},
         scmHash_{scmHash},
         wdHash_{wdHash} {}
 
   ImmediateFuture<folly::Unit> run() override {
-    return diffTrees(
-        context_, getPath(), scmHash_, wdHash_, ignore_, isIgnored_);
+    return diffTrees(context_, getPath(), scmHash_, wdHash_);
   }
 
  private:
-  const GitIgnoreStack* ignore_{nullptr};
-  bool isIgnored_{false};
   ObjectId scmHash_;
   ObjectId wdHash_;
 };
 
 class AddedScmDiffEntry : public DeferredDiffEntry {
  public:
-  AddedScmDiffEntry(
-      DiffContext* context,
-      RelativePath path,
-      ObjectId wdHash,
-      const GitIgnoreStack* ignore,
-      bool isIgnored)
-      : DeferredDiffEntry{context, std::move(path)},
-        ignore_{ignore},
-        isIgnored_{isIgnored},
-        wdHash_{wdHash} {}
+  AddedScmDiffEntry(DiffContext* context, RelativePath path, ObjectId wdHash)
+      : DeferredDiffEntry{context, std::move(path)}, wdHash_{wdHash} {}
 
   ImmediateFuture<folly::Unit> run() override {
-    return diffAddedTree(context_, getPath(), wdHash_, ignore_, isIgnored_);
+    return diffAddedTree(context_, getPath(), wdHash_);
   }
 
  private:
-  const GitIgnoreStack* ignore_{nullptr};
-  bool isIgnored_{false};
   ObjectId wdHash_;
 };
 
@@ -357,21 +335,16 @@ unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createModifiedScmEntry(
     DiffContext* context,
     RelativePath path,
     ObjectId scmHash,
-    ObjectId wdHash,
-    const GitIgnoreStack* ignore,
-    bool isIgnored) {
+    ObjectId wdHash) {
   return make_unique<ModifiedScmDiffEntry>(
-      context, std::move(path), scmHash, wdHash, ignore, isIgnored);
+      context, std::move(path), scmHash, wdHash);
 }
 
 unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createAddedScmEntry(
     DiffContext* context,
     RelativePath path,
-    ObjectId wdHash,
-    const GitIgnoreStack* ignore,
-    bool isIgnored) {
-  return make_unique<AddedScmDiffEntry>(
-      context, std::move(path), wdHash, ignore, isIgnored);
+    ObjectId wdHash) {
+  return make_unique<AddedScmDiffEntry>(context, std::move(path), wdHash);
 }
 
 unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createRemovedScmEntry(

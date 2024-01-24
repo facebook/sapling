@@ -11,9 +11,8 @@ use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks_movement::CreateBookmarkOp;
 use bytes::Bytes;
-use hooks::HookManagerRef;
+use hook_manager::manager::HookManagerRef;
 use mononoke_types::ChangesetId;
-use tunables::tunables;
 
 use crate::errors::MononokeError;
 use crate::repo::RepoContext;
@@ -33,15 +32,9 @@ impl RepoContext {
             target: ChangesetId,
             pushvars: Option<&'a HashMap<String, Bytes>>,
         ) -> CreateBookmarkOp<'a> {
-            let mut op = CreateBookmarkOp::new(bookmark, target, BookmarkUpdateReason::ApiRequest)
+            let op = CreateBookmarkOp::new(bookmark, target, BookmarkUpdateReason::ApiRequest)
                 .with_pushvars(pushvars);
-            if !tunables()
-                .disable_commit_scribe_logging_scs()
-                .unwrap_or_default()
-            {
-                op = op.log_new_public_commits_to_scribe();
-            }
-            op
+            op.log_new_public_commits_to_scribe()
         }
         if let Some(redirector) = self.push_redirector.as_ref() {
             let large_bookmark = redirector.small_to_large_bookmark(bookmark).await?;

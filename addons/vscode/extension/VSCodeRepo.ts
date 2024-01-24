@@ -5,7 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {EnabledSCMApiFeature} from './types';
 import type {RepositoryReference} from 'isl-server/src/RepositoryCache';
+import type {ServerSideTracker} from 'isl-server/src/analytics/serverSideTracker';
 import type {Logger} from 'isl-server/src/logger';
 import type {ChangedFile} from 'isl/src/types';
 import type {Comparison} from 'shared/Comparison';
@@ -26,7 +28,11 @@ export class VSCodeReposList {
 
   private reposByPath = new Map</* arbitrary subpath of repo */ string, VSCodeRepo>();
 
-  constructor(private logger: Logger) {
+  constructor(
+    private logger: Logger,
+    private tracker: ServerSideTracker,
+    private enabledFeatures: Set<EnabledSCMApiFeature>,
+  ) {
     if (vscode.workspace.workspaceFolders) {
       this.updateRepos(vscode.workspace.workspaceFolders, []);
     }
@@ -48,7 +54,12 @@ export class VSCodeReposList {
       if (this.knownRepos.has(fsPath)) {
         throw new Error(`Attempted to add workspace folder path twice: ${fsPath}`);
       }
-      const repoReference = repositoryCache.getOrCreate(getCLICommand(), this.logger, fsPath);
+      const repoReference = repositoryCache.getOrCreate(
+        getCLICommand(),
+        this.logger,
+        this.tracker,
+        fsPath,
+      );
       this.knownRepos.set(fsPath, repoReference);
       repoReference.promise.then(repo => {
         if (repo instanceof Repository) {
@@ -57,7 +68,7 @@ export class VSCodeReposList {
           if (existing) {
             return;
           }
-          const vscodeRepo = new VSCodeRepo(repo, this.logger);
+          const vscodeRepo = new VSCodeRepo(repo, this.logger, this.enabledFeatures);
           this.vscodeRepos.set(root, vscodeRepo);
           repo.onDidDispose(() => {
             vscodeRepo.dispose();
@@ -100,18 +111,27 @@ export class VSCodeReposList {
  */
 export class VSCodeRepo implements vscode.QuickDiffProvider {
   private disposables: Array<vscode.Disposable> = [];
-  private sourceControl: vscode.SourceControl;
-  private resourceGroups: Record<
+  private sourceControl?: vscode.SourceControl;
+  private resourceGroups?: Record<
     'changes' | 'untracked' | 'unresolved' | 'resolved',
     vscode.SourceControlResourceGroup
   >;
   public rootUri: vscode.Uri;
   public rootPath: string;
 
-  constructor(public repo: Repository, private logger: Logger) {
+  constructor(
+    public repo: Repository,
+    private logger: Logger,
+    private enabledFeatures: Set<EnabledSCMApiFeature>,
+  ) {
     repo.onDidDispose(() => this.dispose());
     this.rootUri = vscode.Uri.file(repo.info.repoRoot);
     this.rootPath = repo.info.repoRoot;
+
+    if (!this.enabledFeatures.has('sidebar')) {
+      // if sidebar is not enabled, VSCodeRepo is mostly useless, but still used for checking which paths can be used for ISL and blame.
+      return;
+    }
 
     this.sourceControl = vscode.scm.createSourceControl(
       'sapling',
@@ -146,6 +166,9 @@ export class VSCodeRepo implements vscode.QuickDiffProvider {
   }
 
   private updateResourceGroups() {
+    if (this.resourceGroups == null || this.sourceControl == null) {
+      return;
+    }
     const data = this.repo.getUncommittedChanges();
     const conflicts = this.repo.getMergeConflicts()?.files;
 

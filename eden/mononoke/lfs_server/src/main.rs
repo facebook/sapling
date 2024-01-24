@@ -23,6 +23,7 @@ use anyhow::Error;
 use anyhow::Result;
 use cached_config::ConfigHandle;
 use clap::Parser;
+use clientinfo::ClientEntryPoint;
 use cloned::cloned;
 use cmdlib_caching::CachelibSettings;
 use connection_security_checker::ConnectionSecurityChecker;
@@ -334,6 +335,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                     fb,
                     logger.clone(),
                     internal_identity,
+                    ClientEntryPoint::LfsServer,
                 ))
                 .add(PostResponseMiddleware::with_config(config_handle))
                 .add(RequestContextMiddleware::new(

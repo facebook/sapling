@@ -12,3 +12,9 @@ Start up EdenAPI server.
 List repos.
   $ sslcurl -s "https://localhost:$MONONOKE_SOCKET/edenapi/repos"
   {"repos":["repo"]} (no-eol)
+Test request with a missing mandatory header
+  $ sslcurl_noclientinfo_test -s "https://localhost:$MONONOKE_SOCKET/edenapi/repos"
+  {"message:"Error: X-Client-Info header not provided or wrong format (expected json)."} (no-eol)
+Test that health check request still passes
+  $ sslcurl_noclientinfo_test -s "https://localhost:$MONONOKE_SOCKET/edenapi/health_check"
+  I_AM_ALIVE (no-eol)

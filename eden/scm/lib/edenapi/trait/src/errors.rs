@@ -57,6 +57,23 @@ pub enum ConfigError {
 }
 
 impl EdenApiError {
+    pub fn is_rate_limiting(&self) -> bool {
+        use EdenApiError::*;
+        match self {
+            HttpError { status, .. } => {
+                if status.is_client_error() {
+                    match *status {
+                        StatusCode::TOO_MANY_REQUESTS => true,
+                        _ => false,
+                    }
+                } else {
+                    false
+                }
+            }
+            _ => false,
+        }
+    }
+
     pub fn is_retryable(&self) -> bool {
         use http_client::HttpClientError::*;
         use EdenApiError::*;

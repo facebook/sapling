@@ -14,9 +14,12 @@ Different example combinations exercise different features:
   Run:
     cargo run --example spawn_sendfd
     cargo run --example spawn_sendfd 1>b.txt
+    cargo run --example spawn_sendfd <b.txt
 - hello_parent.js + hello_child.rs + spawn_sendfd.rs exercises feature A + B + C + D
   Run:
     node hello_parent.js spawn_sendfd
+    node hello_parent.js spawn_sendfd <b.txt
+    node hello_parent.js spawn_sendfd --stdin=pipe
 
 Panic or error messages indicate something went wrong.
 

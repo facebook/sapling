@@ -1,0 +1,57 @@
+load("@fbcode_macros//build_defs:cpp_binary.bzl", "cpp_binary")
+load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
+
+oncall("scm_client_infra")
+
+cpp_unittest(
+    name = "test",
+    srcs = [
+        "PrivHelperTest.cpp",
+        "PrivHelperTestServer.cpp",
+    ],
+    headers = ["PrivHelperTestServer.h"],
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    deps = [
+        "//eden/fs/privhelper:conn",
+        "//eden/fs/privhelper:interface",
+        "//eden/fs/privhelper:privhelper",
+        "//eden/fs/privhelper:server",
+        "//eden/fs/testharness:temp_file",
+        "//eden/fs/utils:system_error",
+        "//eden/fs/utils:user_info",
+        "//folly:conv",
+        "//folly:exception",
+        "//folly:file",
+        "//folly:file_util",
+        "//folly:range",
+        "//folly/experimental:test_util",
+        "//folly/futures:core",
+        "//folly/io/async:async_base",
+        "//folly/io/async:event_base_thread",
+        "//folly/portability:gmock",
+        "//folly/portability:gtest",
+        "//folly/test:test_utils",
+    ],
+    external_deps = [
+        ("boost", None, "boost_filesystem"),
+    ],
+)
+
+cpp_binary(
+    name = "drop_privs",
+    srcs = ["DropPrivs.cpp"],
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    deps = [
+        "//eden/fs/utils:user_info",
+        "//folly/init:init",
+        "//folly/logging:init",
+        "//folly/logging:logging",
+        "//folly/portability:unistd",
+    ],
+)

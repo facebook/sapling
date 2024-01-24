@@ -14,6 +14,7 @@ use changeset_info::ChangesetInfo;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use metaconfig_types::CommitSyncConfigVersion;
+use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use repo_derived_data::RepoDerivedDataRef;
 use slog::info;
@@ -132,8 +133,7 @@ fn get_version_impl<'a>(
 pub fn get_mapping_change_version(
     cs_info: &ChangesetInfo,
 ) -> Result<Option<CommitSyncConfigVersion>, Error> {
-    if tunables::tunables()
-        .allow_change_xrepo_mapping_extra()
+    if !justknobs::eval("scm/mononoke:ignore_change_xrepo_mapping_extra", None, None)
         .unwrap_or(false)
     {
         let maybe_mapping = cs_info
@@ -149,6 +149,30 @@ pub fn get_mapping_change_version(
         }
     }
     Ok(None)
+}
+
+/// Set mapping change version into changeset extras
+/// Some changesets are used as "boundaries" to change CommmitSyncConfigVersion
+/// used in syncing. This is determined by the `CHANGE_XREPO_MAPPING_EXTRA`'s
+/// value.
+pub fn set_mapping_change_version(
+    bcs: &mut BonsaiChangesetMut,
+    mapping_version: CommitSyncConfigVersion,
+) -> Result<(), Error> {
+    if bcs
+        .hg_extra
+        .contains_key(&CHANGE_XREPO_MAPPING_EXTRA.to_string())
+    {
+        return Err(format_err!(
+            "changeset already contains the {}",
+            CHANGE_XREPO_MAPPING_EXTRA
+        ));
+    }
+    bcs.hg_extra.insert(
+        CHANGE_XREPO_MAPPING_EXTRA.to_string(),
+        mapping_version.0.clone().into_bytes(),
+    );
+    Ok(())
 }
 
 #[cfg(test)]

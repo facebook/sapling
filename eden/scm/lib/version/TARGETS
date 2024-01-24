@@ -1,0 +1,33 @@
+load("@fbcode_macros//build_defs:native_rules.bzl", "buck_genrule")
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+buck_genrule(
+    name = "gen_rust_version_lib.rs",
+    out = "lib.rs",
+    # Restricting commands doesn't work on Windows.
+    bypass_restricted_cmd = True,
+    cmd = "$(exe //eden/scm:gen_version_py_bin) --version '%s' --release '%s' --revision '%s' $OUT" % (
+        read_config("build_info", "package_version", ""),
+        read_config("build_info", "package_release", ""),
+        read_config("build_info", "revision", ""),
+    ),
+)
+
+rust_library(
+    name = "rust_version",
+    autocargo = {
+        "cargo_toml_config": {
+            "features": {
+                "generated": [],
+            },
+            "package": {
+                "name": "version",
+            },
+        },
+    },
+    crate = "version",
+    features = ["generated"],
+    mapped_srcs = {":gen_rust_version_lib.rs": "lib.rs"},
+)
