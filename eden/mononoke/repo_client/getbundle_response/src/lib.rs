@@ -863,11 +863,11 @@ fn generate_lfs_file(
 pub fn create_manifest_entries_stream(
     ctx: CoreContext,
     blobstore: RepoBlobstore,
-    manifests: Vec<(Option<NonRootMPath>, HgManifestId, HgChangesetId)>,
+    manifests: Vec<(MPath, HgManifestId, HgChangesetId)>,
 ) -> OldBoxStream<OldBoxFuture<parts::TreepackPartInput, Error>, Error> {
     old_stream::iter_ok(manifests)
         .filter(|(fullpath, mf_id, _linknode)| {
-            !(fullpath.is_none() && mf_id.clone().into_nodehash() == NULL_HASH)
+            !(fullpath.is_root() && mf_id.clone().into_nodehash() == NULL_HASH)
         })
         .map({
             move |(fullpath, mf_id, linknode)| {

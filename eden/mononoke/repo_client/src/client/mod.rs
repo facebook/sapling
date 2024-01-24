@@ -2269,7 +2269,7 @@ pub fn fetch_treepack_part_input(
                 )?;
             }
 
-            let fullpath = repo_path.into_mpath();
+            let fullpath = repo_path.into_mpath().into();
             let (p1, p2) = parents.get_nodes();
             Ok(parts::TreepackPartInput {
                 node: hg_mf_id.into_nodehash(),

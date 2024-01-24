@@ -37,6 +37,7 @@ use mercurial_types::NonRootMPath;
 use mercurial_types::RepoPath;
 use mercurial_types::RevFlags;
 use mercurial_types::NULL_HASH;
+use mononoke_types::path::MPath;
 use mononoke_types::DateTime;
 use phases::Phase;
 
@@ -264,7 +265,7 @@ pub struct TreepackPartInput {
     pub p1: Option<HgNodeHash>,
     pub p2: Option<HgNodeHash>,
     pub content: Bytes,
-    pub fullpath: Option<NonRootMPath>,
+    pub fullpath: MPath,
     pub linknode: HgNodeHash,
 }
 
@@ -321,7 +322,7 @@ where
     let wirepack_parts = entries
         .buffered(buffer_size)
         .map(|input| {
-            let path = match input.fullpath {
+            let path = match input.fullpath.into_optional_non_root_path() {
                 Some(path) => RepoPath::DirectoryPath(path),
                 None => RepoPath::RootPath,
             };

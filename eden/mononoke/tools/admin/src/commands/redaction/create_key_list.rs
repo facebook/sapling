@@ -173,8 +173,7 @@ async fn content_keys_for_paths(
         .fsnode_id()
         .find_entries(ctx.clone(), repo.repo_blobstore_arc(), paths.clone())
         .try_filter_map(|(path, entry)| async move {
-            let path: Option<NonRootMPath> = path.into();
-            match (path, entry) {
+            match (path.into_optional_non_root_path(), entry) {
                 (Some(path), Entry::Leaf(fsnode_file)) => {
                     Ok(Some((path, fsnode_file.content_id().blobstore_key())))
                 }
