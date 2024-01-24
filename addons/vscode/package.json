@@ -137,17 +137,18 @@
   },
   "scripts": {
     "eslint": "eslint extension webview --ext .ts --ext .tsx",
-    "test": "jest --passWithNoTests",
-    "watch-extension": "webpack --watch --config extension.webpack.config.ts",
-    "watch-webview": "webpack --watch --config webview.webpack.config.ts",
-    "build-extension": "cross-env NODE_ENV=production webpack --config extension.webpack.config.ts",
-    "build-webview": "cross-env NODE_ENV=production webpack --config webview.webpack.config.ts",
+    "test": "jest",
+    "watch-extension": "rollup --config rollup.extension.config.mjs --watch",
+    "watch-webview": "vite build --watch --mode development",
+    "build-extension": "rollup --config rollup.extension.config.mjs --environment NODE_ENV:production",
+    "build-webview": "vite build",
     "vscode:prepublish": "node ./buildForPublish.js"
   },
   "optionalDependencies": {
     "vsce": "^2.15.0"
   },
   "devDependencies": {
+    "@rollup/plugin-json": "^6.1.0",
     "@types/circular-dependency-plugin": "^5.0.5",
     "@types/jest": "27.5.2",
     "@types/node": "^16.11.7",

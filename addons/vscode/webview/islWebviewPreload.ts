@@ -15,12 +15,9 @@ import type {Platform} from 'isl/src/platform';
 import {vscodeWebviewPlatform} from './vscodeWebviewPlatform';
 
 window.islPlatform = vscodeWebviewPlatform;
-__webpack_nonce__ = window.webpackNonce;
 
 declare global {
   interface Window {
     islPlatform?: Platform;
-    webpackNonce: string;
   }
-  let __webpack_nonce__: string;
 }

@@ -20,8 +20,7 @@
     "webview/global.d.ts",
     "extension",
     "webview",
-    "extension.webpack.config.ts",
-    "webview.webpack.config.ts",
+    "rollup.extension.config.mjs",
     "__mocks__"
   ]
 }

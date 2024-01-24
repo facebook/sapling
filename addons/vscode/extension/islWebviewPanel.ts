@@ -236,8 +236,8 @@ function htmlForISLWebview(
     vscode.Uri.joinPath(context.extensionUri, 'dist', 'webview'),
   );
 
-  const scriptUri = 'isl.js';
-  const stylesMainUri = 'isl.css';
+  const scriptUri = 'webview.js';
+  const stylesMainUri = 'res/webview.css';
 
   // Use a nonce to only allow specific scripts to be run
   const nonce = getNonce();
@@ -249,13 +249,13 @@ function htmlForISLWebview(
 
   const CSP = [
     `default-src ${webview.cspSource}`,
-    `style-src ${webview.cspSource}`,
+    `style-src ${webview.cspSource} 'unsafe-inline'`,
     // vscode-webview-ui needs to use style-src-elem without the nonce
     `style-src-elem ${webview.cspSource} 'unsafe-inline'`,
     `font-src ${webview.cspSource} data:`,
     `img-src ${webview.cspSource} https: data:`,
-    `script-src 'nonce-${nonce}' 'wasm-unsafe-eval'`,
-    `script-src-elem 'nonce-${nonce}'`,
+    `script-src ${webview.cspSource} 'wasm-unsafe-eval'`,
+    `script-src-elem ${webview.cspSource}`,
   ].join('; ');
 
   return `<!DOCTYPE html>
@@ -269,9 +269,8 @@ function htmlForISLWebview(
 		<link href="${stylesMainUri}" rel="stylesheet">
 		<script nonce="${nonce}">
 			window.saplingLanguage = "${locale /* important: locale has already been validated */}";
-      window.webpackNonce = "${nonce}";
 		</script>
-		<script defer="defer" nonce="${nonce}" src="${scriptUri}"></script>
+		<script type="module" defer="defer" nonce="${nonce}" src="${scriptUri}"></script>
 	</head>
 	<body>
 		<div id="root" class="${extraRootClass}">${loadingText}</div>
