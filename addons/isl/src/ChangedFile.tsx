@@ -17,6 +17,7 @@ import {PartialFileSelectionWithMode} from './PartialFileSelection';
 import {SuspenseBoundary} from './SuspenseBoundary';
 import {Tooltip} from './Tooltip';
 import {T, t} from './i18n';
+import {writeAtom} from './jotaiUtils';
 import {AddOperation} from './operations/AddOperation';
 import {ForgetOperation} from './operations/ForgetOperation';
 import {PurgeOperation} from './operations/PurgeOperation';
@@ -30,8 +31,9 @@ import {useShowToast} from './toast';
 import {succeedableRevset} from './types';
 import {usePromise} from './usePromise';
 import {VSCodeButton, VSCodeCheckbox} from '@vscode/webview-ui-toolkit/react';
+import {atom, useAtomValue} from 'jotai';
 import React from 'react';
-import {atom, useRecoilValue} from 'recoil';
+import {useRecoilValue} from 'recoil';
 import {labelForComparison, revsetForComparison, ComparisonType} from 'shared/Comparison';
 import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
@@ -43,30 +45,20 @@ const platformAltKey = (e: KeyboardEvent) => (isMac ? e.altKey : e.ctrlKey);
  * Is the alt key currently held down, used to show full file paths.
  * On windows, this actually uses the ctrl key instead to avoid conflicting with OS focus behaviors.
  */
-const holdingAltAtom = atom<boolean>({
-  key: 'holdingAltAtom',
-  default: false,
-  effects: [
-    ({setSelf}) => {
-      const keydown = (e: KeyboardEvent) => {
-        if (platformAltKey(e)) {
-          setSelf(true);
-        }
-      };
-      const keyup = (e: KeyboardEvent) => {
-        if (!platformAltKey(e)) {
-          setSelf(false);
-        }
-      };
-      document.addEventListener('keydown', keydown);
-      document.addEventListener('keyup', keyup);
-      return () => {
-        document.removeEventListener('keydown', keydown);
-        document.removeEventListener('keyup', keyup);
-      };
-    },
-  ],
-});
+const holdingAltAtom = atom<boolean>(false);
+
+const keydown = (e: KeyboardEvent) => {
+  if (platformAltKey(e)) {
+    writeAtom(holdingAltAtom, true);
+  }
+};
+const keyup = (e: KeyboardEvent) => {
+  if (!platformAltKey(e)) {
+    writeAtom(holdingAltAtom, false);
+  }
+};
+document.addEventListener('keydown', keydown);
+document.addEventListener('keyup', keyup);
 
 export function File({
   file,
@@ -119,7 +111,7 @@ export function File({
   // Hold "alt" key to show full file paths instead of short form.
   // This is a quick way to see where a file comes from without
   // needing to go through the menu to change the rendering type.
-  const isHoldingAlt = useRecoilValue(holdingAltAtom);
+  const isHoldingAlt = useAtomValue(holdingAltAtom);
 
   const tooltip = file.tooltip + '\n\n' + generatedStatusDescription(generatedStatus);
 
