@@ -12,13 +12,15 @@ import type {ExportFile, ImportCommit} from 'shared/types/stack';
 
 import clientToServerAPI from './ClientToServerAPI';
 import {t} from './i18n';
+import {resetOnCwdChange} from './jotaiUtils';
 import {dagWithPreviews, uncommittedChangesWithPreviews} from './previews';
-import {clearOnCwdChange} from './recoilUtils';
+import {entangledAtoms} from './recoilUtils';
 import {latestUncommittedChangesTimestamp} from './serverAPIState';
 import {ChunkSelectState} from './stackEdit/chunkSelectState';
 import {assert} from './utils';
 import Immutable from 'immutable';
-import {selector, useRecoilState, useRecoilValue, atom} from 'recoil';
+import {useAtom} from 'jotai';
+import {selector, useRecoilValue} from 'recoil';
 import {RateLimiter} from 'shared/RateLimiter';
 import {SelfUpdate} from 'shared/immutableExt';
 
@@ -247,11 +249,12 @@ const defaultUncommittedPartialSelection = PartialSelection.empty({
 });
 
 /** PartialSelection for `wdir()`. See `UseUncommittedSelection` for the public API. */
-const uncommittedSelection = atom<PartialSelection>({
-  key: 'uncommittedSelection',
-  default: defaultUncommittedPartialSelection,
-  effects: [clearOnCwdChange()],
-});
+const [uncommittedSelection, uncommittedSelectionRecoil] = entangledAtoms(
+  defaultUncommittedPartialSelection,
+  'uncommittedSelection',
+);
+
+resetOnCwdChange(uncommittedSelection, defaultUncommittedPartialSelection);
 
 const wdirRev = 'wdir()';
 
@@ -526,7 +529,7 @@ type ReadonlyPartialSelection = OmitNotMatching<
 
 /** Get the uncommitted selection state. */
 export function useUncommittedSelection() {
-  const [selection, setSelection] = useRecoilState(uncommittedSelection);
+  const [selection, setSelection] = useAtom(uncommittedSelection);
   const uncommittedChanges = useRecoilValue(uncommittedChangesWithPreviews);
   const epoch = useRecoilValue(latestUncommittedChangesTimestamp);
   const dag = useRecoilValue(dagWithPreviews);
@@ -541,7 +544,7 @@ export const uncommittedSelectionReadonly = selector<ReadonlyPartialSelection>({
   key: 'uncommittedSelectionReadonly',
   cachePolicy_UNSTABLE: {eviction: 'most-recent'},
   get: ({get}) => {
-    const selection = get(uncommittedSelection);
+    const selection = get(uncommittedSelectionRecoil);
     // Return the selection exactly, but modify the type to discourage using non-readonly methods.
     return selection as ReadonlyPartialSelection;
   },
