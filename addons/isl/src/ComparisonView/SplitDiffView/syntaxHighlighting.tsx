@@ -15,8 +15,8 @@ import {grammars, languages} from '../../generated/textmate/TextMateGrammarManif
 import {themeState} from '../../theme';
 import VSCodeDarkPlusTheme from './VSCodeDarkPlusTheme';
 import VSCodeLightPlusTheme from './VSCodeLightPlusTheme';
+import {useAtomValue} from 'jotai';
 import {useEffect, useState} from 'react';
-import {useRecoilValue} from 'recoil';
 import {CancellationToken} from 'shared/CancellationToken';
 import FilepathClassifier from 'shared/textmate-lib/FilepathClassifier';
 import createTextMateRegistry from 'shared/textmate-lib/createTextMateRegistry';
@@ -42,7 +42,7 @@ export function useTokenizedHunks(
   path: string,
   hunks: ParsedDiff['hunks'],
 ): TokenizedDiffHunks | undefined {
-  const theme = useRecoilValue(themeState);
+  const theme = useAtomValue(themeState);
 
   const [tokenized, setTokenized] = useState<TokenizedDiffHunks | undefined>(undefined);
 
@@ -65,7 +65,7 @@ export function useTokenizedContents(
   path: string,
   content: Array<string> | undefined,
 ): TokenizedHunk | undefined {
-  const theme = useRecoilValue(themeState);
+  const theme = useAtomValue(themeState);
 
   const [tokenized, setTokenized] = useState<TokenizedHunk | undefined>(undefined);
 
@@ -97,7 +97,7 @@ export function useTokenizedContentsOnceVisible(
   contentAfter: Array<string> | undefined,
   parentNode: React.MutableRefObject<HTMLElement | null>,
 ): [TokenizedHunk, TokenizedHunk] | undefined {
-  const theme = useRecoilValue(themeState);
+  const theme = useAtomValue(themeState);
   const [tokenized, setTokenized] = useState<[TokenizedHunk, TokenizedHunk] | undefined>(undefined);
   const [hasBeenVisible, setHasBeenVisible] = useState(false);
 

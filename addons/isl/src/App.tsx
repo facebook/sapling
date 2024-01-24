@@ -100,7 +100,7 @@ function ResetStyle() {
 }
 
 function ISLRoot({children}: {children: ReactNode}) {
-  const theme = useRecoilValue(themeState);
+  const theme = useAtomValue(themeState);
   useAtomValue(zoomUISettingAtom);
   return (
     <div

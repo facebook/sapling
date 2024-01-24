@@ -486,7 +486,8 @@ export type LocalStorageName =
   | 'isl.drawer-state'
   | 'isl.ui-zoom'
   | 'isl.has-shown-getting-started'
-  | 'isl.amend-autorestack';
+  | 'isl.amend-autorestack'
+  | 'isl-color-theme';
 
 export type ClientToServerMessage =
   | {type: 'heartbeat'; id: string}

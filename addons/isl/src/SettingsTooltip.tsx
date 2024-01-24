@@ -67,7 +67,7 @@ function SettingsDropdown({
   dismiss: () => unknown;
   showShortcutsHelp: () => unknown;
 }) {
-  const [theme, setTheme] = useRecoilState(themeState);
+  const [theme, setTheme] = useAtom(themeState);
   const [repoInfo, setRepoInfo] = useRecoilState(repositoryInfo);
   const runOperation = useRunOperation();
   const [showDiffNumber, setShowDiffNumber] = useAtom(showDiffNumberConfig);
