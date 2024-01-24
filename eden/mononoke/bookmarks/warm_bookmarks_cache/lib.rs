@@ -17,7 +17,6 @@ use anyhow::anyhow;
 use anyhow::Context as _;
 use anyhow::Error;
 use async_trait::async_trait;
-use basename_suffix_skeleton_manifest::RootBasenameSuffixSkeletonManifest;
 use basename_suffix_skeleton_manifest_v3::RootBssmV3DirectoryId;
 use blame::RootBlameV2;
 use bookmarks::ArcBookmarkUpdateLog;
@@ -251,11 +250,6 @@ impl WarmBookmarksCacheBuilder {
                 &self.ctx,
                 repo_derived_data.clone(),
             ));
-        }
-        if types.contains(RootBasenameSuffixSkeletonManifest::NAME) {
-            self.warmers.push(create_derived_data_warmer::<
-                RootBasenameSuffixSkeletonManifest,
-            >(&self.ctx, repo_derived_data.clone()));
         }
         if types.contains(RootBssmV3DirectoryId::NAME) {
             self.warmers

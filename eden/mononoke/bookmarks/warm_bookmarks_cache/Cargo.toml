@@ -13,7 +13,6 @@ path = "lib.rs"
 [dependencies]
 anyhow = "1.0.75"
 async-trait = "0.1.71"
-basename_suffix_skeleton_manifest = { version = "0.1.0", path = "../../derived_data/basename_suffix_skeleton_manifest" }
 basename_suffix_skeleton_manifest_v3 = { version = "0.1.0", path = "../../derived_data/basename_suffix_skeleton_manifest_v3" }
 blame = { version = "0.1.0", path = "../../derived_data/blame" }
 bookmarks = { version = "0.1.0", path = ".." }
