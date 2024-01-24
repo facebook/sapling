@@ -11,7 +11,9 @@ buck_sh_test(
     ],
     # Those are used to expose Buck-built binary to mononoke-bootstrap.
     # Normally, we don't use those, but we do it for tests.
-    env = env_for_binaries([(".", "admin")]),
+    env = env_for_binaries([
+        ("tools/admin", "newadmin"),
+    ]),
     test = "check.sh",
 )
 
