@@ -471,6 +471,8 @@ async fn insert_entries(
         .cloned()
         .map(|entry| entry.into_sql_tuple())
         .collect();
+    // This pattern is used to convert a ref to tuple into a tuple of refs.
+    #[allow(clippy::map_identity)]
     let entries_ref: Vec<_> = entries
         .iter()
         .map(|(a, b, c, d, e)| (a, b, c, d, e)) // &(a, b, ...) into (&a, &b, ...)

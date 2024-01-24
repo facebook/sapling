@@ -1175,9 +1175,10 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
             .collect::<Vec<_>>();
         let (transaction, result) = InsertChangesetsNoEdges::query_with_transaction(
             transaction,
+            // This pattern is used to convert a ref to tuple into a tuple of refs.
+            #[allow(clippy::map_identity)]
             cs_no_edges
                 .iter()
-                // This does &(TypeA, TypeB, ...) -> (&TypeA, &TypeB, ...)
                 .map(|(a, b, c, d, e, f)| (a, b, c, d, e, f))
                 .collect::<Vec<_>>()
                 .as_slice(),
@@ -1253,6 +1254,8 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
 
         let (transaction, _) = FixEdges::query_with_transaction(
             transaction,
+            // This pattern is used to convert a ref to tuple into a tuple of refs.
+            #[allow(clippy::map_identity)]
             rows.iter()
                 .map(|(a, b, c, d, e, f, g, h, i, j, k)| (a, b, c, d, e, f, g, h, i, j, k))
                 .collect::<Vec<_>>()
@@ -1274,6 +1277,8 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
 
         let (transaction, result) = InsertMergeParents::query_with_transaction(
             transaction,
+            // This pattern is used to convert a ref to tuple into a tuple of refs.
+            #[allow(clippy::map_identity)]
             merge_parent_rows
                 .iter()
                 .map(|(a, b, c)| (a, b, c))
@@ -1348,6 +1353,8 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
 
                 let (transaction, result) = InsertMergeParents::query_with_transaction(
                     transaction,
+                    // This pattern is used to convert a ref to tuple into a tuple of refs.
+                    #[allow(clippy::map_identity)]
                     merge_parent_rows
                         .iter()
                         .map(|(a, b, c)| (a, b, c))

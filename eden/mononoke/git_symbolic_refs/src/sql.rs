@@ -174,6 +174,8 @@ impl GitSymbolicRefs for SqlGitSymbolicRefs {
                 )
             })
             .collect();
+        // This pattern is used to convert a ref to tuple into a tuple of refs.
+        #[allow(clippy::map_identity)]
         let entries: Vec<_> = entries
             .iter()
             .map(|(repo_id, symref_name, ref_name, ref_type)| {

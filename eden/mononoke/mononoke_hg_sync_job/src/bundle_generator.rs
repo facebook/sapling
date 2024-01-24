@@ -193,6 +193,8 @@ impl FilenodeVerifier {
             .values()
             .flat_map(|entries| entries.iter())
             .filter_map(|entry| {
+                // This pattern is used to convert a ref to tuple into a tuple of refs.
+                #[allow(clippy::map_identity)]
                 entry
                     .maybe_get_lfs_pointer()
                     .map(|(sha256, size)| (sha256, size))

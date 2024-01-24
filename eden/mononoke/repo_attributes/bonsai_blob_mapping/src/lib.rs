@@ -161,7 +161,8 @@ impl SqlBonsaiBlobMapping {
             .map(|(shard_id, values)| async move {
                 let mut affected_rows = 0;
                 for chunk in values.chunks(MYSQL_INSERT_CHUNK_SIZE) {
-                    // This iter().map() is needed to convert &(_,_,_) to (&_, &_, &_)
+                    // This pattern is used to convert a ref to tuple into a tuple of refs.
+                    #[allow(clippy::map_identity)]
                     let chunk: Vec<_> = chunk.iter().map(|(a, b, c)| (a, b, c)).collect();
                     let result = InsertBlobKeysForChangesets::query(
                         &self.write_connections[shard_id],
