@@ -64,5 +64,3 @@ confirm everything was derived:
   Derived: e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
   $ mononoke_newadmin derived-data -R repo exists -B main -T skeleton_manifests
   Derived: e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
-  $ mononoke_newadmin derived-data -R repo exists -B main -T bssm
-  Derived: e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2

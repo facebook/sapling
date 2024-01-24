@@ -13,7 +13,6 @@ use std::sync::Arc;
 use acl_regions::build_acl_regions;
 use acl_regions::ArcAclRegions;
 use anyhow::Result;
-use basename_suffix_skeleton_manifest::RootBasenameSuffixSkeletonManifest;
 use basename_suffix_skeleton_manifest_v3::RootBssmV3DirectoryId;
 use blame::RootBlameV2;
 use blobstore::Blobstore;
@@ -186,7 +185,6 @@ pub fn default_test_repo_config() -> RepoConfig {
             RootGitDeltaManifestId::NAME.to_string(),
             MappedHgChangesetId::NAME.to_string(),
             RootSkeletonManifestId::NAME.to_string(),
-            RootBasenameSuffixSkeletonManifest::NAME.to_string(),
             RootTestManifestDirectory::NAME.to_string(),
             RootTestShardedManifestDirectory::NAME.to_string(),
             RootBssmV3DirectoryId::NAME.to_string(),

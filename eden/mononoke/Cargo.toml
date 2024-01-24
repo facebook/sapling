@@ -246,7 +246,6 @@ members = [
   "common/wait_for_replication",
   "common/yield_stream",
   "derived_data",
-  "derived_data/basename_suffix_skeleton_manifest",
   "derived_data/basename_suffix_skeleton_manifest_v3",
   "derived_data/blame",
   "derived_data/changeset_info",

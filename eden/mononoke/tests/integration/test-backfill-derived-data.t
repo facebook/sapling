@@ -83,7 +83,7 @@ backfill derived data
   * derived fsnodes in * (glob)
   *] Finished derived data command execution for repo repo* (glob)
   $ backfill_derived_data single c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd --all-types 2>&1 | grep 'derived .* in' | wc -l
-  13
+  12
 
   $ testtool_drawdag -R repo <<EOF
   > C-D-E-F-G

@@ -20,7 +20,6 @@ use anyhow::anyhow;
 use anyhow::format_err;
 use anyhow::Result;
 use async_trait::async_trait;
-use basename_suffix_skeleton_manifest::RootBasenameSuffixSkeletonManifest;
 use basename_suffix_skeleton_manifest_v3::RootBssmV3DirectoryId;
 use blame::RootBlameV2;
 use bonsai_git_mapping::BonsaiGitMappingArc;
@@ -91,7 +90,6 @@ pub const POSSIBLE_DERIVED_TYPES: &[&str] = &[
     TreeHandle::NAME,
     MappedGitCommitId::NAME,
     RootDeletedManifestV2Id::NAME,
-    RootBasenameSuffixSkeletonManifest::NAME,
     RootBssmV3DirectoryId::NAME,
     RootGitDeltaManifestId::NAME,
     RootTestManifestDirectory::NAME,
@@ -112,7 +110,6 @@ lazy_static! {
         let deleted_mf_v2 = RootDeletedManifestV2Id::NAME;
         let filenodes = FilenodesOnlyPublic::NAME;
         let skeleton_mf = RootSkeletonManifestId::NAME;
-        let bssm = RootBasenameSuffixSkeletonManifest::NAME;
         let bssm_v3 = RootBssmV3DirectoryId::NAME;
         let git_delta_manifest = RootGitDeltaManifestId::NAME;
         let git_commit = MappedGitCommitId::NAME;
@@ -131,7 +128,6 @@ lazy_static! {
         dag.insert(fsnodes, vec![]);
         dag.insert(deleted_mf_v2, vec![unodes]);
         dag.insert(skeleton_mf, vec![]);
-        dag.insert(bssm, vec![]);
         dag.insert(bssm_v3, vec![]);
         dag.insert(git_tree, vec![]);
         dag.insert(git_commit, vec![git_tree]);
@@ -572,13 +568,6 @@ fn derived_data_utils_impl(
         >::new(
             repo, config, enabled_config_name
         ))),
-        RootBasenameSuffixSkeletonManifest::NAME => {
-            Ok(Arc::new(DerivedUtilsFromManager::<
-                RootBasenameSuffixSkeletonManifest,
-            >::new(
-                repo, config, enabled_config_name
-            )))
-        }
         RootBssmV3DirectoryId::NAME => Ok(Arc::new(
             DerivedUtilsFromManager::<RootBssmV3DirectoryId>::new(
                 repo,
@@ -1120,11 +1109,6 @@ pub async fn check_derived(
         }
         DerivableType::GitDeltaManifest => {
             ddm.fetch_derived::<RootGitDeltaManifestId>(ctx, head_cs_id, None)
-                .map_ok(|res| res.is_some())
-                .await
-        }
-        DerivableType::Bssm => {
-            ddm.fetch_derived::<RootBasenameSuffixSkeletonManifest>(ctx, head_cs_id, None)
                 .map_ok(|res| res.is_some())
                 .await
         }

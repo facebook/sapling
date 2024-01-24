@@ -37,7 +37,6 @@ use crate::context::DerivationContext;
 #[derive(AsRefStr, EnumString, Display, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum DerivableType {
     BlameV2,
-    Bssm,
     BssmV3,
     ChangesetInfo,
     DeletedManifests,
@@ -58,7 +57,6 @@ impl DerivableType {
     const fn name(&self) -> &'static str {
         match self {
             DerivableType::BlameV2 => "blame",
-            DerivableType::Bssm => "bssm",
             DerivableType::BssmV3 => "bssm_v3",
             DerivableType::ChangesetInfo => "changeset_info",
             DerivableType::DeletedManifests => "deleted_manifest",
