@@ -18,8 +18,8 @@ use futures::stream::once;
 use futures::stream::Stream;
 use futures_ext::BoxStream;
 use futures_ext::StreamExt;
+use mercurial_types::MPath;
 use mercurial_types::MPathElement;
-use mercurial_types::NonRootMPath;
 use mercurial_types::Type;
 
 use super::revlog::EntryContent;
@@ -42,30 +42,26 @@ pub enum EntryStatus {
 }
 
 pub struct ChangedEntry {
-    pub path: Option<NonRootMPath>,
+    pub path: MPath,
     pub status: EntryStatus,
 }
 
 impl ChangedEntry {
-    pub fn new_added(path: Option<NonRootMPath>, entry: RevlogEntry) -> Self {
+    pub fn new_added(path: MPath, entry: RevlogEntry) -> Self {
         ChangedEntry {
             path,
             status: EntryStatus::Added(entry),
         }
     }
 
-    pub fn new_deleted(path: Option<NonRootMPath>, entry: RevlogEntry) -> Self {
+    pub fn new_deleted(path: MPath, entry: RevlogEntry) -> Self {
         ChangedEntry {
             path,
             status: EntryStatus::Deleted(entry),
         }
     }
 
-    pub fn new_modified(
-        path: Option<NonRootMPath>,
-        to_entry: RevlogEntry,
-        from_entry: RevlogEntry,
-    ) -> Self {
+    pub fn new_modified(path: MPath, to_entry: RevlogEntry, from_entry: RevlogEntry) -> Self {
         ChangedEntry {
             path,
             status: EntryStatus::Modified {
@@ -77,7 +73,7 @@ impl ChangedEntry {
 }
 
 struct NewEntry {
-    path: Option<NonRootMPath>,
+    path: MPath,
     entry: RevlogEntry,
 }
 
@@ -93,7 +89,7 @@ impl NewEntry {
         }
     }
 
-    fn into_tuple(self) -> (Option<NonRootMPath>, RevlogEntry) {
+    fn into_tuple(self) -> (MPath, RevlogEntry) {
         (self.path, self.entry)
     }
 }
@@ -129,10 +125,12 @@ pub fn new_entry_intersection_stream(
     root: &RevlogManifest,
     p1: Option<&RevlogManifest>,
     p2: Option<&RevlogManifest>,
-) -> BoxStream<(Option<NonRootMPath>, RevlogEntry), Error> {
+) -> BoxStream<(MPath, RevlogEntry), Error> {
     if let (Some(p1), Some(p2)) = (p1, p2) {
-        let p1 = changed_entry_stream(root, p1, None).filter_map(NewEntry::from_changed_entry);
-        let p2 = changed_entry_stream(root, p2, None).filter_map(NewEntry::from_changed_entry);
+        let p1 =
+            changed_entry_stream(root, p1, MPath::ROOT).filter_map(NewEntry::from_changed_entry);
+        let p2 =
+            changed_entry_stream(root, p2, MPath::ROOT).filter_map(NewEntry::from_changed_entry);
 
         p2.collect()
             .map(move |p2| {
@@ -145,11 +143,11 @@ pub fn new_entry_intersection_stream(
             .boxify()
     } else {
         let ces = if let Some(p1) = p1 {
-            changed_entry_stream(root, p1, None)
+            changed_entry_stream(root, p1, MPath::ROOT)
         } else if let Some(p2) = p2 {
-            changed_entry_stream(root, p2, None)
+            changed_entry_stream(root, p2, MPath::ROOT)
         } else {
-            changed_entry_stream(root, &RevlogManifest::empty(), None)
+            changed_entry_stream(root, &RevlogManifest::empty(), MPath::ROOT)
         };
 
         ces.filter_map(NewEntry::from_changed_entry)
@@ -167,7 +165,7 @@ pub fn new_entry_intersection_stream(
 pub fn changed_entry_stream(
     to: &RevlogManifest,
     from: &RevlogManifest,
-    path: Option<NonRootMPath>,
+    path: MPath,
 ) -> BoxStream<ChangedEntry, Error> {
     diff_manifests(path, to, from)
         .map(recursive_changed_entry_stream)
@@ -203,7 +201,7 @@ fn recursive_changed_entry_stream(changed_entry: ChangedEntry) -> BoxStream<Chan
                         let from_manifest = get_tree_content(from_content);
 
                         diff_manifests(
-                            NonRootMPath::join_element_opt(path.as_ref(), entry_path.as_ref()),
+                            path.join_element(entry_path.as_ref()),
                             &to_manifest,
                             &from_manifest,
                         )
@@ -231,14 +229,14 @@ fn recursive_changed_entry_stream(changed_entry: ChangedEntry) -> BoxStream<Chan
 /// their path from the root of the repo.
 /// For a non-tree entry returns a stream with a single (entry, path) pair.
 pub fn recursive_entry_stream(
-    rootpath: Option<NonRootMPath>,
+    rootpath: MPath,
     entry: RevlogEntry,
-) -> BoxStream<(Option<NonRootMPath>, RevlogEntry), Error> {
+) -> BoxStream<(MPath, RevlogEntry), Error> {
     let subentries = match entry.get_type() {
         Type::File(_) => empty().boxify(),
         Type::Tree => {
             let entry_basename = entry.get_name();
-            let path = NonRootMPath::join_opt(rootpath.as_ref(), entry_basename);
+            let path = rootpath.join_element(entry_basename);
 
             entry
                 .get_content()
@@ -259,7 +257,7 @@ pub fn recursive_entry_stream(
 /// Difference between manifests, non-recursive.
 /// It fetches manifest content, sorts it and compares.
 fn diff_manifests(
-    path: Option<NonRootMPath>,
+    path: MPath,
     to: &RevlogManifest,
     from: &RevlogManifest,
 ) -> BoxStream<ChangedEntry, Error> {
@@ -279,7 +277,7 @@ fn diff_manifests(
 // This causing compilation failure.
 // We need to find a workaround for an issue.
 pub fn diff_sorted_vecs(
-    path: Option<NonRootMPath>,
+    path: MPath,
     to: Vec<RevlogEntry>,
     from: Vec<RevlogEntry>,
 ) -> Vec<ChangedEntry> {

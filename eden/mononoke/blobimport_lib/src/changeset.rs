@@ -62,10 +62,10 @@ use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::HgNodeHash;
-use mercurial_types::NonRootMPath;
 use mercurial_types::RepoPath;
 use mercurial_types::Type;
 use mercurial_types::NULL_HASH;
+use mononoke_types::path::MPath;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ContentMetadataV2;
 use phases::PhasesArc;
@@ -81,7 +81,7 @@ struct ParseChangeset {
     revlogcs: BoxFuture<SharedItem<RevlogChangeset>, Error>,
     rootmf:
         BoxFuture<Option<(HgManifestId, HgBlob, Option<HgNodeHash>, Option<HgNodeHash>)>, Error>,
-    entries: BoxStream<(Option<NonRootMPath>, RevlogEntry), Error>,
+    entries: BoxStream<(MPath, RevlogEntry), Error>,
 }
 
 // Extracts all the data from revlog repo that commit API may need.
@@ -203,14 +203,14 @@ fn upload_entry(
     blobrepo: &BlobRepo,
     lfs_uploader: Arc<JobProcessor<LFSContent, ContentMetadataV2>>,
     entry: RevlogEntry,
-    path: Option<NonRootMPath>,
+    path: MPath,
 ) -> BoxFuture<(Entry<HgManifestId, HgFileNodeId>, RepoPath), Error> {
     let blobrepo = blobrepo.clone();
 
     let ty = entry.get_type();
 
-    let path = NonRootMPath::join_element_opt(path.as_ref(), entry.get_name());
-    let path = match path {
+    let path = path.join_element(entry.get_name());
+    let path = match path.into_optional_non_root_path() {
         // XXX this shouldn't be possible -- encode this in the type system
         None => {
             return future::err(Error::msg(
