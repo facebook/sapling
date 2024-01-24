@@ -18,7 +18,6 @@ use crate::blob::BlobstoreValue;
 use crate::blob::TestManifestBlob;
 use crate::thrift;
 use crate::typed_hash::IdContext;
-pub use crate::typed_hash::ShardedMapNodeBSSMId;
 use crate::typed_hash::TestManifestId;
 use crate::typed_hash::TestManifestIdContext;
 use crate::MPathElement;

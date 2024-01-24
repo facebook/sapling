@@ -15,7 +15,6 @@ use blobstore::Storable;
 use bytes::Bytes;
 use context::CoreContext;
 
-use crate::typed_hash::BasenameSuffixSkeletonManifestId;
 use crate::typed_hash::BlobstoreKey;
 use crate::typed_hash::BssmV3DirectoryId;
 use crate::typed_hash::ChangesetId;
@@ -92,7 +91,6 @@ pub type SkeletonManifestBlob = Blob<SkeletonManifestId>;
 pub type ContentMetadataV2Blob = Blob<ContentMetadataV2Id>;
 pub type FastlogBatchBlob = Blob<FastlogBatchId>;
 pub type RedactionKeyListBlob = Blob<RedactionKeyListId>;
-pub type BasenameSuffixSkeletonManifestBlob = Blob<BasenameSuffixSkeletonManifestId>;
 pub type BssmV3DirectoryBlob = Blob<BssmV3DirectoryId>;
 pub type TestManifestBlob = Blob<TestManifestId>;
 pub type TestShardedManifestBlob = Blob<TestShardedManifestId>;

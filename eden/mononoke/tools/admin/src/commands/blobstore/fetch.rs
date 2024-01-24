@@ -24,8 +24,6 @@ use git_types::Tree as GitTree;
 use mercurial_types::HgChangesetEnvelope;
 use mercurial_types::HgFileEnvelope;
 use mercurial_types::HgManifestEnvelope;
-use mononoke_types::basename_suffix_skeleton_manifest::BasenameSuffixSkeletonManifest;
-use mononoke_types::basename_suffix_skeleton_manifest::BssmEntry;
 use mononoke_types::basename_suffix_skeleton_manifest_v3::BssmV3Directory;
 use mononoke_types::basename_suffix_skeleton_manifest_v3::BssmV3Entry;
 use mononoke_types::blame_v2::BlameV2;
@@ -91,8 +89,6 @@ pub enum DecodeAs {
     DeletedManifestV2MapNode,
     DeletedManifestV2,
     BlameV2,
-    BasenameSuffixSkeletonManifestMapNode,
-    BasenameSuffixSkeletonManifest,
     BasenameSuffixSkeletonManifestV3MapNode,
     BasenameSuffixSkeletonManifestV3,
     ChangesetInfo,
@@ -128,11 +124,6 @@ impl DecodeAs {
                 ),
                 ("deletedmanifest2.", DecodeAs::DeletedManifestV2),
                 ("blame_v2.", DecodeAs::BlameV2),
-                (
-                    "bssm.mapnode.",
-                    DecodeAs::BasenameSuffixSkeletonManifestMapNode,
-                ),
-                ("bssm.", DecodeAs::BasenameSuffixSkeletonManifest),
                 (
                     "bssm3.map2node.",
                     DecodeAs::BasenameSuffixSkeletonManifestV3MapNode,
@@ -227,14 +218,6 @@ fn decode(key: &str, data: BlobstoreGetData, mut decode_as: DecodeAs) -> Decoded
         }
         DecodeAs::BlameV2 => {
             Decoded::try_debug(BlameV2::from_bytes(data.into_raw_bytes().as_ref()))
-        }
-        DecodeAs::BasenameSuffixSkeletonManifest => Decoded::try_debug(
-            BasenameSuffixSkeletonManifest::from_bytes(&data.into_raw_bytes()),
-        ),
-        DecodeAs::BasenameSuffixSkeletonManifestMapNode => {
-            Decoded::try_debug(ShardedMapNode::<BssmEntry>::from_bytes(
-                &data.into_raw_bytes(),
-            ))
         }
         DecodeAs::BasenameSuffixSkeletonManifestV3 => {
             Decoded::try_debug(BssmV3Directory::from_bytes(&data.into_raw_bytes()))
