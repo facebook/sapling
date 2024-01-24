@@ -21,6 +21,11 @@ use metaconfig_types::SmallRepoCommitSyncConfig;
 use mononoke_types::RepositoryId;
 use thiserror::Error;
 
+// NOTE: Occurrences of Option<NonRootMPath> in this file have not been replaced with MPath since such a
+// replacement is only possible in cases where Option<NonRootMPath> is used to represent a path that can also
+// be root. However, in this case the Some(_) and None variant of Option<NonRootMPath> are used to represent
+// conditional logic, i.e. the code either does something or skips it based on None or Some.
+
 #[derive(Debug, Error)]
 pub enum ErrorKind {
     #[error("Cannot remove prefix, equal to the whole path")]
