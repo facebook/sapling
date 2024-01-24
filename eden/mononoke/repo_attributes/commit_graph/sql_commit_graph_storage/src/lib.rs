@@ -1015,24 +1015,48 @@ impl SqlCommitGraphStorage {
             );
             let fetched_edges = match target.edge {
                 PrefetchEdge::FirstParent => {
-                    SelectManyChangesetsWithFirstParentPrefetch::query(
-                        &self.read_connection.conn,
-                        &self.repo_id,
-                        &steps,
-                        &target.generation.value(),
-                        cs_ids,
-                    )
-                    .await?
+                    if let Some(cri) = ctx.metadata().client_request_info() {
+                        SelectManyChangesetsWithFirstParentPrefetch::traced_query(
+                            &self.read_connection.conn,
+                            cri,
+                            &self.repo_id,
+                            &steps,
+                            &target.generation.value(),
+                            cs_ids,
+                        )
+                        .await?
+                    } else {
+                        SelectManyChangesetsWithFirstParentPrefetch::query(
+                            &self.read_connection.conn,
+                            &self.repo_id,
+                            &steps,
+                            &target.generation.value(),
+                            cs_ids,
+                        )
+                        .await?
+                    }
                 }
                 PrefetchEdge::SkipTreeSkewAncestor => {
-                    SelectManyChangesetsWithSkipTreeSkewAncestorPrefetch::query(
-                        &self.read_connection.conn,
-                        &self.repo_id,
-                        &steps,
-                        &target.generation.value(),
-                        cs_ids,
-                    )
-                    .await?
+                    if let Some(cri) = ctx.metadata().client_request_info() {
+                        SelectManyChangesetsWithSkipTreeSkewAncestorPrefetch::traced_query(
+                            &self.read_connection.conn,
+                            cri,
+                            &self.repo_id,
+                            &steps,
+                            &target.generation.value(),
+                            cs_ids,
+                        )
+                        .await?
+                    } else {
+                        SelectManyChangesetsWithSkipTreeSkewAncestorPrefetch::query(
+                            &self.read_connection.conn,
+                            &self.repo_id,
+                            &steps,
+                            &target.generation.value(),
+                            cs_ids,
+                        )
+                        .await?
+                    }
                 }
             };
             Ok(Self::collect_changeset_edges(&fetched_edges))
