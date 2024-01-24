@@ -88,12 +88,6 @@ pub struct MononokeTunables {
     // with removing it, but this tunable can be used as a quick killswitch to
     // enable them again.
     sql_lag_monitoring_blocklist: TunableVecOfStrings,
-    // Enable usage of basename_suffix_skeleton_manifest in commit_find_files
-    disable_basename_suffix_skeleton_manifest: TunableBool,
-    // Enable using BSSM for suffix queries. Might be inneficient for broad suffixes (like .php)
-    enable_bssm_suffix_query: TunableBool,
-    // Enable using optimized BSSM derivation.
-    enable_bssm_optimized_derivation: TunableBool,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {
