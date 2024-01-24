@@ -22,6 +22,7 @@ use futures::FutureExt;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use maplit::btreeset;
+use mercurial_types::MPath;
 use metaconfig_types::SparseProfilesConfig;
 use mononoke_types::fsnode::FsnodeEntry;
 use mononoke_types::NonRootMPath;
@@ -278,7 +279,7 @@ async fn calculate_size<'a>(
     matchers: HashMap<String, Arc<dyn Matcher + Send + Sync>>,
 ) -> Result<Out, MononokeError> {
     let root_fsnode_id = changeset.root_fsnode_id().await?;
-    let root: Option<NonRootMPath> = None;
+    let root = MPath::ROOT;
     bounded_traversal::bounded_traversal(
         256,
         (root, *root_fsnode_id.fsnode_id(), matchers),
@@ -290,7 +291,7 @@ async fn calculate_size<'a>(
                 let mut next: HashMap<_, HashMap<_, _>> = HashMap::new();
                 let fsnode = fsnode_id.load(&ctx, blobstore).await?;
                 for (base_name, entry) in fsnode.list() {
-                    let path = NonRootMPath::join_opt_element(path.as_ref(), base_name);
+                    let path = path.join_element(Some(base_name));
                     let path_vec = path.to_vec();
                     let repo_path = RepoPath::from_utf8(&path_vec)?;
                     match entry {
@@ -309,7 +310,7 @@ async fn calculate_size<'a>(
                                             tree.summary().descendant_files_total_size;
                                     }
                                     DirectoryMatch::ShouldTraverse => {
-                                        next.entry((Some(path.clone()), *tree.id()))
+                                        next.entry((path.clone(), *tree.id()))
                                             .or_default()
                                             .insert(source.clone(), matcher.clone());
                                     }

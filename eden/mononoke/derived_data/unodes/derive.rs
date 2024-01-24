@@ -516,9 +516,9 @@ mod tests {
             assert_eq!(
                 paths,
                 vec![
-                    None,
-                    Some(NonRootMPath::new("1").unwrap()),
-                    Some(NonRootMPath::new("files").unwrap())
+                    MPath::ROOT,
+                    MPath::new("1").unwrap(),
+                    MPath::new("files").unwrap()
                 ]
             );
             unode_id
@@ -556,10 +556,10 @@ mod tests {
             assert_eq!(
                 paths,
                 vec![
-                    None,
-                    Some(NonRootMPath::new("1").unwrap()),
-                    Some(NonRootMPath::new("2").unwrap()),
-                    Some(NonRootMPath::new("files").unwrap())
+                    MPath::ROOT,
+                    MPath::new("1").unwrap(),
+                    MPath::new("2").unwrap(),
+                    MPath::new("files").unwrap()
                 ]
             );
         }

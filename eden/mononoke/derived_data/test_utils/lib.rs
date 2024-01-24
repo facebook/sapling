@@ -19,9 +19,9 @@ use futures::stream::TryStreamExt;
 use manifest::Entry;
 use manifest::Manifest;
 use mercurial_types::HgChangesetId;
+use mononoke_types::path::MPath;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
-use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
 
 pub async fn bonsai_changeset_from_hg(
@@ -43,13 +43,13 @@ pub fn iterate_all_manifest_entries<'a, MfId, LId>(
     ctx: &'a CoreContext,
     repo: &'a (impl RepoBlobstoreRef + Send + Sync),
     entry: Entry<MfId, LId>,
-) -> impl Stream<Item = Result<(Option<NonRootMPath>, Entry<MfId, LId>)>> + 'a
+) -> impl Stream<Item = Result<(MPath, Entry<MfId, LId>)>> + 'a
 where
     MfId: Loadable + Send + Sync + Clone + 'a,
     LId: Send + Clone + 'static,
     <MfId as Loadable>::Value: Manifest<TreeId = MfId, LeafId = LId>,
 {
-    bounded_traversal_stream(256, Some((None, entry)), move |(path, entry)| {
+    bounded_traversal_stream(256, Some((MPath::ROOT, entry)), move |(path, entry)| {
         async move {
             match entry {
                 Entry::Leaf(_) => Ok((vec![(path, entry.clone())], vec![])),
@@ -58,8 +58,8 @@ where
                     let recurse = mf
                         .list()
                         .map(|(basename, new_entry)| {
-                            let path = NonRootMPath::join_opt_element(path.as_ref(), &basename);
-                            (Some(path), new_entry)
+                            let path = path.join_element(Some(&basename));
+                            (path, new_entry)
                         })
                         .collect();
 

@@ -20,6 +20,7 @@ use manifest::Entry;
 use manifest::ManifestOps;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
+use mononoke_types::path::MPath;
 use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
 
@@ -103,10 +104,10 @@ async fn compute_removed_files(
 ) -> Result<Vec<NonRootMPath>, Error> {
     compute_files_with_status(ctx, blobstore, child, parent, move |diff| match diff {
         Diff::Removed(path, entry) => match entry {
-            Entry::Leaf(_) => path.into(),
-            Entry::Tree(_) => None,
+            Entry::Leaf(_) => path,
+            Entry::Tree(_) => MPath::ROOT,
         },
-        _ => None,
+        _ => MPath::ROOT,
     })
     .await
 }
@@ -116,7 +117,7 @@ async fn compute_files_with_status(
     blobstore: Arc<dyn Blobstore>,
     child: HgManifestId,
     parent: Option<HgManifestId>,
-    filter_map: impl Fn(Diff<Entry<HgManifestId, (FileType, HgFileNodeId)>>) -> Option<NonRootMPath>,
+    filter_map: impl Fn(Diff<Entry<HgManifestId, (FileType, HgFileNodeId)>>) -> MPath,
 ) -> Result<Vec<NonRootMPath>, Error> {
     let s = match parent {
         Some(parent) => parent.diff(ctx.clone(), blobstore, child).left_stream(),
@@ -126,7 +127,7 @@ async fn compute_files_with_status(
             .right_stream(),
     };
 
-    s.try_filter_map(|e| async { Ok(filter_map(e)) })
+    s.try_filter_map(|e| async { Ok(filter_map(e).into_optional_non_root_path()) })
         .try_collect()
         .await
 }

@@ -85,7 +85,7 @@ pub async fn get_file_nodes(
     let manifest_entries: HashMap<_, _> = root_mf_id
         .find_entries(ctx, repo.repo_blobstore().clone(), paths.clone())
         .try_filter_map(|(path, entry)| async move {
-            let path: Option<NonRootMPath> = path.into();
+            let path = path.into_optional_non_root_path();
             let result =
                 path.and_then(move |path| entry.into_leaf().map(move |leaf| (path, leaf.1)));
             Ok(result)
