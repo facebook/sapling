@@ -27,7 +27,6 @@ rust_binary(
         "//eden/mononoke/cmdlib/sharding:executor_lib",
         "//eden/mononoke/cmdlib/sharding_ext:sharding_ext",
         "//eden/mononoke/common/bounded_traversal:bounded_traversal",
-        "//eden/mononoke/derived_data:basename_suffix_skeleton_manifest",
         "//eden/mononoke/derived_data:blame",
         "//eden/mononoke/derived_data:changeset_info",
         "//eden/mononoke/derived_data:deleted_manifest",
