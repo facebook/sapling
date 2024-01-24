@@ -76,29 +76,16 @@ async fn create_test_sharded_manifest_directory(
         LoadableShardedMapV2Node<TestShardedManifestEntry>,
     >,
 ) -> Result<TestShardedManifestDirectory> {
-    let subentries: TrieMap<_> = match subentries {
-        TreeInfoSubentries::AllSubentries(subentries) => subentries
-            .into_iter()
-            .map(|(path, (_ctx, entry))| {
-                let entry = Either::Left(mf_entry_to_test_sharded_mf_entry(entry, path.as_ref()));
-                (path, entry)
-            })
-            .collect(),
-        TreeInfoSubentries::ReusedMapsAndSubentries {
-            produced_subentries_and_reused_maps,
-            ..
-        } => produced_subentries_and_reused_maps
-            .into_iter()
-            .map(|(prefix, entry_or_map)| match entry_or_map {
-                Either::Left((_maybe_ctx, entry)) => {
-                    let entry =
-                        Either::Left(mf_entry_to_test_sharded_mf_entry(entry, prefix.as_ref()));
-                    (prefix, entry)
-                }
-                Either::Right(map) => (prefix, Either::Right(map)),
-            })
-            .collect(),
-    };
+    let subentries: TrieMap<_> = subentries
+        .into_iter()
+        .map(|(prefix, entry_or_map)| match entry_or_map {
+            Either::Left((_maybe_ctx, entry)) => {
+                let entry = Either::Left(mf_entry_to_test_sharded_mf_entry(entry, prefix.as_ref()));
+                (prefix, entry)
+            }
+            Either::Right(map) => (prefix, Either::Right(map)),
+        })
+        .collect();
 
     let subentries =
         ShardedMapV2Node::from_entries_and_partial_maps(&ctx, &blobstore, subentries).await?;

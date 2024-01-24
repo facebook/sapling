@@ -19,6 +19,7 @@ use context::CoreContext;
 use futures::stream::TryStreamExt;
 use futures::Future;
 use futures::FutureExt;
+use itertools::Either;
 use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPathElement;
@@ -29,7 +30,6 @@ use crate::Entry;
 use crate::LeafInfo;
 use crate::PathTree;
 use crate::TreeInfo;
-use crate::TreeInfoSubentries;
 
 pub struct ManifestChanges<Leaf> {
     pub cs_id: ChangesetId,
@@ -462,7 +462,10 @@ where
                             .list(ctx, &store)
                             .await?
                             .map_ok(|(path, entry)| {
-                                (path, (None, convert_to_intermediate_entry(entry)))
+                                (
+                                    path.to_smallvec(),
+                                    Either::Left((None, convert_to_intermediate_entry(entry))),
+                                )
                             })
                             .try_collect()
                             .await?;
@@ -470,7 +473,7 @@ where
                             TreeInfo {
                                 path: path.clone().into(),
                                 parents: vec![tree_id],
-                                subentries: TreeInfoSubentries::AllSubentries(subentries),
+                                subentries,
                             },
                             cs_id,
                         )
@@ -620,7 +623,13 @@ where
                     TreeInfo {
                         path: path.clone(),
                         parents: parent.clone().into_iter().collect(),
-                        subentries: TreeInfoSubentries::AllSubentries(cur_sub_entries.clone()),
+                        subentries: cur_sub_entries
+                            .clone()
+                            .into_iter()
+                            .map(|(name, (context, entry))| {
+                                (name.to_smallvec(), Either::Left((context, entry)))
+                            })
+                            .collect(),
                     },
                     *cs_id,
                 )

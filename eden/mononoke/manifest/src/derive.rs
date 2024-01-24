@@ -50,23 +50,11 @@ pub struct TreeInfo<TreeId, LeafId, Ctx, TrieMapType> {
     pub subentries: TreeInfoSubentries<TreeId, LeafId, Ctx, TrieMapType>,
 }
 
-pub enum TreeInfoSubentries<TreeId, LeafId, Ctx, TrieMapType> {
-    AllSubentries(BTreeMap<MPathElement, (Option<Ctx>, Entry<TreeId, LeafId>)>),
-    ReusedMapsAndSubentries {
-        produced_subentries_and_reused_maps:
-            BTreeMap<SmallVec<[u8; 24]>, Either<(Option<Ctx>, Entry<TreeId, LeafId>), TrieMapType>>,
-        /// Consists of all subentries of parents that are not contained in any reused map.
-        consumed_subentries: Vec<Entry<TreeId, LeafId>>,
-    },
-}
-
-impl<TreeId, LeafId, Ctx, TrieMapType> Default
-    for TreeInfoSubentries<TreeId, LeafId, Ctx, TrieMapType>
-{
-    fn default() -> Self {
-        TreeInfoSubentries::AllSubentries(Default::default())
-    }
-}
+/// Represents the subentries of a tree node as a combination of singular subentries and
+/// reused parent maps. The key for singular subentries is their name, while the key for
+/// reused maps is a prefix that's prepended to all of the keys of the map.
+pub type TreeInfoSubentries<TreeId, LeafId, Ctx, TrieMapType> =
+    BTreeMap<SmallVec<[u8; 24]>, Either<(Option<Ctx>, Entry<TreeId, LeafId>), TrieMapType>>;
 
 pub async fn flatten_subentries<Store, TreeId, IntermediateLeafId, LeafId, Ctx, TrieMapType>(
     ctx: &CoreContext,
@@ -84,47 +72,33 @@ where
     TrieMapType: TrieMapOps<Store, Entry<TreeId, LeafId>>,
     IntermediateLeafId: From<LeafId>,
 {
-    match subentries {
-        TreeInfoSubentries::AllSubentries(subentries) => Ok(Either::Left(subentries.into_iter())),
-        TreeInfoSubentries::ReusedMapsAndSubentries {
-            produced_subentries_and_reused_maps,
-            consumed_subentries: _,
-        } => {
-            let subentries_futures = produced_subentries_and_reused_maps
-                .into_iter()
-                .map(|(prefix, entry_or_map)| async move {
-                    match entry_or_map {
-                        Either::Left((ctx, entry)) => {
-                            Ok(vec![(MPathElement::from_smallvec(prefix)?, (ctx, entry))])
-                        }
-                        Either::Right(map) => map
-                            .into_stream(ctx, blobstore)
-                            .await?
-                            .map_ok(|(mut path, entry)| {
-                                path.insert_from_slice(0, prefix.as_ref());
-                                Ok((
-                                    MPathElement::from_smallvec(path)?,
-                                    (None, convert_to_intermediate_entry(entry)),
-                                ))
-                            })
-                            .try_collect::<Vec<_>>()
-                            .await?
-                            .into_iter()
-                            .collect::<Result<_>>(),
-                    }
-                })
-                .collect::<Vec<_>>();
-
-            Ok(Either::Right(
-                stream::iter(subentries_futures)
-                    .buffer_unordered(100)
+    Ok(stream::iter(subentries)
+        .map(|(prefix, entry_or_map)| async move {
+            match entry_or_map {
+                Either::Left((ctx, entry)) => {
+                    Ok(vec![(MPathElement::from_smallvec(prefix)?, (ctx, entry))])
+                }
+                Either::Right(map) => map
+                    .into_stream(ctx, blobstore)
+                    .await?
+                    .map_ok(|(mut path, entry)| {
+                        path.insert_from_slice(0, prefix.as_ref());
+                        Ok((
+                            MPathElement::from_smallvec(path)?,
+                            (None, convert_to_intermediate_entry(entry)),
+                        ))
+                    })
                     .try_collect::<Vec<_>>()
                     .await?
                     .into_iter()
-                    .flatten(),
-            ))
-        }
-    }
+                    .collect::<Result<_>>(),
+            }
+        })
+        .buffer_unordered(100)
+        .try_collect::<Vec<_>>()
+        .await?
+        .into_iter()
+        .flatten())
 }
 
 /// Information passed to `create_leaf` function when leaf node is constructed
@@ -316,7 +290,6 @@ where
                                 path,
                                 parents,
                                 reused_maps,
-                                consumed_subentries,
                             } => {
                                 let mut subentries = subentries
                                     .flatten()
@@ -334,25 +307,16 @@ where
                                 if subentries.peek().is_none() && reused_maps.is_empty() {
                                     Ok(None)
                                 } else {
-                                    let subentries = match reused_maps.is_empty() {
-                                        true => {
-                                            TreeInfoSubentries::AllSubentries(subentries.collect())
-                                        }
-                                        false => TreeInfoSubentries::ReusedMapsAndSubentries {
-                                            produced_subentries_and_reused_maps: subentries
-                                                .map(|(name, (context, entry))| {
-                                                    (
-                                                        name.to_smallvec(),
-                                                        Either::Left((context, entry)),
-                                                    )
-                                                })
-                                                .chain(reused_maps.into_iter().map(
-                                                    |(prefix, map)| (prefix, Either::Right(map)),
-                                                ))
-                                                .collect(),
-                                            consumed_subentries,
-                                        },
-                                    };
+                                    let subentries = subentries
+                                        .map(|(name, (context, entry))| {
+                                            (name.to_smallvec(), Either::Left((context, entry)))
+                                        })
+                                        .chain(
+                                            reused_maps
+                                                .into_iter()
+                                                .map(|(prefix, map)| (prefix, Either::Right(map))),
+                                        )
+                                        .collect();
 
                                     let (context, tree_id) = create_tree(TreeInfo {
                                         path: path.clone(),
@@ -511,7 +475,6 @@ enum MergeResult<TreeId, LeafId, Leaf, TrieMapType> {
         path: MPath,
         parents: Vec<TreeId>,
         reused_maps: Vec<(SmallVec<[u8; 24]>, TrieMapType)>,
-        consumed_subentries: Vec<Entry<TreeId, LeafId>>,
     },
 }
 
@@ -690,7 +653,6 @@ where
     let MergeSubentriesResult {
         reused_maps,
         merge_nodes,
-        consumed_subentries,
     } = merge_subentries(ctx, store, &path, subentries, parent_manifests_trie_maps).await?;
 
     Ok((
@@ -699,7 +661,6 @@ where
             path,
             parents: parent_subtrees,
             reused_maps,
-            consumed_subentries,
         },
         merge_nodes,
     ))
@@ -715,7 +676,6 @@ struct MergeSubentriesNode<'a, Leaf, TrieMapType> {
 struct MergeSubentriesResult<TreeId, IntermediateLeafId, Leaf, TrieMapType> {
     reused_maps: Vec<(SmallVec<[u8; 24]>, TrieMapType)>,
     merge_nodes: Vec<MergeNode<TreeId, IntermediateLeafId, Leaf>>,
-    consumed_subentries: Vec<Entry<TreeId, IntermediateLeafId>>,
 }
 
 async fn merge_subentries<TreeId, LeafId, IntermediateLeafId, Leaf, TrieMapType, Store>(
@@ -761,7 +721,6 @@ where
                                 .into_iter()
                                 .collect(),
                             merge_nodes: vec![],
-                            consumed_subentries: vec![],
                         },
                         vec![],
                     ));
@@ -803,8 +762,6 @@ where
                         .changes = changes;
                 }
 
-                let mut consumed_subentries = vec![];
-
                 for parent in parents {
                     let (current_entry, child_trie_maps) = parent.expand(ctx, store).await?;
 
@@ -821,7 +778,6 @@ where
                             })
                             .parents
                             .push(current_entry.clone());
-                        consumed_subentries.push(current_entry);
                     }
 
                     for (next_byte, trie_map) in child_trie_maps {
@@ -846,7 +802,6 @@ where
                     MergeSubentriesResult {
                         reused_maps: vec![],
                         merge_nodes: current_merge_node.into_iter().collect::<Vec<_>>(),
-                        consumed_subentries,
                     },
                     child_merge_subentries_nodes.into_values().collect(),
                 ))
@@ -861,9 +816,6 @@ where
                 for child_result in child_results {
                     result.reused_maps.extend(child_result.reused_maps);
                     result.merge_nodes.extend(child_result.merge_nodes);
-                    result
-                        .consumed_subentries
-                        .extend(child_result.consumed_subentries);
                 }
                 Ok(result)
             }
