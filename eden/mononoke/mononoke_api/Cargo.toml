@@ -11,7 +11,6 @@ license = "GPLv2+"
 acl_regions = { version = "0.1.0", path = "../acl_regions" }
 anyhow = "1.0.75"
 async-trait = "0.1.71"
-basename_suffix_skeleton_manifest = { version = "0.1.0", path = "../derived_data/basename_suffix_skeleton_manifest" }
 basename_suffix_skeleton_manifest_v3 = { version = "0.1.0", path = "../derived_data/basename_suffix_skeleton_manifest_v3" }
 blame = { version = "0.1.0", path = "../derived_data/blame" }
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
@@ -106,7 +105,6 @@ streaming_clone = { version = "0.1.0", path = "../repo_client/streaming_clone" }
 synced_commit_mapping = { version = "0.1.0", path = "../commit_rewriting/synced_commit_mapping" }
 test_repo_factory = { version = "0.1.0", path = "../repo_factory/test_repo_factory" }
 thiserror = "1.0.49"
-tunables = { version = "0.1.0", path = "../tunables" }
 types = { version = "0.1.0", path = "../../scm/lib/types" }
 unbundle = { version = "0.1.0", path = "../repo_client/unbundle" }
 unodes = { version = "0.1.0", path = "../derived_data/unodes" }

@@ -50,9 +50,6 @@ use synced_commit_mapping::ArcSyncedCommitMapping;
 use tests_utils::bookmark;
 use tests_utils::resolve_cs_id;
 use tests_utils::CreateCommitContext;
-use tunables::tunables;
-use tunables::with_tunables_async;
-use tunables::MononokeTunables;
 
 use crate::BookmarkFreshness;
 use crate::ChangesetFileOrdering;
@@ -669,31 +666,29 @@ async fn commit_find_files_impl(fb: FacebookInit) -> Result<(), Error> {
         .await?
         .try_collect()
         .await?;
-    // BSSM have different but consistent orders. BSSMv3 produces the same order as BSSM.
-    let expected_files = if tunables()
-        .disable_basename_suffix_skeleton_manifest()
-        .unwrap_or_default()
-    {
-        vec![
-            MononokePath::try_from("1")?,
-            MononokePath::try_from("dir1/file_1_in_dir1")?,
-            MononokePath::try_from("dir1/file_2_in_dir1")?,
-            MononokePath::try_from("dir1/subdir1/file_1")?,
-            MononokePath::try_from("dir1/subdir1/subsubdir1/file_1")?,
-            MononokePath::try_from("dir1/subdir1/subsubdir2/file_1")?,
-            MononokePath::try_from("dir2/file_1_in_dir2")?,
-        ]
-    } else {
-        vec![
-            MononokePath::try_from("1")?,
-            MononokePath::try_from("dir1/subdir1/file_1")?,
-            MononokePath::try_from("dir1/subdir1/subsubdir1/file_1")?,
-            MononokePath::try_from("dir1/subdir1/subsubdir2/file_1")?,
-            MononokePath::try_from("dir1/file_1_in_dir1")?,
-            MononokePath::try_from("dir1/file_2_in_dir1")?,
-            MononokePath::try_from("dir2/file_1_in_dir2")?,
-        ]
-    };
+    // BSSMv3 have different but consistent orders.
+    let expected_files =
+        if justknobs::eval("scm/mononoke:enable_bssm_v3", None, None).unwrap_or_default() {
+            vec![
+                MononokePath::try_from("1")?,
+                MononokePath::try_from("dir1/subdir1/file_1")?,
+                MononokePath::try_from("dir1/subdir1/subsubdir1/file_1")?,
+                MononokePath::try_from("dir1/subdir1/subsubdir2/file_1")?,
+                MononokePath::try_from("dir1/file_1_in_dir1")?,
+                MononokePath::try_from("dir1/file_2_in_dir1")?,
+                MononokePath::try_from("dir2/file_1_in_dir2")?,
+            ]
+        } else {
+            vec![
+                MononokePath::try_from("1")?,
+                MononokePath::try_from("dir1/file_1_in_dir1")?,
+                MononokePath::try_from("dir1/file_2_in_dir1")?,
+                MononokePath::try_from("dir1/subdir1/file_1")?,
+                MononokePath::try_from("dir1/subdir1/subsubdir1/file_1")?,
+                MononokePath::try_from("dir1/subdir1/subsubdir2/file_1")?,
+                MononokePath::try_from("dir2/file_1_in_dir2")?,
+            ]
+        };
     assert_eq!(files, expected_files);
 
     // Suffixes, basenames, ordered after
@@ -709,22 +704,20 @@ async fn commit_find_files_impl(fb: FacebookInit) -> Result<(), Error> {
         .await?
         .try_collect()
         .await?;
-    let expected_files = if tunables()
-        .disable_basename_suffix_skeleton_manifest()
-        .unwrap_or_default()
-    {
-        vec![
-            MononokePath::try_from("dir1/subdir1/subsubdir2/file_1")?,
-            MononokePath::try_from("dir2/file_1_in_dir2")?,
-        ]
-    } else {
-        vec![
-            MononokePath::try_from("dir1/subdir1/subsubdir2/file_1")?,
-            MononokePath::try_from("dir1/file_1_in_dir1")?,
-            MononokePath::try_from("dir1/file_2_in_dir1")?,
-            MononokePath::try_from("dir2/file_1_in_dir2")?,
-        ]
-    };
+    let expected_files =
+        if justknobs::eval("scm/mononoke:enable_bssm_v3", None, None).unwrap_or_default() {
+            vec![
+                MononokePath::try_from("dir1/subdir1/subsubdir2/file_1")?,
+                MononokePath::try_from("dir1/file_1_in_dir1")?,
+                MononokePath::try_from("dir1/file_2_in_dir1")?,
+                MononokePath::try_from("dir2/file_1_in_dir2")?,
+            ]
+        } else {
+            vec![
+                MononokePath::try_from("dir1/subdir1/subsubdir2/file_1")?,
+                MononokePath::try_from("dir2/file_1_in_dir2")?,
+            ]
+        };
     assert_eq!(files, expected_files);
 
     // Suffixes, basenames, prefixes
@@ -805,23 +798,13 @@ async fn commit_find_files_with_bssm_v3(fb: FacebookInit) {
 }
 
 #[fbinit::test]
-async fn commit_find_files_with_bssm(fb: FacebookInit) {
-    let tunables = MononokeTunables::default();
-    tunables.update_bools(&hashmap! {
-        "enable_bssm_suffix_query".to_string() => true
-    });
-    with_tunables_async(tunables, commit_find_files_impl(fb).boxed())
-        .await
-        .unwrap();
-}
-
-#[fbinit::test]
 async fn commit_find_files_without_bssm(fb: FacebookInit) {
-    let tunables = MononokeTunables::default();
-    tunables.update_bools(&hashmap! {
-        "disable_basename_suffix_skeleton_manifest".to_string() => true
+    let justknobs = JustKnobsInMemory::new(hashmap! {
+        "scm/mononoke:enable_bssm_v3".to_string() => KnobVal::Bool(false),
+        "scm/mononoke:enable_bssm_v3_suffix_query".to_string() => KnobVal::Bool(false),
     });
-    with_tunables_async(tunables, commit_find_files_impl(fb).boxed())
+
+    with_just_knobs_async(justknobs, commit_find_files_impl(fb).boxed())
         .await
         .unwrap();
 }

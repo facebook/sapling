@@ -12,7 +12,6 @@ use std::fmt;
 use std::future::Future;
 
 use anyhow::anyhow;
-use basename_suffix_skeleton_manifest::RootBasenameSuffixSkeletonManifest;
 use basename_suffix_skeleton_manifest_v3::RootBssmV3DirectoryId;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
@@ -69,7 +68,6 @@ use repo_derived_data::RepoDerivedDataArc;
 use skeleton_manifest::RootSkeletonManifestId;
 use smallvec::SmallVec;
 use sorted_vector_map::SortedVectorMap;
-use tunables::tunables;
 use unodes::RootUnodeManifestId;
 use vec1::Vec1;
 
@@ -129,8 +127,6 @@ pub struct ChangesetContext {
     root_fsnode_id: LazyShared<Result<RootFsnodeId, MononokeError>>,
     root_skeleton_manifest_id: LazyShared<Result<RootSkeletonManifestId, MononokeError>>,
     root_deleted_manifest_v2_id: LazyShared<Result<RootDeletedManifestV2Id, MononokeError>>,
-    root_basename_suffix_skeleton_manifest:
-        LazyShared<Result<RootBasenameSuffixSkeletonManifest, MononokeError>>,
     root_bssm_v3_directory_id: LazyShared<Result<RootBssmV3DirectoryId, MononokeError>>,
     /// None if no mutable history, else map from supplied paths to data fetched
     mutable_history: Option<HashMap<MononokePath, PathMutableHistory>>,
@@ -181,7 +177,6 @@ impl ChangesetContext {
         let root_fsnode_id = LazyShared::new_empty();
         let root_skeleton_manifest_id = LazyShared::new_empty();
         let root_deleted_manifest_v2_id = LazyShared::new_empty();
-        let root_basename_suffix_skeleton_manifest = LazyShared::new_empty();
         let root_bssm_v3_directory_id = LazyShared::new_empty();
         Self {
             repo,
@@ -192,7 +187,6 @@ impl ChangesetContext {
             root_fsnode_id,
             root_skeleton_manifest_id,
             root_deleted_manifest_v2_id,
-            root_basename_suffix_skeleton_manifest,
             root_bssm_v3_directory_id,
             mutable_history: None,
         }
@@ -325,14 +319,6 @@ impl ChangesetContext {
     pub(crate) async fn root_fsnode_id(&self) -> Result<RootFsnodeId, MononokeError> {
         self.root_fsnode_id
             .get_or_init(|| self.derive::<RootFsnodeId>())
-            .await
-    }
-
-    pub(crate) async fn root_basename_suffix_skeleton_manifest(
-        &self,
-    ) -> Result<RootBasenameSuffixSkeletonManifest, MononokeError> {
-        self.root_basename_suffix_skeleton_manifest
-            .get_or_init(|| self.derive::<RootBasenameSuffixSkeletonManifest>())
             .await
     }
 
@@ -1224,17 +1210,6 @@ impl ChangesetContext {
                     .await?
                     .boxed()
             }
-            Some(basenames_and_suffixes)
-                if !tunables()
-                    .disable_basename_suffix_skeleton_manifest()
-                    .unwrap_or_default()
-                    && (!basenames_and_suffixes.has_right()
-                        || tunables().enable_bssm_suffix_query().unwrap_or_default()) =>
-            {
-                self.find_files_with_bssm(prefixes, basenames_and_suffixes, ordering)
-                    .await?
-                    .boxed()
-            }
             basenames_and_suffixes => {
                 let (basenames, basename_suffixes) = basenames_and_suffixes
                     .map_or((None, None), |b| b.map_any(Some, Some).or_default());
@@ -1248,40 +1223,6 @@ impl ChangesetContext {
                 .boxed()
             }
         })
-    }
-
-    pub(crate) async fn find_files_with_bssm(
-        &self,
-        prefixes: Option<Vec<MononokePath>>,
-        basenames_and_suffixes: EitherOrBoth<Vec1<String>, Vec1<String>>,
-        ordering: ChangesetFileOrdering,
-    ) -> Result<impl Stream<Item = Result<MononokePath, MononokeError>> + '_, MononokeError> {
-        Ok(self
-            .root_basename_suffix_skeleton_manifest()
-            .await?
-            .find_files_filter_basenames(
-                self.ctx(),
-                self.repo().blob_repo().repo_blobstore().clone(),
-                prefixes
-                    .unwrap_or_else(Vec::new)
-                    .into_iter()
-                    .map(MononokePath::into_mpath)
-                    .map(MPath::from)
-                    .collect(),
-                basenames_and_suffixes,
-                match ordering {
-                    ChangesetFileOrdering::Unordered => None,
-                    ChangesetFileOrdering::Ordered { after } => {
-                        Some(after.map(|m| MPath::from(m.into_mpath())))
-                    }
-                },
-            )
-            .await
-            .map_err(MononokeError::from)?
-            .map(|r| match r {
-                Ok(p) => Ok(MononokePath::new(p.into())),
-                Err(err) => Err(MononokeError::from(err)),
-            }))
     }
 
     pub(crate) async fn find_files_with_bssm_v3(
