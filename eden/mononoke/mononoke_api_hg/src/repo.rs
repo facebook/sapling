@@ -63,11 +63,11 @@ use metaconfig_types::RepoConfig;
 use mononoke_api::errors::MononokeError;
 use mononoke_api::path::MononokePath;
 use mononoke_api::repo::RepoContext;
+use mononoke_types::path::MPath;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::ContentMetadataV2;
-use mononoke_types::NonRootMPath;
 use mononoke_types::RepoPath;
 use phases::PhasesRef;
 use repo_blobstore::RepoBlobstore;
@@ -496,7 +496,7 @@ impl HgRepoContext {
         let ctx = self.ctx().clone();
         let blob_repo = self.blob_repo();
         let args = GettreepackArgs {
-            rootdir: path.into_mpath(),
+            rootdir: path.into_mpath().into(),
             mfnodes: root_versions.into_iter().collect(),
             basemfnodes: base_versions.into_iter().collect(),
             directories: vec![], // Not supported.
@@ -508,11 +508,11 @@ impl HgRepoContext {
             .map_err(MononokeError::from)
             .and_then({
                 let repo = self.clone();
-                move |(mfid, path): (HgManifestId, Option<NonRootMPath>)| {
+                move |(mfid, path): (HgManifestId, MPath)| {
                     let repo = repo.clone();
                     async move {
                         let tree = HgTreeContext::new(repo, mfid).await?;
-                        let path = MononokePath::new(path);
+                        let path = MononokePath::new(path.into_optional_non_root_path());
                         Ok((tree, path))
                     }
                 }

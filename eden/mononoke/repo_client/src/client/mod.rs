@@ -118,6 +118,7 @@ use metaconfig_types::RepoClientKnobs;
 use metaconfig_types::RepoConfigRef;
 use mononoke_api::Repo;
 use mononoke_types::hash::GitSha1;
+use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
 use nonzero_ext::nonzero;
 use phases::PhasesArc;
@@ -2057,7 +2058,7 @@ pub fn gettreepack_entries(
     ctx: CoreContext,
     repo: &BlobRepo,
     params: GettreepackArgs,
-) -> BoxStream<(HgManifestId, Option<NonRootMPath>), Error> {
+) -> BoxStream<(HgManifestId, MPath), Error> {
     let GettreepackArgs {
         rootdir,
         mfnodes,
@@ -2076,7 +2077,7 @@ pub fn gettreepack_entries(
             return stream_old::once(Err(e)).boxify();
         }
 
-        if rootdir.is_some() {
+        if !rootdir.is_root() {
             let e = Error::msg("rootdir must be empty");
             return stream_old::once(Err(e)).boxify();
         }
@@ -2089,14 +2090,7 @@ pub fn gettreepack_entries(
         let entries = mfnodes
             .into_iter()
             .zip(directories)
-            .map(|(node, path)| {
-                let path = if !path.is_empty() {
-                    Some(NonRootMPath::new(path.as_ref())?)
-                } else {
-                    None
-                };
-                Ok((node, path))
-            })
+            .map(|(node, path)| Ok((node, MPath::new(path.as_ref())?)))
             .collect::<Result<Vec<_>, Error>>();
 
         let entries = try_boxstream!(entries);
@@ -2156,9 +2150,9 @@ fn get_changed_manifests_stream(
     repo: &BlobRepo,
     mfid: HgManifestId,
     basemfid: HgManifestId,
-    rootpath: Option<NonRootMPath>,
+    rootpath: MPath,
     max_depth: usize,
-) -> BoxStream<(HgManifestId, Option<NonRootMPath>), Error> {
+) -> BoxStream<(HgManifestId, MPath), Error> {
     if max_depth == 1 {
         return stream_old::iter_ok(vec![(mfid, rootpath)]).boxify();
     }
@@ -2201,10 +2195,10 @@ pub fn fetch_treepack_part_input(
     ctx: CoreContext,
     repo: &BlobRepo,
     hg_mf_id: HgManifestId,
-    path: Option<NonRootMPath>,
+    path: MPath,
     validate_content: bool,
 ) -> BoxFuture<parts::TreepackPartInput, Error> {
-    let repo_path = match path {
+    let repo_path = match path.into_optional_non_root_path() {
         Some(path) => RepoPath::DirectoryPath(path),
         None => RepoPath::RootPath,
     };
