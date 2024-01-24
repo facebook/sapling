@@ -487,6 +487,7 @@ rust_library(
     autocargo = {"cargo_toml_dir": "basename_suffix_skeleton_manifest_v3"},
     test_deps = [
         "fbsource//third-party/rust:async-recursion",
+        "fbsource//third-party/rust:quickcheck",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//eden/mononoke/blobrepo:repo_blobstore",
@@ -504,7 +505,6 @@ rust_library(
         ":skeleton_manifest",
         "//common/rust/shed/cloned:cloned",
         "//eden/mononoke/blobstore:blobstore",
-        "//eden/mononoke/derived_data:basename_suffix_skeleton_manifest",
         "//eden/mononoke/derived_data:derived_data",
         "//eden/mononoke/derived_data:derived_data_manager",
         "//eden/mononoke/derived_data/remote/if:derived_data_service_if-rust",

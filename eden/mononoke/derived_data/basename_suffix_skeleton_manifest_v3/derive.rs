@@ -9,7 +9,6 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
-use basename_suffix_skeleton_manifest::BssmPath;
 use blobstore::Blobstore;
 use blobstore::Loadable;
 use blobstore::Storable;
@@ -40,6 +39,7 @@ use skeleton_manifest::mapping::get_file_changes;
 use skeleton_manifest::RootSkeletonManifestId;
 
 use crate::mapping::RootBssmV3DirectoryId;
+use crate::path::BssmPath;
 
 /// Returns the changes that need to be applied to BSSM during derivation,
 /// by getting the file changes from a bonsai changeset, expanding implicit

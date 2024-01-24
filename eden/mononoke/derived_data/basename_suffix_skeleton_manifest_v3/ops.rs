@@ -9,7 +9,6 @@ use std::cmp::Ordering;
 
 use anyhow::Context;
 use anyhow::Result;
-use basename_suffix_skeleton_manifest::BssmPath;
 use blobstore::Blobstore;
 use blobstore::Loadable;
 use cloned::cloned;
@@ -30,6 +29,7 @@ use mononoke_types::MPathElement;
 use vec1::vec1;
 use vec1::Vec1;
 
+use crate::path::BssmPath;
 use crate::RootBssmV3DirectoryId;
 
 fn normal_to_custom<T>(path: T) -> MPath

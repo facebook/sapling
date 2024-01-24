@@ -12,7 +12,6 @@ use std::sync::RwLock;
 
 use anyhow::Result;
 use async_recursion::async_recursion;
-use basename_suffix_skeleton_manifest::BssmPath;
 use blobstore::Blobstore;
 use blobstore::Loadable;
 use commit_graph::CommitGraphRef;
@@ -33,6 +32,7 @@ use repo_derived_data::RepoDerivedDataRef;
 use skeleton_manifest::RootSkeletonManifestId;
 
 use crate::derive_from_predecessor::inner_derive_from_predecessor;
+use crate::path::BssmPath;
 use crate::RootBssmV3DirectoryId;
 
 #[async_recursion]

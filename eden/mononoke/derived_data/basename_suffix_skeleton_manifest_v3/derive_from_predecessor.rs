@@ -9,7 +9,6 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
-use basename_suffix_skeleton_manifest::BssmPath;
 use blobstore::Blobstore;
 use blobstore::Storable;
 use cloned::cloned;
@@ -24,6 +23,7 @@ use skeleton_manifest::RootSkeletonManifestId;
 
 use crate::derive::inner_derive;
 use crate::mapping::RootBssmV3DirectoryId;
+use crate::path::BssmPath;
 
 pub(crate) async fn inner_derive_from_predecessor(
     ctx: &CoreContext,

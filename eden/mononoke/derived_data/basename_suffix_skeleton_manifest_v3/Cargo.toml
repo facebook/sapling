@@ -14,7 +14,6 @@ path = "lib.rs"
 anyhow = "1.0.75"
 async-stream = "0.3"
 async-trait = "0.1.71"
-basename_suffix_skeleton_manifest = { version = "0.1.0", path = "../basename_suffix_skeleton_manifest" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../../server/context" }
@@ -34,5 +33,6 @@ commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/c
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
+quickcheck = "1.0"
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
