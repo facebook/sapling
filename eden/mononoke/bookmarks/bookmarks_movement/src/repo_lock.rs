@@ -30,7 +30,6 @@ use repo_lock::TransactionRepoLock;
 use repo_permission_checker::RepoPermissionChecker;
 use repo_permission_checker::RepoPermissionCheckerRef;
 use sql::Transaction;
-use tunables::tunables;
 
 use crate::BookmarkMovementError;
 
@@ -53,10 +52,7 @@ async fn should_check_repo_lock(
                     // then we allow it to bypass repo lock check
                     bypass_allowed |= authz == &AuthorizationContext::FullAccess;
 
-                    let enforce_acl_check =
-                        tunables().enforce_bypass_readonly_acl().unwrap_or_default();
-
-                    if !bypass_allowed && enforce_acl_check {
+                    if !bypass_allowed {
                         return true;
                     }
 

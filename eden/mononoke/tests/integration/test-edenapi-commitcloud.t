@@ -17,6 +17,19 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
   $ configure modern
+  $ cat >> "$ACL_FILE" << ACLS
+  > {
+  >   "repos": {
+  >     "repo": {
+  >       "actions": {
+  >         "read": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA"],
+  >         "write": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA"],
+  >         "bypass_readonly": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA"]
+  >       }
+  >     }
+  >   }
+  > }
+  > ACLS
   $ setconfig ui.ignorerevnum=false
   $ setconfig pull.httpcommitgraph2=true
   $ setconfig remotenames.selectivepull=True remotenames.selectivepulldefault=master
@@ -28,6 +41,7 @@ setup custom smartlog
 
 setup configuration
   $ export READ_ONLY_REPO=1
+  $ export ACL_NAME=repo
   $ export LOG=pull
   $ INFINITEPUSH_ALLOW_WRITES=true \
   >   setup_common_config

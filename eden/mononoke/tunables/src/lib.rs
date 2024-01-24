@@ -88,8 +88,6 @@ pub struct MononokeTunables {
     filenode_lookup_timeout_ms: TunableI64,
     // Sampling ratio percentage for warm boomark cache.
     warm_bookmark_cache_logging_sampling_pct: TunableI64,
-    // Control whether the BYPASS_READONLY pushvar is restricted by an ACL
-    enforce_bypass_readonly_acl: TunableBool,
     // Which region writes should be done to, in order to minimise latency.
     // This should align with underlying storage (SQL/Manifold) write regions.
     // Notice writes still work from any region, and this field is not necessarily

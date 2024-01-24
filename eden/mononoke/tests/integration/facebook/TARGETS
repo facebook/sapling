@@ -195,7 +195,6 @@ dott_test(
         "test-metadata.t",
         # Purposely not disabling network as this needs to make TLS connections.
         "test-cat-auth.t",
-        "test-bypass-readonly-acl.t",
     ],
     deps = [
         "//eden/mononoke:admin",

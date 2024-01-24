@@ -51,7 +51,6 @@ repo_update_logger = { version = "0.1.0", path = "../../features/repo_update_log
 skeleton_manifest = { version = "0.1.0", path = "../../derived_data/skeleton_manifest" }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 thiserror = "1.0.49"
-tunables = { version = "0.1.0", path = "../../tunables" }
 
 [dev-dependencies]
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
