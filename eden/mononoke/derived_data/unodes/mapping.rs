@@ -168,7 +168,7 @@ impl BonsaiDerivable for RootUnodeManifestId {
                         .map(|item| (item.cs_id, item.per_commit_file_changes))
                         .collect(),
                     derived_parents
-                        .get(0)
+                        .first()
                         .map(|mf_id| *mf_id.manifest_unode_id()),
                 )
                 .await

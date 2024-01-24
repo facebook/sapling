@@ -233,7 +233,7 @@ impl CreateChangeset {
                         ctx.clone(),
                         repo.repo_blobstore_arc(),
                         root_mf_id,
-                        parent_manifest_hashes.get(0).cloned(),
+                        parent_manifest_hashes.first().cloned(),
                         parent_manifest_hashes.get(1).cloned(),
                     )
                     .await?

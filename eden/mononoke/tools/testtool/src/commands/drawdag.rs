@@ -211,7 +211,7 @@ impl Action {
                 ("modify", [name, path, rest @ .., content]) if rest.len() < 2 => {
                     let name = name.to_string()?;
                     let path = path.to_bytes();
-                    let file_type = match rest.get(0) {
+                    let file_type = match rest.first() {
                         Some(file_type) => file_type.to_string()?.parse()?,
                         None => FileType::Regular,
                     };
@@ -255,7 +255,7 @@ impl Action {
                 {
                     let name = name.to_string()?;
                     let path = path.to_bytes();
-                    let file_type = match rest.get(0) {
+                    let file_type = match rest.first() {
                         Some(file_type) => file_type.to_string()?.parse()?,
                         None => FileType::Regular,
                     };

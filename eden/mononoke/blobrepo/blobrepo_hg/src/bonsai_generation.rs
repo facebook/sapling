@@ -225,7 +225,7 @@ async fn get_copy_info(
                 .collect::<Vec<ChangesetId>>()
                 .await;
 
-            match copied_from.get(0) {
+            match copied_from.first() {
                 Some(bonsai_cs_copied_from) => {
                     Ok(Some((repopath.clone(), bonsai_cs_copied_from.clone())))
                 }

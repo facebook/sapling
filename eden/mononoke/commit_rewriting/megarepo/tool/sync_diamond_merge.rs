@@ -423,7 +423,7 @@ fn validate_parents(parents: Vec<ChangesetId>) -> Result<(ChangesetId, Changeset
         ));
     }
     let p1 = parents
-        .get(0)
+        .first()
         .ok_or_else(|| Error::msg("not a merge commit"))?;
     let p2 = parents
         .get(1)
@@ -438,7 +438,7 @@ fn validate_roots(roots: Vec<&ChangesetId>) -> Result<&ChangesetId, Error> {
     }
 
     roots
-        .get(0)
+        .first()
         .cloned()
         .ok_or_else(|| Error::msg("no roots found, this is not a diamond merge"))
 }

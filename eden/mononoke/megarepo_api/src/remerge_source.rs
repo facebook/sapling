@@ -178,7 +178,7 @@ impl<'a> RemergeSource<'a> {
             return Err(MegarepoError::request(anyhow!(
                 "Neither {} nor its first parent {:?} point to a target location {}",
                 actual_target_location,
-                parents.get(0),
+                parents.first(),
                 expected_target_location,
             )));
         }

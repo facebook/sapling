@@ -389,7 +389,7 @@ where
 
     let (next_entry, remaining_entries) = try_join!(next_entry, remaining_entries)?;
     let delay_secs = next_entry
-        .get(0)
+        .first()
         .map_or(0, |entry| entry.timestamp.since_seconds());
 
     Ok(Delay {

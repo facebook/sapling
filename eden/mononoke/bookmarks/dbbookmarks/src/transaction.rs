@@ -337,7 +337,7 @@ impl SqlBookmarksTransactionPayload {
                 )
                 .await?;
                 txn = txn_;
-                if result.get(0).map(|row| row.0).as_ref() != Some(new_cs_id) {
+                if result.first().map(|row| row.0).as_ref() != Some(new_cs_id) {
                     return Err(BookmarkTransactionError::LogicError);
                 }
             } else {

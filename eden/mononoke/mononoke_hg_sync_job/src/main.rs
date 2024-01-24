@@ -847,7 +847,7 @@ fn log_processed_entries_to_scuba(
         // This will make it easier to find entries that were batched
         None
     } else {
-        entries.get(0).map(|entry| entry.id)
+        entries.first().map(|entry| entry.id)
     };
     entries.iter().for_each(|entry| {
         log_processed_entry_to_scuba(

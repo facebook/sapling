@@ -64,7 +64,7 @@ async fn test_diff_with_moves(fb: FacebookInit) -> Result<(), Error> {
         .await?;
 
     assert_eq!(diff.len(), 1);
-    match diff.get(0) {
+    match diff.first() {
         Some(ChangesetPathDiffContext::Moved(to, from)) => {
             assert_eq!(to.path(), &MononokePath::try_from("file_moved")?);
             assert_eq!(from.path(), &MononokePath::try_from("file_to_move")?);
@@ -113,7 +113,7 @@ async fn test_diff_with_multiple_copies(fb: FacebookInit) -> Result<(), Error> {
         .await?;
 
     assert_eq!(diff.len(), 2);
-    match diff.get(0) {
+    match diff.first() {
         Some(ChangesetPathDiffContext::Copied(to, from)) => {
             assert_eq!(to.path(), &MononokePath::try_from("copy_one")?);
             assert_eq!(from.path(), &MononokePath::try_from("file_to_copy")?);
@@ -170,7 +170,7 @@ async fn test_diff_with_multiple_moves(fb: FacebookInit) -> Result<(), Error> {
 
     assert_eq!(diff.len(), 3);
     // The first copy of the file becomes a move.
-    match diff.get(0) {
+    match diff.first() {
         Some(ChangesetPathDiffContext::Moved(to, from)) => {
             assert_eq!(to.path(), &MononokePath::try_from("copy_one")?);
             assert_eq!(from.path(), &MononokePath::try_from("file_to_move")?);
@@ -233,7 +233,7 @@ async fn test_diff_with_dirs(fb: FacebookInit) -> Result<(), Error> {
         .diff_unordered(&other_cs, false, None, btreeset! {ChangesetDiffItem::TREES})
         .await?;
     assert_eq!(diff.len(), 6);
-    check_root_dir_diff(diff.get(0))?;
+    check_root_dir_diff(diff.first())?;
     match diff.get(1) {
         Some(ChangesetPathDiffContext::Added(path)) => {
             assert_eq!(path.path(), &MononokePath::try_from("dir2")?);
@@ -257,7 +257,7 @@ async fn test_diff_with_dirs(fb: FacebookInit) -> Result<(), Error> {
         .diff_unordered(&other_cs, false, None, btreeset! {ChangesetDiffItem::TREES})
         .await?;
     assert_eq!(diff.len(), 5);
-    check_root_dir_diff(diff.get(0))?;
+    check_root_dir_diff(diff.first())?;
     match diff.get(1) {
         Some(ChangesetPathDiffContext::Removed(path)) => {
             assert_eq!(path.path(), &MononokePath::try_from("dir1")?);

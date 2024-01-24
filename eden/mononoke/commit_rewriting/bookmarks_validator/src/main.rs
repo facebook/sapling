@@ -476,7 +476,7 @@ async fn check_large_bookmark_history<M: SyncedCommitMapping + Clone + 'static, 
         return Ok(false);
     }
 
-    if let Some((_, _, _, latest_timestamp)) = log_entries.get(0) {
+    if let Some((_, _, _, latest_timestamp)) = log_entries.first() {
         // Remap large repo commits into small repo commits
         // Note that in theory it's possible to map a small repo commit into a large repo and compare
         // only this remapped commit with the log of the large bookmark. However it doesn't work well

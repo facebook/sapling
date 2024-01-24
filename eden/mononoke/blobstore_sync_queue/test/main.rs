@@ -58,7 +58,7 @@ async fn test_write_ahead_log(fb: FacebookInit) -> Result<(), Error> {
     assert_eq!(some_entries.len(), 1);
     validate(
         some_entries
-            .get(0)
+            .first()
             .ok_or_else(|| format_err!("must have entry"))?,
         &entry0,
     );

@@ -1320,7 +1320,7 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
             &edges.node.skip_tree_depth,
             &edges.node.p1_linear_depth,
             &edges.parents.len(),
-            &edges.parents.get(0).map(|node| node.cs_id),
+            &edges.parents.first().map(|node| node.cs_id),
             &edges.merge_ancestor.map(|node| node.cs_id),
             &edges.skip_tree_parent.map(|node| node.cs_id),
             &edges.skip_tree_skew_ancestor.map(|node| node.cs_id),

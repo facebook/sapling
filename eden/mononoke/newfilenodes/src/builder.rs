@@ -60,8 +60,8 @@ impl NewFilenodesBuilder {
             write_connections,
         } = self.shard_connections;
 
-        let chunk_size = match read_connections.get(0) {
-            Some(Connection::Mysql(_)) => MYSQL_INSERT_CHUNK_SIZE,
+        let chunk_size = match read_connections.first() {
+            Connection::Mysql(_) => MYSQL_INSERT_CHUNK_SIZE,
             _ => SQLITE_INSERT_CHUNK_SIZE,
         };
 

@@ -592,7 +592,7 @@ mod tests {
             // Unodes should be unique even if content is the same. Check it
             let vals: Vec<_> = unode_mf.list().collect();
             assert_eq!(vals.len(), 2);
-            assert_ne!(vals.get(0), vals.get(1));
+            assert_ne!(vals.first(), vals.get(1));
             Ok(())
         }
 

@@ -519,7 +519,7 @@ impl SourceControlServiceImpl {
         params: &thrift::CommitCompareParams,
     ) -> Result<Option<ChangesetContext>, errors::ServiceError> {
         let commit_parents = base_changeset.parents().await?;
-        let mut other_changeset_id = commit_parents.get(0).copied();
+        let mut other_changeset_id = commit_parents.first().copied();
 
         if params.follow_mutable_file_history.unwrap_or(false) {
             let mutable_parents = base_changeset.mutable_parents();

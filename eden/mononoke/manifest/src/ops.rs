@@ -505,7 +505,7 @@ where
         Manifest<Store, TreeId = TreeId, LeafId = LeafId> + Send + Sync,
     LeafId: Clone + Send + Eq + Unpin + 'static,
 {
-    match diff_against.get(0).cloned() {
+    match diff_against.first().cloned() {
         Some(parent) => async move {
             let mut new_entries = Vec::new();
             let mut parent_diff = parent.diff(ctx.clone(), store.clone(), mf_id);

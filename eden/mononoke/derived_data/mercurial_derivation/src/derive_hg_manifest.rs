@@ -105,7 +105,7 @@ pub async fn derive_simple_hg_manifest_stack_without_copy_info(
                             store_file_change(
                                 ctx,
                                 blobstore,
-                                parents.get(0).map(|p| p.untraced().1),
+                                parents.first().map(|p| p.untraced().1),
                                 None,
                                 &path,
                                 &leaf,

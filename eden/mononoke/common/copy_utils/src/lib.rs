@@ -291,7 +291,7 @@ async fn list_directory(
         .try_collect::<Vec<_>>()
         .await?;
 
-    let entry = entries.get(0);
+    let entry = entries.first();
 
     let fsnode_id = match entry {
         Some((_, Entry::Tree(fsnode_id))) => fsnode_id,
@@ -789,7 +789,7 @@ mod test {
         .await?;
 
         assert_eq!(
-            list_working_copy_utf8(&ctx, &repo, *cs_ids.get(0).unwrap()).await?,
+            list_working_copy_utf8(&ctx, &repo, *cs_ids.first().unwrap()).await?,
             hashmap! {
                 NonRootMPath::new("dir_from/a")? => "aa".to_string(),
                 NonRootMPath::new("dir_from/b")? => "b".to_string(),
@@ -993,7 +993,7 @@ mod test {
         .await?;
 
         assert_eq!(
-            list_working_copy_utf8(&ctx, &target_repo, *cs_ids.get(0).unwrap()).await?,
+            list_working_copy_utf8(&ctx, &target_repo, *cs_ids.first().unwrap()).await?,
             hashmap! {
                 NonRootMPath::new("target_random_file")? => "tr".to_string(),
             }
@@ -1011,7 +1011,7 @@ mod test {
         assert_eq!(
             target_repo
                 .changeset_fetcher()
-                .get_parents(&ctx, *cs_ids.get(0).unwrap())
+                .get_parents(&ctx, *cs_ids.first().unwrap())
                 .await?,
             vec![target_cs_id],
         );

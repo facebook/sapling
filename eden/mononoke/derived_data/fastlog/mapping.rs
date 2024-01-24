@@ -306,7 +306,7 @@ mod tests {
             .await
             .unwrap();
 
-        let list = fetch_list(&ctx, &repo, entries.get(0).unwrap().1.clone()).await;
+        let list = fetch_list(&ctx, &repo, entries.first().unwrap().1.clone()).await;
         assert_eq!(list, vec![(bcs_id, vec![])]);
 
         let list = fetch_list(&ctx, &repo, entries.get(1).unwrap().1.clone()).await;
@@ -364,7 +364,7 @@ mod tests {
             parents = vec![bcs_id];
         }
 
-        let latest = parents.get(0).unwrap();
+        let latest = parents.first().unwrap();
         save_bonsai_changesets(bonsais, ctx.clone(), &repo)
             .await
             .unwrap();
@@ -400,7 +400,7 @@ mod tests {
             parents = vec![bcs_id];
         }
 
-        let latest = parents.get(0).unwrap();
+        let latest = parents.first().unwrap();
         save_bonsai_changesets(bonsais, ctx.clone(), &repo)
             .await
             .unwrap();

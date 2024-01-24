@@ -504,7 +504,7 @@ pub async fn rewrite_stack_no_merges<'a>(
         let from_cs = from_cs.into_mut();
 
         let mut remapped_parents = HashMap::new();
-        if let Some(parent) = from_cs.parents.get(0) {
+        if let Some(parent) = from_cs.parents.first() {
             remapped_parents.insert(*parent, rewritten_parent);
         }
 
@@ -589,7 +589,7 @@ pub fn rewrite_commit_with_implicit_deletes<'a>(
                     // field in a thrift struct which says which path should be picked
                     // as copy from
                     Ok(new_paths
-                        .get(0)
+                        .first()
                         .cloned()
                         .map(|new_path| (new_path, *copy_from_commit)))
                 }

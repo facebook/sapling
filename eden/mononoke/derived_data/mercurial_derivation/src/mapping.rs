@@ -148,7 +148,7 @@ impl BonsaiDerivable for MappedHgChangesetId {
                         ctx,
                         derivation_ctx.blobstore(),
                         bonsais,
-                        derived_parents.get(0).cloned(),
+                        derived_parents.first().cloned(),
                         &derivation_opts,
                     )
                     .await

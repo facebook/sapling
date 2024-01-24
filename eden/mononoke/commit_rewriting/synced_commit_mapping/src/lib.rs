@@ -660,7 +660,7 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
         )
         .await?;
         let maybe_row = if !rows.is_empty() {
-            rows.get(0).cloned()
+            rows.first().cloned()
         } else {
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::SqlReadsMaster);
@@ -671,7 +671,7 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
                 &target_repo_id,
             )
             .await
-            .map(|rows| rows.get(0).cloned())?
+            .map(|rows| rows.first().cloned())?
         };
 
         Ok(match maybe_row {

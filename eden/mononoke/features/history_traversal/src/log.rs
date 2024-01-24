@@ -1283,7 +1283,7 @@ mod test {
             parents = vec![bcs_id];
         }
 
-        let top = parents.get(0).unwrap().clone();
+        let top = parents.first().unwrap().clone();
 
         RootFastlog::derive(ctx, blob_repo, top).await?;
 

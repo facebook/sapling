@@ -258,7 +258,7 @@ impl ChangesetContext {
             .blob_repo()
             .get_hg_bonsai_mapping(self.ctx().clone(), self.id)
             .await?;
-        Ok(mapping.get(0).map(|(hg_cs_id, _)| *hg_cs_id))
+        Ok(mapping.first().map(|(hg_cs_id, _)| *hg_cs_id))
     }
 
     /// The Globalrev for the changeset.
@@ -708,7 +708,7 @@ impl ChangesetContext {
             .commit_graph()
             .common_base(self.ctx(), self.id, other_commit)
             .await?;
-        Ok(lca.get(0).map(|id| Self::new(self.repo.clone(), *id)))
+        Ok(lca.first().map(|id| Self::new(self.repo.clone(), *id)))
     }
 
     pub async fn diff_unordered(
