@@ -1866,6 +1866,19 @@ impl RepoContext {
     }
 }
 
+impl PartialEq for RepoContext {
+    fn eq(&self, other: &Self) -> bool {
+        self.repoid() == other.repoid()
+    }
+}
+impl Eq for RepoContext {}
+
+impl Hash for RepoContext {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.repoid().hash(state);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
@@ -1919,18 +1932,5 @@ mod tests {
         let child = maybe_child.ok_or_else(|| anyhow!("didn't find child"))?;
         assert_eq!(child, descendant);
         Ok(())
-    }
-}
-
-impl PartialEq for RepoContext {
-    fn eq(&self, other: &Self) -> bool {
-        self.repoid() == other.repoid()
-    }
-}
-impl Eq for RepoContext {}
-
-impl Hash for RepoContext {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.repoid().hash(state);
     }
 }

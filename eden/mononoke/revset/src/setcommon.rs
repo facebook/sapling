@@ -69,6 +69,11 @@ pub fn poll_all_inputs<T>(inputs: &mut [(GenericStream<T>, Poll<Option<(T, Gener
 }
 
 #[cfg(test)]
+pub use test_utils::NotReadyEmptyStream;
+#[cfg(test)]
+pub use test_utils::RepoErrorStream;
+
+#[cfg(test)]
 mod test_utils {
     use std::marker::PhantomData;
 
@@ -129,8 +134,3 @@ mod test_utils {
         }
     }
 }
-
-#[cfg(test)]
-pub use test_utils::NotReadyEmptyStream;
-#[cfg(test)]
-pub use test_utils::RepoErrorStream;
