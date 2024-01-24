@@ -65,7 +65,6 @@ rust_binary(
         "//eden/mononoke/common/scuba_ext:scuba_ext",
         "//eden/mononoke/common/sql_construct:sql_construct",
         "//eden/mononoke/common/yield_stream:yield_stream",
-        "//eden/mononoke/derived_data:basename_suffix_skeleton_manifest",
         "//eden/mononoke/derived_data:blame",
         "//eden/mononoke/derived_data:changeset_info",
         "//eden/mononoke/derived_data:deleted_manifest",
