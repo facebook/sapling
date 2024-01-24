@@ -13,8 +13,8 @@ rust_library(
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
+        "//common/rust/shed/justknobs_stub:justknobs",
         "//eden/mononoke/repo_factory:test_repo_factory",
-        "//eden/mononoke/tunables:tunables",
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",

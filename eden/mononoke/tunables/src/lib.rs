@@ -97,12 +97,6 @@ pub struct MononokeTunables {
     // with removing it, but this tunable can be used as a quick killswitch to
     // enable them again.
     sql_lag_monitoring_blocklist: TunableVecOfStrings,
-    // If set the `draft` ACL action will be checked and logged on draft access
-    // Unless `enforce_draft_acl` is set `read` action will still be used for
-    // granting access.
-    log_draft_acl_failures: TunableBool,
-    // If set the `draft` ACL action will be used for `draft` access.
-    enforce_draft_acl: TunableBool,
     // Force local pushrebase instead of talking to SCS or Land Service
     force_local_pushrebase: TunableBool,
     // Enable usage of basename_suffix_skeleton_manifest in commit_find_files
