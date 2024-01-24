@@ -55,6 +55,7 @@ use mononoke_api::ChangesetContext;
 use mononoke_api::Mononoke;
 use mononoke_api::MononokePath;
 use mononoke_api::RepoContext;
+use mononoke_types::path::MPath;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
@@ -507,6 +508,8 @@ pub trait MegarepoOp {
 
         let mut res = vec![];
         for (src_path, entry) in entries {
+            // Fine to do this conversion since we are handling empty and non-empty paths
+            // separately
             let src_path: Option<NonRootMPath> = src_path.into();
             match (src_path, entry) {
                 (Some(src_path), Entry::Leaf(leaf)) => {
@@ -529,13 +532,14 @@ pub trait MegarepoOp {
                     }
                 }
                 (src_path, Entry::Tree(tree)) => {
+                    let src_path = src_path.into();
                     let dst_paths = directory_mover(&src_path)?;
                     for dst_path in dst_paths {
                         let mutable_rename_entry = MutableRenameEntry::new(
                             dst_cs_id,
-                            dst_path.into(),
+                            dst_path,
                             cs_id,
-                            src_path.clone().into(),
+                            src_path.clone(),
                             Entry::Tree(tree),
                         )?;
                         res.push(mutable_rename_entry);
@@ -723,9 +727,9 @@ pub trait MegarepoOp {
         for (dst, src) in &source_config.mapping.linkfiles {
             // src is a file inside a given source, so mover needs to be applied to it
             let src = if src == "." {
-                None
+                MPath::ROOT
             } else {
-                NonRootMPath::new_opt(src).map_err(MegarepoError::request)?
+                MPath::new(src).map_err(MegarepoError::request)?
             };
             let dst = NonRootMPath::new(dst).map_err(MegarepoError::request)?;
             let moved_srcs = mover(&src).map_err(MegarepoError::request)?;
@@ -735,11 +739,12 @@ pub trait MegarepoOp {
                 // If the source maps to many files we use the first one as the symlink
                 // source this choice doesn't matter for the symlinked content - just the
                 // symlinked path.
-                (Some(moved_src), _) => moved_src,
+                (Some(moved_src), _) => moved_src.into_optional_non_root_path(),
                 (None, _) => {
-                    let src = match src {
-                        None => ".".to_string(),
-                        Some(path) => path.to_string(),
+                    let src = if src.is_root() {
+                        ".".to_string()
+                    } else {
+                        src.to_string()
                     };
                     return Err(MegarepoError::request(anyhow!(
                         "linkfile source {} does not map to any file inside source {}",
@@ -749,9 +754,10 @@ pub trait MegarepoOp {
                 }
             }
             .ok_or_else(|| {
-                let src = match src {
-                    None => ".".to_string(),
-                    Some(path) => path.to_string(),
+                let src = if src.is_root() {
+                    ".".to_string()
+                } else {
+                    src.to_string()
                 };
                 MegarepoError::request(anyhow!(
                     "linkfile source {} does not map to any file inside the destination from source {}",

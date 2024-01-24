@@ -32,7 +32,7 @@ use futures::StreamExt;
 use futures::TryStreamExt;
 use manifest::get_implicit_deletes;
 use megarepo_configs::types::SourceMappingRules;
-use mononoke_types::non_root_mpath_element_iter;
+use mononoke_types::path::MPath;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
@@ -54,12 +54,8 @@ use thiserror::Error;
 
 pub type MultiMover<'a> =
     Arc<dyn Fn(&NonRootMPath) -> Result<Vec<NonRootMPath>, Error> + Send + Sync + 'a>;
-pub type DirectoryMultiMover = Arc<
-    dyn Fn(&Option<NonRootMPath>) -> Result<Vec<Option<NonRootMPath>>, Error>
-        + Send
-        + Sync
-        + 'static,
->;
+pub type DirectoryMultiMover =
+    Arc<dyn Fn(&MPath) -> Result<Vec<MPath>, Error> + Send + Sync + 'static>;
 
 /// Determines when a file change filter should be applied.
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -170,36 +166,28 @@ pub fn create_directory_source_to_target_multi_mover(
     let mut overrides = mapping_rules.overrides.into_iter().collect::<Vec<_>>();
     overrides.sort_unstable_by_key(|(ref prefix, _)| prefix.len());
     overrides.reverse();
-    let prefix = NonRootMPath::new_opt(mapping_rules.default_prefix)?;
+    let prefix = MPath::new(mapping_rules.default_prefix)?;
 
-    Ok(Arc::new(
-        move |path: &Option<NonRootMPath>| -> Result<Vec<Option<NonRootMPath>>, Error> {
-            for (override_prefix_src, dsts) in &overrides {
-                let override_prefix_src = NonRootMPath::new(override_prefix_src.clone())?;
-                if override_prefix_src.is_prefix_of(non_root_mpath_element_iter(path)) {
-                    let suffix: Vec<_> = non_root_mpath_element_iter(path)
-                        .skip(override_prefix_src.num_components())
-                        .collect();
+    Ok(Arc::new(move |path: &MPath| -> Result<Vec<MPath>, Error> {
+        for (override_prefix_src, dsts) in &overrides {
+            let override_prefix_src = MPath::new(override_prefix_src.clone())?;
+            if override_prefix_src.is_prefix_of(path.into_iter()) {
+                let suffix: Vec<_> = path
+                    .into_iter()
+                    .skip(override_prefix_src.num_components())
+                    .collect();
 
-                    return dsts
-                        .iter()
-                        .map(|dst| {
-                            let override_prefix = NonRootMPath::new_opt(dst)?;
-                            Ok(NonRootMPath::join_opt(
-                                override_prefix.as_ref(),
-                                suffix.clone(),
-                            ))
-                        })
-                        .collect::<Result<_, _>>();
-                }
+                return dsts
+                    .iter()
+                    .map(|dst| {
+                        let override_prefix = MPath::new(dst)?;
+                        Ok(override_prefix.join(suffix.clone()))
+                    })
+                    .collect::<Result<_, _>>();
             }
-
-            Ok(vec![NonRootMPath::join_opt(
-                prefix.as_ref(),
-                non_root_mpath_element_iter(path),
-            )])
-        },
-    ))
+        }
+        Ok(vec![prefix.join(path)])
+    }))
 }
 
 /// Get `SkeletonManifestId`s for a set of `ChangesetId`s
@@ -1715,14 +1703,11 @@ mod test {
         };
         let multi_mover = create_directory_source_to_target_multi_mover(mapping_rules)?;
         assert_eq!(
-            multi_mover(&Some(NonRootMPath::new("path")?))?,
-            vec![Some(NonRootMPath::new("prefix/path")?)]
+            multi_mover(&MPath::new("path")?)?,
+            vec![MPath::new("prefix/path")?]
         );
 
-        assert_eq!(
-            multi_mover(&None)?,
-            vec![Some(NonRootMPath::new("prefix")?)]
-        );
+        assert_eq!(multi_mover(&MPath::ROOT)?, vec![MPath::new("prefix")?]);
         Ok(())
     }
 }
