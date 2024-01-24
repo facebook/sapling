@@ -1328,8 +1328,7 @@ impl ChangesetContext {
         // First, find the entries, and filter by file prefix.
         let entries = self.find_entries(prefixes, ordering).await?;
         let mpaths = entries.try_filter_map(|(path, entry)| async move {
-            let path: Option<NonRootMPath> = path.into();
-            match (path, entry) {
+            match (path.into_optional_non_root_path(), entry) {
                 (Some(mpath), ManifestEntry::Leaf(_)) => Ok(Some(mpath)),
                 _ => Ok(None),
             }
@@ -1484,8 +1483,7 @@ impl ChangesetContext {
         self.find_entries(to_vec1(path_restrictions), ordering)
             .await?
             .try_filter_map(|(path, entry)| async move {
-                let path: Option<NonRootMPath> = path.into();
-                match (path, entry) {
+                match (path.into_optional_non_root_path(), entry) {
                     (Some(mpath), ManifestEntry::Leaf(_)) if diff_files => Ok(Some(mpath)),
                     (Some(mpath), ManifestEntry::Tree(_)) if diff_trees => Ok(Some(mpath)),
                     _ => Ok(None),

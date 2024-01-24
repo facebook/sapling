@@ -37,9 +37,11 @@ pub enum ErrorKind {
 /// Here are the meanings of the return values:
 /// - `Ok(Some(newpath))` - the path should be
 ///   replaced with `newpath` during sync
-/// - `Ok(None)` - the path shoould not be synced
+/// - `Ok(None)` - the path should not be synced
 /// - `Err(e)` - the sync should fail, as this function
 ///   could not figure out how to rewrite path
+/// Fine to have Option<NonRootMPath> in this case since the optional part is not for representing root paths
+/// but instead to handle control flow differently
 pub type Mover = Arc<dyn Fn(&NonRootMPath) -> Result<Option<NonRootMPath>> + Send + Sync + 'static>;
 
 /// A struct to contain forward and reverse `Mover`

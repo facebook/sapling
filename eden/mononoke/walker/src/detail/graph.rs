@@ -54,6 +54,7 @@ use mononoke_types::blame_v2::BlameV2;
 use mononoke_types::deleted_manifest_v2::DeletedManifestV2;
 use mononoke_types::fastlog_batch::FastlogBatch;
 use mononoke_types::fsnode::Fsnode;
+use mononoke_types::path::MPath;
 use mononoke_types::skeleton_manifest::SkeletonManifest;
 use mononoke_types::unode::FileUnode;
 use mononoke_types::unode::ManifestUnode;
@@ -782,10 +783,10 @@ impl fmt::Display for WrappedPath {
 
 static PATH_HASHER_FACTORY: OnceLock<RandomState> = OnceLock::new();
 
-impl From<Option<NonRootMPath>> for WrappedPath {
-    fn from(mpath: Option<NonRootMPath>) -> Self {
+impl From<MPath> for WrappedPath {
+    fn from(mpath: MPath) -> Self {
         let hasher_fac = PATH_HASHER_FACTORY.get_or_init(RandomState::default);
-        match mpath {
+        match mpath.into_optional_non_root_path() {
             Some(mpath) => WrappedPath::NonRoot(ArcIntern::new(EagerHashMemoizer::new(
                 MPathWithHashMemo::new(mpath),
                 hasher_fac,

@@ -16,9 +16,9 @@ use mononoke_types::hash::Blake3;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
+use mononoke_types::path::MPath;
 use mononoke_types::FileUnodeId;
 use mononoke_types::ManifestUnodeId;
-use mononoke_types::NonRootMPath;
 use strum::IntoEnumIterator;
 
 use crate::detail::graph::AliasKey;
@@ -43,8 +43,8 @@ fn check_and_build_path(node_type: NodeType, parts: &[&str]) -> Result<WrappedPa
         ));
     }
     let mpath = match parts[1..].join(NODE_SEP).as_str() {
-        "/" => None,
-        p => Some(NonRootMPath::new(p)?),
+        "/" => MPath::ROOT,
+        p => MPath::new(p)?,
     };
     Ok(WrappedPath::from(mpath))
 }

@@ -508,10 +508,7 @@ pub trait MegarepoOp {
 
         let mut res = vec![];
         for (src_path, entry) in entries {
-            // Fine to do this conversion since we are handling empty and non-empty paths
-            // separately
-            let src_path: Option<NonRootMPath> = src_path.into();
-            match (src_path, entry) {
+            match (src_path.into_optional_non_root_path(), entry) {
                 (Some(src_path), Entry::Leaf(leaf)) => {
                     // TODO(stash, simonfar, mitrandir): we record file
                     // moves to mutable_renames even though these moves are already

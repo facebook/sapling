@@ -402,6 +402,8 @@ pub fn base_commit_sync_config(large_repo: &TestRepo, small_repo: &TestRepo) -> 
     }
 }
 
+/// Fine to have Option<NonRootMPath> in this case since the optional part is not for representing root paths
+/// but instead to handle control flow differently
 fn prefix_mover(v: &NonRootMPath) -> Result<Option<NonRootMPath>, Error> {
     let prefix = NonRootMPath::new("prefix").unwrap();
     Ok(Some(NonRootMPath::join(&prefix, v)))

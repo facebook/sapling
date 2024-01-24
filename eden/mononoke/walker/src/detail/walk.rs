@@ -62,6 +62,7 @@ use mercurial_types::HgManifestId;
 use mercurial_types::RepoPath;
 use mononoke_types::deleted_manifest_common::DeletedManifestCommon;
 use mononoke_types::fsnode::FsnodeEntry;
+use mononoke_types::path::MPath;
 use mononoke_types::skeleton_manifest::SkeletonManifestEntry;
 use mononoke_types::unode::UnodeEntry;
 use mononoke_types::BasenameSuffixSkeletonManifestId;
@@ -73,7 +74,6 @@ use mononoke_types::FastlogBatchId;
 use mononoke_types::FileUnodeId;
 use mononoke_types::FsnodeId;
 use mononoke_types::ManifestUnodeId;
-use mononoke_types::NonRootMPath;
 use mononoke_types::SkeletonManifestId;
 use phases::Phase;
 use phases::Phases;
@@ -668,7 +668,7 @@ async fn bonsai_changeset_step<V: VisitOne>(
                     &mut edges,
                     EdgeType::ChangesetToFileContent,
                     || Node::FileContent(tc.content_id()),
-                    || Some(WrappedPath::from(Some(mpath.clone()))),
+                    || Some(WrappedPath::from(MPath::from(mpath.clone()))),
                 );
             }
             None => {}
@@ -1071,7 +1071,7 @@ where
             checker.add_edge(&mut edges, copyfrom_edge, || {
                 build_file_node(PathKey::new(
                     *file_node_id,
-                    WrappedPath::from(repo_path.clone().into_mpath()),
+                    WrappedPath::from(MPath::from(repo_path.clone().into_mpath())),
                 ))
             })
         }
@@ -1158,8 +1158,8 @@ async fn hg_manifest_step<V: VisitOne>(
             .await?
             .yield_every(MANIFEST_YIELD_EVERY_ENTRY_COUNT, |_| 1);
         while let Some((name, entry)) = subentries.try_next().await? {
-            let full_path =
-                WrappedPath::from(Some(NonRootMPath::join_opt_element(path.as_ref(), &name)));
+            let path: &MPath = path.as_ref().into();
+            let full_path = WrappedPath::from(path.join_element(Some(&name)));
             match entry {
                 Entry::Leaf((_, hg_child_filenode_id)) => {
                     checker.add_edge_with_path(
@@ -1310,10 +1310,8 @@ async fn fsnode_step<V: VisitOne>(
                         || Node::Fsnode(*fsnode_id),
                         || {
                             path.map(|p| {
-                                WrappedPath::from(NonRootMPath::join_element_opt(
-                                    p.as_ref(),
-                                    Some(child),
-                                ))
+                                let path: &MPath = p.as_ref().into();
+                                WrappedPath::from(path.join_element(Some(child)))
                             })
                         },
                     );
@@ -1325,10 +1323,8 @@ async fn fsnode_step<V: VisitOne>(
                         || Node::FileContent(*file.content_id()),
                         || {
                             path.map(|p| {
-                                WrappedPath::from(NonRootMPath::join_element_opt(
-                                    p.as_ref(),
-                                    Some(child),
-                                ))
+                                let path: &MPath = p.as_ref().into();
+                                WrappedPath::from(path.join_element(Some(child)))
                             })
                         },
                     );
@@ -1552,10 +1548,8 @@ async fn unode_manifest_step<V: VisitOne>(
                     || Node::UnodeManifest(UnodeKey { inner: *id, flags }),
                     || {
                         path.map(|p| {
-                            WrappedPath::from(NonRootMPath::join_element_opt(
-                                p.as_ref(),
-                                Some(child),
-                            ))
+                            let path: &MPath = p.as_ref().into();
+                            WrappedPath::from(path.join_element(Some(child)))
                         })
                     },
                 );
@@ -1567,10 +1561,8 @@ async fn unode_manifest_step<V: VisitOne>(
                     || Node::UnodeFile(UnodeKey { inner: *id, flags }),
                     || {
                         path.map(|p| {
-                            WrappedPath::from(NonRootMPath::join_element_opt(
-                                p.as_ref(),
-                                Some(child),
-                            ))
+                            let path: &MPath = p.as_ref().into();
+                            WrappedPath::from(path.join_element(Some(child)))
                         })
                     },
                 );
@@ -1628,10 +1620,8 @@ async fn deleted_manifest_v2_step<V: VisitOne>(
             || Node::DeletedManifestV2(deleted_manifest_v2_id),
             || {
                 path.map(|p| {
-                    WrappedPath::from(NonRootMPath::join_element_opt(
-                        p.as_ref(),
-                        Some(&child_path),
-                    ))
+                    let path: &MPath = p.as_ref().into();
+                    WrappedPath::from(path.join_element(Some(&child_path)))
                 })
             },
         );
@@ -1701,10 +1691,8 @@ async fn skeleton_manifest_step<V: VisitOne>(
                         || Node::SkeletonManifest(*subdir.id()),
                         || {
                             path.map(|p| {
-                                WrappedPath::from(NonRootMPath::join_element_opt(
-                                    p.as_ref(),
-                                    Some(child_path),
-                                ))
+                                let path: &MPath = p.as_ref().into();
+                                WrappedPath::from(path.join_element(Some(child_path)))
                             })
                         },
                     );
@@ -1781,10 +1769,8 @@ async fn basename_suffix_skeleton_manifest_step<V: VisitOne>(
                     || Node::BasenameSuffixSkeletonManifest(subdir.id),
                     || {
                         path.map(|p| {
-                            WrappedPath::from(NonRootMPath::join_element_opt(
-                                p.as_ref(),
-                                Some(&child_path),
-                            ))
+                            let path: &MPath = p.as_ref().into();
+                            WrappedPath::from(path.join_element(Some(&child_path)))
                         })
                     },
                 );

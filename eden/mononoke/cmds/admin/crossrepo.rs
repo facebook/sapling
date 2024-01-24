@@ -739,6 +739,8 @@ async fn get_source_target_cs_ids_and_version(
 
 struct MappingCommitOptions {
     add_mapping_change_extra: bool,
+    // Fine to have Option<NonRootMPath> in this case since this represents an Optional
+    // path that may or may not be provided, i.e. None != Root path in this case
     dump_mapping_file: Option<NonRootMPath>,
 }
 
