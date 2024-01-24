@@ -6,6 +6,7 @@
  */
 
 import {AccessGlobalRecoil} from '../AccessGlobalRecoil';
+import {lazyAtom, readAtom, writeAtom} from '../jotaiUtils';
 import {entangledAtoms} from '../recoilUtils';
 import {render} from '@testing-library/react';
 import {List} from 'immutable';
@@ -13,6 +14,7 @@ import {atom, useAtom, useAtomValue} from 'jotai';
 import {useRef, useState, useEffect} from 'react';
 import {RecoilRoot, atom as recoilAtom, useRecoilState, useRecoilValue} from 'recoil';
 import {SelfUpdate} from 'shared/immutableExt';
+import {nextTick} from 'shared/testUtils';
 
 class Foo extends SelfUpdate<List<number>> {}
 
@@ -105,5 +107,42 @@ describe('entangledAtoms', () => {
         expect(readMessage).toBe(message);
       });
     });
+  });
+});
+
+describe('lazyAtom', () => {
+  it('returns sync load() value', () => {
+    const a = lazyAtom(() => 1, 2);
+    expect(readAtom(a)).toBe(1);
+  });
+
+  it('returns fallback value and sets async load() value', async () => {
+    const a = lazyAtom(() => Promise.resolve(1), 2);
+    expect(readAtom(a)).toBe(2);
+    await nextTick();
+    expect(readAtom(a)).toBe(1);
+  });
+
+  it('can depend on another atom', () => {
+    const a = atom<number | undefined>(undefined);
+    const b = lazyAtom(() => 2, 2, a);
+
+    expect(readAtom(a)).toBe(undefined);
+
+    // Reading `b` triggers updating `a`.
+    expect(readAtom(b)).toBe(2);
+    expect(readAtom(a)).toBe(2);
+
+    // If `a` is updated to be not `undefined`, `b` will be the same value.
+    writeAtom(a, 3);
+    expect(readAtom(b)).toBe(3);
+
+    // Updating `b` updates `a` too.
+    writeAtom(b, 4);
+    expect(readAtom(a)).toBe(4);
+
+    // If `a` is updated to be `undefined`, `b` will be the fallback value.
+    writeAtom(a, undefined);
+    expect(readAtom(b)).toBe(2);
   });
 });

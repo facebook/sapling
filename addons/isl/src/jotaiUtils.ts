@@ -12,6 +12,8 @@ import type {Json} from 'shared/typeUtils';
 import serverAPI from './ClientToServerAPI';
 import platform from './platform';
 import {atom, getDefaultStore} from 'jotai';
+import {RateLimiter} from 'shared/RateLimiter';
+import {isPromise} from 'shared/utils';
 
 /** A mutable atom that stores type `T`. */
 export type MutAtom<T> = WritableAtom<T, [T | ((prev: T) => T)], void>;
@@ -136,6 +138,50 @@ export function atomWithOnChange<T>(
       if (oldValue !== newValue) {
         onChange(newValue);
       }
+    },
+  );
+}
+
+/**
+ * Creates a lazily initialized atom.
+ * On first read, trigger `load` to get the actual value.
+ * `fallback` provides the value when the async `load` is running.
+ * `original` is an optioinal nullable atom to provide the value.
+ */
+export function lazyAtom<T>(
+  load: () => Promise<T> | T,
+  fallback: T,
+  original?: MutAtom<T | undefined>,
+): MutAtom<T> {
+  const originalAtom = original ?? atom<T | undefined>(undefined);
+  const limiter = new RateLimiter(1);
+  return atom(
+    get => {
+      const value = get(originalAtom);
+      if (value !== undefined) {
+        return value;
+      }
+      const loaded = load();
+      if (!isPromise(loaded)) {
+        writeAtom(originalAtom, loaded);
+        return loaded;
+      }
+      // Kick off the "load" but rate limit it.
+      limiter.enqueueRun(async () => {
+        if (get(originalAtom) !== undefined) {
+          // A previous "load" was completed.
+          return;
+        }
+        const newValue = await loaded;
+        writeAtom(originalAtom, newValue);
+      });
+      // Use the fallback value while waiting for the promise.
+      return fallback;
+    },
+    (get, set, args) => {
+      const newValue =
+        typeof args === 'function' ? (args as (prev: T) => T)(get(originalAtom) ?? fallback) : args;
+      set(originalAtom, newValue);
     },
   );
 }
