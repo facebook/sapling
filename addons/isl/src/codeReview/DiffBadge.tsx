@@ -112,6 +112,7 @@ function DiffInfoInner({
     return <DiffSpinner diffId={diffId} provider={provider} />;
   }
   const info = diffInfoResult.value;
+  const shouldHideActions = hideActions || provider.isDiffClosed(info);
   return (
     <div
       className={`diff-info ${provider.name}-diff-info`}
@@ -123,7 +124,7 @@ function DiffInfoInner({
       )}
       <DiffComments diff={info} />
       <DiffNumber>{provider.formatDiffNumber(diffId)}</DiffNumber>
-      {hideActions === true ? null : syncStatus === SyncStatus.RemoteIsNewer ? (
+      {shouldHideActions ? null : syncStatus === SyncStatus.RemoteIsNewer ? (
         <DownloadNewVersionButton diffId={diffId} provider={provider} />
       ) : syncStatus === SyncStatus.LocalIsNewer ? (
         <ResubmitSyncButton commit={commit} provider={provider} />
