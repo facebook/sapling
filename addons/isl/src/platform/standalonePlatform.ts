@@ -37,3 +37,6 @@ const standalonePlatform: Platform = {
 };
 
 window.islPlatform = standalonePlatform;
+
+// Load the actual app entry, which must be done after the platform has been set up.
+import('../index');

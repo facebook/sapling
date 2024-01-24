@@ -5,4 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-/// <reference types="react-scripts" />
+export function declineHotReload() {
+  // noop
+}

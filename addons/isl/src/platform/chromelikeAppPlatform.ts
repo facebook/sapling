@@ -19,3 +19,6 @@ const chromelikeAppPlatform: Platform = {
 };
 
 window.islPlatform = chromelikeAppPlatform;
+
+// Load the actual app entry, which must be done after the platform has been set up.
+import('../index');

@@ -8,6 +8,7 @@
 import type {Disposable} from './types';
 import type {VSCodeAPI} from './vscodeSingleton';
 
+import {declineHotReload} from './declineHotReload';
 import {logger} from './logger';
 import {initialParams} from './urlParams';
 import vscode from './vscodeSingleton';
@@ -213,10 +214,9 @@ declare global {
     };
   }
 }
-if (module.hot) {
-  // We can't allow this file to hot reload, since it creates global state.
-  // If we did, we'd accumulate global `messageBus`es, which is buggy.
-  module.hot.decline();
-}
+
+// We can't allow this file to hot reload, since it creates global state.
+// If we did, we'd accumulate global `messageBus`es, which is buggy.
+declineHotReload();
 
 export default messageBus;

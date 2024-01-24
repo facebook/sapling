@@ -21,9 +21,9 @@ Then launch the following three components in order:
 ### Client
 
 **In the isl folder, run `yarn start`**.
-This will make a development build with [Create React App](https://create-react-app.dev/).
+This will make a development build with [vite](https://vitejs.dev/).
 This watches for changes to the front end and incrementally re-compiles.
-Unlike most CRA apps, this will not yet open the browser,
+Unlike most vite apps, this will not yet open the browser,
 because we need to open it using a token from when we start the server.
 
 ### Server
@@ -45,7 +45,7 @@ You will have to manually restart it in order to pick up server changes.
 This is the development mode equivalent of running `sl web`.
 
 Note: When the server is started, it creates a token to prevent unwanted access.
-`--dev` opens the browser on the port used by CRA in `yarn start`
+`--dev` opens the browser on the port used by vite in `yarn start`
 to ensure the client connects with the right token.
 
 See `../vscode/CONTRIBUTING.md` for build instructions for the vscode extension.
@@ -54,7 +54,7 @@ When developing, it's useful to add a few extra arguments to `yarn serve`:
 
 `yarn serve --dev --force --foreground --stdout --command sl`
 
-- `--dev`: Connect to the CRA dev build's hot-reloading front-end server (defaulting to 3000), even though this server will spawn on 3001.
+- `--dev`: Connect to the vite dev build's hot-reloading front-end server (defaulting to 3000), even though this server will spawn on 3001.
 - `--force`: Kill any other active ISL server running on this port, which makes sure it's the latest version of the code.
 - `--foreground`: instead of spawning the server in the background, run it in the foreground. `ctrl-c`-ing the `yarn serve` process will kill this server.
 - `--stdout`: when combined with `--foreground`, prints the server logs to stdout so you can read them directly in the `yarn serve` terminal output.
@@ -350,7 +350,10 @@ You can visualize what modules are being bundled by webpack for different entry 
 - Upload that file to <https://webpack.github.io/analyse/#modules> to see the exact dependency graph. This is useful for debugging why code is being included by a certain entry point, for example isl-server somehow including something from isl.
 - This also works for vscode, but you need to pass the config or use e.g. `yarn build-extension --profile --json`.
 
-Due to Create React App, this is slightly different on the isl client / reviewstack:
+Due to Create React App, this is slightly different on reviewstack:
 
 - `cd isl`
 - [`npx source-map-explorer build/static/js/*.js`](https://create-react-app.dev/docs/analyzing-the-bundle-size/), which opens a browser visualization of your dependencies.
+
+TODO: We haven't tried this with the isl client now that it uses vite.
+Consider trying <https://github.com/btd/rollup-plugin-visualizer>.

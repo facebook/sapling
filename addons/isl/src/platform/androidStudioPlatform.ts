@@ -73,3 +73,6 @@ const androidStudioPlatform: Platform = {
 };
 
 window.islPlatform = androidStudioPlatform;
+
+// Load the actual app entry, which must be done after the platform has been set up.
+import('../index');

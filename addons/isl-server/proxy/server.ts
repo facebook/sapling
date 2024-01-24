@@ -57,14 +57,26 @@ export function startServer({
   return new Promise(resolve => {
     try {
       const manifest = JSON.parse(
-        fs.readFileSync(path.join(ossSmartlogDir, 'build/asset-manifest.json'), 'utf-8'),
-      ) as {files: Array<string>};
-      for (const file of Object.values(manifest.files)) {
-        if (!file.startsWith('/')) {
-          resolve({type: 'error', error: `expected entry to start with / but was: \`${file}\``});
+        fs.readFileSync(path.join(ossSmartlogDir, 'build/.vite/manifest.json'), 'utf-8'),
+      ) as {[key: string]: {file: string; css?: string[]}};
+      const files = [];
+      for (const [file, asset] of Object.entries(manifest)) {
+        if (file.endsWith('.html')) {
+          files.push(file); // html file
+          files.push(asset.file); // js script file
+        } else {
+          // lazily loaded scripts
+          files.push(asset.file);
+          if (asset.css) {
+            for (const css of asset.css) {
+              files.push(css);
+            }
+          }
         }
+      }
 
-        requestUrlToResource[file] = file.slice(1);
+      for (const file of files) {
+        requestUrlToResource['/' + file] = file;
       }
     } catch (e) {
       // ignore...

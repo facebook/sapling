@@ -7,14 +7,17 @@
 
 import type {Platform} from '../platform';
 
-import {browserPlatform} from '../BrowserPlatform';
+import {browserPlatformImpl} from './browerPlatformImpl';
 
 // important: this file should not try to import other code from 'isl',
 // since it will end up getting duplicated by webpack.
 
 const androidStudioRemotePlatform: Platform = {
-  ...browserPlatform, // just act like the browser platform by default, since the remote use case is almost identical.
+  ...browserPlatformImpl, // just act like the browser platform by default, since the remote use case is almost identical.
   platformName: 'androidStudioRemote',
 };
 
 window.islPlatform = androidStudioRemotePlatform;
+
+// Load the actual app entry, which must be done after the platform has been set up.
+import('../index');
