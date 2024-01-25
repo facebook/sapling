@@ -16,16 +16,12 @@ use cmdlib::args::MononokeClapApp;
 use fbinit::FacebookInit;
 use slog::error;
 
-use crate::bonsai_fetch::subcommand_bonsai_fetch;
-use crate::content_fetch::subcommand_content_fetch;
 use crate::crossrepo::subcommand_crossrepo;
 use crate::error::SubcommandError;
 use crate::filenodes::subcommand_filenodes;
 use crate::hg_changeset::subcommand_hg_changeset;
 
-mod bonsai_fetch;
 mod common;
-mod content_fetch;
 mod crossrepo;
 mod error;
 mod filenodes;
@@ -47,8 +43,6 @@ fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         .with_special_put_behaviour(PutBehaviour::Overwrite)
         .build()
         .about("Poke at mononoke internals for debugging and investigating data structures.")
-        .subcommand(bonsai_fetch::build_subcommand())
-        .subcommand(content_fetch::build_subcommand())
         .subcommand(hg_changeset::build_subcommand())
         .subcommand(filenodes::build_subcommand())
         .subcommand(subcommand_phases::build_subcommand())
@@ -75,12 +69,6 @@ fn main(fb: FacebookInit) -> ExitCode {
 
     let res = runtime.block_on(async {
         match matches.subcommand() {
-            (bonsai_fetch::BONSAI_FETCH, Some(sub_m)) => {
-                subcommand_bonsai_fetch(fb, logger, &matches, sub_m).await
-            }
-            (content_fetch::CONTENT_FETCH, Some(sub_m)) => {
-                subcommand_content_fetch(fb, logger, &matches, sub_m).await
-            }
             (hg_changeset::HG_CHANGESET, Some(sub_m)) => {
                 subcommand_hg_changeset(fb, logger, &matches, sub_m).await
             }
