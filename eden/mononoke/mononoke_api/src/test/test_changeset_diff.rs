@@ -15,6 +15,7 @@ use fbinit::FacebookInit;
 use fixtures::ManyFilesDirs;
 use fixtures::TestRepoFixture;
 use maplit::btreeset;
+use mononoke_types::path::MPath;
 use pretty_assertions::assert_eq;
 use tests_utils::CreateCommitContext;
 
@@ -25,7 +26,6 @@ use crate::ChangesetPathDiffContext;
 use crate::CoreContext;
 use crate::HgChangesetId;
 use crate::Mononoke;
-use crate::MononokePath;
 
 #[fbinit::test]
 async fn test_diff_with_moves(fb: FacebookInit) -> Result<(), Error> {
@@ -66,8 +66,8 @@ async fn test_diff_with_moves(fb: FacebookInit) -> Result<(), Error> {
     assert_eq!(diff.len(), 1);
     match diff.first() {
         Some(ChangesetPathDiffContext::Moved(to, from)) => {
-            assert_eq!(to.path(), &MononokePath::try_from("file_moved")?);
-            assert_eq!(from.path(), &MononokePath::try_from("file_to_move")?);
+            assert_eq!(to.path(), &MPath::try_from("file_moved")?);
+            assert_eq!(from.path(), &MPath::try_from("file_to_move")?);
         }
         _ => {
             panic!("unexpected diff");
@@ -115,15 +115,15 @@ async fn test_diff_with_multiple_copies(fb: FacebookInit) -> Result<(), Error> {
     assert_eq!(diff.len(), 2);
     match diff.first() {
         Some(ChangesetPathDiffContext::Copied(to, from)) => {
-            assert_eq!(to.path(), &MononokePath::try_from("copy_one")?);
-            assert_eq!(from.path(), &MononokePath::try_from("file_to_copy")?);
+            assert_eq!(to.path(), &MPath::try_from("copy_one")?);
+            assert_eq!(from.path(), &MPath::try_from("file_to_copy")?);
         }
         other => panic!("unexpected diff: {:?}", other),
     }
     match diff.get(1) {
         Some(ChangesetPathDiffContext::Copied(to, from)) => {
-            assert_eq!(to.path(), &MononokePath::try_from("copy_two")?);
-            assert_eq!(from.path(), &MononokePath::try_from("file_to_copy")?);
+            assert_eq!(to.path(), &MPath::try_from("copy_two")?);
+            assert_eq!(from.path(), &MPath::try_from("file_to_copy")?);
         }
         other => panic!("unexpected diff: {:?}", other),
     }
@@ -172,22 +172,22 @@ async fn test_diff_with_multiple_moves(fb: FacebookInit) -> Result<(), Error> {
     // The first copy of the file becomes a move.
     match diff.first() {
         Some(ChangesetPathDiffContext::Moved(to, from)) => {
-            assert_eq!(to.path(), &MononokePath::try_from("copy_one")?);
-            assert_eq!(from.path(), &MononokePath::try_from("file_to_move")?);
+            assert_eq!(to.path(), &MPath::try_from("copy_one")?);
+            assert_eq!(from.path(), &MPath::try_from("file_to_move")?);
         }
         other => panic!("unexpected diff: {:?}", other),
     }
     match diff.get(1) {
         Some(ChangesetPathDiffContext::Copied(to, from)) => {
-            assert_eq!(to.path(), &MononokePath::try_from("copy_two")?);
-            assert_eq!(from.path(), &MononokePath::try_from("file_to_move")?);
+            assert_eq!(to.path(), &MPath::try_from("copy_two")?);
+            assert_eq!(from.path(), &MPath::try_from("file_to_move")?);
         }
         other => panic!("unexpected diff: {:?}", other),
     }
     match diff.get(2) {
         Some(ChangesetPathDiffContext::Copied(to, from)) => {
-            assert_eq!(to.path(), &MononokePath::try_from("copy_zzz")?);
-            assert_eq!(from.path(), &MononokePath::try_from("file_to_move")?);
+            assert_eq!(to.path(), &MPath::try_from("copy_zzz")?);
+            assert_eq!(from.path(), &MPath::try_from("file_to_move")?);
         }
         other => panic!("unexpected diff: {:?}", other),
     }
@@ -197,7 +197,7 @@ async fn test_diff_with_multiple_moves(fb: FacebookInit) -> Result<(), Error> {
 fn check_root_dir_diff(diff: Option<&ChangesetPathDiffContext>) -> Result<(), Error> {
     match diff {
         Some(ChangesetPathDiffContext::Changed(path1, path2)) if path1.path() == path2.path() => {
-            assert_eq!(path1.path(), &MononokePath::try_from("")?);
+            assert_eq!(path1.path(), &MPath::try_from("")?);
         }
         _ => {
             panic!("unexpected root dir diff")
@@ -236,7 +236,7 @@ async fn test_diff_with_dirs(fb: FacebookInit) -> Result<(), Error> {
     check_root_dir_diff(diff.first())?;
     match diff.get(1) {
         Some(ChangesetPathDiffContext::Added(path)) => {
-            assert_eq!(path.path(), &MononokePath::try_from("dir2")?);
+            assert_eq!(path.path(), &MPath::try_from("dir2")?);
         }
         _ => {
             panic!("unexpected diff");
@@ -260,7 +260,7 @@ async fn test_diff_with_dirs(fb: FacebookInit) -> Result<(), Error> {
     check_root_dir_diff(diff.first())?;
     match diff.get(1) {
         Some(ChangesetPathDiffContext::Removed(path)) => {
-            assert_eq!(path.path(), &MononokePath::try_from("dir1")?);
+            assert_eq!(path.path(), &MPath::try_from("dir1")?);
         }
         _ => {
             panic!("unexpected diff");

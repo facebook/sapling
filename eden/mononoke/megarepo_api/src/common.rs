@@ -51,9 +51,9 @@ use megarepo_mapping::CommitRemappingState;
 use megarepo_mapping::SourceName;
 use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgFileNodeId;
+use mononoke_api::path::MononokePathPrefixes;
 use mononoke_api::ChangesetContext;
 use mononoke_api::Mononoke;
-use mononoke_api::MononokePath;
 use mononoke_api::RepoContext;
 use mononoke_types::path::MPath;
 use mononoke_types::BonsaiChangeset;
@@ -144,7 +144,7 @@ pub trait MegarepoOp {
                 .paths_in_target_belonging_to_source(ctx, source, *source_cs_id)
                 .await?;
             for path in &paths_in_target_belonging_to_source {
-                if let Some(path) = path.clone().into_mpath() {
+                if let Some(path) = path.clone().into_optional_non_root_path() {
                     all_removed_files.insert(path);
                 }
             }
@@ -351,7 +351,7 @@ pub trait MegarepoOp {
         // where file is from target and dir from additions_merge
         let mut addition_prefixes = vec![];
         for addition in additions {
-            for dir in addition.prefixes() {
+            for dir in MononokePathPrefixes::new(&addition) {
                 addition_prefixes.push(dir);
             }
         }
@@ -453,7 +453,7 @@ pub trait MegarepoOp {
         ctx: &CoreContext,
         source: &Source,
         source_changeset_id: ChangesetId,
-    ) -> Result<HashSet<MononokePath>, MegarepoError> {
+    ) -> Result<HashSet<MPath>, MegarepoError> {
         let source_repo = self.find_repo_by_id(ctx, source.repo_id).await?;
         let mover = &create_source_to_target_multi_mover(source.mapping.clone())?;
         let source_changeset = source_repo
@@ -466,22 +466,19 @@ pub trait MegarepoOp {
             .map_err(MegarepoError::internal)?
             .map_err(MegarepoError::internal)
             .and_then(async move |path| {
-                Ok(mover(&path.into_mpath().ok_or_else(|| {
-                    MegarepoError::internal(anyhow!("mpath can't be null"))
-                })?)?)
+                Ok(mover(&path.into_optional_non_root_path().ok_or_else(
+                    || MegarepoError::internal(anyhow!("mpath can't be null")),
+                )?)?)
             })
             .try_collect()
             .await?;
-        let mut all_paths: HashSet<MononokePath> = moved_paths
-            .into_iter()
-            .flatten()
-            .map(|mpath| MononokePath::new(Some(mpath)))
-            .collect();
-        let linkfiles: HashSet<MononokePath> = source
+        let mut all_paths: HashSet<MPath> =
+            moved_paths.into_iter().flatten().map(MPath::from).collect();
+        let linkfiles: HashSet<MPath> = source
             .mapping
             .linkfiles
             .keys()
-            .map(|dst| dst.try_into())
+            .map(|dst| MPath::new(dst.as_bytes()))
             .try_collect()?;
         all_paths.extend(linkfiles);
         Ok(all_paths)

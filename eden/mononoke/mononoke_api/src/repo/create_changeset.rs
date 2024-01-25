@@ -53,18 +53,18 @@ use crate::changeset::ChangesetContext;
 use crate::errors::MononokeError;
 use crate::file::FileId;
 use crate::file::FileType;
-use crate::path::MononokePath;
+use crate::path::MononokePathPrefixes;
 use crate::repo::RepoContext;
 use crate::specifiers::ChangesetSpecifier;
 
 #[derive(Clone)]
 pub struct CreateCopyInfo {
-    path: MononokePath,
+    path: MPath,
     parent_index: usize,
 }
 
 impl CreateCopyInfo {
-    pub fn new(path: MononokePath, parent_index: usize) -> Self {
+    pub fn new(path: MPath, parent_index: usize) -> Self {
         CreateCopyInfo { path, parent_index }
     }
 
@@ -82,7 +82,7 @@ impl CreateCopyInfo {
                 )));
             }
             // Check if the copy-from path was added or removed in the stack.
-            match stack_changes.get(self.path.as_mpath().into()) {
+            match stack_changes.get(&self.path) {
                 None | Some(CreateChangeType::None) => {}
                 Some(CreateChangeType::Change) => {
                     return Ok(());
@@ -94,8 +94,8 @@ impl CreateCopyInfo {
                 }
             }
             // Check if the copy-from path was deleted by a prefix change.
-            for prefix in self.path.prefixes() {
-                if stack_changes.get(prefix.as_mpath().into()) == Some(&CreateChangeType::Change) {
+            for prefix in MononokePathPrefixes::new(&self.path) {
+                if stack_changes.get(&prefix) == Some(&CreateChangeType::Change) {
                     return Err(MononokeError::InvalidRequest(String::from(
                         "Copy-from path references a file in a directory deleted earler in the stack",
                     )));
@@ -142,7 +142,7 @@ impl CreateCopyInfo {
         self,
         parent_ids: &[ChangesetId],
     ) -> Result<(NonRootMPath, ChangesetId), MononokeError> {
-        let mpath = self.path.into_mpath().ok_or_else(|| {
+        let mpath = self.path.into_optional_non_root_path().ok_or_else(|| {
             MononokeError::InvalidRequest(String::from("Copy-from path cannot be the root"))
         })?;
         let parent_id = parent_ids.get(self.parent_index).ok_or_else(|| {
@@ -320,12 +320,12 @@ pub struct CreateInfo {
 async fn verify_deleted_files_existed_in_a_parent(
     parent_ctxs: &[ChangesetContext],
     stack_changes: Option<&PathTree<CreateChangeType>>,
-    mut deleted_files: BTreeSet<MononokePath>,
+    mut deleted_files: BTreeSet<MPath>,
 ) -> Result<(), MononokeError> {
     async fn get_matching_files<'a>(
         parent_ctx: &'a ChangesetContext,
-        files: &'a BTreeSet<MononokePath>,
-    ) -> Result<impl Stream<Item = Result<MononokePath, MononokeError>> + 'a, MononokeError> {
+        files: &'a BTreeSet<MPath>,
+    ) -> Result<impl Stream<Item = Result<MPath, MononokeError>> + 'a, MononokeError> {
         Ok(parent_ctx
             .paths(files.iter().cloned())
             .await?
@@ -342,24 +342,21 @@ async fn verify_deleted_files_existed_in_a_parent(
     if let Some(stack_changes) = stack_changes {
         // Ignore files that were created or modified earlier in the stack.
         deleted_files.retain(|deleted_file| {
-            stack_changes.get(deleted_file.as_mpath().into()) != Some(&CreateChangeType::Change)
+            stack_changes.get(deleted_file) != Some(&CreateChangeType::Change)
         });
 
         for deleted_file in deleted_files.iter() {
             // It's an error if this file was already deleted, or if any of
             // its path prefixes were created (this implicitly deletes the
             // directory).
-            if stack_changes.get(deleted_file.as_mpath().into())
-                == Some(&CreateChangeType::Deletion)
-            {
+            if stack_changes.get(deleted_file) == Some(&CreateChangeType::Deletion) {
                 return Err(MononokeError::InvalidRequest(format!(
                     "Deleted file '{}' was deleted earlier in the stack",
                     deleted_file
                 )));
             }
-            for prefix in deleted_file.prefixes() {
-                if let Some(CreateChangeType::Change) = stack_changes.get(prefix.as_mpath().into())
-                {
+            for prefix in MononokePathPrefixes::new(deleted_file) {
+                if let Some(CreateChangeType::Change) = stack_changes.get(&prefix) {
                     return Err(MononokeError::InvalidRequest(format!(
                         "Deleted file '{}' was deleted earlier in the stack through replacement of '{}'",
                         deleted_file, prefix
@@ -409,9 +406,9 @@ async fn verify_deleted_files_existed_in_a_parent(
 
 /// Returns `true` if any prefix of the path has a change.  Use for
 /// detecting when a directory is replaced by a file.
-fn is_prefix_changed(path: &MononokePath, paths: &PathTree<CreateChangeType>) -> bool {
-    path.prefixes()
-        .any(|prefix| paths.get(prefix.as_mpath().into()) == Some(&CreateChangeType::Change))
+fn is_prefix_changed(path: &MPath, paths: &PathTree<CreateChangeType>) -> bool {
+    MononokePathPrefixes::new(path)
+        .any(|prefix| paths.get(&prefix) == Some(&CreateChangeType::Change))
 }
 
 /// Verify that any files in `prefix_paths` that exist in any of
@@ -420,19 +417,18 @@ fn is_prefix_changed(path: &MononokePath, paths: &PathTree<CreateChangeType>) ->
 async fn verify_prefix_files_deleted(
     parent_ctxs: &[ChangesetContext],
     stack_changes: Option<&PathTree<CreateChangeType>>,
-    mut prefix_paths: BTreeSet<MononokePath>,
+    mut prefix_paths: BTreeSet<MPath>,
     path_changes: &PathTree<CreateChangeType>,
 ) -> Result<(), MononokeError> {
     if let Some(stack_changes) = stack_changes {
         // Remove any prefix paths that have already been deleted earlier in the stack.
         prefix_paths.retain(|prefix_path| {
-            stack_changes.get(prefix_path.as_mpath().into()) != Some(&CreateChangeType::Deletion)
+            stack_changes.get(prefix_path) != Some(&CreateChangeType::Deletion)
         });
         // Check that any prefix path added earlier in the stack is being deleted.
         for prefix_path in prefix_paths.iter() {
-            if stack_changes.get(prefix_path.as_mpath().into()) == Some(&CreateChangeType::Change)
-                && path_changes.get(prefix_path.as_mpath().into())
-                    != Some(&CreateChangeType::Deletion)
+            if stack_changes.get(prefix_path) == Some(&CreateChangeType::Change)
+                && path_changes.get(prefix_path) != Some(&CreateChangeType::Deletion)
             {
                 return Err(MononokeError::InvalidRequest(format!(
                     concat!(
@@ -453,8 +449,7 @@ async fn verify_prefix_files_deleted(
                 .await?
                 .try_for_each(|prefix_path| async move {
                     if prefix_path.is_file().await?
-                        && path_changes.get(prefix_path.path().as_mpath().into())
-                            != Some(&CreateChangeType::Deletion)
+                        && path_changes.get(prefix_path.path()) != Some(&CreateChangeType::Deletion)
                     {
                         Err(MononokeError::InvalidRequest(format!(
                             "Creating files inside '{}' requires deleting the file at that path",
@@ -491,7 +486,7 @@ async fn check_addless_union_conflicts(
 
     let conflict_paths = bounded_traversal::bounded_traversal_stream(
         256,
-        Some((root_fsnodes, MononokePath::new(None))),
+        Some((root_fsnodes, MPath::ROOT)),
         move |(fsnodes_to_check, current_path)| {
             Box::pin(async move {
                 let mut leaf_content: BTreeMap<MPathElement, HashSet<_>> = BTreeMap::new();
@@ -521,9 +516,9 @@ async fn check_addless_union_conflicts(
                 let conflicts: Vec<_> = leaf_content
                     .into_iter()
                     .filter_map(|(path_element, contents)| {
-                        let path = current_path.append(&path_element);
+                        let path = current_path.join_element(Some(&path_element));
                         let fix_exists = fix_paths
-                            .get(path.as_mpath().into())
+                            .get(&path)
                             .map_or(false, CreateChangeType::is_modification);
                         let conflict_exists =
                             contents.len() > 1 || trees.contains_key(&path_element);
@@ -539,9 +534,9 @@ async fn check_addless_union_conflicts(
                 let recurse: Vec<_> = trees
                     .into_iter()
                     .filter_map(|(path_element, fsnodes)| {
-                        let path = current_path.append(&path_element);
+                        let path = current_path.join_element(Some(&path_element));
                         let fix_exists = fix_paths
-                            .get(path.as_mpath().into())
+                            .get(&path)
                             .map_or(false, CreateChangeType::is_modification);
 
                         if !fix_exists && fsnodes.len() > 1 {
@@ -606,7 +601,7 @@ impl RepoContext {
         &self,
         parents: Vec<ChangesetId>,
         info: CreateInfo,
-        changes: BTreeMap<MononokePath, CreateChange>,
+        changes: BTreeMap<MPath, CreateChange>,
         // If some, this changeset is a snapshot. Currently unsupported to upload a
         // normal commit to a bubble, though can be easily added.
         bubble: Option<&Bubble>,
@@ -633,7 +628,7 @@ impl RepoContext {
         &self,
         stack_parents: Vec<ChangesetId>,
         info_stack: Vec<CreateInfo>,
-        changes_stack: Vec<BTreeMap<MononokePath, CreateChange>>,
+        changes_stack: Vec<BTreeMap<MPath, CreateChange>>,
         // If some, this changeset is a snapshot. Currently unsupported to upload a
         // normal commit to a bubble, though can be easily added.
         bubble: Option<&Bubble>,
@@ -695,9 +690,11 @@ impl RepoContext {
         let path_changes_stack: Vec<_> = changes_stack
             .iter()
             .map(|changes| {
-                PathTree::from_iter(changes.iter().map(|(path, change)| {
-                    (MPath::from(path.as_mpath().cloned()), change.change_type())
-                }))
+                PathTree::from_iter(
+                    changes
+                        .iter()
+                        .map(|(path, change)| (path.clone(), change.change_type())),
+                )
             })
             .collect();
         let path_changes_stack = path_changes_stack.as_slice();
@@ -709,7 +706,7 @@ impl RepoContext {
                 changes
                     .iter()
                     .filter(|(_path, change)| change.change_type() == CreateChangeType::Change)
-                    .flat_map(|(path, _change)| path.clone().prefixes())
+                    .flat_map(|(path, _change)| MononokePathPrefixes::new(path))
                     .collect()
             })
             .collect();
@@ -731,7 +728,7 @@ impl RepoContext {
                     // resolving any changes, so that we don't start storing data
                     // until we're happy that the changes are valid.
                     .map(|(path, change)| {
-                        path.into_mpath()
+                        path.into_optional_non_root_path()
                             .ok_or_else(|| {
                                 MononokeError::InvalidRequest(String::from(
                                     "Cannot create a file with an empty path",

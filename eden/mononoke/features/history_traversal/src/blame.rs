@@ -22,6 +22,7 @@ use futures_stats::TimedFutureExt;
 use manifest::ManifestOps;
 use mononoke_types::blame_v2::BlameParent;
 use mononoke_types::blame_v2::BlameV2;
+use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileUnodeId;
 use mononoke_types::NonRootMPath;
@@ -67,14 +68,8 @@ async fn fetch_mutable_blame(
             .as_ref()
             .ok_or_else(|| anyhow!("Mutable rename points file to root directory"))?
             .clone();
-        let (src_blame, src_content) = blame_with_content(
-            ctx,
-            repo,
-            rename.src_cs_id(),
-            rename_src_path.as_ref(),
-            true,
-        )
-        .await?;
+        let (src_blame, src_content) =
+            blame_with_content(ctx, repo, rename.src_cs_id(), rename.src_path(), true).await?;
 
         let blobstore = repo.repo_blobstore_arc();
         let unode = repo
@@ -182,12 +177,15 @@ pub async fn blame(
     ctx: &CoreContext,
     repo: &impl Repo,
     csid: ChangesetId,
-    path: Option<&NonRootMPath>,
+    path: &MPath,
     follow_mutable_file_history: bool,
 ) -> Result<(BlameV2, FileUnodeId), BlameError> {
-    let path = path.ok_or_else(|| anyhow!("Blame is not available for directory: `/`"))?;
+    let path = path
+        .clone()
+        .into_optional_non_root_path()
+        .ok_or_else(|| anyhow!("Blame is not available for directory: `/`"))?;
     if follow_mutable_file_history {
-        let (stats, result) = fetch_mutable_blame(ctx, repo, csid, path, &mut HashSet::new())
+        let (stats, result) = fetch_mutable_blame(ctx, repo, csid, &path, &mut HashSet::new())
             .timed()
             .await;
         let mut scuba = ctx.scuba().clone();
@@ -195,7 +193,7 @@ pub async fn blame(
         scuba.log_with_msg("Computed mutable blame", None);
         result
     } else {
-        fetch_immutable_blame(ctx, repo, csid, path).await
+        fetch_immutable_blame(ctx, repo, csid, &path).await
     }
 }
 
@@ -206,7 +204,7 @@ pub async fn blame_with_content(
     ctx: &CoreContext,
     repo: &impl Repo,
     csid: ChangesetId,
-    path: Option<&NonRootMPath>,
+    path: &MPath,
     follow_mutable_file_history: bool,
 ) -> Result<(BlameV2, Bytes), BlameError> {
     let (blame, file_unode_id) = blame(ctx, repo, csid, path, follow_mutable_file_history).await?;

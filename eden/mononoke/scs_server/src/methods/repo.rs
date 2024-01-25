@@ -31,12 +31,12 @@ use mononoke_api::CreateInfo;
 use mononoke_api::FileId;
 use mononoke_api::FileType;
 use mononoke_api::MononokeError;
-use mononoke_api::MononokePath;
 use mononoke_api::RepoContext;
 use mononoke_api::StoreRequest;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
+use mononoke_types::path::MPath;
 use repo_authorization::AuthorizationContext;
 use source_control as thrift;
 
@@ -400,11 +400,11 @@ impl SourceControlServiceImpl {
     async fn convert_create_commit_changes(
         repo: &RepoContext,
         changes: BTreeMap<String, thrift::RepoCreateCommitParamsChange>,
-    ) -> Result<BTreeMap<MononokePath, CreateChange>, errors::ServiceError> {
+    ) -> Result<BTreeMap<MPath, CreateChange>, errors::ServiceError> {
         let changes = changes
             .into_iter()
             .map(|(path, change)| async move {
-                let path = MononokePath::try_from(&path).map_err(|e| {
+                let path = MPath::try_from(&path).map_err(|e| {
                     errors::invalid_request(format!("invalid path '{}': {}", path, e))
                 })?;
                 let change = Self::convert_create_commit_change(repo, change).await?;

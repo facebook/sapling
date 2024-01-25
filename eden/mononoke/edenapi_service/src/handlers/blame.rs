@@ -94,7 +94,11 @@ async fn blame_file_data(repo: HgRepoContext, key: Key) -> Result<BlameData> {
     .unwrap_or(false);
 
     let blame = cs
-        .path_with_history(to_mpath(&key.path)?.context(ErrorKind::UnexpectedEmptyPath)?)
+        .path_with_history(
+            to_mpath(&key.path)?
+                .into_optional_non_root_path()
+                .context(ErrorKind::UnexpectedEmptyPath)?,
+        )
         .await?
         .blame(!disable_mutable_blame)
         .await?;

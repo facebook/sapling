@@ -77,7 +77,9 @@ async fn fetch_history_for_key(
     length: Option<u32>,
 ) -> Result<HistoryStream, Error> {
     let filenode_id = HgFileNodeId::new(HgNodeHash::from(key.hgid));
-    let mpath = to_mpath(&key.path)?.context(ErrorKind::UnexpectedEmptyPath)?;
+    let mpath = to_mpath(&key.path)?
+        .into_optional_non_root_path()
+        .context(ErrorKind::UnexpectedEmptyPath)?;
 
     let file = repo
         .file(filenode_id)

@@ -93,7 +93,7 @@ use crate::utils::parse_cbor_request;
 use crate::utils::parse_wire_request;
 use crate::utils::to_create_change;
 use crate::utils::to_hg_path;
-use crate::utils::to_mononoke_path;
+use crate::utils::to_mpath;
 use crate::utils::to_revlog_changeset;
 
 /// XXX: This number was chosen arbitrarily.
@@ -405,7 +405,7 @@ impl EdenApiHandler for UploadBonsaiChangesetHandler {
                     .map(|(path, fc)| {
                         let create_change = to_create_change(fc, bubble_id)
                             .with_context(|| anyhow!("Parsing file changes for {}", path))?;
-                        Ok((to_mononoke_path(path)?, create_change))
+                        Ok((to_mpath(path)?, create_change))
                     })
                     .collect::<anyhow::Result<_>>()?,
                 match bubble_id {

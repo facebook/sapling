@@ -20,11 +20,10 @@ use bookmarks_movement::HookRejection;
 use derived_data::DerivationError;
 use itertools::Itertools;
 use megarepo_error::MegarepoError;
+use mononoke_types::path::MPath;
 use pushrebase::PushrebaseError;
 use repo_authorization::AuthorizationError;
 use thiserror::Error;
-
-use crate::path::MononokePath;
 
 #[derive(Clone, Debug)]
 pub struct InternalError(Arc<Error>);
@@ -73,7 +72,7 @@ pub enum MononokeError {
     #[error("invalid request: {0}")]
     InvalidRequest(String),
     #[error("unresolved path conflicts in merge:\n {}", .conflict_paths.iter().join("\n"))]
-    MergeConflicts { conflict_paths: Vec<MononokePath> },
+    MergeConflicts { conflict_paths: Vec<MPath> },
     #[error("Conflicts while pushrebasing: {0:?}")]
     PushrebaseConflicts(Vec<pushrebase::PushrebaseConflict>),
     #[error(

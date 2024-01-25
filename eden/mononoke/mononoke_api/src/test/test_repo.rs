@@ -42,6 +42,7 @@ use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::RichGitSha1;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
+use mononoke_types::path::MPath;
 use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
@@ -65,7 +66,6 @@ use crate::FileType;
 use crate::HgChangesetId;
 use crate::HgChangesetIdPrefix;
 use crate::Mononoke;
-use crate::MononokePath;
 use crate::TreeEntry;
 use crate::TreeId;
 use crate::XRepoLookupSyncBehaviour;
@@ -296,15 +296,15 @@ async fn commit_find_files_impl(fb: FacebookInit) -> Result<(), Error> {
         .await?;
     files.sort();
     let expected_files = vec![
-        MononokePath::try_from("1")?,
-        MononokePath::try_from("2")?,
-        MononokePath::try_from("dir1/file_1_in_dir1")?,
-        MononokePath::try_from("dir1/file_2_in_dir1")?,
-        MononokePath::try_from("dir1/subdir1/file_1")?,
-        MononokePath::try_from("dir1/subdir1/subsubdir1/file_1")?,
-        MononokePath::try_from("dir1/subdir1/subsubdir2/file_1")?,
-        MononokePath::try_from("dir1/subdir1/subsubdir2/file_2")?,
-        MononokePath::try_from("dir2/file_1_in_dir2")?,
+        MPath::try_from("1")?,
+        MPath::try_from("2")?,
+        MPath::try_from("dir1/file_1_in_dir1")?,
+        MPath::try_from("dir1/file_2_in_dir1")?,
+        MPath::try_from("dir1/subdir1/file_1")?,
+        MPath::try_from("dir1/subdir1/subsubdir1/file_1")?,
+        MPath::try_from("dir1/subdir1/subsubdir2/file_1")?,
+        MPath::try_from("dir1/subdir1/subsubdir2/file_2")?,
+        MPath::try_from("dir2/file_1_in_dir2")?,
     ];
     assert_eq!(files, expected_files);
 
@@ -328,15 +328,15 @@ async fn commit_find_files_impl(fb: FacebookInit) -> Result<(), Error> {
             None,
             None,
             ChangesetFileOrdering::Ordered {
-                after: Some(MononokePath::try_from("dir1/subdir1/subsubdir2/file_1")?),
+                after: Some(MPath::try_from("dir1/subdir1/subsubdir2/file_1")?),
             },
         )
         .await?
         .try_collect()
         .await?;
     let expected_files = vec![
-        MononokePath::try_from("dir1/subdir1/subsubdir2/file_2")?,
-        MononokePath::try_from("dir2/file_1_in_dir2")?,
+        MPath::try_from("dir1/subdir1/subsubdir2/file_2")?,
+        MPath::try_from("dir2/file_1_in_dir2")?,
     ];
     assert_eq!(files, expected_files);
 
@@ -344,8 +344,8 @@ async fn commit_find_files_impl(fb: FacebookInit) -> Result<(), Error> {
     let mut files: Vec<_> = cs
         .find_files_unordered(
             Some(vec![
-                MononokePath::try_from("dir1/subdir1/subsubdir1")?,
-                MononokePath::try_from("dir2")?,
+                MPath::try_from("dir1/subdir1/subsubdir1")?,
+                MPath::try_from("dir2")?,
             ]),
             None,
         )
@@ -354,8 +354,8 @@ async fn commit_find_files_impl(fb: FacebookInit) -> Result<(), Error> {
         .await?;
     files.sort();
     let expected_files = vec![
-        MononokePath::try_from("dir1/subdir1/subsubdir1/file_1")?,
-        MononokePath::try_from("dir2/file_1_in_dir2")?,
+        MPath::try_from("dir1/subdir1/subsubdir1/file_1")?,
+        MPath::try_from("dir2/file_1_in_dir2")?,
     ];
     assert_eq!(files, expected_files);
 
@@ -364,13 +364,13 @@ async fn commit_find_files_impl(fb: FacebookInit) -> Result<(), Error> {
     let files: Vec<_> = cs
         .find_files(
             Some(vec![
-                MononokePath::try_from("dir1/subdir1/subsubdir1")?,
-                MononokePath::try_from("dir2")?,
+                MPath::try_from("dir1/subdir1/subsubdir1")?,
+                MPath::try_from("dir2")?,
             ]),
             None,
             None,
             ChangesetFileOrdering::Ordered {
-                after: Some(MononokePath::try_from("")?),
+                after: Some(MPath::try_from("")?),
             },
         )
         .await?
@@ -382,19 +382,19 @@ async fn commit_find_files_impl(fb: FacebookInit) -> Result<(), Error> {
     let files: Vec<_> = cs
         .find_files(
             Some(vec![
-                MononokePath::try_from("dir1/subdir1/subsubdir1")?,
-                MononokePath::try_from("dir2")?,
+                MPath::try_from("dir1/subdir1/subsubdir1")?,
+                MPath::try_from("dir2")?,
             ]),
             None,
             None,
             ChangesetFileOrdering::Ordered {
-                after: Some(MononokePath::try_from("dir1/subdir1/subsubdir1/file_1")?),
+                after: Some(MPath::try_from("dir1/subdir1/subsubdir1/file_1")?),
             },
         )
         .await?
         .try_collect()
         .await?;
-    let expected_files = vec![MononokePath::try_from("dir2/file_1_in_dir2")?];
+    let expected_files = vec![MPath::try_from("dir2/file_1_in_dir2")?];
     assert_eq!(files, expected_files);
 
     // Basenames
@@ -405,9 +405,9 @@ async fn commit_find_files_impl(fb: FacebookInit) -> Result<(), Error> {
         .await?;
     files.sort();
     let expected_files = vec![
-        MononokePath::try_from("dir1/subdir1/file_1")?,
-        MononokePath::try_from("dir1/subdir1/subsubdir1/file_1")?,
-        MononokePath::try_from("dir1/subdir1/subsubdir2/file_1")?,
+        MPath::try_from("dir1/subdir1/file_1")?,
+        MPath::try_from("dir1/subdir1/subsubdir1/file_1")?,
+        MPath::try_from("dir1/subdir1/subsubdir2/file_1")?,
     ];
     assert_eq!(files, expected_files);
 
@@ -418,7 +418,7 @@ async fn commit_find_files_impl(fb: FacebookInit) -> Result<(), Error> {
             Some(vec![String::from("file_1")]),
             None,
             ChangesetFileOrdering::Ordered {
-                after: Some(MononokePath::try_from("")?),
+                after: Some(MPath::try_from("")?),
             },
         )
         .await?
@@ -433,21 +433,21 @@ async fn commit_find_files_impl(fb: FacebookInit) -> Result<(), Error> {
             Some(vec![String::from("file_1")]),
             None,
             ChangesetFileOrdering::Ordered {
-                after: Some(MononokePath::try_from("dir1/subdir1/subsubdir1/file_1")?),
+                after: Some(MPath::try_from("dir1/subdir1/subsubdir1/file_1")?),
             },
         )
         .await?
         .try_collect()
         .await?;
-    let expected_files = vec![MononokePath::try_from("dir1/subdir1/subsubdir2/file_1")?];
+    let expected_files = vec![MPath::try_from("dir1/subdir1/subsubdir2/file_1")?];
     assert_eq!(files, expected_files);
 
     // Basenames and Prefixes
     let mut files: Vec<_> = cs
         .find_files_unordered(
             Some(vec![
-                MononokePath::try_from("dir1/subdir1/subsubdir2")?,
-                MononokePath::try_from("dir2")?,
+                MPath::try_from("dir1/subdir1/subsubdir2")?,
+                MPath::try_from("dir2")?,
             ]),
             Some(vec![String::from("file_2"), String::from("file_1_in_dir2")]),
         )
@@ -456,8 +456,8 @@ async fn commit_find_files_impl(fb: FacebookInit) -> Result<(), Error> {
         .await?;
     files.sort();
     let expected_files = vec![
-        MononokePath::try_from("dir1/subdir1/subsubdir2/file_2")?,
-        MononokePath::try_from("dir2/file_1_in_dir2")?,
+        MPath::try_from("dir1/subdir1/subsubdir2/file_2")?,
+        MPath::try_from("dir2/file_1_in_dir2")?,
     ];
     assert_eq!(files, expected_files);
 
@@ -465,21 +465,21 @@ async fn commit_find_files_impl(fb: FacebookInit) -> Result<(), Error> {
     let mut files: Vec<_> = cs
         .find_files(
             Some(vec![
-                MononokePath::try_from("dir1/subdir1/subsubdir2")?,
-                MononokePath::try_from("dir2")?,
+                MPath::try_from("dir1/subdir1/subsubdir2")?,
+                MPath::try_from("dir2")?,
             ]),
             Some(vec![String::from("file_2"), String::from("file_1_in_dir2")]),
             None,
             ChangesetFileOrdering::Ordered {
-                after: Some(MononokePath::try_from("")?),
+                after: Some(MPath::try_from("")?),
             },
         )
         .await?
         .try_collect()
         .await?;
     let expected_files = vec![
-        MononokePath::try_from("dir1/subdir1/subsubdir2/file_2")?,
-        MononokePath::try_from("dir2/file_1_in_dir2")?,
+        MPath::try_from("dir1/subdir1/subsubdir2/file_2")?,
+        MPath::try_from("dir2/file_1_in_dir2")?,
     ];
     files.sort();
     assert_eq!(files, expected_files);
@@ -488,19 +488,19 @@ async fn commit_find_files_impl(fb: FacebookInit) -> Result<(), Error> {
     let files: Vec<_> = cs
         .find_files(
             Some(vec![
-                MononokePath::try_from("dir1/subdir1/subsubdir2")?,
-                MononokePath::try_from("dir2")?,
+                MPath::try_from("dir1/subdir1/subsubdir2")?,
+                MPath::try_from("dir2")?,
             ]),
             Some(vec![String::from("file_2"), String::from("file_1_in_dir2")]),
             None,
             ChangesetFileOrdering::Ordered {
-                after: Some(MononokePath::try_from("dir1a/file_1_in_dir2")?),
+                after: Some(MPath::try_from("dir1a/file_1_in_dir2")?),
             },
         )
         .await?
         .try_collect()
         .await?;
-    let expected_files = vec![MononokePath::try_from("dir2/file_1_in_dir2")?];
+    let expected_files = vec![MPath::try_from("dir2/file_1_in_dir2")?];
     assert_eq!(files, expected_files);
 
     // Suffixes
@@ -516,10 +516,10 @@ async fn commit_find_files_impl(fb: FacebookInit) -> Result<(), Error> {
         .await?;
     files.sort();
     let expected_files = vec![
-        MononokePath::try_from("dir1/subdir1/file_1")?,
-        MononokePath::try_from("dir1/subdir1/subsubdir1/file_1")?,
-        MononokePath::try_from("dir1/subdir1/subsubdir2/file_1")?,
-        MononokePath::try_from("dir1/subdir1/subsubdir2/file_2")?,
+        MPath::try_from("dir1/subdir1/file_1")?,
+        MPath::try_from("dir1/subdir1/subsubdir1/file_1")?,
+        MPath::try_from("dir1/subdir1/subsubdir2/file_1")?,
+        MPath::try_from("dir1/subdir1/subsubdir2/file_2")?,
     ];
     assert_eq!(files, expected_files);
 
@@ -530,17 +530,17 @@ async fn commit_find_files_impl(fb: FacebookInit) -> Result<(), Error> {
             None,
             Some(vec![String::from("_1"), String::from("_2")]),
             ChangesetFileOrdering::Ordered {
-                after: Some(MononokePath::try_from("")?),
+                after: Some(MPath::try_from("")?),
             },
         )
         .await?
         .try_collect()
         .await?;
     let expected_files = vec![
-        MononokePath::try_from("dir1/subdir1/file_1")?,
-        MononokePath::try_from("dir1/subdir1/subsubdir1/file_1")?,
-        MononokePath::try_from("dir1/subdir1/subsubdir2/file_1")?,
-        MononokePath::try_from("dir1/subdir1/subsubdir2/file_2")?,
+        MPath::try_from("dir1/subdir1/file_1")?,
+        MPath::try_from("dir1/subdir1/subsubdir1/file_1")?,
+        MPath::try_from("dir1/subdir1/subsubdir2/file_1")?,
+        MPath::try_from("dir1/subdir1/subsubdir2/file_2")?,
     ];
     assert_eq!(files, expected_files);
 
@@ -551,15 +551,15 @@ async fn commit_find_files_impl(fb: FacebookInit) -> Result<(), Error> {
             None,
             Some(vec![String::from("_1"), String::from("_2")]),
             ChangesetFileOrdering::Ordered {
-                after: Some(MononokePath::try_from("dir1/subdir1/subsubdir1/file_1")?),
+                after: Some(MPath::try_from("dir1/subdir1/subsubdir1/file_1")?),
             },
         )
         .await?
         .try_collect()
         .await?;
     let expected_files = vec![
-        MononokePath::try_from("dir1/subdir1/subsubdir2/file_1")?,
-        MononokePath::try_from("dir1/subdir1/subsubdir2/file_2")?,
+        MPath::try_from("dir1/subdir1/subsubdir2/file_1")?,
+        MPath::try_from("dir1/subdir1/subsubdir2/file_2")?,
     ];
     assert_eq!(files, expected_files);
 
@@ -567,8 +567,8 @@ async fn commit_find_files_impl(fb: FacebookInit) -> Result<(), Error> {
     let mut files: Vec<_> = cs
         .find_files(
             Some(vec![
-                MononokePath::try_from("dir1/subdir1/subsubdir1")?,
-                MononokePath::try_from("dir1/subdir1/subsubdir2")?,
+                MPath::try_from("dir1/subdir1/subsubdir1")?,
+                MPath::try_from("dir1/subdir1/subsubdir2")?,
             ]),
             None,
             Some(vec![String::from("1"), String::from("2")]),
@@ -579,9 +579,9 @@ async fn commit_find_files_impl(fb: FacebookInit) -> Result<(), Error> {
         .await?;
     files.sort();
     let expected_files = vec![
-        MononokePath::try_from("dir1/subdir1/subsubdir1/file_1")?,
-        MononokePath::try_from("dir1/subdir1/subsubdir2/file_1")?,
-        MononokePath::try_from("dir1/subdir1/subsubdir2/file_2")?,
+        MPath::try_from("dir1/subdir1/subsubdir1/file_1")?,
+        MPath::try_from("dir1/subdir1/subsubdir2/file_1")?,
+        MPath::try_from("dir1/subdir1/subsubdir2/file_2")?,
     ];
     assert_eq!(files, expected_files);
 
@@ -589,22 +589,22 @@ async fn commit_find_files_impl(fb: FacebookInit) -> Result<(), Error> {
     let files: Vec<_> = cs
         .find_files(
             Some(vec![
-                MononokePath::try_from("dir1/subdir1/subsubdir1")?,
-                MononokePath::try_from("dir1/subdir1/subsubdir2")?,
+                MPath::try_from("dir1/subdir1/subsubdir1")?,
+                MPath::try_from("dir1/subdir1/subsubdir2")?,
             ]),
             None,
             Some(vec![String::from("1"), String::from("2")]),
             ChangesetFileOrdering::Ordered {
-                after: Some(MononokePath::try_from("")?),
+                after: Some(MPath::try_from("")?),
             },
         )
         .await?
         .try_collect()
         .await?;
     let expected_files = vec![
-        MononokePath::try_from("dir1/subdir1/subsubdir1/file_1")?,
-        MononokePath::try_from("dir1/subdir1/subsubdir2/file_1")?,
-        MononokePath::try_from("dir1/subdir1/subsubdir2/file_2")?,
+        MPath::try_from("dir1/subdir1/subsubdir1/file_1")?,
+        MPath::try_from("dir1/subdir1/subsubdir2/file_1")?,
+        MPath::try_from("dir1/subdir1/subsubdir2/file_2")?,
     ];
     assert_eq!(files, expected_files);
 
@@ -612,21 +612,21 @@ async fn commit_find_files_impl(fb: FacebookInit) -> Result<(), Error> {
     let files: Vec<_> = cs
         .find_files(
             Some(vec![
-                MononokePath::try_from("dir1/subdir1/subsubdir1")?,
-                MononokePath::try_from("dir1/subdir1/subsubdir2")?,
+                MPath::try_from("dir1/subdir1/subsubdir1")?,
+                MPath::try_from("dir1/subdir1/subsubdir2")?,
             ]),
             None,
             Some(vec![String::from("1"), String::from("2")]),
             ChangesetFileOrdering::Ordered {
-                after: Some(MononokePath::try_from("dir1/subdir1/subsubdir1/file_1")?),
+                after: Some(MPath::try_from("dir1/subdir1/subsubdir1/file_1")?),
             },
         )
         .await?
         .try_collect()
         .await?;
     let expected_files = vec![
-        MononokePath::try_from("dir1/subdir1/subsubdir2/file_1")?,
-        MononokePath::try_from("dir1/subdir1/subsubdir2/file_2")?,
+        MPath::try_from("dir1/subdir1/subsubdir2/file_1")?,
+        MPath::try_from("dir1/subdir1/subsubdir2/file_2")?,
     ];
     assert_eq!(files, expected_files);
 
@@ -643,13 +643,13 @@ async fn commit_find_files_impl(fb: FacebookInit) -> Result<(), Error> {
         .await?;
     files.sort();
     let expected_files = vec![
-        MononokePath::try_from("1")?,
-        MononokePath::try_from("dir1/file_1_in_dir1")?,
-        MononokePath::try_from("dir1/file_2_in_dir1")?,
-        MononokePath::try_from("dir1/subdir1/file_1")?,
-        MononokePath::try_from("dir1/subdir1/subsubdir1/file_1")?,
-        MononokePath::try_from("dir1/subdir1/subsubdir2/file_1")?,
-        MononokePath::try_from("dir2/file_1_in_dir2")?,
+        MPath::try_from("1")?,
+        MPath::try_from("dir1/file_1_in_dir1")?,
+        MPath::try_from("dir1/file_2_in_dir1")?,
+        MPath::try_from("dir1/subdir1/file_1")?,
+        MPath::try_from("dir1/subdir1/subsubdir1/file_1")?,
+        MPath::try_from("dir1/subdir1/subsubdir2/file_1")?,
+        MPath::try_from("dir2/file_1_in_dir2")?,
     ];
     assert_eq!(files, expected_files);
 
@@ -660,36 +660,35 @@ async fn commit_find_files_impl(fb: FacebookInit) -> Result<(), Error> {
             Some(vec![String::from("file_1_in_dir2")]),
             Some(vec![String::from("1")]),
             ChangesetFileOrdering::Ordered {
-                after: Some(MononokePath::try_from("")?),
+                after: Some(MPath::try_from("")?),
             },
         )
         .await?
         .try_collect()
         .await?;
-    // BSSMv3 have different but consistent orders.
+    // BSSM have different but consistent orders. BSSMv3 produces the same order as BSSM.
     let expected_files =
         if justknobs::eval("scm/mononoke:enable_bssm_v3", None, None).unwrap_or_default() {
             vec![
-                MononokePath::try_from("1")?,
-                MononokePath::try_from("dir1/subdir1/file_1")?,
-                MononokePath::try_from("dir1/subdir1/subsubdir1/file_1")?,
-                MononokePath::try_from("dir1/subdir1/subsubdir2/file_1")?,
-                MononokePath::try_from("dir1/file_1_in_dir1")?,
-                MononokePath::try_from("dir1/file_2_in_dir1")?,
-                MononokePath::try_from("dir2/file_1_in_dir2")?,
+                MPath::try_from("1")?,
+                MPath::try_from("dir1/file_1_in_dir1")?,
+                MPath::try_from("dir1/file_2_in_dir1")?,
+                MPath::try_from("dir1/subdir1/file_1")?,
+                MPath::try_from("dir1/subdir1/subsubdir1/file_1")?,
+                MPath::try_from("dir1/subdir1/subsubdir2/file_1")?,
+                MPath::try_from("dir2/file_1_in_dir2")?,
             ]
         } else {
             vec![
-                MononokePath::try_from("1")?,
-                MononokePath::try_from("dir1/file_1_in_dir1")?,
-                MononokePath::try_from("dir1/file_2_in_dir1")?,
-                MononokePath::try_from("dir1/subdir1/file_1")?,
-                MononokePath::try_from("dir1/subdir1/subsubdir1/file_1")?,
-                MononokePath::try_from("dir1/subdir1/subsubdir2/file_1")?,
-                MononokePath::try_from("dir2/file_1_in_dir2")?,
+                MPath::try_from("1")?,
+                MPath::try_from("dir1/subdir1/file_1")?,
+                MPath::try_from("dir1/subdir1/subsubdir1/file_1")?,
+                MPath::try_from("dir1/subdir1/subsubdir2/file_1")?,
+                MPath::try_from("dir1/file_1_in_dir1")?,
+                MPath::try_from("dir1/file_2_in_dir1")?,
+                MPath::try_from("dir2/file_1_in_dir2")?,
             ]
         };
-    assert_eq!(files, expected_files);
 
     // Suffixes, basenames, ordered after
     let files: Vec<_> = cs
@@ -698,7 +697,7 @@ async fn commit_find_files_impl(fb: FacebookInit) -> Result<(), Error> {
             Some(vec![String::from("file_1_in_dir2")]),
             Some(vec![String::from("1")]),
             ChangesetFileOrdering::Ordered {
-                after: Some(MononokePath::try_from("dir1/subdir1/subsubdir1/file_1")?),
+                after: Some(MPath::try_from("dir1/subdir1/subsubdir1/file_1")?),
             },
         )
         .await?
@@ -707,25 +706,24 @@ async fn commit_find_files_impl(fb: FacebookInit) -> Result<(), Error> {
     let expected_files =
         if justknobs::eval("scm/mononoke:enable_bssm_v3", None, None).unwrap_or_default() {
             vec![
-                MononokePath::try_from("dir1/subdir1/subsubdir2/file_1")?,
-                MononokePath::try_from("dir1/file_1_in_dir1")?,
-                MononokePath::try_from("dir1/file_2_in_dir1")?,
-                MononokePath::try_from("dir2/file_1_in_dir2")?,
+                MPath::try_from("dir1/subdir1/subsubdir2/file_1")?,
+                MPath::try_from("dir1/file_1_in_dir1")?,
+                MPath::try_from("dir1/file_2_in_dir1")?,
+                MPath::try_from("dir2/file_1_in_dir2")?,
             ]
         } else {
             vec![
-                MononokePath::try_from("dir1/subdir1/subsubdir2/file_1")?,
-                MononokePath::try_from("dir2/file_1_in_dir2")?,
+                MPath::try_from("dir1/subdir1/subsubdir2/file_1")?,
+                MPath::try_from("dir2/file_1_in_dir2")?,
             ]
         };
     assert_eq!(files, expected_files);
-
     // Suffixes, basenames, prefixes
     let mut files: Vec<_> = cs
         .find_files(
             Some(vec![
-                MononokePath::try_from("dir1/subdir1/subsubdir2")?,
-                MononokePath::try_from("dir2")?,
+                MPath::try_from("dir1/subdir1/subsubdir2")?,
+                MPath::try_from("dir2")?,
             ]),
             Some(vec![String::from("file_1_in_dir2")]),
             Some(vec![String::from("1")]),
@@ -736,8 +734,8 @@ async fn commit_find_files_impl(fb: FacebookInit) -> Result<(), Error> {
         .await?;
     files.sort();
     let expected_files = vec![
-        MononokePath::try_from("dir1/subdir1/subsubdir2/file_1")?,
-        MononokePath::try_from("dir2/file_1_in_dir2")?,
+        MPath::try_from("dir1/subdir1/subsubdir2/file_1")?,
+        MPath::try_from("dir2/file_1_in_dir2")?,
     ];
     assert_eq!(files, expected_files);
 
@@ -745,21 +743,21 @@ async fn commit_find_files_impl(fb: FacebookInit) -> Result<(), Error> {
     let files: Vec<_> = cs
         .find_files(
             Some(vec![
-                MononokePath::try_from("dir1/subdir1/subsubdir2")?,
-                MononokePath::try_from("dir2")?,
+                MPath::try_from("dir1/subdir1/subsubdir2")?,
+                MPath::try_from("dir2")?,
             ]),
             Some(vec![String::from("file_1_in_dir2")]),
             Some(vec![String::from("1")]),
             ChangesetFileOrdering::Ordered {
-                after: Some(MononokePath::try_from("")?),
+                after: Some(MPath::try_from("")?),
             },
         )
         .await?
         .try_collect()
         .await?;
     let expected_files = vec![
-        MononokePath::try_from("dir1/subdir1/subsubdir2/file_1")?,
-        MononokePath::try_from("dir2/file_1_in_dir2")?,
+        MPath::try_from("dir1/subdir1/subsubdir2/file_1")?,
+        MPath::try_from("dir2/file_1_in_dir2")?,
     ];
     assert_eq!(files, expected_files);
 
@@ -767,19 +765,19 @@ async fn commit_find_files_impl(fb: FacebookInit) -> Result<(), Error> {
     let files: Vec<_> = cs
         .find_files(
             Some(vec![
-                MononokePath::try_from("dir1/subdir1/subsubdir2")?,
-                MononokePath::try_from("dir2")?,
+                MPath::try_from("dir1/subdir1/subsubdir2")?,
+                MPath::try_from("dir2")?,
             ]),
             Some(vec![String::from("file_1_in_dir2")]),
             Some(vec![String::from("1")]),
             ChangesetFileOrdering::Ordered {
-                after: Some(MononokePath::try_from("dir1/subdir1/subsubdir2/file_1")?),
+                after: Some(MPath::try_from("dir1/subdir1/subsubdir2/file_1")?),
             },
         )
         .await?
         .try_collect()
         .await?;
-    let expected_files = vec![MononokePath::try_from("dir2/file_1_in_dir2")?];
+    let expected_files = vec![MPath::try_from("dir2/file_1_in_dir2")?];
     assert_eq!(files, expected_files);
 
     Ok(())
