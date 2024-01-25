@@ -638,7 +638,7 @@ function ActionsBar({
     diffSummaries.value && provider?.getSubmittableDiffs([commit], diffSummaries.value);
   const canSubmitIndividualDiffs = submittable && submittable.length > 0;
 
-  const ongoingImageUploads = useRecoilValue(numPendingImageUploads);
+  const ongoingImageUploads = useAtomValue(numPendingImageUploads);
   const areImageUploadsOngoing = ongoingImageUploads > 0;
 
   // Generally "Amend"/"Commit" for head commit, but if there's no changes while amending, just use "Amend message"
