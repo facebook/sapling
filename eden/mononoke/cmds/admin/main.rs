@@ -16,8 +16,6 @@ use cmdlib::args::MononokeClapApp;
 use fbinit::FacebookInit;
 use slog::error;
 
-use crate::blobstore_fetch::subcommand_blobstore_fetch;
-use crate::blobstore_upload::subcommand_blobstore_upload;
 use crate::bonsai_fetch::subcommand_bonsai_fetch;
 use crate::content_fetch::subcommand_content_fetch;
 use crate::crossrepo::subcommand_crossrepo;
@@ -26,8 +24,6 @@ use crate::filenodes::subcommand_filenodes;
 use crate::hash_convert::subcommand_hash_convert;
 use crate::hg_changeset::subcommand_hg_changeset;
 
-mod blobstore_fetch;
-mod blobstore_upload;
 mod bonsai_fetch;
 mod common;
 mod content_fetch;
@@ -53,8 +49,6 @@ fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         .with_special_put_behaviour(PutBehaviour::Overwrite)
         .build()
         .about("Poke at mononoke internals for debugging and investigating data structures.")
-        .subcommand(blobstore_fetch::build_subcommand())
-        .subcommand(blobstore_upload::build_subcommand())
         .subcommand(bonsai_fetch::build_subcommand())
         .subcommand(content_fetch::build_subcommand())
         .subcommand(hg_changeset::build_subcommand())
@@ -84,12 +78,6 @@ fn main(fb: FacebookInit) -> ExitCode {
 
     let res = runtime.block_on(async {
         match matches.subcommand() {
-            (blobstore_fetch::BLOBSTORE_FETCH, Some(sub_m)) => {
-                subcommand_blobstore_fetch(fb, logger, &matches, sub_m).await
-            }
-            (blobstore_upload::BLOBSTORE_UPLOAD, Some(sub_m)) => {
-                subcommand_blobstore_upload(fb, logger, &matches, sub_m).await
-            }
             (bonsai_fetch::BONSAI_FETCH, Some(sub_m)) => {
                 subcommand_bonsai_fetch(fb, logger, &matches, sub_m).await
             }

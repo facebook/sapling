@@ -25,7 +25,6 @@ bookmarks = { version = "0.1.0", path = "../bookmarks" }
 bookmarks_movement = { version = "0.1.0", path = "../bookmarks/bookmarks_movement" }
 bounded_traversal = { version = "0.1.0", path = "../common/bounded_traversal" }
 bytes = { version = "1.1", features = ["serde"] }
-cacheblob = { version = "0.1.0", path = "../blobstore/cacheblob" }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 changeset_fetcher = { version = "0.1.0", path = "../blobrepo/changeset_fetcher" }
 clap-old = { package = "clap", version = "2.34.0" }
@@ -47,7 +46,6 @@ filestore = { version = "0.1.0", path = "../filestore" }
 fsnodes = { version = "0.1.0", path = "../derived_data/fsnodes" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-git_types = { version = "0.1.0", path = "../git/git_types" }
 itertools = "0.11.0"
 live_commit_sync_config = { version = "0.1.0", path = "../commit_rewriting/live_commit_sync_config" }
 manifest = { version = "0.1.0", path = "../manifest" }
@@ -59,15 +57,12 @@ mononoke_api_types = { version = "0.1.0", path = "../mononoke_api/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
 phases = { version = "0.1.0", path = "../phases" }
-prefixblob = { version = "0.1.0", path = "../blobstore/prefixblob" }
 pushrebase = { version = "0.1.0", path = "../pushrebase" }
-redactedblobstore = { version = "0.1.0", path = "../blobstore/redactedblobstore" }
 regex = "1.9.2"
 repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
 repo_factory = { version = "0.1.0", path = "../repo_factory" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 revset = { version = "0.1.0", path = "../revset" }
-scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 segmented_changelog = { version = "0.1.0", path = "../segmented_changelog" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_derive = "1.0.185"
@@ -84,5 +79,6 @@ xdiff = { version = "0.1.0", path = "../../scm/lib/xdiff" }
 
 [dev-dependencies]
 ascii = "1.0"
+cacheblob = { version = "0.1.0", path = "../blobstore/cacheblob" }
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }
 sql_construct = { version = "0.1.0", path = "../common/sql_construct" }

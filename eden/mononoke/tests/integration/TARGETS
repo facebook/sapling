@@ -125,19 +125,6 @@ dott_test(
 )
 
 dott_test(
-    name = "admin-mysql",
-    dott_files = [
-        "test-mononoke-admin.t",
-    ],
-    use_mysql = True,
-    deps = [
-        "//eden/mononoke:admin",
-        "//eden/mononoke:blobimport",
-        "//eden/mononoke:blobstore_healer",
-    ],
-)
-
-dott_test(
     name = "aliasverify",
     disable_all_network_access_target = False,
     dott_files = ["test-alias-verify.t"],
