@@ -45,6 +45,7 @@ use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_app::MononokeReposManager;
 use openssl::ssl::AlpnError;
+use scuba_ext::MononokeScubaSampleBuilder;
 use sharding_ext::RepoShard;
 use slog::error;
 use slog::info;
@@ -103,16 +104,30 @@ struct MononokeServerArgs {
 /// Struct representing the Mononoke server process when sharding by repo.
 pub struct MononokeServerProcess {
     fb: FacebookInit,
+    scuba: MononokeScubaSampleBuilder,
     repos_mgr: Arc<MononokeReposManager<Repo>>,
 }
 
 impl MononokeServerProcess {
-    fn new(fb: FacebookInit, repos_mgr: MononokeReposManager<Repo>) -> Self {
+    fn new(
+        fb: FacebookInit,
+        repos_mgr: MononokeReposManager<Repo>,
+        scuba: MononokeScubaSampleBuilder,
+    ) -> Self {
         let repos_mgr = Arc::new(repos_mgr);
-        Self { fb, repos_mgr }
+        Self {
+            fb,
+            repos_mgr,
+            scuba,
+        }
     }
 
-    async fn add_repo(&self, repo_name: &str, logger: &Logger) -> Result<()> {
+    async fn add_repo(
+        &self,
+        repo_name: &str,
+        logger: &Logger,
+        scuba: &MononokeScubaSampleBuilder,
+    ) -> Result<()> {
         // Check if the input repo is already initialized. This can happen if the repo is a
         // shallow-sharded repo, in which case it would already be initialized during service startup.
         if self.repos_mgr.repos().get_by_name(repo_name).is_none() {
@@ -120,7 +135,8 @@ impl MononokeServerProcess {
             let repo = self.repos_mgr.add_repo(repo_name).await?;
             let blob_repo = repo.blob_repo().clone();
             let cache_warmup_params = repo.config().cache_warmup.clone();
-            let ctx = CoreContext::new_with_logger(self.fb, logger.clone());
+            let ctx =
+                CoreContext::new_with_logger_and_scuba(self.fb, logger.clone(), scuba.clone());
             cache_warmup(&ctx, &blob_repo, cache_warmup_params)
                 .await
                 .with_context(|| format!("Error while warming up cache for repo {}", repo_name))?;
@@ -144,12 +160,14 @@ impl RepoShardedProcess for MononokeServerProcess {
         let repo_name = repo.repo_name.as_str();
         let logger = self.repos_mgr.repo_logger(repo_name);
         info!(&logger, "Setting up repo {} in Mononoke service", repo_name);
-        self.add_repo(repo_name, &logger).await.with_context(|| {
-            format!(
-                "Failure in setting up repo {} in Mononoke service",
-                repo_name
-            )
-        })?;
+        self.add_repo(repo_name, &logger, &self.scuba)
+            .await
+            .with_context(|| {
+                format!(
+                    "Failure in setting up repo {} in Mononoke service",
+                    repo_name
+                )
+            })?;
         Ok(Arc::new(MononokeServerProcessExecutor {
             repo_name: repo_name.to_string(),
             repos_mgr: self.repos_mgr.clone(),
@@ -305,9 +323,10 @@ fn main(fb: FacebookInit) -> Result<()> {
                     let blob_repo = repo.blob_repo().clone();
                     let root_log = root_log.clone();
                     let cache_warmup_params = repo.config().cache_warmup.clone();
+                    cloned!(scuba);
                     async move {
                         let logger = root_log.new(o!("repo" => repo_name.clone()));
-                        let ctx = CoreContext::new_with_logger(fb, logger);
+                        let ctx = CoreContext::new_with_logger_and_scuba(fb, logger, scuba);
                         cache_warmup(&ctx, &blob_repo, cache_warmup_params)
                             .await
                             .with_context(|| {
@@ -325,7 +344,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 app.fb,
                 runtime.clone(),
                 app.logger(),
-                || Arc::new(MononokeServerProcess::new(app.fb, repos_mgr)),
+                || Arc::new(MononokeServerProcess::new(app.fb, repos_mgr, scuba.clone())),
                 false, // disable shard (repo) level healing
                 SM_CLEANUP_TIMEOUT_SECS,
             )? {

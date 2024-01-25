@@ -59,6 +59,14 @@ Finally, check that we can also generate a snapshot to files
 
 Test that the server warmup metrics are logged
   $ cat "$SCUBA" | summarize_scuba_json "Cache warmup complete" \
-  >     .normal.log_tag .normal.http_method .normal.http_path \
+  >     .normal.log_tag \
+  >     .int.completion_time_us \
   >     .int.poll_count .int.poll_time_us \
   >     .int.max_poll_time_us
+  {
+    "completion_time_us": *, (glob)
+    "log_tag": "Cache warmup complete",
+    "max_poll_time_us": *, (glob)
+    "poll_count": *, (glob)
+    "poll_time_us": * (glob)
+  }
