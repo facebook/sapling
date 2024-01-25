@@ -32,5 +32,8 @@ module.exports = {
       diagnostics: false,
     },
   },
+  transform: {
+    '^.+\\.tsx?$': '<rootDir>/jest-transformer-import-meta.cjs',
+  },
   resetMocks: true,
 };
