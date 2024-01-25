@@ -9,8 +9,10 @@ import type {Dag} from './dag/dag';
 import type {CommitInfo, ExactRevset, SmartlogCommits, SucceedableRevset} from './types';
 
 import {MutationDag} from './dag/mutation_dag';
+import {writeAtom} from './jotaiUtils';
+import {entangledAtoms} from './recoilUtils';
 import {exactRevset, succeedableRevset} from './types';
-import {atom, DefaultValue} from 'recoil';
+import {DefaultValue} from 'recoil';
 
 type Successions = Array<[oldHash: string, newHash: string]>;
 type SuccessionCallback = (successions: Successions) => unknown;
@@ -94,19 +96,16 @@ export class SuccessionTracker {
 
 export const successionTracker = new SuccessionTracker();
 
-export const latestSuccessorsMap = atom<MutationDag>({
+export const [latestSuccessorsMapAtom, latestSuccessorsMap] = entangledAtoms<MutationDag>({
   key: 'latestSuccessorsMap',
   default: new MutationDag(),
-  effects: [
-    ({setSelf}) => {
-      return successionTracker.onSuccessions(successions => {
-        setSelf(existing => {
-          const dag = existing instanceof DefaultValue ? new MutationDag() : existing;
-          return dag.addMutations(successions);
-        });
-      });
-    },
-  ],
+});
+
+successionTracker.onSuccessions(successions => {
+  writeAtom(latestSuccessorsMapAtom, existing => {
+    const dag = existing instanceof DefaultValue ? new MutationDag() : existing;
+    return dag.addMutations(successions);
+  });
 });
 
 /**
