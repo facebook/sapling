@@ -79,11 +79,6 @@ pub type TunableVecOfStringsByRepo = ArcSwap<HashMap<String, Vec<String>>>;
 #[derive(Tunables, Default, Debug)]
 pub struct MononokeTunables {
     warm_bookmark_cache_poll_interval_ms: TunableI64,
-    // Which region writes should be done to, in order to minimise latency.
-    // This should align with underlying storage (SQL/Manifold) write regions.
-    // Notice writes still work from any region, and this field is not necessarily
-    // enforced.
-    preferred_write_region: TunableString,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {
