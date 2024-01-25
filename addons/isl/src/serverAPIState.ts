@@ -30,7 +30,7 @@ import {Dag, DagCommitInfo} from './dag/dag';
 import {configBackedAtom, writeAtom} from './jotaiUtils';
 import {clearOnCwdChange, entangledAtoms} from './recoilUtils';
 import {initialParams} from './urlParams';
-import {short} from './utils';
+import {registerCleanup, registerDisposable, short} from './utils';
 import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD} from 'isl-server/src/constants';
 import {selectorFamily, atom, DefaultValue, selector, useRecoilCallback} from 'recoil';
 import {reuseEqualObjects} from 'shared/deepEqualExt';
@@ -41,13 +41,21 @@ const [jotaiRepositoryData, repositoryData] = entangledAtoms<{info?: RepoInfo; c
   default: {},
 });
 
-serverAPI.onMessageOfType('repoInfo', event => {
-  writeAtom(jotaiRepositoryData, {info: event.info, cwd: event.cwd});
-});
-serverAPI.onSetup(() =>
-  serverAPI.postMessage({
-    type: 'requestRepoInfo',
+registerDisposable(
+  jotaiRepositoryData,
+  serverAPI.onMessageOfType('repoInfo', event => {
+    writeAtom(jotaiRepositoryData, {info: event.info, cwd: event.cwd});
   }),
+  import.meta.hot,
+);
+registerCleanup(
+  jotaiRepositoryData,
+  serverAPI.onSetup(() =>
+    serverAPI.postMessage({
+      type: 'requestRepoInfo',
+    }),
+  ),
+  import.meta.hot,
 );
 
 export const repositoryInfo = selector<RepoInfo | undefined>({

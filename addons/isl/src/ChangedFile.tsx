@@ -30,6 +30,7 @@ import {useRunOperation} from './serverAPIState';
 import {useShowToast} from './toast';
 import {succeedableRevset} from './types';
 import {usePromise} from './usePromise';
+import {registerCleanup} from './utils';
 import {VSCodeButton, VSCodeCheckbox} from '@vscode/webview-ui-toolkit/react';
 import {atom, useAtomValue} from 'jotai';
 import React from 'react';
@@ -59,6 +60,15 @@ const keyup = (e: KeyboardEvent) => {
 };
 document.addEventListener('keydown', keydown);
 document.addEventListener('keyup', keyup);
+
+registerCleanup(
+  holdingAltAtom,
+  () => {
+    document.removeEventListener('keydown', keydown);
+    document.removeEventListener('keyup', keyup);
+  },
+  import.meta.hot,
+);
 
 export function File({
   file,

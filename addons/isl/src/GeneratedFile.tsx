@@ -11,6 +11,7 @@ import serverAPI from './ClientToServerAPI';
 import {t} from './i18n';
 import {writeAtom} from './jotaiUtils';
 import {GeneratedStatus} from './types';
+import {registerDisposable} from './utils';
 import {atom, useAtomValue} from 'jotai';
 import {useMemo} from 'react';
 import {LRU} from 'shared/LRU';
@@ -29,13 +30,17 @@ const currentlyFetching = new Set<RepoRelativePath>();
  */
 const generatedFileGeneration = atom<number>(0);
 
-serverAPI.onMessageOfType('fetchedGeneratedStatuses', event => {
-  for (const [path, status] of Object.entries(event.results)) {
-    genereatedFileCache.set(path, status);
-    currentlyFetching.delete(path);
-  }
-  writeAtom(generatedFileGeneration, old => old + 1);
-});
+registerDisposable(
+  currentlyFetching,
+  serverAPI.onMessageOfType('fetchedGeneratedStatuses', event => {
+    for (const [path, status] of Object.entries(event.results)) {
+      genereatedFileCache.set(path, status);
+      currentlyFetching.delete(path);
+    }
+    writeAtom(generatedFileGeneration, old => old + 1);
+  }),
+  import.meta.hot,
+);
 
 export function useGeneratedFileStatus(path: RepoRelativePath): GeneratedStatus {
   useAtomValue(generatedFileGeneration); // update if we get new statuses

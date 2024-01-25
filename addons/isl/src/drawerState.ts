@@ -8,7 +8,7 @@
 import type {AllDrawersState, DrawerState} from './Drawers';
 
 import {localStorageBackedAtom, readAtom, writeAtom} from './jotaiUtils';
-import {getWindowWidthInPixels} from './utils';
+import {getWindowWidthInPixels, registerCleanup} from './utils';
 
 const AUTO_CLOSE_MAX_SIZE = 700;
 const DEFAULT_RIGHT_DRAWER_WIDTH = 500;
@@ -51,3 +51,12 @@ window.addEventListener('resize', resizeFn);
 
 // check startup window size
 window.addEventListener('load', resizeFn);
+
+registerCleanup(
+  islDrawerState,
+  () => {
+    window.removeEventListener('resize', resizeFn);
+    window.removeEventListener('load', resizeFn);
+  },
+  import.meta.hot,
+);
