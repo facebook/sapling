@@ -44,8 +44,6 @@ mod test {
     pub use fixtures;
     pub use quickcheck;
 }
-#[cfg(not(test))]
-mod test {}
 #[cfg(test)]
 mod quickchecks;
 #[cfg(test)]
