@@ -1065,12 +1065,22 @@ impl SqlCommitGraphStorage {
                 .dispatch(ctx.fb.clone(), cs_ids.iter().copied().collect(), || {
                     let conn = rendezvous.conn.clone();
                     let repo_id = self.repo_id.clone();
+                    let cri = ctx.metadata().client_request_info().cloned();
 
                     move |cs_ids| async move {
                         let cs_ids = cs_ids.into_iter().collect::<Vec<_>>();
 
-                        let fetched_edges =
-                            SelectManyChangesets::query(&conn, &repo_id, cs_ids.as_slice()).await?;
+                        let fetched_edges = if let Some(cri) = cri {
+                            SelectManyChangesets::traced_query(
+                                &conn,
+                                &cri,
+                                &repo_id,
+                                cs_ids.as_slice(),
+                            )
+                            .await?
+                        } else {
+                            SelectManyChangesets::query(&conn, &repo_id, cs_ids.as_slice()).await?
+                        };
                         Ok(Self::collect_changeset_edges(&fetched_edges))
                     }
                 })
