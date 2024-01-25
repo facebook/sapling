@@ -242,7 +242,7 @@ describe('CommitInfoView', () => {
               ],
               id: expect.anything(),
               runner: CommandRunner.Sapling,
-              trackEventName: 'AmendOperation',
+              trackEventName: 'AmendFileSubsetOperation',
             },
           }),
         );

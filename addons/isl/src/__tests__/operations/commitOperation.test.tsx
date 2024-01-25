@@ -102,7 +102,7 @@ describe('CommitOperation', () => {
         ],
         id: expect.anything(),
         runner: CommandRunner.Sapling,
-        trackEventName: 'CommitOperation',
+        trackEventName: 'CommitFileSubsetOperation',
       },
     });
   });
