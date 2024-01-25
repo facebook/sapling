@@ -383,15 +383,11 @@ pub struct InsertOpts {
 /// Distinguish between a file and a tree.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
+#[derive(Default)]
 pub enum Kind {
+    #[default]
     File,
     Tree,
-}
-
-impl Default for Kind {
-    fn default() -> Self {
-        Kind::File
-    }
 }
 
 /// Provide information about how to build a file and tree store.

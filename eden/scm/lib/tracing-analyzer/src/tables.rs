@@ -66,7 +66,7 @@ fn extract_dev_command_timers<'a>(tables: &mut Tables, tid_spans: &TidSpans) {
                             }
                             "parent_names" => {
                                 if let Ok(names) = serde_json::from_str::<Vec<String>>(value) {
-                                    let name = names.get(0).cloned().unwrap_or_default();
+                                    let name = names.first().cloned().unwrap_or_default();
                                     row.insert("parent".into(), name.into());
                                 }
                             }

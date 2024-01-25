@@ -310,8 +310,7 @@ pub fn expand_prefix(
                     possibilities,
                 });
             } else if command_matches.len() == 1 {
-                let alias = command_matches.into_iter().next().unwrap();
-                alias
+                command_matches.into_iter().next().unwrap()
             } else {
                 arg
             }

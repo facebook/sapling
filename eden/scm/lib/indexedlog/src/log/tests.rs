@@ -450,7 +450,7 @@ fn test_lookup_prefix_and_range() {
     )
     .unwrap();
 
-    let entries = vec![&b"aaa"[..], b"bb", b"bb"];
+    let entries = [&b"aaa"[..], b"bb", b"bb"];
 
     for entry in entries.iter() {
         log.append(entry).unwrap();

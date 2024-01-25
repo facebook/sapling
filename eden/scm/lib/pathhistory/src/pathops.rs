@@ -111,7 +111,7 @@ impl<'a> State<'a> {
 
     /// Convert to output.
     fn into_output(self) -> Vec<Option<(HgId, Flag)>> {
-        if let Some(Some(item)) = self.items.get(0) {
+        if let Some(Some(item)) = self.items.first() {
             tracing::trace!("   root tree {} => {:?}", item.id, &self.output);
         }
         self.output

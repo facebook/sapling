@@ -94,7 +94,7 @@ impl Server<'_> {
     fn apply_env(&self, env: CommandEnv, umask: Option<u32>) -> bool {
         tracing::debug!("server::apply_env");
         let CommandEnv { cwd, env } = env;
-        if std::env::set_current_dir(&cwd).is_err() {
+        if std::env::set_current_dir(cwd).is_err() {
             return false;
         }
         let new_key_set: HashSet<_> = env.iter().map(|(k, _)| k).collect();

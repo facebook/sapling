@@ -859,7 +859,7 @@ fn test_segment_ancestors_example1() {
         assert_eq!(dag.is_ancestor(a, b).unwrap(), ancestor == Some(a));
     }
 
-    for (spans, ancestors) in vec![
+    for (spans, ancestors) in [
         (vec![3..=8], vec![3]),
         (vec![1..=1, 4..=9], vec![1]),
         (vec![1..=4], vec![]),

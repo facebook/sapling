@@ -450,7 +450,7 @@ mod tests {
         mutdatapack.add(&delta, &Default::default())?;
         let chain = mutdatapack.get_delta_chain(&delta.key)?.unwrap();
         assert_eq!(chain.len(), 1);
-        assert_eq!(chain.get(0), Some(&delta));
+        assert_eq!(chain.first(), Some(&delta));
 
         Ok(())
     }

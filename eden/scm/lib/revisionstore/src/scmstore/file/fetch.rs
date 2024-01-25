@@ -333,7 +333,7 @@ impl FetchState {
     }
 
     fn found_aux_indexedlog(&mut self, key: Key, entry: AuxDataEntry, typ: StoreType) {
-        let aux_data: FileAuxData = entry.into();
+        let aux_data: FileAuxData = entry;
         self.found_attributes(key, aux_data.into(), Some(typ));
     }
 
@@ -498,9 +498,9 @@ impl FetchState {
         let mut lfsptr = None;
 
         if let Some(aux_data) = entry.aux_data() {
-            let aux_data: FileAuxData = aux_data.clone().into();
+            let aux_data: FileAuxData = aux_data.clone();
             if let Some(aux_cache) = aux_cache.as_ref() {
-                aux_cache.put(key.hgid, &aux_data.into())?;
+                aux_cache.put(key.hgid, &aux_data)?;
             }
             file.aux_data = Some(aux_data);
         }
@@ -962,14 +962,14 @@ impl FetchState {
                                 StoreType::Shared => {
                                     if let Some(aux_cache) = aux_cache {
                                         if let Some(aux_data) = new.aux_data {
-                                            let _ = aux_cache.put(key.hgid, &aux_data.into());
+                                            let _ = aux_cache.put(key.hgid, &aux_data);
                                         }
                                     }
                                 }
                                 StoreType::Local => {
                                     if let Some(aux_local) = aux_local {
                                         if let Some(aux_data) = new.aux_data {
-                                            let _ = aux_local.put(key.hgid, &aux_data.into());
+                                            let _ = aux_local.put(key.hgid, &aux_data);
                                         }
                                     }
                                 }

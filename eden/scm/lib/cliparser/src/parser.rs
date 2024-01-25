@@ -1237,7 +1237,7 @@ mod tests {
 
         let configs: Vec<String> = result.pick("config");
         assert_eq!(configs.len(), 1);
-        assert_eq!(configs.get(0).unwrap(), "");
+        assert_eq!(configs.first().unwrap(), "");
     }
 
     #[test]
@@ -1250,7 +1250,7 @@ mod tests {
 
         let configs: Vec<String> = result.pick("config");
         assert_eq!(configs.len(), 1);
-        assert_eq!(configs.get(0).unwrap(), "test");
+        assert_eq!(configs.first().unwrap(), "test");
     }
 
     #[test]
@@ -1263,7 +1263,7 @@ mod tests {
 
         let configs: Vec<String> = result.pick("config");
         assert_eq!(configs.len(), 1);
-        assert_eq!(configs.get(0).unwrap(), "");
+        assert_eq!(configs.first().unwrap(), "");
     }
 
     #[test]

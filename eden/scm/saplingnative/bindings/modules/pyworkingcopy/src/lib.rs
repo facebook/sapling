@@ -209,7 +209,7 @@ py_class!(pub class workingcopy |py| {
 
     def writemergestate(&self, ms: mergestate) -> PyResult<PyNone> {
         let ms = ms.extract_inner_ref(py);
-        self.inner(py).read().lock().map_pyerr(py)?.write_merge_state(&*ms.borrow()).map_pyerr(py)?;
+        self.inner(py).read().lock().map_pyerr(py)?.write_merge_state(&ms.borrow()).map_pyerr(py)?;
         Ok(PyNone)
     }
 

@@ -630,7 +630,7 @@ impl<'a> LockedWorkingCopy<'a> {
 
     pub fn set_parents(&self, parents: Vec<HgId>, parent_tree_hash: Option<HgId>) -> Result<()> {
         let p1 = parents
-            .get(0)
+            .first()
             .context("At least one parent is required for setting parents")?
             .clone();
         let p2 = parents.get(1).copied();

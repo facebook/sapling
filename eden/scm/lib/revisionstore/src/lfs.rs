@@ -304,7 +304,7 @@ impl LfsPointersStore {
 
     /// Find the pointer corresponding to the passed in `HgId`.
     fn get_by_hgid(&self, hgid: &HgId) -> Result<Option<LfsPointersEntry>> {
-        let mut iter = self.0.lookup(Self::INDEX_NODE, &hgid)?;
+        let mut iter = self.0.lookup(Self::INDEX_NODE, hgid)?;
         let buf = match iter.next() {
             None => return Ok(None),
             Some(buf) => buf?,
@@ -1991,7 +1991,7 @@ impl RemoteDataStore for LfsFallbackRemoteStore {
                 .collect::<Vec<_>>(),
         )?;
 
-        not_found.extend(not_prefetched.into_iter());
+        not_found.extend(not_prefetched);
         Ok(not_found)
     }
 

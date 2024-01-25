@@ -142,7 +142,7 @@ mod tests {
                 }
             }
 
-            for value in vec![last.0, last.1].iter() {
+            for value in [last.0, last.1].iter() {
                 if map.lookup_by_first(value).unwrap().is_some() {
                     return false;
                 }

@@ -156,7 +156,7 @@ impl Entry {
         let compressed = if let Some(compressed) = self.compressed_content {
             compressed
         } else if let Some(raw) = self.content.get() {
-            compress(&raw)?.into()
+            compress(raw)?.into()
         } else {
             bail!("No content");
         };
@@ -274,7 +274,7 @@ impl IndexedLogHgIdDataStore {
 
     /// Directly get the local content. Do not ask remote servers.
     pub(crate) fn get_local_content_direct(&self, id: &HgId) -> Result<Option<Bytes>> {
-        let entry = match self.get_raw_entry(&id)? {
+        let entry = match self.get_raw_entry(id)? {
             None => return Ok(None),
             Some(v) => v,
         };

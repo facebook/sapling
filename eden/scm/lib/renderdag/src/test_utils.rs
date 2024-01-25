@@ -54,7 +54,7 @@ pub(crate) fn render_string_with_order(
     reserve
         .iter()
         .cloned()
-        .map(|s| v(s))
+        .map(v)
         .for_each(|s| renderer.reserve(s));
 
     let messages: HashMap<_, _> = messages.iter().cloned().collect();

@@ -470,7 +470,7 @@ fn hg_sha1_text(parents: &[Vertex], raw_text: &[u8]) -> Vec<u8> {
     }
     let mut result = Vec::with_capacity(raw_text.len() + Id20::len() * 2);
     let (p1, p2) = (
-        parents.get(0).cloned().unwrap_or_else(null_id),
+        parents.first().cloned().unwrap_or_else(null_id),
         parents.get(1).cloned().unwrap_or_else(null_id),
     );
     if p1 < p2 {

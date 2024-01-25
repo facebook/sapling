@@ -1447,7 +1447,7 @@ mod tests {
         {
             let mut log = log::OpenOptions::new()
                 .create(true)
-                .open(&dir.path().join("1"))
+                .open(dir.path().join("1"))
                 .unwrap();
             log.append(&[b'b'; 100][..]).unwrap();
             log.append(&[b'c'; 100][..]).unwrap();

@@ -81,7 +81,7 @@ impl AppendCommits for HgCommits {
         fn text_with_header(raw_text: &[u8], parents: &[Vertex]) -> Result<Vec<u8>> {
             let mut result = Vec::with_capacity(raw_text.len() + Id20::len() * 2);
             let (p1, p2) = (
-                parents.get(0).cloned().unwrap_or_else(null_id),
+                parents.first().cloned().unwrap_or_else(null_id),
                 parents.get(1).cloned().unwrap_or_else(null_id),
             );
             if p1 < p2 {

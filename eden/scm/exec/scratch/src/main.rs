@@ -138,7 +138,7 @@ impl Config {
             self.template = Some(template);
         }
 
-        self.overrides.extend(other.overrides.into_iter());
+        self.overrides.extend(other.overrides);
 
         if let Some(style) = other.style.take() {
             self.style = Some(style);

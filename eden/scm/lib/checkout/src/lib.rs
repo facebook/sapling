@@ -1043,7 +1043,7 @@ pub(crate) fn check_conflicts(
         bail!("untracked files in working directory differ from files in requested revision");
     }
 
-    let conflicts = plan.check_conflicts(&status);
+    let conflicts = plan.check_conflicts(status);
     if !conflicts.is_empty() {
         bail!(
             "{:?} conflicting file changes:\n {}",

@@ -49,7 +49,7 @@ impl FetchLogger {
 
             if !matches.is_empty() {
                 let mut seen = self.seen.lock();
-                seen.extend(matches.into_iter());
+                seen.extend(matches);
             }
         }
     }

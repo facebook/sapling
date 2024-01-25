@@ -66,7 +66,7 @@ fn main() {
         }
     }
 
-    match full_args.get(0).map(AsRef::as_ref) {
+    match full_args.first().map(AsRef::as_ref) {
         Some("buildinfo") => {
             // This code path keeps buildinfo-related symbols alive.
             #[cfg(feature = "buildinfo")]

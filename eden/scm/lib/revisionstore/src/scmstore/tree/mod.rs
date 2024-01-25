@@ -189,9 +189,9 @@ impl TreeStore {
                                 let aux_data = entry.aux_data();
                                 for (hgid, aux) in aux_data.into_iter() {
                                     if let Some(ref aux_cache) = aux_cache {
-                                        aux_cache.put(hgid, &aux.into())?;
+                                        aux_cache.put(hgid, &aux)?;
                                     } else {
-                                        aux_local.put(hgid, &aux.into())?;
+                                        aux_local.put(hgid, &aux)?;
                                     }
                                 }
                             }

@@ -151,7 +151,7 @@ fn parse(definition: &CommandDefinition, args: &Vec<String>) -> Result<ParseOutp
     let flags = definition
         .flags()
         .into_iter()
-        .chain(HgGlobalOpts::flags().into_iter())
+        .chain(HgGlobalOpts::flags())
         .collect();
     ParseOptions::new()
         .error_on_unknown_opts(true)
@@ -337,7 +337,7 @@ impl Dispatcher {
             }
         };
 
-        let first_arg = if let Some(first_arg) = self.early_result.args.get(0) {
+        let first_arg = if let Some(first_arg) = self.early_result.args.first() {
             first_arg.clone()
         } else {
             let default_command = self.default_command()?;

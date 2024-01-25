@@ -500,7 +500,7 @@ impl Repair<()> for MetaLog {
 
         // Write out good Root IDs.
         if good_root_ids.len() == root_ids.len() {
-            message += &"All Roots are verified.\n".to_string();
+            message += "All Roots are verified.\n";
         } else {
             message += &format!(
                 "Removing {} bad Root IDs.\n",
@@ -1012,9 +1012,9 @@ mod tests {
         }
 
         // verify that delete on commit works
-        fs::create_dir(&dir.path().join("roots")).unwrap();
-        fs::create_dir(&dir.path().join("1")).unwrap();
-        fs::create_dir(&dir.path().join("1").join("roots")).unwrap();
+        fs::create_dir(dir.path().join("roots")).unwrap();
+        fs::create_dir(dir.path().join("1")).unwrap();
+        fs::create_dir(dir.path().join("1").join("roots")).unwrap();
         metalog3.set("00", b"xyz").unwrap();
         metalog3.commit(commit_opt("compact commit 3", 4)).unwrap();
         for path in &deleted_paths {

@@ -773,7 +773,7 @@ impl RevlogIndex {
             .create(true)
             .append(true)
             .write(true)
-            .open(&revlog_data_path)?;
+            .open(revlog_data_path)?;
         let mut revlog_index = fs::OpenOptions::new()
             .read(true)
             .create(true)

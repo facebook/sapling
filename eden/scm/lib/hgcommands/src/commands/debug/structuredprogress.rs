@@ -111,7 +111,7 @@ impl Bar {
     fn from_args(args: &str) -> Result<Self> {
         let mut b = Self::default();
         for v in args.split(',') {
-            match v.split_once("=") {
+            match v.split_once('=') {
                 Some((k, v)) => match k {
                     "t" => b.total = v.parse()?,
                     "n" => b.name = v.to_string(),
@@ -135,7 +135,7 @@ impl Bar {
 
         spec = consume(spec, "[")?;
 
-        while !spec.starts_with("]") {
+        while !spec.starts_with(']') {
             spec = consume(spec, "b(")?;
             let end_paren = spec.find(')').ok_or_else(|| anyhow!("expected )"))?;
 

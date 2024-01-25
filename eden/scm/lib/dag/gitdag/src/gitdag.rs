@@ -150,8 +150,7 @@ fn sync_from_git(
         .chain(non_master_heads.clone());
     non_blocking_result(dag.add_heads_and_flush(&parents, &heads))?;
 
-    let possible_heads =
-        Set::from_static_names(master_heads.into_iter().chain(non_master_heads.into_iter()));
+    let possible_heads = Set::from_static_names(master_heads.into_iter().chain(non_master_heads));
     let heads = non_blocking_result(dag.heads_ancestors(possible_heads))?;
 
     Ok(GitDag {

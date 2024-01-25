@@ -419,7 +419,7 @@ impl TreeManifest {
         fn compute_hgid<C: AsRef<[u8]>>(parent_tree_nodes: &[HgId], content: C) -> HgId {
             let mut hasher = Sha1::new();
             debug_assert!(parent_tree_nodes.len() <= 2);
-            let p1 = parent_tree_nodes.get(0).unwrap_or(HgId::null_id());
+            let p1 = parent_tree_nodes.first().unwrap_or(HgId::null_id());
             let p2 = parent_tree_nodes.get(1).unwrap_or(HgId::null_id());
             // Even if parents are sorted two hashes go into hash computation but surprise
             // the NULL_ID is not a special case in this case and gets sorted.

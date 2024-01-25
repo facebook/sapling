@@ -156,10 +156,10 @@ fn parse_valid_date_range(cert: &[u8]) -> Result<(DateTime<Utc>, DateTime<Utc>),
     // nicer. Instead, we have to parse the DER-encoded ASN.1 object manually.
     // The field indexes that are hardcoded here correspond to the field order
     // specified in RFC 5280, which all X.509 certificates must conform to.
-    if let Some(ASN1Block::Sequence(_, cert)) = asn1.get(0) {
-        if let Some(ASN1Block::Sequence(_, fields)) = cert.get(0) {
+    if let Some(ASN1Block::Sequence(_, cert)) = asn1.first() {
+        if let Some(ASN1Block::Sequence(_, fields)) = cert.first() {
             if let Some(ASN1Block::Sequence(_, validity)) = fields.get(4) {
-                if let Some(ASN1Block::UTCTime(_, not_before)) = validity.get(0) {
+                if let Some(ASN1Block::UTCTime(_, not_before)) = validity.first() {
                     if let Some(ASN1Block::UTCTime(_, not_after)) = validity.get(1) {
                         return Ok((*not_before, *not_after));
                     }

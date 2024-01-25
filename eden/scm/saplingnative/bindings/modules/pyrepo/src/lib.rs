@@ -64,7 +64,7 @@ py_class!(pub class repo |py| {
     def workingcopy(&self) -> PyResult<PyWorkingCopy> {
         let mut wc_option = self.inner_wc(py).borrow_mut();
         if wc_option.is_none() {
-            let mut repo = self.inner(py).write();
+            let repo = self.inner(py).write();
             wc_option.replace(Arc::new(RwLock::new(repo.working_copy().map_pyerr(py)?)));
         }
         PyWorkingCopy::create_instance(py, wc_option.as_ref().unwrap().clone())
@@ -73,7 +73,7 @@ py_class!(pub class repo |py| {
     def invalidateworkingcopy(&self) -> PyResult<PyNone> {
         let wc_option = self.inner_wc(py).borrow_mut();
         if wc_option.is_some() {
-            let mut repo = self.inner(py).write();
+            let repo = self.inner(py).write();
             let mut wc = wc_option.as_ref().unwrap().write();
             *wc = repo.working_copy().map_pyerr(py)?;
         }
@@ -108,7 +108,7 @@ py_class!(pub class repo |py| {
     }
 
     def invalidatemetalog(&self) -> PyResult<PyNone> {
-        let mut repo_ref = self.inner(py).write();
+        let repo_ref = self.inner(py).write();
         repo_ref.invalidate_metalog();
         Ok(PyNone)
     }
@@ -128,7 +128,7 @@ py_class!(pub class repo |py| {
     }
 
     def filescmstore(&self, remote: PyRemoteStore) -> PyResult<PyFileScmStore> {
-        let mut repo = self.inner(py).write();
+        let repo = self.inner(py).write();
         let _ = repo.file_store().map_pyerr(py)?;
         let mut file_scm_store = repo.file_scm_store().unwrap();
 
@@ -154,7 +154,7 @@ py_class!(pub class repo |py| {
     }
 
     def treescmstore(&self, remote: PyRemoteStore) -> PyResult<PyTreeScmStore> {
-        let mut repo = self.inner(py).write();
+        let repo = self.inner(py).write();
         let _ = repo.tree_store().map_pyerr(py)?;
         let mut tree_scm_store = repo.tree_scm_store().unwrap();
 
@@ -182,7 +182,7 @@ py_class!(pub class repo |py| {
     }
 
     def changelog(&self) -> PyResult<PyCommits> {
-        let mut repo_ref = self.inner(py).write();
+        let repo_ref = self.inner(py).write();
         let changelog_ref = py
             .allow_threads(|| repo_ref.dag_commits())
             .map_pyerr(py)?;
@@ -190,13 +190,13 @@ py_class!(pub class repo |py| {
     }
 
     def invalidatechangelog(&self) -> PyResult<PyNone> {
-        let mut repo_ref = self.inner(py).write();
+        let repo_ref = self.inner(py).write();
         repo_ref.invalidate_dag_commits().map_pyerr(py)?;
         Ok(PyNone)
     }
 
     def invalidatestores(&self) -> PyResult<PyNone> {
-        let mut repo_ref = self.inner(py).write();
+        let repo_ref = self.inner(py).write();
         repo_ref.invalidate_stores().map_pyerr(py)?;
         Ok(PyNone)
     }
@@ -230,7 +230,7 @@ py_class!(pub class repo |py| {
     }
 
     def eagerstore(&self) -> PyResult<PyEagerRepoStore> {
-        let mut repo = self.inner(py).write();
+        let repo = self.inner(py).write();
         let _ = repo.file_store().map_pyerr(py)?;
         PyEagerRepoStore::create_instance(py, repo.eager_store().unwrap())
     }

@@ -1626,7 +1626,7 @@ impl Log {
 
     fn corruption(&self, message: String) -> crate::Error {
         let path: &Path = match self.dir.as_opt_path() {
-            Some(ref path) => path,
+            Some(path) => path,
             None => Path::new("<memory>"),
         };
         crate::Error::corruption(path, message)

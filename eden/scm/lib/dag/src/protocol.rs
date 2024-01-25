@@ -182,7 +182,7 @@ impl<M: IdConvert, DagStore: IdDagStore> Process<Vec<VertexName>, RequestNameToL
         let dag = &self.1;
         // Only provides heads in the master group, since it's expected that the
         // non-master group is already locally known.
-        let heads = stream::iter(dag.heads_ancestors(dag.master_group()?)?.into_iter()).boxed();
+        let heads = stream::iter(dag.heads_ancestors(dag.master_group()?)?).boxed();
         let heads = heads
             .then(|id| map.vertex_name(id))
             .try_collect::<Vec<VertexName>>()
@@ -295,7 +295,7 @@ impl<M: IdConvert, DagStore: IdDagStore> Process<RequestNameToLocation, Response
         let dag = &self.1;
 
         let heads: IdSet = {
-            let heads = stream::iter(request.heads.into_iter());
+            let heads = stream::iter(request.heads);
             let heads = heads
                 .then(|s| map.vertex_id(s))
                 .try_collect::<Vec<Id>>()

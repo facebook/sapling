@@ -106,7 +106,7 @@ pub fn run(ctx: ReqCtx<Opts>, repo: &mut Repo) -> Result<u8> {
                 loop {
                     let v = wait.wait_for_change(&working_copy, &config)?;
                     if v.should_reload_working_copy() {
-                        let mut repo = Repo::load(&repo_path, &[], &[])?;
+                        let repo = Repo::load(&repo_path, &[], &[])?;
                         working_copy = repo.working_copy()?;
                         continue;
                     }

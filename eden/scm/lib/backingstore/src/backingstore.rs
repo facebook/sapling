@@ -336,10 +336,9 @@ where
     fn single(&self, node: &[u8], fetch_mode: FetchMode) -> Result<Option<OutputType>> {
         let hgid = HgId::from_slice(node)?;
         if fetch_mode.is_local() {
-            let maybe_value = match self.get_local_single(RepoPath::empty(), hgid)? {
-                Some(v) => Some(v.into()),
-                None => None,
-            };
+            let maybe_value = self
+                .get_local_single(RepoPath::empty(), hgid)?
+                .map(|v| v.into());
             Ok(maybe_value)
         } else {
             let value = self.get_single(RepoPath::empty(), hgid)?;

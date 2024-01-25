@@ -216,6 +216,9 @@ pub use crate::uniondatastore::UnionHgIdDataStore;
 pub mod testutil;
 
 #[cfg(test)]
+pub(crate) use env_lock::env_lock;
+
+#[cfg(test)]
 mod env_lock {
     use parking_lot::Mutex;
 
@@ -235,6 +238,3 @@ mod env_lock {
         lock
     }
 }
-
-#[cfg(test)]
-pub(crate) use env_lock::env_lock;

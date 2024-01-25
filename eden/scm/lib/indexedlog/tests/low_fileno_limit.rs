@@ -66,7 +66,7 @@ mod unix_tests {
                         let mut log = open_opts.clone().open(&path)?;
                         for j in 1..=WRITE_COUNT_PER_THREAD {
                             let buf = [i, j];
-                            log.append(&buf).expect("append should not fail");
+                            log.append(buf).expect("append should not fail");
                             if j % (i + 1) == 0 || j == WRITE_COUNT_PER_THREAD {
                                 // This might fail with fileno limit
                                 log.sync()?;
@@ -87,7 +87,7 @@ mod unix_tests {
                                     i,
                                     format!("{:?}", err)
                                         .replace("\n\n", "\n")
-                                        .replace("\n", "\n  ")
+                                        .replace('\n', "\n  ")
                                 )
                             }
                         }

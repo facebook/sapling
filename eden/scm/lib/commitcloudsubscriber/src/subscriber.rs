@@ -241,7 +241,7 @@ impl WorkspaceSubscriberService {
         if let Some(cursor) = polling_cursor {
             polling_update_url
                 .query_pairs_mut()
-                .append_pair("polling_cursor", &cursor);
+                .append_pair("polling_cursor", cursor);
         }
 
         Ok(polling_update_url)

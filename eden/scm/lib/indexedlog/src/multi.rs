@@ -129,7 +129,7 @@ impl OpenOptions {
             // logs.
             let meta_log_path = multi_meta_log_path(path);
             let meta_path = multi_meta_path(path);
-            let mut multimeta_log = multi_meta_log_open_options().open(&meta_log_path)?;
+            let mut multimeta_log = multi_meta_log_open_options().open(meta_log_path)?;
             let multimeta_log_is_empty = multimeta_log.iter().next().is_none();
 
             // Read meltimeta from the multimeta log.

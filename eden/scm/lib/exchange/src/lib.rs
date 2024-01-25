@@ -75,7 +75,7 @@ pub fn clone(
         block_on(commits.import_clone_data(clone_data))??;
     } else {
         // All lazy heads should be in the MASTER group.
-        let mut head_opts =
+        let head_opts =
             VertexListWithOptions::from(head_vertexes).with_highest_group(Group::MASTER);
         block_on(commits.import_pull_data(clone_data, &head_opts))??;
     }

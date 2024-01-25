@@ -183,10 +183,9 @@ fn register_error_handlers() {
                 .or_else(|| Some(PyErr::new::<HttpError, _>(py, e.0.to_string())))
         } else if e.is::<pathmatcher::Error>() {
             Some(PyErr::new::<PathMatcherError, _>(py, format!("{:?}", e)))
-        } else if let Some(e) = e.downcast_ref::<cpython_ext::PyErr>() {
-            Some(e.clone(py).into())
         } else {
-            None
+            e.downcast_ref::<cpython_ext::PyErr>()
+                .map(|e| e.clone(py).into())
         }
     }
 

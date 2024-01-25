@@ -193,7 +193,7 @@ fn serialize_entry(mut dirstate: impl Write, path: &[u8], state: &FileStateV2) -
         })?;
 
         tracing::trace!(
-            source_path = util::utf8::escape_non_utf8(&source_path),
+            source_path = util::utf8::escape_non_utf8(source_path),
             dest_path = util::utf8::escape_non_utf8(path),
             "serializing copy",
         );

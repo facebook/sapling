@@ -323,7 +323,7 @@ mod tests {
             )
             .single()?
             .expect("key not found");
-        assert_eq!(entry, fetched.aux_data().expect("no aux data found").into());
+        assert_eq!(entry, fetched.aux_data().expect("no aux data found"));
         Ok(())
     }
 
@@ -378,10 +378,7 @@ mod tests {
             )
             .single()?
             .expect("key not found");
-        assert_eq!(
-            expected,
-            fetched.aux_data().expect("no aux data found").into()
-        );
+        assert_eq!(expected, fetched.aux_data().expect("no aux data found"));
 
         // Verify we can read it directly too
         let found = aux.get(k.hgid)?;
