@@ -42,7 +42,8 @@ Derive data, then regenerate microwave snapshot:
 
 Start Mononoke again, check that the microwave snapshot was used
 
-  $ start_and_wait_for_mononoke_server
+  $ SCUBA="$TESTTMP/scuba.json"
+  $ start_and_wait_for_mononoke_server --scuba-dataset "file://$SCUBA"
   $ wait_for_mononoke_cache_warmup
   $ grep primed "$TESTTMP/mononoke.out"
   * primed filenodes cache with 1 entries, repo: repo (glob)
@@ -55,3 +56,9 @@ Finally, check that we can also generate a snapshot to files
   $ quiet microwave_builder local-path "$TESTTMP/microwave"
   $ ls "$TESTTMP/microwave"
   repo0000.microwave_snapshot_v1
+
+Test that the server warmup metrics are logged
+  $ cat "$SCUBA" | summarize_scuba_json "Cache warmup complete" \
+  >     .normal.log_tag .normal.http_method .normal.http_path \
+  >     .int.poll_count .int.poll_time_us \
+  >     .int.max_poll_time_us
