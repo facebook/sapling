@@ -9,9 +9,10 @@ import type {RepoRelativePath} from './types';
 
 import serverAPI from './ClientToServerAPI';
 import {t} from './i18n';
+import {writeAtom} from './jotaiUtils';
 import {GeneratedStatus} from './types';
+import {atom, useAtomValue} from 'jotai';
 import {useMemo} from 'react';
-import {DefaultValue, atom, useRecoilValue} from 'recoil';
 import {LRU} from 'shared/LRU';
 
 export const genereatedFileCache = new LRU<RepoRelativePath, GeneratedStatus>(1500);
@@ -21,30 +22,23 @@ const currentlyFetching = new Set<RepoRelativePath>();
 
 /**
  * Generated files are cached in `generatedFileCache` LRU.
- * This is not part of a recoil atom so it can be accessed anywhere.
- * In order to allow recoil to rerender dependencies when we update file statuses,
+ * For historical reasons, the files are not an atom.
+ * In order to allow rerender dependencies when we update file statuses,
  * store a generation index in recoil.
  * This state should generally be used through useGeneratedFileStatus helpers.
  */
-const generatedFileGeneration = atom<number>({
-  key: 'generatedFileGeneration',
-  default: 0,
-  effects: [
-    ({setSelf}) => {
-      const disposable = serverAPI.onMessageOfType('fetchedGeneratedStatuses', event => {
-        for (const [path, status] of Object.entries(event.results)) {
-          genereatedFileCache.set(path, status);
-          currentlyFetching.delete(path);
-        }
-        setSelf(old => (old instanceof DefaultValue ? 1 : old + 1));
-      });
-      return () => disposable.dispose();
-    },
-  ],
+const generatedFileGeneration = atom<number>(0);
+
+serverAPI.onMessageOfType('fetchedGeneratedStatuses', event => {
+  for (const [path, status] of Object.entries(event.results)) {
+    genereatedFileCache.set(path, status);
+    currentlyFetching.delete(path);
+  }
+  writeAtom(generatedFileGeneration, old => old + 1);
 });
 
 export function useGeneratedFileStatus(path: RepoRelativePath): GeneratedStatus {
-  useRecoilValue(generatedFileGeneration); // update if we get new statuses
+  useAtomValue(generatedFileGeneration); // update if we get new statuses
   const found = genereatedFileCache.get(path);
   if (found == null) {
     fetchMissingGeneratedFileStatuses([path]);
@@ -55,7 +49,7 @@ export function useGeneratedFileStatus(path: RepoRelativePath): GeneratedStatus 
 export function useGeneratedFileStatuses(
   paths: Array<RepoRelativePath>,
 ): Record<RepoRelativePath, GeneratedStatus> {
-  const generation = useRecoilValue(generatedFileGeneration); // update if we get new statuses
+  const generation = useAtomValue(generatedFileGeneration); // update if we get new statuses
 
   fetchMissingGeneratedFileStatuses(paths);
 
