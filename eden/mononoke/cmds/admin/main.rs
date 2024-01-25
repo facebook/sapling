@@ -21,7 +21,6 @@ use crate::content_fetch::subcommand_content_fetch;
 use crate::crossrepo::subcommand_crossrepo;
 use crate::error::SubcommandError;
 use crate::filenodes::subcommand_filenodes;
-use crate::hash_convert::subcommand_hash_convert;
 use crate::hg_changeset::subcommand_hg_changeset;
 
 mod bonsai_fetch;
@@ -30,7 +29,6 @@ mod content_fetch;
 mod crossrepo;
 mod error;
 mod filenodes;
-mod hash_convert;
 mod hg_changeset;
 mod rsync;
 mod subcommand_blame;
@@ -52,7 +50,6 @@ fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         .subcommand(bonsai_fetch::build_subcommand())
         .subcommand(content_fetch::build_subcommand())
         .subcommand(hg_changeset::build_subcommand())
-        .subcommand(hash_convert::build_subcommand())
         .subcommand(filenodes::build_subcommand())
         .subcommand(subcommand_phases::build_subcommand())
         .subcommand(subcommand_unodes::build_subcommand())
@@ -86,9 +83,6 @@ fn main(fb: FacebookInit) -> ExitCode {
             }
             (hg_changeset::HG_CHANGESET, Some(sub_m)) => {
                 subcommand_hg_changeset(fb, logger, &matches, sub_m).await
-            }
-            (hash_convert::HASH_CONVERT, Some(sub_m)) => {
-                subcommand_hash_convert(fb, logger, &matches, sub_m).await
             }
             (filenodes::FILENODES, Some(sub_m)) => {
                 subcommand_filenodes(fb, logger, &matches, sub_m).await
