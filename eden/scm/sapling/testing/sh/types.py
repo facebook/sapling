@@ -301,6 +301,14 @@ class ShellFS(ABC):
     def exists(self, path: str):
         raise NotImplementedError
 
+    def lexists(self, path: str):
+        """
+        Return True if path refers to an existing path. Returns True for
+        broken symbolic links. Equivalent to exists() on platforms lacking
+        os.lstat().
+        """
+        raise NotImplementedError
+
     def listdir(self, path: str) -> List[str]:
         raise NotImplementedError
 

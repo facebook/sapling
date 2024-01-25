@@ -676,7 +676,7 @@ def ls(args: List[str], stdout: BinaryIO, stderr: BinaryIO, fs: ShellFS):
             raise NotImplementedError(f"ls with flag {arg}")
         elif fs.isdir(arg):
             entries += listdir(arg, listall=listall)
-        elif fs.exists(arg):
+        elif fs.lexists(arg):
             entries.append(arg)
         else:
             stderr.write(f"ls: {arg}: No such file or directory\n".encode())

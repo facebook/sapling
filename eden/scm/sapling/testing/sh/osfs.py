@@ -70,6 +70,10 @@ class OSFS(ShellFS):
         path = self._absjoin(path)
         return os.path.exists(path)
 
+    def lexists(self, path: str):
+        path = self._absjoin(path)
+        return os.path.lexists(path)
+
     def listdir(self, path: str) -> List[str]:
         path = self._absjoin(path)
         return os.listdir(path)
