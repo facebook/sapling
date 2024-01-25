@@ -229,9 +229,9 @@ export function CommitTreeList() {
             <FetchingAdditionalCommitsButton />
             <FetchingAdditionalCommitsIndicator />
           </MainLineEllipsis>
-          <MaybeEditStackModal />
         </div>
       )}
+      <MaybeEditStackModal />
     </>
   );
 }
