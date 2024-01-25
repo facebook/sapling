@@ -18,7 +18,6 @@ rendezvous = { version = "0.1.0", path = "../../../common/rendezvous" }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql_construct = { version = "0.1.0", path = "../../../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../../../common/rust/sql_ext" }
-tunables = { version = "0.1.0", path = "../../../tunables" }
 vec1 = { version = "1", features = ["serde"] }
 
 [dev-dependencies]

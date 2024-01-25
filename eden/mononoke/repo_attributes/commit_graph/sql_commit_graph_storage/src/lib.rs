@@ -43,7 +43,6 @@ use sql::SqlConnections;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::mononoke_queries;
-use tunables::tunables;
 use vec1::vec1;
 use vec1::Vec1;
 
