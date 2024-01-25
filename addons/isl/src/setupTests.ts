@@ -15,8 +15,6 @@ import '@testing-library/jest-dom';
 // console.log still works for debugging tests.
 jest.mock('./logger');
 
-jest.mock('./declineHotReload');
-
 import {configure} from '@testing-library/react';
 
 if (process.env.HIDE_RTL_DOM_ERRORS) {
