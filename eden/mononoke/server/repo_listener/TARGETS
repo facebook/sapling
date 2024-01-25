@@ -65,7 +65,6 @@ rust_library(
         "//eden/mononoke/server/qps:qps",
         "//eden/mononoke/server/session_id:session_id",
         "//eden/mononoke/sshrelay:sshrelay",
-        "//eden/mononoke/tunables:tunables",
         "//eden/mononoke/wireproto_handler:wireproto_handler",
         "//eden/scm/lib/clientinfo:clientinfo",
     ],

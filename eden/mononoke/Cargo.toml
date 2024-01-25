@@ -409,8 +409,6 @@ members = [
   "tools/executor",
   "tools/import",
   "tools/testtool",
-  "tunables",
-  "tunables/tunables-derive",
   "walker",
   "wireproto_handler",
 ]

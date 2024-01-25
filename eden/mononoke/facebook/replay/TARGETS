@@ -12,7 +12,6 @@ cogwheel_test(
         ab_test = True,
         configerator_path_prefix_triggers = [
             "source/scm/mononoke/repos",
-            "source/scm/mononoke/tunables",
         ],
         # Give the task 25 minutes to pass the health check
         confirm_alloc_timeout = 1500,

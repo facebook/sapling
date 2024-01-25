@@ -65,7 +65,6 @@ use crate::args::ConfigArgs;
 use crate::args::JustKnobsArgs;
 use crate::args::MysqlArgs;
 use crate::args::RuntimeArgs;
-use crate::args::TunablesArgs;
 use crate::extension::AppExtension;
 use crate::extension::AppExtensionBox;
 use crate::extension::BoxedAppExtension;
@@ -97,9 +96,6 @@ pub struct EnvironmentArgs {
 
     #[clap(flatten, next_help_heading = "MYSQL OPTIONS")]
     mysql_args: MysqlArgs,
-
-    #[clap(flatten, next_help_heading = "TUNABLES OPTIONS")]
-    tunables_args: TunablesArgs,
 
     #[clap(flatten, next_help_heading = "JUST KNOBS OPTIONS")]
     just_knobs_args: JustKnobsArgs,
@@ -286,7 +282,6 @@ impl MononokeAppBuilder {
             acl_args,
             remote_derivation_args,
             rendezvous_args,
-            tunables_args,
             just_knobs_args,
         } = env_args;
 
@@ -357,12 +352,6 @@ impl MononokeAppBuilder {
         let acl_provider =
             create_acl_provider(self.fb, &acl_args).context("Failed to create ACL provider")?;
 
-        init_tunables_worker(
-            &tunables_args,
-            &config_store,
-            logger.clone(),
-            runtime.handle().clone(),
-        )?;
         init_just_knobs_worker(
             &just_knobs_args,
             &config_store,
@@ -413,7 +402,6 @@ fn create_config_store(
         let crypto_regex_paths = match &config_args.crypto_path_regex {
             Some(paths) => paths.clone(),
             None => vec![
-                "scm/mononoke/tunables/.*".to_string(),
                 "scm/mononoke/repos/.*".to_string(),
                 "scm/mononoke/redaction/.*".to_string(),
             ],
@@ -529,32 +517,6 @@ fn create_blobstore_options(
     );
 
     Ok(blobstore_options)
-}
-
-fn init_tunables_worker(
-    tunables_args: &TunablesArgs,
-    config_store: &ConfigStore,
-    logger: Logger,
-    handle: Handle,
-) -> Result<()> {
-    if tunables_args.disable_tunables {
-        debug!(logger, "Tunables are disabled");
-        return Ok(());
-    }
-
-    if let Some(tunables_local_path) = &tunables_args.tunables_local_path {
-        let value = std::fs::read_to_string(tunables_local_path)
-            .with_context(|| format!("failed to open tunables path {}", tunables_local_path))?;
-        let config_handle = ConfigHandle::from_json(&value)
-            .with_context(|| format!("failed to parse tunables at path {}", tunables_local_path))?;
-        return tunables::init_tunables(&logger, &config_handle);
-    }
-
-    let tunables_config = tunables_args.tunables_config_or_default();
-    let config_handle =
-        config_store.get_config_handle(parse_config_spec_to_path(&tunables_config)?)?;
-
-    tunables::init_tunables_worker(logger, config_handle, handle)
 }
 
 fn init_just_knobs_worker(

@@ -59,7 +59,6 @@ rust_library(
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/mononoke/repo_factory:repo_factory",
         "//eden/mononoke/server/context:context",
-        "//eden/mononoke/tunables:tunables",
     ],
 )
 

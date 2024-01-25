@@ -45,7 +45,6 @@ use slog::trace;
 use slog::Logger;
 use thiserror::Error;
 use tokio::io::AsyncReadExt;
-use tunables::force_update_tunables;
 
 use crate::connection_acceptor;
 use crate::connection_acceptor::AcceptedConnection;
@@ -342,7 +341,6 @@ where
 
         if path == "/force_update_configerator" {
             self.acceptor().config_store.force_update_configs();
-            force_update_tunables();
             return Ok(ok);
         }
 
