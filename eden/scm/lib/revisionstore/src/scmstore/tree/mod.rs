@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::borrow::Borrow;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -599,12 +600,14 @@ struct ScmStoreTreeEntry {
 }
 
 impl ScmStoreTreeEntry {
-    fn basic_tree_entry(&self) -> Result<&Box<dyn TreeEntry>> {
-        self.basic_tree_entry.get_or_try_init(|| {
-            let data = self.tree.hg_content()?;
-            let entry = storemodel::basic_parse_tree(data, SerializationFormat::Hg)?;
-            Ok(entry)
-        })
+    fn basic_tree_entry(&self) -> Result<&dyn TreeEntry> {
+        self.basic_tree_entry
+            .get_or_try_init(|| {
+                let data = self.tree.hg_content()?;
+                let entry = storemodel::basic_parse_tree(data, SerializationFormat::Hg)?;
+                Ok(entry)
+            })
+            .map(Borrow::borrow)
     }
 }
 

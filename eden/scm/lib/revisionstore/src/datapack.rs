@@ -306,6 +306,10 @@ impl DataPack {
         })
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     pub fn len(&self) -> usize {
         self.mmap.len()
     }
@@ -518,7 +522,7 @@ pub mod tests {
     use crate::datastore::Metadata;
     use crate::mutabledatapack::MutableDataPack;
 
-    pub fn make_datapack(tempdir: &TempDir, deltas: &Vec<(Delta, Metadata)>) -> DataPack {
+    pub fn make_datapack(tempdir: &TempDir, deltas: &[(Delta, Metadata)]) -> DataPack {
         let mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One);
         for (delta, metadata) in deltas.iter() {
             mutdatapack.add(delta, metadata).unwrap();

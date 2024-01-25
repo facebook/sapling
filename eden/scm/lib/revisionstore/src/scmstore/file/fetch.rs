@@ -777,8 +777,10 @@ impl FetchState {
                 // Unwrap is safe because the only place sha256 could come from is
                 // `pending` and all of its entries were put in `key_map`.
                 for (key, ptr) in key_map.get(&sha256).unwrap().iter() {
-                    let mut file = StoreFile::default();
-                    file.content = Some(LazyFile::Lfs(data.clone(), ptr.clone()));
+                    let file = StoreFile {
+                        content: Some(LazyFile::Lfs(data.clone(), ptr.clone())),
+                        ..Default::default()
+                    };
 
                     // It's important to do this after the self.pointer_origin.get() above, since
                     // found_attributes removes the key from pointer_origin.

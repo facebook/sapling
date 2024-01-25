@@ -68,17 +68,13 @@ impl<T: RemoteDataStore> RemoteDataStore for UnionHgIdDataStore<T> {
     }
 
     fn upload(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        self.into_iter()
-            .fold(Ok(keys.to_vec()), |not_sent, store| match not_sent {
-                Ok(not_sent) => {
-                    if !not_sent.is_empty() {
-                        store.upload(&not_sent)
-                    } else {
-                        Ok(Vec::new())
-                    }
-                }
-                Err(e) => Err(e),
-            })
+        self.into_iter().try_fold(keys.to_vec(), |not_sent, store| {
+            if !not_sent.is_empty() {
+                store.upload(&not_sent)
+            } else {
+                Ok(Vec::new())
+            }
+        })
     }
 }
 

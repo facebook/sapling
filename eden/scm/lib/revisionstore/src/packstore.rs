@@ -735,7 +735,7 @@ mod tests {
             },
             Default::default(),
         );
-        make_datapack(&tempdir, &vec![revision.clone()]);
+        make_datapack(&tempdir, &[revision.clone()]);
 
         let store = DataPackStore::new(
             &tempdir,
@@ -764,7 +764,7 @@ mod tests {
             },
             Default::default(),
         );
-        make_datapack(&tempdir, &vec![revision]);
+        make_datapack(&tempdir, &[revision]);
 
         let store = DataPackStore::new(
             &tempdir,
@@ -796,7 +796,7 @@ mod tests {
             },
             Default::default(),
         );
-        make_datapack(&tempdir, &vec![revision.clone()]);
+        make_datapack(&tempdir, &[revision.clone()]);
 
         let stored = store.get(StoreKey::hgid(k))?;
         assert_eq!(
@@ -824,7 +824,7 @@ mod tests {
             },
             Default::default(),
         );
-        make_datapack(&tempdir, &vec![revision]);
+        make_datapack(&tempdir, &[revision]);
 
         store.get(StoreKey::hgid(k)).unwrap();
 
@@ -837,7 +837,7 @@ mod tests {
             },
             Default::default(),
         );
-        make_datapack(&tempdir, &vec![revision]);
+        make_datapack(&tempdir, &[revision]);
 
         let k = StoreKey::hgid(k);
         assert_eq!(store.get(k.clone()).unwrap(), StoreResult::NotFound(k));
@@ -861,7 +861,7 @@ mod tests {
             },
             Default::default(),
         );
-        make_datapack(&tempdir, &vec![revision]);
+        make_datapack(&tempdir, &[revision]);
 
         store.get(StoreKey::hgid(k))?;
 
@@ -874,7 +874,7 @@ mod tests {
             },
             Default::default(),
         );
-        make_datapack(&tempdir, &vec![revision]);
+        make_datapack(&tempdir, &[revision]);
 
         store.force_rescan();
         assert_eq!(
@@ -902,7 +902,7 @@ mod tests {
             },
             Default::default(),
         );
-        make_datapack(&tempdir, &vec![revision]);
+        make_datapack(&tempdir, &[revision]);
 
         store.get(StoreKey::hgid(k))?;
 
@@ -915,7 +915,7 @@ mod tests {
             },
             Default::default(),
         );
-        make_datapack(&tempdir, &vec![revision]);
+        make_datapack(&tempdir, &[revision]);
 
         assert_eq!(
             store.get(StoreKey::hgid(k.clone()))?,
@@ -958,7 +958,7 @@ mod tests {
             },
             Default::default(),
         );
-        make_datapack(&tempdir, &vec![revision1]);
+        make_datapack(&tempdir, &[revision1]);
 
         let k2 = key("b", "3");
         let revision2 = (
@@ -969,7 +969,7 @@ mod tests {
             },
             Default::default(),
         );
-        make_datapack(&tempdir, &vec![revision2]);
+        make_datapack(&tempdir, &[revision2]);
 
         let packstore = DataPackStore::new(
             &tempdir,
@@ -1021,7 +1021,7 @@ mod tests {
             },
             Default::default(),
         );
-        let path = make_datapack(&tempdir, &vec![revision1])
+        let path = make_datapack(&tempdir, &[revision1])
             .pack_path()
             .to_path_buf();
 
@@ -1061,7 +1061,7 @@ mod tests {
             },
             Default::default(),
         );
-        let path = make_datapack(&tempdir, &vec![revision1])
+        let path = make_datapack(&tempdir, &[revision1])
             .pack_path()
             .to_path_buf();
 

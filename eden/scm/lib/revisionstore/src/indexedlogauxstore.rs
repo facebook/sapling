@@ -226,9 +226,11 @@ mod tests {
         let tempdir = TempDir::new().unwrap();
         let store = AuxStore::new(&tempdir, &empty_config(), StoreType::Shared)?;
 
-        let mut entry = Entry::default();
-        entry.total_size = 1;
-        entry.sha1 = single_byte_sha1(1);
+        let entry = Entry {
+            total_size: 1,
+            sha1: single_byte_sha1(1),
+            ..Default::default()
+        };
 
         let k = key("a", "1");
 
@@ -245,9 +247,11 @@ mod tests {
         let tempdir = TempDir::new().unwrap();
         let store = AuxStore::new(&tempdir, &empty_config(), StoreType::Shared)?;
 
-        let mut entry = Entry::default();
-        entry.total_size = 1;
-        entry.sha1 = single_byte_sha1(1);
+        let entry = Entry {
+            total_size: 1,
+            sha1: single_byte_sha1(1),
+            ..Default::default()
+        };
 
         let k = key("a", "1");
 
@@ -267,9 +271,11 @@ mod tests {
         let store = AuxStore::new(&tempdir, &empty_config(), StoreType::Shared)?;
 
         let k = key("a", "2");
-        let mut entry = Entry::default();
-        entry.total_size = 2;
-        entry.sha1 = single_byte_sha1(2);
+        let entry = Entry {
+            total_size: 2,
+            sha1: single_byte_sha1(2),
+            ..Default::default()
+        };
 
         store.put(k.hgid, &entry)?;
         store.flush()?;
@@ -284,9 +290,11 @@ mod tests {
         let store = AuxStore::new(&tempdir, &empty_config(), StoreType::Shared)?;
 
         let k = key("a", "3");
-        let mut entry = Entry::default();
-        entry.total_size = 3;
-        entry.sha1 = single_byte_sha1(3);
+        let entry = Entry {
+            total_size: 3,
+            sha1: single_byte_sha1(3),
+            ..Default::default()
+        };
 
         store.put(k.hgid, &entry)?;
         store.flush()?;
@@ -301,9 +309,11 @@ mod tests {
         let tmp = TempDir::new()?;
         let aux = Arc::new(AuxStore::new(&tmp, &empty_config(), StoreType::Shared)?);
 
-        let mut entry = Entry::default();
-        entry.total_size = 1;
-        entry.sha1 = single_byte_sha1(1);
+        let entry = Entry {
+            total_size: 1,
+            sha1: single_byte_sha1(1),
+            ..Default::default()
+        };
 
         let k = key("a", "1");
 
@@ -358,17 +368,20 @@ mod tests {
         store.indexedlog_local = Some(content);
         store.aux_local = Some(aux.clone());
 
-        let mut expected = Entry::default();
-        expected.total_size = 4;
-        expected.content_id = ContentId::from_str(
-            "aa6ab85da77ca480b7624172fe44aa9906b6c3f00f06ff23c3e5f60bfd0c414e",
-        )?;
-        expected.sha1 = Sha1::from_str("7110eda4d09e062aa5e4a390b0a572ac0d2c0220")?;
-        expected.sha256 =
-            Sha256::from_str("03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4")?;
-        expected.seeded_blake3 = Some(Blake3::from_str(
-            "2078b4229b5353de0268efc7f64b68f3c99fb8829e9c052117b4e1e090b2603a",
-        )?);
+        let expected = Entry {
+            total_size: 4,
+            content_id: ContentId::from_str(
+                "aa6ab85da77ca480b7624172fe44aa9906b6c3f00f06ff23c3e5f60bfd0c414e",
+            )?,
+            sha1: Sha1::from_str("7110eda4d09e062aa5e4a390b0a572ac0d2c0220")?,
+            sha256: Sha256::from_str(
+                "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
+            )?,
+            seeded_blake3: Some(Blake3::from_str(
+                "2078b4229b5353de0268efc7f64b68f3c99fb8829e9c052117b4e1e090b2603a",
+            )?),
+            ..Default::default()
+        };
         // Attempt fetch.
         let fetched = store
             .fetch(

@@ -85,7 +85,7 @@ pub const MF_MODIFIED_NODE_ID: HgId = HgId::from_byte_array([
 ]);
 
 impl HgId {
-    pub fn null_id() -> &'static Self {
+    pub const fn null_id() -> &'static Self {
         &NULL_ID
     }
 

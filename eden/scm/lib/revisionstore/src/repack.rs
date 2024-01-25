@@ -737,7 +737,7 @@ mod tests {
             to_corrupt.set_extension("");
             assert!(errors.iter().any(|(p, _)| p == &to_corrupt));
         } else {
-            assert!(false);
+            panic!("unexpected res. Expected `Some(RepackFailure::Partial(...))`");
         }
     }
 
