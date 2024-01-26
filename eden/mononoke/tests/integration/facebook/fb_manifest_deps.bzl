@@ -6,6 +6,7 @@ load("@fbcode_macros//build_defs:custom_unittest.bzl", "custom_unittest")
 load("@fbcode_macros//build_defs:native_rules.bzl", "buck_filegroup")
 load("@fbcode_macros//build_defs/lib:rust_common.bzl", "rust_common")
 load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
+load("@fbcode_macros//build_defs/lib:test_utils.bzl", "test_utils")
 load("@fbsource//tools/build_defs/buck2:is_buck2.bzl", "is_buck2")
 
 MONONOKE_TARGETS_TO_ENV = {
@@ -253,6 +254,12 @@ def _dott_test(name, dott_files, deps, use_mysql = False, disable_all_network_ac
             "scm/mononoke/mysql/xdb.mononoke_blobstore_wal_queue",
         ])
 
+    env = {
+        "NO_LOCAL_PATHS": "1",
+    }
+    env = test_utils.add_llvm_coverage_tools_to_env(env)
+    env = test_utils.add_llvm_coverage_additional_targets_to_env(env, resolved_deps)
+
     # and now the actual test
     custom_unittest(
         name = name,
@@ -260,14 +267,11 @@ def _dott_test(name, dott_files, deps, use_mysql = False, disable_all_network_ac
             "$(location //eden/mononoke/tests/integration:integration_runner_real)",
             "$(location :%s)" % manifest_target,
         ] + extra_args,
-        env = {
-            "NO_LOCAL_PATHS": "1",
-        },
-
+        env = env,
+        tags = ["tpx-test-type:mononoke_integration", "tpx:supports_coverage"],
         # This is not really a junit test. It pretends to be one for testpilot. For
         # tpx we want to do better, override the "test type" through a label to
         # work with both testpilot and tpx for now.
-        tags = ["tpx-test-type:mononoke_integration"],
         type = "junit",
         deps = resolved_deps,
     )
