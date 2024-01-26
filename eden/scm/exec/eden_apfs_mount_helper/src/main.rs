@@ -32,7 +32,7 @@ use structopt::StructOpt;
 #[cfg(feature = "fb")]
 mod facebook;
 
-const MOUNT_APFS: &'static str = "/sbin/mount_apfs";
+const MOUNT_APFS: &str = "/sbin/mount_apfs";
 const MAX_ADDVOLUME_RETRY: u64 = 3;
 
 static MOUNT: Lazy<SystemCommandImpl> = Lazy::new(|| SystemCommandImpl(PathBuf::from(MOUNT_PATH)));
@@ -204,7 +204,7 @@ fn make_new_volume(apfs_util: &ApfsUtil, name: &str, disk: &str) -> Result<ApfsV
     let mut tried = 0;
     loop {
         let output = new_cmd_unprivileged(DISKUTIL_PATH)
-            .args(&["apfs", "addVolume", disk, "apfs", name, "-nomount"])
+            .args(["apfs", "addVolume", disk, "apfs", name, "-nomount"])
             .output()?;
         if !output.status.success() {
             anyhow::bail!("failed to execute diskutil addVolume: {:?}", output);
@@ -343,7 +343,7 @@ fn mount_scratch_space_on(apfs_util: &ApfsUtil, input_mount_point: &str) -> Resu
     // Mount the volume at the desired mount point.
     // This is the only part of this utility that requires root privs.
     let output = new_cmd_with_root_privs(MOUNT_APFS)
-        .args(&[
+        .args([
             "-onobrowse,nodev,nosuid",
             "-u",
             &format!("{}", metadata.uid()),
@@ -398,7 +398,7 @@ fn chown(path: &str, uid: u32, gid: u32) -> Result<()> {
 /// to build an index for something managed entirely by the machine.
 fn disable_spotlight(mount_point: &str) -> Result<()> {
     let output = new_cmd_with_root_privs("/usr/bin/mdutil")
-        .args(&["-Ed", "-i", "off", mount_point])
+        .args(["-Ed", "-i", "off", mount_point])
         .output()?;
     if !output.status.success() {
         eprintln!(
@@ -408,7 +408,7 @@ fn disable_spotlight(mount_point: &str) -> Result<()> {
     }
 
     let spotlight = Path::new(mount_point).join(".Spotlight-V100");
-    std::fs::remove_dir_all(&spotlight).ok();
+    std::fs::remove_dir_all(spotlight).ok();
 
     Ok(())
 }
@@ -423,7 +423,7 @@ fn disable_fsevents(mount_point: &str) -> Result<()> {
     // be good enough in most cases.
 
     let fseventsd = Path::new(mount_point).join(".fseventsd");
-    std::fs::remove_dir_all(&fseventsd).ok();
+    std::fs::remove_dir_all(fseventsd).ok();
 
     Ok(())
 }
@@ -456,7 +456,7 @@ fn main() -> Result<()> {
             for container in containers {
                 for vol in container.volumes {
                     if all || vol.is_edenfs_managed_volume() {
-                        let name = vol.name.as_ref().map(String::as_str).unwrap_or("");
+                        let name = vol.name.as_deref().unwrap_or("");
                         if let Some(mount_point) =
                             vol.get_current_mount_point(&*MOUNT, Some(&mounts))
                         {
@@ -505,7 +505,7 @@ fn main() -> Result<()> {
         }
 
         Opt::Delete { mount_point } => {
-            apfs_util.delete_scratch(&mount_point)?;
+            apfs_util.delete_scratch(mount_point)?;
             Ok(())
         }
 
