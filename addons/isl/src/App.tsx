@@ -18,6 +18,7 @@ import {Drawers} from './Drawers';
 import {EmptyState} from './EmptyState';
 import {ErrorBoundary, ErrorNotice} from './ErrorNotice';
 import {ISLCommandContext, useCommand} from './ISLShortcuts';
+import {Internal} from './Internal';
 import {TooltipRootContainer} from './Tooltip';
 import {TopBar} from './TopBar';
 import {TopLevelErrors} from './TopLevelErrors';
@@ -207,12 +208,20 @@ function ISLNullState({repoError}: {repoError: RepositoryError}) {
           <CwdSelections dismiss={() => null} />
         </>
       );
-    } else if (repoError.type === 'invalidCommand') {
+    } else if (repoError.type === 'cwdDoesNotExist') {
       content = (
         <ErrorNotice
-          title={<T>Invalid Sapling command. Is Sapling installed correctly?</T>}
+          title={
+            <T replace={{$cwd: repoError.cwd}}>
+              cwd $cwd does not exist. Make sure the folder exists.
+            </T>
+          }
           error={
-            new Error(t('Command "$cmd" was not found.', {replace: {$cmd: repoError.command}}))
+            new Error(
+              t('$cwd not found', {
+                replace: {$cwd: repoError.cwd},
+              }),
+            )
           }
           buttons={[
             <VSCodeButton
@@ -228,6 +237,35 @@ function ISLNullState({repoError}: {repoError: RepositoryError}) {
           ]}
         />
       );
+    } else if (repoError.type === 'invalidCommand') {
+      if (Internal.InvalidSlCommand) {
+        content = <Internal.InvalidSlCommand repoError={repoError} />;
+      } else {
+        content = (
+          <ErrorNotice
+            startExpanded
+            title={<T>Invalid Sapling command. Is Sapling installed correctly?</T>}
+            description={
+              <T replace={{$cmd: repoError.command}}>Command "$cmd" was not found in PATH</T>
+            }
+            details={<T replace={{$path: repoError.path ?? '(no path found)'}}>PATH: $path'</T>}
+            buttons={[
+              <VSCodeButton
+                key="help-button"
+                appearance="secondary"
+                onClick={e => {
+                  platform.openExternalLink(
+                    'https://sapling-scm.com/docs/introduction/installation',
+                  );
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}>
+                <T>See installation docs</T>
+              </VSCodeButton>,
+            ]}
+          />
+        );
+      }
     } else {
       content = <ErrorNotice title={<T>Something went wrong</T>} error={repoError.error} />;
     }

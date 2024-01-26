@@ -86,8 +86,10 @@ export type RepositoryError =
   | {
       type: 'invalidCommand';
       command: string;
+      path: string | undefined;
     }
   | {type: 'cwdNotARepository'; cwd: string}
+  | {type: 'cwdDoesNotExist'; cwd: string}
   | {
       type: 'unknownError';
       error: Error;

@@ -22,6 +22,8 @@ import path from 'path';
 import * as fsUtils from 'shared/fs';
 import {clone, mockLogger, nextTick} from 'shared/testUtils';
 
+/* eslint-disable require-await */
+
 jest.mock('execa', () => {
   return jest.fn();
 });
@@ -208,6 +210,21 @@ describe('Repository', () => {
     });
   });
 
+  it('handles cwd not exists', async () => {
+    const err = new Error('cwd does not exist') as Error & {code: string};
+    err.code = 'ENOENT';
+    mockExeca([[/^sl root/, err]]);
+    const info = (await Repository.getRepoInfo(
+      'sl',
+      mockLogger,
+      '/path/to/cwd',
+    )) as ValidatedRepoInfo;
+    expect(info).toEqual({
+      type: 'cwdDoesNotExist',
+      cwd: '/path/to/cwd',
+    });
+  });
+
   it('handles missing executables on windows', async () => {
     const osSpy = jest.spyOn(os, 'platform').mockImplementation(() => 'win32');
     mockExeca([
@@ -219,6 +236,7 @@ describe('Repository', () => {
         ),
       ],
     ]);
+    jest.spyOn(fsUtils, 'exists').mockImplementation(async () => true);
     const info = (await Repository.getRepoInfo(
       'sl',
       mockLogger,
@@ -227,6 +245,7 @@ describe('Repository', () => {
     expect(info).toEqual({
       type: 'invalidCommand',
       command: 'sl',
+      path: expect.anything(),
     });
     osSpy.mockRestore();
   });

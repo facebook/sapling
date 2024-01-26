@@ -52,7 +52,8 @@ code {
 .empty-app-state {
   display: flex;
   flex-direction: column;
-  width: 100%;
+  padding: calc(4 * var(--pad));
+  width: calc(100% - 8 * var(--pad));
   height: 100%;
   align-items: center;
   justify-content: center;

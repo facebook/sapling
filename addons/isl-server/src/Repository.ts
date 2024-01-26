@@ -472,7 +472,17 @@ export class Repository {
     const preferredSubmitCommand = configs.get('github.preferred_submit_command');
 
     if (repoRoot instanceof Error) {
-      return {type: 'invalidCommand', command};
+      // first check that the cwd exists
+      const cwdExists = await exists(cwd);
+      if (!cwdExists) {
+        return {type: 'cwdDoesNotExist', cwd};
+      }
+
+      return {
+        type: 'invalidCommand',
+        command,
+        path: process.env.PATH,
+      };
     }
     if (repoRoot == null || dotdir == null) {
       return {type: 'cwdNotARepository', cwd};
