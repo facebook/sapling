@@ -5,12 +5,12 @@
  * GNU General Public License version 2.
  */
 
-pub static VERSION: &'static str = match option_env!("SAPLING_VERSION") {
+pub static VERSION: &str = match option_env!("SAPLING_VERSION") {
     Some(s) => s,
     None => "dev",
 };
 
-pub static VERSION_HASH: &'static str = match option_env!("SAPLING_VERSION_HASH") {
+pub static VERSION_HASH: &str = match option_env!("SAPLING_VERSION_HASH") {
     Some(s) => s,
     None => "",
 };

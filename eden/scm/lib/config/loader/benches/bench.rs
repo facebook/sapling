@@ -15,9 +15,9 @@ fn main() {
     bench("parse 645KB file", || {
         let mut config_file = String::new();
         for _ in 0..100 {
-            for section in b'a'..b'z' {
+            for section in b'a'..=b'z' {
                 config_file += &format!("[{ch}{ch}{ch}{ch}]\n", ch = section as char);
-                for name in b'a'..b'z' {
+                for name in b'a'..=b'z' {
                     config_file += &format!("{ch}{ch}{ch} = {ch}{ch}{ch}\n", ch = name as char);
                 }
             }

@@ -90,9 +90,8 @@ pub fn diff(base: &[u8], data: &[u8]) -> io::Result<Vec<u8>> {
         }
 
         let max_outsize = ZSTD_compressBound(data.len());
-        let mut buf: Vec<u8> = Vec::with_capacity(max_outsize);
+        let mut buf: Vec<u8> = vec![0; max_outsize];
 
-        buf.set_len(max_outsize);
         let outsize = ZSTD_compress_advanced(
             cctx,
             buf.as_mut_ptr() as *mut c_void,

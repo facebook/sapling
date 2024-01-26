@@ -155,7 +155,7 @@ impl RepoLocker {
         ))
     }
 
-    fn store_locked(&self) -> bool {
+    pub fn store_locked(&self) -> bool {
         self.inner.lock().store_lock.is_some()
     }
 
@@ -180,7 +180,7 @@ impl RepoLocker {
         ))
     }
 
-    fn working_copy_locked(&self, wc_path: &Path) -> bool {
+    pub fn working_copy_locked(&self, wc_path: &Path) -> bool {
         self.inner.lock().wc_locks.contains_key(wc_path)
     }
 }

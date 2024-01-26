@@ -36,7 +36,7 @@ pub fn extract_tables(tid_spans: &TidSpans) -> Tables {
     tables
 }
 
-fn extract_dev_command_timers<'a>(tables: &mut Tables, tid_spans: &TidSpans) {
+fn extract_dev_command_timers(tables: &mut Tables, tid_spans: &TidSpans) {
     let mut row = Row::new();
     let toint = |value: &str| -> Value { value.parse::<i64>().unwrap_or_default().into() };
 
@@ -107,7 +107,7 @@ fn extract_dev_command_timers<'a>(tables: &mut Tables, tid_spans: &TidSpans) {
     tables.insert("dev_command_timers".into(), vec![row]);
 }
 
-fn extract_other_tables<'a>(tables: &mut Tables, tid_spans: &TidSpans) {
+fn extract_other_tables(tables: &mut Tables, tid_spans: &TidSpans) {
     for spans in tid_spans.values() {
         for span in spans.walk() {
             match span.meta.get("name").cloned().unwrap_or("") {

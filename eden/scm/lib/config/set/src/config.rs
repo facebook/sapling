@@ -7,10 +7,14 @@
 
 use std::borrow::Cow;
 use std::collections::HashSet;
+use std::fmt;
+use std::fmt::Display;
+use std::fmt::Formatter;
 use std::fs;
 use std::hash::Hash;
 use std::path::Path;
 use std::path::PathBuf;
+use std::rc::Rc;
 use std::str;
 use std::sync::Arc;
 
@@ -49,7 +53,7 @@ struct Section {
 #[derive(Clone, Default)]
 pub struct Options {
     source: Text,
-    filters: Vec<Arc<Box<dyn Fn(Text, Text, Option<Text>) -> Option<(Text, Text, Option<Text>)>>>>,
+    filters: Vec<Rc<Box<dyn Fn(Text, Text, Option<Text>) -> Option<(Text, Text, Option<Text>)>>>>,
 }
 
 impl Config for ConfigSet {
@@ -120,8 +124,8 @@ impl Config for ConfigSet {
                 secondary_sources
             } else {
                 let sources: Vec<ValueSource> = secondary_sources
-                    .into_owned()
-                    .into_iter()
+                    .iter()
+                    .cloned()
                     .chain(self_sources.into_owned())
                     .collect();
                 Cow::Owned(sources)
@@ -168,9 +172,41 @@ fn merge_cow_list<'a, T: Clone + Hash + Eq>(a: Cow<'a, [T]>, b: Cow<'a, [T]>) ->
     } else if b.is_empty() {
         a
     } else {
-        let result: IndexSet<T> = a.into_owned().into_iter().chain(b.into_owned()).collect();
+        let result: IndexSet<T> = a.iter().cloned().chain(b.iter().cloned()).collect();
         let result: Vec<T> = result.into_iter().collect();
         Cow::Owned(result)
+    }
+}
+
+impl Display for ConfigSet {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        for section in self.sections().iter() {
+            writeln!(f, "[{}]", section.as_ref())?;
+
+            for key in self.keys(section).iter() {
+                let value = self.get_considering_unset(section, key);
+                #[cfg(test)]
+                {
+                    let values = self.get_sources(section, key);
+                    assert_eq!(values.last().map(|v| v.value().clone()), value);
+                }
+                if let Some(value) = value {
+                    if let Some(value) = value {
+                        // When a newline delimited list is loaded, the whitespace around each
+                        // entry is trimmed. In order for the serialized config to be parsable, we
+                        // need some indentation after each newline. Since this whitespace will be
+                        // stripped on load, it shouldn't hurt anything.
+                        writeln!(f, "{}={}", key, value.replace('\n', "\n "))?;
+                    } else {
+                        // None indicates the value was unset.
+                        writeln!(f, "%unset {}", key)?;
+                    }
+                }
+            }
+
+            writeln!(f)?;
+        }
+        Ok(())
     }
 }
 
@@ -416,47 +452,6 @@ impl ConfigSet {
         &self.files
     }
 
-    pub fn to_string(&self) -> String {
-        let mut result = String::new();
-
-        for section in self.sections().iter() {
-            result.push('[');
-            result.push_str(section.as_ref());
-            result.push_str("]\n");
-
-            for key in self.keys(section).iter() {
-                let value = self.get_considering_unset(section, key);
-                #[cfg(test)]
-                {
-                    let values = self.get_sources(section, key);
-                    assert_eq!(values.last().map(|v| v.value().clone()), value);
-                }
-                if let Some(value) = value {
-                    if let Some(value) = value {
-                        result.push_str(key);
-                        result.push('=');
-                        // When a newline delimited list is loaded, the whitespace around each
-                        // entry is trimmed. In order for the serialized config to be parsable, we
-                        // need some indentation after each newline. Since this whitespace will be
-                        // stripped on load, it shouldn't hurt anything.
-                        let value = value.replace('\n', "\n ");
-                        result.push_str(&value);
-                        result.push('\n');
-                    } else {
-                        // None indicates the value was unset.
-                        result.push_str("%unset ");
-                        result.push_str(key);
-                        result.push('\n');
-                    }
-                }
-            }
-
-            result.push('\n');
-        }
-
-        result
-    }
-
     /// Drop configs from sources that are outside `allowed_locations` or
     /// `allowed_configs`.
     ///
@@ -556,7 +551,7 @@ impl Options {
         mut self,
         filter: Box<dyn Fn(Text, Text, Option<Text>) -> Option<(Text, Text, Option<Text>)>>,
     ) -> Self {
-        self.filters.push(Arc::new(filter));
+        self.filters.push(Rc::new(filter));
         self
     }
 
@@ -579,9 +574,7 @@ impl Options {
     ) -> Option<(Text, Text, Option<Text>)> {
         self.filters
             .iter()
-            .fold(Some((section, name, value)), move |acc, func| {
-                acc.and_then(|(s, n, v)| func(s, n, v))
-            })
+            .try_fold((section, name, value), move |(s, n, v), func| func(s, n, v))
     }
 }
 

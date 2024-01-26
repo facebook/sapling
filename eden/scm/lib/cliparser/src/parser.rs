@@ -551,8 +551,8 @@ impl Parser {
         debug_assert!(arg.starts_with("--"));
         let arg = &arg[2..];
 
-        let (arg, positive_flag) = if arg.starts_with("no-") {
-            (&arg[3..], false)
+        let (arg, positive_flag) = if let Some(suffix) = arg.strip_prefix("no-") {
+            (suffix, false)
         } else {
             (arg, true)
         };
@@ -1409,7 +1409,7 @@ mod tests {
         if let Value::Bool(Some(no_commit)) = result.pick("no-commit") {
             assert!(!no_commit);
         } else {
-            assert!(false);
+            panic!("Expected a Value::Bool(Some(_))");
         }
     }
 
@@ -1432,7 +1432,7 @@ mod tests {
         if let Value::Bool(Some(no_commit)) = result.pick("no-commit") {
             assert!(no_commit);
         } else {
-            assert!(false);
+            panic!("Expected a Value::Bool(Some(_))");
         }
     }
 

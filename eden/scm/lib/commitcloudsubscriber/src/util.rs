@@ -35,10 +35,8 @@ static SEC_IN_WEEK: u64 = 604800;
 pub static COMMIT_CLOUD_APP_ID: u64 = 184975892288525u64;
 
 /// Map from a subscription to list of repo roots
-pub fn read_subscriptions(
-    joined_pool_path: &PathBuf,
-) -> Result<HashMap<Subscription, Vec<PathBuf>>> {
-    let mut joined_pool_path = joined_pool_path.clone();
+pub fn read_subscriptions(joined_pool_path: &Path) -> Result<HashMap<Subscription, Vec<PathBuf>>> {
+    let mut joined_pool_path = joined_pool_path.to_path_buf();
     joined_pool_path.push(JOINED_DIR);
     joined_pool_path.push(JOINED);
 

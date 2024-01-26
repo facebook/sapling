@@ -195,7 +195,7 @@ impl Id {
     /// Convert to a byte array. Useful for indexedlog range query.
     pub fn to_bytearray(self) -> [u8; 8] {
         // The field can be used for index range query. So it has to be BE.
-        unsafe { std::mem::transmute(self.0.to_be()) }
+        self.0.to_be().to_ne_bytes()
     }
 
     /// Similar to `to_bytearray`, but insert a `prefix` at the head.

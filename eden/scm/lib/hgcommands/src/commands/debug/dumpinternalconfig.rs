@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::str::FromStr;
+
 use clidispatch::ReqCtx;
 #[cfg(feature = "fb")]
 use configloader::hg::calculate_internalconfig;
@@ -50,7 +52,7 @@ pub fn run(ctx: ReqCtx<DebugDumpConfigOpts>, config: &mut ConfigSet) -> Result<u
         let mode = if ctx.opts.mode.is_empty() {
             FbConfigMode::default()
         } else {
-            FbConfigMode::from_str(&ctx.opts.mode)
+            FbConfigMode::from_str(&ctx.opts.mode)?
         };
         let generated = calculate_internalconfig(
             mode,

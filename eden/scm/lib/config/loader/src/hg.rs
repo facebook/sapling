@@ -106,7 +106,7 @@ pub fn load(
 
     let mut errors = Vec::new();
     for path in extra_files {
-        errors.extend(cfg.load_path(&path, &"--configfile".into()));
+        errors.extend(cfg.load_path(path, &"--configfile".into()));
     }
 
     if let Err(err) = set_overrides(&mut cfg, extra_values) {
@@ -129,7 +129,7 @@ pub fn load(
     // The "readonly" facility can't be used to pin the configs
     // because it doesn't interact with the config verification properly.
     for path in extra_files {
-        cfg.load_path(&path, &"--configfile".into());
+        cfg.load_path(path, &"--configfile".into());
     }
 
     let _ = set_overrides(&mut cfg, extra_values);
@@ -395,7 +395,7 @@ impl ConfigSetHgExt for ConfigSet {
         // Check version
         let content = read_to_string(&dynamic_path).ok();
         let version = content.as_ref().and_then(|c| {
-            let mut lines = c.split("\n");
+            let mut lines = c.split('\n');
             match lines.next() {
                 Some(line) if line.starts_with("# version=") => Some(&line[10..]),
                 Some(_) | None => None,
@@ -511,7 +511,7 @@ impl ConfigSetHgExt for ConfigSet {
                             .env("HG_INTERNALCONFIG_IS_REFRESHING", "1");
 
                         if let Some(repo_path) = repo_path {
-                            command.current_dir(&repo_path);
+                            command.current_dir(repo_path);
                         }
 
                         let _ = run_background(command);
@@ -577,8 +577,8 @@ impl ConfigSetHgExt for ConfigSet {
                 .map(|v| HashSet::from_iter(v.iter().map(|s| s.as_str()))),
             allowed_configs.as_ref().map(|v| {
                 HashSet::from_iter(v.iter().map(|s| {
-                    let split: Vec<&str> = s.splitn(2, ".").into_iter().collect();
-                    (split[0], split[1])
+                    s.split_once('.')
+                        .expect("allowed configs must contain dots")
                 }))
             }),
         ))
@@ -633,7 +633,7 @@ fn read_set_repo_name(config: &mut ConfigSet, repo_path: &Path) -> crate::Result
             };
             if need_rewrite {
                 let path = get_repo_name_path(repo_path);
-                match fs::write(&path, &repo_name) {
+                match fs::write(path, &repo_name) {
                     Ok(_) => tracing::debug!("repo name: written to reponame file"),
                     Err(e) => tracing::warn!("repo name: cannot write to reponame file: {:?}", e),
                 }
@@ -740,8 +740,8 @@ pub fn resolve_custom_scheme(config: &dyn Config, url: Url) -> Result<Url> {
             format!("{tmpl}{non_scheme}")
         };
 
-        return Ok(Url::parse(&resolved_url)
-            .with_context(|| format!("parsing resolved custom scheme URL {resolved_url}"))?);
+        return Url::parse(&resolved_url)
+            .with_context(|| format!("parsing resolved custom scheme URL {resolved_url}"));
     }
 
     Ok(url)
@@ -800,7 +800,7 @@ fn get_config_dir(repo_path: Option<&Path>) -> Result<PathBuf, Error> {
             let shared_path = repo_path.join("sharedpath");
             if shared_path.exists() {
                 let raw = read_to_string(&shared_path).map_err(|e| Error::Io(shared_path, e))?;
-                let trimmed = raw.trim_end_matches("\n");
+                let trimmed = raw.trim_end_matches('\n');
                 // sharedpath can be relative, so join it with repo_path.
                 repo_path.join(trimmed)
             } else {
@@ -1093,7 +1093,7 @@ mod tests {
             format!("user={}", dir.path().join("user.rc").display()),
         ]
         .join(";");
-        env.set(*CONFIG_ENV_VAR, Some(&hgrcpath));
+        env.set(*CONFIG_ENV_VAR, Some(hgrcpath));
 
         let mut cfg = ConfigSet::new();
 

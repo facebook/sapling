@@ -130,7 +130,7 @@ impl Identity {
     pub fn env_var(&self, suffix: &str) -> Option<Result<String, VarError>> {
         let var_name = self.env_name(suffix);
         match std::env::var(var_name.as_ref()) {
-            Err(err) if err == VarError::NotPresent => None,
+            Err(VarError::NotPresent) => None,
             Err(err) => Some(Err(err)),
             Ok(val) => Some(Ok(val)),
         }

@@ -275,7 +275,7 @@ pub fn remove_file<P: AsRef<Path>>(path: P) -> io::Result<()> {
         Cow::Borrowed(path)
     };
     // This borrow is not needless when `#[cfg(windows)]`
-    #[allow(clippy::needless_borrow)]
+    #[allow(clippy::needless_borrows_for_generic_args)]
     let result = fs_remove_file(&path);
     #[cfg(windows)]
     match &result {

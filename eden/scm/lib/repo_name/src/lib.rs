@@ -33,6 +33,5 @@ pub fn decode_repo_name(repo_name_encoded: impl AsRef<str>) -> Result<String> {
     Ok(percent_decode_str(repo_name_encoded.as_ref())
         .decode_utf8()
         .context("Repo name must be utf-8 percent encoded")?
-        .to_owned()
         .to_string())
 }
