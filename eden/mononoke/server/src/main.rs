@@ -16,6 +16,7 @@ use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use cache_warmup::cache_warmup;
+use cache_warmup::CacheWarmupKind;
 use clap::Parser;
 use cloned::cloned;
 use cmdlib_logging::ScribeLoggingArgs;
@@ -137,9 +138,14 @@ impl MononokeServerProcess {
             let cache_warmup_params = repo.config().cache_warmup.clone();
             let ctx =
                 CoreContext::new_with_logger_and_scuba(self.fb, logger.clone(), scuba.clone());
-            cache_warmup(&ctx, &blob_repo, cache_warmup_params)
-                .await
-                .with_context(|| format!("Error while warming up cache for repo {}", repo_name))?;
+            cache_warmup(
+                &ctx,
+                &blob_repo,
+                cache_warmup_params,
+                CacheWarmupKind::MononokeServer,
+            )
+            .await
+            .with_context(|| format!("Error while warming up cache for repo {}", repo_name))?;
             info!(
                 &logger,
                 "Completed repo {} setup in Mononoke service", repo_name
@@ -327,11 +333,16 @@ fn main(fb: FacebookInit) -> Result<()> {
                     async move {
                         let logger = root_log.new(o!("repo" => repo_name.clone()));
                         let ctx = CoreContext::new_with_logger_and_scuba(fb, logger, scuba);
-                        cache_warmup(&ctx, &blob_repo, cache_warmup_params)
-                            .await
-                            .with_context(|| {
-                                format!("Error while warming up cache for repo {}", repo_name)
-                            })
+                        cache_warmup(
+                            &ctx,
+                            &blob_repo,
+                            cache_warmup_params,
+                            CacheWarmupKind::MononokeServer,
+                        )
+                        .await
+                        .with_context(|| {
+                            format!("Error while warming up cache for repo {}", repo_name)
+                        })
                     }
                 })
                 // Repo cache warmup can be quite expensive, let's limit to 40

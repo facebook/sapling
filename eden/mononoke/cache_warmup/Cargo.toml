@@ -25,6 +25,7 @@ filenodes = { version = "0.1.0", path = "../filenodes" }
 filenodes_derivation = { version = "0.1.0", path = "../derived_data/filenodes_derivation" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 manifest = { version = "0.1.0", path = "../manifest" }
 mercurial_derivation = { version = "0.1.0", path = "../derived_data/mercurial_derivation" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }

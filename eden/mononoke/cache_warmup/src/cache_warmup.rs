@@ -60,6 +60,14 @@ pub enum CacheWarmupTarget {
     Changeset(ChangesetId),
 }
 
+#[derive(Debug, Eq, PartialEq, PartialOrd, Ord)]
+pub enum CacheWarmupKind {
+    // Offline job - speed is not a big concern
+    MicrowaveBuilder,
+    // Warmup done during server startup, it needs happen fast
+    MononokeServer,
+}
+
 #[derive(Debug)]
 pub struct CacheWarmupRequest {
     pub target: CacheWarmupTarget,
@@ -217,6 +225,7 @@ async fn do_cache_warmup(
     repo: &BlobRepo,
     target: CacheWarmupTarget,
     commit_limit: usize,
+    cache_warmup_kind: CacheWarmupKind,
 ) -> Result<(), Error> {
     let ctx = ctx.clone_and_reset();
 
@@ -234,9 +243,20 @@ async fn do_cache_warmup(
     let blobstore_warmup = task::spawn({
         cloned!(ctx, repo);
         async move {
-            blobstore_and_filenodes_warmup(&ctx, &repo, bcs_id, hg_cs_id)
-                .await
-                .context("While warming up blobstore and filenodes")
+            if justknobs::eval(
+                "scm/mononoke:mononoke_server_skip_blobstore_warmup",
+                None,
+                None,
+            )
+            .unwrap_or(false)
+                && cache_warmup_kind == CacheWarmupKind::MononokeServer
+            {
+                Ok(())
+            } else {
+                blobstore_and_filenodes_warmup(&ctx, &repo, bcs_id, hg_cs_id)
+                    .await
+                    .context("While warming up blobstore and filenodes")
+            }
         }
     });
 
@@ -294,13 +314,14 @@ pub async fn cache_warmup<T: Into<CacheWarmupRequest>>(
     ctx: &CoreContext,
     repo: &BlobRepo,
     cache_warmup: Option<T>,
+    cache_warmup_kind: CacheWarmupKind,
 ) -> Result<(), Error> {
     if let Some(req) = cache_warmup {
         let req = req.into();
 
         microwave_preload(ctx, repo, &req).await;
 
-        do_cache_warmup(ctx, repo, req.target, req.commit_limit)
+        do_cache_warmup(ctx, repo, req.target, req.commit_limit, cache_warmup_kind)
             .await
             .with_context(|| format!("while warming up repo {}", repo.repo_identity().id()))?;
     }

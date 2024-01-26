@@ -10,6 +10,7 @@
     "scm/mononoke:lfs_k_consistent_hash_routing": false,
     "scm/mononoke:megarepo_override_author_check": false,
     "scm/mononoke:mononoke_force_local_pushrebase": false,
+    "scm/mononoke:mononoke_server_skip_blobstore_warmup": false,
     "scm/mononoke:scs_commit_find_files_disable_bssm": false,
     "scm/mononoke:scs_commit_find_files_use_bssm_for_suffix_queries": false,
     "scm/mononoke:sql_disable_auto_cache": false,
