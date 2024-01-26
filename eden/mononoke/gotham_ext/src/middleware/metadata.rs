@@ -36,6 +36,7 @@ use crate::state_ext::StateExt;
 
 const ENCODED_CLIENT_IDENTITY: &str = "x-fb-validated-client-encoded-identity";
 const CLIENT_IP: &str = "tfb-orig-client-ip";
+const CLIENT_PORT: &str = "tfb-orig-client-port";
 
 #[derive(StateData, Default)]
 pub struct MetadataState(Metadata);
@@ -92,6 +93,13 @@ fn request_ip_from_headers(headers: &HeaderMap) -> Option<IpAddr> {
     Some(ip)
 }
 
+fn request_port_from_headers(headers: &HeaderMap) -> Option<u16> {
+    let header = headers.get(CLIENT_PORT)?;
+    let header = header.to_str().ok()?;
+    let ip = header.parse().ok()?;
+    Some(ip)
+}
+
 fn request_identities_from_headers(headers: &HeaderMap) -> Option<MononokeIdentitySet> {
     let encoded_identities = headers.get(ENCODED_CLIENT_IDENTITY)?;
     let json_identities = percent_decode(encoded_identities.as_bytes())
@@ -107,7 +115,9 @@ impl Middleware for MetadataMiddleware {
         let mut metadata = Metadata::default();
 
         if let Some(headers) = HeaderMap::try_borrow_from(state) {
-            metadata = metadata.set_client_ip(request_ip_from_headers(headers));
+            metadata = metadata
+                .set_client_ip(request_ip_from_headers(headers))
+                .set_client_port(request_port_from_headers(headers));
 
             let maybe_identities = {
                 let maybe_cat_idents =
@@ -183,7 +193,11 @@ impl Middleware for MetadataMiddleware {
 
         // For the IP, we can fallback to the peer IP
         if metadata.client_ip().is_none() {
-            metadata = metadata.set_client_ip(client_addr(state).as_ref().map(SocketAddr::ip));
+            let client_addr = client_addr(state);
+
+            metadata = metadata
+                .set_client_ip(client_addr.as_ref().map(SocketAddr::ip))
+                .set_client_port(client_addr.as_ref().map(SocketAddr::port));
         }
 
         state.put(MetadataState(metadata));

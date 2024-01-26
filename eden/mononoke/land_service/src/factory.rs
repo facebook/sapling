@@ -163,6 +163,7 @@ impl Factory {
                 client_debug,
                 metadata::security::is_client_untrusted(|h| req_ctxt.header(h))?,
                 client_ip,
+                None,
             )
             .await;
 
@@ -185,6 +186,7 @@ impl Factory {
             tls_identities.union(&cats_identities).cloned().collect(),
             false,
             metadata::security::is_client_untrusted(|h| req_ctxt.header(h))?,
+            None,
             None,
         )
         .await;

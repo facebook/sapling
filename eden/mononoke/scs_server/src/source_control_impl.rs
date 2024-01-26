@@ -282,6 +282,7 @@ impl SourceControlServiceImpl {
                     metadata::security::is_client_untrusted(|h| req_ctxt.header(h))
                         .map_err(errors::invalid_request)?,
                     client_ip,
+                    None,
                 )
                 .await;
 
@@ -303,6 +304,7 @@ impl SourceControlServiceImpl {
             false,
             metadata::security::is_client_untrusted(|h| req_ctxt.header(h))
                 .map_err(errors::invalid_request)?,
+            None,
             None,
         )
         .await;

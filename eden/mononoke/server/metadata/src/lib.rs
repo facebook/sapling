@@ -37,6 +37,7 @@ pub struct Metadata {
     /// or admin bypass.
     client_untrusted: bool,
     client_ip: Option<IpAddr>,
+    client_port: Option<u16>,
     client_hostname: Option<String>,
     revproxy_region: Option<String>,
     raw_encoded_cats: Option<String>,
@@ -50,6 +51,7 @@ impl Metadata {
         client_debug: bool,
         client_untrusted: bool,
         client_ip: Option<IpAddr>,
+        client_port: Option<u16>,
     ) -> Self {
         let session_id: SessionId = match session_id {
             Some(id) => SessionId::from_string(id.to_owned()),
@@ -79,6 +81,7 @@ impl Metadata {
             client_debug,
             client_untrusted,
             client_ip,
+            client_port,
             client_hostname,
             revproxy_region: None,
             raw_encoded_cats: None,
@@ -184,8 +187,17 @@ impl Metadata {
         self.client_ip.as_ref()
     }
 
+    pub fn client_port(&self) -> Option<u16> {
+        self.client_port
+    }
+
     pub fn set_client_ip(mut self, client_ip: Option<IpAddr>) -> Self {
         self.client_ip = client_ip;
+        self
+    }
+
+    pub fn set_client_port(mut self, client_port: Option<u16>) -> Self {
+        self.client_port = client_port;
         self
     }
 
