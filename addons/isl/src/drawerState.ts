@@ -27,6 +27,10 @@ export const islDrawerState = localStorageBackedAtom<AllDrawersState>('isl.drawe
 // This allows collapsing even if the size has been previous persisted.
 function autoCloseBasedOnWindowWidth() {
   const windowWidth = getWindowWidthInPixels();
+  if (windowWidth === 0) {
+    // window not loaded yet
+    return;
+  }
 
   const current = readAtom(islDrawerState).right.size;
   const setDrawer = (state: DrawerState) => {
