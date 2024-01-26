@@ -185,7 +185,7 @@ fn expand_shell_alias_args(command_args: &[String], shell_alias: &str) -> Vec<St
                 cmd += &command_args
                     .iter()
                     .skip(1)
-                    .map(|s| shlex::quote(s))
+                    .map(|s| shlex::try_quote(s).expect("null byte unexpected"))
                     .collect::<Vec<_>>()
                     .join(" ");
                 buf.clear();
@@ -520,7 +520,7 @@ mod tests {
         };
 
         assert_eq!(expand("echo \"foo\"", vec!["bar"]), "echo \"foo\"");
-        assert_eq!(expand("echo \"$@\"", vec!["a b", "c"]), "echo \"a b\" c");
+        assert_eq!(expand("echo \"$@\"", vec!["a b", "c"]), "echo 'a b' c");
         assert_eq!(expand("echo $@", vec!["a b", "c"]), "echo a b c");
         assert_eq!(
             expand("$0 $1 $2", vec!["echo -n", "a b", "c d"]),
