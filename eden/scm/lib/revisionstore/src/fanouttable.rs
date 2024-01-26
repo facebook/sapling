@@ -352,17 +352,8 @@ mod tests {
                 let (start, end) = FanoutTable::get_bounds(table, hgid).expect("bounds");
                 let end = end.unwrap_or(data_buf.len());
 
-                // Manually scan for the hgid in the data buffer bounds.
-                let mut found = false;
-                let mut cur = start;
-                while start < end {
-                    if &data_buf[cur..cur + hgid_size] == hgid.as_ref() {
-                        found = true;
-                        break;
-                    }
-
-                    cur += hgid_size;
-                }
+                // Scan for the hgid in the data buffer bounds.
+                let found = data_buf[start..end].chunks(hgid_size).any(|chunk| chunk == hgid.as_ref());
                 if !found {
                     return false;
                 }
