@@ -7,6 +7,7 @@
 
 use std::any::Any;
 use std::fmt;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
 use nonblocking::non_blocking_result;
@@ -67,7 +68,7 @@ impl Iter {
                     Some((map.vertex_name(id).await, self))
                 } else {
                     // On demand prefetch in batch.
-                    let batch_size = 131072;
+                    let batch_size = crate::config::BATCH_SIZE.load(Ordering::Acquire);
                     let mut ids = Vec::with_capacity(batch_size);
                     ids.push(id);
                     for _ in ids.len()..batch_size {
