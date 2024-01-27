@@ -79,5 +79,7 @@ class HealthOfFakeEdenFSTest(ServiceTestCaseBase, PexpectAssertionMixin):
             #  `Optional[_Environ[typing.Any]]` but got `Dict[str, str]`.
             env=env,
             encoding="utf-8",
+            # pyre-fixme[6]: For 5th argument expected `Optional[_Logfile]` but got
+            #  `TextIO`.
             logfile=sys.stderr,
         )

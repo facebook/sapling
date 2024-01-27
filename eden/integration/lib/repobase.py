@@ -109,6 +109,7 @@ class Repository:
             contents = contents.encode()
 
         with open(full_path, "wb") as f:
+            # pyre-fixme[6]: For 1st argument expected `Buffer` but got `AnyStr`.
             f.write(contents)
 
         os.chmod(full_path, mode)
