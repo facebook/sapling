@@ -9,7 +9,7 @@ import react from '@vitejs/plugin-react';
 import {defineConfig} from 'vite';
 import viteTsconfigPaths from 'vite-tsconfig-paths';
 
-export default defineConfig({
+export default defineConfig(({mode}) => ({
   base: '',
   plugins: [
     react({
@@ -30,11 +30,12 @@ export default defineConfig({
       },
     },
     copyPublicDir: true,
-    sourcemap: true,
+    // No need for source maps in production. We can always build them locally to understand a wild stack trace.
+    sourcemap: mode === 'development',
   },
   publicDir: '../isl/public',
   server: {
     // No need to open the browser, we run inside vscode and don't really connect to the server.
     open: false,
   },
-});
+}));
