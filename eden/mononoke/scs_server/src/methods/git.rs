@@ -146,6 +146,7 @@ impl SourceControlServiceImpl {
                     })
             })
             .transpose()?;
+        let target_is_tag = params.target_is_tag.unwrap_or(false);
         let changeset_context = repo_ctx
             .create_annotated_tag(
                 tag_hash,
@@ -154,6 +155,7 @@ impl SourceControlServiceImpl {
                 author_date,
                 params.annotation,
                 annotated_tag,
+                target_is_tag,
             )
             .await?;
         Ok(thrift::CreateGitTagResponse {

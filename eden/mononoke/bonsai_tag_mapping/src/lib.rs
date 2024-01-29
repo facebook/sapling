@@ -21,14 +21,21 @@ pub struct BonsaiTagMappingEntry {
     pub changeset_id: ChangesetId,
     pub tag_name: String,
     pub tag_hash: GitSha1,
+    pub target_is_tag: bool,
 }
 
 impl BonsaiTagMappingEntry {
-    pub fn new(changeset_id: ChangesetId, tag_name: String, tag_hash: GitSha1) -> Self {
+    pub fn new(
+        changeset_id: ChangesetId,
+        tag_name: String,
+        tag_hash: GitSha1,
+        target_is_tag: bool,
+    ) -> Self {
         BonsaiTagMappingEntry {
             changeset_id,
             tag_name,
             tag_hash,
+            target_is_tag,
         }
     }
 }

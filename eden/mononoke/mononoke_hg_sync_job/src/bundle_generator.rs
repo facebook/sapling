@@ -321,7 +321,7 @@ async fn create_bundle_impl(
                 repo.repo_blobstore().clone(),
                 manifests
                     .into_iter()
-                    .map(|(path, m_id, cs_id)| (path.into(), m_id, cs_id))
+                    .map(|(path, m_id, cs_id)| (path, m_id, cs_id))
                     .collect(),
             ),
             parts::StoreInHgCache::Yes,

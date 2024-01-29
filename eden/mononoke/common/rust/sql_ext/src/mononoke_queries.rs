@@ -17,8 +17,6 @@ use anyhow::Result;
 use async_trait::async_trait;
 use bytes::Bytes;
 use caching_ext::*;
-use clientinfo::ClientEntryPoint;
-use clientinfo::ClientRequestInfo;
 use itertools::Itertools;
 use maplit::hashmap;
 use maplit::hashset;

@@ -29,15 +29,22 @@ async fn test_add_and_get(_: FacebookInit) -> Result<(), Error> {
         changeset_id: bonsai::ONES_CSID,
         tag_name: tag_name.to_string(),
         tag_hash: GitSha1::from_str(ZERO_GIT_HASH)?,
+        target_is_tag: false,
     };
 
     mapping.add_or_update_mappings(vec![entry.clone()]).await?;
 
     let result = mapping
         .get_entry_by_tag_name(entry.tag_name.clone())
-        .await?
-        .map(|entry| entry.changeset_id);
-    assert_eq!(result, Some(bonsai::ONES_CSID));
+        .await?;
+    assert_eq!(
+        result.as_ref().map(|entry| entry.changeset_id),
+        Some(bonsai::ONES_CSID)
+    );
+    assert_eq!(
+        result.as_ref().map(|entry| entry.target_is_tag),
+        Some(false)
+    );
 
     let result = mapping
         .get_entries_by_changeset(bonsai::ONES_CSID)
@@ -60,6 +67,7 @@ async fn test_update_and_get(_: FacebookInit) -> Result<(), Error> {
         changeset_id: bonsai::ONES_CSID,
         tag_name: tag_name.to_string(),
         tag_hash: GitSha1::from_str(ZERO_GIT_HASH)?,
+        target_is_tag: false,
     };
 
     mapping.add_or_update_mappings(vec![entry.clone()]).await?;
@@ -77,6 +85,7 @@ async fn test_update_and_get(_: FacebookInit) -> Result<(), Error> {
         changeset_id: bonsai::ONES_CSID,
         tag_name: tag_name.to_string(),
         tag_hash: GitSha1::from_str(ONE_GIT_HASH)?,
+        target_is_tag: true,
     };
     mapping
         .add_or_update_mappings(vec![new_entry.clone()])
@@ -111,11 +120,13 @@ async fn test_get_multiple_tags(_: FacebookInit) -> Result<(), Error> {
         changeset_id: bonsai::ONES_CSID,
         tag_name: "JustATag".to_string(),
         tag_hash: GitSha1::from_str(ZERO_GIT_HASH)?,
+        target_is_tag: false,
     };
     let another_entry = BonsaiTagMappingEntry {
         changeset_id: bonsai::ONES_CSID,
         tag_name: "AnotherTag".to_string(),
         tag_hash: GitSha1::from_str(ONE_GIT_HASH)?,
+        target_is_tag: true,
     };
     mapping
         .add_or_update_mappings(vec![entry, another_entry])

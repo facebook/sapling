@@ -59,10 +59,10 @@ inline unsigned int ChronoUnitPerfectHash::hash(StringPiece str) {
   switch (hval) {
     default:
       hval += asso_values[static_cast<unsigned char>(str[2])];
-      FOLLY_FALLTHROUGH;
+      [[fallthrough]];
     case 2:
       hval += asso_values[static_cast<unsigned char>(str[1])];
-      FOLLY_FALLTHROUGH;
+      [[fallthrough]];
     case 1:
       hval += asso_values[static_cast<unsigned char>(str[0])];
       break;

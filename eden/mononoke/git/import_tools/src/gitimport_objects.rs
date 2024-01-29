@@ -325,6 +325,7 @@ pub struct TagMetadata {
     pub author_date: Option<DateTime>,
     pub name: String,
     pub pgp_signature: Option<Bytes>,
+    pub target_is_tag: bool,
 }
 
 impl TagMetadata {
@@ -335,6 +336,7 @@ impl TagMetadata {
     ) -> Result<Self, Error> {
         let Tag {
             name,
+            target_kind,
             mut tagger,
             message,
             mut pgp_signature,
@@ -353,6 +355,7 @@ impl TagMetadata {
         let pgp_signature = pgp_signature
             .take()
             .map(|signature| Bytes::from(signature.to_vec()));
+        let target_is_tag = target_kind == gix_object::Kind::Tag;
         Result::<_, Error>::Ok(TagMetadata {
             oid,
             author,
@@ -360,6 +363,7 @@ impl TagMetadata {
             name,
             message,
             pgp_signature,
+            target_is_tag,
         })
     }
 }

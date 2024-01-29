@@ -25,16 +25,17 @@ mononoke_queries! {
         tag_name: String,
         changeset_id: ChangesetId,
         tag_hash: GitSha1,
+        target_is_tag: bool,
     )) {
         none,
-        "REPLACE INTO bonsai_tag_mapping (repo_id, tag_name, changeset_id, tag_hash) VALUES {values}"
+        "REPLACE INTO bonsai_tag_mapping (repo_id, tag_name, changeset_id, tag_hash, target_is_tag) VALUES {values}"
     }
 
     read SelectMappingByChangeset(
         repo_id: RepositoryId,
         changeset_id: ChangesetId
-    ) -> (String, ChangesetId, GitSha1) {
-        "SELECT tag_name, changeset_id, tag_hash
+    ) -> (String, ChangesetId, GitSha1, bool) {
+        "SELECT tag_name, changeset_id, tag_hash, target_is_tag
          FROM bonsai_tag_mapping
          WHERE repo_id = {repo_id} AND changeset_id = {changeset_id}"
     }
@@ -42,8 +43,8 @@ mononoke_queries! {
     read SelectMappingByTagName(
         repo_id: RepositoryId,
         tag_name: String,
-    ) -> (String, ChangesetId, GitSha1) {
-        "SELECT tag_name, changeset_id, tag_hash
+    ) -> (String, ChangesetId, GitSha1, bool) {
+        "SELECT tag_name, changeset_id, tag_hash, target_is_tag
          FROM bonsai_tag_mapping
          WHERE repo_id = {repo_id} AND tag_name = {tag_name}"
     }
@@ -113,8 +114,8 @@ impl BonsaiTagMapping for SqlBonsaiTagMapping {
         Ok(results
             .into_iter()
             .next()
-            .map(|(tag_name, changeset_id, tag_hash)| {
-                BonsaiTagMappingEntry::new(changeset_id, tag_name, tag_hash)
+            .map(|(tag_name, changeset_id, tag_hash, target_is_tag)| {
+                BonsaiTagMappingEntry::new(changeset_id, tag_name, tag_hash, target_is_tag)
             }))
     }
 
@@ -137,8 +138,8 @@ impl BonsaiTagMapping for SqlBonsaiTagMapping {
 
         let values = results
             .into_iter()
-            .map(|(tag_name, changeset_id, tag_hash)| {
-                BonsaiTagMappingEntry::new(changeset_id, tag_name, tag_hash)
+            .map(|(tag_name, changeset_id, tag_hash, target_is_tag)| {
+                BonsaiTagMappingEntry::new(changeset_id, tag_name, tag_hash, target_is_tag)
             })
             .collect::<Vec<_>>();
         let output = (!values.is_empty()).then_some(values);
@@ -154,6 +155,7 @@ impl BonsaiTagMapping for SqlBonsaiTagMapping {
                     &entry.tag_name,
                     &entry.changeset_id,
                     &entry.tag_hash,
+                    &entry.target_is_tag,
                 )
             })
             .collect();

@@ -671,25 +671,26 @@ async fn commit_find_files_impl(fb: FacebookInit) -> Result<(), Error> {
         if justknobs::eval("scm/mononoke:enable_bssm_v3", None, None).unwrap_or_default() {
             vec![
                 MPath::try_from("1")?,
-                MPath::try_from("dir1/file_1_in_dir1")?,
-                MPath::try_from("dir1/file_2_in_dir1")?,
                 MPath::try_from("dir1/subdir1/file_1")?,
                 MPath::try_from("dir1/subdir1/subsubdir1/file_1")?,
                 MPath::try_from("dir1/subdir1/subsubdir2/file_1")?,
+                MPath::try_from("dir1/file_1_in_dir1")?,
+                MPath::try_from("dir1/file_2_in_dir1")?,
                 MPath::try_from("dir2/file_1_in_dir2")?,
             ]
         } else {
             vec![
                 MPath::try_from("1")?,
+                MPath::try_from("dir1/file_1_in_dir1")?,
+                MPath::try_from("dir1/file_2_in_dir1")?,
                 MPath::try_from("dir1/subdir1/file_1")?,
                 MPath::try_from("dir1/subdir1/subsubdir1/file_1")?,
                 MPath::try_from("dir1/subdir1/subsubdir2/file_1")?,
-                MPath::try_from("dir1/file_1_in_dir1")?,
-                MPath::try_from("dir1/file_2_in_dir1")?,
                 MPath::try_from("dir2/file_1_in_dir2")?,
             ]
         };
 
+    assert_eq!(files, expected_files);
     // Suffixes, basenames, ordered after
     let files: Vec<_> = cs
         .find_files(
