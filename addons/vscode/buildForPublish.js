@@ -27,11 +27,11 @@ function deleteFolderRecursive(pathToDelete) {
 async function build() {
   try {
     console.log('Building Extension');
-    let {stdout} = await exec('webpack --config extension.webpack.config.ts');
+    let {stdout} = await exec('yarn build-extension');
     console.log(stdout);
 
     console.log('Building Webview');
-    let webViewOutput = await exec('webpack --config webview.webpack.config.ts');
+    let webViewOutput = await exec('yarn build-webview');
     console.log(webViewOutput.stdout);
     console.log('Build complete');
   } catch (err) {
