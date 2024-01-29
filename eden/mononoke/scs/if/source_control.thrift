@@ -1686,6 +1686,8 @@ struct CreateGitTagParams {
   7: string tag_name;
   /// The git SHA1 hash of the tag
   8: optional binary tag_hash;
+  /// Flag indicating if the target of the tag is also a tag
+  9: optional bool target_is_tag;
 }
 
 /// Method response structures
