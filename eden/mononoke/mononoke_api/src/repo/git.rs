@@ -135,6 +135,7 @@ impl RepoContext {
             author_date,
             annotation,
             annotated_tag,
+            false, // TODO(rajshar): Populate this field once we have it
         )
         .await?;
 
@@ -254,6 +255,7 @@ pub async fn create_annotated_tag(
     author_date: Option<DateTime<FixedOffset>>,
     annotation: String,
     annotated_tag: BonsaiAnnotatedTag,
+    target_is_tag: bool,
 ) -> Result<mononoke_types::ChangesetId, GitError> {
     let tag_id = format!("{:?}", annotated_tag);
 
@@ -288,7 +290,7 @@ pub async fn create_annotated_tag(
         changeset_id,
         tag_hash,
         tag_name: name,
-        target_is_tag: false, //TODO(rajshar): Initialize it properly by parsing the tag
+        target_is_tag,
     };
     repo.bonsai_tag_mapping()
         .add_or_update_mappings(vec![mapping_entry])
