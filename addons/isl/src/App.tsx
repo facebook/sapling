@@ -29,6 +29,7 @@ import {GettingStartedModal} from './gettingStarted/GettingStartedModal';
 import {I18nSupport, t, T} from './i18n';
 import {setJotaiStore} from './jotaiUtils';
 import platform from './platform';
+import {getEntangledAtomsInitializedState} from './recoilUtils';
 import {DEFAULT_RESET_CSS} from './resetStyle';
 import {useMainContentWidth, zoomUISettingAtom} from './responsive';
 import {applicationinfo, repositoryInfo} from './serverAPIState';
@@ -50,7 +51,7 @@ export default function App() {
     <React.StrictMode>
       <ResetStyle />
       <I18nSupport>
-        <RecoilRoot>
+        <RecoilRoot initializeState={getEntangledAtomsInitializedState}>
           <AccessGlobalRecoil />
           <MaybeWithJotaiRoot>
             <ISLRoot>

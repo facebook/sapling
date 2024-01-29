@@ -6,7 +6,7 @@
  */
 
 import type {MutAtom} from './jotaiUtils';
-import type {AtomEffect, RecoilState} from 'recoil';
+import type {AtomEffect, MutableSnapshot, RecoilState} from 'recoil';
 
 import {globalRecoil} from './AccessGlobalRecoil';
 import serverAPI from './ClientToServerAPI';
@@ -19,6 +19,15 @@ import {atom as RecoilAtom} from 'recoil';
  */
 export function clearOnCwdChange<T>(): AtomEffect<T> {
   return ({resetSelf}) => serverAPI.onCwdChanged(resetSelf);
+}
+
+const entangledAtomsInitializedState: Map<RecoilState<unknown>, unknown> = new Map();
+
+export function getEntangledAtomsInitializedState(snapshot: MutableSnapshot): void {
+  for (const [atom, value] of entangledAtomsInitializedState.entries()) {
+    snapshot.set(atom, value);
+  }
+  // Note: we intentionally don't clear the map, since RecoilRoot is sometimes re-called during hot reloads.
 }
 
 /**
@@ -40,15 +49,6 @@ export function entangledAtoms<T>(props: {
   let recoilValue = initialValue;
   let jotaiValue = initialValue;
 
-  const jotaiAtom = atomWithOnChange(originalAtom, value => {
-    if (recoilValue !== value) {
-      // Recoil value is outdated.
-      recoilValue = value;
-      globalRecoil().set(recoilAtom, value);
-    }
-  });
-  jotaiAtom.debugLabel = key;
-
   const effects = props.effects ?? [];
   effects.push(({onSet}) => {
     onSet(newValue => {
@@ -59,12 +59,27 @@ export function entangledAtoms<T>(props: {
       }
     });
   });
-
   const recoilAtom = RecoilAtom<T>({
     key,
     default: initialValue,
     effects,
   });
+
+  const jotaiAtom = atomWithOnChange(originalAtom, value => {
+    if (recoilValue !== value) {
+      // Recoil value is outdated.
+      recoilValue = value;
+      const recoil = globalRecoil();
+      if (recoil == null) {
+        // Sometimes, an atom is written to before RecoilRoot is initialized.
+        // Save such values so we can pass them to RecoilRoot's initializeState..
+        entangledAtomsInitializedState.set(recoilAtom as RecoilState<unknown>, value);
+      } else {
+        recoil.set(recoilAtom, value);
+      }
+    }
+  });
+  jotaiAtom.debugLabel = key;
 
   return [jotaiAtom, recoilAtom];
 }
