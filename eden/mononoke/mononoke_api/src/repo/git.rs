@@ -125,6 +125,7 @@ impl RepoContext {
         author_date: Option<DateTime<FixedOffset>>,
         annotation: String,
         annotated_tag: BonsaiAnnotatedTag,
+        target_is_tag: bool,
     ) -> Result<ChangesetContext, GitError> {
         let new_changeset_id = create_annotated_tag(
             self.ctx(),
@@ -135,7 +136,7 @@ impl RepoContext {
             author_date,
             annotation,
             annotated_tag,
-            false, // TODO(rajshar): Populate this field once we have it
+            target_is_tag,
         )
         .await?;
 
