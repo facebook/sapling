@@ -613,7 +613,7 @@ mod h2m {
                     .transpose()?)
             })?,
             Some(conn.pending.addr.ip()),
-            Some(conn.pending.addr.port().into()),
+            Some(conn.pending.addr.port()),
         )
         .await;
 

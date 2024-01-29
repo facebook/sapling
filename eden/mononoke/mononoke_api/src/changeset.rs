@@ -1090,10 +1090,7 @@ impl ChangesetContext {
     > {
         let root = self.root_skeleton_manifest_id().await?;
         let prefixes = match prefixes {
-            Some(prefixes) => prefixes
-                .into_iter()
-                .map(|prefix| PathOrPrefix::Prefix(prefix))
-                .collect(),
+            Some(prefixes) => prefixes.into_iter().map(PathOrPrefix::Prefix).collect(),
             None => vec![PathOrPrefix::Prefix(MPath::ROOT)],
         };
         let entries = match ordering {
