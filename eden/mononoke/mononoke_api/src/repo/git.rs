@@ -288,6 +288,7 @@ pub async fn create_annotated_tag(
         changeset_id,
         tag_hash,
         tag_name: name,
+        target_is_tag: false, //TODO(rajshar): Initialize it properly by parsing the tag
     };
     repo.bonsai_tag_mapping()
         .add_or_update_mappings(vec![mapping_entry])
