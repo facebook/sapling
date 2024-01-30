@@ -198,7 +198,7 @@ class ParentsCmd(Subcmd):
         path = args.path or os.getcwd()
         _, checkout, _ = cmd_util.require_checkout(args, path)
         try:
-            working_copy_parent, checked_out_revision = checkout.get_snapshot()
+            working_copy_parent, checked_out_revision = checkout.get_snapshot()[0:2]
         except Exception as ex:
             print_stderr(f"error parsing EdenFS snapshot : {ex}")
             return 1

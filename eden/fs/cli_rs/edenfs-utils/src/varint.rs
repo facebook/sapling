@@ -33,7 +33,6 @@ pub fn encode_varint(value: u32) -> Result<([u8; VARINT_MAX_BYTES], usize), std:
     Ok((buffer, count))
 }
 
-#[allow(dead_code)]
 pub fn decode_varint(buf: &mut impl Read) -> Result<(u32, usize), std::io::Error> {
     let mut value = 0;
     let mut shift = 0;

@@ -38,6 +38,7 @@ use edenfs_error::ResultExt;
 use edenfs_utils::path_from_bytes;
 #[cfg(windows)]
 use edenfs_utils::strip_unc_prefix;
+use edenfs_utils::varint::decode_varint;
 use serde::Deserialize;
 use serde::Deserializer;
 use serde::Serialize;
@@ -506,13 +507,22 @@ impl CheckoutConfig {
 pub struct SnapshotState {
     pub working_copy_parent: String,
     pub last_checkout_hash: String,
+    pub parent_filter_id: Option<String>,
+    pub last_filter_id: Option<String>,
 }
 
 impl SnapshotState {
-    fn new(working_copy_parent: String, last_checkout_hash: String) -> Self {
+    fn new(
+        working_copy_parent: String,
+        last_checkout_hash: String,
+        parent_filter_id: Option<String>,
+        last_filter_id: Option<String>,
+    ) -> Self {
         Self {
             working_copy_parent,
             last_checkout_hash,
+            parent_filter_id,
+            last_filter_id,
         }
     }
 }
@@ -565,24 +575,66 @@ impl EdenFsCheckout {
         s
     }
 
+    /// Determines the hash and filter id for a given Snapshot component.
+    pub fn parse_snapshot_component(
+        &self,
+        component_buf: &Vec<u8>,
+    ) -> Result<(String, Option<String>)> {
+        let checkout_config = CheckoutConfig::parse_config(self.data_dir.clone())?;
+
+        if checkout_config.repository.repo_type == RepositoryType::FilteredHg {
+            // FilteredRootIds are in the form: <VarInt><RootId><FilterId>. We first parse out the
+            // VarInt to determine where the RootId ends.
+            let cursor = std::io::Cursor::new(component_buf);
+            let (component_hash_len, varint_len) = decode_varint(&mut BufReader::new(cursor))
+                .context("Could not decode varint in Snapshot file")?;
+            let filter_offset = varint_len + (component_hash_len as usize);
+
+            // We can then parse out the RootId, FilterId, and convert them into strings.
+            let decoded_hash = std::str::from_utf8(&component_buf[varint_len..filter_offset])
+                .from_err()?
+                .to_string();
+            let decoded_filter = std::str::from_utf8(&component_buf[filter_offset..])
+                .from_err()?
+                .to_string();
+            Ok((decoded_hash, Some(decoded_filter)))
+        } else {
+            // The entire buffer corresponds to the hash. There is no filter id present.
+            let decoded_hash = std::str::from_utf8(component_buf).from_err()?.to_string();
+            Ok((decoded_hash, None))
+        }
+    }
+
     /// Returns a SnapshotState representing EdenFS working copy parent as well as the last checked
     /// out revision.
     pub fn get_snapshot(&self) -> Result<SnapshotState> {
         let snapshot_path = self.data_dir.join(SNAPSHOT);
-        let mut f = File::open(&snapshot_path).from_err()?;
+        let mut f = File::open(snapshot_path).from_err()?;
         let mut header = [0u8; 8];
         f.read(&mut header).from_err()?;
+
         if header == SNAPSHOT_MAGIC_1 {
             let mut snapshot = [0u8; 20];
             f.read(&mut snapshot).from_err()?;
             let decoded = EdenFsCheckout::encode_hex(&snapshot);
-            Ok(SnapshotState::new(decoded.clone(), decoded))
+            Ok(SnapshotState::new(decoded.clone(), decoded, None, None))
         } else if header == SNAPSHOT_MAGIC_2 {
+            // The first byte of the snapshot file is the length of the working copy parent.
             let body_length = f.read_u32::<BigEndian>().from_err()?;
             let mut buf = vec![0u8; body_length as usize];
             f.read_exact(&mut buf).from_err()?;
-            let decoded = std::str::from_utf8(&buf).from_err()?.to_string();
-            Ok(SnapshotState::new(decoded.clone(), decoded))
+
+            // We must parse out the working copy parent hash. For Filtered repos, we also have to
+            // parse out the active filter id.
+            let (decoded_hash, decoded_filter) = self
+                .parse_snapshot_component(&buf)
+                .context("Could not parse snapshot component")?;
+            Ok(SnapshotState::new(
+                decoded_hash.clone(),
+                decoded_hash,
+                decoded_filter.clone(),
+                decoded_filter,
+            ))
         } else if header == SNAPSHOT_MAGIC_3 {
             let _pid = f.read_u32::<BigEndian>().from_err()?;
 
@@ -594,11 +646,21 @@ impl EdenFsCheckout {
             let mut to_buf = vec![0u8; to_length as usize];
             f.read_exact(&mut to_buf).from_err()?;
 
+            let (from_hash, from_filter) = self
+                .parse_snapshot_component(&from_buf)
+                .context("Could not parse snapshot component")?;
+
+            let (to_hash, to_filter) = self
+                .parse_snapshot_component(&to_buf)
+                .context("Could not parse snapshot component")?;
+
             // TODO(xavierd): return a proper object that the caller could use.
             Err(EdenFsError::Other(anyhow!(
-                "A checkout operation is ongoing from {} to {}",
-                std::str::from_utf8(&from_buf).from_err()?,
-                std::str::from_utf8(&to_buf).from_err()?
+                "A checkout operation is ongoing from {} (filter: {:?}) to {} (filter: {:?})",
+                from_hash,
+                from_filter,
+                to_hash,
+                to_filter,
             )))
         } else if header == SNAPSHOT_MAGIC_4 {
             let working_copy_parent_length = f.read_u32::<BigEndian>().from_err()?;
@@ -609,13 +671,19 @@ impl EdenFsCheckout {
             let mut checked_out_buf = vec![0u8; checked_out_length as usize];
             f.read_exact(&mut checked_out_buf).from_err()?;
 
+            let (parent_hash, parent_filter) = self
+                .parse_snapshot_component(&working_copy_parent_buf)
+                .context("Could not parse snapshot component")?;
+
+            let (checked_out_hash, checked_out_filter) = self
+                .parse_snapshot_component(&checked_out_buf)
+                .context("Could not parse snapshot component")?;
+
             Ok(SnapshotState::new(
-                std::str::from_utf8(&working_copy_parent_buf)
-                    .from_err()?
-                    .to_string(),
-                std::str::from_utf8(&checked_out_buf)
-                    .from_err()?
-                    .to_string(),
+                parent_hash,
+                checked_out_hash,
+                parent_filter,
+                checked_out_filter,
             ))
         } else {
             Err(EdenFsError::Other(anyhow!(
