@@ -89,6 +89,8 @@ dott_test(
         "test-newadmin-*.t",
     ]),
     deps = [
+        # TODO(T175880214): remove dependency to admin
+        "//eden/mononoke:admin",
         "//eden/mononoke:backfill_derived_data",
         "//eden/mononoke:blobimport",
         "//eden/mononoke/git/gitimport:gitimport",
