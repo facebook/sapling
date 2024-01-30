@@ -46,7 +46,7 @@ external_commands![
     // see update_commands.sh
     // [[[cog
     // import cog, glob, os
-    // for path in sorted(glob.glob('commands/cmd*/TARGETS')):
+    // for path in sorted(glob.glob('commands/cmd*/TARGETS')) + sorted(glob.glob('debugcommands/cmd*/TARGETS')):
     //     name = os.path.basename(os.path.dirname(path))
     //     cog.outl(f'{name},')
     // ]]]
@@ -58,6 +58,11 @@ external_commands![
     cmdstatus,
     cmdversion,
     cmdwhereami,
+    cmddebugargs,
+    cmddebugcurrentexe,
+    cmddebugdumpindexedlog,
+    cmddebugdumpinternalconfig,
+    cmddebugfsync,
     // [[[end]]]
 ];
 

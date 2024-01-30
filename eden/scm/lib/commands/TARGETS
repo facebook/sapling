@@ -42,6 +42,7 @@ rust_library(
                     "configloader/fb",
                     "identity/fb",
                     "cmdversion/fb",
+                    "cmddebugdumpinternalconfig/fb",
                 ],
             },
         },
@@ -81,12 +82,9 @@ rust_library(
         "//eden/scm/lib/doctor/network:network-doctor",
         "//eden/scm/lib/edenapi:edenapi",
         "//eden/scm/lib/edenfs-client:edenfs-client",
-        "//eden/scm/lib/fsyncglob:fsyncglob",
         "//eden/scm/lib/hg-http:hg-http",
         "//eden/scm/lib/hg-metrics:hg-metrics",
-        "//eden/scm/lib/hgtime:hgtime",
         "//eden/scm/lib/identity:identity",
-        "//eden/scm/lib/indexedlog:indexedlog",
         "//eden/scm/lib/metrics/render:metrics-render",
         "//eden/scm/lib/mincode:mincode",
         "//eden/scm/lib/minibytes:minibytes",
@@ -116,6 +114,9 @@ rust_library(
         # for path in sorted(glob.glob('commands/cmd*/TARGETS')):
         #     name = os.path.basename(os.path.dirname(path))
         #     cog.outl(f'"//eden/scm/lib/commands/commands/{name}:{name}",')
+        # for path in sorted(glob.glob('debugcommands/cmd*/TARGETS')):
+        #     name = os.path.basename(os.path.dirname(path))
+        #     cog.outl(f'"//eden/scm/lib/commands/debugcommands/{name}:{name}",')
         # ]]]
         "//eden/scm/lib/commands/commands/cmdclone:cmdclone",
         "//eden/scm/lib/commands/commands/cmdconfig:cmdconfig",
@@ -125,6 +126,11 @@ rust_library(
         "//eden/scm/lib/commands/commands/cmdstatus:cmdstatus",
         "//eden/scm/lib/commands/commands/cmdversion:cmdversion",
         "//eden/scm/lib/commands/commands/cmdwhereami:cmdwhereami",
+        "//eden/scm/lib/commands/debugcommands/cmddebugargs:cmddebugargs",
+        "//eden/scm/lib/commands/debugcommands/cmddebugcurrentexe:cmddebugcurrentexe",
+        "//eden/scm/lib/commands/debugcommands/cmddebugdumpindexedlog:cmddebugdumpindexedlog",
+        "//eden/scm/lib/commands/debugcommands/cmddebugdumpinternalconfig:cmddebugdumpinternalconfig",
+        "//eden/scm/lib/commands/debugcommands/cmddebugfsync:cmddebugfsync",
         # [[[end]]]
     ],
 )

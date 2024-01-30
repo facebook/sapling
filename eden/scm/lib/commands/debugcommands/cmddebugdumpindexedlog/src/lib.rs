@@ -9,10 +9,16 @@ use std::io::Write;
 use std::path::Path;
 
 use clidispatch::ReqCtx;
+use cmdutil::define_flags;
 use cmdutil::ConfigSet;
 use cmdutil::Result;
 
-use super::DebugArgsOpts;
+define_flags! {
+    pub struct DebugArgsOpts {
+        #[args]
+        args: Vec<String>,
+    }
+}
 
 pub fn run(ctx: ReqCtx<DebugArgsOpts>, _config: &mut ConfigSet) -> Result<u8> {
     let mut ferr = ctx.io().error();

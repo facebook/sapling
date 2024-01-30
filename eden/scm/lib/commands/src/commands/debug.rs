@@ -8,13 +8,7 @@
 use cmdutil::define_flags;
 
 commands! {
-    mod args;
-    mod currentexe;
-    mod dumpinternalconfig;
-    mod dumpindexedlog;
-    mod dumptrace;
     mod refreshconfig;
-    mod fsync;
     mod http;
     mod mergestate;
     mod metrics;

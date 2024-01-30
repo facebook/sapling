@@ -6,10 +6,16 @@
  */
 
 use clidispatch::ReqCtx;
+use cmdutil::define_flags;
 use cmdutil::ConfigSet;
 use cmdutil::Result;
 
-use super::DebugArgsOpts;
+define_flags! {
+    pub struct DebugArgsOpts {
+        #[args]
+        args: Vec<String>,
+    }
+}
 
 pub fn run(ctx: ReqCtx<DebugArgsOpts>, _config: &mut ConfigSet) -> Result<u8> {
     match ctx.io().write(format!("{:?}\n", ctx.opts.args)) {
