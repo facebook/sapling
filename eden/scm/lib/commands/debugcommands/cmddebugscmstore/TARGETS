@@ -1,0 +1,28 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "cmddebugscmstore",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "extra_buck_dependencies": {
+                "dependencies": [
+                    "//eden/scm/lib/revisionstore:revisionstore",
+                ],
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "//eden/scm/lib/async-runtime:async-runtime",
+        "//eden/scm/lib/clidispatch:clidispatch",
+        "//eden/scm/lib/commands/cmdutil:cmdutil",
+        "//eden/scm/lib/config/loader:configloader",
+        "//eden/scm/lib/repo:repo",
+        "//eden/scm/lib/revisionstore:revisionstore_with_ods",
+        "//eden/scm/lib/types:types",
+    ],
+)

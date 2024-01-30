@@ -9,6 +9,9 @@ rust_python_library(
         "cargo_toml_config": {
             "dependencies_override": {
                 "dependencies": {
+                    "cliparser": {
+                        "features": ["python"],
+                    },
                     "cpython": {
                         "features": [],
                         "git": None,

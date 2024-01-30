@@ -5,25 +5,6 @@
  * GNU General Public License version 2.
  */
 
-macro_rules! commands {
-    ( $( mod $module:ident; )* ) => {
-        $( mod $module; )*
-        pub(crate) fn extend_command_table(table: &mut ::clidispatch::command::CommandTable) {
-            // NOTE: Consider passing 'config' to name() or doc() if we want
-            // some flexibility defining them using configs.
-            $(
-            {
-                use self::$module as m;
-                let command_aliases = m::aliases();
-                let doc = m::doc();
-                let synopsis = m::synopsis();
-                ::clidispatch::command::Register::register(table, m::run, &command_aliases, &doc, synopsis.as_deref());
-            }
-            )*
-        }
-    }
-}
-
 macro_rules! external_commands {
     [ $( $name:ident, )* ] => {
         pub(crate) fn extend_crate_command_table(table: &mut ::clidispatch::command::CommandTable) {
@@ -39,8 +20,6 @@ macro_rules! external_commands {
         }
     }
 }
-
-mod debug;
 
 external_commands![
     // see update_commands.sh
@@ -72,6 +51,15 @@ external_commands![
     cmddebugrefreshconfig,
     cmddebugrevsets,
     cmddebugrunlog,
+    cmddebugscmstore,
+    cmddebugscmstorereplay,
+    cmddebugsegmentclone,
+    cmddebugsegmentgraph,
+    cmddebugsegmentpull,
+    cmddebugstore,
+    cmddebugstructuredprogress,
+    cmddebugtop,
+    cmddebugwait,
     // [[[end]]]
 ];
 
@@ -81,7 +69,6 @@ use clidispatch::command::CommandTable;
 /// Return the main command table including all Rust commands.
 pub fn table() -> CommandTable {
     let mut table = CommandTable::new();
-    debug::extend_command_table(&mut table);
 
     extend_crate_command_table(&mut table);
 
