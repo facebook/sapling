@@ -276,7 +276,7 @@ impl SourceControlServiceImpl {
                 );
                 let client_port = Some(
                     forwarded_port
-                        .parse::<u32>()
+                        .parse::<u16>()
                         .map_err(errors::invalid_request)?,
                 );
                 let client_debug = header(FORWARDED_CLIENT_DEBUG_HEADER)?.is_some();

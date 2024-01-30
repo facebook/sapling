@@ -158,7 +158,7 @@ impl Factory {
 
             let client_port = Some(
                 forwarded_port
-                    .parse::<u32>()
+                    .parse::<u16>()
                     .map_err(|e| errors::internal_error(&e))?,
             );
 
