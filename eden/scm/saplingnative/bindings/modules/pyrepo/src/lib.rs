@@ -109,7 +109,7 @@ py_class!(pub class repo |py| {
 
     def invalidatemetalog(&self) -> PyResult<PyNone> {
         let repo_ref = self.inner(py).write();
-        repo_ref.invalidate_metalog();
+        repo_ref.invalidate_metalog().map_pyerr(py)?;
         Ok(PyNone)
     }
 

@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+#[cfg(feature = "fb")]
 use std::str::FromStr;
 
 use clidispatch::ReqCtx;
