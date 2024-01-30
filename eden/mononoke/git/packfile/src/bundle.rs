@@ -45,7 +45,8 @@ where
     pub prereqs: Vec<ObjectId>,
     /// The version of bundle format
     pub version: BundleVersion,
-    /// List of ref-names with the commits IDs that they point to
+    /// List of ref-names with the commits IDs that they point to along with
+    /// optional metadata associated to the refs
     pub refs: Vec<(String, ObjectId)>,
     /// Packfile writer created over the underlying raw writer
     pub pack_writer: PackfileWriter<T>,

@@ -373,10 +373,12 @@ pub async fn repo_stack_git_bundle(
     let refs_to_include = response
         .included_refs
         .into_iter()
-        .map(|(ref_name, commit)| match ref_name.strip_prefix("refs/") {
-            Some(stripped_ref) => (stripped_ref.to_owned(), commit),
-            None => (ref_name, commit),
-        })
+        .map(
+            |(ref_name, ref_target)| match ref_name.strip_prefix("refs/") {
+                Some(stripped_ref) => (stripped_ref.to_owned(), ref_target.into_commit()),
+                None => (ref_name, ref_target.into_commit()),
+            },
+        )
         .collect();
 
     // Create the bundle writer with the header pre-written

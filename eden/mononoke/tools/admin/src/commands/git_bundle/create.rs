@@ -34,6 +34,7 @@ use protocol::types::PackItemStreamRequest;
 use protocol::types::PackfileItemInclusion;
 use protocol::types::RequestedRefs;
 use protocol::types::RequestedSymrefs;
+use protocol::types::SymrefFormat;
 use protocol::types::TagInclusion;
 use walkdir::WalkDir;
 
@@ -164,7 +165,7 @@ pub async fn create_from_mononoke_repo(
         RequestedRefs::all()
     };
     let request = PackItemStreamRequest::new(
-        RequestedSymrefs::IncludeHead,
+        RequestedSymrefs::IncludeHead(SymrefFormat::NameOnly),
         requested_refs,
         create_args.have_heads.clone(),
         delta_inclusion,
@@ -193,7 +194,11 @@ pub async fn create_from_mononoke_repo(
     // Create the bundle writer with the header pre-written
     let mut writer = BundleWriter::new_with_header(
         output_file,
-        response.included_refs.into_iter().collect(),
+        response
+            .included_refs
+            .into_iter()
+            .map(|(ref_name, ref_target)| (ref_name, ref_target.into_commit()))
+            .collect(),
         prereqs,
         response.num_items as u32,
         create_args.concurrency,

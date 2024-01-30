@@ -15,15 +15,47 @@ use mononoke_types::ChangesetId;
 use packfile::pack::DeltaForm;
 use packfile::types::PackfileItem;
 
+/// Enum defining the type of data associated with a ref target
+pub enum RefTarget {
+    /// The target is a plain Git object
+    Plain(ObjectId),
+    /// The target is a Git object with associated metadata
+    WithMetadata(ObjectId, String),
+}
+
+impl RefTarget {
+    pub fn id(&self) -> &ObjectId {
+        match self {
+            RefTarget::Plain(oid) | RefTarget::WithMetadata(oid, _) => oid,
+        }
+    }
+
+    pub fn into_commit(self) -> ObjectId {
+        match self {
+            RefTarget::Plain(oid) | RefTarget::WithMetadata(oid, _) => oid,
+        }
+    }
+}
+
 /// The set of symrefs that are to be included in or excluded from the pack
 #[derive(Debug, Clone, Copy)]
 pub enum RequestedSymrefs {
     /// Only include the HEAD symref in the pack/bundle
-    IncludeHead,
+    IncludeHead(SymrefFormat),
     /// Incldue all known symrefs in the pack/bundle
-    IncludeAll,
+    IncludeAll(SymrefFormat),
     /// Exclude all known symrefs from the pack/bundle
     ExcludeAll,
+}
+
+/// The format in which the symrefs need to be included in the pack
+#[derive(Debug, Clone, Copy)]
+pub enum SymrefFormat {
+    /// Include the symref along with the ref that it points to, e.g.
+    /// object_id_here HEAD symref-target:refs/heads/master
+    NameWithTarget,
+    /// Only include the symref name, e.g. object_id_here HEAD
+    NameOnly,
 }
 
 /// The set of refs that are to be included in or excluded from the pack
@@ -50,11 +82,14 @@ impl RequestedRefs {
 /// Enum defining how annotated tags should be included as a ref
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TagInclusion {
-    // Peel the tag and map it to the underlying Git commit
+    /// Peel the tag and map it to the underlying Git commit
     Peeled,
-    // Include the tag as-is without peeling and map it to
-    // the annotated Git tag object
+    /// Include the tag as-is without peeling and map it to
+    /// the annotated Git tag object
     AsIs,
+    /// Include the tag as-is without peeling but reference the
+    /// peeled target of the tag
+    WithTarget,
 }
 
 /// Enum defining whether a delta should be included in the pack
@@ -113,7 +148,6 @@ pub enum PackfileItemInclusion {
 /// The request parameters used to specify the constraints that need to be
 /// honored while generating the input PackfileItem stream
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct PackItemStreamRequest {
     /// The symrefs that are requested to be included/excluded from the pack
     pub requested_symrefs: RequestedSymrefs,
@@ -154,7 +188,7 @@ impl PackItemStreamRequest {
         packfile_item_inclusion: PackfileItemInclusion,
     ) -> Self {
         Self {
-            requested_symrefs: RequestedSymrefs::IncludeHead,
+            requested_symrefs: RequestedSymrefs::IncludeHead(SymrefFormat::NameOnly),
             requested_refs: RequestedRefs::Excluded(HashSet::new()),
             have_heads: vec![],
             delta_inclusion,
@@ -172,15 +206,15 @@ pub struct PackItemStreamResponse<'a> {
     /// The number of packfile items that were generated for the given range of commits
     pub num_items: usize,
     /// The set of refs mapped to their Git commit ID or tag ID that are included in the
-    /// generated stream of packfile items
-    pub included_refs: HashMap<String, ObjectId>,
+    /// generated stream of packfile items along with optional metadata for the mapping
+    pub included_refs: HashMap<String, RefTarget>,
 }
 
 impl<'a> PackItemStreamResponse<'a> {
     pub fn new(
         items: BoxStream<'a, Result<PackfileItem>>,
         num_items: usize,
-        included_refs: HashMap<String, ObjectId>,
+        included_refs: HashMap<String, RefTarget>,
     ) -> Self {
         Self {
             items,

@@ -72,7 +72,11 @@ pub async fn create_git_repo_on_disk(
     let concurrency = 1000;
     let mut writer = BundleWriter::new_with_header(
         output_file,
-        response.included_refs.into_iter().collect(),
+        response
+            .included_refs
+            .into_iter()
+            .map(|(ref_name, ref_target)| (ref_name, ref_target.into_commit()))
+            .collect(),
         prereqs,
         response.num_items as u32,
         concurrency,
