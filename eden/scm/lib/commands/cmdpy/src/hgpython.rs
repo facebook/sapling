@@ -8,14 +8,16 @@
 use std::cell::RefCell;
 use std::env;
 use std::path::Path;
+use std::sync::OnceLock;
 use std::sync::RwLock;
 use std::sync::Weak;
 
+use clidispatch::command::CommandTable;
 use clidispatch::io::IO;
 use commandserver::ipc::ClientIpc;
 use commandserver::ipc::CommandEnv;
 use commandserver::ipc::Server;
-use configloader::config::ConfigSet;
+use configset::config::ConfigSet;
 use cpython::*;
 use cpython_ext::convert::Serde;
 use cpython_ext::format_py_error;
@@ -26,7 +28,6 @@ use pyio::WrappedIO;
 use tracing::debug_span;
 use tracing::info_span;
 
-use crate::commands;
 use crate::python::py_finalize;
 use crate::python::py_init_threads;
 use crate::python::py_initialize;
@@ -34,8 +35,41 @@ use crate::python::py_is_initialized;
 use crate::python::py_main;
 
 const HGPYENTRYPOINT_MOD: &str = "sapling";
+/// Python interpreter that bridges to Rust commands and bindings.
 pub struct HgPython {
     py_initialized_by_us: bool,
+}
+
+/// Configuration for Rust commands used by Python.
+/// This needs to be manually configured to avoid cyclic dependency.
+#[derive(Clone, Copy, Eq, PartialEq, Debug)]
+pub struct RustCommandConfig {
+    /// How to obtain the command table.
+    pub table: fn() -> CommandTable,
+    /// How to run a command and return an exit code.
+    pub run_command: fn(Vec<String>, &IO) -> i32,
+}
+
+static RUST_COMMAND_CONFIG: OnceLock<RustCommandConfig> = OnceLock::new();
+
+impl RustCommandConfig {
+    /// Register the `RustCommandConfig` so `HgPython` can use it.
+    /// Must be called before the first `HgPython` initialization.
+    /// If called multiple times, must provide the same functions.
+    /// Otherwise the program will panic.
+    pub fn register(self) {
+        let orig_config = RUST_COMMAND_CONFIG.get_or_init(|| self);
+        assert_eq!(
+            orig_config, &self,
+            "bug: cannot register different RustCommandConfigs"
+        );
+    }
+
+    fn get() -> &'static Self {
+        RUST_COMMAND_CONFIG
+            .get()
+            .expect("bug: RustCommandConfig must be registered before Python initialization")
+    }
 }
 
 impl HgPython {
@@ -330,6 +364,7 @@ fn init_bindings_commands(py: Python, package: &str) -> PyResult<PyModule> {
         fout: Option<PyObject>,
         ferr: Option<PyObject>,
     ) -> PyResult<i32> {
+        let run_command = RustCommandConfig::get().run_command;
         if let (Some(fin), Some(fout), Some(ferr)) = (fin, fout, ferr) {
             let fin = wrap_pyio(py, fin);
             let fout = wrap_pyio(py, fout);
@@ -337,7 +372,7 @@ fn init_bindings_commands(py: Python, package: &str) -> PyResult<PyModule> {
             let old_io = IO::main();
             let io = IO::new(fin, fout, Some(ferr));
             io.set_main();
-            let result = Ok(crate::run_command(args, &io));
+            let result = Ok((run_command)(args, &io));
             if let (Ok(old_io), true) = (old_io, io.is_main()) {
                 old_io.set_main();
             }
@@ -345,12 +380,12 @@ fn init_bindings_commands(py: Python, package: &str) -> PyResult<PyModule> {
         } else {
             // Reuse the main IO.
             let io = IO::main().map_pyerr(py)?;
-            Ok(crate::run_command(args, &io))
+            Ok((run_command)(args, &io))
         }
     }
 
     fn table_py(py: Python) -> PyResult<PyDict> {
-        let table = commands::table();
+        let table = (RustCommandConfig::get().table)();
         let py_table: PyDict = PyDict::new(py);
         for def in table.values() {
             let doc = def.doc().to_string();

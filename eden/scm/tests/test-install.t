@@ -10,7 +10,7 @@ hg debuginstall
     SNI not supported by Python install; may have connectivity issues with some servers (?)
   checking Sapling version (*) (glob)
   checking Sapling custom build (*) (glob)
-  checking installed modules (*sapling)... (glob)
+  checking installed modules (*)... (glob)
   checking registered compression engines (*zlib*) (glob)
   checking available compression engines (*zlib*) (glob)
   checking available compression engines for wire protocol (*zlib*) (glob)
@@ -29,7 +29,7 @@ hg debuginstall JSON
     "encoding": "utf-8",
     "encodingerror": null,
     "extensionserror": null,
-    "hgmodules": "*sapling", (glob)
+    "hgmodules": "*", (glob)
     "hgver": "*", (glob)
     "hgverextra": "*", (glob)
     "problems": 0,
@@ -53,7 +53,7 @@ hg debuginstall with no username
     SNI not supported by Python install; may have connectivity issues with some servers (?)
   checking Sapling version (*) (glob)
   checking Sapling custom build (*) (glob)
-  checking installed modules (*sapling)... (glob)
+  checking installed modules (*)... (glob)
   checking registered compression engines (*zlib*) (glob)
   checking available compression engines (*zlib*) (glob)
   checking available compression engines for wire protocol (*zlib*) (glob)
@@ -92,7 +92,7 @@ path variables are expanded (~ is the same as $TESTTMP)
     SNI not supported by Python install; may have connectivity issues with some servers (?)
   checking Sapling version (*) (glob)
   checking Sapling custom build (*) (glob)
-  checking installed modules (*sapling)... (glob)
+  checking installed modules (*)... (glob)
   checking registered compression engines (*zlib*) (glob)
   checking available compression engines (*zlib*) (glob)
   checking available compression engines for wire protocol (*zlib*) (glob)

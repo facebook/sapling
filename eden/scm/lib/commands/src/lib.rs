@@ -6,11 +6,19 @@
  */
 
 pub mod commands;
-mod hgpython;
-mod python;
 mod run;
 
+pub use cmdpy::prepare_builtin_modules;
+pub use cmdpy::HgPython;
 pub use run::run_command;
 
-pub use crate::hgpython::prepare_builtin_modules;
-pub use crate::hgpython::HgPython;
+/// Register Rust functions required by `cmdpy`. Can be called multiple times.
+/// This is used by `run_command` and `pybindings`.
+pub fn init() {
+    use cmdpy::RustCommandConfig;
+    let cfg = RustCommandConfig {
+        table: commands::table,
+        run_command,
+    };
+    cfg.register();
+}

@@ -32,7 +32,7 @@
     tested with: 3.0 3.1 3.2.1
     bug reporting: https://example.org/bts
   histedit
-    location: */ext/histedit.py* (glob)
+    location: * (glob)
     bundled: yes
   hotfix1
     location: <sapling_ext_hotfix1>

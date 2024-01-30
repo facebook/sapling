@@ -1,0 +1,43 @@
+load("//eden/scm:targets.bzl", "rust_python_library")
+
+oncall("mercurial_release")
+
+rust_python_library(
+    name = "cmdpy",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "bindings": {
+                        "default-features": False,
+                    },
+                    "cpython": {
+                        "features": ["python3-sys"],
+                        "git": None,
+                        "rev": None,
+                    },
+                    "python3-sys": {
+                        "git": None,
+                        "rev": None,
+                    },
+                },
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    include_python_sys = True,
+    deps = [
+        "fbsource//third-party/rust:libc",
+        "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/clidispatch:clidispatch",
+        "//eden/scm/lib/commandserver:commandserver",
+        "//eden/scm/lib/config/set:configset",
+        "//eden/scm/lib/cpython-ext:cpython-ext",
+        "//eden/scm/lib/util/nodeipc:nodeipc",
+        "//eden/scm/saplingnative/bindings:bindings",
+        "//eden/scm/saplingnative/bindings/modules/pyconfigloader:pyconfigloader",
+        "//eden/scm/saplingnative/bindings/modules/pyio:pyio",
+        "//eden/scm/saplingnative/bindings/modules/pymodules:pymodules",
+    ],
+)

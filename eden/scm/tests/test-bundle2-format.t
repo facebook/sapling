@@ -283,7 +283,7 @@ Test old style bundle are detected and refused
 
   $ hg bundle --all --type v1 ../bundle.hg --config format.allowbundle1=True
   devel-warn: using deprecated bundlev1 format
-   at: */changegroup.py:* (makechangegroup) (glob)
+   at: *changegroup* (makechangegroup) (glob)
   1 changesets found
   $ hg statbundle2 < ../bundle.hg
   abort: unknown bundle version 10

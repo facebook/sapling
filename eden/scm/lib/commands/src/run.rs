@@ -62,6 +62,9 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
     let start_time = StartTime::now();
     let start_blocked = io.time_interval().total_blocked_ms();
 
+    // Ensure HgPython can initialize.
+    crate::init();
+
     // The pfcserver or commandserver do not want tracing or blackbox or ctrlc setup,
     // or going through the Rust command table. Bypass them.
     if let Some(arg1) = args.get(1).map(|s| s.as_ref()) {

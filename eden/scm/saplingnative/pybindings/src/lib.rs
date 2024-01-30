@@ -5,11 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use cpython::py_module_initializer;
 use commands::prepare_builtin_modules;
+use cpython::py_module_initializer;
 
 py_module_initializer!(bindings, initbindings, PyInit_bindings, |py, m| {
     m.add(py, "__doc__", "Bootstraps the hg python environment")?;
+    commands::init();
     prepare_builtin_modules(py, m)?;
     Ok(())
 });
