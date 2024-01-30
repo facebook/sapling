@@ -87,6 +87,7 @@
   * (glob)
   * (glob)
   The bundle records a complete history.
+  The bundle uses this hash algorithm: sha1 (?)
 # Create a new empty repo
   $ mkdir $TESTTMP/git_client_repo
   $ cd $TESTTMP
