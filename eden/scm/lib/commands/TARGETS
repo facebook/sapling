@@ -123,6 +123,8 @@ rust_library(
         #     cog.outl(f'"//eden/scm/lib/commands/commands/{name}:{name}",')
         # ]]]
         "//eden/scm/lib/commands/commands/cmdclone:cmdclone",
+        "//eden/scm/lib/commands/commands/cmdconfig:cmdconfig",
+        "//eden/scm/lib/commands/commands/cmdconfigfile:cmdconfigfile",
         # [[[end]]]
     ],
 )

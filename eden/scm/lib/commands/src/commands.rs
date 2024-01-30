@@ -43,8 +43,6 @@ macro_rules! external_commands {
 mod debug;
 
 commands! {
-    mod config;
-    mod configfile;
     mod goto;
     mod root;
     mod status;
@@ -61,6 +59,8 @@ external_commands![
     //     cog.outl(f'{name},')
     // ]]]
     cmdclone,
+    cmdconfig,
+    cmdconfigfile,
     // [[[end]]]
 ];
 

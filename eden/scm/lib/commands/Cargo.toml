@@ -15,6 +15,8 @@ chrono = { version = "0.4", features = ["clock", "serde", "std"], default-featur
 clidispatch = { version = "0.1.0", path = "../clidispatch" }
 cliparser = { version = "0.1.0", path = "../cliparser", features = ["python"] }
 cmdclone = { version = "0.1.0", path = "commands/cmdclone" }
+cmdconfig = { version = "0.1.0", path = "commands/cmdconfig" }
+cmdconfigfile = { version = "0.1.0", path = "commands/cmdconfigfile" }
 cmdpy = { version = "0.1.0", path = "cmdpy" }
 cmdutil = { version = "0.1.0", path = "cmdutil" }
 comfy-table = "6.1.4"
