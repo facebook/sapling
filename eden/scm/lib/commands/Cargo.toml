@@ -19,6 +19,7 @@ cmdconfigfile = { version = "0.1.0", path = "commands/cmdconfigfile" }
 cmdgoto = { version = "0.1.0", path = "commands/cmdgoto" }
 cmdpy = { version = "0.1.0", path = "cmdpy" }
 cmdroot = { version = "0.1.0", path = "commands/cmdroot" }
+cmdstatus = { version = "0.1.0", path = "commands/cmdstatus" }
 cmdutil = { version = "0.1.0", path = "cmdutil" }
 cmdversion = { version = "0.1.0", path = "commands/cmdversion" }
 cmdwhereami = { version = "0.1.0", path = "commands/cmdwhereami" }
@@ -34,7 +35,6 @@ edenapi = { version = "0.1.0", path = "../edenapi" }
 edenfs-client = { version = "0.1.0", path = "../edenfs-client", optional = true }
 fail = { version = "0.4", features = ["failpoints"] }
 flate2 = { version = "1.0.26", features = ["rust_backend"], default-features = false }
-formatter = { version = "0.1.0", path = "../formatter" }
 fsyncglob = { version = "0.1.0", path = "../fsyncglob" }
 hg-http = { version = "0.1.0", path = "../hg-http" }
 hg-metrics = { version = "0.1.0", path = "../hg-metrics" }
@@ -50,7 +50,6 @@ minibytes = { version = "0.1.0", path = "../minibytes" }
 network-doctor = { version = "0.1.0", path = "../doctor/network" }
 nodeipc = { version = "0.1.0", path = "../util/nodeipc" }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
-pathmatcher = { version = "0.1.0", path = "../pathmatcher" }
 procinfo = { version = "0.1.0", path = "../procinfo" }
 progress-model = { version = "0.1.0", path = "../progress/model" }
 progress-render = { version = "0.1.0", path = "../progress/render" }
@@ -64,9 +63,7 @@ repostate = { version = "0.1.0", path = "../workingcopy/repostate" }
 revisionstore = { version = "0.1.0", path = "../revisionstore" }
 runlog = { version = "0.1.0", path = "../runlog" }
 sampling = { version = "0.1.0", path = "../sampling" }
-serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
-status = { version = "0.1.0", path = "../status" }
 tracing = "0.1.40"
 tracing-collector = { version = "0.1.0", path = "../tracing-collector" }
 tracing-reload = { version = "0.1.0", path = "../tracing-reload" }

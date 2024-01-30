@@ -42,10 +42,6 @@ macro_rules! external_commands {
 
 mod debug;
 
-commands! {
-    mod status;
-}
-
 external_commands![
     // see update_commands.sh
     // [[[cog
@@ -59,6 +55,7 @@ external_commands![
     cmdconfigfile,
     cmdgoto,
     cmdroot,
+    cmdstatus,
     cmdversion,
     cmdwhereami,
     // [[[end]]]
@@ -70,7 +67,6 @@ use clidispatch::command::CommandTable;
 /// Return the main command table including all Rust commands.
 pub fn table() -> CommandTable {
     let mut table = CommandTable::new();
-    extend_command_table(&mut table);
     debug::extend_command_table(&mut table);
 
     extend_crate_command_table(&mut table);

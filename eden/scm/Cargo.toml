@@ -30,6 +30,7 @@ members = [
   "lib/commands/commands/cmdconfigfile",
   "lib/commands/commands/cmdgoto",
   "lib/commands/commands/cmdroot",
+  "lib/commands/commands/cmdstatus",
   "lib/commands/commands/cmdversion",
   "lib/commands/commands/cmdwhereami",
   "lib/commandserver",
