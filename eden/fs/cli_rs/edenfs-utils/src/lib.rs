@@ -27,6 +27,7 @@ use tracing::trace;
 
 pub mod humantime;
 pub mod metadata;
+pub mod varint;
 
 #[cfg(windows)]
 pub mod winargv;
