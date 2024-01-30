@@ -87,15 +87,11 @@ Unodes from root
   a/b/bar.txt FileUnodeId(Blake2(4e8fbca02d5fa0d2a9abb7f075d8b5c4ad22e54e49dd6e18e00590032b1d3064))
 
 Deleted manifests
-  $ with_stripped_logs mononoke_admin deleted-manifest manifest "$B" "a"
-  using repo "repo" repoid RepositoryId(0)
-  changeset resolved as: ChangesetId(Blake2(b65c0e6f73c666e4f7b9b4bdddfcb72f2c8beef5968bbfc13ed1b231536f8e11))
+  $ with_stripped_logs mononoke_newadmin derived-data -R repo list-manifests -p "a" -i "$B" deleted-manifests
   a/bar.txt/ DeletedManifestV2Id(Blake2(fa523e73a133223c61a827b226f8e339e136957ff48d7614d55dd0e18a42c19d))
 
 Deleted manifests from root
-  $ with_stripped_logs mononoke_admin deleted-manifest manifest "main" ""
-  using repo "repo" repoid RepositoryId(0)
-  changeset resolved as: ChangesetId(Blake2(0b95b6947772ea75083a16af5c9cdc2c3f76b23c26c834f0bdfe227819319a2b))
-  a/bar.txt/ DeletedManifestV2Id(Blake2(fa523e73a133223c61a827b226f8e339e136957ff48d7614d55dd0e18a42c19d))
+  $ with_stripped_logs mononoke_newadmin derived-data -R repo list-manifests -p "" -B "main" deleted-manifests
   b/ DeletedManifestV2Id(Blake2(c9e91618b8e2c37c1ead087030945e4feaa7adabe24b93aa7e41ed1de9ce6b88))
   b/hoo.txt/ DeletedManifestV2Id(Blake2(f67b8e1fe09de8ccc5697cbe4290bac4af2a889b03fb1d04a145c3c032bd865b))
+  a/bar.txt/ DeletedManifestV2Id(Blake2(fa523e73a133223c61a827b226f8e339e136957ff48d7614d55dd0e18a42c19d))

@@ -45,6 +45,7 @@ commit_id = { version = "0.1.0", path = "../../cmdlib/commit_id" }
 context = { version = "0.1.0", path = "../../server/context" }
 dag = { version = "0.1.0", path = "../../../scm/lib/dag" }
 dag-types = { version = "0.1.0", path = "../../../scm/lib/dag/dag-types", features = ["for-tests", "serialize-abomonation"] }
+deleted_manifest = { version = "0.1.0", path = "../../derived_data/deleted_manifest" }
 deletion_log = { version = "0.1.0", path = "../../repo_attributes/deletion_log" }
 derived_data = { version = "0.1.0", path = "../../derived_data" }
 derived_data_manager = { version = "0.1.0", path = "../../derived_data/manager" }

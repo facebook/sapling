@@ -11,6 +11,8 @@ use anyhow::Result;
 use clap::Args;
 use clap::Subcommand;
 use context::CoreContext;
+use deleted_manifest::DeletedManifestOps;
+use deleted_manifest::RootDeletedManifestV2Id;
 use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
 use futures::TryStreamExt;
@@ -41,7 +43,7 @@ enum ListManifestSubcommand {
     SkeletonManifests(SkeletonManifestListArgs),
     Fsnodes,
     Unodes,
-    // DeletedManifests, // TODO(T175880214): Add support for deleted manifests
+    DeletedManifests,
 }
 
 #[derive(Args)]
@@ -179,6 +181,28 @@ async fn unodes(ctx: &CoreContext, repo: &Repo, cs_id: ChangesetId, path: MPath)
         .await
 }
 
+async fn deleted_manifests(
+    ctx: &CoreContext,
+    repo: &Repo,
+    cs_id: ChangesetId,
+    path: MPath,
+) -> Result<()> {
+    let root_del_manif_id = RootDeletedManifestV2Id::derive(ctx, repo, cs_id).await?;
+
+    let entries = if !path.is_root() {
+        root_del_manif_id.find_entries(ctx, repo.repo_blobstore(), vec![PathOrPrefix::Prefix(path)])
+    } else {
+        root_del_manif_id.list_all_entries(ctx, repo.repo_blobstore())
+    };
+
+    entries
+        .try_for_each(|(path, mf_id)| async move {
+            println!("{}/ {:?}", path, mf_id);
+            Ok(())
+        })
+        .await
+}
+
 pub(super) async fn list_manifests(
     ctx: &CoreContext,
     repo: &Repo,
@@ -202,6 +226,9 @@ pub(super) async fn list_manifests(
         }
         ListManifestSubcommand::Unodes => {
             unodes(ctx, repo, cs_id, path.clone()).await?;
+        }
+        ListManifestSubcommand::DeletedManifests => {
+            deleted_manifests(ctx, repo, cs_id, path.clone()).await?;
         }
     };
 
