@@ -1009,14 +1009,35 @@ impl EdenFsCheckout {
             // special trees prefetch profile which fetches all of the trees in the repo, kick this
             // off before activating the rest of the prefetch profiles
             let tree_profile = "trees";
+            // special trees-mobile prefetch profile which fetches a subset of trees in fbsource, kick this
+            // off only if not fetching the overarching trees profile, and before activating the rest of the prefetch profiles
+            let tree_mobile_profile = "trees-mobile";
+
+            let mut trees_profile_set = HashSet::new();
+
+            // Check for trees first, if it exists, then kick off the prefetch request.
             if profiles_to_fetch.iter().any(|x| x == tree_profile) {
                 profiles_to_fetch.retain(|x| *x != *tree_profile);
-                let mut profile_set = HashSet::new();
-                profile_set.insert("**/*".to_owned());
+                // also remove the trees-mobile profile if it exists, but don't fetch it because it is a subset of trees
+                profiles_to_fetch.retain(|x| *x != *tree_mobile_profile);
 
+                trees_profile_set.insert("**/*".to_owned());
+            } else if profiles_to_fetch.iter().any(|x| x == tree_mobile_profile) {
+                profiles_to_fetch.retain(|x| *x != *tree_mobile_profile);
+
+                trees_profile_set.insert("arvr/**/*".to_owned());
+                trees_profile_set.insert("fbandroid/**/*".to_owned());
+                trees_profile_set.insert("fbcode/**/*".to_owned());
+                trees_profile_set.insert("fbobjc/**/*".to_owned());
+                trees_profile_set.insert("third-party/**/*".to_owned());
+                trees_profile_set.insert("tools/**/*".to_owned());
+                trees_profile_set.insert("xplat/**/*".to_owned());
+            }
+
+            if !trees_profile_set.is_empty() {
                 self.make_prefetch_request(
                     instance,
-                    profile_set,
+                    trees_profile_set,
                     true, // only prefetch directories
                     silent,
                     revisions.clone(),
