@@ -10,10 +10,9 @@ use std::io::Write;
 use clidispatch::errors;
 use clidispatch::ReqCtx;
 use cliparser::define_flags;
+use cmdutil::Result;
 use dag::render::render_segment_dag;
-
-use super::Repo;
-use super::Result;
+use repo::repo::Repo;
 
 define_flags! {
     pub struct GraphOpts {

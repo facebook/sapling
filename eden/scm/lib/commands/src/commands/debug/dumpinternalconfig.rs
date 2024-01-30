@@ -9,14 +9,13 @@
 use std::str::FromStr;
 
 use clidispatch::ReqCtx;
+use cmdutil::define_flags;
+use cmdutil::ConfigSet;
+use cmdutil::Result;
 #[cfg(feature = "fb")]
 use configloader::hg::calculate_internalconfig;
 #[cfg(feature = "fb")]
 use configmodel::ConfigExt;
-
-use super::define_flags;
-use super::ConfigSet;
-use super::Result;
 
 define_flags! {
     pub struct DebugDumpConfigOpts {

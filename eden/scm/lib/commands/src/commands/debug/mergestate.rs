@@ -10,10 +10,9 @@ use std::io::Write;
 use anyhow::ensure;
 use clidispatch::ReqCtx;
 use cliparser::define_flags;
+use cmdutil::Result;
+use repo::repo::Repo;
 use workingcopy::workingcopy::WorkingCopy;
-
-use super::Repo;
-use super::Result;
 
 define_flags! {
     pub struct DebugMergeStateOpts {

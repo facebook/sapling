@@ -21,6 +21,8 @@ use clidispatch::fallback;
 use clidispatch::ReqCtx;
 use clidispatch::TermLogger;
 use cliparser::define_flags;
+use cmdutil::ConfigSet;
+use cmdutil::Result;
 use configloader::hg::resolve_custom_scheme;
 use configmodel::Config;
 use configmodel::ConfigExt;
@@ -37,8 +39,6 @@ use util::file::atomic_write;
 use util::path::absolute;
 use util::path::create_shared_dir_all;
 
-use super::ConfigSet;
-use super::Result;
 use crate::HgPython;
 
 static SEGMENTED_CHANGELOG_CAPABILITY: &str = "segmented-changelog";

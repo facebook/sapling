@@ -7,10 +7,9 @@
 
 use clidispatch::errors;
 use clidispatch::ReqCtx;
-
-use super::define_flags;
-use super::ConfigSet;
-use super::Result;
+use cmdutil::define_flags;
+use cmdutil::ConfigSet;
+use cmdutil::Result;
 
 define_flags! {
     pub struct DebugPythonOpts {

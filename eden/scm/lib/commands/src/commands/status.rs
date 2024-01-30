@@ -12,7 +12,10 @@ use std::sync::Arc;
 use anyhow::Result;
 use clidispatch::fallback;
 use clidispatch::ReqCtx;
-use cliparser::define_flags;
+use cmdutil::define_flags;
+use cmdutil::get_formatter;
+use cmdutil::FormatterOpts;
+use cmdutil::WalkOpts;
 use configloader::configmodel::ConfigExt;
 use print::PrintConfig;
 use print::PrintConfigStatusTypes;
@@ -20,10 +23,6 @@ use repo::repo::Repo;
 use status::needs_morestatus_extension;
 use types::path::RepoPathRelativizer;
 use workingcopy::workingcopy::WorkingCopy;
-
-use super::get_formatter;
-use crate::commands::FormatterOpts;
-use crate::commands::WalkOpts;
 
 define_flags! {
     pub struct StatusOpts {

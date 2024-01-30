@@ -15,11 +15,10 @@ use anyhow::bail;
 use anyhow::Result;
 use clidispatch::ReqCtx;
 use cliparser::define_flags;
+use cmdutil::ConfigSet;
 use progress_model::IoTimeSeries;
 use progress_model::ProgressBar;
 use progress_model::Registry;
-
-use crate::commands::ConfigSet;
 
 define_flags! {
     pub struct StructuredProgressOpts {

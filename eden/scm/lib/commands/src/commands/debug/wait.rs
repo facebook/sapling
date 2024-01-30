@@ -13,10 +13,9 @@ use std::time::Duration;
 use std::time::Instant;
 
 use clidispatch::ReqCtx;
-
-use super::define_flags;
-use super::Repo;
-use super::Result;
+use cmdutil::define_flags;
+use cmdutil::Result;
+use repo::repo::Repo;
 
 define_flags! {
     pub struct Opts {

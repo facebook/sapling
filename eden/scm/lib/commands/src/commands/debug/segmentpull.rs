@@ -9,6 +9,7 @@ use anyhow::Context;
 use async_runtime::block_unless_interrupted as block_on;
 use clidispatch::ReqCtx;
 use cliparser::define_flags;
+use cmdutil::Result;
 use dag::namedag::IndexedLogNameDagPath;
 use dag::ops::DagImportPullData;
 use dag::ops::DagPersistent;
@@ -17,10 +18,8 @@ use dag::CloneData;
 use dag::Group;
 use dag::VertexListWithOptions;
 use dag::VertexName;
+use repo::repo::Repo;
 use types::HgId;
-
-use super::Repo;
-use super::Result;
 
 define_flags! {
     pub struct StatusOpts {

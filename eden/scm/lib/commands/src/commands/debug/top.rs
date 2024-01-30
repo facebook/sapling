@@ -12,11 +12,10 @@ use std::time::Duration;
 use clidispatch::io::IsTty;
 use clidispatch::ReqCtx;
 use cliparser::define_flags;
+use cmdutil::Result;
 use comfy_table::Table;
 use debugtop::TableGenerator;
-
-use super::Repo;
-use super::Result;
+use repo::repo::Repo;
 
 define_flags! {
     pub struct DebugTopOpts {

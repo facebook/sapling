@@ -6,10 +6,9 @@
  */
 
 use clidispatch::ReqCtx;
-
-use super::ConfigSet;
-use super::NoOpts;
-use super::Result;
+use cmdutil::ConfigSet;
+use cmdutil::NoOpts;
+use cmdutil::Result;
 
 pub fn run(ctx: ReqCtx<NoOpts>, _config: &mut ConfigSet) -> Result<u8> {
     let id = identity::default();

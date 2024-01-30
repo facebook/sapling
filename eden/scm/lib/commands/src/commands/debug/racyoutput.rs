@@ -14,14 +14,13 @@ use std::time::Duration;
 
 use clidispatch::ReqCtx;
 use cliparser::define_flags;
+use cmdutil::ConfigSet;
+use cmdutil::Result;
+use cmdutil::IO;
 use progress_model::IoSample;
 use progress_model::IoTimeSeries;
 use progress_model::ProgressBar;
 use progress_model::Registry;
-
-use super::ConfigSet;
-use super::Result;
-use super::IO;
 
 define_flags! {
     pub struct DebugRacyOutputOpts {

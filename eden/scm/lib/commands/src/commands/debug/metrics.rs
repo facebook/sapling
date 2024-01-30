@@ -6,10 +6,9 @@
  */
 
 use clidispatch::ReqCtx;
-
-use super::NoOpts;
-use super::Repo;
-use super::Result;
+use cmdutil::NoOpts;
+use cmdutil::Result;
+use repo::repo::Repo;
 
 pub fn run(_ctx: ReqCtx<NoOpts>, _repo: &mut Repo) -> Result<u8> {
     hg_metrics::increment_counter("test_counter", 1);

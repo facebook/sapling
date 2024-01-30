@@ -12,8 +12,7 @@ use clidispatch::abort_if;
 use clidispatch::OptionalRepo;
 use clidispatch::ReqCtx;
 use cliparser::define_flags;
-
-use super::Result;
+use cmdutil::Result;
 
 define_flags! {
     pub struct DebugConfigLocationOpts {

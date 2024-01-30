@@ -5,12 +5,7 @@
  * GNU General Public License version 2.
  */
 
-pub use super::define_flags;
-pub use super::ConfigSet;
-pub use super::NoOpts;
-pub use super::Repo;
-pub use super::Result;
-pub use super::IO;
+use cmdutil::define_flags;
 
 commands! {
     mod args;

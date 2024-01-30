@@ -8,8 +8,11 @@
 use std::str::FromStr;
 
 use clidispatch::ReqCtx;
+use cmdutil::define_flags;
+use cmdutil::Result;
 use configloader::convert::ByteCount;
 use configmodel::ConfigExt;
+use repo::repo::Repo;
 use revisionstore::CorruptionPolicy;
 use revisionstore::DataPackStore;
 use revisionstore::ExtStoredPolicy;
@@ -23,10 +26,6 @@ use revisionstore::UnionHgIdDataStore;
 use types::HgId;
 use types::Key;
 use types::RepoPathBuf;
-
-use super::define_flags;
-use super::Repo;
-use super::Result;
 
 define_flags! {
     pub struct DebugstoreOpts {

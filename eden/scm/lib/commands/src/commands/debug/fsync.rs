@@ -8,11 +8,10 @@
 use std::path::Path;
 
 use clidispatch::ReqCtx;
+use cmdutil::NoOpts;
+use cmdutil::Result;
 use configmodel::ConfigExt;
-
-use super::NoOpts;
-use super::Repo;
-use super::Result;
+use repo::repo::Repo;
 
 pub fn run(_ctx: ReqCtx<NoOpts>, repo: &mut Repo) -> Result<u8> {
     let store_path = repo.store_path();

@@ -14,14 +14,13 @@ use clidispatch::abort;
 use clidispatch::fallback;
 use clidispatch::ReqCtx;
 use cliparser::define_flags;
+use cmdutil::MergeToolOpts;
 use configmodel::ConfigExt;
 use fs_err as fs;
 use repo::repo::Repo;
 use repostate::command_state::Operation;
 use workingcopy::workingcopy::LockedWorkingCopy;
 use workingcopy::workingcopy::WorkingCopy;
-
-use super::MergeToolOpts;
 
 define_flags! {
     pub struct GotoOpts {

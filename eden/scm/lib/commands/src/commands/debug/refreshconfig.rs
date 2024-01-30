@@ -6,16 +6,15 @@
  */
 
 use clidispatch::ReqCtx;
+use cmdutil::define_flags;
+use cmdutil::Result;
 #[cfg(feature = "fb")]
 use configloader::hg::generate_internalconfig;
 #[cfg(feature = "fb")]
 use configmodel::Config;
 #[cfg(feature = "fb")]
 use configmodel::ConfigExt;
-
-use super::define_flags;
-use super::Repo;
-use super::Result;
+use repo::repo::Repo;
 
 define_flags! {
     pub struct DebugDynamicConfigOpts {

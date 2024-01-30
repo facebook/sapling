@@ -16,6 +16,7 @@ chrono = { version = "0.4", features = ["clock", "serde", "std"], default-featur
 clidispatch = { version = "0.1.0", path = "../clidispatch" }
 cliparser = { version = "0.1.0", path = "../cliparser", features = ["python"] }
 clone = { version = "0.1.0", path = "../clone" }
+cmdutil = { version = "0.1.0", path = "cmdutil" }
 comfy-table = "6.1.4"
 commandserver = { version = "0.1.0", path = "../commandserver" }
 configloader = { version = "0.1.0", path = "../config/loader" }
@@ -73,7 +74,6 @@ sampling = { version = "0.1.0", path = "../sampling" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
 status = { version = "0.1.0", path = "../status" }
-termstyle = { version = "0.1.0", path = "../io/term/style" }
 tracing = "0.1.40"
 tracing-collector = { version = "0.1.0", path = "../tracing-collector" }
 tracing-reload = { version = "0.1.0", path = "../tracing-reload" }

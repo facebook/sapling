@@ -9,10 +9,10 @@ use std::io::Write;
 use std::path::Path;
 
 use clidispatch::ReqCtx;
+use cmdutil::ConfigSet;
+use cmdutil::Result;
 
-use super::ConfigSet;
 use super::DebugArgsOpts;
-use super::Result;
 
 pub fn run(ctx: ReqCtx<DebugArgsOpts>, _config: &mut ConfigSet) -> Result<u8> {
     let mut ferr = ctx.io().error();

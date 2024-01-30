@@ -9,10 +9,9 @@ use std::io::Write;
 
 use clidispatch::OptionalRepo;
 use clidispatch::ReqCtx;
+use cmdutil::NoOpts;
+use cmdutil::Result;
 use configloader::config::Options;
-
-use super::NoOpts;
-use super::Result;
 
 pub fn run(ctx: ReqCtx<NoOpts>, repo: &mut OptionalRepo) -> Result<u8> {
     // Set a default repo so we can build valid edenapi URLs outside a repo.

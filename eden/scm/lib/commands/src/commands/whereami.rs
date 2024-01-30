@@ -10,12 +10,11 @@ use std::io::Write;
 
 use anyhow::Context;
 use clidispatch::ReqCtx;
+use cmdutil::NoOpts;
+use cmdutil::Result;
+use repo::repo::Repo;
 use treestate::serialization::Serializable;
 use types::HgId;
-
-use super::NoOpts;
-use super::Repo;
-use super::Result;
 
 pub fn run(ctx: ReqCtx<NoOpts>, repo: &mut Repo) -> Result<u8> {
     let mut stdout = ctx.io().output();

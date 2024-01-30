@@ -6,10 +6,10 @@
  */
 
 use clidispatch::ReqCtx;
+use cmdutil::ConfigSet;
+use cmdutil::Result;
 
-use super::ConfigSet;
 use super::DebugArgsOpts;
-use super::Result;
 
 pub fn run(ctx: ReqCtx<DebugArgsOpts>, _config: &mut ConfigSet) -> Result<u8> {
     match ctx.io().write(format!("{:?}\n", ctx.opts.args)) {

@@ -15,6 +15,8 @@ use async_runtime::block_unless_interrupted;
 use clidispatch::errors;
 use clidispatch::ReqCtx;
 use cliparser::define_flags;
+use cmdutil::ConfigSet;
+use cmdutil::Result;
 use dag::namedag::IndexedLogNameDagPath;
 use dag::ops::DagImportCloneData;
 use dag::ops::DagPersistent;
@@ -24,9 +26,6 @@ use dag::Group;
 use dag::VertexListWithOptions;
 use dag::VertexName;
 use progress_model::ProgressBar;
-
-use super::ConfigSet;
-use super::Result;
 
 define_flags! {
     pub struct StatusOpts {

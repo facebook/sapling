@@ -23,6 +23,7 @@ members = [
   "lib/cliparser",
   "lib/clone",
   "lib/commands",
+  "lib/commands/cmdutil",
   "lib/commandserver",
   "lib/commitcloudsubscriber",
   "lib/commits",

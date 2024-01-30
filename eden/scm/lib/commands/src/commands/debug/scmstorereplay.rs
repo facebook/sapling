@@ -9,13 +9,12 @@ use std::io::Write;
 use std::time::Instant;
 
 use clidispatch::ReqCtx;
+use cmdutil::define_flags;
+use cmdutil::Result;
+use repo::repo::Repo;
 use revisionstore::scmstore::activitylogger;
 use revisionstore::scmstore::FetchMode;
 use revisionstore::scmstore::FileStoreBuilder;
-
-use super::define_flags;
-use super::Repo;
-use super::Result;
 
 define_flags! {
     pub struct DebugScmStoreReplayOpts {

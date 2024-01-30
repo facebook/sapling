@@ -13,7 +13,11 @@ use clidispatch::abort_if;
 use clidispatch::errors;
 use clidispatch::OptionalRepo;
 use clidispatch::ReqCtx;
-use cliparser::define_flags;
+use cmdutil::define_flags;
+use cmdutil::get_formatter;
+use cmdutil::ConfigSet;
+use cmdutil::FormatterOpts;
+use cmdutil::Result;
 use configloader::Config;
 use configmodel::ConfigExt;
 use configmodel::ValueSource;
@@ -24,11 +28,6 @@ use minibytes::Text;
 use serde::ser::Serialize;
 use serde::ser::SerializeStruct;
 use serde::ser::Serializer;
-
-use super::get_formatter;
-use super::ConfigSet;
-use super::Result;
-use crate::commands::FormatterOpts;
 
 define_flags! {
     pub struct ConfigOpts {

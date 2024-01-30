@@ -7,10 +7,9 @@
 
 use async_runtime::block_unless_interrupted as block_on;
 use clidispatch::ReqCtx;
-
-use super::NoOpts;
-use super::Repo;
-use super::Result;
+use cmdutil::NoOpts;
+use cmdutil::Result;
+use repo::repo::Repo;
 
 pub fn run(ctx: ReqCtx<NoOpts>, repo: &mut Repo) -> Result<u8> {
     let client = edenapi::Builder::from_config(repo.config())?.build()?;
