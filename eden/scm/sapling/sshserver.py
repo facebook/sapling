@@ -31,7 +31,6 @@ class sshserver(wireproto.abstractserverproto):
         self.fout = ui.fout
         self.name = "ssh"
 
-        hook.redirect(True)
         ui.fout = repo.ui.fout = ui.ferr
 
         # Prevent insertion/deletion of CRs
