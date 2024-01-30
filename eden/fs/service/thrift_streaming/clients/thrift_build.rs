@@ -15,13 +15,12 @@ fn main() {
     let out_dir: &Path = out_dir.as_ref();
     fs::write(
         out_dir.join("cratemap"),
-        "fb303_core fb303_core
-megarepo_configs megarepo_configs
-source_control crate",
+        "eden thrift
+streamingeden crate",
     ).expect("Failed to write cratemap");
 
     let conf = {
-        let mut conf = Config::from_env(GenContext::Types).expect("Failed to instantiate thrift_compiler::Config");
+        let mut conf = Config::from_env(GenContext::Clients).expect("Failed to instantiate thrift_compiler::Config");
 
         let path_from_manifest_to_base: &Path = "../../../../..".as_ref();
         let cargo_manifest_dir =
@@ -45,10 +44,10 @@ source_control crate",
 
         conf.base_path(base_path);
 
-        conf.types_crate("source_control__types");
-        conf.clients_crate("source_control__clients");
+        conf.types_crate("thrift-streaming__types");
+        conf.clients_crate("thrift-streaming__clients");
 
-        let options = "deprecated_default_enum_min_i32,serde";
+        let options = "deprecated_default_enum_min_i32";
         if !options.is_empty() {
             conf.options(options);
         }
@@ -66,7 +65,7 @@ source_control crate",
     };
 
     let srcs: &[&str] = &[
-        "../source_control.thrift"
+        "../../streamingeden.thrift"
     ];
     conf.run(srcs).expect("Failed while running thrift compilation");
 }

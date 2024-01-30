@@ -27,7 +27,9 @@ members = [
   "inodes/overlay",
   "inodes/overlay/types",
   "service",
+  "service/clients",
   "service/thrift_streaming",
+  "service/thrift_streaming/clients",
   "service/thrift_streaming/types",
   "service/types",
 ]

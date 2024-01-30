@@ -46,6 +46,7 @@ source_control crate",
         conf.base_path(base_path);
 
         conf.types_crate("source_control__types");
+        conf.clients_crate("source_control__clients");
 
         let options = "deprecated_default_enum_min_i32,serde";
         if !options.is_empty() {
