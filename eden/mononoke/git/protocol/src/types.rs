@@ -63,6 +63,8 @@ pub enum SymrefFormat {
 pub enum RequestedRefs {
     /// Include the following refs with values known by the server
     Included(HashSet<String>),
+    /// Include only those refs whose names start with the given prefix
+    IncludedWithPrefix(HashSet<String>),
     /// Include the following refs with values provided by the caller
     IncludedWithValue(HashMap<String, ChangesetId>),
     /// Exclude the following refs
@@ -198,6 +200,33 @@ impl PackItemStreamRequest {
     }
 }
 
+/// The request parameters used to specify the constraints that need to be
+/// honored while generating the collection of refs to be sent as response to
+/// ls-refs command
+#[derive(Debug, Clone)]
+pub struct LsRefsRequest {
+    /// The symrefs that are requested to be included/excluded from the output
+    pub requested_symrefs: RequestedSymrefs,
+    /// The refs that are requested to be included/excluded from the output
+    pub requested_refs: RequestedRefs,
+    /// How annotated tags should be included in the output
+    pub tag_inclusion: TagInclusion,
+}
+
+impl LsRefsRequest {
+    pub fn new(
+        requested_symrefs: RequestedSymrefs,
+        requested_refs: RequestedRefs,
+        tag_inclusion: TagInclusion,
+    ) -> Self {
+        Self {
+            requested_symrefs,
+            requested_refs,
+            tag_inclusion,
+        }
+    }
+}
+
 /// Struct representing the packfile item response generated for the
 /// given range of commits
 pub struct PackItemStreamResponse<'a> {
@@ -221,5 +250,19 @@ impl<'a> PackItemStreamResponse<'a> {
             num_items,
             included_refs,
         }
+    }
+}
+
+/// Struct representing the ls-refs response generated for the
+/// given request parameters
+pub struct LsRefsResponse {
+    /// The set of refs mapped to their Git commit ID or tag ID that are included in the
+    /// output along with optional metadata for the mapping
+    pub included_refs: HashMap<String, RefTarget>,
+}
+
+impl LsRefsResponse {
+    pub fn new(included_refs: HashMap<String, RefTarget>) -> Self {
+        Self { included_refs }
     }
 }

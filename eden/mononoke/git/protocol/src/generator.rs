@@ -52,6 +52,8 @@ use rustc_hash::FxHashMap;
 use rustc_hash::FxHashSet;
 
 use crate::types::DeltaInclusion;
+use crate::types::LsRefsRequest;
+use crate::types::LsRefsResponse;
 use crate::types::PackItemStreamRequest;
 use crate::types::PackItemStreamResponse;
 use crate::types::PackfileItemInclusion;
@@ -81,7 +83,7 @@ pub trait Repo = RepoIdentityRef
 async fn bookmarks(
     ctx: &CoreContext,
     repo: &impl Repo,
-    request: &PackItemStreamRequest,
+    requested_refs: &RequestedRefs,
 ) -> Result<FxHashMap<BookmarkKey, ChangesetId>> {
     let mut bookmarks = repo
         .bookmarks()
@@ -95,12 +97,22 @@ async fn bookmarks(
             u64::MAX,
         )
         .try_filter_map(|(bookmark, cs_id)| {
-            let refs = request.requested_refs.clone();
+            let refs = requested_refs.clone();
             let name = bookmark.name().to_string();
             async move {
                 let result = match refs {
                     RequestedRefs::Included(refs) if refs.contains(&name) => {
                         Some((bookmark.into_key(), cs_id))
+                    }
+                    RequestedRefs::IncludedWithPrefix(ref_prefixes) => {
+                        if ref_prefixes
+                            .iter()
+                            .any(|ref_prefix| name.starts_with(ref_prefix))
+                        {
+                            Some((bookmark.into_key(), cs_id))
+                        } else {
+                            None
+                        }
                     }
                     RequestedRefs::Excluded(refs) if !refs.contains(&name) => {
                         Some((bookmark.into_key(), cs_id))
@@ -117,7 +129,7 @@ async fn bookmarks(
         .await?;
     // In case the requested refs include specified refs with value and those refs are not
     // bookmarks known at the server, we need to manually include them in the output
-    if let RequestedRefs::IncludedWithValue(ref ref_value_map) = request.requested_refs {
+    if let RequestedRefs::IncludedWithValue(ref ref_value_map) = requested_refs {
         for (ref_name, ref_value) in ref_value_map {
             bookmarks.insert(
                 BookmarkKey::with_name(ref_name.as_str().try_into()?),
@@ -805,12 +817,14 @@ pub async fn generate_pack_item_stream<'a>(
     request: PackItemStreamRequest,
 ) -> Result<PackItemStreamResponse<'a>> {
     // We need to include the bookmarks (i.e. branches, tags) in the pack based on the request parameters
-    let bookmarks = bookmarks(ctx, repo, &request).await.with_context(|| {
-        format!(
-            "Error in fetching bookmarks for repo {}",
-            repo.repo_identity().name()
-        )
-    })?;
+    let bookmarks = bookmarks(ctx, repo, &request.requested_refs)
+        .await
+        .with_context(|| {
+            format!(
+                "Error in fetching bookmarks for repo {}",
+                repo.repo_identity().name()
+            )
+        })?;
 
     // STEP 1: Create state to track the total number of objects that will be included in the packfile/bundle. Initialize with the
     // tree, blob and commit count. Collect the set of duplicated objects.
@@ -862,4 +876,33 @@ pub async fn generate_pack_item_stream<'a>(
         refs_to_include.into_iter().collect(),
     );
     Ok(response)
+}
+
+/// Based on the input request parameters, generate the response to the
+/// ls-refs request command
+pub async fn ls_refs_response(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    request: LsRefsRequest,
+) -> Result<LsRefsResponse> {
+    // We need to include the bookmarks (i.e. branches, tags) based on the request parameters
+    let bookmarks = bookmarks(ctx, repo, &request.requested_refs)
+        .await
+        .with_context(|| {
+            format!(
+                "Error in fetching bookmarks for repo {}",
+                repo.repo_identity().name()
+            )
+        })?;
+    // Convert the above bookmarks into refs that can be sent in the response
+    let mut refs_to_include = refs_to_include(ctx, repo, &bookmarks, request.tag_inclusion)
+        .await
+        .context("Error while determining refs to include in the response")?;
+
+    // Add symrefs to the refs_to_include map based on the request parameters
+    include_symrefs(repo, request.requested_symrefs, &mut refs_to_include)
+        .await
+        .context("Error while adding symrefs to included set of refs")?;
+
+    Ok(LsRefsResponse::new(refs_to_include.into_iter().collect()))
 }
