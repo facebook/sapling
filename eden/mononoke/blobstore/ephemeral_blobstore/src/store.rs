@@ -429,7 +429,7 @@ impl RepoEphemeralStoreInner {
 
     async fn open_bubble_raw(
         &self,
-        _ctx: &CoreContext,
+        ctx: &CoreContext,
         bubble_id: BubbleId,
         fail_on_expired: bool,
     ) -> Result<Bubble> {
@@ -462,7 +462,21 @@ impl RepoEphemeralStoreInner {
             )
             .await?;
             if bubble_rows.is_empty() {
-                return Err(EphemeralBlobstoreError::NoSuchBubble(bubble_id).into());
+                // S391328: Still no bubble.  Let's wait a short while and try
+                // again.
+                tokio::time::sleep(Duration::from_millis(500)).await;
+                bubble_rows = SelectBubbleById::query(
+                    self.sql_config.as_ref(),
+                    &self.connections.read_master_connection,
+                    &bubble_id,
+                )
+                .await?;
+                if bubble_rows.is_empty() {
+                    return Err(EphemeralBlobstoreError::NoSuchBubble(bubble_id).into());
+                }
+                let mut scuba = ctx.scuba().clone();
+                ctx.perf_counters().insert_perf_counters(&mut scuba);
+                scuba.log_with_msg("Bubble appeared after short wait", None);
             }
         }
         // TODO(mbthomas): check owner_identity

@@ -551,6 +551,7 @@ rust_library(
         "fbsource//third-party/rust:itertools",
         "fbsource//third-party/rust:serde",
         "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tokio",
         "fbsource//third-party/rust:vec1",
         ":blobstore",
         ":prefixblob",
