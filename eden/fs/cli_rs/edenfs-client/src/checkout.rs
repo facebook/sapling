@@ -72,8 +72,6 @@ const SNAPSHOT_MAGIC_2: &[u8] = b"eden\x00\x00\x00\x02";
 const SNAPSHOT_MAGIC_3: &[u8] = b"eden\x00\x00\x00\x03";
 const SNAPSHOT_MAGIC_4: &[u8] = b"eden\x00\x00\x00\x04";
 
-const SUPPORTED_INODE_CATALOG_TYPES: &[&str] = &["legacy", "sqlite", "inmemory", "lmdb"];
-
 // List of supported repository types. This should stay in sync with the list
 // in the Python CLI at fs/cli_rs/edenfs-client/src/checkout.rs and the list in
 // the Daemon's CheckoutConfig at fs/config/CheckoutConfig.h.
@@ -99,6 +97,19 @@ enum MountProtocol {
     Nfs,
     #[strum(serialize = "prjfs")]
     Prjfs,
+}
+
+#[derive(Deserialize, Serialize, Debug, PartialEq, EnumVariantNames, EnumString)]
+#[serde(rename_all = "lowercase")]
+enum InodeCatalogType {
+    #[strum(serialize = "legacy")]
+    Legacy,
+    #[strum(serialize = "sqlite")]
+    Sqlite,
+    #[strum(serialize = "inmemory")]
+    InMemory,
+    #[strum(serialize = "lmdb")]
+    Lmdb,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -145,7 +156,7 @@ struct Repository {
         default = "default_inode_catalog_type",
         deserialize_with = "deserialize_inode_catalog_type"
     )]
-    inode_catalog_type: Option<String>,
+    inode_catalog_type: Option<InodeCatalogType>,
 }
 
 fn default_enable_windows_symlinks() -> bool {
@@ -193,11 +204,13 @@ where
     }
 }
 
-fn default_inode_catalog_type() -> Option<String> {
+fn default_inode_catalog_type() -> Option<InodeCatalogType> {
     None
 }
 
-fn deserialize_inode_catalog_type<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+fn deserialize_inode_catalog_type<'de, D>(
+    deserializer: D,
+) -> Result<Option<InodeCatalogType>, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -205,18 +218,14 @@ where
 
     match s {
         None => Ok(None),
-        Some(mut s) => {
-            s = s.to_lowercase();
-            if SUPPORTED_INODE_CATALOG_TYPES.iter().any(|v| v == &s) {
-                Ok(Some(s))
-            } else {
-                Err(serde::de::Error::custom(format!(
-                    "Unsupported value: `{}`. Must be one of: {}",
-                    s,
-                    SUPPORTED_INODE_CATALOG_TYPES.join(", ")
-                )))
-            }
-        }
+        Some(s) => match InodeCatalogType::from_str(&s) {
+            Ok(t) => Ok(Some(t)),
+            Err(_) => Err(serde::de::Error::custom(format!(
+                "Unsupported value: `{}`. Must be one of: {}",
+                s,
+                InodeCatalogType::VARIANTS.join(", ")
+            ))),
+        },
     }
 }
 
