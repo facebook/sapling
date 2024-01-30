@@ -43,10 +43,7 @@ macro_rules! external_commands {
 mod debug;
 
 commands! {
-    mod root;
     mod status;
-    mod version;
-    mod whereami;
 }
 
 external_commands![
@@ -61,11 +58,11 @@ external_commands![
     cmdconfig,
     cmdconfigfile,
     cmdgoto,
+    cmdroot,
+    cmdversion,
+    cmdwhereami,
     // [[[end]]]
 ];
-
-#[cfg(feature = "fb")]
-mod fb;
 
 use clidispatch::command::CommandTable;
 

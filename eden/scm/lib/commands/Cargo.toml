@@ -18,7 +18,10 @@ cmdconfig = { version = "0.1.0", path = "commands/cmdconfig" }
 cmdconfigfile = { version = "0.1.0", path = "commands/cmdconfigfile" }
 cmdgoto = { version = "0.1.0", path = "commands/cmdgoto" }
 cmdpy = { version = "0.1.0", path = "cmdpy" }
+cmdroot = { version = "0.1.0", path = "commands/cmdroot" }
 cmdutil = { version = "0.1.0", path = "cmdutil" }
+cmdversion = { version = "0.1.0", path = "commands/cmdversion" }
+cmdwhereami = { version = "0.1.0", path = "commands/cmdwhereami" }
 comfy-table = "6.1.4"
 commandserver = { version = "0.1.0", path = "../commandserver" }
 configloader = { version = "0.1.0", path = "../config/loader" }
@@ -79,4 +82,4 @@ zstd = { version = "0.13", features = ["experimental", "zstdmt"] }
 [features]
 default = []
 eden = ["clidispatch/eden", "cmdgoto/eden", "edenfs-client", "pycheckout/eden", "pyedenclient/eden", "pyworkingcopy/eden"]
-fb = ["configloader/fb", "identity/fb"]
+fb = ["cmdversion/fb", "configloader/fb", "identity/fb"]

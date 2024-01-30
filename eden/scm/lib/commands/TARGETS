@@ -41,6 +41,7 @@ rust_library(
                 "fb": [
                     "configloader/fb",
                     "identity/fb",
+                    "cmdversion/fb",
                 ],
             },
         },
@@ -124,6 +125,9 @@ rust_library(
         "//eden/scm/lib/commands/commands/cmdconfig:cmdconfig",
         "//eden/scm/lib/commands/commands/cmdconfigfile:cmdconfigfile",
         "//eden/scm/lib/commands/commands/cmdgoto:cmdgoto",
+        "//eden/scm/lib/commands/commands/cmdroot:cmdroot",
+        "//eden/scm/lib/commands/commands/cmdversion:cmdversion",
+        "//eden/scm/lib/commands/commands/cmdwhereami:cmdwhereami",
         # [[[end]]]
     ],
 )

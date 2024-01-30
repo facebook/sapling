@@ -10,6 +10,9 @@ use cmdutil::ConfigSet;
 use cmdutil::NoOpts;
 use cmdutil::Result;
 
+#[cfg(feature = "fb")]
+mod fb;
+
 pub fn run(ctx: ReqCtx<NoOpts>, _config: &mut ConfigSet) -> Result<u8> {
     let id = identity::default();
     let io = ctx.io();
@@ -19,7 +22,7 @@ pub fn run(ctx: ReqCtx<NoOpts>, _config: &mut ConfigSet) -> Result<u8> {
         io.write_err("(see https://sapling-scm.com/ for more information)\n")?;
 
         #[cfg(feature = "fb")]
-        io.write_err(super::fb::VERSION_TEXT)?;
+        io.write_err(fb::VERSION_TEXT)?;
     }
 
     Ok(0)
