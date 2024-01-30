@@ -44,7 +44,10 @@ pub async fn store(ctx: &CoreContext, repo: &Repo, store_args: FilestoreStoreArg
         .len();
     let blobstore = match store_args.bubble_id {
         Some(bubble_id) => {
-            let bubble = repo.repo_ephemeral_store().open_bubble(bubble_id).await?;
+            let bubble = repo
+                .repo_ephemeral_store()
+                .open_bubble(ctx, bubble_id)
+                .await?;
             bubble.wrap_repo_blobstore(repo.repo_blobstore().clone())
         }
         None => repo.repo_blobstore().clone(),

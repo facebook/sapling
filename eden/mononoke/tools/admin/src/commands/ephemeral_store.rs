@@ -60,7 +60,9 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         EphemeralStoreSubcommand::Cleanup(cleanup_args) => {
             cleanup::clean_bubbles(&ctx, &repo, cleanup_args).await
         }
-        EphemeralStoreSubcommand::Info(info_args) => info::bubble_info(&repo, info_args).await,
+        EphemeralStoreSubcommand::Info(info_args) => {
+            info::bubble_info(&ctx, &repo, info_args).await
+        }
         EphemeralStoreSubcommand::List(list_args) => list::list_keys(&ctx, &repo, list_args).await,
     };
     match subcommand_result {

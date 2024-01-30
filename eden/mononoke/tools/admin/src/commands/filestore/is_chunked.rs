@@ -35,7 +35,10 @@ pub async fn is_chunked(
     let fetch_key = metadata_args.item_id.fetch_key()?;
     let blobstore = match metadata_args.bubble_id {
         Some(bubble_id) => {
-            let bubble = repo.repo_ephemeral_store().open_bubble(bubble_id).await?;
+            let bubble = repo
+                .repo_ephemeral_store()
+                .open_bubble(ctx, bubble_id)
+                .await?;
             bubble.wrap_repo_blobstore(repo.repo_blobstore().clone())
         }
         None => repo.repo_blobstore().clone(),

@@ -10,6 +10,7 @@ use std::str::FromStr;
 use anyhow::anyhow;
 use anyhow::Result;
 use clap::Args;
+use context::CoreContext;
 use ephemeral_blobstore::BubbleId;
 use mononoke_types::ChangesetId;
 
@@ -28,7 +29,11 @@ pub struct EphemeralStoreInfoArgs {
     bubble_id: Option<BubbleId>,
 }
 
-pub async fn bubble_info(repo: &Repo, args: EphemeralStoreInfoArgs) -> Result<()> {
+pub async fn bubble_info(
+    ctx: &CoreContext,
+    repo: &Repo,
+    args: EphemeralStoreInfoArgs,
+) -> Result<()> {
     let bubble_id = match (&args.bubble_id, &args.changeset_id) {
         (None, Some(id)) => repo
             .repo_ephemeral_store
@@ -48,7 +53,10 @@ pub async fn bubble_info(repo: &Repo, args: EphemeralStoreInfoArgs) -> Result<()
         }
         Some(id) => vec![ChangesetId::from_str(id)?],
     };
-    let bubble = repo.repo_ephemeral_store.open_bubble_raw(bubble_id).await?;
+    let bubble = repo
+        .repo_ephemeral_store
+        .open_bubble_raw(ctx, bubble_id)
+        .await?;
     println!(
         "BubbleID: {}\nChangesetIDs: {:?}\nRepoID: {}\nExpiryDate: {}\nStatus: {}\nBlobstorePrefix: {}",
         bubble_id,

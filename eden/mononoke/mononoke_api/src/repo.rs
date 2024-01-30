@@ -785,7 +785,10 @@ impl RepoContext {
 
         // Open the bubble if necessary.
         let repo = if let Some(bubble_id) = bubble_id {
-            let bubble = repo.repo_ephemeral_store().open_bubble(bubble_id).await?;
+            let bubble = repo
+                .repo_ephemeral_store()
+                .open_bubble(&ctx, bubble_id)
+                .await?;
             Arc::new(repo.with_bubble(bubble))
         } else {
             repo
@@ -921,7 +924,7 @@ impl RepoContext {
         Ok(self
             .repo
             .repo_ephemeral_store()
-            .open_bubble(bubble_id)
+            .open_bubble(self.ctx(), bubble_id)
             .await?)
     }
 

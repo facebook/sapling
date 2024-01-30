@@ -555,13 +555,13 @@ impl EdenApiHandler for AlterSnapshotHandler {
         } else if label_addition {
             // Input has labels to add, so let's add the input labels.
             repo.ephemeral_store()
-                .add_bubble_labels(id, request.labels_to_add.clone())
+                .add_bubble_labels(repo.ctx(), id, request.labels_to_add.clone())
                 .await?;
         } else {
             // Input has labels to remove, or no labels as input at all. In either case,
             // we need to remove specific or all labels corresponding to the bubble.
             repo.ephemeral_store()
-                .remove_bubble_labels(id, request.labels_to_remove.clone())
+                .remove_bubble_labels(repo.ctx(), id, request.labels_to_remove.clone())
                 .await?;
         }
         let current_labels = repo.ephemeral_store().labels_from_bubble(&id).await?;
