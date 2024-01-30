@@ -21,6 +21,7 @@ from bindings import (
 )
 
 from .. import (
+    alerts,
     bookmarks as bookmod,
     edenapi,
     error,
@@ -55,6 +56,9 @@ def doctor(ui, **opts) -> typing.Optional[int]:
     from .. import dispatch  # avoid cycle
 
     origui = ui
+
+    # show alerts first so you don't need to wait
+    alerts.print_active_alerts(ui)
 
     # Minimal logic to get key repo objects without actually constructing
     # a real repo object.

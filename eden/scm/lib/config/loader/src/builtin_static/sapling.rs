@@ -42,6 +42,11 @@ track=command, command_alias, command_finish, command_exception,
  profile, hgsql, sqllock, pushrebase, status, metrics, visibility, perftrace
 
 [color]
+alerts.critical=bold purple_background
+alerts.high=bold red_background
+alerts.medium=bold black yellow_background
+alerts.low=bold blue_background
+alerts.advice=bold black_background
 log.changeset=bold blue
 sl.active=yellow
 sl.amended=brightblack:none
@@ -418,6 +423,7 @@ jf_submit_template='\{
  "phase": {phase|json}
  },\n'
 sl_backup="{if(enabled('commitcloud'),sl_backupstatus)}"
+alerts="\n     Ongoing issue\n 🔥  {label(severity_color, ' {severity} ')} {hyperlink(url, title)}\n     {description}\n\n"
 
 [ui]
 style=sl_default
