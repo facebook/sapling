@@ -66,14 +66,12 @@ rust_library(
         "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:tracing",
         "fbsource//third-party/rust:tracing-subscriber",
-        "fbsource//third-party/rust:url",
         "fbsource//third-party/rust:zstd",
         "//eden/scm/lib/async-runtime:async-runtime",
         "//eden/scm/lib/blackbox:blackbox",
         "//eden/scm/lib/checkout:checkout",
         "//eden/scm/lib/clidispatch:clidispatch",
         "//eden/scm/lib/cliparser:cliparser",
-        "//eden/scm/lib/clone:clone",
         "//eden/scm/lib/commands/cmdpy:cmdpy",
         "//eden/scm/lib/commands/cmdutil:cmdutil",
         "//eden/scm/lib/commandserver:commandserver",
@@ -83,10 +81,8 @@ rust_library(
         "//eden/scm/lib/dag:dag",
         "//eden/scm/lib/debugtop:debugtop",
         "//eden/scm/lib/doctor/network:network-doctor",
-        "//eden/scm/lib/eagerepo:eagerepo",
         "//eden/scm/lib/edenapi:edenapi",
         "//eden/scm/lib/edenfs-client:edenfs-client",
-        "//eden/scm/lib/exchange:exchange",
         "//eden/scm/lib/formatter:formatter",
         "//eden/scm/lib/fsyncglob:fsyncglob",
         "//eden/scm/lib/hg-http:hg-http",
@@ -94,9 +90,7 @@ rust_library(
         "//eden/scm/lib/hgtime:hgtime",
         "//eden/scm/lib/identity:identity",
         "//eden/scm/lib/indexedlog:indexedlog",
-        "//eden/scm/lib/metalog:metalog",
         "//eden/scm/lib/metrics/render:metrics-render",
-        "//eden/scm/lib/migration:migration",
         "//eden/scm/lib/mincode:mincode",
         "//eden/scm/lib/minibytes:minibytes",
         "//eden/scm/lib/pathmatcher:pathmatcher",
@@ -104,7 +98,6 @@ rust_library(
         "//eden/scm/lib/progress/model:progress-model",
         "//eden/scm/lib/progress/render:progress-render",
         "//eden/scm/lib/repo:repo",
-        "//eden/scm/lib/repo_name:repo_name",
         "//eden/scm/lib/revisionstore:revisionstore_with_ods",
         "//eden/scm/lib/runlog:runlog",
         "//eden/scm/lib/sampling:sampling",
@@ -122,5 +115,14 @@ rust_library(
         "//eden/scm/lib/workingcopy:workingcopy",
         "//eden/scm/lib/workingcopy/repostate:repostate",
         "//eden/scm/saplingnative/bindings/modules/pytracing:pytracing",
+        # see update_modules.sh
+        # [[[cog
+        # import cog, glob, os
+        # for path in sorted(glob.glob('commands/cmd*/TARGETS')):
+        #     name = os.path.basename(os.path.dirname(path))
+        #     cog.outl(f'"//eden/scm/lib/commands/commands/{name}:{name}",')
+        # ]]]
+        "//eden/scm/lib/commands/commands/cmdclone:cmdclone",
+        # [[[end]]]
     ],
 )

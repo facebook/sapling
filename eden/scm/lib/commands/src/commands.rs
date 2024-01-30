@@ -24,10 +24,25 @@ macro_rules! commands {
     }
 }
 
+macro_rules! external_commands {
+    [ $( $name:ident, )* ] => {
+        pub(crate) fn extend_crate_command_table(table: &mut ::clidispatch::command::CommandTable) {
+            $(
+            {
+                use ::$name as m;
+                let command_aliases = m::aliases();
+                let doc = m::doc();
+                let synopsis = m::synopsis();
+                ::clidispatch::command::Register::register(table, m::run, &command_aliases, &doc, synopsis.as_deref());
+            }
+            )*
+        }
+    }
+}
+
 mod debug;
 
 commands! {
-    mod clone;
     mod config;
     mod configfile;
     mod goto;
@@ -36,6 +51,18 @@ commands! {
     mod version;
     mod whereami;
 }
+
+external_commands![
+    // see update_commands.sh
+    // [[[cog
+    // import cog, glob, os
+    // for path in sorted(glob.glob('commands/cmd*/TARGETS')):
+    //     name = os.path.basename(os.path.dirname(path))
+    //     cog.outl(f'{name},')
+    // ]]]
+    cmdclone,
+    // [[[end]]]
+];
 
 #[cfg(feature = "fb")]
 mod fb;
@@ -48,6 +75,8 @@ pub fn table() -> CommandTable {
     let mut table = CommandTable::new();
     extend_command_table(&mut table);
     debug::extend_command_table(&mut table);
+
+    extend_crate_command_table(&mut table);
 
     table
 }

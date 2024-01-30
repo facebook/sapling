@@ -14,7 +14,7 @@ checkout = { version = "0.1.0", path = "../checkout" }
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 clidispatch = { version = "0.1.0", path = "../clidispatch" }
 cliparser = { version = "0.1.0", path = "../cliparser", features = ["python"] }
-clone = { version = "0.1.0", path = "../clone" }
+cmdclone = { version = "0.1.0", path = "commands/cmdclone" }
 cmdpy = { version = "0.1.0", path = "cmdpy" }
 cmdutil = { version = "0.1.0", path = "cmdutil" }
 comfy-table = "6.1.4"
@@ -25,10 +25,8 @@ constructors = { version = "0.1.0", path = "../constructors", features = ["git"]
 ctrlc = { version = "3.1", features = ["termination"] }
 dag = { version = "0.1.0", path = "../dag" }
 debugtop = { version = "0.1.0", path = "../debugtop" }
-eagerepo = { version = "0.1.0", path = "../eagerepo" }
 edenapi = { version = "0.1.0", path = "../edenapi" }
 edenfs-client = { version = "0.1.0", path = "../edenfs-client", optional = true }
-exchange = { version = "0.1.0", path = "../exchange" }
 fail = { version = "0.4", features = ["failpoints"] }
 flate2 = { version = "1.0.26", features = ["rust_backend"], default-features = false }
 formatter = { version = "0.1.0", path = "../formatter" }
@@ -42,9 +40,7 @@ hostname = "0.3"
 identity = { version = "0.1.0", path = "../identity" }
 indexedlog = { version = "0.1.0", path = "../indexedlog" }
 libc = "0.2.139"
-metalog = { version = "0.1.0", path = "../metalog" }
 metrics-render = { version = "0.1.0", path = "../metrics/render" }
-migration = { version = "0.1.0", path = "../migration" }
 mincode = { version = "0.1.0", path = "../mincode" }
 minibytes = { version = "0.1.0", path = "../minibytes" }
 network-doctor = { version = "0.1.0", path = "../doctor/network" }
@@ -60,7 +56,6 @@ pytracing = { version = "0.1.0", path = "../../saplingnative/bindings/modules/py
 pyworkingcopy = { version = "0.1.0", path = "../../saplingnative/bindings/modules/pyworkingcopy" }
 rand = { version = "0.8", features = ["small_rng"] }
 repo = { version = "0.1.0", path = "../repo", features = ["wdir"] }
-repo_name = { version = "0.1.0", path = "../repo_name" }
 repostate = { version = "0.1.0", path = "../workingcopy/repostate" }
 revisionstore = { version = "0.1.0", path = "../revisionstore" }
 runlog = { version = "0.1.0", path = "../runlog" }
@@ -75,7 +70,6 @@ tracing-sampler = { version = "0.1.0", path = "../tracing-sampler" }
 tracing-subscriber = { version = "0.3.18", features = ["ansi", "chrono", "env-filter", "fmt", "json", "local-time", "parking_lot", "registry"] }
 treestate = { version = "0.1.0", path = "../treestate" }
 types = { version = "0.1.0", path = "../types" }
-url = "2.2.2"
 util = { version = "0.1.0", path = "../util" }
 version = { version = "0.1.0", path = "../version" }
 workingcopy = { version = "0.1.0", path = "../workingcopy" }

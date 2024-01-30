@@ -20,7 +20,8 @@ use clidispatch::errors;
 use clidispatch::fallback;
 use clidispatch::ReqCtx;
 use clidispatch::TermLogger;
-use cliparser::define_flags;
+use cmdpy::HgPython;
+use cmdutil::define_flags;
 use cmdutil::ConfigSet;
 use cmdutil::Result;
 use configloader::hg::resolve_custom_scheme;
@@ -38,8 +39,6 @@ use url::Url;
 use util::file::atomic_write;
 use util::path::absolute;
 use util::path::create_shared_dir_all;
-
-use crate::HgPython;
 
 static SEGMENTED_CHANGELOG_CAPABILITY: &str = "segmented-changelog";
 static COMMIT_GRAPH_SEGMENTS_CAPABILITY: &str = "commit-graph-segments";

@@ -25,6 +25,7 @@ members = [
   "lib/commands",
   "lib/commands/cmdpy",
   "lib/commands/cmdutil",
+  "lib/commands/commands/cmdclone",
   "lib/commandserver",
   "lib/commitcloudsubscriber",
   "lib/commits",
