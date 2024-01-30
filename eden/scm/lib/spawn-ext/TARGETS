@@ -42,6 +42,7 @@ rust_library(
         (
             "windows",
             [
+                "fbsource//third-party/rust:tracing",
                 "fbsource//third-party/rust:winapi",
             ],
         ),

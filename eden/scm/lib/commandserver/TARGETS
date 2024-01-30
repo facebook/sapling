@@ -39,7 +39,6 @@ rust_library(
         "//eden/scm/lib/identity:identity",
         "//eden/scm/lib/spawn-ext:spawn-ext",
         "//eden/scm/lib/util/nodeipc:nodeipc",
-        "//eden/scm/lib/util/system-command:system-command",
         "//eden/scm/lib/util/udsipc:udsipc",
         "//eden/scm/lib/version:rust_version",
     ],

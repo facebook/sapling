@@ -6,6 +6,7 @@
  */
 
 use std::collections::HashSet;
+use std::process::Command;
 use std::sync::Arc;
 use std::sync::Weak;
 
@@ -14,6 +15,7 @@ use nodeipc::ipc;
 use nodeipc::NodeIpc;
 use serde::Deserialize;
 use serde::Serialize;
+use spawn_ext::CommandExt;
 
 use crate::util;
 
@@ -45,7 +47,7 @@ impl Client {
     /// Run a shell command. Return exit code.
     fn system(&self, env: CommandEnv, command: String) -> i32 {
         tracing::debug!("client::system {}", command);
-        let mut cmd = system_command::new_system_command(command);
+        let mut cmd = Command::new_shell(&command);
         let CommandEnv { cwd, env } = env;
         cmd.env_clear().envs(env).current_dir(cwd);
         match cmd.status() {
