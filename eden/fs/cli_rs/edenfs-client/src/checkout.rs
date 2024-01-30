@@ -22,6 +22,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
+use std::str::FromStr;
 use std::time::Duration;
 use std::vec;
 
@@ -41,6 +42,8 @@ use serde::Deserialize;
 use serde::Deserializer;
 use serde::Serialize;
 use serde::Serializer;
+use strum::EnumString;
+use strum::EnumVariantNames;
 use thrift_types::edenfs::errors::eden_service::PrefetchFilesError;
 use thrift_types::edenfs::types::GlobParams;
 use thrift_types::edenfs::types::MountInfo;
@@ -67,19 +70,31 @@ const SNAPSHOT_MAGIC_2: &[u8] = b"eden\x00\x00\x00\x02";
 const SNAPSHOT_MAGIC_3: &[u8] = b"eden\x00\x00\x00\x03";
 const SNAPSHOT_MAGIC_4: &[u8] = b"eden\x00\x00\x00\x04";
 
+const SUPPORTED_MOUNT_PROTOCOLS: &[&str] = &["fuse", "nfs", "prjfs"];
+const SUPPORTED_INODE_CATALOG_TYPES: &[&str] = &["legacy", "sqlite", "inmemory", "lmdb"];
+
 // List of supported repository types. This should stay in sync with the list
 // in the Python CLI at fs/cli_rs/edenfs-client/src/checkout.rs and the list in
 // the Daemon's CheckoutConfig at fs/config/CheckoutConfig.h.
-const SUPPORTED_REPOS: &[&str] = &["git", "hg", "recas", "filteredhg"];
-const SUPPORTED_MOUNT_PROTOCOLS: &[&str] = &["fuse", "nfs", "prjfs"];
-const SUPPORTED_INODE_CATALOG_TYPES: &[&str] = &["legacy", "sqlite", "inmemory", "lmdb"];
+#[derive(Deserialize, Serialize, Debug, PartialEq, EnumVariantNames, EnumString)]
+#[serde(rename_all = "lowercase")]
+enum RepositoryType {
+    #[strum(serialize = "git")]
+    Git,
+    #[strum(serialize = "hg")]
+    Hg,
+    #[strum(serialize = "recas")]
+    Recas,
+    #[strum(serialize = "filteredhg")]
+    FilteredHg,
+}
 
 #[derive(Deserialize, Serialize, Debug)]
 struct Repository {
     path: PathBuf,
 
     #[serde(rename = "type", deserialize_with = "deserialize_repo_type")]
-    repo_type: String,
+    repo_type: RepositoryType,
 
     #[serde(default = "default_guid")]
     guid: Uuid,
@@ -150,20 +165,18 @@ where
     }
 }
 
-fn deserialize_repo_type<'de, D>(deserializer: D) -> Result<String, D::Error>
+fn deserialize_repo_type<'de, D>(deserializer: D) -> Result<RepositoryType, D::Error>
 where
     D: Deserializer<'de>,
 {
     let s = String::deserialize(deserializer)?;
 
-    if SUPPORTED_REPOS.iter().any(|v| v == &s) {
-        Ok(s)
-    } else {
-        Err(serde::de::Error::custom(format!(
-            "Unsupported value: `{}`. Must be one of: {}",
-            s,
-            SUPPORTED_REPOS.join(", ")
-        )))
+    match RepositoryType::from_str(&s) {
+        Ok(t) => Ok(t),
+        Err(e) => Err(serde::de::Error::custom(format!(
+            "Invalid repository type: {:?}",
+            e
+        ))),
     }
 }
 
