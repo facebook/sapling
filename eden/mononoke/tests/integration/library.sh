@@ -2091,7 +2091,7 @@ function git() {
   GIT_AUTHOR_DATE="${GIT_AUTHOR_DATE:-$date}" \
   GIT_AUTHOR_NAME="$name" \
   GIT_AUTHOR_EMAIL="$email" \
-  command git "$@"
+  command git -c protocol.file.allow=always "$@"
 }
 
 function git_set_only_author() {
@@ -2102,7 +2102,7 @@ function git_set_only_author() {
   GIT_AUTHOR_DATE="$date" \
   GIT_AUTHOR_NAME="$name" \
   GIT_AUTHOR_EMAIL="$email" \
-  command git "$@"
+  command git -c protocol.file.allow=always "$@"
 }
 
 function summarize_scuba_json() {
