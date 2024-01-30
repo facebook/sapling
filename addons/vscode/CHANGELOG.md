@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.36
+
+- Fixed an issue where Pull button and cwd selector didn't appear in some cases
+- Updated tooltips for download menu and commit mode selector
+
 ## 0.1.35
 
 ### Jan 25 2024
