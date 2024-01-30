@@ -45,6 +45,7 @@ use serde::Serialize;
 use serde::Serializer;
 use strum::EnumString;
 use strum::EnumVariantNames;
+use strum::VariantNames;
 use thrift_types::edenfs::errors::eden_service::PrefetchFilesError;
 use thrift_types::edenfs::types::GlobParams;
 use thrift_types::edenfs::types::MountInfo;
@@ -71,7 +72,6 @@ const SNAPSHOT_MAGIC_2: &[u8] = b"eden\x00\x00\x00\x02";
 const SNAPSHOT_MAGIC_3: &[u8] = b"eden\x00\x00\x00\x03";
 const SNAPSHOT_MAGIC_4: &[u8] = b"eden\x00\x00\x00\x04";
 
-const SUPPORTED_MOUNT_PROTOCOLS: &[&str] = &["fuse", "nfs", "prjfs"];
 const SUPPORTED_INODE_CATALOG_TYPES: &[&str] = &["legacy", "sqlite", "inmemory", "lmdb"];
 
 // List of supported repository types. This should stay in sync with the list
@@ -90,6 +90,17 @@ enum RepositoryType {
     FilteredHg,
 }
 
+#[derive(Deserialize, Serialize, Debug, PartialEq, EnumVariantNames, EnumString)]
+#[serde(rename_all = "lowercase")]
+enum MountProtocol {
+    #[strum(serialize = "fuse")]
+    Fuse,
+    #[strum(serialize = "nfs")]
+    Nfs,
+    #[strum(serialize = "prjfs")]
+    Prjfs,
+}
+
 #[derive(Deserialize, Serialize, Debug)]
 struct Repository {
     path: PathBuf,
@@ -104,7 +115,7 @@ struct Repository {
         deserialize_with = "deserialize_protocol",
         default = "default_protocol"
     )]
-    protocol: String,
+    protocol: MountProtocol,
 
     #[serde(rename = "case-sensitive", default = "default_case_sensitive")]
     case_sensitive: bool,
@@ -208,28 +219,27 @@ where
     }
 }
 
-fn deserialize_protocol<'de, D>(deserializer: D) -> Result<String, D::Error>
+fn deserialize_protocol<'de, D>(deserializer: D) -> Result<MountProtocol, D::Error>
 where
     D: Deserializer<'de>,
 {
     let s = String::deserialize(deserializer)?;
 
-    if SUPPORTED_MOUNT_PROTOCOLS.iter().any(|v| v == &s) {
-        Ok(s)
-    } else {
-        Err(serde::de::Error::custom(format!(
+    match MountProtocol::from_str(&s) {
+        Ok(m) => Ok(m),
+        Err(_) => Err(serde::de::Error::custom(format!(
             "Unsupported value: `{}`. Must be one of: {}",
             s,
-            SUPPORTED_MOUNT_PROTOCOLS.join(", ")
-        )))
+            MountProtocol::VARIANTS.join(", ")
+        ))),
     }
 }
 
-fn default_protocol() -> String {
+fn default_protocol() -> MountProtocol {
     if cfg!(windows) {
-        "prjfs".to_string()
+        MountProtocol::Prjfs
     } else {
-        "fuse".to_string()
+        MountProtocol::Fuse
     }
 }
 
