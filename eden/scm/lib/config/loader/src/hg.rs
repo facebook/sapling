@@ -79,6 +79,9 @@ pub trait ConfigSetHgExt {
         proxy_sock_path: Option<String>,
     ) -> Result<Vec<Error>>;
 
+    /// Optionally refresh the dynamic config in the background.
+    fn maybe_refresh_dynamic(&self, repo_path: Option<&Path>, identity: &Identity) -> Result<()>;
+
     /// Load user config files (and environment variables).  If config environment variable is
     /// set, load files listed in that environment variable instead.
     /// Return errors parsing files.
@@ -344,6 +347,11 @@ impl ConfigSetHgExt for ConfigSet {
             }
         }
 
+        // Wait until config is fully loaded so maybe_refresh_dynamic() itself sees
+        // correct config values.
+        self.maybe_refresh_dynamic(repo_path.as_deref(), &ident)
+            .map_err(|e| Errors(vec![Error::Other(e)]))?;
+
         if !errors.is_empty() {
             return Err(Errors(errors));
         }
@@ -372,12 +380,6 @@ impl ConfigSetHgExt for ConfigSet {
         identity: &Identity,
         proxy_sock_path: Option<String>,
     ) -> Result<Vec<Error>> {
-        use std::process::Command;
-        use std::time::Duration;
-        use std::time::SystemTime;
-
-        use util::run_background;
-
         use crate::fb::internalconfig::vpnless_config_path;
 
         let mut errors = Vec::new();
@@ -475,6 +477,24 @@ impl ConfigSetHgExt for ConfigSet {
         // Log config ages
         // - Done in python for now
 
+        Ok(errors)
+    }
+
+    #[cfg(feature = "fb")]
+    fn maybe_refresh_dynamic(&self, repo_path: Option<&Path>, identity: &Identity) -> Result<()> {
+        use std::process::Command;
+        use std::time::Duration;
+        use std::time::SystemTime;
+
+        use util::run_background;
+
+        let mode = FbConfigMode::from_identity(identity);
+        if !mode.need_dynamic_generator() {
+            return Ok(());
+        }
+
+        let dynamic_path = get_config_dir(repo_path)?.join("hgrc.dynamic");
+
         // Regenerate if mtime is old.
         let generation_time: Option<u64> = self.get_opt("configs", "generationtime")?;
         let recursion_marker = env::var("HG_INTERNALCONFIG_IS_REFRESHING");
@@ -529,7 +549,12 @@ impl ConfigSetHgExt for ConfigSet {
             tracing::debug!("skip spawning debugrefreshconfig because {}", reason);
         }
 
-        Ok(errors)
+        Ok(())
+    }
+
+    #[cfg(not(feature = "fb"))]
+    fn maybe_refresh_dynamic(&self, _repo_path: Option<&Path>, _identity: &Identity) -> Result<()> {
+        Ok(())
     }
 
     #[cfg(not(feature = "fb"))]
