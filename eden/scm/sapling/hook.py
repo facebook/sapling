@@ -174,10 +174,6 @@ def _exthook(ui, repo, htype, name, cmd, args, throw, background=False):
     return r
 
 
-# represent an untrusted hook command
-_fromuntrusted = object()
-
-
 def _allhooks(ui):
     """return a list of (hook-id, cmd) pairs sorted by priority"""
     hooks = _hookitems(ui)
@@ -190,7 +186,6 @@ def _hookitems(ui):
     for name, cmd in ui.configitems("hooks"):
         if not name.startswith("priority"):
             priority = ui.configint("hooks", "priority.%s" % name, 0)
-            # TODO: check whether the hook item is trusted or not
             hooks[name] = (-priority, len(hooks), name, cmd)
     return hooks
 
@@ -252,16 +247,7 @@ def runhooks(ui, repo, htype, hooks, throw: bool = False, **args):
                     # files seem to be bogus, give up on redirecting (WSGI, etc)
                     pass
 
-            if cmd is _fromuntrusted:
-                if throw:
-                    raise error.HookAbort(
-                        _("untrusted hook %s not executed") % hname,
-                        hint=_("see '@prog@ help config.trusted'"),
-                    )
-                ui.warn(_("warning: untrusted hook %s not executed\n") % hname)
-                r = 1
-                raised = False
-            elif callable(cmd):
+            if callable(cmd):
                 r, raised = _pythonhook(ui, repo, htype, hname, cmd, args, throw)
             elif cmd.startswith("python:"):
                 if cmd.count(":") >= 2:
