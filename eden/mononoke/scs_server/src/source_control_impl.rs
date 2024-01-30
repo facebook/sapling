@@ -69,6 +69,7 @@ use crate::specifiers::SpecifierExt;
 
 const FORWARDED_IDENTITIES_HEADER: &str = "scm_forwarded_identities";
 const FORWARDED_CLIENT_IP_HEADER: &str = "scm_forwarded_client_ip";
+const FORWARDED_CLIENT_PORT_HEADER: &str = "scm_forwarded_client_port";
 const FORWARDED_CLIENT_DEBUG_HEADER: &str = "scm_forwarded_client_debug";
 const FORWARDED_OTHER_CATS_HEADER: &str = "scm_forwarded_other_cats";
 const PER_REQUEST_READ_QPS: usize = 4000;
@@ -260,9 +261,10 @@ impl SourceControlServiceImpl {
             .await;
 
         if is_trusted {
-            if let (Some(forwarded_identities), Some(forwarded_ip)) = (
+            if let (Some(forwarded_identities), Some(forwarded_ip), Some(forwarded_port)) = (
                 header(FORWARDED_IDENTITIES_HEADER)?,
                 header(FORWARDED_CLIENT_IP_HEADER)?,
+                header(FORWARDED_CLIENT_PORT_HEADER)?,
             ) {
                 let mut header_identities: MononokeIdentitySet =
                     serde_json::from_str(forwarded_identities.as_str())
@@ -270,6 +272,11 @@ impl SourceControlServiceImpl {
                 let client_ip = Some(
                     forwarded_ip
                         .parse::<IpAddr>()
+                        .map_err(errors::invalid_request)?,
+                );
+                let client_port = Some(
+                    forwarded_port
+                        .parse::<u32>()
                         .map_err(errors::invalid_request)?,
                 );
                 let client_debug = header(FORWARDED_CLIENT_DEBUG_HEADER)?.is_some();
@@ -282,7 +289,7 @@ impl SourceControlServiceImpl {
                     metadata::security::is_client_untrusted(|h| req_ctxt.header(h))
                         .map_err(errors::invalid_request)?,
                     client_ip,
-                    None,
+                    client_port,
                 )
                 .await;
 

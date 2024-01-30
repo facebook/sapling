@@ -30,6 +30,7 @@ use crate::errors::LandChangesetsError;
 
 const FORWARDED_IDENTITIES_HEADER: &str = "scm_forwarded_identities";
 const FORWARDED_CLIENT_IP_HEADER: &str = "scm_forwarded_client_ip";
+const FORWARDED_CLIENT_PORT_HEADER: &str = "scm_forwarded_client_port";
 const FORWARDED_CLIENT_DEBUG_HEADER: &str = "scm_forwarded_client_debug";
 const FORWARDED_OTHER_CATS_HEADER: &str = "scm_forwarded_other_cats";
 use clientinfo::ClientInfo;
@@ -140,9 +141,10 @@ impl Factory {
             .as_ref()
             .and_then(|ci| serde_json::from_str(ci).ok());
 
-        if let (Some(forwarded_identities), Some(forwarded_ip)) = (
+        if let (Some(forwarded_identities), Some(forwarded_ip), Some(forwarded_port)) = (
             header(FORWARDED_IDENTITIES_HEADER)?,
             header(FORWARDED_CLIENT_IP_HEADER)?,
+            header(FORWARDED_CLIENT_PORT_HEADER)?,
         ) {
             let mut header_identities: MononokeIdentitySet =
                 serde_json::from_str(forwarded_identities.as_str())
@@ -151,6 +153,12 @@ impl Factory {
             let client_ip = Some(
                 forwarded_ip
                     .parse::<IpAddr>()
+                    .map_err(|e| errors::internal_error(&e))?,
+            );
+
+            let client_port = Some(
+                forwarded_port
+                    .parse::<u32>()
                     .map_err(|e| errors::internal_error(&e))?,
             );
 
@@ -163,7 +171,7 @@ impl Factory {
                 client_debug,
                 metadata::security::is_client_untrusted(|h| req_ctxt.header(h))?,
                 client_ip,
-                None,
+                client_port,
             )
             .await;
 
