@@ -196,7 +196,7 @@ pub fn py_finalize() {
         // #6  ... in _PyModule_ClearDict () from /lib64/libpython3.6m.so.1.0
         // #7  ... in PyImport_Cleanup () from /lib64/libpython3.6m.so.1.0
         // #8  ... in Py_FinalizeEx () from /lib64/libpython3.6m.so.1.0
-        // #9  ... in hgcommands::python::py_finalize ()
+        // #9  ... in commands::python::py_finalize ()
         // ....
         // #15 ... in hgmain::main () eden/scm/exec/hgmain/src/main.rs:81
         //

@@ -121,8 +121,8 @@ impl Server<'_> {
     /// Run the given main command. Return exit code.
     fn run_command(&self, argv: Vec<String>) -> i32 {
         tracing::debug!("server::run_command {:?}", &argv);
-        // To avoid circular dependency, we cannot call hgcommands here.
-        // Instead, rely on hgcommands to provide Server::run_func.
+        // To avoid circular dependency, we cannot call commands here.
+        // Instead, rely on commands to provide Server::run_func.
         (self.run_func)(self, argv)
     }
 }

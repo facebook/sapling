@@ -6,7 +6,7 @@
  */
 
 use cpython::py_module_initializer;
-use hgcommands::prepare_builtin_modules;
+use commands::prepare_builtin_modules;
 
 py_module_initializer!(bindings, initbindings, PyInit_bindings, |py, m| {
     m.add(py, "__doc__", "Bootstraps the hg python environment")?;

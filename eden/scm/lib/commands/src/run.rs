@@ -744,15 +744,15 @@ fn log_end(
         io.time_interval().total_blocked_ms() - start_blocked
     };
 
-    if tracing::enabled!(target: "hgcommands::run::blocked", Level::DEBUG) {
+    if tracing::enabled!(target: "commands::run::blocked", Level::DEBUG) {
         let interval = io.time_interval();
         let tags = interval.list_tags();
         for tag in tags {
             let tag: &str = tag.as_ref();
             let time = interval.tagged_blocked_ms(tag);
-            tracing::debug!(target: "hgcommands::run::blocked", tag=tag, time=time, "blocked tag");
+            tracing::debug!(target: "commands::run::blocked", tag=tag, time=time, "blocked tag");
         }
-        tracing::debug!(target: "hgcommands::run::blocked", total=total_blocked_ms, start=start_blocked, "blocked total");
+        tracing::debug!(target: "commands::run::blocked", total=total_blocked_ms, start=start_blocked, "blocked total");
     }
 
     tracing::info!(

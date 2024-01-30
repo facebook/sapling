@@ -7,7 +7,7 @@
 
 //! Simple crate to call fsync on files matching glob patterns.
 //!
-//! This is a standalone crate to help reducing compile time of `hgcommands`.
+//! This is a standalone crate to help reducing compile time of `commands`.
 
 use std::fs;
 use std::io;

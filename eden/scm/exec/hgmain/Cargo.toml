@@ -9,8 +9,8 @@ build = "build.rs"
 [dependencies]
 atexit = { version = "0.1.0", path = "../../lib/util/atexit" }
 clidispatch = { version = "0.1.0", path = "../../lib/clidispatch" }
+commands = { version = "0.1.0", path = "../../lib/commands", default-features = false }
 configparser = { package = "configloader", version = "0.1.0", path = "../../lib/config/loader" }
-hgcommands = { version = "0.1.0", path = "../../lib/hgcommands", default-features = false }
 pyblackbox = { path = "../../saplingnative/bindings/modules/pyblackbox" }
 tracing = "0.1.40"
 
@@ -34,8 +34,8 @@ winapi = { version = "0.3", features = ["everything"] }
 [features]
 buildinfo = []
 default = []
-eden = ["clidispatch/eden", "hgcommands/eden"]
-fb = ["hgcommands/fb"]
+eden = ["clidispatch/eden", "commands/eden"]
+fb = ["commands/fb"]
 sl_only = ["clidispatch/sl_only"]
 with_chg = ["dirs", "identity"]
 

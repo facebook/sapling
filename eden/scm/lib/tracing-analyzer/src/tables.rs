@@ -43,7 +43,7 @@ fn extract_dev_command_timers(tables: &mut Tables, tid_spans: &TidSpans) {
     for spans in tid_spans.values() {
         for span in spans.walk() {
             match span.meta.get("name").cloned().unwrap_or("") {
-                // By hgcommands, run.rs
+                // By commands, run.rs
                 "Run Command" => {
                     let duration = span.duration_millis().unwrap_or(0);
                     row.insert("command_duration".into(), duration.into());

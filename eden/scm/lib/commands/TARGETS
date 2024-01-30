@@ -3,7 +3,7 @@ load("//eden/scm:targets.bzl", "rust_python_library")
 oncall("mercurial_release")
 
 rust_python_library(
-    name = "hgcommands",
+    name = "commands",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {
         "cargo_toml_config": {
