@@ -8,16 +8,7 @@
 use cmdutil::define_flags;
 
 commands! {
-    mod refreshconfig;
-    mod http;
-    mod mergestate;
-    mod metrics;
-    mod networkdoctor;
     mod structuredprogress;
-    mod python;
-    mod racyoutput;
-    mod revsets;
-    mod runlog;
     mod scmstore;
     mod scmstorereplay;
     mod segmentclone;

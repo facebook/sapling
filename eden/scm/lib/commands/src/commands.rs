@@ -63,6 +63,15 @@ external_commands![
     cmddebugdumpindexedlog,
     cmddebugdumpinternalconfig,
     cmddebugfsync,
+    cmddebughttp,
+    cmddebugmergestate,
+    cmddebugmetrics,
+    cmddebugnetworkdoctor,
+    cmddebugpython,
+    cmddebugracyoutput,
+    cmddebugrefreshconfig,
+    cmddebugrevsets,
+    cmddebugrunlog,
     // [[[end]]]
 ];
 

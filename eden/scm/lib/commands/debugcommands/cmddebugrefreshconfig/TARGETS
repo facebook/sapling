@@ -1,0 +1,28 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "cmddebugrefreshconfig",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "features": {
+                "default": [],
+                "fb": [
+                    "configloader/fb",
+                ],
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    features = ["fb"],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "//eden/scm/lib/clidispatch:clidispatch",
+        "//eden/scm/lib/commands/cmdutil:cmdutil",
+        "//eden/scm/lib/config/loader:configloader",
+        "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/repo:repo",
+    ],
+)

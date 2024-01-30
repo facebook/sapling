@@ -21,6 +21,15 @@ cmddebugcurrentexe = { version = "0.1.0", path = "debugcommands/cmddebugcurrente
 cmddebugdumpindexedlog = { version = "0.1.0", path = "debugcommands/cmddebugdumpindexedlog" }
 cmddebugdumpinternalconfig = { version = "0.1.0", path = "debugcommands/cmddebugdumpinternalconfig" }
 cmddebugfsync = { version = "0.1.0", path = "debugcommands/cmddebugfsync" }
+cmddebughttp = { version = "0.1.0", path = "debugcommands/cmddebughttp" }
+cmddebugmergestate = { version = "0.1.0", path = "debugcommands/cmddebugmergestate" }
+cmddebugmetrics = { version = "0.1.0", path = "debugcommands/cmddebugmetrics" }
+cmddebugnetworkdoctor = { version = "0.1.0", path = "debugcommands/cmddebugnetworkdoctor" }
+cmddebugpython = { version = "0.1.0", path = "debugcommands/cmddebugpython" }
+cmddebugracyoutput = { version = "0.1.0", path = "debugcommands/cmddebugracyoutput" }
+cmddebugrefreshconfig = { version = "0.1.0", path = "debugcommands/cmddebugrefreshconfig" }
+cmddebugrevsets = { version = "0.1.0", path = "debugcommands/cmddebugrevsets" }
+cmddebugrunlog = { version = "0.1.0", path = "debugcommands/cmddebugrunlog" }
 cmdgoto = { version = "0.1.0", path = "commands/cmdgoto" }
 cmdpy = { version = "0.1.0", path = "cmdpy" }
 cmdroot = { version = "0.1.0", path = "commands/cmdroot" }
@@ -49,7 +58,6 @@ libc = "0.2.139"
 metrics-render = { version = "0.1.0", path = "../metrics/render" }
 mincode = { version = "0.1.0", path = "../mincode" }
 minibytes = { version = "0.1.0", path = "../minibytes" }
-network-doctor = { version = "0.1.0", path = "../doctor/network" }
 nodeipc = { version = "0.1.0", path = "../util/nodeipc" }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 procinfo = { version = "0.1.0", path = "../procinfo" }
@@ -59,13 +67,10 @@ pycheckout = { version = "0.1.0", path = "../../saplingnative/bindings/modules/p
 pyedenclient = { version = "0.1.0", path = "../../saplingnative/bindings/modules/pyedenclient" }
 pytracing = { version = "0.1.0", path = "../../saplingnative/bindings/modules/pytracing", default-features = false }
 pyworkingcopy = { version = "0.1.0", path = "../../saplingnative/bindings/modules/pyworkingcopy" }
-rand = { version = "0.8", features = ["small_rng"] }
 repo = { version = "0.1.0", path = "../repo", features = ["wdir"] }
-repostate = { version = "0.1.0", path = "../workingcopy/repostate" }
 revisionstore = { version = "0.1.0", path = "../revisionstore" }
 runlog = { version = "0.1.0", path = "../runlog" }
 sampling = { version = "0.1.0", path = "../sampling" }
-serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
 tracing = "0.1.40"
 tracing-collector = { version = "0.1.0", path = "../tracing-collector" }
 tracing-reload = { version = "0.1.0", path = "../tracing-reload" }
@@ -81,4 +86,4 @@ zstd = { version = "0.13", features = ["experimental", "zstdmt"] }
 [features]
 default = []
 eden = ["clidispatch/eden", "cmdgoto/eden", "edenfs-client", "pycheckout/eden", "pyedenclient/eden", "pyworkingcopy/eden"]
-fb = ["cmddebugdumpinternalconfig/fb", "cmdversion/fb", "configloader/fb", "identity/fb"]
+fb = ["cmddebugdumpinternalconfig/fb", "cmddebugrefreshconfig/fb", "cmdversion/fb", "configloader/fb", "identity/fb"]

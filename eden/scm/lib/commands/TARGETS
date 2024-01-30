@@ -43,6 +43,7 @@ rust_library(
                     "identity/fb",
                     "cmdversion/fb",
                     "cmddebugdumpinternalconfig/fb",
+                    "cmddebugrefreshconfig/fb",
                 ],
             },
         },
@@ -62,8 +63,6 @@ rust_library(
         "fbsource//third-party/rust:hostname",
         "fbsource//third-party/rust:libc",
         "fbsource//third-party/rust:parking_lot",
-        "fbsource//third-party/rust:rand",
-        "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:tracing",
         "fbsource//third-party/rust:tracing-subscriber",
         "fbsource//third-party/rust:zstd",
@@ -79,7 +78,6 @@ rust_library(
         "//eden/scm/lib/constructors:constructors",
         "//eden/scm/lib/dag:dag",
         "//eden/scm/lib/debugtop:debugtop",
-        "//eden/scm/lib/doctor/network:network-doctor",
         "//eden/scm/lib/edenapi:edenapi",
         "//eden/scm/lib/edenfs-client:edenfs-client",
         "//eden/scm/lib/hg-http:hg-http",
@@ -106,7 +104,6 @@ rust_library(
         "//eden/scm/lib/util/nodeipc:nodeipc",
         "//eden/scm/lib/version:rust_version",
         "//eden/scm/lib/workingcopy:workingcopy",
-        "//eden/scm/lib/workingcopy/repostate:repostate",
         "//eden/scm/saplingnative/bindings/modules/pytracing:pytracing",
         # see update_modules.sh
         # [[[cog
@@ -131,6 +128,15 @@ rust_library(
         "//eden/scm/lib/commands/debugcommands/cmddebugdumpindexedlog:cmddebugdumpindexedlog",
         "//eden/scm/lib/commands/debugcommands/cmddebugdumpinternalconfig:cmddebugdumpinternalconfig",
         "//eden/scm/lib/commands/debugcommands/cmddebugfsync:cmddebugfsync",
+        "//eden/scm/lib/commands/debugcommands/cmddebughttp:cmddebughttp",
+        "//eden/scm/lib/commands/debugcommands/cmddebugmergestate:cmddebugmergestate",
+        "//eden/scm/lib/commands/debugcommands/cmddebugmetrics:cmddebugmetrics",
+        "//eden/scm/lib/commands/debugcommands/cmddebugnetworkdoctor:cmddebugnetworkdoctor",
+        "//eden/scm/lib/commands/debugcommands/cmddebugpython:cmddebugpython",
+        "//eden/scm/lib/commands/debugcommands/cmddebugracyoutput:cmddebugracyoutput",
+        "//eden/scm/lib/commands/debugcommands/cmddebugrefreshconfig:cmddebugrefreshconfig",
+        "//eden/scm/lib/commands/debugcommands/cmddebugrevsets:cmddebugrevsets",
+        "//eden/scm/lib/commands/debugcommands/cmddebugrunlog:cmddebugrunlog",
         # [[[end]]]
     ],
 )
