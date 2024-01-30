@@ -18,7 +18,7 @@ pub fn init() {
         eagerepo::init();
 
         // Commit stores.
-        hgcommits::init();
+        commits::init();
         #[cfg(feature = "git")]
         commits_git::init();
 

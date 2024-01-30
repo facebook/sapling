@@ -10,6 +10,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use async_runtime::block_unless_interrupted as block_on;
+use commits::DagCommits;
 use dag::Group;
 use dag::VertexListWithOptions;
 use dag::VertexName;
@@ -17,7 +18,6 @@ use edenapi::configmodel::Config;
 use edenapi::configmodel::ConfigExt;
 use edenapi::types::CommitGraphSegments;
 use edenapi::EdenApi;
-use hgcommits::DagCommits;
 use metalog::CommitOptions;
 use metalog::MetaLog;
 use tracing::instrument;

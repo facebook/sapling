@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-//! # hgcommits
+//! # commits
 //!
 //! Commits stored in HG format and backed by efficient `dag` structures.
 

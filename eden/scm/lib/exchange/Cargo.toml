@@ -8,9 +8,9 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.75"
 async-runtime = { version = "0.1.0", path = "../async-runtime" }
+commits = { version = "0.1.0", path = "../commits" }
 dag = { version = "0.1.0", path = "../dag" }
 edenapi = { version = "0.1.0", path = "../edenapi" }
-hgcommits = { version = "0.1.0", path = "../hgcommits" }
 metalog = { version = "0.1.0", path = "../metalog" }
 refencode = { version = "0.1.0", path = "../refencode" }
 tracing = "0.1.40"
