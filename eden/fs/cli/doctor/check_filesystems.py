@@ -182,34 +182,25 @@ class LowDiskSpace(Problem):
         super().__init__(message, severity=severity)
 
 
-class LowDiskSpaceMacOS(Problem, FixableProblem):
+class LowDiskSpaceMacOS(Problem):
     """
-    The LowDiskSpace problem **on macOS** is potentially fixable, so we have a separate class for it (as a subclass of FixableProblem).
-    For all other OSes, use the regular LowDiskSpace problem class.
+    The LowDiskSpace problem **on macOS** is potentially fixable, but we don't
+    have the permissions to fix it (see https://fburl.com/edenfs_purgeable).
+    We will give the user advice on how they can remediate themselves.
     """
+
+    util = "/System/Library/Filesystems/apfs.fs/Contents/Resources/apfs.util"
+    util_check = f"sudo {util} -G ~"
+    util_purge = f"sudo {util} -P ~"
 
     def __init__(self, message: str, severity: ProblemSeverity) -> None:
-        super().__init__(message, severity=severity)
-
-    def dry_run_msg(self) -> str:
-        return "Would attempt to purge the APFS cache\n"
-
-    def start_msg(self) -> str:
-        return "Trying to purge the APFS cache...\n"
-
-    def perform_fix(self) -> None:
-        apfs_util = "/System/Library/Filesystems/apfs.fs/Contents/Resources/apfs.util"
-        command = f"{apfs_util} -P -high ~"
-        try:
-            subprocess.run(
-                command,
-                shell=True,
-                stdout=subprocess.PIPE,
-                check=True,
-                text=True,
-            )
-        except subprocess.CalledProcessError as e:
-            raise RemediationError(f"Failed to purge APFS cache.\n{e}")
+        addtl_msg = (
+            f"\nA significant portion of your disk may be used up by purgeable "
+            f"space. You can check purgeable space with: \n\n'{self.util_check}'\n\n"
+            f"You can clear purgeable space with: \n\n'{self.util_purge}'\n\n"
+            f"See https://fburl.com/edenfs_purgeable for more info.\n"
+        )
+        super().__init__(message + addtl_msg, severity=severity)
 
 
 def check_disk_usage(
