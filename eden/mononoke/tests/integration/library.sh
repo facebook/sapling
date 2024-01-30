@@ -2359,7 +2359,7 @@ function derived_data_client() {
   THRIFT_TLS_CL_KEY_PATH="$TEST_CERTDIR/client0.key" \
   THRIFT_TLS_CL_CA_PATH="$TEST_CERTDIR/root-ca.crt" \
   GLOG_minloglevel=5 "$DERIVED_DATA_CLIENT" \
-  -h "localhost:$DDS_PORT" \
+  --host "localhost:$DDS_PORT" \
   "$@"
 }
 
