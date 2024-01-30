@@ -30,7 +30,6 @@ mod rsync;
 mod subcommand_blame;
 mod subcommand_deleted_manifest;
 mod subcommand_phases;
-mod subcommand_unodes;
 mod truncate_segmented_changelog;
 
 fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
@@ -44,7 +43,6 @@ fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         .subcommand(hg_changeset::build_subcommand())
         .subcommand(filenodes::build_subcommand())
         .subcommand(subcommand_phases::build_subcommand())
-        .subcommand(subcommand_unodes::build_subcommand())
         .subcommand(crossrepo::build_subcommand())
         .subcommand(subcommand_blame::build_subcommand())
         .subcommand(subcommand_deleted_manifest::build_subcommand())
@@ -73,9 +71,6 @@ fn main(fb: FacebookInit) -> ExitCode {
             }
             (subcommand_phases::PHASES, Some(sub_m)) => {
                 subcommand_phases::subcommand_phases(fb, logger, &matches, sub_m).await
-            }
-            (subcommand_unodes::UNODES, Some(sub_m)) => {
-                subcommand_unodes::subcommand_unodes(fb, logger, &matches, sub_m).await
             }
             (crossrepo::CROSSREPO, Some(sub_m)) => {
                 subcommand_crossrepo(fb, logger, &matches, sub_m).await

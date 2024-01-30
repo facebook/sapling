@@ -16,6 +16,7 @@ use fsnodes::RootFsnodeId;
 use futures::TryStreamExt;
 use manifest::Entry;
 use manifest::ManifestOps;
+use manifest::PathOrPrefix;
 use manifest::StoreLoadable;
 use mononoke_app::args::ChangesetArgs;
 use mononoke_types::path::MPath;
@@ -24,6 +25,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::SkeletonManifestId;
 use repo_blobstore::RepoBlobstoreRef;
 use skeleton_manifest::RootSkeletonManifestId;
+use unodes::RootUnodeManifestId;
 
 use super::Repo;
 
@@ -38,7 +40,7 @@ struct SkeletonManifestListArgs {
 enum ListManifestSubcommand {
     SkeletonManifests(SkeletonManifestListArgs),
     Fsnodes,
-    // Unodes, // TODO(T175880214): Add support for unodes
+    Unodes,
     // DeletedManifests, // TODO(T175880214): Add support for deleted manifests
 }
 
@@ -147,6 +149,36 @@ async fn fsnodes(ctx: &CoreContext, repo: &Repo, cs_id: ChangesetId, path: MPath
         .await
 }
 
+async fn unodes(ctx: &CoreContext, repo: &Repo, cs_id: ChangesetId, path: MPath) -> Result<()> {
+    let root_unode_id = RootUnodeManifestId::derive(ctx, repo, cs_id).await?;
+
+    let unode_id = *root_unode_id.manifest_unode_id();
+
+    let entries = if !path.is_root() {
+        unode_id.find_entries(
+            ctx.clone(),
+            repo.repo_blobstore().clone(),
+            vec![PathOrPrefix::Prefix(path)],
+        )
+    } else {
+        unode_id.list_all_entries(ctx.clone(), repo.repo_blobstore().clone())
+    };
+
+    entries
+        .try_for_each(|(path, entry)| async move {
+            match entry {
+                Entry::Tree(tree_id) => {
+                    println!("{}/ {:?}", path, tree_id);
+                }
+                Entry::Leaf(leaf_id) => {
+                    println!("{} {:?}", path, leaf_id);
+                }
+            }
+            Ok(())
+        })
+        .await
+}
+
 pub(super) async fn list_manifests(
     ctx: &CoreContext,
     repo: &Repo,
@@ -167,6 +199,9 @@ pub(super) async fn list_manifests(
         }
         ListManifestSubcommand::Fsnodes => {
             fsnodes(ctx, repo, cs_id, path.clone()).await?;
+        }
+        ListManifestSubcommand::Unodes => {
+            unodes(ctx, repo, cs_id, path.clone()).await?;
         }
     };
 

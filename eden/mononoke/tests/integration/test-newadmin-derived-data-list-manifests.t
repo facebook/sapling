@@ -65,11 +65,7 @@ Fsnodes from root path
   a/foo.txt	67f9f510b6a13f94986928ba0f270ec005b194edd77b22a13dec797471a4fe85	regular	5
   a/b/bar.txt	638aceddb6283739ca98ac2cb18bf6d8d5358439ea187fd4ab0257d24d6d6e47	regular	5
 Unodes
-  $ with_stripped_logs mononoke_admin unodes tree "main" "a"
-  using repo "repo" repoid RepositoryId(0)
-  changeset resolved as: ChangesetId(Blake2(0b95b6947772ea75083a16af5c9cdc2c3f76b23c26c834f0bdfe227819319a2b))
-  ROOT: RootUnodeManifestId(ManifestUnodeId(Blake2(97c62e3717a0783ef5b6d1039e03ff4946dde86e6f85da512f0a1ea64fa035ea)))
-  PATH: MPath("a")
+  $ with_stripped_logs mononoke_newadmin derived-data -R repo list-manifests -p "a" -B main unodes
   a/ ManifestUnodeId(Blake2(dbdbdd1b393b32741aaab820850468c06b3f50319bea3728e8b2d346e61a01ef))
   a/foo.txt FileUnodeId(Blake2(5b5ddd33b0347715e192bfc25bc172ed8c5800d87ba3d3238ef88dee25d28dc6))
   a/b/ ManifestUnodeId(Blake2(48caf3edd514179ebde2bec7cc44bbc1e925b633a232eb9672fce099ca09054b))
@@ -79,12 +75,8 @@ Unodes
   a/b/c/hoo.txt FileUnodeId(Blake2(eb6aaff4bf9645666875dfd18d6407ccd7a153de2fcbf64d4d7ae883cf07a2bb))
 
 Unodes from root
-  $ with_stripped_logs mononoke_admin unodes tree "$B" ""
-  using repo "repo" repoid RepositoryId(0)
-  changeset resolved as: ChangesetId(Blake2(b65c0e6f73c666e4f7b9b4bdddfcb72f2c8beef5968bbfc13ed1b231536f8e11))
-  ROOT: RootUnodeManifestId(ManifestUnodeId(Blake2(8ade1b6151194edff398e823450e3bfbc8a1252958ea89f0c3ef58b0c3d30e70)))
-  PATH: MPath("")
-  (none)/ ManifestUnodeId(Blake2(8ade1b6151194edff398e823450e3bfbc8a1252958ea89f0c3ef58b0c3d30e70))
+  $ with_stripped_logs mononoke_newadmin derived-data -R repo list-manifests -p "" -i "$B" unodes
+  / ManifestUnodeId(Blake2(8ade1b6151194edff398e823450e3bfbc8a1252958ea89f0c3ef58b0c3d30e70))
   A FileUnodeId(Blake2(5da8409b6ec0f3759444f93c2c5194f5c94c02037095ca16b5f3e0f70152c613))
   B FileUnodeId(Blake2(eb68a776a3017fcc811f6f23a8724a771db09de2f35fda2db314b580d41fb7ae))
   b/ ManifestUnodeId(Blake2(4668835e236dfec9b0273f21f33cfa4570769a24a5a5422b10920b28e5440092))
