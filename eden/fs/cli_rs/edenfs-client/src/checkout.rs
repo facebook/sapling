@@ -185,9 +185,10 @@ where
 
     match RepositoryType::from_str(&s) {
         Ok(t) => Ok(t),
-        Err(e) => Err(serde::de::Error::custom(format!(
-            "Invalid repository type: {:?}",
-            e
+        Err(_) => Err(serde::de::Error::custom(format!(
+            "Unsupported value: `{}`. Must be one of: {}",
+            s,
+            RepositoryType::VARIANTS.join(", ")
         ))),
     }
 }
