@@ -43,12 +43,6 @@ def _pythonhook(ui, repo, htype, hname, funcname, args, throw):
             )
         modname = funcname[:d]
         oldpaths = sys.path
-        if util.mainfrozen():
-            # binary installs require sys.path manipulation
-            modpath, modfile = os.path.split(modname)
-            if modpath and modfile:
-                sys.path = sys.path[:] + [modpath]
-                modname = modfile
         with demandimport.deactivated():
             try:
                 obj = __import__(modname)

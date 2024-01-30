@@ -736,7 +736,7 @@ def _plainapplepython():
       for using system certificate store CAs in addition to the provided
       cacerts file
     """
-    if not pycompat.isdarwin or util.mainfrozen() or not pycompat.sysexecutable:
+    if not pycompat.isdarwin or not pycompat.sysexecutable:
         return False
     exe = os.path.realpath(pycompat.sysexecutable).lower()
     return exe.startswith("/usr/bin/python") or exe.startswith(
