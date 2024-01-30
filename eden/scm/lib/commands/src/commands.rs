@@ -43,7 +43,6 @@ macro_rules! external_commands {
 mod debug;
 
 commands! {
-    mod goto;
     mod root;
     mod status;
     mod version;
@@ -61,6 +60,7 @@ external_commands![
     cmdclone,
     cmdconfig,
     cmdconfigfile,
+    cmdgoto,
     // [[[end]]]
 ];
 

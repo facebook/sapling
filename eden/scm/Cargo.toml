@@ -28,6 +28,7 @@ members = [
   "lib/commands/commands/cmdclone",
   "lib/commands/commands/cmdconfig",
   "lib/commands/commands/cmdconfigfile",
+  "lib/commands/commands/cmdgoto",
   "lib/commandserver",
   "lib/commitcloudsubscriber",
   "lib/commits",

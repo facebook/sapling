@@ -10,13 +10,13 @@ anyhow = { version = "1.0.75", features = ["backtrace"] }
 async-runtime = { version = "0.1.0", path = "../async-runtime" }
 atexit = { version = "0.1.0", path = "../util/atexit" }
 blackbox = { version = "0.1.0", path = "../blackbox" }
-checkout = { version = "0.1.0", path = "../checkout" }
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 clidispatch = { version = "0.1.0", path = "../clidispatch" }
 cliparser = { version = "0.1.0", path = "../cliparser", features = ["python"] }
 cmdclone = { version = "0.1.0", path = "commands/cmdclone" }
 cmdconfig = { version = "0.1.0", path = "commands/cmdconfig" }
 cmdconfigfile = { version = "0.1.0", path = "commands/cmdconfigfile" }
+cmdgoto = { version = "0.1.0", path = "commands/cmdgoto" }
 cmdpy = { version = "0.1.0", path = "cmdpy" }
 cmdutil = { version = "0.1.0", path = "cmdutil" }
 comfy-table = "6.1.4"
@@ -32,7 +32,6 @@ edenfs-client = { version = "0.1.0", path = "../edenfs-client", optional = true 
 fail = { version = "0.4", features = ["failpoints"] }
 flate2 = { version = "1.0.26", features = ["rust_backend"], default-features = false }
 formatter = { version = "0.1.0", path = "../formatter" }
-fs-err = { version = "2.6.0", features = ["tokio"] }
 fsyncglob = { version = "0.1.0", path = "../fsyncglob" }
 hg-http = { version = "0.1.0", path = "../hg-http" }
 hg-metrics = { version = "0.1.0", path = "../hg-metrics" }
@@ -79,5 +78,5 @@ zstd = { version = "0.13", features = ["experimental", "zstdmt"] }
 
 [features]
 default = []
-eden = ["checkout/eden", "clidispatch/eden", "edenfs-client", "pycheckout/eden", "pyedenclient/eden", "pyworkingcopy/eden"]
+eden = ["clidispatch/eden", "cmdgoto/eden", "edenfs-client", "pycheckout/eden", "pyedenclient/eden", "pyworkingcopy/eden"]
 fb = ["configloader/fb", "identity/fb"]
