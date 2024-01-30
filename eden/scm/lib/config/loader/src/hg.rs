@@ -486,7 +486,7 @@ impl ConfigSetHgExt for ConfigSet {
         use std::time::Duration;
         use std::time::SystemTime;
 
-        use util::run_background;
+        use spawn_ext::CommandExt;
 
         let mode = FbConfigMode::from_identity(identity);
         if !mode.need_dynamic_generator() {
@@ -534,7 +534,7 @@ impl ConfigSetHgExt for ConfigSet {
                             command.current_dir(repo_path);
                         }
 
-                        let _ = run_background(command);
+                        let _ = command.spawn_detached();
                     }
                 } else {
                     skip_reason = Some("mtime <= configs.generationtime");
