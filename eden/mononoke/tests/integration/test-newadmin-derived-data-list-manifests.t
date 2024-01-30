@@ -51,22 +51,14 @@ Skeleton manifests from root (recursive)
   a/b/c/foo.txt
   a/b/c/hoo.txt
 Fsnodes
-  $ with_stripped_logs mononoke_admin fsnodes tree "main" "a"
-  using repo "repo" repoid RepositoryId(0)
-  changeset resolved as: ChangesetId(Blake2(0b95b6947772ea75083a16af5c9cdc2c3f76b23c26c834f0bdfe227819319a2b))
-  ROOT: RootFsnodeId(FsnodeId(Blake2(dc7c671a36bc4caa1fd07c4e41fc7bf4d2cb713d09271eb286a350004bf04430)))
-  PATH: MPath("a")
+  $ with_stripped_logs mononoke_newadmin derived-data -R repo list-manifests -p "a" -B main fsnodes
   a/foo.txt	67f9f510b6a13f94986928ba0f270ec005b194edd77b22a13dec797471a4fe85	regular	5
   a/b/bar.txt	638aceddb6283739ca98ac2cb18bf6d8d5358439ea187fd4ab0257d24d6d6e47	regular	5
   a/b/c/foo.txt	a2ad79422b22799f40b07486efbe522add2d31b7ebd809989a20d74fea833684	regular	5
   a/b/c/hoo.txt	3ce7f4c533d5a93f131f1f7dc6f887642d5da12e47496afaa589e5aabb29fa8a	regular	5
 
 Fsnodes from root path
-  $ with_stripped_logs mononoke_admin fsnodes tree "$B" ""
-  using repo "repo" repoid RepositoryId(0)
-  changeset resolved as: ChangesetId(Blake2(b65c0e6f73c666e4f7b9b4bdddfcb72f2c8beef5968bbfc13ed1b231536f8e11))
-  ROOT: RootFsnodeId(FsnodeId(Blake2(99a417374c81249e8e41d1fec99d3189fc4503ee7c46f38dc2913bcc81f38deb)))
-  PATH: MPath("")
+  $ with_stripped_logs mononoke_newadmin derived-data -R repo list-manifests -p "" -i "$B" fsnodes
   A	eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9	regular	1
   B	55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f	regular	1
   b/hoo.txt	88c50336ada15d8abe61f2adce8af17b63eb74985d50eec76d4d0248f33bb4a9	regular	5

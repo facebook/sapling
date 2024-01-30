@@ -12,6 +12,7 @@ use clap::Args;
 use clap::Subcommand;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
+use fsnodes::RootFsnodeId;
 use futures::TryStreamExt;
 use manifest::Entry;
 use manifest::ManifestOps;
@@ -36,7 +37,7 @@ struct SkeletonManifestListArgs {
 #[derive(Subcommand)]
 enum ListManifestSubcommand {
     SkeletonManifests(SkeletonManifestListArgs),
-    // Fsnodes, // TODO(T175880214): Add support for fsnodes
+    Fsnodes,
     // Unodes, // TODO(T175880214): Add support for unodes
     // DeletedManifests, // TODO(T175880214): Add support for deleted manifests
 }
@@ -120,6 +121,32 @@ async fn skeleton_manifest(
     skeleton_manifest_list(ctx, repo, path, skeleton_id).await
 }
 
+async fn fsnodes(ctx: &CoreContext, repo: &Repo, cs_id: ChangesetId, path: MPath) -> Result<()> {
+    let root_fsnode_id = RootFsnodeId::derive(ctx, repo, cs_id).await?;
+
+    let fsnode_id = *root_fsnode_id.fsnode_id();
+
+    let entries = if let Some(path) = path.into_optional_non_root_path() {
+        fsnode_id.list_leaf_entries_under(ctx.clone(), repo.repo_blobstore().clone(), vec![path])
+    } else {
+        fsnode_id.list_leaf_entries(ctx.clone(), repo.repo_blobstore().clone())
+    };
+
+    entries
+        .try_for_each(|(path, file)| async move {
+            println!(
+                "{}\t{}\t{}\t{}",
+                path,
+                file.content_id(),
+                file.file_type(),
+                file.size(),
+            );
+
+            Ok(())
+        })
+        .await
+}
+
 pub(super) async fn list_manifests(
     ctx: &CoreContext,
     repo: &Repo,
@@ -137,6 +164,9 @@ pub(super) async fn list_manifests(
     match &args.subcommand {
         ListManifestSubcommand::SkeletonManifests(skeleton_args) => {
             skeleton_manifest(ctx, repo, cs_id, path.clone(), skeleton_args.recursive).await?;
+        }
+        ListManifestSubcommand::Fsnodes => {
+            fsnodes(ctx, repo, cs_id, path.clone()).await?;
         }
     };
 
