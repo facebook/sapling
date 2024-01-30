@@ -103,6 +103,9 @@ def clone(ui, url, destpath=None, update=True, pullnames=None):
     """
     from . import hg
 
+    if url.endswith("/"):
+        url = url[:-1]
+
     if destpath is None:
         # use basename as fallback, but strip ".git" or "/.git".
         basename = os.path.basename(url)
