@@ -25,9 +25,9 @@ mononoke_types_thrift mononoke_types_thrift",
     ).expect("Failed to write cratemap");
 
     let conf = {
-        let mut conf = Config::from_env(GenContext::Lib).expect("Failed to instantiate thrift_compiler::Config");
+        let mut conf = Config::from_env(GenContext::Services).expect("Failed to instantiate thrift_compiler::Config");
 
-        let path_from_manifest_to_base: &Path = "../../../../..".as_ref();
+        let path_from_manifest_to_base: &Path = "../../../../../..".as_ref();
         let cargo_manifest_dir =
             env::var_os("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not provided");
         let cargo_manifest_dir: &Path = cargo_manifest_dir.as_ref();
@@ -71,7 +71,7 @@ mononoke_types_thrift mononoke_types_thrift",
     };
 
     let srcs: &[&str] = &[
-        "derived_data_service.thrift"
+        "../derived_data_service.thrift"
     ];
     conf.run(srcs).expect("Failed while running thrift compilation");
 }

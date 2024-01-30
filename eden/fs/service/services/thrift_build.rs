@@ -15,19 +15,15 @@ fn main() {
     let out_dir: &Path = out_dir.as_ref();
     fs::write(
         out_dir.join("cratemap"),
-        "changeset_info_thrift derived_data_thrift
-derived_data_service crate
-fb303_core fb303_core
-filenodes filenodes_if
-git_types_thrift git_types_thrift
-mercurial_thrift mercurial_thrift
-mononoke_types_thrift mononoke_types_thrift",
+        "eden crate
+eden_config config_thrift
+fb303_core fb303_core",
     ).expect("Failed to write cratemap");
 
     let conf = {
-        let mut conf = Config::from_env(GenContext::Lib).expect("Failed to instantiate thrift_compiler::Config");
+        let mut conf = Config::from_env(GenContext::Services).expect("Failed to instantiate thrift_compiler::Config");
 
-        let path_from_manifest_to_base: &Path = "../../../../..".as_ref();
+        let path_from_manifest_to_base: &Path = "../../../..".as_ref();
         let cargo_manifest_dir =
             env::var_os("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not provided");
         let cargo_manifest_dir: &Path = cargo_manifest_dir.as_ref();
@@ -49,9 +45,9 @@ mononoke_types_thrift mononoke_types_thrift",
 
         conf.base_path(base_path);
 
-        conf.types_crate("derived_data_service_if__types");
-        conf.clients_crate("derived_data_service_if__clients");
-        conf.services_crate("derived_data_service_if__services");
+        conf.types_crate("thrift__types");
+        conf.clients_crate("thrift__clients");
+        conf.services_crate("thrift__services");
 
         let options = "deprecated_default_enum_min_i32";
         if !options.is_empty() {
@@ -71,7 +67,7 @@ mononoke_types_thrift mononoke_types_thrift",
     };
 
     let srcs: &[&str] = &[
-        "derived_data_service.thrift"
+        "../eden.thrift"
     ];
     conf.run(srcs).expect("Failed while running thrift compilation");
 }

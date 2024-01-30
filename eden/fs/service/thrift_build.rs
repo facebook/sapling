@@ -47,6 +47,7 @@ fb303_core fb303_core",
 
         conf.types_crate("thrift__types");
         conf.clients_crate("thrift__clients");
+        conf.services_crate("thrift__services");
 
         let options = "deprecated_default_enum_min_i32";
         if !options.is_empty() {
