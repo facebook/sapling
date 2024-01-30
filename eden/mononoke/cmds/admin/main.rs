@@ -31,7 +31,6 @@ mod subcommand_blame;
 mod subcommand_deleted_manifest;
 mod subcommand_fsnodes;
 mod subcommand_phases;
-mod subcommand_skeleton_manifests;
 mod subcommand_unodes;
 mod truncate_segmented_changelog;
 
@@ -52,7 +51,6 @@ fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         .subcommand(subcommand_blame::build_subcommand())
         .subcommand(subcommand_deleted_manifest::build_subcommand())
         .subcommand(rsync::build_subcommand())
-        .subcommand(subcommand_skeleton_manifests::build_subcommand())
         .subcommand(truncate_segmented_changelog::build_subcommand())
 }
 
@@ -98,12 +96,6 @@ fn main(fb: FacebookInit) -> ExitCode {
             }
             (rsync::RSYNC, Some(sub_m)) => {
                 rsync::subcommand_rsync(fb, logger, &matches, sub_m).await
-            }
-            (subcommand_skeleton_manifests::SKELETON_MANIFESTS, Some(sub_m)) => {
-                subcommand_skeleton_manifests::subcommand_skeleton_manifests(
-                    fb, logger, &matches, sub_m,
-                )
-                .await
             }
             (truncate_segmented_changelog::TRUNCATE_SEGMENTED_CHANGELOG, Some(sub_m)) => {
                 truncate_segmented_changelog::subcommand_truncate_segmented_changelog(

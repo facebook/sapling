@@ -28,37 +28,21 @@ setup configuration
 derived-data list-manifests:
 
 Skeleton manifests
-  $ with_stripped_logs mononoke_admin skeleton-manifests list "main" "a"
-  using repo "repo" repoid RepositoryId(0)
-  changeset resolved as: ChangesetId(Blake2(0b95b6947772ea75083a16af5c9cdc2c3f76b23c26c834f0bdfe227819319a2b))
-  ROOT: RootSkeletonManifestId(SkeletonManifestId(Blake2(074acd1bbb8fdf8a6b1e9e5c2d40b5e9a64d0608475f4f236ae1e13d901c2fb8)))
-  PATH: MPath("a")
+  $ with_stripped_logs mononoke_newadmin derived-data -R repo list-manifests -p "a" -B main skeleton-manifests
   a/b/
   a/foo.txt
 Skeleton manifests from root
-  $ with_stripped_logs mononoke_admin skeleton-manifests list "$B" ""
-  using repo "repo" repoid RepositoryId(0)
-  changeset resolved as: ChangesetId(Blake2(b65c0e6f73c666e4f7b9b4bdddfcb72f2c8beef5968bbfc13ed1b231536f8e11))
-  ROOT: RootSkeletonManifestId(SkeletonManifestId(Blake2(29f82225b205a9227259295e69adee6f7d0c7d6194a4b2ea72ff739bec79ab3d)))
-  PATH: MPath("")
+  $ with_stripped_logs mononoke_newadmin derived-data -R repo list-manifests -p "" -i "$B" skeleton-manifests
   A
   B
   a/
   b/
 Skeleton manifests (recursive)
-  $ with_stripped_logs mononoke_admin skeleton-manifests tree "$B" "a"
-  using repo "repo" repoid RepositoryId(0)
-  changeset resolved as: ChangesetId(Blake2(b65c0e6f73c666e4f7b9b4bdddfcb72f2c8beef5968bbfc13ed1b231536f8e11))
-  ROOT: RootSkeletonManifestId(SkeletonManifestId(Blake2(29f82225b205a9227259295e69adee6f7d0c7d6194a4b2ea72ff739bec79ab3d)))
-  PATH: MPath("a")
+  $ with_stripped_logs mononoke_newadmin derived-data -R repo list-manifests -p "a" -i "$B" skeleton-manifests --recursive
   a/foo.txt
   a/b/bar.txt
 Skeleton manifests from root (recursive)
-  $ with_stripped_logs mononoke_admin skeleton-manifests tree "main" ""
-  using repo "repo" repoid RepositoryId(0)
-  changeset resolved as: ChangesetId(Blake2(0b95b6947772ea75083a16af5c9cdc2c3f76b23c26c834f0bdfe227819319a2b))
-  ROOT: RootSkeletonManifestId(SkeletonManifestId(Blake2(074acd1bbb8fdf8a6b1e9e5c2d40b5e9a64d0608475f4f236ae1e13d901c2fb8)))
-  PATH: MPath("")
+  $ with_stripped_logs mononoke_newadmin derived-data -R repo list-manifests -p "" -B main skeleton-manifests --recursive
   A
   B
   C
@@ -88,7 +72,6 @@ Fsnodes from root path
   b/hoo.txt	88c50336ada15d8abe61f2adce8af17b63eb74985d50eec76d4d0248f33bb4a9	regular	5
   a/foo.txt	67f9f510b6a13f94986928ba0f270ec005b194edd77b22a13dec797471a4fe85	regular	5
   a/b/bar.txt	638aceddb6283739ca98ac2cb18bf6d8d5358439ea187fd4ab0257d24d6d6e47	regular	5
-
 Unodes
   $ with_stripped_logs mononoke_admin unodes tree "main" "a"
   using repo "repo" repoid RepositoryId(0)
