@@ -25,6 +25,7 @@ import time
 import bindings
 
 from . import (
+    alerts,
     blackbox,
     cmdutil,
     color,
@@ -1134,8 +1135,12 @@ def handlecommandexception(ui):
     if ui.configbool("devel", "silence-crash"):
         return True  # do not re-raise
     warning = _exceptionwarning(ui)
-    ui.log("command_exception", "%s\n%s\n", warning, util.smartformatexc())
+    crash = util.smartformatexc()
+    ui.log("command_exception", "%s\n%s\n", warning, crash)
     ui.warn(warning)
+
+    alerts.print_matching_alerts_for_exception(ui, crash)
+
     return False  # re-raise the exception
 
 

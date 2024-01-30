@@ -7,6 +7,7 @@ import re
 from typing import List, NamedTuple, Optional
 
 from . import cmdutil, templater
+from .i18n import _
 
 
 class Alert(NamedTuple):
@@ -106,4 +107,22 @@ def print_active_alerts(ui):
     alerts = get_alerts(ui)
 
     for alert in alerts:
+        print_alert(ui, alert)
+
+
+def print_matching_alerts_for_exception(ui, crash: str):
+    related_alerts = []
+
+    alerts = get_alerts(ui)
+    for alert in alerts:
+        if alert.show_after_crashes_regex and alert.show_after_crashes_regex.search(
+            crash
+        ):
+            related_alerts.append(alert)
+
+    if not related_alerts:
+        return
+
+    ui.write_err(_("This crash may be related to an ongoing issue:\n"))
+    for alert in related_alerts:
         print_alert(ui, alert)
