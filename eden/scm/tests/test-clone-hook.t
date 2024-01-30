@@ -10,8 +10,8 @@ Show post-clone runs from within the new repo.
   bar
 
 Get a warning about unrun hook with new clone.
-  $ hg clone -Uq test:e1 repo repo2 --config hooks.post-clone.foo=_ --config hooks.pre-clone.bar=_ --config hooks.fail-clone.baz=_ --config clone.use-rust=true
-  WARNING: The following hooks were not run: ["pre-clone.bar", "post-clone.foo"]
+  $ hg clone -Uq test:e1 repo repo2 --config hooks.post-clone.foo=_ --config hooks.pre-clone=_ --config hooks.pre-clone.bar=_ --config hooks.fail-clone.baz=_ --config clone.use-rust=true
+  WARNING: The following hooks were not run: ["pre-clone.bar", "pre-clone", "post-clone.foo"]
 
 Repo already exists - test fail hook warning.
   $ hg clone -Uq test:e1 repo repo2 --config hooks.post-clone.foo=_ --config hooks.pre-clone.bar=_ --config hooks.fail-clone.baz=_ --config clone.use-rust=true

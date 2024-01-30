@@ -283,14 +283,20 @@ fn dispatch_command(
 
     if !fell_back {
         if let Some(command) = command {
-            let hooks_with_prefix =
-                |prefix: String| -> Vec<minibytes::Text> { config.keys_prefixed("hooks", &prefix) };
-            let mut hooks = hooks_with_prefix(format!("pre-{}.", command.main_alias()));
+            let hooks_with_prefix = |prefix: String| -> Vec<minibytes::Text> {
+                let mut hooks = config.keys_prefixed("hooks", &format!("{prefix}."));
+                if config.get("hooks", &prefix).is_some() {
+                    hooks.push(prefix.into());
+                }
+                hooks
+            };
+
+            let mut hooks = hooks_with_prefix(format!("pre-{}", command.main_alias()));
             if exit_code > 0 {
-                let mut names = hooks_with_prefix(format!("fail-{}.", command.main_alias()));
+                let mut names = hooks_with_prefix(format!("fail-{}", command.main_alias()));
                 hooks.append(&mut names);
             } else {
-                let mut names = hooks_with_prefix(format!("post-{}.", command.main_alias()));
+                let mut names = hooks_with_prefix(format!("post-{}", command.main_alias()));
                 hooks.append(&mut names);
             }
 
