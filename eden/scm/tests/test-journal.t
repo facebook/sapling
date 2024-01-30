@@ -150,7 +150,7 @@ Test that verbose, JSON, template and commit output work
   [
    {
     "command": "up",
-    "date": [5.0, 0],
+    "date": [5, 0],
     "name": ".",
     "newhashes": ["1e6c11564562b4ed919baca798bc4338bd299d6a"],
     "oldhashes": ["cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b"],
@@ -158,7 +158,7 @@ Test that verbose, JSON, template and commit output work
    },
    {
     "command": "up 'desc(a)'",
-    "date": [2.0, 0],
+    "date": [2, 0],
     "name": ".",
     "newhashes": ["cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b"],
     "oldhashes": ["1e6c11564562b4ed919baca798bc4338bd299d6a"],
@@ -166,7 +166,7 @@ Test that verbose, JSON, template and commit output work
    },
    {
     "command": "commit -Aqm b",
-    "date": [1.0, 0],
+    "date": [1, 0],
     "name": ".",
     "newhashes": ["1e6c11564562b4ed919baca798bc4338bd299d6a"],
     "oldhashes": ["cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b"],
@@ -174,7 +174,7 @@ Test that verbose, JSON, template and commit output work
    },
    {
     "command": "commit -Aqm a",
-    "date": [0.0, 0],
+    "date": [0, 0],
     "name": ".",
     "newhashes": ["cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b"],
     "oldhashes": ["0000000000000000000000000000000000000000"],
