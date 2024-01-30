@@ -92,7 +92,7 @@ dott_test(
 dott_test(
     name = "test-server-and-bookmark-service",
     disable_all_network_access_target = False,
-    dott_files = glob(["test-bookmark-service*.t"]),
+    dott_files = glob(["test-server-and-bookmark-service-*.t"]),
     deps = [
         "//eden/mononoke:mononoke",
         "//eden/mononoke:segmented_changelog_tailer",
