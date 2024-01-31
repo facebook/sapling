@@ -7,14 +7,14 @@
 
 import {AnimatedReorderGroup} from './AnimatedReorderGroup';
 import {toastQueueAtom, useShowToast} from './toast';
-import {useRecoilValue} from 'recoil';
+import {useAtomValue} from 'jotai';
 
 import './TopLevelToast.css';
 import './Tooltip.css';
 
 export function TopLevelToast() {
   const toast = useShowToast();
-  const toastQueue = useRecoilValue(toastQueueAtom);
+  const toastQueue = useAtomValue(toastQueueAtom);
 
   const toastDivs = toastQueue.toArray().map(t => {
     const handleClick = () => toast.hide([t.key]);
