@@ -7,6 +7,9 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::fmt::Display;
+use std::fmt::Formatter;
+use std::io::Write;
 
 use anyhow::Result;
 use futures::stream::BoxStream;
@@ -14,6 +17,8 @@ use gix_hash::ObjectId;
 use mononoke_types::ChangesetId;
 use packfile::pack::DeltaForm;
 use packfile::types::PackfileItem;
+
+const SYMREF_HEAD: &str = "HEAD";
 
 /// Enum defining the type of data associated with a ref target
 pub enum RefTarget {
@@ -33,6 +38,15 @@ impl RefTarget {
     pub fn into_commit(self) -> ObjectId {
         match self {
             RefTarget::Plain(oid) | RefTarget::WithMetadata(oid, _) => oid,
+        }
+    }
+}
+
+impl Display for RefTarget {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        match self {
+            RefTarget::Plain(oid) => write!(f, "{}", oid),
+            RefTarget::WithMetadata(oid, meta) => write!(f, "{} {}", oid, meta),
         }
     }
 }
@@ -264,5 +278,21 @@ pub struct LsRefsResponse {
 impl LsRefsResponse {
     pub fn new(included_refs: HashMap<String, RefTarget>) -> Self {
         Self { included_refs }
+    }
+
+    pub fn write<W>(&self, writer: &mut W) -> Result<()>
+    where
+        W: Write + Send,
+    {
+        // HEAD symref should always be written first
+        if let Some(target) = self.included_refs.get(SYMREF_HEAD) {
+            writeln!(writer, "{} {}", SYMREF_HEAD, target)?;
+        }
+        for (name, target) in &self.included_refs {
+            if name.as_str() != SYMREF_HEAD {
+                writeln!(writer, "{} {}", name, target)?;
+            }
+        }
+        Ok(())
     }
 }

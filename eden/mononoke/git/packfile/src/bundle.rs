@@ -52,7 +52,6 @@ where
     pub pack_writer: PackfileWriter<T>,
 }
 
-#[allow(dead_code)]
 impl<T: AsyncWrite + Unpin> BundleWriter<T> {
     /// Create a new BundleWriter instance with the header of the bundle written to the
     /// underlying writer.
