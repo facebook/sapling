@@ -47,7 +47,7 @@ pub async fn clean_bubbles(
     let cutoff_duration = Duration::from_secs(args.cutoff.into());
     let expired_bubbles = repo
         .repo_ephemeral_store
-        .get_expired_bubbles(cutoff_duration, args.limit)
+        .get_expired_bubbles(ctx, cutoff_duration, args.limit)
         .await?;
     if expired_bubbles.is_empty() {
         println!("No expired bubbles found for deletion based on input provided");
@@ -61,7 +61,7 @@ pub async fn clean_bubbles(
     if !args.dryrun {
         let delete_futures = expired_bubbles.iter().map(|id| {
             repo.repo_ephemeral_store
-                .delete_bubble(*id, ctx)
+                .delete_bubble(ctx, *id)
                 .map_ok(|count| (id.clone(), count))
         });
         let bubbleid_and_count = try_join_all(delete_futures).await?;

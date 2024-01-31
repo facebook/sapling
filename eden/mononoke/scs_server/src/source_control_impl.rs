@@ -391,10 +391,11 @@ impl SourceControlServiceImpl {
 
     fn bubble_fetcher_for_changeset(
         &self,
+        ctx: CoreContext,
         specifier: ChangesetSpecifier,
     ) -> impl FnOnce(RepoEphemeralStore) -> BoxFuture<'static, anyhow::Result<Option<BubbleId>>>
     {
-        move |ephemeral| async move { specifier.bubble_id(ephemeral).await }.boxed()
+        move |ephemeral| async move { specifier.bubble_id(&ctx, ephemeral).await }.boxed()
     }
 
     /// Get the repo and changeset specified by a `thrift::CommitSpecifier`.
@@ -405,13 +406,10 @@ impl SourceControlServiceImpl {
     ) -> Result<(RepoContext, ChangesetContext), errors::ServiceError> {
         let changeset_specifier = ChangesetSpecifier::from_request(&commit.id)?;
         let authz = AuthorizationContext::new(&ctx);
+        let bubble_fetcher =
+            self.bubble_fetcher_for_changeset(ctx.clone(), changeset_specifier.clone());
         let repo = self
-            .repo_impl(
-                ctx,
-                &commit.repo,
-                authz,
-                self.bubble_fetcher_for_changeset(changeset_specifier.clone()),
-            )
+            .repo_impl(ctx, &commit.repo, authz, bubble_fetcher)
             .await?;
         let changeset = repo
             .changeset(changeset_specifier)
@@ -439,13 +437,10 @@ impl SourceControlServiceImpl {
             )))?
         }
         let authz = AuthorizationContext::new(&ctx);
+        let bubble_fetcher =
+            self.bubble_fetcher_for_changeset(ctx.clone(), changeset_specifier.clone());
         let repo = self
-            .repo_impl(
-                ctx,
-                &commit.repo,
-                authz,
-                self.bubble_fetcher_for_changeset(changeset_specifier.clone()),
-            )
+            .repo_impl(ctx, &commit.repo, authz, bubble_fetcher)
             .await?;
         let (changeset, other_changeset) = try_join!(
             async {

@@ -134,7 +134,7 @@ impl HgRepoContext {
         Ok(self
             .repo()
             .repo_ephemeral_store_arc()
-            .create_bubble(custom_duration, labels)
+            .create_bubble(self.ctx(), custom_duration, labels)
             .await?)
     }
 

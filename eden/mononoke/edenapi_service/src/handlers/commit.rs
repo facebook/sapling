@@ -450,12 +450,12 @@ impl EdenApiHandler for FetchSnapshotHandler {
         let cs_id = ChangesetId::from(request.cs_id);
         let bubble_id = repo
             .ephemeral_store()
-            .bubble_from_changeset(&cs_id)
+            .bubble_from_changeset(repo.ctx(), &cs_id)
             .await?
             .context("Snapshot not in a bubble")?;
         let labels = repo
             .ephemeral_store()
-            .labels_from_bubble(&bubble_id)
+            .labels_from_bubble(repo.ctx(), &bubble_id)
             .await
             .context("Failed to fetch labels associated with the snapshot")?;
         let blobstore = repo.bubble_blobstore(Some(bubble_id)).await?;
@@ -540,7 +540,7 @@ impl EdenApiHandler for AlterSnapshotHandler {
         let cs_id = ChangesetId::from(request.cs_id);
         let id = repo
             .ephemeral_store()
-            .bubble_from_changeset(&cs_id)
+            .bubble_from_changeset(repo.ctx(), &cs_id)
             .await?
             .context("Snapshot does not exist or has already expired")?;
         let (label_addition, label_removal) = (
@@ -564,7 +564,10 @@ impl EdenApiHandler for AlterSnapshotHandler {
                 .remove_bubble_labels(repo.ctx(), id, request.labels_to_remove.clone())
                 .await?;
         }
-        let current_labels = repo.ephemeral_store().labels_from_bubble(&id).await?;
+        let current_labels = repo
+            .ephemeral_store()
+            .labels_from_bubble(repo.ctx(), &id)
+            .await?;
         let response = AlterSnapshotResponse { current_labels };
         Ok(stream::once(async move { Ok(response) }).boxed())
     }

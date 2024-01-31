@@ -48,7 +48,7 @@ pub async fn list_keys(ctx: &CoreContext, repo: &Repo, args: EphemeralStoreListA
     let bubble_id = match (&args.bubble_id, &args.changeset_id) {
         (None, Some(id)) => repo
             .repo_ephemeral_store
-            .bubble_from_changeset(&ChangesetId::from_str(id)?)
+            .bubble_from_changeset(ctx, &ChangesetId::from_str(id)?)
             .await?
             .ok_or_else(|| anyhow!("No bubble exists for changeset ID {}", id)),
         (Some(id), _) => Ok(*id),
@@ -58,7 +58,7 @@ pub async fn list_keys(ctx: &CoreContext, repo: &Repo, args: EphemeralStoreListA
     }?;
     let mut keys = repo
         .repo_ephemeral_store
-        .keys_in_bubble(bubble_id, ctx, args.start_from, args.limit)
+        .keys_in_bubble(ctx, bubble_id, args.start_from, args.limit)
         .await?;
     if args.ordered {
         keys.sort();

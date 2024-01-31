@@ -952,7 +952,7 @@ impl RepoContext {
             UnknownBubble => match self
                 .repo
                 .repo_ephemeral_store()
-                .bubble_from_changeset(&changeset_id)
+                .bubble_from_changeset(&self.ctx, &changeset_id)
                 .await?
             {
                 Some(id) => Some(id),
