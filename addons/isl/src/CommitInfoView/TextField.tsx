@@ -158,8 +158,8 @@ export function CommitInfoTextField({
                       {suggestion.image && <ImageWithFallback src={suggestion.image} />}
                       <span className="suggestion-label">
                         <span>{suggestion.label}</span>
-                        {suggestion.label !== suggestion.value && (
-                          <Subtle>{suggestion.value}</Subtle>
+                        {(suggestion.detail || suggestion.label !== suggestion.value) && (
+                          <Subtle>{suggestion.detail ?? suggestion.value}</Subtle>
                         )}
                       </span>
                     </span>

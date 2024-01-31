@@ -14,9 +14,14 @@ export type TypeaheadResult = {
   label: string;
 
   /**
-   * The literal value of the suggestion,
-   * shown de-emphasized next to the display name
-   * and placed literally as text into the commit message
+   * Additional details to show de-emphasized next to the display name.
+   * If provided, this is shown visually instead of the value.
+   */
+  detail?: string;
+
+  /**
+   * The literal value of the suggestion, placed literally as text into the commit message.
+   * If `detail` is not provided, value is shown de-emphasized next to the display name.
    */
   value: string;
 
