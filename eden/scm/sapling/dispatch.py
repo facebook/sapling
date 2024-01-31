@@ -51,6 +51,7 @@ from .i18n import _, _x
 
 
 cliparser = bindings.cliparser
+rsconfig = bindings.configloader.config
 
 
 unrecoverablewrite = registrar.command.unrecoverablewrite
@@ -137,15 +138,11 @@ class request:
                 raise exc
 
 
-def run(args=None, fin=None, fout=None, ferr=None, config=None):
+def run(args, fin, fout, ferr, rcfg: rsconfig):
     "run the command in sys.argv"
     _initstdio()
-    if args is None:
-        args = pycompat.sysargv
 
-    ui = None
-    if config:
-        ui = uimod.ui(rcfg=config)
+    ui = uimod.ui(rcfg=rcfg)
 
     if not ui or ui.configbool("experimental", "mercurial-shim", True):
         from . import mercurialshim
