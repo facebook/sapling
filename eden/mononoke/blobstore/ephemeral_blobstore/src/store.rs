@@ -14,6 +14,7 @@ use anyhow::Result;
 use blobstore::BlobstoreEnumerableWithUnlink;
 use chrono::Duration as ChronoDuration;
 use context::CoreContext;
+use context::PerfCounterType;
 use derivative::Derivative;
 use futures_lazy_shared::LazyShared;
 use metaconfig_types::BubbleDeletionMode;
@@ -208,7 +209,7 @@ fn to_chrono(duration: Duration) -> ChronoDuration {
 impl RepoEphemeralStoreInner {
     async fn create_bubble(
         &self,
-        _ctx: &CoreContext,
+        ctx: &CoreContext,
         custom_duration: Option<Duration>,
         labels: Vec<String>,
     ) -> Result<Bubble> {
@@ -249,6 +250,9 @@ impl RepoEphemeralStoreInner {
                 } else {
                     txn.commit().await?;
                 };
+                ctx.perf_counters()
+                    .increment_counter(PerfCounterType::SqlWrites);
+
                 Ok(Bubble::new(
                     bubble_id,
                     expires_at + self.bubble_expiration_grace,
@@ -276,6 +280,8 @@ impl RepoEphemeralStoreInner {
             .map(|label| (&bubble_id, label.as_str()))
             .collect::<Vec<_>>();
         // The bubble exists, add labels to it.
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlWrites);
         AddBubbleLabels::query(&self.connections.write_connection, bubble_labels.as_slice())
             .await?;
         Ok(())
@@ -298,10 +304,14 @@ impl RepoEphemeralStoreInner {
         if labels.is_empty() {
             // No input labels were provided. In this case remove_labels should remove all
             // labels associated with the bubble.
+            ctx.perf_counters()
+                .increment_counter(PerfCounterType::SqlWrites);
             DeleteBubbleLabelsById::query(&self.connections.write_connection, &bubble.bubble_id())
                 .await?;
         } else {
             // Specific labels were provided as input. Only remove those labels.
+            ctx.perf_counters()
+                .increment_counter(PerfCounterType::SqlWrites);
             DeleteBubbleLabels::query(
                 &self.connections.write_connection,
                 &bubble.bubble_id(),
@@ -315,10 +325,12 @@ impl RepoEphemeralStoreInner {
     /// Given a changeset ID, fetch the corresponding Bubble ID.
     async fn bubble_from_changeset(
         &self,
-        _ctx: &CoreContext,
+        ctx: &CoreContext,
         repo_id: &RepositoryId,
         cs_id: &ChangesetId,
     ) -> Result<Option<BubbleId>> {
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsReplica);
         let rows =
             SelectBubbleFromChangeset::query(&self.connections.read_connection, repo_id, cs_id)
                 .await?;
@@ -328,9 +340,11 @@ impl RepoEphemeralStoreInner {
     /// Given a Bubble ID, fetch labels corresponding to that bubble.
     async fn labels_from_bubble(
         &self,
-        _ctx: &CoreContext,
+        ctx: &CoreContext,
         bubble_id: &BubbleId,
     ) -> Result<Vec<String>> {
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsReplica);
         let rows =
             SelectBubbleLabelsById::query(&self.connections.read_connection, bubble_id).await?;
         Ok(rows.into_iter().map(|l| l.0).collect::<Vec<_>>())
@@ -338,9 +352,11 @@ impl RepoEphemeralStoreInner {
 
     async fn changesets_from_bubble(
         &self,
-        _ctx: &CoreContext,
+        ctx: &CoreContext,
         bubble_id: &BubbleId,
     ) -> Result<Vec<ChangesetId>> {
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsReplica);
         let rows =
             SelectChangesetFromBubble::query(&self.connections.read_connection, bubble_id).await?;
         Ok(rows.into_iter().map(|b| b.0).collect::<Vec<_>>())
@@ -350,7 +366,7 @@ impl RepoEphemeralStoreInner {
     /// by atleast a duration of expiry_offset + bubble_expiration_grace
     async fn get_expired_bubbles(
         &self,
-        _ctx: &CoreContext,
+        ctx: &CoreContext,
         expiry_offset: Duration,
         max_bubbles: u32,
     ) -> Result<Vec<BubbleId>> {
@@ -360,6 +376,8 @@ impl RepoEphemeralStoreInner {
             // bubbles that are past expiry period but NOT marked as
             // expired yet (i.e. are active)
             BubbleDeletionMode::MarkOnly => {
+                ctx.perf_counters()
+                    .increment_counter(PerfCounterType::SqlWrites);
                 SelectBubblesWithExpiryAndStatus::query(
                     &self.connections.write_connection,
                     &Timestamp::from(expiry_cutoff - self.bubble_expiration_grace),
@@ -371,6 +389,8 @@ impl RepoEphemeralStoreInner {
             // If hard delete is required, we want to fetch bubbles regardless
             // of their expiry status as long as they are past expiry date.
             _ => {
+                ctx.perf_counters()
+                    .increment_counter(PerfCounterType::SqlWrites);
                 SelectBubblesWithExpiry::query(
                     &self.connections.write_connection,
                     &Timestamp::from(expiry_cutoff - self.bubble_expiration_grace),
@@ -401,6 +421,8 @@ impl RepoEphemeralStoreInner {
             return Err(EphemeralBlobstoreError::DeleteBubbleDisabled.into());
         }
         // Step 1: Mark the bubble as expired in the backing SQL Store.
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlWrites);
         let res = UpdateExpired::query(
             &self.connections.write_connection,
             &ExpiryStatus::Expired,
@@ -420,6 +442,8 @@ impl RepoEphemeralStoreInner {
 
         // Step 3: Delete the metadata associated with the bubble from
         // the backing SQL store.
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlWrites);
         let res =
             DeleteBubbleChangesetMapping::query(&self.connections.write_connection, &bubble_id)
                 .await?;
@@ -428,9 +452,13 @@ impl RepoEphemeralStoreInner {
         }
         // When invoked through processes, this will always be a no-op. This is useful for
         // manually deleting a bubble regardless of its expiry status.
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlWrites);
         DeleteExpiredBubbleLabels::query(&self.connections.write_connection, &bubble_id).await?;
 
         // Step 4: Delete the bubble itself from the backing SQL store.
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlWrites);
         let res = DeleteBubble::query(&self.connections.write_connection, &bubble_id).await?;
         if res.affected_rows() > 1 {
             return Err(EphemeralBlobstoreError::DeleteBubbleFailed(bubble_id).into());
@@ -444,6 +472,8 @@ impl RepoEphemeralStoreInner {
         bubble_id: BubbleId,
         fail_on_expired: bool,
     ) -> Result<Bubble> {
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsReplica);
         let mut bubble_rows = SelectBubbleById::query(
             self.sql_config.as_ref(),
             &self.connections.read_connection,
@@ -451,9 +481,12 @@ impl RepoEphemeralStoreInner {
         )
         .await?;
         let labels_future = {
+            let ctx = ctx.clone();
             let connection = self.connections.read_connection.clone();
             let bubble_id = bubble_id.clone();
             async move {
+                ctx.perf_counters()
+                    .increment_counter(PerfCounterType::SqlReadsReplica);
                 let label_rows = SelectBubbleLabelsById::query(&connection, &bubble_id)
                     .await
                     .map_err(|_| EphemeralBlobstoreError::FetchBubbleLabelsFailed(bubble_id))?;
@@ -466,6 +499,8 @@ impl RepoEphemeralStoreInner {
         if bubble_rows.is_empty() {
             // Perhaps the bubble hasn't showed up yet due to replication lag.
             // Let's retry on master just in case.
+            ctx.perf_counters()
+                .increment_counter(PerfCounterType::SqlReadsMaster);
             bubble_rows = SelectBubbleById::query(
                 self.sql_config.as_ref(),
                 &self.connections.read_master_connection,
@@ -476,6 +511,8 @@ impl RepoEphemeralStoreInner {
                 // S391328: Still no bubble.  Let's wait a short while and try
                 // again.
                 tokio::time::sleep(Duration::from_millis(500)).await;
+                ctx.perf_counters()
+                    .increment_counter(PerfCounterType::SqlReadsMaster);
                 bubble_rows = SelectBubbleById::query(
                     self.sql_config.as_ref(),
                     &self.connections.read_master_connection,
