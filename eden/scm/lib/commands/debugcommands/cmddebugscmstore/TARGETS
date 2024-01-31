@@ -5,15 +5,6 @@ oncall("mercurial_release")
 rust_library(
     name = "cmddebugscmstore",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "extra_buck_dependencies": {
-                "dependencies": [
-                    "//eden/scm/lib/revisionstore:revisionstore",
-                ],
-            },
-        },
-    },
     crate_root = "src/lib.rs",
     deps = [
         "fbsource//third-party/rust:anyhow",
@@ -22,7 +13,7 @@ rust_library(
         "//eden/scm/lib/commands/cmdutil:cmdutil",
         "//eden/scm/lib/config/loader:configloader",
         "//eden/scm/lib/repo:repo",
-        "//eden/scm/lib/revisionstore:revisionstore_with_ods",
+        "//eden/scm/lib/revisionstore:revisionstore",
         "//eden/scm/lib/types:types",
     ],
 )

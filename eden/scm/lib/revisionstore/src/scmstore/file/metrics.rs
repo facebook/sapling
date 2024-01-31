@@ -98,8 +98,8 @@ impl FileStoreFetchMetrics {
     }
     /// Update ODS stats.
     /// This assumes that fbinit was called higher up the stack.
-    /// It is meant to be used when called from eden which uses the `revisionstore_with_ods`
-    /// target, which sets the `ods` feature flag.
+    /// It is meant to be used when called from eden which uses the `revisionstore` with
+    /// the `ods` feature flag.
     #[cfg(feature = "ods")]
     pub(crate) fn update_ods(&self) -> anyhow::Result<()> {
         for (metric, value) in self.metrics() {
