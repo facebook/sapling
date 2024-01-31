@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use clidispatch::OptionalRepo;
 use clidispatch::ReqCtx;
 use cmdutil::define_flags;
 use cmdutil::Result;
@@ -14,7 +15,6 @@ use configloader::hg::generate_internalconfig;
 use configmodel::Config;
 #[cfg(feature = "fb")]
 use configmodel::ConfigExt;
-use repo::repo::Repo;
 
 define_flags! {
     pub struct DebugDynamicConfigOpts {
@@ -23,10 +23,14 @@ define_flags! {
     }
 }
 
-pub fn run(ctx: ReqCtx<DebugDynamicConfigOpts>, repo: &mut Repo) -> Result<u8> {
+pub fn run(ctx: ReqCtx<DebugDynamicConfigOpts>, repo: &mut OptionalRepo) -> Result<u8> {
     #[cfg(feature = "fb")]
     {
         use configloader::fb::FbConfigMode;
+        let (dot_hg_path, repo_name) = match &repo {
+            OptionalRepo::Some(repo) => (Some(repo.shared_dot_hg_path()), repo.repo_name()),
+            OptionalRepo::None(_) => (None, None),
+        };
         let username = repo
             .config()
             .get("ui", "username")
@@ -36,8 +40,8 @@ pub fn run(ctx: ReqCtx<DebugDynamicConfigOpts>, repo: &mut Repo) -> Result<u8> {
 
         generate_internalconfig(
             mode,
-            Some(repo.shared_dot_hg_path()),
-            repo.repo_name(),
+            dot_hg_path,
+            repo_name,
             ctx.opts.canary,
             username,
             repo.config().get_opt("auth_proxy", "unix_socket_path")?,
