@@ -622,7 +622,7 @@ export default class ServerToClientAPI {
       case 'typeahead': {
         // Current repo's code review provider should be able to handle all
         // TypeaheadKinds for the fields in its defined schema.
-        repo.codeReviewProvider?.typeahead?.(data.kind, data.query)?.then(result =>
+        repo.codeReviewProvider?.typeahead?.(data.kind, data.query, cwd)?.then(result =>
           this.postMessage({
             type: 'typeaheadResult',
             id: data.id,
