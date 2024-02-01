@@ -22,9 +22,9 @@ export function DebugToolsButton() {
   }
   return (
     <Tooltip
-      component={() => (
+      component={dismiss => (
         <Suspense fallback={<Icon icon="loading" />}>
-          <DebugToolsMenu />
+          <DebugToolsMenu dismiss={dismiss} />
         </Suspense>
       )}
       title={t('Debug Tools')}

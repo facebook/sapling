@@ -25,6 +25,7 @@ import {
   mergeConflicts,
   repositoryInfo,
 } from '../serverAPIState';
+import {ComponentExplorerButton} from './ComponentExplorer';
 import {getAllRecoilStateJson} from './getAllRecoilStateJson';
 import {VSCodeBadge, VSCodeButton, VSCodeCheckbox} from '@vscode/webview-ui-toolkit/react';
 import {useState, useCallback, useEffect} from 'react';
@@ -32,7 +33,7 @@ import {atom, useRecoilCallback, useRecoilState, useRecoilValue} from 'recoil';
 
 import './DebugToolsMenu.css';
 
-export default function DebugToolsMenu() {
+export default function DebugToolsMenu({dismiss}: {dismiss: () => unknown}) {
   return (
     <DropdownFields
       title={<T>Internal Debugging Tools</T>}
@@ -56,6 +57,9 @@ export default function DebugToolsMenu() {
       </DropdownField>
       <DropdownField title={<T>Server/Client Messages</T>}>
         <ServerClientMessageLogging />
+      </DropdownField>
+      <DropdownField title={<T>Component Explorer</T>}>
+        <ComponentExplorerButton dismiss={dismiss} />
       </DropdownField>
     </DropdownFields>
   );
