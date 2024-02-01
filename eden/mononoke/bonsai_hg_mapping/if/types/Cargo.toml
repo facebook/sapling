@@ -9,6 +9,7 @@ license = "GPLv2+"
 build = "thrift_build.rs"
 
 [lib]
+name = "bonsai_hg_mapping_entry_thrift"
 path = "thrift_lib.rs"
 test = false
 doctest = false

@@ -9,6 +9,7 @@ license = "GPLv2+"
 build = "thrift_build.rs"
 
 [lib]
+name = "lfs_server_config"
 path = "thrift_lib.rs"
 test = false
 doctest = false

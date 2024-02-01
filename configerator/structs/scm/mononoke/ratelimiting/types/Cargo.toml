@@ -9,6 +9,7 @@ license = "GPLv2+"
 build = "thrift_build.rs"
 
 [lib]
+name = "rate_limiting_config"
 path = "thrift_lib.rs"
 test = false
 doctest = false
