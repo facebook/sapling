@@ -7,6 +7,7 @@
 
 use std::env;
 use std::path::Path;
+use std::sync::Arc;
 
 use anyhow::Error;
 use cliparser::alias::expand_aliases;
@@ -134,7 +135,7 @@ fn initialize_blackbox(optional_repo: &OptionalRepo) -> Result<()> {
     Ok(())
 }
 
-fn initialize_indexedlog(config: &ConfigSet) -> Result<()> {
+fn initialize_indexedlog(config: &dyn Config) -> Result<()> {
     indexedlog::config::configure(config)?;
     Ok(())
 }
@@ -207,7 +208,7 @@ impl Dispatcher {
     }
 
     /// Get a reference to the parsed config.
-    pub fn config(&self) -> &ConfigSet {
+    pub fn config(&self) -> &Arc<dyn Config> {
         self.optional_repo.config()
     }
 
@@ -227,7 +228,7 @@ impl Dispatcher {
     /// where config is not influenced by the current repo.
     pub fn convert_to_repoless_config(&mut self) -> Result<()> {
         if matches!(self.optional_repo, OptionalRepo::Some(_)) {
-            self.optional_repo = OptionalRepo::None(self.load_repoless_config()?)
+            self.optional_repo = OptionalRepo::None(Arc::new(self.load_repoless_config()?));
         }
 
         Ok(())
@@ -388,7 +389,7 @@ impl Dispatcher {
                 CommandFunc::OptionalRepo(f) => f(parsed, io, &mut self.optional_repo),
                 CommandFunc::NoRepo(f) => {
                     self.convert_to_repoless_config()?;
-                    f(parsed, io, self.optional_repo.config_mut())
+                    f(parsed, io, self.optional_repo.config())
                 }
                 CommandFunc::WorkingCopy(f) => {
                     let repo = self.repo_mut()?;

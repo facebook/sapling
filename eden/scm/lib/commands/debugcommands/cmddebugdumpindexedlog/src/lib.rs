@@ -7,10 +7,11 @@
 
 use std::io::Write;
 use std::path::Path;
+use std::sync::Arc;
 
 use clidispatch::ReqCtx;
 use cmdutil::define_flags;
-use cmdutil::ConfigSet;
+use cmdutil::Config;
 use cmdutil::Result;
 
 define_flags! {
@@ -20,7 +21,7 @@ define_flags! {
     }
 }
 
-pub fn run(ctx: ReqCtx<DebugArgsOpts>, _config: &mut ConfigSet) -> Result<u8> {
+pub fn run(ctx: ReqCtx<DebugArgsOpts>, _config: &Arc<dyn Config>) -> Result<u8> {
     let mut ferr = ctx.io().error();
     let mut fout = ctx.io().output();
     for path in ctx.opts.args {

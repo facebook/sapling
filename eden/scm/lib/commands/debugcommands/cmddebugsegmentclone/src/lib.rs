@@ -8,6 +8,7 @@
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use anyhow::Context;
 use async_runtime::block_on;
@@ -15,6 +16,7 @@ use async_runtime::block_unless_interrupted;
 use clidispatch::errors;
 use clidispatch::ReqCtx;
 use cliparser::define_flags;
+use cmdutil::Config;
 use cmdutil::ConfigSet;
 use cmdutil::Result;
 use dag::namedag::IndexedLogNameDagPath;
@@ -36,9 +38,11 @@ define_flags! {
         dest: String,
     }
 }
-pub fn run(ctx: ReqCtx<StatusOpts>, config: &mut ConfigSet) -> Result<u8> {
+pub fn run(ctx: ReqCtx<StatusOpts>, config: &Arc<dyn Config>) -> Result<u8> {
     let reponame = ctx.opts.reponame;
     let destination = PathBuf::from(&ctx.opts.dest);
+
+    let mut config = ConfigSet::wrap(config.clone());
 
     if destination.exists() {
         return Err(
@@ -52,7 +56,7 @@ pub fn run(ctx: ReqCtx<StatusOpts>, config: &mut ConfigSet) -> Result<u8> {
         Some(reponame.clone()),
         &"arg".into(),
     );
-    let edenapi_client = edenapi::Builder::from_config(config)?.build()?;
+    let edenapi_client = edenapi::Builder::from_config(&config)?.build()?;
 
     let clone_data = match block_unless_interrupted(edenapi_client.clone_data()) {
         Err(e) => Err(anyhow::Error::from(e)),

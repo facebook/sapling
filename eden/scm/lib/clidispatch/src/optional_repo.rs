@@ -6,20 +6,21 @@
  */
 
 use std::path::Path;
+use std::sync::Arc;
 
 use anyhow::Result;
-use configloader::config::ConfigSet;
+use configmodel::Config;
 use repo::errors;
 use repo::repo::Repo;
 
 use crate::global_flags::HgGlobalOpts;
 use crate::util::pinned_configs;
 
-/// Either an optional [`Repo`] which owns a [`ConfigSet`], or a [`ConfigSet`]
+/// Either an optional [`Repo`] which owns a [`Arc<dyn Config>`], or a [`Arc<dyn Config>`]
 /// without a repo.
 pub enum OptionalRepo {
     Some(Repo),
-    None(ConfigSet),
+    None(Arc<dyn Config>),
 }
 
 impl OptionalRepo {
@@ -32,10 +33,10 @@ impl OptionalRepo {
             let repo = Repo::load(path, &pinned_configs(opts))?;
             Ok(OptionalRepo::Some(repo))
         } else {
-            Ok(OptionalRepo::None(configloader::hg::load(
+            Ok(OptionalRepo::None(Arc::new(configloader::hg::load(
                 None,
                 &pinned_configs(opts),
-            )?))
+            )?)))
         }
     }
 
@@ -68,14 +69,7 @@ impl OptionalRepo {
         Err(errors::RepoNotFound(repository_path.display().to_string()).into())
     }
 
-    pub fn config_mut(&mut self) -> &mut ConfigSet {
-        match self {
-            OptionalRepo::Some(ref mut repo) => repo.config_mut(),
-            OptionalRepo::None(ref mut config) => config,
-        }
-    }
-
-    pub fn config(&self) -> &ConfigSet {
+    pub fn config(&self) -> &Arc<dyn Config> {
         match self {
             OptionalRepo::Some(ref repo) => repo.config(),
             OptionalRepo::None(ref config) => config,

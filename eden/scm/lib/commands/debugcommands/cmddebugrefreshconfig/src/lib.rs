@@ -8,13 +8,13 @@
 use clidispatch::OptionalRepo;
 use clidispatch::ReqCtx;
 use cmdutil::define_flags;
+#[cfg(feature = "fb")]
+use cmdutil::Config;
+#[cfg(feature = "fb")]
+use cmdutil::ConfigExt;
 use cmdutil::Result;
 #[cfg(feature = "fb")]
 use configloader::hg::generate_internalconfig;
-#[cfg(feature = "fb")]
-use configmodel::Config;
-#[cfg(feature = "fb")]
-use configmodel::ConfigExt;
 
 define_flags! {
     pub struct DebugDynamicConfigOpts {

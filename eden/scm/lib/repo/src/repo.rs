@@ -59,7 +59,7 @@ use crate::trees::TreeManifestResolver;
 pub struct Repo {
     path: PathBuf,
     ident: identity::Identity,
-    config: ConfigSet,
+    config: Arc<dyn Config>,
     shared_path: PathBuf,
     shared_ident: identity::Identity,
     pub(crate) store_path: PathBuf,
@@ -171,7 +171,7 @@ impl Repo {
         Ok(Repo {
             path,
             ident,
-            config,
+            config: Arc::new(config),
             shared_path,
             shared_ident,
             store_path,
@@ -242,12 +242,8 @@ impl Repo {
         &self.shared_dot_hg_path
     }
 
-    pub fn config(&self) -> &ConfigSet {
+    pub fn config(&self) -> &Arc<dyn Config> {
         &self.config
-    }
-
-    pub fn config_mut(&mut self) -> &mut ConfigSet {
-        &mut self.config
     }
 
     pub fn locker(&self) -> &Arc<RepoLocker> {

@@ -8,6 +8,5 @@ edition = "2021"
 [dependencies]
 clidispatch = { version = "0.1.0", path = "../../../clidispatch" }
 cmdutil = { version = "0.1.0", path = "../../cmdutil" }
-configmodel = { version = "0.1.0", path = "../../../config/model" }
 fsyncglob = { version = "0.1.0", path = "../../../fsyncglob" }
 repo = { version = "0.1.0", path = "../../../repo" }

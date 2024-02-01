@@ -9,7 +9,6 @@ rust_library(
     deps = [
         "//eden/scm/lib/clidispatch:clidispatch",
         "//eden/scm/lib/commands/cmdutil:cmdutil",
-        "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/fsyncglob:fsyncglob",
         "//eden/scm/lib/repo:repo",
     ],

@@ -16,11 +16,13 @@ pub use clidispatch::io::IO;
 pub use clidispatch::OptionalRepo;
 pub use clidispatch::ReqCtx;
 pub use cliparser::define_flags;
+pub use configmodel::Config;
+pub use configmodel::ConfigExt;
 pub use configset::config::ConfigSet;
 pub use formatter::formatter;
 
 pub fn get_formatter(
-    config: &dyn configmodel::Config,
+    config: &dyn Config,
     command_name: &'static str,
     template: &str,
     options: &HgGlobalOpts,

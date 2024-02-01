@@ -10,6 +10,7 @@ use std::fs;
 use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Context;
@@ -162,8 +163,10 @@ fn looks_like_windows_path(s: &str) -> bool {
     bytes.len() >= 2 && bytes[0].is_ascii_alphabetic() && bytes[1] == b':'
 }
 
-pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &mut ConfigSet) -> Result<u8> {
+pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &Arc<dyn Config>) -> Result<u8> {
     let mut logger = ctx.logger();
+
+    let mut config = ConfigSet::wrap(config.clone());
 
     let deprecated_options = [
         ("--rev", "rev-option", ctx.opts.rev.is_empty()),
@@ -181,7 +184,7 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &mut ConfigSet) -> Result<u8> {
     for (option_name, option_config, option_is_empty) in deprecated_options {
         if !option_is_empty {
             deprecate(
-                config,
+                &config,
                 option_config,
                 format!("the {} option has been deprecated", option_name),
             )?;
@@ -222,7 +225,7 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &mut ConfigSet) -> Result<u8> {
         fallback!("clone.use-rust not set to True");
     }
 
-    let source = match ctx.opts.source(config) {
+    let source = match ctx.opts.source(&config) {
         Err(_) => fallback!("invalid URL"),
         Ok(source) => match source.scheme.as_ref() {
             "mononoke" | "eager" | "test" => source,
@@ -256,7 +259,7 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &mut ConfigSet) -> Result<u8> {
             logger.verbose(|| format!("Repo name is {} from config", c));
             c
         }
-        Some(_) | None => match configloader::hg::repo_name_from_url(config, &ctx.opts.source) {
+        Some(_) | None => match configloader::hg::repo_name_from_url(&config, &ctx.opts.source) {
             Some(name) => {
                 logger.verbose(|| format!("Repo name is {} via URL {}", name, ctx.opts.source));
                 config.set(
@@ -288,7 +291,7 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &mut ConfigSet) -> Result<u8> {
                 _ => abort!("invalid reponame {reponame}"),
             };
 
-            clone::get_default_destination_directory(config)?.join(basename)
+            clone::get_default_destination_directory(&config)?.join(basename)
         }
     };
 
@@ -326,7 +329,7 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &mut ConfigSet) -> Result<u8> {
     if ctx.opts.eden {
         let backing_path = if !ctx.opts.eden_backing_repo.is_empty() {
             PathBuf::from(&ctx.opts.eden_backing_repo)
-        } else if let Some(dir) = clone::get_default_eden_backing_directory(config)? {
+        } else if let Some(dir) = clone::get_default_eden_backing_directory(&config)? {
             dir.join(encode_repo_name(&reponame))
         } else {
             abort!("please specify --eden-backing-repo");
@@ -340,7 +343,7 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &mut ConfigSet) -> Result<u8> {
                     backing_path.display(),
                 )
             });
-            try_clone_metadata(&ctx, &mut logger, config, &reponame, &backing_path)?
+            try_clone_metadata(&ctx, &mut logger, &mut config, &reponame, &backing_path)?
         } else {
             Repo::load(
                 &backing_path,
@@ -363,7 +366,7 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &mut ConfigSet) -> Result<u8> {
         });
         clone::eden_clone(&backing_repo, &destination, target_rev)?;
     } else {
-        let mut repo = try_clone_metadata(&ctx, &mut logger, config, &reponame, &destination)?;
+        let mut repo = try_clone_metadata(&ctx, &mut logger, &mut config, &reponame, &destination)?;
 
         let target_rev = match get_update_target(&mut logger, &mut repo, &ctx.opts)? {
             Some((id, name)) => {
@@ -631,7 +634,7 @@ fn recursive_copy(from: &Path, to: &Path) -> Result<()> {
 }
 
 pub fn revlog_clone(
-    config: &ConfigSet,
+    config: &Arc<dyn Config>,
     logger: &mut TermLogger,
     ctx: &ReqCtx<CloneOpts>,
     root: &Path,
@@ -669,7 +672,11 @@ pub fn revlog_clone(
     Ok(())
 }
 
-fn migrate_to_lazytext(ctx: &ReqCtx<CloneOpts>, config: &ConfigSet, root: &Path) -> Result<()> {
+fn migrate_to_lazytext(
+    ctx: &ReqCtx<CloneOpts>,
+    config: &Arc<dyn Config>,
+    root: &Path,
+) -> Result<()> {
     let args = vec![
         identity::cli_name().to_string(),
         "debugchangelog".to_string(),

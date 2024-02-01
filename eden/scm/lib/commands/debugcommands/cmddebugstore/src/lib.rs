@@ -9,9 +9,9 @@ use std::str::FromStr;
 
 use clidispatch::ReqCtx;
 use cmdutil::define_flags;
+use cmdutil::ConfigExt;
 use cmdutil::Result;
 use configloader::convert::ByteCount;
-use configmodel::ConfigExt;
 use repo::repo::Repo;
 use revisionstore::CorruptionPolicy;
 use revisionstore::DataPackStore;

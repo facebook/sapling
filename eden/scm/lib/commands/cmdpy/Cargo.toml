@@ -9,6 +9,7 @@ edition = "2021"
 bindings = { version = "0.1.0", path = "../../../saplingnative/bindings", default-features = false }
 clidispatch = { version = "0.1.0", path = "../../clidispatch" }
 commandserver = { version = "0.1.0", path = "../../commandserver" }
+configmodel = { version = "0.1.0", path = "../../config/model" }
 configset = { version = "0.1.0", path = "../../config/set" }
 cpython = { version = "0.7.1", features = ["python3-sys"], default-features = false }
 cpython_ext = { version = "0.1.0", path = "../../cpython-ext" }

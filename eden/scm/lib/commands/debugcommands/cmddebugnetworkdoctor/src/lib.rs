@@ -9,13 +9,16 @@ use std::io::Write;
 
 use clidispatch::OptionalRepo;
 use clidispatch::ReqCtx;
+use cmdutil::ConfigSet;
 use cmdutil::NoOpts;
 use cmdutil::Result;
 use configloader::config::Options;
 
 pub fn run(ctx: ReqCtx<NoOpts>, repo: &mut OptionalRepo) -> Result<u8> {
+    let mut config = ConfigSet::wrap(repo.config().clone());
+
     // Set a default repo so we can build valid edenapi URLs outside a repo.
-    if let OptionalRepo::None(ref mut config) = repo {
+    if matches!(repo, OptionalRepo::None(_)) {
         config.set(
             "remotefilelog",
             "reponame",

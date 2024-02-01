@@ -11,7 +11,6 @@ rust_library(
         "//eden/scm/lib/clidispatch:clidispatch",
         "//eden/scm/lib/commands/cmdutil:cmdutil",
         "//eden/scm/lib/config/loader:configloader",
-        "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/repo:repo",
         "//eden/scm/lib/revisionstore:revisionstore",
         "//eden/scm/lib/types:types",

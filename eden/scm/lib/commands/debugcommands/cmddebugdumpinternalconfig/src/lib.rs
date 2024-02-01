@@ -7,15 +7,16 @@
 
 #[cfg(feature = "fb")]
 use std::str::FromStr;
+use std::sync::Arc;
 
 use clidispatch::ReqCtx;
 use cmdutil::define_flags;
-use cmdutil::ConfigSet;
+use cmdutil::Config;
+#[cfg(feature = "fb")]
+use cmdutil::ConfigExt;
 use cmdutil::Result;
 #[cfg(feature = "fb")]
 use configloader::hg::calculate_internalconfig;
-#[cfg(feature = "fb")]
-use configmodel::ConfigExt;
 
 define_flags! {
     pub struct DebugDumpConfigOpts {
@@ -36,7 +37,7 @@ define_flags! {
     }
 }
 
-pub fn run(ctx: ReqCtx<DebugDumpConfigOpts>, config: &mut ConfigSet) -> Result<u8> {
+pub fn run(ctx: ReqCtx<DebugDumpConfigOpts>, config: &Arc<dyn Config>) -> Result<u8> {
     #[cfg(feature = "fb")]
     {
         use configloader::fb::FbConfigMode;

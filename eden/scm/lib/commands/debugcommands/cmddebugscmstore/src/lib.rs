@@ -12,9 +12,9 @@ use async_runtime::stream_to_iter as block_on_stream;
 use clidispatch::errors;
 use clidispatch::ReqCtx;
 use cmdutil::define_flags;
+use cmdutil::Config;
 use cmdutil::Result;
 use cmdutil::IO;
-use configloader::config::ConfigSet;
 use repo::repo::Repo;
 use revisionstore::scmstore::file_to_async_key_stream;
 use revisionstore::scmstore::FetchMode;
@@ -61,7 +61,7 @@ pub fn run(ctx: ReqCtx<DebugScmStoreOpts>, repo: &mut Repo) -> Result<u8> {
     Ok(0)
 }
 
-fn fetch_files(io: &IO, config: &ConfigSet, keys: Vec<Key>, local: bool) -> Result<()> {
+fn fetch_files(io: &IO, config: &dyn Config, keys: Vec<Key>, local: bool) -> Result<()> {
     let file_builder = FileStoreBuilder::new(&config);
     let store = file_builder.build()?;
 
@@ -93,7 +93,7 @@ fn fetch_files(io: &IO, config: &ConfigSet, keys: Vec<Key>, local: bool) -> Resu
     Ok(())
 }
 
-fn fetch_trees(io: &IO, config: &ConfigSet, keys: Vec<Key>, local: bool) -> Result<()> {
+fn fetch_trees(io: &IO, config: &dyn Config, keys: Vec<Key>, local: bool) -> Result<()> {
     let mut tree_builder = TreeStoreBuilder::new(config);
     tree_builder = tree_builder.suffix("manifests");
     let store = tree_builder.build()?;

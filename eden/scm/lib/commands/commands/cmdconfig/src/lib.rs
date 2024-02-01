@@ -15,7 +15,6 @@ use clidispatch::OptionalRepo;
 use clidispatch::ReqCtx;
 use cmdutil::define_flags;
 use cmdutil::get_formatter;
-use cmdutil::ConfigSet;
 use cmdutil::FormatterOpts;
 use cmdutil::Result;
 use configloader::Config;
@@ -181,7 +180,7 @@ impl<'a> Formattable for ConfigItem<'a> {
 }
 
 fn get_config_item<'a>(
-    config: &'a ConfigSet,
+    config: &'a dyn Config,
     section: &'a str,
     key: &'a str,
     single_item: bool,
@@ -235,7 +234,7 @@ fn source_to_display_string(source: &ValueSource) -> String {
 
 fn show_configs(
     ctx: ReqCtx<ConfigOpts>,
-    config: &ConfigSet,
+    config: &dyn Config,
     formatter: &mut dyn ListFormatter,
 ) -> Result<u8> {
     let verbose = ctx.global_opts().verbose;

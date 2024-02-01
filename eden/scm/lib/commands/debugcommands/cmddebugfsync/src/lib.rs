@@ -8,9 +8,9 @@
 use std::path::Path;
 
 use clidispatch::ReqCtx;
+use cmdutil::ConfigExt;
 use cmdutil::NoOpts;
 use cmdutil::Result;
-use configmodel::ConfigExt;
 use repo::repo::Repo;
 
 pub fn run(_ctx: ReqCtx<NoOpts>, repo: &mut Repo) -> Result<u8> {

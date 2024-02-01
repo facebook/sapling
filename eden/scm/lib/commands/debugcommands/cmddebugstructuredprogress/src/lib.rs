@@ -15,7 +15,7 @@ use anyhow::bail;
 use anyhow::Result;
 use clidispatch::ReqCtx;
 use cliparser::define_flags;
-use cmdutil::ConfigSet;
+use cmdutil::Config;
 use progress_model::IoTimeSeries;
 use progress_model::ProgressBar;
 use progress_model::Registry;
@@ -38,7 +38,7 @@ struct Bar {
     children: Vec<Bar>,
 }
 
-pub fn run(ctx: ReqCtx<StructuredProgressOpts>, _config: &mut ConfigSet) -> Result<u8> {
+pub fn run(ctx: ReqCtx<StructuredProgressOpts>, _config: &Arc<dyn Config>) -> Result<u8> {
     let bars = Bar::from_spec_list(&ctx.opts.layout)?.1;
 
     // Add a test io time series so we can see how things look.

@@ -250,14 +250,23 @@ impl ConfigSet {
         Default::default()
     }
 
+    /// Create a (mutable) ConfigSet wrapping `config`.
+    /// This allows you to overlay new configs on top of `config`.
+    pub fn wrap(config: Arc<dyn Config>) -> Self {
+        Self {
+            secondary: Some(config),
+            ..Default::default()
+        }
+    }
+
     /// Attach a secondary config as fallback for items missing from the
     /// main config.
     ///
     /// The secondary config is immutable, is cheaper to clone, and provides
     /// the layers information.
     ///
-    /// If a secondary config was already attached, it will be completed
-    /// replaced by this call.
+    /// If a secondary config was already attached, it will be replaced by this
+    /// call.
     pub fn secondary(&mut self, secondary: Arc<dyn Config>) -> &mut Self {
         self.secondary = Some(secondary);
         self
@@ -485,10 +494,6 @@ impl ConfigSet {
                 }
             }
         }
-    }
-
-    pub fn files(&self) -> &[PathBuf] {
-        &self.files
     }
 
     /// Drop configs from sources that are outside `allowed_locations` or

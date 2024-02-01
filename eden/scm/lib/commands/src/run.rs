@@ -69,7 +69,10 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
     // or going through the Rust command table. Bypass them.
     if let Some(arg1) = args.get(1).map(|s| s.as_ref()) {
         match arg1 {
-            "start-pfc-server" => return HgPython::new(&args).run_hg(args, io, &ConfigSet::new()),
+            "start-pfc-server" => {
+                let config: Arc<dyn Config> = Arc::new(ConfigSet::new());
+                return HgPython::new(&args).run_hg(args, io, &config);
+            }
             "start-commandserver" => {
                 commandserver_serve(&args, io);
                 return 0;
@@ -264,7 +267,7 @@ fn dispatch_command(
                     // Attempt to connect to an existing command server.
                     let args = dispatcher.args();
                     if let Ok(ret) =
-                        commandserver::client::run_via_commandserver(args.to_vec(), &config)
+                        commandserver::client::run_via_commandserver(args.to_vec(), config)
                     {
                         break 'fallback ret;
                     }
@@ -480,7 +483,7 @@ fn setup_tracing(global_opts: &Option<HgGlobalOpts>, io: &IO) -> Result<Arc<Mute
 }
 
 fn spawn_progress_thread(
-    config: &ConfigSet,
+    config: &dyn Config,
     global_opts: &HgGlobalOpts,
     io: &IO,
     run_logger: Option<Arc<runlog::Logger>>,
@@ -848,7 +851,7 @@ fn log_repo_path_and_exe_version(repo: Option<&Repo>) {
     tracing::info!(target: "command_info", version = version::VERSION);
 }
 
-fn log_perftrace(io: &IO, config: &ConfigSet, start_time: StartTime) -> Result<()> {
+fn log_perftrace(io: &IO, config: &dyn Config, start_time: StartTime) -> Result<()> {
     if let Some(threshold) = config.get_opt::<Duration>("tracing", "threshold")? {
         let elapsed = start_time.elapsed();
         if elapsed >= threshold {
