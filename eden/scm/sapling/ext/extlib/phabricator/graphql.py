@@ -176,13 +176,22 @@ class Client:
         params = {"diffid": diffid}
         ret = self._client.query(timeout, query, params)
 
-        latest: Optional[dict] = ret["data"]["phabricator_diff_query"][0]["results"][
-            "nodes"
-        ][0]["latest_associated_phabricator_version_regardless_of_viewer"]
+        try:
+            latest: Optional[dict] = ret["data"]["phabricator_diff_query"][0][
+                "results"
+            ]["nodes"][0]["latest_associated_phabricator_version_regardless_of_viewer"]
 
-        if latest is None:
+            if latest is None:
+                raise ClientError(
+                    None, _("D%s does not have any commits associated with it") % diffid
+                )
+        except (KeyError, IndexError):
             raise ClientError(
-                None, f"D{diffid} does not have any commits associated with it"
+                None,
+                _(
+                    "Failed to get commit hash via Phabricator for D%s. GraphQL response:\n  %s"
+                )
+                % (diffid, json.dumps(ret)),
             )
 
         # Massage commits into {repo_name => commit_hash}
