@@ -190,8 +190,8 @@ class LowDiskSpaceMacOS(Problem):
     """
 
     util = "/System/Library/Filesystems/apfs.fs/Contents/Resources/apfs.util"
-    util_check = f"sudo {util} -G ~"
-    util_purge = f"sudo {util} -P ~"
+    util_check = f"sudo {util} -G ~/*"
+    util_purge = f"sudo {util} -P ~/*"
 
     def __init__(self, message: str, severity: ProblemSeverity) -> None:
         addtl_msg = (
