@@ -35,7 +35,7 @@ optional arguments:
   --json           Output machine-readable JSON
   --stdout         Write server logs to stdout instead of a tmp file
   --dev            Open on port 3000 despite hosting ${DEFAULT_PORT} (or custom port with -p)
-                   This is useless unless running from source to hook into CRA dev mode
+                   This is useless unless running from source to hook into Vite dev mode
   --kill           Do not start Sapling Web, just kill any previously running Sapling Web server on the specified port
                    Note that this will disrupt other windows still using the previous Sapling Web server.
   --force          Kill any existing Sapling Web server on the specified port, then start a new server.
@@ -400,13 +400,13 @@ export async function runProxyMain(args: Args) {
    */
   function getURL(port: number, token: string, cwd: string): URL {
     // Although `port` is where our server is actually hosting from,
-    // in dev mode CRA will start on 3000 and proxy requests to the server.
+    // in dev mode Vite will start on 3000 and proxy requests to the server.
     // We only get the source build by opening from port 3000.
-    const CRA_DEFAULT_PORT = 3000;
+    const VITE_DEFAULT_PORT = 3000;
 
     let serverPort: number;
     if (isDevMode) {
-      serverPort = CRA_DEFAULT_PORT;
+      serverPort = VITE_DEFAULT_PORT;
     } else {
       if (!Number.isInteger(port) || port < 0) {
         throw Error(`illegal port: \`${port}\``);

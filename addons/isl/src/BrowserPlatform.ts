@@ -10,7 +10,7 @@ import type {Platform} from './platform';
 import {browserPlatformImpl} from './platform/browerPlatformImpl';
 
 // important: this file should not try to import other code from 'isl',
-// since it will end up getting duplicated by webpack.
+// since it will end up getting duplicated when bundling.
 
 declare global {
   interface Window {

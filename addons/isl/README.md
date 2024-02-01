@@ -342,7 +342,7 @@ Usually, you can tell the version by the path in the stack trace.
 
 ## Profiling webpack bundle sizes and dependencies
 
-You can visualize what modules are being bundled by webpack for different entry points:
+You can visualize what modules are being bundled when bundling for different entry points:
 
 - `cd isl-server`
 - `yarn --silent webpack --profile --json > webpack_stats.json`
