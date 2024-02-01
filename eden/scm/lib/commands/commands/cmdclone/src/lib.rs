@@ -25,6 +25,7 @@ use cmdutil::define_flags;
 use cmdutil::ConfigSet;
 use cmdutil::Result;
 use configloader::hg::resolve_custom_scheme;
+use configloader::hg::PinnedConfig;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use configmodel::ValueSource;
@@ -343,8 +344,10 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &mut ConfigSet) -> Result<u8> {
         } else {
             Repo::load(
                 &backing_path,
-                &ctx.global_opts().config,
-                &ctx.global_opts().configfile,
+                &PinnedConfig::from_cli_opts(
+                    &ctx.global_opts().config,
+                    &ctx.global_opts().configfile,
+                ),
             )?
         };
         let target_rev =
@@ -500,7 +503,7 @@ fn clone_metadata(
         destination,
         config,
         Some(repo_config_file_content),
-        &ctx.global_opts().config,
+        &PinnedConfig::from_cli_opts(&ctx.global_opts().config, &[]),
     )?;
 
     let edenapi = repo.eden_api()?;
@@ -555,8 +558,7 @@ fn clone_metadata(
     if repo_needs_reload {
         repo = Repo::load(
             destination,
-            &ctx.global_opts().config,
-            &ctx.global_opts().configfile,
+            &PinnedConfig::from_cli_opts(&ctx.global_opts().config, &ctx.global_opts().configfile),
         )?;
     }
 
@@ -591,8 +593,7 @@ fn eager_clone(
 
     let mut repo = Repo::load(
         dest,
-        &ctx.global_opts().config,
-        &ctx.global_opts().configfile,
+        &PinnedConfig::from_cli_opts(&ctx.global_opts().config, &ctx.global_opts().configfile),
     )?;
 
     // Convert bookmarks to remotenames.

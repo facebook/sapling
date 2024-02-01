@@ -9,6 +9,7 @@ use std::path::Path;
 
 use anyhow::Result;
 use configloader::config::ConfigSet;
+use configloader::hg::PinnedConfig;
 use repo::errors;
 use repo::repo::Repo;
 
@@ -28,13 +29,15 @@ impl OptionalRepo {
     /// parent directories.
     fn from_cwd(opts: &HgGlobalOpts, cwd: impl AsRef<Path>) -> Result<OptionalRepo> {
         if let Some((path, _)) = identity::sniff_root(&util::path::absolute(cwd)?)? {
-            let repo = Repo::load(path, &opts.config, &opts.configfile)?;
+            let repo = Repo::load(
+                path,
+                &PinnedConfig::from_cli_opts(&opts.config, &opts.configfile),
+            )?;
             Ok(OptionalRepo::Some(repo))
         } else {
             Ok(OptionalRepo::None(configloader::hg::load(
                 None,
-                &opts.config,
-                &opts.configfile,
+                &PinnedConfig::from_cli_opts(&opts.config, &opts.configfile),
             )?))
         }
     }
@@ -58,7 +61,10 @@ impl OptionalRepo {
             };
         if let Ok(path) = util::path::absolute(full_repository_path) {
             if identity::sniff_dir(&path)?.is_some() {
-                let repo = Repo::load(path, &opts.config, &opts.configfile)?;
+                let repo = Repo::load(
+                    path,
+                    &PinnedConfig::from_cli_opts(&opts.config, &opts.configfile),
+                )?;
                 return Ok(OptionalRepo::Some(repo));
             } else if path.is_file() {
                 // 'path' is a bundle path

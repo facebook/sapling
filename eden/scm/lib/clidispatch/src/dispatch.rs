@@ -16,6 +16,7 @@ use cliparser::parser::ParseOptions;
 use cliparser::parser::ParseOutput;
 use cliparser::parser::StructFlags;
 use configloader::config::ConfigSet;
+use configloader::hg::PinnedConfig;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use repo::repo::Repo;
@@ -240,9 +241,10 @@ impl Dispatcher {
             Err(err) => {
                 // If we failed to load the repo, make one last ditch effort to load a repo-less config.
                 // This might allow us to run the network doctor even if this repo's dynamic config is not loadable.
-                if let Ok(config) =
-                    configloader::hg::load(None, &global_opts.config, &global_opts.configfile)
-                {
+                if let Ok(config) = configloader::hg::load(
+                    None,
+                    &PinnedConfig::from_cli_opts(&global_opts.config, &global_opts.configfile),
+                ) {
                     Err(errors::triage_error(&config, err, None))
                 } else {
                     Err(err)
@@ -283,7 +285,10 @@ impl Dispatcher {
     }
 
     fn load_repoless_config(&self) -> Result<ConfigSet> {
-        configloader::hg::load(None, &self.global_opts.config, &self.global_opts.configfile)
+        configloader::hg::load(
+            None,
+            &PinnedConfig::from_cli_opts(&self.global_opts.config, &self.global_opts.configfile),
+        )
     }
 
     fn default_command(&self) -> Result<String, UnknownCommand> {

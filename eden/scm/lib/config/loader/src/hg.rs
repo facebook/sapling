@@ -92,23 +92,32 @@ pub trait ConfigSetHgExt {
 /// Load config from specified repo root path, or global config if no path specified.
 /// `extra_values` contains config overrides (i.e. "--config" CLI values).
 /// `extra_files` contains additional config files (i.e. "--configfile" CLI values).
-pub fn load(
-    repo_path: Option<&Path>,
-    extra_values: &[String],
-    extra_files: &[String],
-) -> Result<ConfigSet> {
+pub fn load(repo_path: Option<&Path>, pinned: &[PinnedConfig]) -> Result<ConfigSet> {
     let mut cfg = ConfigSet::new();
     let mut errors = Vec::new();
 
     // "--configfile" and "--config" values are loaded as "pinned". This lets us load them
     // first so they can inform further config loading, but also make sure they still take
     // precedence over "regular" configs.
-    for path in extra_files {
-        let opts = Options::default().source("--configfile");
-        errors.extend(cfg.load_path(path, &opts));
-    }
-    if let Err(err) = set_overrides(&mut cfg, extra_values) {
-        errors.push(err);
+    for pinned in pinned {
+        let opts = Options::default().pin(true);
+
+        match pinned {
+            PinnedConfig::Raw(raw, source) => {
+                if let Err(err) = set_override(&mut cfg, raw, opts.clone().source(source.clone())) {
+                    errors.push(err);
+                }
+            }
+            PinnedConfig::KeyValue(section, name, value, source) => cfg.set(
+                section,
+                name,
+                Some(value),
+                &opts.clone().source(source.clone()),
+            ),
+            PinnedConfig::File(path, source) => {
+                errors.extend(cfg.load_path(path.as_ref(), &opts.clone().source(source.clone())));
+            }
+        }
     }
 
     match cfg.load(repo_path) {
@@ -124,6 +133,31 @@ pub fn load(
     }
 
     Ok(cfg)
+}
+
+#[derive(Debug, Clone)]
+pub enum PinnedConfig {
+    // ("foo.bar=baz", <source>)
+    Raw(Text, Text),
+    // ("foo", "bar", "baz", <source>)
+    KeyValue(Text, Text, Text, Text),
+    // ("some/file.rc", <source>)
+    File(Text, Text),
+}
+
+impl PinnedConfig {
+    pub fn from_cli_opts(config: &[String], configfile: &[String]) -> Vec<Self> {
+        // "--config" comes last so they take precedence
+        configfile
+            .iter()
+            .map(|f| PinnedConfig::File(f.to_string().into(), "--configfile".into()))
+            .chain(
+                config
+                    .iter()
+                    .map(|c| PinnedConfig::Raw(c.to_string().into(), "--config".into())),
+            )
+            .collect()
+    }
 }
 
 impl OptionsHgExt for Options {
@@ -227,23 +261,22 @@ impl OptionsHgExt for Options {
 }
 
 /// override config values from a list of --config overrides
-fn set_overrides(config: &mut ConfigSet, overrides: &[String]) -> crate::Result<()> {
-    for config_override in overrides {
-        let equals_pos = config_override
-            .find('=')
-            .ok_or_else(|| Error::ParseFlag(config_override.to_string()))?;
-        let section_name_pair = &config_override[..equals_pos];
-        let value = &config_override[equals_pos + 1..];
+fn set_override(config: &mut ConfigSet, raw: &Text, opts: Options) -> crate::Result<()> {
+    let equals_pos = raw
+        .as_ref()
+        .find('=')
+        .ok_or_else(|| Error::ParseFlag(raw.to_string()))?;
+    let section_name_pair = &raw[..equals_pos];
+    let value = &raw[equals_pos + 1..];
 
-        let dot_pos = section_name_pair
-            .find('.')
-            .ok_or_else(|| Error::ParseFlag(config_override.to_string()))?;
-        let section = &section_name_pair[..dot_pos];
-        let name = &section_name_pair[dot_pos + 1..];
+    let dot_pos = section_name_pair
+        .find('.')
+        .ok_or_else(|| Error::ParseFlag(raw.to_string()))?;
+    let section = &section_name_pair[..dot_pos];
+    let name = &section_name_pair[dot_pos + 1..];
 
-        let opts = Options::default().source("--config").pin(true);
-        config.set(section, name, Some(value), &opts);
-    }
+    config.set(section, name, Some(value), &opts);
+
     Ok(())
 }
 
@@ -1001,7 +1034,7 @@ mod tests {
 
         env.set("TESTTMP", Some("1"));
 
-        let cfg = load(None, &[], &[]).unwrap();
+        let cfg = load(None, &[]).unwrap();
 
         // Sanity that we have a test value from static config.
         assert_eq!(
@@ -1014,7 +1047,7 @@ mod tests {
 
         // With HGPLAIN=1, aliases should get dropped.
         env.set(*HGPLAIN, Some("1"));
-        let cfg = load(None, &[], &[]).unwrap();
+        let cfg = load(None, &[]).unwrap();
         assert_eq!(cfg.get("alias", "some-command"), None);
     }
 
@@ -1242,8 +1275,13 @@ mod tests {
 
         let cfg = load(
             Some(dir.path()),
-            &["s.b=flag".to_string()],
-            &[format!("{}", other_rc.display())],
+            &[
+                PinnedConfig::File(
+                    format!("{}", other_rc.display()).into(),
+                    "--configfile".into(),
+                ),
+                PinnedConfig::Raw("s.b=flag".into(), "--config".into()),
+            ],
         )
         .unwrap();
 

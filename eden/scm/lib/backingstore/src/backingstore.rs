@@ -19,6 +19,7 @@ use std::time::SystemTime;
 use anyhow::anyhow;
 use anyhow::Result;
 use arc_swap::ArcSwap;
+use configloader::hg::PinnedConfig;
 use log::warn;
 use repo::repo::Repo;
 use storemodel::BoxIterator;
@@ -46,7 +47,7 @@ struct Inner {
 
     // We store these so we can maintain them when reloading ourself.
     allow_retries: bool,
-    extra_configs: Vec<String>,
+    extra_configs: Vec<PinnedConfig>,
 
     // State used to track the touch file and determine if we need to reload ourself.
     create_time: Instant,
@@ -74,11 +75,16 @@ impl BackingStore {
         allow_retries: bool,
         extra_configs: &[String],
     ) -> Result<Self> {
+        let extra_configs = extra_configs
+            .iter()
+            .map(|c| PinnedConfig::Raw(c.to_string().into(), "backingstore".into()))
+            .collect::<Vec<_>>();
+
         Ok(Self {
             inner: ArcSwap::new(Arc::new(Self::new_inner(
                 root.as_ref(),
                 allow_retries,
-                extra_configs,
+                &extra_configs,
                 touch_file_mtime(),
             )?)),
         })
@@ -87,12 +93,12 @@ impl BackingStore {
     fn new_inner(
         root: &Path,
         allow_retries: bool,
-        extra_configs: &[String],
+        extra_configs: &[PinnedConfig],
         touch_file_mtime: Option<SystemTime>,
     ) -> Result<Inner> {
         constructors::init();
 
-        let mut config = configloader::hg::load(Some(root), extra_configs, &[])?;
+        let mut config = configloader::hg::load(Some(root), extra_configs)?;
 
         let source = "backingstore".into();
         config.set("store", "aux", Some("true"), &source);
