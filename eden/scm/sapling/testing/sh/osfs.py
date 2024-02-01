@@ -90,7 +90,7 @@ class OSFS(ShellFS):
                 os.unlink(dst)
             except FileNotFoundError:
                 pass
-        os.rename(src, dst)
+        shutil.move(src, dst)
 
     def rm(self, path: str):
         path = self._absjoin(path)
