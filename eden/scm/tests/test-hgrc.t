@@ -167,10 +167,10 @@ plain hgrc
 with environment variables
 
   $ PAGER=p1 EDITOR=e1 VISUAL=e2 hg showconfig --debug
-  $VISUAL: ui.editor=e2
   --verbose: ui.verbose=False
   --debug: ui.debug=True
   --quiet: ui.quiet=False
+  $VISUAL: ui.editor=e2
 
 don't set editor to empty string
 

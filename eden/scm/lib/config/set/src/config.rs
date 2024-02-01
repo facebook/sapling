@@ -63,7 +63,7 @@ struct Section {
 pub struct Options {
     source: Text,
     filters: Vec<Rc<Box<dyn Fn(Text, Text, Option<Text>) -> Option<(Text, Text, Option<Text>)>>>>,
-    pin: bool,
+    pin: Option<bool>,
 }
 
 impl Config for ConfigSet {
@@ -320,6 +320,7 @@ impl ConfigSet {
 
     /// Set a config item directly. `section`, `name` locates the config. `value` is the new value.
     /// `source` is some annotation about who set it, ex. "reporc", "userrc", "--config", etc.
+    /// Value is set as a "pinned" config which will "stick" if the config is re-loaded.
     pub fn set(
         &mut self,
         section: impl AsRef<str>,
@@ -342,7 +343,7 @@ impl ConfigSet {
         opts: &Options,
     ) {
         if let Some((section, name, value)) = opts.filter(section, name, value) {
-            let dest = if opts.pin {
+            let dest = if opts.pin.unwrap_or(true) {
                 &mut self.pinned
             } else {
                 &mut self.sections
@@ -571,6 +572,16 @@ impl ConfigSet {
             }
         }
     }
+
+    pub fn clear_unpinned(&mut self) {
+        self.sections.clear();
+        self.secondary = None;
+
+        // Not technically correct since "pinned" configs could have
+        // been loaded from files, but probably doesn't matter either
+        // way.
+        self.files.clear();
+    }
 }
 
 impl Options {
@@ -613,6 +624,13 @@ impl Options {
         self.filters
             .iter()
             .try_fold((section, name, value), move |(s, n, v), func| func(s, n, v))
+    }
+
+    /// Mark config insertions as "pinned". This places them in a higher priority area
+    /// separate from regular configs, making them easier to maintain.
+    pub fn pin(mut self, pin: bool) -> Self {
+        self.pin = Some(pin);
+        self
     }
 }
 
@@ -1112,7 +1130,9 @@ space_list=value1.a value1.b
                     content: Text::from_static(""),
                     location: 0..1,
                 }),
-                &Options::new().source(Text::from_static("source")),
+                &Options::new()
+                    .source(Text::from_static("source"))
+                    .pin(false),
             );
         }
 
@@ -1315,14 +1335,18 @@ x = 2
         let mut cfg = ConfigSet::new();
 
         let pin = Options {
-            pin: true,
+            pin: Some(true),
             ..Default::default()
         };
         cfg.set("shared_sec", "value", Some("pin"), &pin);
         cfg.set("pin_sec", "value", Some("pin"), &pin);
 
-        cfg.set("shared_sec", "value", Some("main"), &Options::default());
-        cfg.set("main_sec", "value", Some("main"), &Options::default());
+        let dont_pin = Options {
+            pin: Some(false),
+            ..Default::default()
+        };
+        cfg.set("shared_sec", "value", Some("main"), &dont_pin);
+        cfg.set("main_sec", "value", Some("main"), &dont_pin);
 
         assert_eq!(cfg.sections(), vec!["shared_sec", "pin_sec", "main_sec"]);
         assert_eq!(cfg.keys("main_sec"), vec!["value"]);
@@ -1333,5 +1357,13 @@ x = 2
 
         let sources = cfg.get_sources("shared_sec", "value");
         assert_eq!(sources.len(), 2);
+
+        cfg.clear_unpinned();
+
+        assert_eq!(cfg.sections(), vec!["shared_sec", "pin_sec"]);
+        assert_eq!(cfg.keys("shared_sec"), vec!["value"]);
+
+        let sources = cfg.get_sources("shared_sec", "value");
+        assert_eq!(sources.len(), 1);
     }
 }

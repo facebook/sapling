@@ -298,7 +298,10 @@ impl ConfigSetHgExt for ConfigSet {
 
         let mut errors = vec![];
 
-        let mut opts = Options::new();
+        // Don't pin any configs we load. We are doing the "default" config loading should
+        // be cleared if we load() again (via clear_unpinned());
+        let mut opts = Options::new().pin(false);
+
         if let Some(readonly_items) = readonly_items {
             opts = opts.readonly_items(readonly_items);
         }
@@ -669,7 +672,7 @@ fn read_set_repo_name(config: &mut ConfigSet, repo_path: &Path) -> crate::Result
                 "remotefilelog",
                 "reponame",
                 Some(&repo_name),
-                &source.into(),
+                &Options::default().source(source).pin(false),
             );
         }
     } else {
