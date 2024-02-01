@@ -289,18 +289,6 @@ class ui:
     def copy(self):
         return self.__class__(self)
 
-    def copywithoutrepo(self):
-        """Create a copy sans repo-specific config."""
-
-        # This copies the config as well, but uiconfig.load below
-        # completely replaces the _uiconfig object.
-        repoless = self.copy()
-        uiconfig.uiconfig.load(repoless, None)
-
-        repoless.setclioverrides(self.cliconfigs, self.cliconfigfiles)
-        repoless.deriveconfigfromclioptions(self.clioptions)
-        return repoless
-
     def resetstate(self):
         """Clear internal state that shouldn't persist across commands"""
         progress.resetstate()
