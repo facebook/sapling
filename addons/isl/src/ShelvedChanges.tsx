@@ -20,30 +20,28 @@ import {Subtle} from './Subtle';
 import {Tooltip} from './Tooltip';
 import {ChangedFiles} from './UncommittedChanges';
 import {T, t} from './i18n';
+import {atomLoadableWithRefresh} from './jotaiUtils';
 import {UnshelveOperation} from './operations/UnshelveOperation';
 import {RelativeDate} from './relativeDate';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
+import {useAtom} from 'jotai';
 import {useEffect} from 'react';
-import {selector, useRecoilValueLoadable, useRecoilRefresher_UNSTABLE} from 'recoil';
 import {ComparisonType} from 'shared/Comparison';
 import {Icon} from 'shared/Icon';
 import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
 
 import './ShelvedChanges.css';
 
-const shelvedChangesState = selector<Array<ShelvedChange>>({
-  key: 'shelvedChangesState',
-  get: async () => {
-    serverAPI.postMessage({
-      type: 'fetchShelvedChanges',
-    });
+const shelvedChangesState = atomLoadableWithRefresh(async _get => {
+  serverAPI.postMessage({
+    type: 'fetchShelvedChanges',
+  });
 
-    const result = await serverAPI.nextMessageMatching('fetchedShelvedChanges', () => true);
-    if (result.shelvedChanges.error != null) {
-      throw new Error(result.shelvedChanges.error.toString());
-    }
-    return result.shelvedChanges.value;
-  },
+  const result = await serverAPI.nextMessageMatching('fetchedShelvedChanges', () => true);
+  if (result.shelvedChanges.error != null) {
+    throw new Error(result.shelvedChanges.error.toString());
+  }
+  return result.shelvedChanges.value;
 });
 
 export function ShelvedChangesMenu() {
@@ -67,8 +65,7 @@ export function ShelvedChangesMenu() {
 }
 
 function ShelvedChangesList({dismiss}: {dismiss: () => void}) {
-  const shelvedChanges = useRecoilValueLoadable(shelvedChangesState);
-  const refresh = useRecoilRefresher_UNSTABLE(shelvedChangesState);
+  const [shelvedChanges, refresh] = useAtom(shelvedChangesState);
   useEffect(() => {
     // make sure we fetch whenever loading the shelved changes list
     refresh();
@@ -94,15 +91,15 @@ function ShelvedChangesList({dismiss}: {dismiss: () => void}) {
       ) : shelvedChanges.state === 'hasError' ? (
         <ErrorNotice
           title="Could not fetch shelved changes"
-          error={shelvedChanges.errorOrThrow()}
+          error={shelvedChanges.error as Error}
         />
-      ) : shelvedChanges.valueOrThrow().length === 0 ? (
+      ) : shelvedChanges.data.length === 0 ? (
         <EmptyState small>
           <T>No shelved changes</T>
         </EmptyState>
       ) : (
         <div className="shelved-changes-list">
-          {shelvedChanges.valueOrThrow().map(change => {
+          {shelvedChanges.data.map(change => {
             const comparison = {
               type: ComparisonType.Committed,
               hash: change.hash,
