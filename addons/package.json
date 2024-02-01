@@ -20,6 +20,9 @@
     "eslint-plugin-rulesdir": "^0.2.1",
     "prettier": "2.8.8"
   },
+  "resolutions": {
+    "@stylexjs/babel-plugin": "0.4.1"
+  },
   "scripts": {
     "prettier-check": "prettier --check .",
     "prettier-fix": "prettier --write ."

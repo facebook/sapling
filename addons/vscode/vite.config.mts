@@ -6,7 +6,8 @@
  */
 
 import react from '@vitejs/plugin-react';
-import {defineConfig, Plugin} from 'vite';
+import {defineConfig} from 'vite';
+import styleX from 'vite-plugin-stylex';
 import viteTsconfigPaths from 'vite-tsconfig-paths';
 
 export default defineConfig(({mode}) => ({
@@ -15,6 +16,7 @@ export default defineConfig(({mode}) => ({
     react({
       include: '**/*.tsx',
     }),
+    styleX(),
     viteTsconfigPaths(),
   ],
   build: {
