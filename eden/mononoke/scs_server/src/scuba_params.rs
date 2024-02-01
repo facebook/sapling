@@ -7,6 +7,7 @@
 
 use std::collections::BTreeSet;
 
+use itertools::Itertools;
 use scuba_ext::MononokeScubaSampleBuilder;
 use scuba_ext::ScubaValue;
 use source_control as thrift;
@@ -367,6 +368,13 @@ impl AddScubaParams for thrift::CommitLookupXRepoParams {
 impl AddScubaParams for thrift::CommitPathBlameParams {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("param_format", self.format.to_string());
+        if let Some(param_blame_format_option) = &self.format_options {
+            let repr = param_blame_format_option
+                .iter()
+                .map(|x| format!("{}", x))
+                .join("|");
+            scuba.add("param_format_options", repr);
+        }
         self.identity_schemes.add_scuba_params(scuba);
     }
 }
