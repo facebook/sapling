@@ -16,7 +16,6 @@ use cliparser::parser::ParseOptions;
 use cliparser::parser::ParseOutput;
 use cliparser::parser::StructFlags;
 use configloader::config::ConfigSet;
-use configloader::hg::PinnedConfig;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use repo::repo::Repo;
@@ -30,6 +29,7 @@ use crate::errors::UnknownCommand;
 use crate::fallback;
 use crate::global_flags::HgGlobalOpts;
 use crate::io::IO;
+use crate::util::pinned_configs;
 use crate::OptionalRepo;
 
 type Result<T, E = Error> = std::result::Result<T, E>;
@@ -42,54 +42,6 @@ pub fn args() -> Result<Vec<String>> {
                 .map_err(|_| errors::NonUTF8Arguments.into())
         })
         .collect()
-}
-
-fn add_global_flag_derived_configs(repo: &mut OptionalRepo, global_opts: HgGlobalOpts) {
-    if let OptionalRepo::Some(_) = repo {
-        if global_opts.hidden {
-            let config = repo.config_mut();
-            config.set("visibility", "all-heads", Some("true"), &"--hidden".into());
-        }
-    }
-
-    let config = repo.config_mut();
-    if global_opts.trace || global_opts.traceback {
-        config.set("ui", "traceback", Some("on"), &"--traceback".into());
-    }
-    if global_opts.profile {
-        config.set("profiling", "enabled", Some("true"), &"--profile".into());
-    }
-    if !global_opts.color.is_empty() {
-        config.set(
-            "ui",
-            "color",
-            Some(global_opts.color.as_str()),
-            &"--color".into(),
-        );
-    }
-    if global_opts.verbose || global_opts.debug || global_opts.quiet {
-        config.set(
-            "ui",
-            "verbose",
-            Some(global_opts.verbose.to_string().as_str()),
-            &"--verbose".into(),
-        );
-        config.set(
-            "ui",
-            "debug",
-            Some(global_opts.debug.to_string().as_str()),
-            &"--debug".into(),
-        );
-        config.set(
-            "ui",
-            "quiet",
-            Some(global_opts.quiet.to_string().as_str()),
-            &"--quiet".into(),
-        );
-    }
-    if global_opts.noninteractive {
-        config.set("ui", "interactive", Some("off"), &"-y".into());
-    }
 }
 
 fn last_chance_to_abort(early: &HgGlobalOpts, full: &HgGlobalOpts) -> Result<()> {
@@ -241,10 +193,7 @@ impl Dispatcher {
             Err(err) => {
                 // If we failed to load the repo, make one last ditch effort to load a repo-less config.
                 // This might allow us to run the network doctor even if this repo's dynamic config is not loadable.
-                if let Ok(config) = configloader::hg::load(
-                    None,
-                    &PinnedConfig::from_cli_opts(&global_opts.config, &global_opts.configfile),
-                ) {
+                if let Ok(config) = configloader::hg::load(None, &pinned_configs(&global_opts)) {
                     Err(errors::triage_error(&config, err, None))
                 } else {
                     Err(err)
@@ -285,10 +234,7 @@ impl Dispatcher {
     }
 
     fn load_repoless_config(&self) -> Result<ConfigSet> {
-        configloader::hg::load(
-            None,
-            &PinnedConfig::from_cli_opts(&self.global_opts.config, &self.global_opts.configfile),
-        )
+        configloader::hg::load(None, &pinned_configs(&self.global_opts))
     }
 
     fn default_command(&self) -> Result<String, UnknownCommand> {
@@ -436,7 +382,6 @@ impl Dispatcher {
         sampling::append_sample("command_info", "option_values", &opt_values);
 
         let res = || -> Result<u8> {
-            add_global_flag_derived_configs(&mut self.optional_repo, parsed.clone().try_into()?);
             tracing::debug!("command handled by a Rust function");
             match handler.func() {
                 CommandFunc::Repo(f) => f(parsed, io, self.repo_mut()?),

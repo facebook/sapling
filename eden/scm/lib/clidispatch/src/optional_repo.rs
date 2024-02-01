@@ -9,11 +9,11 @@ use std::path::Path;
 
 use anyhow::Result;
 use configloader::config::ConfigSet;
-use configloader::hg::PinnedConfig;
 use repo::errors;
 use repo::repo::Repo;
 
 use crate::global_flags::HgGlobalOpts;
+use crate::util::pinned_configs;
 
 /// Either an optional [`Repo`] which owns a [`ConfigSet`], or a [`ConfigSet`]
 /// without a repo.
@@ -29,15 +29,12 @@ impl OptionalRepo {
     /// parent directories.
     fn from_cwd(opts: &HgGlobalOpts, cwd: impl AsRef<Path>) -> Result<OptionalRepo> {
         if let Some((path, _)) = identity::sniff_root(&util::path::absolute(cwd)?)? {
-            let repo = Repo::load(
-                path,
-                &PinnedConfig::from_cli_opts(&opts.config, &opts.configfile),
-            )?;
+            let repo = Repo::load(path, &pinned_configs(opts))?;
             Ok(OptionalRepo::Some(repo))
         } else {
             Ok(OptionalRepo::None(configloader::hg::load(
                 None,
-                &PinnedConfig::from_cli_opts(&opts.config, &opts.configfile),
+                &pinned_configs(opts),
             )?))
         }
     }
@@ -61,10 +58,7 @@ impl OptionalRepo {
             };
         if let Ok(path) = util::path::absolute(full_repository_path) {
             if identity::sniff_dir(&path)?.is_some() {
-                let repo = Repo::load(
-                    path,
-                    &PinnedConfig::from_cli_opts(&opts.config, &opts.configfile),
-                )?;
+                let repo = Repo::load(path, &pinned_configs(opts))?;
                 return Ok(OptionalRepo::Some(repo));
             } else if path.is_file() {
                 // 'path' is a bundle path
