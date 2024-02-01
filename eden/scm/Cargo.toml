@@ -99,6 +99,7 @@ members = [
   "lib/hg-http",
   "lib/hg-metrics",
   "lib/hgtime",
+  "lib/hook",
   "lib/http-client",
   "lib/identity",
   "lib/indexedlog",
