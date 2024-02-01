@@ -5,10 +5,43 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {Plugin} from 'vite';
+
 import react from '@vitejs/plugin-react';
+import fs from 'fs';
+import path from 'path';
 import {defineConfig} from 'vite';
 import styleX from 'vite-plugin-stylex';
 import viteTsconfigPaths from 'vite-tsconfig-paths';
+
+// vite-plugin-stylex doesn't support renaming the output CSS file, so we have to do that ourselves.
+function moveStylexFilenamePlugin(): Plugin {
+  return {
+    name: 'move-stylex-filename',
+    writeBundle(options, bundle) {
+      for (const name in bundle) {
+        const chunk = bundle[name];
+        // Check if this is the stylex output cssfile
+        if (chunk.type === 'asset' && /assets[/\\]stylex\.[a-f0-9]+\.css/.test(chunk.fileName)) {
+          // Rename the file, move it from "assets" to "res" where the rest of our assets are
+          const newName = 'res/stylex.css';
+          if (options.dir == null) {
+            this.error('Could not replace StyleX output, dir must be set');
+          }
+          const dir = options.dir as string;
+          const oldPath = path.resolve(dir, chunk.fileName);
+          const newPath = path.resolve(dir, newName);
+          this.info(`Replacing StyleX output file ${chunk.fileName} with ${newName}`);
+          fs.renameSync(oldPath, newPath);
+          // Update the bundle object
+          chunk.fileName = newName;
+          bundle[newName] = chunk;
+          delete bundle[name];
+        }
+      }
+    },
+  };
+}
 
 export default defineConfig(({mode}) => ({
   base: '',
@@ -18,6 +51,7 @@ export default defineConfig(({mode}) => ({
     }),
     styleX(),
     viteTsconfigPaths(),
+    moveStylexFilenamePlugin(),
   ],
   build: {
     outDir: 'dist/webview',

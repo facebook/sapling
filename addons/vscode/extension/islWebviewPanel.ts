@@ -299,7 +299,6 @@ function htmlForISLWebview(
   );
 
   const scriptUri = 'webview.js';
-  const stylesMainUri = 'res/webview.css';
 
   // Use a nonce to only allow specific scripts to be run
   const nonce = getNonce();
@@ -328,7 +327,8 @@ function htmlForISLWebview(
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<base href="${baseUri}/">
 		<title>${titleText}</title>
-		<link href="${stylesMainUri}" rel="stylesheet">
+		<link href="res/webview.css" rel="stylesheet">
+		<link href="res/stylex.css" rel="stylesheet">
 		<script nonce="${nonce}">
 			window.saplingLanguage = "${locale /* important: locale has already been validated */}";
 		</script>
