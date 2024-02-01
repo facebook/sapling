@@ -63,7 +63,7 @@ class ConfigParserTests(unittest.TestCase):
 
     def testReadConfig(self):
         cfg = createConfig()
-        cfg.readpath("a.rc", "readpath", None, None, None)
+        cfg.readpath("a.rc", "readpath", None, None)
         cfg.parse("[c]\nx=1", "parse")
         cfg.set("d", "y", "2", "set1")
         cfg.set("d", "x", None, "set2")
@@ -95,19 +95,13 @@ class ConfigParserTests(unittest.TestCase):
 
     def testSectionIncludelist(self):
         cfg = createConfig()
-        cfg.readpath("a.rc", "readpath", ["a"], None, None)
+        cfg.readpath("a.rc", "readpath", ["a"], None)
         self.assertEqual(cfg.sections(), ["a"])
 
     def testSectionRemap(self):
         cfg = createConfig()
-        cfg.readpath("a.rc", "readpath", None, [("a", "x")], None)
+        cfg.readpath("a.rc", "readpath", None, [("a", "x")])
         self.assertEqual(cfg.sections(), ["x", "b"])
-
-    def testIncludelist(self):
-        cfg = createConfig()
-        cfg.readpath("a.rc", "readpath", None, None, [("a", "y")])
-        self.assertEqual(cfg.get("a", "x"), "1")
-        self.assertEqual(cfg.get("a", "y"), None)
 
     def testClone(self):
         cfg1 = createConfig()

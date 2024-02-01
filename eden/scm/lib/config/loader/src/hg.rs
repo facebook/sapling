@@ -42,10 +42,6 @@ pub trait OptionsHgExt {
     /// Drop configs according to `$HGPLAIN` and `$HGPLAINEXCEPT`.
     fn process_hgplain(self) -> Self;
 
-    /// Set read-only config items. `items` contains a list of tuple `(section, name)`.
-    /// Setting those items to new value will be ignored.
-    fn readonly_items<S: Into<Text>, N: Into<Text>>(self, items: Vec<(S, N)>) -> Self;
-
     /// Set section remap. If a section name matches an entry key, it will be treated as if the
     /// name is the entry value. The remap wouldn't happen recursively. For example, with a
     /// `{"A": "B", "B": "C"}` map, section name "A" will be treated as "B", not "C".
@@ -59,11 +55,7 @@ pub trait OptionsHgExt {
 }
 
 pub trait ConfigSetHgExt {
-    fn load<S: Into<Text>, N: Into<Text>>(
-        &mut self,
-        repo_path: Option<&Path>,
-        readonly_items: Option<Vec<(S, N)>>,
-    ) -> Result<(), Errors>;
+    fn load(&mut self, repo_path: Option<&Path>) -> Result<(), Errors>;
 
     /// Load system config files if config environment variable is not set.
     /// Return errors parsing files.
@@ -119,7 +111,7 @@ pub fn load(
         errors.push(err);
     }
 
-    match cfg.load::<Text, Text>(repo_path, None) {
+    match cfg.load(repo_path) {
         Ok(_) => {
             if !errors.is_empty() {
                 return Err(Errors(errors).into());
@@ -232,23 +224,6 @@ impl OptionsHgExt for Options {
 
         self.append_filter(Box::new(filter))
     }
-
-    fn readonly_items<S: Into<Text>, N: Into<Text>>(self, items: Vec<(S, N)>) -> Self {
-        let readonly_items: HashSet<(Text, Text)> = items
-            .into_iter()
-            .map(|(section, name)| (section.into(), name.into()))
-            .collect();
-
-        let filter = move |section: Text, name: Text, value: Option<Text>| {
-            if readonly_items.contains(&(section.clone(), name.clone())) {
-                None
-            } else {
-                Some((section, name, value))
-            }
-        };
-
-        self.append_filter(Box::new(filter))
-    }
 }
 
 /// override config values from a list of --config overrides
@@ -274,15 +249,13 @@ fn set_overrides(config: &mut ConfigSet, overrides: &[String]) -> crate::Result<
 
 impl ConfigSetHgExt for ConfigSet {
     /// Load system, user config files.
-    fn load<S: Into<Text>, N: Into<Text>>(
-        &mut self,
-        repo_path: Option<&Path>,
-        readonly_items: Option<Vec<(S, N)>>,
-    ) -> Result<(), Errors> {
+    fn load(&mut self, repo_path: Option<&Path>) -> Result<(), Errors> {
         tracing::info!(
             repo_path = %repo_path.and_then(|p| p.to_str()).unwrap_or("<none>"),
             "loading config"
         );
+
+        self.clear_unpinned();
 
         let ident = repo_path
             .map(|p| identity::must_sniff_dir(p).map_err(|e| Errors(vec![Error::Other(e)])))
@@ -295,11 +268,7 @@ impl ConfigSetHgExt for ConfigSet {
 
         // Don't pin any configs we load. We are doing the "default" config loading should
         // be cleared if we load() again (via clear_unpinned());
-        let mut opts = Options::new().pin(false);
-
-        if let Some(readonly_items) = readonly_items {
-            opts = opts.readonly_items(readonly_items);
-        }
+        let opts = Options::new().pin(false);
 
         // The config priority from low to high is:
         //
@@ -1245,25 +1214,6 @@ mod tests {
     }
 
     #[test]
-    fn test_readonly_items() {
-        let opts = Options::new().readonly_items(vec![("x", "a"), ("y", "b")]);
-        let mut cfg = ConfigSet::new();
-        cfg.parse(
-            "[x]\n\
-             a=1\n\
-             [y]\n\
-             b=2\n\
-             [z]\n\
-             c=3",
-            &opts,
-        );
-
-        assert_eq!(cfg.get("x", "a"), None);
-        assert_eq!(cfg.get("y", "b"), None);
-        assert_eq!(cfg.get("z", "c"), Some("3".into()));
-    }
-
-    #[test]
     fn test_py_core_items() {
         let mut env = lock_env();
 
@@ -1271,7 +1221,7 @@ mod tests {
         env.set("TESTTMP", Some("1"));
 
         let mut cfg = ConfigSet::new();
-        cfg.load::<String, String>(None, None).unwrap();
+        cfg.load(None).unwrap();
         assert_eq!(cfg.get("treestate", "repackfactor").unwrap(), "3");
     }
 
