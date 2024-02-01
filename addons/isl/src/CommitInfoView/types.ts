@@ -8,7 +8,12 @@
 /** Values for each field key,  */
 export type CommitMessageFields = Record<string, string | Array<string>>;
 
-export type TypeaheadKind = 'meta-user' | 'meta-task' | 'meta-tag' | 'meta-diff';
+export type TypeaheadKind =
+  | 'meta-user'
+  | 'meta-task'
+  | 'meta-tag'
+  | 'meta-diff'
+  | 'meta-privacy-context';
 export type TypeaheadResult = {
   /** The display text of the suggestion */
   label: string;
