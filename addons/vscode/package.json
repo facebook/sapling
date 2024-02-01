@@ -139,7 +139,7 @@
     "eslint": "eslint extension webview --ext .ts --ext .tsx",
     "test": "jest",
     "watch-extension": "rollup --config rollup.extension.config.mjs --watch",
-    "watch-webview": "vite build --watch --mode development",
+    "watch-webview": "vite",
     "build-extension": "rollup --config rollup.extension.config.mjs --environment NODE_ENV:production",
     "build-webview": "vite build",
     "vscode:prepublish": "node ./buildForPublish.js"
@@ -149,6 +149,7 @@
   },
   "devDependencies": {
     "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-replace": "^5.0.5",
     "@types/circular-dependency-plugin": "^5.0.5",
     "@types/jest": "27.5.2",
     "@types/node": "^16.11.7",

@@ -9,6 +9,7 @@ import alias from '@rollup/plugin-alias';
 import cjs from '@rollup/plugin-commonjs';
 import importJson from '@rollup/plugin-json';
 import nodeResolve from '@rollup/plugin-node-resolve';
+import replace from '@rollup/plugin-replace';
 import path from 'path';
 import esbuild from 'rollup-plugin-esbuild';
 
@@ -34,6 +35,10 @@ export default (async () => {
     },
     external: ['ws', 'vscode'],
     plugins: [
+      replace({
+        'process.env.NODE_ENV': isProduction ? '"production"' : '"development"',
+        preventAssignment: true,
+      }),
       // Support importing from `isl` and `shared` inside `vscode`
       alias({
         entries: [

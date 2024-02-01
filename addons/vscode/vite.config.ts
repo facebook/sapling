@@ -6,7 +6,7 @@
  */
 
 import react from '@vitejs/plugin-react';
-import {defineConfig} from 'vite';
+import {defineConfig, Plugin} from 'vite';
 import viteTsconfigPaths from 'vite-tsconfig-paths';
 
 export default defineConfig(({mode}) => ({
@@ -37,5 +37,6 @@ export default defineConfig(({mode}) => ({
   server: {
     // No need to open the browser, we run inside vscode and don't really connect to the server.
     open: false,
+    port: 3005,
   },
 }));
