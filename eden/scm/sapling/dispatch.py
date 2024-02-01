@@ -744,17 +744,21 @@ def _joinfullargs(fullargs):
     return " ".join(fullargs)
 
 
-def runcommand(lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions):
-    # run pre-hook, and abort if it fails
-    hook.hook(
-        lui,
-        repo,
-        "pre-%s" % cmd,
-        True,
-        args=_joinfullargs(fullargs),
-        pats=cmdpats,
-        opts=cmdoptions,
-    )
+def runcommand(
+    lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions, namesforhooks
+):
+    for name in namesforhooks:
+        # run pre-hook, and abort if it fails
+        hook.hook(
+            lui,
+            repo,
+            "pre-%s" % name,
+            True,
+            args=_joinfullargs(fullargs),
+            pats=cmdpats,
+            opts=cmdoptions,
+        )
+
     try:
         hintutil.loadhintconfig(lui)
         ui.log("jobid", jobid=encoding.environ.get("HG_JOB_ID", "unknown"))
@@ -766,27 +770,29 @@ def runcommand(lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions):
             ret = 0 if repo else 1
 
         # run post-hook, passing command result
-        hook.hook(
-            lui,
-            repo,
-            "post-%s" % cmd,
-            False,
-            args=" ".join(fullargs),
-            result=ret,
-            pats=cmdpats,
-            opts=cmdoptions,
-        )
+        for name in namesforhooks:
+            hook.hook(
+                lui,
+                repo,
+                "post-%s" % name,
+                False,
+                args=" ".join(fullargs),
+                result=ret,
+                pats=cmdpats,
+                opts=cmdoptions,
+            )
     except Exception as e:
-        # run failure hook and re-raise
-        hook.hook(
-            lui,
-            repo,
-            "fail-%s" % cmd,
-            False,
-            args=" ".join(fullargs),
-            pats=cmdpats,
-            opts=cmdoptions,
-        )
+        for name in namesforhooks:
+            # run failure hook and re-raise
+            hook.hook(
+                lui,
+                repo,
+                "fail-%s" % name,
+                False,
+                args=" ".join(fullargs),
+                pats=cmdpats,
+                opts=cmdoptions,
+            )
         _log_exception(lui, e)
         raise
     if getattr(repo, "_txnreleased", False):
@@ -1072,7 +1078,16 @@ def _dispatch(req):
             strcmdopt = cmdoptions
             d = lambda: util.checksignature(func)(ui, *args, **strcmdopt)
             ret = runcommand(
-                lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions
+                lui,
+                repo,
+                cmd,
+                fullargs,
+                ui,
+                options,
+                d,
+                cmdpats,
+                cmdoptions,
+                func.namesforhooks,
             )
             hintutil.show(lui)
             if repo:

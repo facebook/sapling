@@ -97,7 +97,7 @@ def clienttelemetryvaluesfromconfig(ui):
     return result
 
 
-def _runcommand(orig, lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions):
+def _runcommand(orig, lui, repo, cmd, fullargs, *args):
     # Record the command that is running in the client telemetry data.
     _clienttelemetrydata["command"] = cmd
 
@@ -107,7 +107,7 @@ def _runcommand(orig, lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdopti
         fullcommand = fullcommand[:256] + " (truncated)"
 
     _clienttelemetrydata["fullcommand"] = fullcommand
-    return orig(lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions)
+    return orig(lui, repo, cmd, fullargs, *args)
 
 
 def _peersetup(ui, peer) -> None:
