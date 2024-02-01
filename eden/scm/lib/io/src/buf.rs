@@ -27,6 +27,10 @@ impl BufIO {
         }
     }
 
+    pub fn empty() -> Self {
+        Self::with_content(Vec::new())
+    }
+
     pub fn dev_null() -> Self {
         let mut buf = Self::with_content(Vec::new());
         buf.dev_null = true;

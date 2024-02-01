@@ -6,5 +6,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+anyhow = "1.0.75"
+clientinfo = { version = "0.1.0", path = "../clientinfo" }
 configmodel = { version = "0.1.0", path = "../config/model" }
+identity = { version = "0.1.0", path = "../identity" }
+io = { version = "0.1.0", path = "../io" }
 minibytes = { version = "0.1.0", path = "../minibytes" }
+spawn-ext = { version = "0.1.0", path = "../spawn-ext" }
+tracing = "0.1.40"

@@ -7,7 +7,13 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     crate_root = "src/lib.rs",
     deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/clientinfo:clientinfo",
         "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/identity:identity",
+        "//eden/scm/lib/io:io",
         "//eden/scm/lib/minibytes:minibytes",
+        "//eden/scm/lib/spawn-ext:spawn-ext",
     ],
 )
