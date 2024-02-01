@@ -65,7 +65,6 @@ python_binary(
 )
 
 python_binary(
-    # @autodeps-skip
     name = "make-release",
     srcs = ["make-release.py"],
     main_function = "eden.fs.facebook.make-release.main_2",
