@@ -38,6 +38,7 @@ rust_library(
                     "cmddebugwait/eden",
                 ],
                 "fb": [
+                    "cmdpy/fb",
                     "configloader/fb",
                     "identity/fb",
                     "cmdversion/fb",

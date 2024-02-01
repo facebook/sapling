@@ -19,3 +19,7 @@ pyio = { version = "0.1.0", path = "../../../saplingnative/bindings/modules/pyio
 pymodules = { version = "0.1.0", path = "../../../saplingnative/bindings/modules/pymodules" }
 python3-sys = "0.7.1"
 tracing = "0.1.40"
+
+[features]
+default = []
+fb = []

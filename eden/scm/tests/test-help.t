@@ -286,6 +286,78 @@ Test extension help:
                      minimize and speed up large repositories
        sampling      (no help text available)
        treemanifest
+  
+      Disabled extensions:
+  
+       absorb        apply working directory changes to changesets
+       amend         extends the existing commit amend functionality
+       arcdiff       (no help text available)
+       blackbox      log repository events to a blackbox for debugging
+       catnotate     (no help text available)
+       checkserverbookmark
+                     (no help text available)
+       chistedit
+       clienttelemetry
+                     provide information about the client in server telemetry
+       clonebundles  advertise pre-generated bundles to seed clones
+       commitcloud   back up and sync changesets via the cloud
+       copytrace     extension that does copytracing fast
+       crdump        (no help text available)
+       debugnetwork  test network connections to the server
+       dialect       replace terms with more widely used equivalents
+       dirsync
+       disablesymlinks
+                     disables symlink support when enabled
+       drop          drop specified changeset from the stack
+       edensparse    allow sparse EdenFS checkouts
+       extdiff       command to allow external programs to compare revisions
+       extorder
+       extutil       (no help text available)
+       fastlog
+       fbcodereview  integration with Meta internal code review systems
+       fbhistedit    extends the existing histedit functionality
+       gitrevset     map a git hash to a Mercurial hash:
+       globalrevs    extension for providing strictly increasing revision
+                     numbers
+       grpcheck      check if the user is in specified groups
+       hgevents      publishes state-enter and state-leave events to Watchman
+       hgsql         sync hg repos with MySQL
+       histedit      interactive history editing
+       infinitepush  store draft commits in the cloud
+       infinitepushbackup
+                     back up draft commits in the cloud
+       interactiveui
+                     (no help text available)
+       logginghelper
+                     this extension logs different pieces of information that
+                     will be used
+       megarepo      provides support for cross repo commit resolution
+       morestatus    make status give a bit more context
+       myparent
+       ownercheck    prevent operations on repos not owned by the current user
+       preventpremegarepoupdateshook
+                     (no help text available)
+       pushrebase    rebases commits during push
+       rage          upload useful diagnostics and give instructions for asking
+                     for help
+       remotenames   mercurial extension for improving client/server workflows
+       reset         reset the active bookmark and working copy to a desired
+                     revision
+       schemes       extend schemes with shortcuts to repository swarms
+       share         share a common history between several working directories
+       shelve        save and restore changes to the working directory
+       sigtrace      sigtrace - dump stack and memory traces on signal
+       simplecache
+       smartlog      command to display a relevant subgraph
+       snapshot      stores snapshots of uncommitted changes
+       sparse        allow sparse checkouts of the working directory
+       stablerev     provide a way to expose the "stable" commit via a revset
+       traceprof     (no help text available)
+       treemanifestserver
+       tweakdefaults
+                     user friendly defaults
+       undo          (no help text available)
+       win32mbcs     allow the use of MBCS paths with problematic encodings
 
 Only show documented aliases:
 
@@ -1052,20 +1124,23 @@ Test -e / -c / -k combinations
 
   $ hg help -c|grep -E '^[A-Z].*:|^ debug'
   Commands:
-  $ hg help -e|grep -E '^[A-Z].*:|^ debugshell'
+  $ hg help -e|grep -E '^[A-Z].*:|^ debug'
   Extensions:
-   debugshell*a python shell with repo, changelog & manifest objects (glob)
-  $ hg help -k|grep -E '^[A-Z].*:|^ debugshell'
+   debugnetwork                  test network connections to the server
+   debugshell                    a python shell with repo, changelog & manifest
+  $ hg help -k|grep -E '^[A-Z].*:|^ debug'
   Topics:
   Commands:
   Extensions:
-   debugshell*a python shell with repo, changelog & manifest objects (glob)
+   debugnetwork                  test network connections to the server
+   debugshell                    a python shell with repo, changelog & manifest
   Extension Commands:
   $ hg help -c -k dates |grep -E '^(Topics|Extensions|Commands):'
   Commands:
   $ hg help -e -k a |grep -E '^(Topics|Extensions|Commands):'
   Extensions:
   $ hg help -e -c -k date |grep -E '^(Topics|Extensions|Commands):'
+  Extensions:
   Commands:
   $ hg help -c commit > /dev/null
   $ hg help -e -c commit > /dev/null
@@ -1098,8 +1173,8 @@ Test keyword search help
   
   Extensions:
   
+   clonebundles advertise pre-generated bundles to seed clones
    prefixedname matched against word "clone"
-   prefixedname matched against word "clone" (?)
 
 Test unfound topic
 
