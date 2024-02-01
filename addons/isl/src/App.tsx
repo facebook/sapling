@@ -22,6 +22,7 @@ import {ISLCommandContext, useCommand} from './ISLShortcuts';
 import {Internal} from './Internal';
 import {TooltipRootContainer} from './Tooltip';
 import {TopBar} from './TopBar';
+import {TopLevelAlerts} from './TopLevelAlert';
 import {TopLevelErrors} from './TopLevelErrors';
 import {TopLevelToast} from './TopLevelToast';
 import {tracker} from './analytics';
@@ -162,6 +163,7 @@ function MainContent() {
     <div className="main-content-area" ref={ref}>
       <TopBar />
       <TopLevelErrors />
+      <TopLevelAlerts />
       {repoInfo != null && repoInfo.type !== 'success' ? (
         <ISLNullState repoError={repoInfo} />
       ) : (

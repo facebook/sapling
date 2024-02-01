@@ -41,6 +41,7 @@ export type TrackEventName =
   | 'FoldOperation'
   | 'GettingStartedInteraction'
   | 'GetSuggestedReviewers'
+  | 'GetAlertsCommand'
   | 'AcceptSuggestedReviewer'
   | 'GenerateAICommitMessage'
   | 'GenerateAICommitMessageFunnelEvent'

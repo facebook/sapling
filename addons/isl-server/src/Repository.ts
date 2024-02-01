@@ -38,6 +38,7 @@ import type {
   CommitCloudSyncState,
   Hash,
   ConfigName,
+  Alert,
 } from 'isl/src/types';
 import type {Comparison} from 'shared/Comparison';
 
@@ -45,6 +46,7 @@ import {Internal} from './Internal';
 import {OperationQueue} from './OperationQueue';
 import {PageFocusTracker} from './PageFocusTracker';
 import {WatchForChanges} from './WatchForChanges';
+import {parseAlerts} from './alerts';
 import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD, ErrorShortMessages} from './constants';
 import {GitHubCodeReviewProvider} from './github/githubCodeReviewProvider';
 import {isGithubEnterprise} from './github/queryGraphQL';
@@ -1003,6 +1005,26 @@ export class Repository {
         ?.commits.value?.map(commit => commit.diffId)
         .filter(notEmpty) ?? []
     );
+  }
+
+  public async getActiveAlerts(): Promise<Array<Alert>> {
+    const result = await this.runCommand(
+      ['config', '-Tjson', 'alerts'],
+      'GetAlertsCommand',
+      undefined,
+      {reject: false},
+    );
+    if (result.exitCode !== 0 || !result.stdout) {
+      return [];
+    }
+    try {
+      const configs = JSON.parse(result.stdout) as [{name: string; value: unknown}];
+      const alerts = parseAlerts(configs);
+      this.logger.info('Found active alerts:', alerts);
+      return alerts;
+    } catch (e) {
+      return [];
+    }
   }
 
   public async runDiff(comparison: Comparison, contextLines = 4): Promise<string> {

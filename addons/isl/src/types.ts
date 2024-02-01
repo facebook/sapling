@@ -323,6 +323,16 @@ export type CommitCloudSyncState = {
   workspaceError?: Error;
 };
 
+export type AlertSeverity = 'SEV 0' | 'SEV 1' | 'SEV 2' | 'SEV 3' | 'SEV 4' | 'UBN';
+export type Alert = {
+  key: string;
+  title: string;
+  description: string;
+  url: string;
+  severity: AlertSeverity;
+  ['show-in-isl']: boolean;
+};
+
 /**
  * A file can be auto-generated, partially auto-generated, or not generated (manual).
  * Numbered according to expected visual sort order.
@@ -489,6 +499,7 @@ export type LocalStorageName =
   | 'isl.ui-zoom'
   | 'isl.has-shown-getting-started'
   | 'isl.amend-autorestack'
+  | 'isl.dismissed-alerts'
   | 'isl-color-theme';
 
 export type ClientToServerMessage =
@@ -501,6 +512,7 @@ export type ClientToServerMessage =
   | {type: 'fileBugReport'; data: FileABugFields; uiState?: Json}
   | {type: 'runOperation'; operation: RunnableOperation}
   | {type: 'abortRunningOperation'; operationId: string}
+  | {type: 'fetchActiveAlerts'}
   | {type: 'fetchGeneratedStatuses'; paths: Array<RepoRelativePath>}
   | {type: 'fetchCommitMessageTemplate'}
   | {type: 'fetchShelvedChanges'}
@@ -570,6 +582,7 @@ export type ServerToClientMessage =
       type: 'fetchedGeneratedStatuses';
       results: Record<RepoRelativePath, GeneratedStatus>;
     }
+  | {type: 'fetchedActiveAlerts'; alerts: Array<Alert>}
   | {type: 'fetchedCommitMessageTemplate'; template: string}
   | {type: 'fetchedShelvedChanges'; shelvedChanges: Result<Array<ShelvedChange>>}
   | {type: 'fetchedLatestCommit'; info: Result<CommitInfo>; revset: string}

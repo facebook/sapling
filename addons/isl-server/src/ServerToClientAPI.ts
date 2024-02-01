@@ -793,6 +793,23 @@ export default class ServerToClientAPI {
         });
         break;
       }
+      case 'fetchActiveAlerts': {
+        repo
+          .getActiveAlerts()
+          .then(alerts => {
+            if (alerts.length === 0) {
+              return;
+            }
+            this.postMessage({
+              type: 'fetchedActiveAlerts',
+              alerts,
+            });
+          })
+          .catch(err => {
+            this.logger.error('Failed to fetch active alerts:', err);
+          });
+        break;
+      }
       default: {
         if (repo.codeReviewProvider?.handleClientToServerMessage?.(data) === true) {
           break;
