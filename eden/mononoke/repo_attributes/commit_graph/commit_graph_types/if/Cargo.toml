@@ -17,6 +17,8 @@ doctest = false
 anyhow = "1.0.75"
 async-trait = "0.1.71"
 codegen_includer_proc_macro = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+commit_graph_thrift__clients = { package = "commit_graph_thrift_clients", version = "0.1.0", path = "clients" }
+commit_graph_thrift__services = { package = "commit_graph_thrift_services", version = "0.1.0", path = "services" }
 commit_graph_thrift__types = { package = "commit_graph_thrift_types", version = "0.1.0", path = "types" }
 const-cstr = "0.3.0"
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }

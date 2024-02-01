@@ -45,6 +45,8 @@ mononoke_types_thrift mononoke_types_thrift",
         conf.base_path(base_path);
 
         conf.types_crate("derived_data-thrift__types");
+        conf.clients_crate("derived_data-thrift__clients");
+        conf.services_crate("derived_data-thrift__services");
 
         let options = "";
         if !options.is_empty() {

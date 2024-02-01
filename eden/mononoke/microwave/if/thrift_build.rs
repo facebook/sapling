@@ -46,6 +46,8 @@ mononoke_types_thrift mononoke_types_thrift",
         conf.base_path(base_path);
 
         conf.types_crate("microwave-if__types");
+        conf.clients_crate("microwave-if__clients");
+        conf.services_crate("microwave-if__services");
 
         let options = "";
         if !options.is_empty() {

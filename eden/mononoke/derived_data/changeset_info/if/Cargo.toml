@@ -19,6 +19,8 @@ async-trait = "0.1.71"
 bytes = { version = "1.1", features = ["serde"] }
 codegen_includer_proc_macro = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 const-cstr = "0.3.0"
+derived_data_thrift__clients = { package = "derived_data_thrift_clients", version = "0.1.0", path = "clients" }
+derived_data_thrift__services = { package = "derived_data_thrift_services", version = "0.1.0", path = "services" }
 derived_data_thrift__types = { package = "derived_data_thrift_types", version = "0.1.0", path = "types" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }

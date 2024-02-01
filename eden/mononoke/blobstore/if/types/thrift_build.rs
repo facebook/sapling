@@ -44,6 +44,8 @@ fn main() {
         conf.base_path(base_path);
 
         conf.types_crate("memcache-lock-thrift__types");
+        conf.clients_crate("memcache-lock-thrift__clients");
+        conf.services_crate("memcache-lock-thrift__services");
 
         let options = "";
         if !options.is_empty() {

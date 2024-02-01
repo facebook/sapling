@@ -45,6 +45,8 @@ repos repos",
         conf.base_path(base_path);
 
         conf.types_crate("commitsync__types");
+        conf.clients_crate("commitsync__clients");
+        conf.services_crate("commitsync__services");
 
         let options = "serde";
         if !options.is_empty() {

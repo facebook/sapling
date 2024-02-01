@@ -16,6 +16,8 @@ doctest = false
 [dependencies]
 anyhow = "1.0.75"
 async-trait = "0.1.71"
+bonsai_hg_mapping_entry_thrift__clients = { package = "bonsai_hg_mapping_entry_thrift_clients", version = "0.1.0", path = "clients" }
+bonsai_hg_mapping_entry_thrift__services = { package = "bonsai_hg_mapping_entry_thrift_services", version = "0.1.0", path = "services" }
 bonsai_hg_mapping_entry_thrift__types = { package = "bonsai_hg_mapping_entry_thrift_types", version = "0.1.0", path = "types" }
 codegen_includer_proc_macro = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 const-cstr = "0.3.0"

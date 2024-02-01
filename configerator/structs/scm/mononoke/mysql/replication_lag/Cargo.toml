@@ -21,6 +21,8 @@ const-cstr = "0.3.0"
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 ref-cast = "1.0.18"
+replication_lag_config__clients = { package = "replication_lag_config_clients", version = "0.1.0", path = "clients" }
+replication_lag_config__services = { package = "replication_lag_config_services", version = "0.1.0", path = "services" }
 replication_lag_config__types = { package = "replication_lag_config_types", version = "0.1.0", path = "types" }
 thiserror = "1.0.49"
 tracing = "0.1.40"

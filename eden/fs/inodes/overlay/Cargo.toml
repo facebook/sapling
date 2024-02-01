@@ -21,6 +21,8 @@ const-cstr = "0.3.0"
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 ref-cast = "1.0.18"
+serialization__clients = { package = "serialization_clients", version = "0.1.0", path = "clients" }
+serialization__services = { package = "serialization_services", version = "0.1.0", path = "services" }
 serialization__types = { package = "serialization_types", version = "0.1.0", path = "types" }
 thiserror = "1.0.49"
 tracing = "0.1.40"

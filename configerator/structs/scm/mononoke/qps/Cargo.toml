@@ -20,6 +20,8 @@ codegen_includer_proc_macro = { version = "0.1.0", git = "https://github.com/fac
 const-cstr = "0.3.0"
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
+qps_config__clients = { package = "qps_config_clients", version = "0.1.0", path = "clients" }
+qps_config__services = { package = "qps_config_services", version = "0.1.0", path = "services" }
 qps_config__types = { package = "qps_config_types", version = "0.1.0", path = "types" }
 ref-cast = "1.0.18"
 thiserror = "1.0.49"

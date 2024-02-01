@@ -44,6 +44,8 @@ fn main() {
         conf.base_path(base_path);
 
         conf.types_crate("serialization__types");
+        conf.clients_crate("serialization__clients");
+        conf.services_crate("serialization__services");
 
         let options = "";
         if !options.is_empty() {

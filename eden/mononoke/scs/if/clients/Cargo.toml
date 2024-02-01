@@ -18,10 +18,12 @@ anyhow = "1.0.75"
 async-trait = "0.1.71"
 codegen_includer_proc_macro = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 const-cstr = "0.3.0"
-fb303_core = { version = "0.0.0", git = "https://github.com/facebook/fb303.git", branch = "main" }
+fb303_core_clients = { version = "0.0.0", git = "https://github.com/facebook/fb303.git", branch = "main" }
+fb303_core_types = { version = "0.0.0", git = "https://github.com/facebook/fb303.git", branch = "main" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
-megarepo_configs = { version = "0.1.0", path = "../../../../../configerator/structs/scm/mononoke/megarepo" }
+megarepo_configs_clients = { version = "0.1.0", path = "../../../../../configerator/structs/scm/mononoke/megarepo/clients" }
+megarepo_configs_types = { version = "0.1.0", path = "../../../../../configerator/structs/scm/mononoke/megarepo/types" }
 source_control__types = { package = "source_control_types", version = "0.1.0", path = "../types" }
 tracing = "0.1.40"
 

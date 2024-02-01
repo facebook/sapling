@@ -45,6 +45,8 @@ mutable_rename crate",
         conf.base_path(base_path);
 
         conf.types_crate("mutable-rename-thrift__types");
+        conf.clients_crate("mutable-rename-thrift__clients");
+        conf.services_crate("mutable-rename-thrift__services");
 
         let options = "";
         if !options.is_empty() {

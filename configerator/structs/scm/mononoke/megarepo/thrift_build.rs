@@ -44,6 +44,8 @@ fn main() {
         conf.base_path(base_path);
 
         conf.types_crate("megarepo_configs__types");
+        conf.clients_crate("megarepo_configs__clients");
+        conf.services_crate("megarepo_configs__services");
 
         let options = "serde";
         if !options.is_empty() {

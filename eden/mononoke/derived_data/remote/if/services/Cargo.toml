@@ -19,14 +19,20 @@ async-trait = "0.1.71"
 codegen_includer_proc_macro = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 const-cstr = "0.3.0"
 derived_data_service_if__types = { package = "derived_data_service_if_types", version = "0.1.0", path = "../types" }
-derived_data_thrift = { version = "0.1.0", path = "../../../changeset_info/if" }
-fb303_core = { version = "0.0.0", git = "https://github.com/facebook/fb303.git", branch = "main" }
+derived_data_thrift_services = { version = "0.1.0", path = "../../../changeset_info/if/services" }
+derived_data_thrift_types = { version = "0.1.0", path = "../../../changeset_info/if/types" }
+fb303_core_services = { version = "0.0.0", git = "https://github.com/facebook/fb303.git", branch = "main" }
+fb303_core_types = { version = "0.0.0", git = "https://github.com/facebook/fb303.git", branch = "main" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
-filenodes_if = { version = "0.1.0", path = "../../../../filenodes/if" }
+filenodes_if_services = { version = "0.1.0", path = "../../../../filenodes/if/services" }
+filenodes_if_types = { version = "0.1.0", path = "../../../../filenodes/if/types" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
-git_types_thrift = { version = "0.1.0", path = "../../../../git/git_types/if" }
-mercurial_thrift = { version = "0.1.0", path = "../../../../mercurial/types/if" }
-mononoke_types_thrift = { version = "0.1.0", path = "../../../../mononoke_types/if" }
+git_types_thrift_services = { version = "0.1.0", path = "../../../../git/git_types/if/services" }
+git_types_thrift_types = { version = "0.1.0", path = "../../../../git/git_types/if/types" }
+mercurial_thrift_services = { version = "0.1.0", path = "../../../../mercurial/types/if/services" }
+mercurial_thrift_types = { version = "0.1.0", path = "../../../../mercurial/types/if/types" }
+mononoke_types_thrift_services = { version = "0.1.0", path = "../../../../mononoke_types/if/services" }
+mononoke_types_thrift_types = { version = "0.1.0", path = "../../../../mononoke_types/if/types" }
 tracing = "0.1.40"
 
 [build-dependencies]

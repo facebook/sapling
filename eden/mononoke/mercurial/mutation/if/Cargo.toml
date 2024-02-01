@@ -20,6 +20,8 @@ codegen_includer_proc_macro = { version = "0.1.0", git = "https://github.com/fac
 const-cstr = "0.3.0"
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
+hg_mutation_entry_thrift__clients = { package = "hg_mutation_entry_thrift_clients", version = "0.1.0", path = "clients" }
+hg_mutation_entry_thrift__services = { package = "hg_mutation_entry_thrift_services", version = "0.1.0", path = "services" }
 hg_mutation_entry_thrift__types = { package = "hg_mutation_entry_thrift_types", version = "0.1.0", path = "types" }
 mercurial_thrift = { version = "0.1.0", path = "../../types/if" }
 ref-cast = "1.0.18"
