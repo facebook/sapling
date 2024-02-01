@@ -9,6 +9,7 @@ import type {Logger} from 'isl-server/src/logger';
 import type {ClientToServerMessage, ServerToClientMessage} from 'isl/src/types';
 
 import packageJson from '../package.json';
+import {Internal} from './Internal';
 import {executeVSCodeCommand} from './commands';
 import {getCLICommand} from './config';
 import {locale, t} from './i18n';
@@ -285,6 +286,9 @@ function htmlForISLWebview(
   logger: Logger,
 ) {
   if (IS_DEV_BUILD) {
+    if (!Internal?.supportsDevBuilds?.()) {
+      throw new Error('Cannot use dev build with current VS Code version');
+    }
     return devModeHtmlForISLWebview(kind, logger);
   }
 
