@@ -6,12 +6,13 @@
  */
 
 import type {ConfigName, LocalStorageName} from './types';
-import type {WritableAtom, Atom} from 'jotai';
+import type {WritableAtom, Atom, Getter} from 'jotai';
 import type {Json} from 'shared/typeUtils';
 
 import serverAPI from './ClientToServerAPI';
 import platform from './platform';
 import {atom, getDefaultStore} from 'jotai';
+import {loadable} from 'jotai/utils';
 import {RateLimiter} from 'shared/RateLimiter';
 import {isPromise} from 'shared/utils';
 
@@ -200,4 +201,52 @@ export function resetOnCwdChange<T>(atom: WritableAtom<T, [T], unknown>, default
   serverAPI.onCwdChanged(() => {
     store.set(atom, defaultValue);
   });
+}
+
+/**
+ * Creates a derived atom that can be force-refreshed, by using the update function.
+ * Uses Suspense for async update functions.
+ * ```
+ * const postsAtom = atomWithRefresh(get => fetchPostsAsync());
+ *   ...
+ * const [posts, refreshPosts] = useAtom(postsAtom);
+ * ```
+ */
+export function atomWithRefresh<T>(fn: (get: Getter) => T) {
+  const refreshCounter = atom(0);
+
+  return atom(
+    get => {
+      get(refreshCounter);
+      return fn(get);
+    },
+    (_, set) => set(refreshCounter, i => i + 1),
+  );
+}
+
+/**
+ * Creates a derived atom that can be force-refreshed, by using the update function.
+ * The underlying async state is given as a Loadable atom instead of one that suspends.
+ * ```
+ * const postsAtom = atomWithRefresh(get => fetchPostsAsync());
+ *   ...
+ * const [postsLoadable, refreshPosts] = useAtom(postsAtom);
+ * if (postsLoadable.state === 'hasData') {
+ *   const posts = postsLoadable.data;
+ * }
+ * ```
+ */
+export function atomLoadableWithRefresh<T>(fn: (get: Getter) => Promise<T>) {
+  const refreshCounter = atom(0);
+  const loadableAtom = loadable(
+    atom(get => {
+      get(refreshCounter);
+      return fn(get);
+    }),
+  );
+
+  return atom(
+    get => get(loadableAtom),
+    (_, set) => set(refreshCounter, i => i + 1),
+  );
 }
