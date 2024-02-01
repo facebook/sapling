@@ -106,12 +106,15 @@ pub fn load(
     extra_files: &[String],
 ) -> Result<ConfigSet> {
     let mut cfg = ConfigSet::new();
-
     let mut errors = Vec::new();
-    for path in extra_files {
-        errors.extend(cfg.load_path(path, &"--configfile".into()));
-    }
 
+    // "--configfile" and "--config" values are loaded as "pinned". This lets us load them
+    // first so they can inform further config loading, but also make sure they still take
+    // precedence over "regular" configs.
+    for path in extra_files {
+        let opts = Options::default().source("--configfile");
+        errors.extend(cfg.load_path(path, &opts));
+    }
     if let Err(err) = set_overrides(&mut cfg, extra_values) {
         errors.push(err);
     }
@@ -127,15 +130,6 @@ pub fn load(
             return Err(err.into());
         }
     }
-
-    // Load the CLI configs again to make sure they take precedence.
-    // The "readonly" facility can't be used to pin the configs
-    // because it doesn't interact with the config verification properly.
-    for path in extra_files {
-        cfg.load_path(path, &"--configfile".into());
-    }
-
-    let _ = set_overrides(&mut cfg, extra_values);
 
     Ok(cfg)
 }
@@ -272,7 +266,8 @@ fn set_overrides(config: &mut ConfigSet, overrides: &[String]) -> crate::Result<
         let section = &section_name_pair[..dot_pos];
         let name = &section_name_pair[dot_pos + 1..];
 
-        config.set(section, name, Some(value), &"--config".into());
+        let opts = Options::default().source("--config").pin(true);
+        config.set(section, name, Some(value), &opts);
     }
     Ok(())
 }
