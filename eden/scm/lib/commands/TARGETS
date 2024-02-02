@@ -131,6 +131,7 @@ rust_library(
         "//eden/scm/lib/commands/debugcommands/cmddebugsegmentpull:cmddebugsegmentpull",
         "//eden/scm/lib/commands/debugcommands/cmddebugstore:cmddebugstore",
         "//eden/scm/lib/commands/debugcommands/cmddebugstructuredprogress:cmddebugstructuredprogress",
+        "//eden/scm/lib/commands/debugcommands/cmddebugtestcommand:cmddebugtestcommand",
         "//eden/scm/lib/commands/debugcommands/cmddebugtop:cmddebugtop",
         "//eden/scm/lib/commands/debugcommands/cmddebugwait:cmddebugwait",
         # [[[end]]]

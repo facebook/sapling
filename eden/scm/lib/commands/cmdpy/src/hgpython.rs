@@ -399,7 +399,7 @@ fn init_bindings_commands(py: Python, package: &str) -> PyResult<PyModule> {
             // Key entry by primary command name which Python knows to
             // look for. This avoids having to make the alias list
             // match exactly between Python and Rust.
-            let primary_name = def.aliases().split('|').next().unwrap();
+            let primary_name = def.main_alias();
 
             if let Some(synopsis) = def.synopsis().map(|s| s.to_string()) {
                 py_table.set_item(py, primary_name, (doc, def.flags(), synopsis))?;

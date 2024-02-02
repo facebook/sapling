@@ -34,6 +34,7 @@ cmddebugsegmentgraph = { version = "0.1.0", path = "debugcommands/cmddebugsegmen
 cmddebugsegmentpull = { version = "0.1.0", path = "debugcommands/cmddebugsegmentpull" }
 cmddebugstore = { version = "0.1.0", path = "debugcommands/cmddebugstore" }
 cmddebugstructuredprogress = { version = "0.1.0", path = "debugcommands/cmddebugstructuredprogress" }
+cmddebugtestcommand = { version = "0.1.0", path = "debugcommands/cmddebugtestcommand" }
 cmddebugtop = { version = "0.1.0", path = "debugcommands/cmddebugtop" }
 cmddebugwait = { version = "0.1.0", path = "debugcommands/cmddebugwait" }
 cmdgoto = { version = "0.1.0", path = "commands/cmdgoto" }

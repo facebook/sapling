@@ -58,6 +58,7 @@ external_commands![
     cmddebugsegmentpull,
     cmddebugstore,
     cmddebugstructuredprogress,
+    cmddebugtestcommand,
     cmddebugtop,
     cmddebugwait,
     // [[[end]]]

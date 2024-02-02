@@ -54,6 +54,7 @@ members = [
   "lib/commands/debugcommands/cmddebugsegmentpull",
   "lib/commands/debugcommands/cmddebugstore",
   "lib/commands/debugcommands/cmddebugstructuredprogress",
+  "lib/commands/debugcommands/cmddebugtestcommand",
   "lib/commands/debugcommands/cmddebugtop",
   "lib/commands/debugcommands/cmddebugwait",
   "lib/commandserver",

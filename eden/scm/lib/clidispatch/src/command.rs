@@ -57,10 +57,6 @@ impl CommandDefinition {
         (self.flags_func)()
     }
 
-    pub fn aliases(&self) -> &str {
-        &self.aliases
-    }
-
     pub fn doc(&self) -> &str {
         &self.doc
     }
@@ -79,6 +75,12 @@ impl CommandDefinition {
         } else {
             ""
         }
+    }
+
+    pub fn legacy_alias(&self) -> Option<&str> {
+        self.aliases
+            .split('|')
+            .find_map(|a| a.strip_prefix("legacy:"))
     }
 }
 
@@ -103,7 +105,11 @@ impl CommandTable {
         if !aliases.contains('|') {
             return;
         }
-        for name in aliases.split('|') {
+        for mut name in aliases.split('|') {
+            if let Some((_, after)) = name.split_once(':') {
+                name = after;
+            }
+
             if name.is_empty() {
                 continue;
             }
