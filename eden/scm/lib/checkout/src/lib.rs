@@ -52,7 +52,6 @@ use treestate::filestate::StateFlags;
 use treestate::treestate::TreeState;
 use types::hgid::MF_ADDED_NODE_ID;
 use types::hgid::MF_MODIFIED_NODE_ID;
-use types::hgid::NULL_ID;
 use types::HgId;
 use types::Key;
 use types::RepoPath;
@@ -921,7 +920,7 @@ pub fn filesystem_checkout(
     target_commit: HgId,
     update_mode: CheckoutMode,
 ) -> Result<(usize, usize)> {
-    let current_commit = wc.parents()?.into_iter().next().unwrap_or(NULL_ID);
+    let current_commit = wc.first_parent()?;
 
     let tree_resolver = repo.tree_resolver()?;
     let mut current_mf = tree_resolver.get(&current_commit)?;

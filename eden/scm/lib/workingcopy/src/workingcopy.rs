@@ -44,6 +44,7 @@ use treestate::filestate::StateFlags;
 use treestate::serialization::Serializable;
 use treestate::tree::VisitorResult;
 use treestate::treestate::TreeState;
+use types::hgid::NULL_ID;
 use types::repo::StorageFormat;
 use types::HgId;
 use types::RepoPath;
@@ -260,6 +261,11 @@ impl WorkingCopy {
 
     pub fn parents(&self) -> Result<Vec<HgId>> {
         self.treestate.lock().parents().collect()
+    }
+
+    /// Return the first working copy parent, or the null commmit if there are no parents.
+    pub fn first_parent(&self) -> Result<HgId> {
+        Ok(self.parents()?.into_iter().next().unwrap_or(NULL_ID))
     }
 
     pub fn filestore(&self) -> ArcFileStore {

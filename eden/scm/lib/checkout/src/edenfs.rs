@@ -26,7 +26,6 @@ use repo::repo::Repo;
 use spawn_ext::CommandExt;
 use termlogger::TermLogger;
 use treestate::filestate::StateFlags;
-use types::hgid::NULL_ID;
 use types::HgId;
 use types::RepoPath;
 use workingcopy::util::walk_treestate;
@@ -145,7 +144,7 @@ fn edenfs_noconflict_checkout(
     target_commit: HgId,
     target_commit_tree_hash: HgId,
 ) -> anyhow::Result<()> {
-    let current_commit = wc.parents()?.into_iter().next().unwrap_or(NULL_ID);
+    let current_commit = wc.first_parent()?;
     let tree_resolver = repo.tree_resolver()?;
     let source_mf = tree_resolver.get(&current_commit)?;
     let target_mf = tree_resolver.get(&target_commit)?;
