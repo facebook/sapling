@@ -53,6 +53,7 @@ import multiprocessing
 import os
 import random
 import re
+import resource
 import shutil
 import signal
 import socket
@@ -725,6 +726,7 @@ def parseargs(args, parser):
     if options.verbose:
         verbose = ""
 
+    try_increase_open_file_limit()
     setup_sigtrace()
 
     if options.tmpdir:
@@ -766,6 +768,18 @@ def parseargs(args, parser):
         showprogress = False
 
     return options
+
+
+def try_increase_open_file_limit():
+    old_soft, old_hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+    if old_soft < 1_048_576:
+        resource.setrlimit(resource.RLIMIT_NOFILE, (old_hard, old_hard))
+    new_soft, new_hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+    vlog(
+        "Maximum number of open file descriptors:"
+        f" old(soft_limit={old_soft}, hard_limit={old_hard}),"
+        f" new(soft_limit={new_soft}, hard_limit={new_hard}),"
+    )
 
 
 def rename(src, dst):
