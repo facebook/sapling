@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {TypeaheadKind, TypeaheadResult} from './types';
+import type {FieldConfig, TypeaheadKind, TypeaheadResult} from './types';
 
 import serverApi from '../ClientToServerAPI';
 import {Subtle} from '../Subtle';
@@ -18,20 +18,17 @@ import {Icon} from 'shared/Icon';
 import {randomId} from 'shared/utils';
 
 export function CommitInfoTextField({
-  name,
+  field,
   autoFocus,
   editedMessage,
   setEditedCommitMessage,
-  typeaheadKind,
-  maxTokens,
 }: {
-  name: string;
+  field: FieldConfig & {type: 'field'};
   autoFocus: boolean;
   editedMessage: string;
   setEditedCommitMessage: (fieldValue: string) => unknown;
-  typeaheadKind: TypeaheadKind;
-  maxTokens?: number;
 }) {
+  const {key, maxTokens, typeaheadKind} = field;
   const ref = useRef(null);
   useEffect(() => {
     if (ref.current && autoFocus) {
@@ -65,7 +62,7 @@ export function CommitInfoTextField({
     });
   };
 
-  const fieldKey = name.toLowerCase().replace(/\s/g, '-');
+  const fieldKey = key.toLowerCase().replace(/\s/g, '-');
 
   const isReviewers = fieldKey === 'reviewers';
 

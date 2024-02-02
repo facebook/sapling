@@ -92,12 +92,10 @@ export function CommitInfoField({
           </SmallCapsTitle>
           {field.type === 'field' ? (
             <CommitInfoTextField
-              name={field.key}
+              field={field}
               autoFocus={autofocus ?? false}
               editedMessage={editedFieldContent}
               setEditedCommitMessage={setEditedField}
-              typeaheadKind={field.typeaheadKind}
-              maxTokens={field.maxTokens}
             />
           ) : (
             <CommitInfoTextArea
