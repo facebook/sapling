@@ -11,5 +11,7 @@ FIXME: hook should not be invoked twice
   worked
   $ hg go -q . --config 'hooks.pre-update=echo worked'
   worked
+  worked
   $ hg up -q . --config 'hooks.pre-update=echo worked'
+  worked
   worked

@@ -238,3 +238,11 @@ Update active bookmark
   $ cat .hg/bookmarks.current
   cat: .hg/bookmarks.current: $ENOENT$
   [1]
+
+#if no-windows
+Support "update" and "goto" hooks:
+  $ newclientrepo
+  $ hg go -q . --config 'hooks.pre-update=echo update' --config 'hooks.pre-goto=echo goto'
+  goto
+  update
+#endif

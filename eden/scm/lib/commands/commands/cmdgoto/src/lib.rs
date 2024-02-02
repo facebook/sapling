@@ -210,7 +210,7 @@ fn maybe_clear_update_merge_state(wc: &LockedWorkingCopy, clean: bool) -> Result
 }
 
 pub fn aliases() -> &'static str {
-    "goto|go|update|up|checkout|co|upd|upda|updat|che|chec|check|checko|checkou"
+    "goto|go|legacy:update|up|checkout|co"
 }
 
 pub fn doc() -> &'static str {
