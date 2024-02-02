@@ -747,6 +747,9 @@ def _joinfullargs(fullargs):
 def runcommand(
     lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions, namesforhooks
 ):
+
+    fullargs = _joinfullargs(fullargs)
+
     for name in namesforhooks:
         # run pre-hook, and abort if it fails
         hook.hook(
@@ -754,7 +757,7 @@ def runcommand(
             repo,
             "pre-%s" % name,
             True,
-            args=_joinfullargs(fullargs),
+            args=fullargs,
             pats=cmdpats,
             opts=cmdoptions,
         )
@@ -776,7 +779,7 @@ def runcommand(
                 repo,
                 "post-%s" % name,
                 False,
-                args=" ".join(fullargs),
+                args=fullargs,
                 result=ret,
                 pats=cmdpats,
                 opts=cmdoptions,
@@ -789,7 +792,7 @@ def runcommand(
                 repo,
                 "fail-%s" % name,
                 False,
-                args=" ".join(fullargs),
+                args=fullargs,
                 pats=cmdpats,
                 opts=cmdoptions,
             )
