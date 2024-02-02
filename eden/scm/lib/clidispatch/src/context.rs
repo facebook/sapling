@@ -12,19 +12,13 @@ use cliparser::parser::ParseOutput;
 use configmodel::convert::FromConfigValue;
 use configmodel::Config;
 use configmodel::ConfigExt;
+use context::CoreContext;
 use hgplain::is_plain;
 use io::IsTty;
 use io::IO;
 use termlogger::TermLogger;
 
 use crate::global_flags::HgGlobalOpts;
-
-/// CoreContext is a container for common facilities intended to be
-/// passed into upper level library code.
-pub struct CoreContext {
-    pub io: IO,
-    pub logger: TermLogger,
-}
 
 /// RequestContext is a container object to organize CLI facilities.
 pub struct RequestContext<O>

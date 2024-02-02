@@ -12,6 +12,7 @@ blackbox = { version = "0.1.0", path = "../blackbox" }
 cliparser = { version = "0.1.0", path = "../cliparser" }
 configloader = { version = "0.1.0", path = "../config/loader" }
 configmodel = { version = "0.1.0", path = "../config/model" }
+context = { version = "0.1.0", path = "../context" }
 hgplain = { version = "0.1.0", path = "../util/hgplain" }
 hook = { version = "0.1.0", path = "../hook" }
 hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

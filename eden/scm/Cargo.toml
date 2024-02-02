@@ -70,6 +70,7 @@ members = [
   "lib/config/static/macros",
   "lib/config/union",
   "lib/constructors",
+  "lib/context",
   "lib/control-point",
   "lib/copytrace",
   "lib/cpython-async",
