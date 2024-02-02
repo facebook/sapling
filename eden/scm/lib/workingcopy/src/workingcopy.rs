@@ -394,6 +394,9 @@ impl WorkingCopy {
         config: &dyn Config,
         lgr: &TermLogger,
     ) -> Result<Status> {
+        let span = tracing::info_span!("status", status_len = tracing::field::Empty);
+        let _enter = span.enter();
+
         let added_files = self.added_files()?;
 
         let manifests =
@@ -515,7 +518,11 @@ impl WorkingCopy {
                 self.filter_accidential_symlink_changes(status_builder, p1_manifest)?;
         }
 
-        Ok(status_builder.build())
+        let status = status_builder.build();
+
+        span.record("status_len", status.len());
+
+        Ok(status)
     }
 
     // Filter out modified symlinks where it appears the symlink has
