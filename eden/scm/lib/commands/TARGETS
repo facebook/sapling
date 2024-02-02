@@ -76,7 +76,6 @@ rust_library(
         "//eden/scm/lib/identity:identity",
         "//eden/scm/lib/metrics/render:metrics-render",
         "//eden/scm/lib/mincode:mincode",
-        "//eden/scm/lib/minibytes:minibytes",
         "//eden/scm/lib/procinfo:procinfo",
         "//eden/scm/lib/progress/model:progress-model",
         "//eden/scm/lib/progress/render:progress-render",

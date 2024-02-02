@@ -58,7 +58,6 @@ identity = { version = "0.1.0", path = "../identity" }
 libc = "0.2.139"
 metrics-render = { version = "0.1.0", path = "../metrics/render" }
 mincode = { version = "0.1.0", path = "../mincode" }
-minibytes = { version = "0.1.0", path = "../minibytes" }
 nodeipc = { version = "0.1.0", path = "../util/nodeipc" }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 procinfo = { version = "0.1.0", path = "../procinfo" }
