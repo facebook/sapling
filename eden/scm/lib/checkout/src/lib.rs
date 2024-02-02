@@ -849,6 +849,16 @@ pub fn checkout(
     mut maybe_bookmark: Option<String>,
     update_mode: CheckoutMode,
 ) -> Result<Option<(usize, usize)>> {
+    let preupdate_hooks = hook::Hooks::from_config(repo.config(), &ctx.io, "preupdate");
+    preupdate_hooks.run_shell_hooks(
+        Some(repo.path()),
+        true,
+        &HashMap::from([
+            ("parent1".to_string(), wc.first_parent()?.to_hex()),
+            ("parent2".to_string(), target_commit.to_hex()),
+        ]),
+    )?;
+
     let stats = if repo.requirements.contains("eden") {
         #[cfg(feature = "eden")]
         {
@@ -867,6 +877,19 @@ pub fn checkout(
             update_mode,
         )?)
     };
+
+    let update_hooks = hook::Hooks::from_config(repo.config(), &ctx.io, "update");
+    update_hooks.run_shell_hooks(
+        Some(repo.path()),
+        false,
+        &HashMap::from([
+            ("parent1".to_string(), target_commit.to_hex()),
+            ("parent2".to_string(), "".to_string()),
+            // This is number of unresolved files. We don't support leaving unresolved
+            // files in Rust yet, so hard code to "0" for now.
+            ("error".to_string(), "0".to_string()),
+        ]),
+    )?;
 
     let local_bms = repo.local_bookmarks()?;
     if !maybe_bookmark

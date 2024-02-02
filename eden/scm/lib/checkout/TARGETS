@@ -60,6 +60,7 @@ rust_library(
         "//eden/scm/lib/context:context",
         "//eden/scm/lib/edenfs-client:edenfs-client",
         "//eden/scm/lib/hg-metrics:hg-metrics",
+        "//eden/scm/lib/hook:hook",
         "//eden/scm/lib/io/term/logger:termlogger",
         "//eden/scm/lib/manifest:manifest",
         "//eden/scm/lib/manifest-tree:manifest-tree",

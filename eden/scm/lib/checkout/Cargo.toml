@@ -14,6 +14,7 @@ crossbeam = "0.8"
 edenfs-client = { version = "0.1.0", path = "../edenfs-client", optional = true }
 fail = { version = "0.4", features = ["failpoints"] }
 hg-metrics = { version = "0.1.0", path = "../hg-metrics", optional = true }
+hook = { version = "0.1.0", path = "../hook" }
 manifest = { version = "0.1.0", path = "../manifest", features = ["for-tests"] }
 manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
 minibytes = { version = "0.1.0", path = "../minibytes" }
