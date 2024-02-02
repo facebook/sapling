@@ -23,6 +23,7 @@ use anyhow::format_err;
 use anyhow::Error;
 use anyhow::Result;
 use atexit::AtExit;
+use context::CoreContext;
 use crossbeam::channel;
 #[cfg(windows)]
 use fs_err as fs;
@@ -842,7 +843,7 @@ fn truncate_u64(f: &str, path: &RepoPath, v: u64) -> i32 {
 }
 
 pub fn checkout(
-    lgr: &TermLogger,
+    ctx: &CoreContext,
     repo: &mut Repo,
     wc: &LockedWorkingCopy,
     target_commit: HgId,
@@ -852,7 +853,7 @@ pub fn checkout(
     let stats = if repo.requirements.contains("eden") {
         #[cfg(feature = "eden")]
         {
-            edenfs::edenfs_checkout(lgr, repo, wc, target_commit, update_mode)?;
+            edenfs::edenfs_checkout(ctx, repo, wc, target_commit, update_mode)?;
             None
         }
 
@@ -860,7 +861,7 @@ pub fn checkout(
         bail!("checkout() called on eden working copy on non-eden build");
     } else {
         Some(filesystem_checkout(
-            lgr,
+            ctx,
             repo,
             wc,
             target_commit,
@@ -880,11 +881,11 @@ pub fn checkout(
     if maybe_bookmark != current_bookmark {
         match (&current_bookmark, &maybe_bookmark) {
             // TODO: color bookmark name
-            (Some(old), Some(new)) => {
-                lgr.info(format!("(changing active bookmark from {old} to {new})"))
-            }
-            (None, Some(new)) => lgr.info(format!("(activating bookmark {new})")),
-            (Some(old), None) => lgr.info(format!("(leaving bookmark {old})")),
+            (Some(old), Some(new)) => ctx
+                .logger
+                .info(format!("(changing active bookmark from {old} to {new})")),
+            (None, Some(new)) => ctx.logger.info(format!("(activating bookmark {new})")),
+            (Some(old), None) => ctx.logger.info(format!("(leaving bookmark {old})")),
             (None, None) => {}
         }
 
@@ -914,7 +915,7 @@ fn file_type(vfs: &VFS, path: &RepoPath) -> FileType {
 }
 
 pub fn filesystem_checkout(
-    lgr: &TermLogger,
+    ctx: &CoreContext,
     repo: &mut Repo,
     wc: &LockedWorkingCopy,
     target_commit: HgId,
@@ -930,7 +931,7 @@ pub fn filesystem_checkout(
         create_sparse_matchers(repo, wc.vfs(), &current_mf, &target_mf)?;
 
     // Overlay manifest with "status" info to include outstanding working copy changes.
-    let status = wc.status(sparse_matcher.clone(), false, repo.config(), lgr)?;
+    let status = wc.status(sparse_matcher.clone(), false, repo.config(), &ctx.logger)?;
 
     if update_mode == CheckoutMode::Force {
         // With --clean, mix on our working copy changes so they are "undone" by
@@ -960,7 +961,7 @@ pub fn filesystem_checkout(
 
     if update_mode != CheckoutMode::Force {
         // 2. Check if status is dirty
-        check_conflicts(lgr, repo, wc, &plan, &target_mf, &status)?;
+        check_conflicts(&ctx.logger, repo, wc, &plan, &target_mf, &status)?;
     }
 
     // 3. Signal that an update is being performed
@@ -975,7 +976,8 @@ pub fn filesystem_checkout(
     let apply_result = plan.apply_store(repo.file_store()?.as_ref())?;
 
     for (path, err) in apply_result.remove_failed {
-        lgr.warn(format!("update failed to remove {}: {:#}!\n", path, err));
+        ctx.logger
+            .warn(format!("update failed to remove {}: {:#}!\n", path, err));
     }
 
     // 5. Update the treestate parents, dirstate

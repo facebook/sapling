@@ -170,7 +170,7 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
     };
     let _lock = repo.lock()?;
     let update_result = checkout::checkout(
-        &ctx.logger(),
+        &ctx.core,
         repo,
         &wc,
         target,

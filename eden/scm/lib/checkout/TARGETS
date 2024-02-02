@@ -57,6 +57,7 @@ rust_library(
         "fbsource//third-party/rust:toml",
         "fbsource//third-party/rust:tracing",
         "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/context:context",
         "//eden/scm/lib/edenfs-client:edenfs-client",
         "//eden/scm/lib/hg-metrics:hg-metrics",
         "//eden/scm/lib/io/term/logger:termlogger",

@@ -18,6 +18,7 @@ use anyhow::Context;
 use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
+use context::CoreContext;
 use edenfs_client::CheckoutConflict;
 use manifest::Manifest;
 use pathmatcher::AlwaysMatcher;
@@ -88,7 +89,7 @@ fn actionmap_from_eden_conflicts(
 }
 
 pub fn edenfs_checkout(
-    lgr: &TermLogger,
+    ctx: &CoreContext,
     repo: &mut Repo,
     wc: &LockedWorkingCopy,
     target_commit: HgId,
@@ -102,9 +103,13 @@ pub fn edenfs_checkout(
         CheckoutMode::Force => {
             edenfs_force_checkout(repo, wc, target_commit, target_commit_tree_hash)?
         }
-        CheckoutMode::NoConflict => {
-            edenfs_noconflict_checkout(lgr, repo, wc, target_commit, target_commit_tree_hash)?
-        }
+        CheckoutMode::NoConflict => edenfs_noconflict_checkout(
+            &ctx.logger,
+            repo,
+            wc,
+            target_commit,
+            target_commit_tree_hash,
+        )?,
         CheckoutMode::Merge => bail!("native merge checkout not yet supported for EdenFS"),
     };
 
@@ -115,7 +120,7 @@ pub fn edenfs_checkout(
     let updatestate_path = wc.dot_hg_path().join("updatestate");
     util::file::unlink_if_exists(updatestate_path)?;
     // Run EdenFS specific "hooks"
-    edenfs_redirect_fixup(lgr, repo.config(), wc)?;
+    edenfs_redirect_fixup(&ctx.logger, repo.config(), wc)?;
     Ok(())
 }
 

@@ -9,6 +9,7 @@ edition = "2021"
 anyhow = "1.0.75"
 atexit = { version = "0.1.0", path = "../util/atexit" }
 configmodel = { version = "0.1.0", path = "../config/model" }
+context = { version = "0.1.0", path = "../context" }
 crossbeam = "0.8"
 edenfs-client = { version = "0.1.0", path = "../edenfs-client", optional = true }
 fail = { version = "0.4", features = ["failpoints"] }
