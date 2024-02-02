@@ -175,6 +175,7 @@ impl HgPython {
         args: Vec<String>,
         io: &clidispatch::io::IO,
         config: ConfigSet,
+        skip_pre_hooks: bool,
     ) -> PyResult<()> {
         let entry_point_mod =
             info_span!("import sapling").in_scope(|| py.import(HGPYENTRYPOINT_MOD))?;
@@ -186,7 +187,7 @@ impl HgPython {
                 Some(error) => write_to_py_object(py, error),
             });
             let config = pyconfigloader::config::create_instance(py, RefCell::new(config)).unwrap();
-            (args, fin, fout, ferr, config).to_py_object(py)
+            (args, fin, fout, ferr, config, skip_pre_hooks).to_py_object(py)
         };
         entry_point_mod.call(py, "run", call_args, None)?;
         Ok(())
@@ -198,10 +199,17 @@ impl HgPython {
         args: Vec<String>,
         io: &clidispatch::io::IO,
         config: &Arc<dyn Config>,
+        skip_pre_hooks: bool,
     ) -> i32 {
         let gil = Python::acquire_gil();
         let py = gil.python();
-        match self.run_hg_py(py, args, io, ConfigSet::wrap(config.clone())) {
+        match self.run_hg_py(
+            py,
+            args,
+            io,
+            ConfigSet::wrap(config.clone()),
+            skip_pre_hooks,
+        ) {
             // The code below considers the following exit scenarios:
             // - `PyResult` is `Ok`. This means that the Python code returned
             //    successfully, without calling `sys.exit` or raising an

@@ -27,7 +27,6 @@ use crate::command::CommandFunc;
 use crate::command::CommandTable;
 use crate::errors;
 use crate::errors::UnknownCommand;
-use crate::fallback;
 use crate::global_flags::HgGlobalOpts;
 use crate::io::IO;
 use crate::util::pinned_configs;
@@ -52,7 +51,7 @@ fn last_chance_to_abort(early: &HgGlobalOpts, full: &HgGlobalOpts) -> Result<()>
     );
 
     if full.help {
-        fallback!("--help option requested");
+        return Err(errors::UnknownCommand("--help".to_string()).into());
     }
 
     // These are security sensitive options, so perform extra checks.

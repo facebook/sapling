@@ -45,7 +45,7 @@ _fixsys()
 del globals()["_fixsys"]
 
 
-def run(args=None, fin=None, fout=None, ferr=None, config=None):
+def run(args, fin, fout, ferr, config, skipprehooks):
     import sys
 
     if args is None:
@@ -83,4 +83,4 @@ def run(args=None, fin=None, fout=None, ferr=None, config=None):
         # so 'import dispatch' happens after demandimport
         from . import dispatch
 
-        dispatch.run(args, fin, fout, ferr, config)
+        dispatch.run(args, fin, fout, ferr, config, skipprehooks)

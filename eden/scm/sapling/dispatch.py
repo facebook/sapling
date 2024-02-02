@@ -67,10 +67,12 @@ class request:
         fout=None,
         ferr=None,
         prereposetups=None,
+        skipprehooks=False,
     ):
         self.args = args
         self.ui = ui
         self.repo = repo
+        self.skipprehooks = skipprehooks
 
         # The repo, if any, that ends up being used for command execution.
         self.cmdrepo = None
@@ -138,7 +140,7 @@ class request:
                 raise exc
 
 
-def run(args, fin, fout, ferr, rcfg: rsconfig):
+def run(args, fin, fout, ferr, rcfg: rsconfig, skipprehooks: bool):
     "run the command in sys.argv"
     _initstdio()
 
@@ -152,7 +154,9 @@ def run(args, fin, fout, ferr, rcfg: rsconfig):
         # (even though the shim module appears in sys.modules).
         sys.meta_path.insert(0, mercurialshim.MercurialImporter())
 
-    req = request(args[1:], fin=fin, fout=fout, ferr=ferr, ui=ui)
+    req = request(
+        args[1:], fin=fin, fout=fout, ferr=ferr, ui=ui, skipprehooks=skipprehooks
+    )
     err = None
     try:
         status = (dispatch(req) or 0) & 255
@@ -745,7 +749,17 @@ def _joinfullargs(fullargs):
 
 
 def runcommand(
-    lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions, namesforhooks
+    lui,
+    repo,
+    cmd,
+    fullargs,
+    ui,
+    options,
+    d,
+    cmdpats,
+    cmdoptions,
+    namesforhooks,
+    skipprehooks,
 ):
 
     fullargs = _joinfullargs(fullargs)
@@ -757,6 +771,7 @@ def runcommand(
             repo,
             "pre-%s" % name,
             True,
+            skipshell=skipprehooks,
             args=fullargs,
             pats=cmdpats,
             opts=cmdoptions,
@@ -1091,6 +1106,7 @@ def _dispatch(req):
                 cmdpats,
                 cmdoptions,
                 func.namesforhooks,
+                req.skipprehooks,
             )
             hintutil.show(lui)
             if repo:

@@ -666,7 +666,7 @@ pub fn revlog_clone(
     let hg_python = HgPython::new(&args);
 
     abort_if!(
-        hg_python.run_hg(args, ctx.io(), config) != 0,
+        hg_python.run_hg(args, ctx.io(), config, false) != 0,
         "Cloning revlog failed"
     );
     Ok(())
@@ -688,7 +688,7 @@ fn migrate_to_lazytext(
 
     let hg_python = HgPython::new(&args);
     abort_if!(
-        hg_python.run_hg(args, ctx.io(), config) != 0,
+        hg_python.run_hg(args, ctx.io(), config, false) != 0,
         "rev compat lazytext migration failed"
     );
 

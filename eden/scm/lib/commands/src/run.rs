@@ -71,7 +71,7 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
         match arg1 {
             "start-pfc-server" => {
                 let config: Arc<dyn Config> = Arc::new(ConfigSet::new());
-                return HgPython::new(&args).run_hg(args, io, &config);
+                return HgPython::new(&args).run_hg(args, io, &config, false);
             }
             "start-commandserver" => {
                 commandserver_serve(&args, io);
@@ -278,7 +278,15 @@ fn dispatch_command(
                     // Error is not fatal.
                     let _ = interp.setup_tracing("*".into());
                 }
-                interp.run_hg(dispatcher.args().to_vec(), io, config)
+
+                let already_ran_pre_hooks = err.is::<errors::FallbackToPython>();
+
+                interp.run_hg(
+                    dispatcher.args().to_vec(),
+                    io,
+                    config,
+                    already_ran_pre_hooks,
+                )
             } else {
                 errors::print_error(&err, io, &dispatcher.args()[1..]);
                 errors::upload_traceback(&err, start_time.epoch_ms());

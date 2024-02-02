@@ -194,13 +194,17 @@ def hashook(ui, htype) -> bool:
     return False
 
 
-def hook(ui, repo, htype, throw: bool = False, **args) -> bool:
+def hook(ui, repo, htype, throw: bool = False, skipshell: bool = False, **args) -> bool:
     if not ui.callhooks:
         return False
 
     hooks = []
     for hname, cmd in _allhooks(ui):
         if hname.split(".")[0] == htype and cmd:
+            # This is for Rust commands that already ran "pre" hooks and then fell back to
+            # Python. Rust doesn't support python hooks, so let's run those.
+            if skipshell and not callable(cmd) and not cmd.startswith("python:"):
+                continue
             hooks.append((hname, cmd))
 
     if not hooks:
