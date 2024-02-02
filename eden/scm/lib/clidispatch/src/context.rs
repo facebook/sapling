@@ -23,7 +23,7 @@ use crate::global_flags::HgGlobalOpts;
 /// passed into upper level library code.
 pub struct CoreContext {
     pub io: IO,
-    pub global_opts: HgGlobalOpts,
+    pub logger: TermLogger,
 }
 
 /// RequestContext is a container object to organize CLI facilities.
@@ -33,6 +33,7 @@ where
 {
     pub core: CoreContext,
     pub opts: O,
+    pub global_opts: HgGlobalOpts,
 }
 
 impl<O> RequestContext<O>
@@ -40,12 +41,14 @@ where
     O: TryFrom<ParseOutput, Error = anyhow::Error>,
 {
     pub(crate) fn new(p: ParseOutput, io: IO) -> Result<Self> {
+        let global_opts: HgGlobalOpts = p.clone().try_into()?;
+        let logger = TermLogger::new(&io)
+            .with_quiet(global_opts.quiet)
+            .with_verbose(global_opts.verbose);
         Ok(Self {
-            core: CoreContext {
-                io,
-                global_opts: p.clone().try_into()?,
-            },
+            core: CoreContext { io, logger },
             opts: p.try_into()?,
+            global_opts,
         })
     }
 
@@ -54,24 +57,24 @@ where
     }
 
     pub fn global_opts(&self) -> &HgGlobalOpts {
-        &self.core.global_opts
+        &self.global_opts
     }
 
     pub fn maybe_start_pager(&self, config: &dyn Config) -> Result<()> {
-        let (enable_pager, reason) =
-            if bool::try_from_str(&self.core.global_opts.pager).unwrap_or(false) {
-                (true, "--pager")
-            } else if is_plain(Some("pager")) {
-                (false, "plain")
-            } else if self.core.global_opts.pager != "auto" {
-                (false, "--pager")
-            } else if !self.core.io.output().is_tty() {
-                (false, "not tty")
-            } else if !config.get_or("ui", "paginate", || true)? {
-                (false, "ui.paginate")
-            } else {
-                (true, "auto")
-            };
+        let (enable_pager, reason) = if bool::try_from_str(&self.global_opts.pager).unwrap_or(false)
+        {
+            (true, "--pager")
+        } else if is_plain(Some("pager")) {
+            (false, "plain")
+        } else if self.global_opts.pager != "auto" {
+            (false, "--pager")
+        } else if !self.core.io.output().is_tty() {
+            (false, "not tty")
+        } else if !config.get_or("ui", "paginate", || true)? {
+            (false, "ui.paginate")
+        } else {
+            (true, "auto")
+        };
 
         tracing::debug!(enable_pager, reason, "maybe starting pager");
 
@@ -83,8 +86,6 @@ where
     }
 
     pub fn logger(&self) -> TermLogger {
-        TermLogger::new(self.io())
-            .with_quiet(self.global_opts().quiet)
-            .with_verbose(self.global_opts().verbose)
+        self.core.logger.clone()
     }
 }

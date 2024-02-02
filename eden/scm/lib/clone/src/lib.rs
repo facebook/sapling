@@ -69,7 +69,7 @@ pub enum WorkingCopyError {
 
 #[instrument(skip(logger), err)]
 pub fn init_working_copy(
-    logger: &mut TermLogger,
+    logger: &TermLogger,
     repo: &mut Repo,
     target: Option<HgId>,
     sparse_profiles: Vec<String>,

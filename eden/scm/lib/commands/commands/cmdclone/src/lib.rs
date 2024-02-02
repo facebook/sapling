@@ -164,7 +164,7 @@ fn looks_like_windows_path(s: &str) -> bool {
 }
 
 pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &Arc<dyn Config>) -> Result<u8> {
-    let mut logger = ctx.logger();
+    let logger = ctx.logger();
 
     let mut config = ConfigSet::wrap(config.clone());
 
@@ -343,7 +343,7 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &Arc<dyn Config>) -> Result<u8> {
                     backing_path.display(),
                 )
             });
-            try_clone_metadata(&ctx, &mut logger, &mut config, &reponame, &backing_path)?
+            try_clone_metadata(&ctx, &logger, &mut config, &reponame, &backing_path)?
         } else {
             Repo::load(
                 &backing_path,
@@ -354,7 +354,7 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &Arc<dyn Config>) -> Result<u8> {
             )?
         };
         let target_rev =
-            get_update_target(&mut logger, &mut backing_repo, &ctx.opts)?.map(|(rev, _)| rev);
+            get_update_target(&logger, &mut backing_repo, &ctx.opts)?.map(|(rev, _)| rev);
         logger.verbose(|| {
             format!(
                 "Performing EdenFS clone {}@{} from {} to {}",
@@ -366,9 +366,9 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &Arc<dyn Config>) -> Result<u8> {
         });
         clone::eden_clone(&backing_repo, &destination, target_rev)?;
     } else {
-        let mut repo = try_clone_metadata(&ctx, &mut logger, &mut config, &reponame, &destination)?;
+        let mut repo = try_clone_metadata(&ctx, &logger, &mut config, &reponame, &destination)?;
 
-        let target_rev = match get_update_target(&mut logger, &mut repo, &ctx.opts)? {
+        let target_rev = match get_update_target(&logger, &mut repo, &ctx.opts)? {
             Some((id, name)) => {
                 logger.info(format!("Checking out '{}'", name));
 
@@ -388,7 +388,7 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &Arc<dyn Config>) -> Result<u8> {
         };
 
         clone::init_working_copy(
-            &mut logger,
+            &logger,
             &mut repo,
             target_rev,
             ctx.opts.enable_profile.clone(),
@@ -400,7 +400,7 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &Arc<dyn Config>) -> Result<u8> {
 
 fn try_clone_metadata(
     ctx: &ReqCtx<CloneOpts>,
-    logger: &mut TermLogger,
+    logger: &TermLogger,
     config: &mut ConfigSet,
     reponame: &str,
     destination: &Path,
@@ -426,7 +426,7 @@ fn try_clone_metadata(
 #[instrument(skip_all, fields(repo=reponame), err)]
 fn clone_metadata(
     ctx: &ReqCtx<CloneOpts>,
-    logger: &mut TermLogger,
+    logger: &TermLogger,
     config: &mut ConfigSet,
     reponame: &str,
     destination: &Path,
@@ -635,7 +635,7 @@ fn recursive_copy(from: &Path, to: &Path) -> Result<()> {
 
 pub fn revlog_clone(
     config: &Arc<dyn Config>,
-    logger: &mut TermLogger,
+    logger: &TermLogger,
     ctx: &ReqCtx<CloneOpts>,
     root: &Path,
 ) -> Result<()> {
@@ -703,7 +703,7 @@ fn get_selective_bookmarks(repo: &Repo) -> Result<Vec<String>> {
 
 #[instrument(skip_all, err, ret)]
 fn get_update_target(
-    logger: &mut TermLogger,
+    logger: &TermLogger,
     repo: &mut Repo,
     clone_opts: &CloneOpts,
 ) -> Result<Option<(HgId, String)>> {

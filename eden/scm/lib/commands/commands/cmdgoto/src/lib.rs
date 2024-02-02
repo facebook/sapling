@@ -192,7 +192,7 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
     Ok(0)
 }
 
-// Clear use out of the "updatemergestate" state if there are no unresolved
+// Clear us out of the "updatemergestate" state if there are no unresolved
 // files or user specified "--clean". Returns whether state was cleared.
 fn maybe_clear_update_merge_state(wc: &LockedWorkingCopy, clean: bool) -> Result<bool> {
     let ums_path = wc.dot_hg_path().join("updatemergestate");
