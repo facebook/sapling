@@ -6,7 +6,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.75"
 clidispatch = { version = "0.1.0", path = "../../../clidispatch" }
 cliparser = { version = "0.1.0", path = "../../../cliparser" }
 cmdutil = { version = "0.1.0", path = "../../cmdutil" }

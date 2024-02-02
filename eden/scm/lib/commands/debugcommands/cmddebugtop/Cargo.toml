@@ -6,7 +6,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.75"
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 clidispatch = { version = "0.1.0", path = "../../../clidispatch" }
 cliparser = { version = "0.1.0", path = "../../../cliparser" }

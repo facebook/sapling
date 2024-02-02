@@ -18,7 +18,6 @@ rust_library(
     crate_root = "src/lib.rs",
     features = ["fb"],
     deps = [
-        "fbsource//third-party/rust:anyhow",
         "//eden/scm/lib/clidispatch:clidispatch",
         "//eden/scm/lib/commands/cmdutil:cmdutil",
         "//eden/scm/lib/config/loader:configloader",
