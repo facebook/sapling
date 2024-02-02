@@ -140,3 +140,11 @@ Warn about python hooks since we can't fall back to Python:
   abort: pre-debugtestcommand hook exited with status 127
   [255]
 #endif
+
+#if no-windows
+Test client correlator:
+  $ newclientrepo
+  $ hg debugtestcommand --config 'hooks.pre-debugtestcommand=echo ENTRY POINT: $SAPLING_CLIENT_ENTRY_POINT && echo CORRELATOR: $SAPLING_CLIENT_CORRELATOR'
+  ENTRY POINT: sapling
+  CORRELATOR: test-correlator
+#endif
