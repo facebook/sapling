@@ -11,7 +11,7 @@ import serverApi from '../ClientToServerAPI';
 import {Subtle} from '../Subtle';
 import {recentReviewers, SuggestedReviewers} from './SuggestedReviewers';
 import {extractTokens, TokensList, tokensToString} from './Tokens';
-import {getInnerTextareaForVSCodeTextArea} from './utils';
+import {getInnerTextareaForVSCodeTextArea, getOnClickToken} from './utils';
 import {VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
 import {useRef, useEffect, useState} from 'react';
 import {Icon} from 'shared/Icon';
@@ -117,6 +117,7 @@ export function CommitInfoTextField({
         }}>
         <TokensList
           tokens={tokens}
+          onClickToken={getOnClickToken(field)}
           onClickX={(token: string) => {
             setEditedCommitMessage(
               tokensToString(

@@ -15,7 +15,7 @@ import {SeeMoreContainer} from './SeeMoreContainer';
 import {CommitInfoTextArea} from './TextArea';
 import {CommitInfoTextField} from './TextField';
 import {extractTokens, TokensList} from './Tokens';
-import {Section, SmallCapsTitle} from './utils';
+import {getOnClickToken, Section, SmallCapsTitle} from './utils';
 import {Fragment} from 'react';
 import {Icon} from 'shared/Icon';
 
@@ -118,7 +118,7 @@ export function CommitInfoField({
         const tokens = Array.isArray(content) ? content : extractTokens(content)[0];
         renderedContent = (
           <div className="commit-info-tokenized-field">
-            <TokensList tokens={tokens} />
+            <TokensList tokens={tokens} onClickToken={getOnClickToken(field)} />
             {field.maxTokens === 1 && tokens.length > 0 && (
               <Copyable iconOnly>{tokens[0]}</Copyable>
             )}

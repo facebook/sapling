@@ -310,6 +310,15 @@
   min-height: calc(var(--token-height) - 2px);
 }
 
+.commit-info-tokenized-field .token.clickable {
+  cursor: pointer;
+}
+
+.commit-info-tokenized-field .token.clickable:hover {
+  background-color: var(--hover-darken);
+  text-decoration: underline;
+}
+
 .commit-info-tokenized-field .token vscode-button {
   margin-right: calc(-1 * var(--pad));
 }

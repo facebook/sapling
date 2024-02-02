@@ -14,6 +14,7 @@ import {InlineBadge} from '../InlineBadge';
 import {Subtle} from '../Subtle';
 import {Tooltip} from '../Tooltip';
 import {t, T} from '../i18n';
+import platform from '../platform';
 import {RelativeDate} from '../relativeDate';
 
 export function CommitTitleByline({commit}: {commit: CommitInfo}) {
@@ -93,4 +94,17 @@ export function getInnerTextareaForVSCodeTextArea(
   outer: HTMLElement | null,
 ): HTMLTextAreaElement | null {
   return outer == null ? null : (outer as unknown as {control: HTMLTextAreaElement}).control;
+}
+
+export function getOnClickToken(
+  field: FieldConfig & {type: 'field'},
+): ((token: string) => unknown) | undefined {
+  if (field.getUrl == null) {
+    return undefined;
+  }
+
+  return token => {
+    const url = field.getUrl?.(token);
+    url && platform.openExternalLink(url);
+  };
 }

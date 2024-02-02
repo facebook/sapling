@@ -86,5 +86,6 @@ export type FieldConfig = {
       extractValues?: (text: string) => Array<string>;
       /** post-process token values before placing it in the actual commit message */
       formatValues?: (tokens: Array<string>) => string | undefined;
+      getUrl?: (token: string) => string;
     }
 );
