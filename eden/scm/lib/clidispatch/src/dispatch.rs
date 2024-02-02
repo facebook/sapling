@@ -383,20 +383,38 @@ impl Dispatcher {
         sampling::append_sample("command_info", "option_values", &opt_values);
 
         let res = || -> Result<u8> {
+            // This may trigger Python fallback if there are Python hooks.
+            let hooks = crate::hooks::Hooks::new(self.config(), io, handler)?;
+
             tracing::debug!("command handled by a Rust function");
-            match handler.func() {
+
+            // Convert to repoless before running the "pre" hook. For repoless commands,
+            // we don't want to run hooks from root of incidentally containing repo.
+            if matches!(handler.func(), CommandFunc::NoRepo(_)) {
+                self.convert_to_repoless_config()?;
+            }
+
+            hooks.run_pre(self.repo().map(|r| r.path()), &self.args[1..])?;
+
+            let res = match handler.func() {
                 CommandFunc::Repo(f) => f(parsed, io, self.repo_mut()?),
                 CommandFunc::OptionalRepo(f) => f(parsed, io, &mut self.optional_repo),
-                CommandFunc::NoRepo(f) => {
-                    self.convert_to_repoless_config()?;
-                    f(parsed, io, self.optional_repo.config())
-                }
+                CommandFunc::NoRepo(f) => f(parsed, io, self.optional_repo.config()),
                 CommandFunc::WorkingCopy(f) => {
                     let repo = self.repo_mut()?;
                     let mut wc = repo.working_copy()?;
                     f(parsed, io, repo, &mut wc)
                 }
+            };
+
+            match &res {
+                Ok(result_code) => {
+                    hooks.run_post(self.repo().map(|r| r.path()), &self.args[1..], *result_code)?
+                }
+                Err(_) => hooks.run_fail(self.repo().map(|r| r.path()), &self.args[1..])?,
             }
+
+            res
         }();
 
         (Some(handler), res)
