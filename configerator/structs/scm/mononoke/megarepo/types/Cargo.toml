@@ -13,6 +13,7 @@ name = "megarepo_configs"
 path = "thrift_lib.rs"
 test = false
 doctest = false
+doc = false
 
 [dependencies]
 anyhow = "1.0.75"
