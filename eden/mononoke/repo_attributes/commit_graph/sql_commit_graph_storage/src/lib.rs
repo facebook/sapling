@@ -1206,17 +1206,32 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
                 )
             })
             .collect::<Vec<_>>();
-        let (transaction, result) = InsertChangesetsNoEdges::query_with_transaction(
-            transaction,
-            // This pattern is used to convert a ref to tuple into a tuple of refs.
-            #[allow(clippy::map_identity)]
-            cs_no_edges
-                .iter()
-                .map(|(a, b, c, d, e, f)| (a, b, c, d, e, f))
-                .collect::<Vec<_>>()
-                .as_slice(),
-        )
-        .await?;
+        let (transaction, result) = if let Some(cri) = ctx.metadata().client_request_info() {
+            InsertChangesetsNoEdges::traced_query_with_transaction(
+                transaction,
+                cri,
+                // This pattern is used to convert a ref to tuple into a tuple of refs.
+                #[allow(clippy::map_identity)]
+                cs_no_edges
+                    .iter()
+                    .map(|(a, b, c, d, e, f)| (a, b, c, d, e, f))
+                    .collect::<Vec<_>>()
+                    .as_slice(),
+            )
+            .await?
+        } else {
+            InsertChangesetsNoEdges::query_with_transaction(
+                transaction,
+                // This pattern is used to convert a ref to tuple into a tuple of refs.
+                #[allow(clippy::map_identity)]
+                cs_no_edges
+                    .iter()
+                    .map(|(a, b, c, d, e, f)| (a, b, c, d, e, f))
+                    .collect::<Vec<_>>()
+                    .as_slice(),
+            )
+            .await?
+        };
         let modified = result.affected_rows();
         if modified == 0 {
             // Early return, everything is already stored
@@ -1285,16 +1300,30 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
             }
         };
 
-        let (transaction, _) = FixEdges::query_with_transaction(
-            transaction,
-            // This pattern is used to convert a ref to tuple into a tuple of refs.
-            #[allow(clippy::map_identity)]
-            rows.iter()
-                .map(|(a, b, c, d, e, f, g, h, i, j, k)| (a, b, c, d, e, f, g, h, i, j, k))
-                .collect::<Vec<_>>()
-                .as_slice(),
-        )
-        .await?;
+        let (transaction, _) = if let Some(cri) = ctx.metadata().client_request_info() {
+            FixEdges::traced_query_with_transaction(
+                transaction,
+                cri,
+                // This pattern is used to convert a ref to tuple into a tuple of refs.
+                #[allow(clippy::map_identity)]
+                rows.iter()
+                    .map(|(a, b, c, d, e, f, g, h, i, j, k)| (a, b, c, d, e, f, g, h, i, j, k))
+                    .collect::<Vec<_>>()
+                    .as_slice(),
+            )
+            .await?
+        } else {
+            FixEdges::query_with_transaction(
+                transaction,
+                // This pattern is used to convert a ref to tuple into a tuple of refs.
+                #[allow(clippy::map_identity)]
+                rows.iter()
+                    .map(|(a, b, c, d, e, f, g, h, i, j, k)| (a, b, c, d, e, f, g, h, i, j, k))
+                    .collect::<Vec<_>>()
+                    .as_slice(),
+            )
+            .await?
+        };
 
         let merge_parent_rows = many_edges
             .iter()
