@@ -40,7 +40,6 @@ use crate::InProcessIdDag;
 
 pub type SeedHead = SegmentedChangelogHeadConfig;
 
-#[async_trait::async_trait]
 trait IntoVertexList {
     async fn into_vertex_list(
         &self,
@@ -49,7 +48,6 @@ trait IntoVertexList {
     ) -> Result<VertexListWithOptions>;
 }
 
-#[async_trait::async_trait]
 impl IntoVertexList for SeedHead {
     async fn into_vertex_list(
         &self,
