@@ -15,7 +15,7 @@ fn main() {
     let out_dir: &Path = out_dir.as_ref();
     fs::write(
         out_dir.join("cratemap"),
-        "eden thrift
+        "eden thrift //eden/fs/service:thrift-rust
 streamingeden crate",
     ).expect("Failed to write cratemap");
 

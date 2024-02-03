@@ -16,8 +16,8 @@ fn main() {
     fs::write(
         out_dir.join("cratemap"),
         "eden crate
-eden_config config_thrift
-fb303_core fb303_core",
+eden_config config_thrift //eden/fs/config:config_thrift-rust
+fb303_core fb303_core //fb303/thrift:fb303_core-rust",
     ).expect("Failed to write cratemap");
 
     let conf = {

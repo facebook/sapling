@@ -16,7 +16,7 @@ fn main() {
     fs::write(
         out_dir.join("cratemap"),
         "lfs_server crate
-ratelimits rate_limiting_config",
+ratelimits rate_limiting_config //configerator/structs/scm/mononoke/ratelimiting:rate_limiting_config-rust",
     ).expect("Failed to write cratemap");
 
     let conf = {

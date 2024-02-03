@@ -15,8 +15,8 @@ fn main() {
     let out_dir: &Path = out_dir.as_ref();
     fs::write(
         out_dir.join("cratemap"),
-        "fb303_core fb303_core
-megarepo_configs megarepo_configs
+        "fb303_core fb303_core //fb303/thrift:fb303_core-rust
+megarepo_configs megarepo_configs //configerator/structs/scm/mononoke/megarepo:megarepo_configs-rust
 source_control crate",
     ).expect("Failed to write cratemap");
 

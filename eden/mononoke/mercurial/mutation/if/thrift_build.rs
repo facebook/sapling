@@ -16,7 +16,7 @@ fn main() {
     fs::write(
         out_dir.join("cratemap"),
         "hg_mutation_entry crate
-mercurial_thrift mercurial_thrift",
+mercurial_thrift mercurial_thrift //eden/mononoke/mercurial/types/if:mercurial-thrift-rust",
     ).expect("Failed to write cratemap");
 
     let conf = {
