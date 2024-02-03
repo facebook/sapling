@@ -1317,9 +1317,10 @@
   shelved as default
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ touch b
-  $ hg unshelve
-  unshelving change 'default'
-  abort: $ENOENT$: foo/b
-  [255]
   $ hg st
   ? b
+  $ hg unshelve
+  unshelving change 'default'
+  $ hg st
+  A b
+  ? b.orig
