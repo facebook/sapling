@@ -105,9 +105,10 @@ async fn bookmarks(
                         Some((bookmark.into_key(), cs_id))
                     }
                     RequestedRefs::IncludedWithPrefix(ref_prefixes) => {
+                        let ref_name = format!("refs/{}", name);
                         if ref_prefixes
                             .iter()
-                            .any(|ref_prefix| name.starts_with(ref_prefix))
+                            .any(|ref_prefix| ref_name.starts_with(ref_prefix))
                         {
                             Some((bookmark.into_key(), cs_id))
                         } else {
@@ -369,8 +370,11 @@ async fn include_symrefs(
                     )
                 })?
                 .id();
-            let ref_target =
-                symref_target(&head_ref.symref_name, head_commit_id.clone(), symref_format);
+            let ref_target = symref_target(
+                &head_ref.ref_name_with_type(),
+                head_commit_id.clone(),
+                symref_format,
+            );
             FxHashMap::from_iter([(head_ref.symref_name, ref_target)])
         }
         RequestedSymrefs::IncludeAll(symref_format) => {
@@ -398,7 +402,7 @@ async fn include_symrefs(
                         )
                     })?
                     .id();
-                let ref_target = symref_target(&entry.symref_name, ref_commit_id.clone(), symref_format);
+                let ref_target = symref_target(&entry.ref_name_with_type(), ref_commit_id.clone(), symref_format);
                 Ok((entry.symref_name, ref_target))
             }).collect::<Result<FxHashMap<_, _>>>()?
         }

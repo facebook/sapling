@@ -197,7 +197,7 @@ pub async fn create_from_mononoke_repo(
         response
             .included_refs
             .into_iter()
-            .map(|(ref_name, ref_target)| (ref_name, ref_target.into_commit()))
+            .map(|(ref_name, ref_target)| (ref_name, ref_target.into_object_id()))
             .collect(),
         prereqs,
         response.num_items as u32,

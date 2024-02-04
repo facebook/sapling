@@ -375,8 +375,8 @@ pub async fn repo_stack_git_bundle(
         .into_iter()
         .map(
             |(ref_name, ref_target)| match ref_name.strip_prefix("refs/") {
-                Some(stripped_ref) => (stripped_ref.to_owned(), ref_target.into_commit()),
-                None => (ref_name, ref_target.into_commit()),
+                Some(stripped_ref) => (stripped_ref.to_owned(), ref_target.into_object_id()),
+                None => (ref_name, ref_target.into_object_id()),
             },
         )
         .collect();

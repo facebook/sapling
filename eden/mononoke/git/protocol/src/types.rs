@@ -35,9 +35,22 @@ impl RefTarget {
         }
     }
 
-    pub fn into_commit(self) -> ObjectId {
+    pub fn into_object_id(self) -> ObjectId {
         match self {
             RefTarget::Plain(oid) | RefTarget::WithMetadata(oid, _) => oid,
+        }
+    }
+
+    pub fn as_object_id(&self) -> &ObjectId {
+        match self {
+            RefTarget::Plain(oid) | RefTarget::WithMetadata(oid, _) => oid,
+        }
+    }
+
+    pub fn metadata(&self) -> Option<&str> {
+        match self {
+            RefTarget::Plain(_) => None,
+            RefTarget::WithMetadata(_, meta) => Some(meta),
         }
     }
 }
@@ -275,6 +288,17 @@ pub struct LsRefsResponse {
     pub included_refs: HashMap<String, RefTarget>,
 }
 
+fn ref_line(name: &str, target: &RefTarget) -> String {
+    match target.metadata() {
+        None => {
+            format!("{} {}", target.as_object_id().to_hex(), name)
+        }
+        Some(metadata) => {
+            format!("{} {} {}", target.as_object_id().to_hex(), name, metadata)
+        }
+    }
+}
+
 impl LsRefsResponse {
     pub fn new(included_refs: HashMap<String, RefTarget>) -> Self {
         Self { included_refs }
@@ -286,11 +310,11 @@ impl LsRefsResponse {
     {
         // HEAD symref should always be written first
         if let Some(target) = self.included_refs.get(SYMREF_HEAD) {
-            writeln!(writer, "{} {}", SYMREF_HEAD, target)?;
+            write!(writer, "{}", ref_line(SYMREF_HEAD, target))?;
         }
         for (name, target) in &self.included_refs {
             if name.as_str() != SYMREF_HEAD {
-                writeln!(writer, "{} {}", name, target)?;
+                write!(writer, "{}", ref_line(name, target))?;
             }
         }
         Ok(())
