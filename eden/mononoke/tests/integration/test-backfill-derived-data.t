@@ -26,7 +26,6 @@ backfill derived data
 
   $ backfill_derived_data backfill --prefetched-commits-path "$TESTTMP/prefetched_commits" "$DERIVED_DATA_TYPE" --limit 1
   *] enabled stdlog with level: Error (set RUST_LOG to configure) (glob)
-  *] Initializing tunables: * (glob)
   *] Initializing JustKnobs: * (glob)
   *] Setting up derived data command for repo repo (glob)
   *] Completed derived data command setup for repo repo (glob)
@@ -49,7 +48,6 @@ backfill derived data
   Derived: 9feb8ddd3e8eddcfa3a4913b57df7842bedf84b8ea3b7b3fcb14c6424aa81fec
   $ backfill_derived_data backfill --prefetched-commits-path "$TESTTMP/prefetched_commits" "$DERIVED_DATA_TYPE" --skip-changesets 1
   *] enabled stdlog with level: Error (set RUST_LOG to configure) (glob)
-  *] Initializing tunables: * (glob)
   *] Initializing JustKnobs: * (glob)
   *] Setting up derived data command for repo repo (glob)
   *] Completed derived data command setup for repo repo (glob)
@@ -72,7 +70,6 @@ backfill derived data
 
   $ backfill_derived_data single c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd "$DERIVED_DATA_TYPE"
   *] enabled stdlog with level: Error (set RUST_LOG to configure) (glob)
-  *] Initializing tunables: * (glob)
   *] Initializing JustKnobs: * (glob)
   *] Setting up derived data command for repo repo (glob)
   *] Completed derived data command setup for repo repo (glob)

@@ -52,7 +52,7 @@ pub enum Abort {
 }
 
 impl Abort {
-    pub fn abort<E: Into<anyhow::Error>>(reason: E) -> Self {
+    pub fn new<E: Into<anyhow::Error>>(reason: E) -> Self {
         Abort::WithReason(reason.into())
     }
 }

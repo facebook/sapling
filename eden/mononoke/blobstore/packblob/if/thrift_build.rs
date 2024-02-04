@@ -44,6 +44,8 @@ fn main() {
         conf.base_path(base_path);
 
         conf.types_crate("packblob-thrift__types");
+        conf.clients_crate("packblob-thrift__clients");
+        conf.services_crate("packblob-thrift__services");
 
         let options = "";
         if !options.is_empty() {

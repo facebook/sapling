@@ -38,6 +38,7 @@ import type {
   CommitCloudSyncState,
   Hash,
   ConfigName,
+  Alert,
 } from 'isl/src/types';
 import type {Comparison} from 'shared/Comparison';
 
@@ -45,6 +46,7 @@ import {Internal} from './Internal';
 import {OperationQueue} from './OperationQueue';
 import {PageFocusTracker} from './PageFocusTracker';
 import {WatchForChanges} from './WatchForChanges';
+import {parseAlerts} from './alerts';
 import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD, ErrorShortMessages} from './constants';
 import {GitHubCodeReviewProvider} from './github/githubCodeReviewProvider';
 import {isGithubEnterprise} from './github/queryGraphQL';
@@ -472,7 +474,17 @@ export class Repository {
     const preferredSubmitCommand = configs.get('github.preferred_submit_command');
 
     if (repoRoot instanceof Error) {
-      return {type: 'invalidCommand', command};
+      // first check that the cwd exists
+      const cwdExists = await exists(cwd);
+      if (!cwdExists) {
+        return {type: 'cwdDoesNotExist', cwd};
+      }
+
+      return {
+        type: 'invalidCommand',
+        command,
+        path: process.env.PATH,
+      };
     }
     if (repoRoot == null || dotdir == null) {
       return {type: 'cwdNotARepository', cwd};
@@ -995,6 +1007,26 @@ export class Repository {
     );
   }
 
+  public async getActiveAlerts(): Promise<Array<Alert>> {
+    const result = await this.runCommand(
+      ['config', '-Tjson', 'alerts'],
+      'GetAlertsCommand',
+      undefined,
+      {reject: false},
+    );
+    if (result.exitCode !== 0 || !result.stdout) {
+      return [];
+    }
+    try {
+      const configs = JSON.parse(result.stdout) as [{name: string; value: unknown}];
+      const alerts = parseAlerts(configs);
+      this.logger.info('Found active alerts:', alerts);
+      return alerts;
+    } catch (e) {
+      return [];
+    }
+  }
+
   public async runDiff(comparison: Comparison, contextLines = 4): Promise<string> {
     const output = await this.runCommand(
       [
@@ -1344,7 +1376,8 @@ export function parseCommitInfoOutput(logger: Logger, output: string): SmartlogC
         closestPredecessors: splitLine(lines[FIELD_INDEX.cloesestPredecessors], ','),
         description: lines
           .slice(FIELD_INDEX.description + 1 /* first field of description is title; skip it */)
-          .join('\n'),
+          .join('\n')
+          .trim(),
         diffId: lines[FIELD_INDEX.diffId] != '' ? lines[FIELD_INDEX.diffId] : undefined,
         stableCommitMetadata:
           lines[FIELD_INDEX.stableCommitMetadata] != ''

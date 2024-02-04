@@ -66,7 +66,7 @@ fn main() {
         }
     }
 
-    match full_args.get(0).map(AsRef::as_ref) {
+    match full_args.first().map(AsRef::as_ref) {
         Some("buildinfo") => {
             // This code path keeps buildinfo-related symbols alive.
             #[cfg(feature = "buildinfo")]
@@ -115,7 +115,7 @@ fn main() {
     // you might want to delay it for chg/pfc server's case.
     // See D44048693 for example.
 
-    let mut code = hgcommands::run_command(full_args, &io);
+    let mut code = commands::run_command(full_args, &io);
     if io.flush().is_err() {
         if code == 0 {
             code = 255;

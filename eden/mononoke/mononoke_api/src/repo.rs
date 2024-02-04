@@ -785,7 +785,10 @@ impl RepoContext {
 
         // Open the bubble if necessary.
         let repo = if let Some(bubble_id) = bubble_id {
-            let bubble = repo.repo_ephemeral_store().open_bubble(bubble_id).await?;
+            let bubble = repo
+                .repo_ephemeral_store()
+                .open_bubble(&ctx, bubble_id)
+                .await?;
             Arc::new(repo.with_bubble(bubble))
         } else {
             repo
@@ -921,7 +924,7 @@ impl RepoContext {
         Ok(self
             .repo
             .repo_ephemeral_store()
-            .open_bubble(bubble_id)
+            .open_bubble(self.ctx(), bubble_id)
             .await?)
     }
 
@@ -949,7 +952,7 @@ impl RepoContext {
             UnknownBubble => match self
                 .repo
                 .repo_ephemeral_store()
-                .bubble_from_changeset(&changeset_id)
+                .bubble_from_changeset(&self.ctx, &changeset_id)
                 .await?
             {
                 Some(id) => Some(id),
@@ -1080,6 +1083,14 @@ impl RepoContext {
             .await?
             .map(|cs_id| ChangesetContext::new(self.clone(), cs_id));
         Ok(changeset)
+    }
+
+    /// Create changeset context from known existing changeset id.
+    pub async fn changeset_from_existing_id(
+        &self,
+        cs_id: ChangesetId,
+    ) -> Result<ChangesetContext, MononokeError> {
+        Ok(ChangesetContext::new(self.clone(), cs_id))
     }
 
     pub async fn difference_of_unions_of_ancestors<'a>(

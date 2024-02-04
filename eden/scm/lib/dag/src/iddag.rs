@@ -676,7 +676,7 @@ pub trait IdDagAlgorithm: IdDagStore {
                 let span = seg.span()?;
                 result.push_span((span.low..=id).into());
                 trace(&|| format!(" push {:?}..={:?}", span.low, id));
-                if let Some(&p) = seg.parents()?.get(0) {
+                if let Some(&p) = seg.parents()?.first() {
                     to_visit.push(p);
                 }
             }
@@ -861,7 +861,7 @@ pub trait IdDagAlgorithm: IdDagStore {
             n -= step;
             if n > 0 {
                 // Follow the first parent.
-                id = match seg.parents()?.get(0) {
+                id = match seg.parents()?.first() {
                     None => return Ok(None),
                     Some(&id) => id,
                 };
@@ -993,7 +993,7 @@ pub trait IdDagAlgorithm: IdDagStore {
 
                     // Fragmented linear segments. Convert id~n to next_id~next_n.
                     let child_parents = child_seg.parents()?;
-                    match child_parents.get(0) {
+                    match child_parents.first() {
                         None => {
                             return bug(format!(
                                 "segment {:?} should have parent {:?}",
@@ -2029,7 +2029,7 @@ mod tests {
 
     fn get_parents(id: Id) -> Result<Vec<Id>> {
         match id.0 {
-            0 | 1 | 2 => Ok(Vec::new()),
+            0..=2 => Ok(Vec::new()),
             _ => Ok(vec![id - 1, Id(id.0 / 2)]),
         }
     }

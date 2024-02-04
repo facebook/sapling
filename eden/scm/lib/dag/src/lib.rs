@@ -13,6 +13,7 @@
 //! Building blocks for the commit graph used by source control.
 
 mod bsearch;
+pub mod config;
 mod default_impl;
 mod delegate;
 pub mod errors;

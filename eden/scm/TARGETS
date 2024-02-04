@@ -126,7 +126,7 @@ rust_binary(
         "cargo_toml_config": {
             "dependencies_override": {
                 "dependencies": {
-                    "hgcommands": {"default-features": False},
+                    "commands": {"default-features": False},
                     # Not covered by autocargo, so declare explicitly
                     "pyblackbox": {"path": "../../saplingnative/bindings/modules/pyblackbox"},
                 },
@@ -157,9 +157,9 @@ rust_binary(
                 "default": [],
                 "eden": [
                     "clidispatch/eden",
-                    "hgcommands/eden",
+                    "commands/eden",
                 ],
-                "fb": ["hgcommands/fb"],
+                "fb": ["commands/fb"],
                 "sl_only": ["clidispatch/sl_only"],
                 "with_chg": [
                     "dirs",
@@ -223,7 +223,7 @@ rust_binary(
     deps = [
         "fbsource//third-party/rust:tracing",
         "//eden/scm/lib/clidispatch:clidispatch",
-        "//eden/scm/lib/hgcommands:hgcommands",
+        "//eden/scm/lib/commands:commands",
         "//eden/scm/lib/util/atexit:atexit",
     ] + ([] if rust_oss.is_oss_build() else [
         "//common/rust/shed/fbinit:fbinit",

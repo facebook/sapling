@@ -20,7 +20,6 @@ mod repo;
 mod repo_blobstore;
 mod repo_filter;
 mod runtime;
-mod tunables;
 mod wbc;
 
 pub use acl::AclArgs;
@@ -46,7 +45,6 @@ pub use shutdown_timeout::ShutdownTimeoutArgs;
 pub use tls::TLSArgs;
 pub use wbc::WarmBookmarksCacheExtension;
 
-pub use self::tunables::TunablesArgs;
 pub use crate::fb303::Fb303Args;
 pub use crate::repo_args;
 pub use crate::repo_args_optional;

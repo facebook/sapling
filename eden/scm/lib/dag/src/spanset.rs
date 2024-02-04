@@ -558,7 +558,7 @@ impl SpanSet {
 
     /// Get the maximum id in this set.
     pub fn max(&self) -> Option<Id> {
-        self.spans.get(0).map(|span| span.high)
+        self.spans.front().map(|span| span.high)
     }
 
     /// Get the minimal id in this set.

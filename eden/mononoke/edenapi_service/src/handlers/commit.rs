@@ -93,7 +93,7 @@ use crate::utils::parse_cbor_request;
 use crate::utils::parse_wire_request;
 use crate::utils::to_create_change;
 use crate::utils::to_hg_path;
-use crate::utils::to_mononoke_path;
+use crate::utils::to_mpath;
 use crate::utils::to_revlog_changeset;
 
 /// XXX: This number was chosen arbitrarily.
@@ -405,7 +405,7 @@ impl EdenApiHandler for UploadBonsaiChangesetHandler {
                     .map(|(path, fc)| {
                         let create_change = to_create_change(fc, bubble_id)
                             .with_context(|| anyhow!("Parsing file changes for {}", path))?;
-                        Ok((to_mononoke_path(path)?, create_change))
+                        Ok((to_mpath(path)?, create_change))
                     })
                     .collect::<anyhow::Result<_>>()?,
                 match bubble_id {
@@ -450,12 +450,12 @@ impl EdenApiHandler for FetchSnapshotHandler {
         let cs_id = ChangesetId::from(request.cs_id);
         let bubble_id = repo
             .ephemeral_store()
-            .bubble_from_changeset(&cs_id)
+            .bubble_from_changeset(repo.ctx(), &cs_id)
             .await?
             .context("Snapshot not in a bubble")?;
         let labels = repo
             .ephemeral_store()
-            .labels_from_bubble(&bubble_id)
+            .labels_from_bubble(repo.ctx(), &bubble_id)
             .await
             .context("Failed to fetch labels associated with the snapshot")?;
         let blobstore = repo.bubble_blobstore(Some(bubble_id)).await?;
@@ -540,7 +540,7 @@ impl EdenApiHandler for AlterSnapshotHandler {
         let cs_id = ChangesetId::from(request.cs_id);
         let id = repo
             .ephemeral_store()
-            .bubble_from_changeset(&cs_id)
+            .bubble_from_changeset(repo.ctx(), &cs_id)
             .await?
             .context("Snapshot does not exist or has already expired")?;
         let (label_addition, label_removal) = (
@@ -555,16 +555,19 @@ impl EdenApiHandler for AlterSnapshotHandler {
         } else if label_addition {
             // Input has labels to add, so let's add the input labels.
             repo.ephemeral_store()
-                .add_bubble_labels(id, request.labels_to_add.clone())
+                .add_bubble_labels(repo.ctx(), id, request.labels_to_add.clone())
                 .await?;
         } else {
             // Input has labels to remove, or no labels as input at all. In either case,
             // we need to remove specific or all labels corresponding to the bubble.
             repo.ephemeral_store()
-                .remove_bubble_labels(id, request.labels_to_remove.clone())
+                .remove_bubble_labels(repo.ctx(), id, request.labels_to_remove.clone())
                 .await?;
         }
-        let current_labels = repo.ephemeral_store().labels_from_bubble(&id).await?;
+        let current_labels = repo
+            .ephemeral_store()
+            .labels_from_bubble(repo.ctx(), &id)
+            .await?;
         let response = AlterSnapshotResponse { current_labels };
         Ok(stream::once(async move { Ok(response) }).boxed())
     }

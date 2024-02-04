@@ -68,17 +68,13 @@ impl<T: RemoteDataStore> RemoteDataStore for UnionHgIdDataStore<T> {
     }
 
     fn upload(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        self.into_iter()
-            .fold(Ok(keys.to_vec()), |not_sent, store| match not_sent {
-                Ok(not_sent) => {
-                    if !not_sent.is_empty() {
-                        store.upload(&not_sent)
-                    } else {
-                        Ok(Vec::new())
-                    }
-                }
-                Err(e) => Err(e),
-            })
+        self.into_iter().try_fold(keys.to_vec(), |not_sent, store| {
+            if !not_sent.is_empty() {
+                store.upload(&not_sent)
+            } else {
+                Ok(Vec::new())
+            }
+        })
     }
 }
 
@@ -186,10 +182,7 @@ mod tests {
         fn test_bad_datastore_get(key: Key) -> bool {
             let mut unionstore = UnionHgIdDataStore::new();
             unionstore.add(BadHgIdDataStore);
-            match unionstore.get(StoreKey::hgid(key)) {
-                Err(_) => true,
-                _ => false,
-            }
+            unionstore.get(StoreKey::hgid(key)).is_err()
         }
 
         fn test_empty_unionstore_get_meta(key: Key) -> bool {
@@ -211,10 +204,7 @@ mod tests {
         fn test_bad_datastore_get_meta(key: Key) -> bool {
             let mut unionstore = UnionHgIdDataStore::new();
             unionstore.add(BadHgIdDataStore);
-            match unionstore.get_meta(StoreKey::hgid(key)) {
-                Err(_) => true,
-                _ => false,
-            }
+            unionstore.get_meta(StoreKey::hgid(key)).is_err()
         }
 
         fn test_empty_unionstore_get_missing(keys: Vec<StoreKey>) -> bool {
@@ -230,10 +220,7 @@ mod tests {
         fn test_bad_datastore_get_missing(keys: Vec<StoreKey>) -> bool {
             let mut unionstore = UnionHgIdDataStore::new();
             unionstore.add(BadHgIdDataStore);
-            match unionstore.get_missing(&keys) {
-                Ok(_) => false,
-                Err(_) => true,
-            }
+            unionstore.get_missing(&keys).is_err()
         }
     }
 }

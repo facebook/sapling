@@ -20,6 +20,7 @@
     "webview/global.d.ts",
     "extension",
     "webview",
+    "vite.config.mts",
     "rollup.extension.config.mjs",
     "__mocks__"
   ]

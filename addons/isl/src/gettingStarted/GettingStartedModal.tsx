@@ -24,7 +24,7 @@ export function GettingStartedModal() {
   const [isShowingStable, setIsShowingStable] = useState(false);
 
   useEffect(() => {
-    if (hasShownAlready === false) {
+    if (hasShownAlready !== true) {
       setIsShowingStable(true);
       setHasShown(true);
     }

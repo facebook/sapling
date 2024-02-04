@@ -34,11 +34,11 @@ use mononoke_api::ChangesetSpecifier;
 use mononoke_api::CopyInfo;
 use mononoke_api::MetadataDiff;
 use mononoke_api::MononokeError;
-use mononoke_api::MononokePath;
 use mononoke_api::RepoContext;
 use mononoke_api::UnifiedDiff;
 use mononoke_api::UnifiedDiffMode;
 use mononoke_api::XRepoLookupSyncBehaviour;
+use mononoke_types::path::MPath;
 use source_control as thrift;
 
 use crate::commit_id::map_commit_identities;
@@ -126,8 +126,9 @@ async fn add_mutable_renames(
         if let Some(paths) = &params.paths {
             let paths: Vec<_> = paths
                 .iter()
-                .map(MononokePath::try_from)
-                .collect::<Result<_, MononokeError>>()?;
+                .map(MPath::try_from)
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(|error| MononokeError::InvalidRequest(error.to_string()))?;
             base_changeset
                 .add_mutable_renames(paths.into_iter())
                 .await?;
@@ -334,7 +335,8 @@ impl SourceControlServiceImpl {
                 Ok((
                     match path_pair.base_path {
                         Some(path) => {
-                            let mpath = MononokePath::try_from(&path)
+                            let mpath = MPath::try_from(&path)
+                                .map_err(|error| MononokeError::InvalidRequest(error.to_string()))
                                 .context("invalid base commit path")?;
                             base_commit_paths.push(mpath.clone());
                             Some(mpath)
@@ -344,7 +346,10 @@ impl SourceControlServiceImpl {
                     match &other_commit {
                         Some(_other_commit) => match path_pair.other_path {
                             Some(path) => {
-                                let mpath = MononokePath::try_from(&path)
+                                let mpath = MPath::try_from(&path)
+                                    .map_err(|error| {
+                                        MononokeError::InvalidRequest(error.to_string())
+                                    })
                                     .context("invalid other commit path")?;
                                 other_commit_paths.push(mpath.clone());
                                 Some(mpath)
@@ -588,13 +593,14 @@ impl SourceControlServiceImpl {
             diff_items = btreeset! { ChangesetDiffItem::FILES };
         }
 
-        let paths: Option<Vec<MononokePath>> = match params.paths {
+        let paths: Option<Vec<MPath>> = match params.paths {
             None => None,
             Some(paths) => Some(
                 paths
                     .iter()
-                    .map(|path| path.try_into())
-                    .collect::<Result<Vec<_>, _>>()?,
+                    .map(MPath::try_from)
+                    .collect::<Result<Vec<_>, _>>()
+                    .map_err(|error| MononokeError::InvalidRequest(error.to_string()))?,
             ),
         };
         let (diff_files, diff_trees) = match params.ordered_params {
@@ -636,7 +642,7 @@ impl SourceControlServiceImpl {
                 let after = ordered_params
                     .after_path
                     .map(|after| {
-                        MononokePath::try_from(&after).map_err(|e| {
+                        MPath::try_from(&after).map_err(|e| {
                             errors::invalid_request(format!(
                                 "invalid continuation path '{}': {}",
                                 after, e
@@ -719,7 +725,7 @@ impl SourceControlServiceImpl {
                 prefixes
                     .into_iter()
                     .map(|prefix| {
-                        MononokePath::try_from(&prefix).map_err(|e| {
+                        MPath::try_from(&prefix).map_err(|e| {
                             errors::invalid_request(format!("invalid prefix '{}': {}", prefix, e))
                         })
                     })
@@ -729,7 +735,7 @@ impl SourceControlServiceImpl {
         };
         let ordering = match &params.after {
             Some(after) => {
-                let after = Some(MononokePath::try_from(after).map_err(|e| {
+                let after = Some(MPath::try_from(after).map_err(|e| {
                     errors::invalid_request(format!("invalid continuation path '{}': {}", after, e))
                 })?);
                 ChangesetFileOrdering::Ordered { after }

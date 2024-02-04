@@ -80,12 +80,10 @@ use crate::SeedHead;
 use crate::SegmentedChangelog;
 use crate::SegmentedChangelogRef;
 
-#[async_trait::async_trait]
 trait SegmentedChangelogExt {
     async fn head(&self, ctx: &CoreContext) -> Result<ChangesetId>;
 }
 
-#[async_trait::async_trait]
 impl<T> SegmentedChangelogExt for T
 where
     T: SegmentedChangelog,

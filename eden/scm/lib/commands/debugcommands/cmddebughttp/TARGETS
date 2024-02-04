@@ -1,0 +1,16 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "cmddebughttp",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    deps = [
+        "//eden/scm/lib/async-runtime:async-runtime",
+        "//eden/scm/lib/clidispatch:clidispatch",
+        "//eden/scm/lib/commands/cmdutil:cmdutil",
+        "//eden/scm/lib/edenapi:edenapi",
+        "//eden/scm/lib/repo:repo",
+    ],
+)

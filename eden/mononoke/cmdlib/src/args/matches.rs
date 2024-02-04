@@ -35,7 +35,6 @@ use blobstore_factory::PutBehaviour;
 use blobstore_factory::ScrubAction;
 use blobstore_factory::SrubWriteOnly;
 use blobstore_factory::ThrottleOptions;
-use cached_config::ConfigHandle;
 use cached_config::ConfigStore;
 use clap_old::ArgMatches;
 use clap_old::OsValues;
@@ -75,8 +74,6 @@ use sql_ext::facebook::PoolConfig;
 use sql_ext::facebook::ReadConnectionType;
 use tokio::runtime::Handle;
 use tokio::runtime::Runtime;
-use tunables::init_tunables_worker;
-use tunables::tunables;
 
 pub type Normal = rand_distr::Normal<f64>;
 use super::app::ArgType;
@@ -92,7 +89,6 @@ use super::app::CACHELIB_ATTEMPT_ZSTD_ARG;
 use super::app::CRYPTO_PATH_REGEX_ARG;
 use super::app::DERIVE_REMOTELY;
 use super::app::DERIVE_REMOTELY_TIER;
-use super::app::DISABLE_TUNABLES;
 use super::app::ENABLE_MCROUTER;
 use super::app::GET_MEAN_DELAY_SECS_ARG;
 use super::app::GET_STDDEV_DELAY_SECS_ARG;
@@ -126,8 +122,6 @@ use super::app::RENDEZVOUS_FREE_CONNECTIONS;
 use super::app::RUNTIME_THREADS;
 use super::app::SCUBA_DATASET_ARG;
 use super::app::SCUBA_LOG_FILE_ARG;
-use super::app::TUNABLES_CONFIG;
-use super::app::TUNABLES_LOCAL_PATH;
 use super::app::WARM_BOOKMARK_CACHE_SCUBA_DATASET_ARG;
 use super::app::WITH_DYNAMIC_OBSERVABILITY;
 use super::app::WITH_READONLY_STORAGE_ARG;
@@ -144,7 +138,6 @@ use crate::helpers::create_runtime;
 trait Drain =
     slog::Drain<Ok = (), Err = Never> + Send + Sync + UnwindSafe + RefUnwindSafe + 'static;
 
-const DEFAULT_TUNABLES_PATH: &str = "scm/mononoke/tunables/default";
 const CRYPTO_PROJECT: &str = "SCM";
 
 const CONFIGERATOR_POLL_INTERVAL: Duration = Duration::from_secs(1);
@@ -195,13 +188,6 @@ impl<'a> MononokeMatches<'a> {
 
         let runtime = init_runtime(&matches).context("Failed to create Tokio runtime")?;
 
-        init_tunables(
-            &matches,
-            &config_store,
-            logger.clone(),
-            runtime.handle().clone(),
-        )
-        .context("Failed to initialize tunables")?;
         init_just_knobs(
             &matches,
             &config_store,
@@ -926,35 +912,6 @@ fn parse_mononoke_megarepo_configs_options(
     }
 }
 
-fn init_tunables<'a>(
-    matches: &'a ArgMatches<'a>,
-    config_store: &'a ConfigStore,
-    logger: Logger,
-    handle: Handle,
-) -> Result<()> {
-    if matches.is_present(DISABLE_TUNABLES) {
-        debug!(logger, "Tunables are disabled");
-        return Ok(());
-    }
-
-    if let Some(tunables_local_path) = matches.value_of(TUNABLES_LOCAL_PATH) {
-        let value = std::fs::read_to_string(tunables_local_path)
-            .with_context(|| format!("failed to open tunables path {}", tunables_local_path))?;
-        let config_handle = ConfigHandle::from_json(&value)
-            .with_context(|| format!("failed to parse tunables at path {}", tunables_local_path))?;
-        return tunables::init_tunables(&logger, &config_handle);
-    }
-
-    let tunables_spec = matches
-        .value_of(TUNABLES_CONFIG)
-        .unwrap_or(DEFAULT_TUNABLES_PATH);
-
-    let config_handle =
-        config_store.get_config_handle(parse_config_spec_to_path(tunables_spec)?)?;
-
-    init_tunables_worker(logger, config_handle, handle)
-}
-
 fn init_just_knobs<'a>(
     matches: &'a ArgMatches<'a>,
     config_store: &'a ConfigStore,
@@ -1004,10 +961,6 @@ fn create_config_store<'a>(
     let local_configerator_path = matches.value_of(LOCAL_CONFIGERATOR_PATH_ARG);
     let crypto_regex = matches.values_of(CRYPTO_PATH_REGEX_ARG).map_or(
         vec![
-            (
-                "scm/mononoke/tunables/.*".to_string(),
-                CRYPTO_PROJECT.to_string(),
-            ),
             (
                 "scm/mononoke/repos/.*".to_string(),
                 CRYPTO_PROJECT.to_string(),

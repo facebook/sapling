@@ -40,6 +40,7 @@ pyhgtime = { version = "0.1.0", path = "modules/pyhgtime" }
 pyidentity = { version = "0.1.0", path = "modules/pyidentity" }
 pyindexedlog = { version = "0.1.0", path = "modules/pyindexedlog" }
 pyio = { version = "0.1.0", path = "modules/pyio" }
+pyjournal = { version = "0.1.0", path = "modules/pyjournal" }
 pylinelog = { version = "0.1.0", path = "modules/pylinelog" }
 pylock = { version = "0.1.0", path = "modules/pylock" }
 pylz4 = { version = "0.1.0", path = "modules/pylz4" }

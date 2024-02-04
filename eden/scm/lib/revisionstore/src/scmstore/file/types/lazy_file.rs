@@ -53,14 +53,12 @@ impl LazyFile {
     pub(crate) fn aux_data(&mut self) -> Result<FileAuxData> {
         // TODO(meyer): Implement the rest of the aux data fields
         let aux_data = match self {
-            LazyFile::Lfs(content, _) => FileAuxData::from_content(&content),
-            LazyFile::EdenApi(entry) if entry.aux_data.is_some() => entry
-                .aux_data()
-                .cloned()
-                .ok_or_else(|| {
+            LazyFile::Lfs(content, _) => FileAuxData::from_content(content),
+            LazyFile::EdenApi(entry) if entry.aux_data.is_some() => {
+                entry.aux_data().cloned().ok_or_else(|| {
                     anyhow::anyhow!("Invalid EdenAPI entry in LazyFile. Aux data is empty")
                 })?
-                .into(),
+            }
             _ => {
                 let content = self.file_content()?;
                 FileAuxData::from_content(&content)

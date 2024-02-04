@@ -1,0 +1,20 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "cmddebugsegmentclone",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "//eden/scm/lib/async-runtime:async-runtime",
+        "//eden/scm/lib/clidispatch:clidispatch",
+        "//eden/scm/lib/cliparser:cliparser",
+        "//eden/scm/lib/commands/cmdutil:cmdutil",
+        "//eden/scm/lib/dag:dag",
+        "//eden/scm/lib/edenapi:edenapi",
+        "//eden/scm/lib/identity:identity",
+        "//eden/scm/lib/progress/model:progress-model",
+    ],
+)

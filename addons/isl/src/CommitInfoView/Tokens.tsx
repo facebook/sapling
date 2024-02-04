@@ -11,16 +11,30 @@ import {Icon} from 'shared/Icon';
 export function TokensList({
   tokens,
   onClickX,
+  onClickToken,
 }: {
   tokens: Array<string>;
   onClickX?: (token: string) => unknown;
+  onClickToken?: (token: string) => unknown;
 }) {
+  const hasOnClick = onClickToken != null;
   return (
     <>
       {tokens
         .filter(token => token != '')
         .map((token, i) => (
-          <span key={i} className="token">
+          <span
+            key={i}
+            className={'token' + (hasOnClick ? ' clickable' : '')}
+            onClick={
+              hasOnClick
+                ? e => {
+                    onClickToken(token);
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }
+                : undefined
+            }>
             {token}
             {onClickX == null ? null : (
               <VSCodeButton appearance="icon" onClick={() => onClickX?.(token)}>

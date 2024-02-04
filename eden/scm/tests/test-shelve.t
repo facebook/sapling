@@ -1304,3 +1304,23 @@
   unshelving change 'default'
   $ cat file2
   2
+
+# Test unshelve new added files in a sub-directory (non-reporoot)
+
+  $ newclientrepo
+  $ mkdir foo && cd foo
+  $ touch a
+  $ hg ci -Aqm a
+  $ touch b
+  $ hg add b
+  $ hg shelve
+  shelved as default
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ touch b
+  $ hg st
+  ? b
+  $ hg unshelve
+  unshelving change 'default'
+  $ hg st
+  A b
+  ? b.orig

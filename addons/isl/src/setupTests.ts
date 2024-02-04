@@ -15,7 +15,8 @@ import '@testing-library/jest-dom';
 // console.log still works for debugging tests.
 jest.mock('./logger');
 
-jest.mock('./declineHotReload');
+// jest doesn't have the stylex compilation step, let's just mock it
+jest.mock('@stylexjs/stylex');
 
 import {configure} from '@testing-library/react';
 

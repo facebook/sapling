@@ -57,8 +57,7 @@ pub fn get_full_text(base_text: &[u8], deltas: &Vec<&[u8]>) -> Result<Vec<u8>, &
         }
 
         let outlen = outlen as usize;
-        let mut result: Vec<u8> = Vec::with_capacity(outlen);
-        result.set_len(outlen);
+        let mut result: Vec<u8> = vec![0; outlen];
         if mpatch_apply(
             result.as_mut_ptr() as *mut c_char,
             base_text.as_ptr() as *const c_char,

@@ -120,17 +120,8 @@
   $ mononoke_newadmin git-bundle create from-repo -R repo --output-location "$BUNDLE_PATH" --have-heads da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c
 # Ensure that Git considers this a valid bundle
   $ cd $GIT_REPO
-  $ git bundle verify $BUNDLE_PATH
+  $ git bundle verify -q $BUNDLE_PATH
   $TESTTMP/repo_bundle.bundle is okay
-  The bundle contains these 6 refs:
-  * (glob)
-  * (glob)
-  * (glob)
-  * (glob)
-  * (glob)
-  * (glob)
-  The bundle requires this ref:
-  e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 
 
 # Create a new empty folder for containing the repo
   $ cd $TESTTMP/git_client_repo  

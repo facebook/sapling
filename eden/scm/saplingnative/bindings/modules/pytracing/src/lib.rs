@@ -210,15 +210,15 @@ fn getattr_opt(py: Python, obj: &PyObject, name: &str) -> Option<PyObject> {
 }
 
 fn tostr(py: Python, obj: PyObject) -> String {
-    obj.str(py)
-        .map(|s| s.to_string_lossy(py).to_string())
-        .unwrap_or_else(|_| "<missing>".to_string())
+    obj.str(py).map_or_else(
+        |_| "<missing>".to_string(),
+        |s| s.to_string_lossy(py).to_string(),
+    )
 }
 
 fn tostr_opt(py: Python, obj: PyObject) -> Option<String> {
     obj.str(py)
-        .map(|s| Some(s.to_string_lossy(py).to_string()))
-        .unwrap_or_else(|_| None)
+        .map_or_else(|_| None, |s| Some(s.to_string_lossy(py).to_string()))
 }
 
 // Decorator to set "meta" attribute.
@@ -385,7 +385,7 @@ impl wrapfunc {
         // journal, copytrace, clienttelemetry, sparse extensions.  By showing
         // `journal.runcommand`, `copytrace._runcommand` instead of
         // `runcommand`, it's easier to tell what's going on.
-        if let Some(module_last_name) = module.rsplit(".").nth(0) {
+        if let Some(module_last_name) = module.rsplit('.').nth(0) {
             // Only keep the last part of module name. There is limited space
             // in a span, and common prefix like `sapling` is not
             // very interesting.
@@ -659,7 +659,7 @@ py_class!(pub class TracingSpan |py| {
     /// Record a value. The field name must be predefined with the callsite.
     def record(&self, name: &str, value: FieldValue) -> PyResult<PyNone> {
         if let Some(value) = value.to_opt_tracing_value() {
-            self.span(py).borrow().record(name, &value.as_ref());
+            self.span(py).borrow().record(name, value.as_ref());
         }
         Ok(PyNone)
     }

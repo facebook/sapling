@@ -44,6 +44,8 @@ fn main() {
         conf.base_path(base_path);
 
         conf.types_crate("rate_limiting_config__types");
+        conf.clients_crate("rate_limiting_config__clients");
+        conf.services_crate("rate_limiting_config__services");
 
         let options = "deprecated_default_enum_min_i32,serde";
         if !options.is_empty() {

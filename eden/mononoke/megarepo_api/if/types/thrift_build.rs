@@ -16,8 +16,8 @@ fn main() {
     fs::write(
         out_dir.join("cratemap"),
         "megarepo_types_thrift crate
-mononoke_types_thrift mononoke_types_thrift
-source_control source_control",
+mononoke_types_thrift mononoke_types_thrift //eden/mononoke/mononoke_types/if:mononoke_types-thrift-rust
+source_control source_control //eden/mononoke/scs/if:source_control-rust",
     ).expect("Failed to write cratemap");
 
     let conf = {
@@ -46,6 +46,8 @@ source_control source_control",
         conf.base_path(base_path);
 
         conf.types_crate("megarepo_types-thrift__types");
+        conf.clients_crate("megarepo_types-thrift__clients");
+        conf.services_crate("megarepo_types-thrift__services");
 
         let options = "";
         if !options.is_empty() {

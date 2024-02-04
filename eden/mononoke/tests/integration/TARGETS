@@ -89,6 +89,8 @@ dott_test(
         "test-newadmin-*.t",
     ]),
     deps = [
+        # TODO(T175880214): remove dependency to admin
+        "//eden/mononoke:admin",
         "//eden/mononoke:backfill_derived_data",
         "//eden/mononoke:blobimport",
         "//eden/mononoke/git/gitimport:gitimport",
@@ -121,19 +123,6 @@ dott_test(
         "//eden/mononoke:mononoke",
         "//eden/mononoke/tools/admin:newadmin",
         "//eden/mononoke/tools/testtool:testtool",
-    ],
-)
-
-dott_test(
-    name = "admin-mysql",
-    dott_files = [
-        "test-mononoke-admin.t",
-    ],
-    use_mysql = True,
-    deps = [
-        "//eden/mononoke:admin",
-        "//eden/mononoke:blobimport",
-        "//eden/mononoke:blobstore_healer",
     ],
 )
 

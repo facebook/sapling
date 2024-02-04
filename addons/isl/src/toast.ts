@@ -6,21 +6,21 @@
  */
 
 import type {ReactNode} from 'react';
-import type {SetterOrUpdater} from 'recoil';
 
 import {t} from './i18n';
+import {atomWithOnChange, writeAtom} from './jotaiUtils';
 import platform from './platform';
 import {List} from 'immutable';
-import {DefaultValue, atom, useSetRecoilState} from 'recoil';
+import {atom, useSetAtom} from 'jotai';
 
 export function useShowToast(): UseShowToast {
-  const setQueue = useSetRecoilState(toastQueueAtom);
+  const setQueue = useSetAtom(toastQueueAtom);
   return new UseShowToast(setQueue);
 }
 
 /** Features related to showing toasts. */
 class UseShowToast {
-  constructor(private setQueue: SetterOrUpdater<ToastQueue>) {}
+  constructor(private setQueue: (cb: (t: ToastQueue) => ToastQueue) => unknown) {}
 
   /**
    * Push a toast. It will be displayed immediately and auto hides after a timeout.
@@ -71,33 +71,17 @@ const DEFAULT_DURATION_MS = 2000;
 
 type ToastQueue = List<ToastProps>;
 
-export const toastQueueAtom = atom<ToastQueue>({
-  key: 'toastQueueAtom',
-  default: List<ToastProps>(),
-  effects: [
-    // Clean up expired toasts after the first `disapparAt`.
-    ({onSet, setSelf}) => {
-      onSet(newValue => {
-        if (newValue instanceof DefaultValue) {
-          return;
-        }
-        const firstDisapparAt = newValue.reduce(
-          (a, t) => Math.min(a, t.disapparAt.getTime()),
-          Infinity,
-        );
-        if (firstDisapparAt === Infinity) {
-          return;
-        }
-        const interval = Math.max(firstDisapparAt - Date.now(), 1);
-        const timeout = setTimeout(() => {
-          setSelf(oldValue =>
-            oldValue instanceof DefaultValue ? oldValue : removeExpired(oldValue),
-          );
-        }, interval);
-        return () => clearTimeout(timeout);
-      });
-    },
-  ],
+const underlyingToastQueueAtom = atom<ToastQueue>(List<ToastProps>());
+export const toastQueueAtom = atomWithOnChange(underlyingToastQueueAtom, newValue => {
+  const firstDisapparAt = newValue.reduce((a, t) => Math.min(a, t.disapparAt.getTime()), Infinity);
+  if (firstDisapparAt === Infinity) {
+    return;
+  }
+  const interval = Math.max(firstDisapparAt - Date.now(), 1);
+  const timeout = setTimeout(() => {
+    writeAtom(underlyingToastQueueAtom, oldValue => removeExpired(oldValue));
+  }, interval);
+  return () => clearTimeout(timeout);
 });
 
 function removeExpired(queue: ToastQueue) {

@@ -10,6 +10,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use async_runtime::block_unless_interrupted as block_on;
+use commits::DagCommits;
 use dag::Group;
 use dag::VertexListWithOptions;
 use dag::VertexName;
@@ -17,7 +18,6 @@ use edenapi::configmodel::Config;
 use edenapi::configmodel::ConfigExt;
 use edenapi::types::CommitGraphSegments;
 use edenapi::EdenApi;
-use hgcommits::DagCommits;
 use metalog::CommitOptions;
 use metalog::MetaLog;
 use tracing::instrument;
@@ -75,7 +75,7 @@ pub fn clone(
         block_on(commits.import_clone_data(clone_data))??;
     } else {
         // All lazy heads should be in the MASTER group.
-        let mut head_opts =
+        let head_opts =
             VertexListWithOptions::from(head_vertexes).with_highest_group(Group::MASTER);
         block_on(commits.import_pull_data(clone_data, &head_opts))??;
     }

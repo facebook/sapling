@@ -26,6 +26,8 @@ from __future__ import absolute_import
 import collections
 import errno
 import itertools
+
+import os
 import time
 from typing import Optional
 
@@ -730,7 +732,10 @@ def mergefiles(ui, repo, wctx, shelvectx) -> None:
         # revert will overwrite unknown files, so move them out of the way
         for file in repo.status(unknown=True).unknown:
             if file in files:
-                util.rename(file, scmutil.origpath(ui, repo, file))
+                util.rename(
+                    os.path.join(repo.root, file),
+                    os.path.join(repo.root, scmutil.origpath(ui, repo, file)),
+                )
         ui.pushbuffer(True)
         cmdutil.revert(
             ui,

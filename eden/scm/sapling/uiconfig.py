@@ -47,15 +47,11 @@ class uiconfig:
         if src:
             self._rcfg = src._rcfg.clone()
             self._unserializable = src._unserializable.copy()
-            self._pinnedconfigs = src._pinnedconfigs.copy()
             self._knownconfig = src._knownconfig
         else:
             self._rcfg = rcfg or configloader.config()
             # map from IDs to unserializable Python objects.
             self._unserializable = {}
-            # config "pinned" that cannot be loaded from files.
-            # ex. --config flags
-            self._pinnedconfigs = set()
             self._knownconfig = configitems.coreitems
 
         self.fixconfig()
@@ -78,7 +74,7 @@ class uiconfig:
 
     def reload(self, ui, repopath):
         # The actual config expects the non-shared root directory.
-        self._rcfg.reload(repopath, list(self._pinnedconfigs))
+        self._rcfg.reload(repopath)
 
         # fixconfig expects the non-shard repo root, without the .hg.
         self.fixconfig(root=repopath)
@@ -101,7 +97,6 @@ class uiconfig:
             source,
             sections,
             remap and remap.items(),
-            list(self._pinnedconfigs),
         )
         if errors:
             raise error.ParseError("\n\n".join(errors))
@@ -169,7 +164,6 @@ class uiconfig:
             self._unserializable[replacement] = value
             value = replacement
 
-        self._pinnedconfigs.add((section, name))
         self._rcfg.set(section, name, value, source or "ui.setconfig")
         self.fixconfig(section=section)
 
@@ -475,7 +469,6 @@ class uiconfig:
         {(section, name) : value}"""
         backup = self._rcfg.clone()
         unserializablebackup = dict(self._unserializable)
-        pinnedbackup = set(self._pinnedconfigs)
         try:
             for (section, name), value in overrides.items():
                 self.setconfig(section, name, value, source)
@@ -483,7 +476,6 @@ class uiconfig:
         finally:
             self._rcfg = backup
             self._unserializable = unserializablebackup
-            self._pinnedconfigs = pinnedbackup
 
             # just restoring ui.quiet config to the previous value is not enough
             # as it does not update ui.quiet class member

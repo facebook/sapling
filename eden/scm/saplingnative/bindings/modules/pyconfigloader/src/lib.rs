@@ -56,7 +56,6 @@ py_class!(pub class config |py| {
         source: String,
         sections: Option<Vec<String>>,
         remap: Option<Vec<(String, String)>>,
-        readonly_items: Option<Vec<(String, String)>>
     ) -> PyResult<Vec<String>> {
         let mut cfg = self.cfg(py).borrow_mut();
 
@@ -67,9 +66,6 @@ py_class!(pub class config |py| {
         if let Some(remap) = remap {
             let map = remap.into_iter().collect();
             opts = opts.remap_sections(map);
-        }
-        if let Some(readonly_items) = readonly_items {
-            opts = opts.readonly_items(readonly_items);
         }
 
         let errors = cfg.load_path(path, &opts);
@@ -146,18 +142,17 @@ py_class!(pub class config |py| {
     def load(repopath: Option<PyPathBuf>) -> PyResult<Self> {
         let repopath = repopath.as_ref().map(|p| p.as_path());
         let mut cfg = ConfigSet::new();
-        cfg.load::<String, String>(repopath, None).map_pyerr(py)?;
+        cfg.load(repopath).map_pyerr(py)?;
         Self::create_instance(py, RefCell::new(cfg))
     }
 
     def reload(
         &self,
         repopath: Option<PyPathBuf>,
-        readonly_items: Option<Vec<(String, String)>>
     ) -> PyResult<PyNone> {
         let repopath = repopath.as_ref().map(|p| p.as_path());
         let mut cfg = self.cfg(py).borrow_mut();
-        cfg.load(repopath, readonly_items).map_pyerr(py)?;
+        cfg.load(repopath).map_pyerr(py)?;
         Ok(PyNone)
     }
 

@@ -59,8 +59,6 @@ mkdir -p "${LOCAL_CONFIGERATOR_PATH}"
 
 export ACL_FILE="$TESTTMP/acls.json"
 
-# The path for tunables. Do not write directly to this! Use merge_tunables instead.
-export MONONOKE_TUNABLES_PATH="${LOCAL_CONFIGERATOR_PATH}/mononoke_tunables.json"
 export MONONOKE_JUST_KNOBS_OVERRIDES_PATH="${LOCAL_CONFIGERATOR_PATH}/just_knobs.json"
 cp "${TEST_FIXTURES}/just_knobs.json" "$MONONOKE_JUST_KNOBS_OVERRIDES_PATH"
 
@@ -80,7 +78,6 @@ fi
 
 COMMON_ARGS=(
   --mysql-master-only
-  --tunables-config "$(get_configerator_relative_path "${MONONOKE_TUNABLES_PATH}")"
   --just-knobs-config-path "$(get_configerator_relative_path "${MONONOKE_JUST_KNOBS_OVERRIDES_PATH}")"
   --local-configerator-path "${LOCAL_CONFIGERATOR_PATH}"
   --log-exclude-tag "futures_watchdog"
@@ -2094,7 +2091,7 @@ function git() {
   GIT_AUTHOR_DATE="${GIT_AUTHOR_DATE:-$date}" \
   GIT_AUTHOR_NAME="$name" \
   GIT_AUTHOR_EMAIL="$email" \
-  command git "$@"
+  command git -c protocol.file.allow=always "$@"
 }
 
 function git_set_only_author() {
@@ -2105,7 +2102,7 @@ function git_set_only_author() {
   GIT_AUTHOR_DATE="$date" \
   GIT_AUTHOR_NAME="$name" \
   GIT_AUTHOR_EMAIL="$email" \
-  command git "$@"
+  command git -c protocol.file.allow=always "$@"
 }
 
 function summarize_scuba_json() {
@@ -2301,31 +2298,11 @@ function sqlite3() {
   command sqlite3 -cmd '.timeout 1000' "$@"
 }
 
-function merge_tunables() {
-  local new
-  new="$(jq -s '.[0] * .[1]' "$MONONOKE_TUNABLES_PATH" -)"
-  printf "%s" "$new" > "$MONONOKE_TUNABLES_PATH"
-  # This may fail if Mononoke is not started. No big deal.
-  force_update_configerator >/dev/null 2>&1 || true
-}
-
 function merge_just_knobs() {
   local new
   new="$(jq -s '.[0] * .[1]' "$MONONOKE_JUST_KNOBS_OVERRIDES_PATH" -)"
   printf "%s" "$new" > "$MONONOKE_JUST_KNOBS_OVERRIDES_PATH"
 }
-
-function init_tunables() {
-  if [[ ! -f "$MONONOKE_TUNABLES_PATH" ]]; then
-    cat >> "$MONONOKE_TUNABLES_PATH" <<EOF
-{}
-EOF
-  fi
-}
-
-# Always initialize tunables, since they're required by our binaries to start
-# unless explicitly disabled (but we don't do that in tests).
-init_tunables
 
 function packer() {
   "$MONONOKE_PACKER" \
@@ -2382,7 +2359,7 @@ function derived_data_client() {
   THRIFT_TLS_CL_KEY_PATH="$TEST_CERTDIR/client0.key" \
   THRIFT_TLS_CL_CA_PATH="$TEST_CERTDIR/root-ca.crt" \
   GLOG_minloglevel=5 "$DERIVED_DATA_CLIENT" \
-  -h "localhost:$DDS_PORT" \
+  --host "localhost:$DDS_PORT" \
   "$@"
 }
 

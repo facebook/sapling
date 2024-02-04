@@ -176,11 +176,15 @@ impl ClientRequestInfo {
     }
 
     pub(crate) fn generate_correlator() -> String {
-        thread_rng()
-            .sample_iter(Alphanumeric)
-            .take(16)
-            .map(char::from)
-            .collect()
+        if std::env::var_os("TESTTMP").is_some() {
+            "test-correlator".to_string()
+        } else {
+            thread_rng()
+                .sample_iter(Alphanumeric)
+                .take(16)
+                .map(char::from)
+                .collect()
+        }
     }
 }
 

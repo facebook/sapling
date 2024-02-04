@@ -52,7 +52,7 @@ pub fn atomic_write_symlink(path: &Path, data: &[u8]) -> io::Result<()> {
     let temp_name = || -> PathBuf { append_name(&format!(".{:x}.atomic", rand::random::<u32>())) };
 
     // Protect racy write operations by a lock.
-    let _lock = crate::lock::PathLock::exclusive(&append_name(".lock"))?;
+    let _lock = crate::lock::PathLock::exclusive(append_name(".lock"))?;
 
     // Pick a name. Open the file.
     let (real_path, mut file) = loop {
@@ -274,6 +274,8 @@ pub fn remove_file<P: AsRef<Path>>(path: P) -> io::Result<()> {
     } else {
         Cow::Borrowed(path)
     };
+    // This borrow is not needless when `#[cfg(windows)]`
+    #[allow(clippy::needless_borrows_for_generic_args)]
     let result = fs_remove_file(&path);
     #[cfg(windows)]
     match &result {

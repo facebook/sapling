@@ -58,11 +58,11 @@ class DiskUsageTest(DoctorTestBase):
         self._mock_disk_usage(blocks=100000000, avail=500000)
         problems = self._check_disk_usage()
 
-        self.assertEqual(
+        self.assertRegex(
             problems[0].description(),
-            "/ has only 512000000 bytes available. "
+            r"/ has only 512000000 bytes available\. "
             "EdenFS lazily loads your files and needs enough disk "
-            "space to store these files when loaded.",
+            r"space to store these files when loaded.*",
         )
         self.assertEqual(problems[0].severity(), doctor.ProblemSeverity.ERROR)
 
@@ -70,11 +70,11 @@ class DiskUsageTest(DoctorTestBase):
         self._mock_disk_usage(blocks=100000000, avail=2000000)
         problems = self._check_disk_usage()
 
-        self.assertEqual(
+        self.assertRegex(
             problems[0].description(),
-            "/ is 98.00% full. "
+            r"/ is 98\.00% full\. "
             "EdenFS lazily loads your files and needs enough disk "
-            "space to store these files when loaded.",
+            r"space to store these files when loaded.*",
         )
         self.assertEqual(problems[0].severity(), doctor.ProblemSeverity.ADVICE)
 
@@ -82,11 +82,10 @@ class DiskUsageTest(DoctorTestBase):
         self._mock_disk_usage(blocks=800000, avail=500000)
         problems = self._check_disk_usage()
 
-        self.assertEqual(
+        self.assertRegex(
             problems[0].description(),
-            "/ has only 512000000 bytes available. "
-            "EdenFS lazily loads your files and needs enough disk "
-            "space to store these files when loaded.",
+            r"/ has only 512000000 bytes available\. EdenFS lazily loads your "
+            r"files and needs enough disk space to store these files when loaded.*",
         )
         self.assertEqual(problems[0].severity(), doctor.ProblemSeverity.ERROR)
 
@@ -104,12 +103,12 @@ class DiskUsageTest(DoctorTestBase):
             },
         )
         problems = self._check_disk_usage(instance=instance)
-        self.assertEqual(
+        self.assertRegex(
             problems[0].description(),
-            "/ has only 512000000 bytes available. "
+            r"/ has only 512000000 bytes available\. "
             "EdenFS lazily loads your files and needs enough disk "
-            "space to store these files when loaded. Ask your administrator "
-            "for help.",
+            r"space to store these files when loaded.*Ask your administrator "
+            r"for help.*",
         )
 
         self._mock_disk_usage(blocks=100000000, avail=2000000)
@@ -120,10 +119,10 @@ class DiskUsageTest(DoctorTestBase):
             },
         )
         problems = self._check_disk_usage(instance=instance)
-        self.assertEqual(
+        self.assertRegex(
             problems[0].description(),
-            "/ is 98.00% full. "
+            r"/ is 98\.00% full\. "
             "EdenFS lazily loads your files and needs enough disk "
-            "space to store these files when loaded. Ask your administrator "
-            "for help.",
+            r"space to store these files when loaded.*Ask your administrator "
+            r"for help.*",
         )

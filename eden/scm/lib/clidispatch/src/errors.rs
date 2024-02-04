@@ -8,6 +8,7 @@
 use std::borrow::Cow;
 
 use configloader::config::ConfigSet;
+use configmodel::Config;
 use configmodel::ConfigExt;
 use thiserror::Error;
 #[cfg(feature = "eden")]
@@ -124,7 +125,7 @@ pub fn upload_traceback(err: &anyhow::Error, start_time_epoch_ms: u64) {
 
 /// Optionally transform an error into something more friendly to the user.
 pub fn triage_error(
-    config: &ConfigSet,
+    config: &dyn Config,
     cmd_err: anyhow::Error,
     command_name: Option<&str>,
 ) -> anyhow::Error {

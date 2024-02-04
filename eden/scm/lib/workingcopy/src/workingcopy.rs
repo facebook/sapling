@@ -44,6 +44,7 @@ use treestate::filestate::StateFlags;
 use treestate::serialization::Serializable;
 use treestate::tree::VisitorResult;
 use treestate::treestate::TreeState;
+use types::hgid::NULL_ID;
 use types::repo::StorageFormat;
 use types::HgId;
 use types::RepoPath;
@@ -262,6 +263,11 @@ impl WorkingCopy {
         self.treestate.lock().parents().collect()
     }
 
+    /// Return the first working copy parent, or the null commmit if there are no parents.
+    pub fn first_parent(&self) -> Result<HgId> {
+        Ok(self.parents()?.into_iter().next().unwrap_or(NULL_ID))
+    }
+
     pub fn filestore(&self) -> ArcFileStore {
         self.filestore.clone()
     }
@@ -388,6 +394,9 @@ impl WorkingCopy {
         config: &dyn Config,
         lgr: &TermLogger,
     ) -> Result<Status> {
+        let span = tracing::info_span!("status", status_len = tracing::field::Empty);
+        let _enter = span.enter();
+
         let added_files = self.added_files()?;
 
         let manifests =
@@ -509,7 +518,11 @@ impl WorkingCopy {
                 self.filter_accidential_symlink_changes(status_builder, p1_manifest)?;
         }
 
-        Ok(status_builder.build())
+        let status = status_builder.build();
+
+        span.record("status_len", status.len());
+
+        Ok(status)
     }
 
     // Filter out modified symlinks where it appears the symlink has
@@ -630,7 +643,7 @@ impl<'a> LockedWorkingCopy<'a> {
 
     pub fn set_parents(&self, parents: Vec<HgId>, parent_tree_hash: Option<HgId>) -> Result<()> {
         let p1 = parents
-            .get(0)
+            .first()
             .context("At least one parent is required for setting parents")?
             .clone();
         let p2 = parents.get(1).copied();

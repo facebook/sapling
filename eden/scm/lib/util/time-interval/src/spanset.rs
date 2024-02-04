@@ -33,11 +33,7 @@ pub struct SpanSet {
 
 impl PartialOrd for Span {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(match self.high.cmp(&other.high) {
-            Less => Less,
-            Greater => Greater,
-            Equal => self.low.cmp(&other.low),
-        })
+        Some(self.cmp(other))
     }
 }
 

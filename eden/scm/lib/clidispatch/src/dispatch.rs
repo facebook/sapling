@@ -7,6 +7,7 @@
 
 use std::env;
 use std::path::Path;
+use std::sync::Arc;
 
 use anyhow::Error;
 use cliparser::alias::expand_aliases;
@@ -26,9 +27,9 @@ use crate::command::CommandFunc;
 use crate::command::CommandTable;
 use crate::errors;
 use crate::errors::UnknownCommand;
-use crate::fallback;
 use crate::global_flags::HgGlobalOpts;
 use crate::io::IO;
+use crate::util::pinned_configs;
 use crate::OptionalRepo;
 
 type Result<T, E = Error> = std::result::Result<T, E>;
@@ -43,54 +44,6 @@ pub fn args() -> Result<Vec<String>> {
         .collect()
 }
 
-fn add_global_flag_derived_configs(repo: &mut OptionalRepo, global_opts: HgGlobalOpts) {
-    if let OptionalRepo::Some(_) = repo {
-        if global_opts.hidden {
-            let config = repo.config_mut();
-            config.set("visibility", "all-heads", Some("true"), &"--hidden".into());
-        }
-    }
-
-    let config = repo.config_mut();
-    if global_opts.trace || global_opts.traceback {
-        config.set("ui", "traceback", Some("on"), &"--traceback".into());
-    }
-    if global_opts.profile {
-        config.set("profiling", "enabled", Some("true"), &"--profile".into());
-    }
-    if !global_opts.color.is_empty() {
-        config.set(
-            "ui",
-            "color",
-            Some(global_opts.color.as_str()),
-            &"--color".into(),
-        );
-    }
-    if global_opts.verbose || global_opts.debug || global_opts.quiet {
-        config.set(
-            "ui",
-            "verbose",
-            Some(global_opts.verbose.to_string().as_str()),
-            &"--verbose".into(),
-        );
-        config.set(
-            "ui",
-            "debug",
-            Some(global_opts.debug.to_string().as_str()),
-            &"--debug".into(),
-        );
-        config.set(
-            "ui",
-            "quiet",
-            Some(global_opts.quiet.to_string().as_str()),
-            &"--quiet".into(),
-        );
-    }
-    if global_opts.noninteractive {
-        config.set("ui", "interactive", Some("off"), &"-y".into());
-    }
-}
-
 fn last_chance_to_abort(early: &HgGlobalOpts, full: &HgGlobalOpts) -> Result<()> {
     abort_if!(
         full.profile,
@@ -98,7 +51,7 @@ fn last_chance_to_abort(early: &HgGlobalOpts, full: &HgGlobalOpts) -> Result<()>
     );
 
     if full.help {
-        fallback!("--help option requested");
+        return Err(errors::UnknownCommand("--help".to_string()).into());
     }
 
     // These are security sensitive options, so perform extra checks.
@@ -151,7 +104,7 @@ fn parse(definition: &CommandDefinition, args: &Vec<String>) -> Result<ParseOutp
     let flags = definition
         .flags()
         .into_iter()
-        .chain(HgGlobalOpts::flags().into_iter())
+        .chain(HgGlobalOpts::flags())
         .collect();
     ParseOptions::new()
         .error_on_unknown_opts(true)
@@ -181,7 +134,7 @@ fn initialize_blackbox(optional_repo: &OptionalRepo) -> Result<()> {
     Ok(())
 }
 
-fn initialize_indexedlog(config: &ConfigSet) -> Result<()> {
+fn initialize_indexedlog(config: &dyn Config) -> Result<()> {
     indexedlog::config::configure(config)?;
     Ok(())
 }
@@ -240,9 +193,7 @@ impl Dispatcher {
             Err(err) => {
                 // If we failed to load the repo, make one last ditch effort to load a repo-less config.
                 // This might allow us to run the network doctor even if this repo's dynamic config is not loadable.
-                if let Ok(config) =
-                    configloader::hg::load(None, &global_opts.config, &global_opts.configfile)
-                {
+                if let Ok(config) = configloader::hg::load(None, &pinned_configs(&global_opts)) {
                     Err(errors::triage_error(&config, err, None))
                 } else {
                     Err(err)
@@ -256,7 +207,7 @@ impl Dispatcher {
     }
 
     /// Get a reference to the parsed config.
-    pub fn config(&self) -> &ConfigSet {
+    pub fn config(&self) -> &Arc<dyn Config> {
         self.optional_repo.config()
     }
 
@@ -276,14 +227,14 @@ impl Dispatcher {
     /// where config is not influenced by the current repo.
     pub fn convert_to_repoless_config(&mut self) -> Result<()> {
         if matches!(self.optional_repo, OptionalRepo::Some(_)) {
-            self.optional_repo = OptionalRepo::None(self.load_repoless_config()?)
+            self.optional_repo = OptionalRepo::None(Arc::new(self.load_repoless_config()?));
         }
 
         Ok(())
     }
 
     fn load_repoless_config(&self) -> Result<ConfigSet> {
-        configloader::hg::load(None, &self.global_opts.config, &self.global_opts.configfile)
+        configloader::hg::load(None, &pinned_configs(&self.global_opts))
     }
 
     fn default_command(&self) -> Result<String, UnknownCommand> {
@@ -337,7 +288,7 @@ impl Dispatcher {
             }
         };
 
-        let first_arg = if let Some(first_arg) = self.early_result.args.get(0) {
+        let first_arg = if let Some(first_arg) = self.early_result.args.first() {
             first_arg.clone()
         } else {
             let default_command = self.default_command()?;
@@ -431,21 +382,38 @@ impl Dispatcher {
         sampling::append_sample("command_info", "option_values", &opt_values);
 
         let res = || -> Result<u8> {
-            add_global_flag_derived_configs(&mut self.optional_repo, parsed.clone().try_into()?);
+            // This may trigger Python fallback if there are Python hooks.
+            let hooks = crate::hooks::Hooks::new(self.config(), io, handler)?;
+
             tracing::debug!("command handled by a Rust function");
-            match handler.func() {
+
+            // Convert to repoless before running the "pre" hook. For repoless commands,
+            // we don't want to run hooks from root of incidentally containing repo.
+            if matches!(handler.func(), CommandFunc::NoRepo(_)) {
+                self.convert_to_repoless_config()?;
+            }
+
+            hooks.run_pre(self.repo().map(|r| r.path()), &self.args[1..])?;
+
+            let res = match handler.func() {
                 CommandFunc::Repo(f) => f(parsed, io, self.repo_mut()?),
                 CommandFunc::OptionalRepo(f) => f(parsed, io, &mut self.optional_repo),
-                CommandFunc::NoRepo(f) => {
-                    self.convert_to_repoless_config()?;
-                    f(parsed, io, self.optional_repo.config_mut())
-                }
+                CommandFunc::NoRepo(f) => f(parsed, io, self.optional_repo.config()),
                 CommandFunc::WorkingCopy(f) => {
                     let repo = self.repo_mut()?;
                     let mut wc = repo.working_copy()?;
                     f(parsed, io, repo, &mut wc)
                 }
+            };
+
+            match &res {
+                Ok(result_code) => {
+                    hooks.run_post(self.repo().map(|r| r.path()), &self.args[1..], *result_code)?
+                }
+                Err(_) => hooks.run_fail(self.repo().map(|r| r.path()), &self.args[1..])?,
             }
+
+            res
         }();
 
         (Some(handler), res)

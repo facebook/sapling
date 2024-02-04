@@ -27,15 +27,14 @@ macro_rules! nodeinfo_type {
             }
         }
 
-        impl Into<$crate::NodeInfo> for $typename {
-            fn into(self) -> $crate::NodeInfo {
-                $crate::NodeInfo {
-                    parents: self.parents,
-                    linknode: self.linknode,
+        impl From<$typename> for $crate::NodeInfo {
+            fn from(this: $typename) -> Self {
+                Self {
+                    parents: this.parents,
+                    linknode: this.linknode,
                 }
             }
         }
-
         impl SerdeWith<$typename> for $crate::NodeInfo {
             fn serialize_with<S: ::serde::Serializer>(
                 &self,

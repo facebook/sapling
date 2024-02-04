@@ -8,7 +8,6 @@
 import type {Disposable} from './types';
 import type {VSCodeAPI} from './vscodeSingleton';
 
-import {declineHotReload} from './declineHotReload';
 import {logger} from './logger';
 import {initialParams} from './urlParams';
 import vscode from './vscodeSingleton';
@@ -199,7 +198,7 @@ const messageBus: MessageBus =
     ? new VSCodeMessageBus(vscode)
     : new LocalWebSocketEventBus(
         process.env.NODE_ENV === 'development'
-          ? // in dev mode, Create-React-App hosts our files for hot-reloading.
+          ? // in dev mode, Vite hosts our files for hot-reloading.
             // This means we can't host the ws server on the same port as the page.
             'localhost:3001'
           : // in production, we serve both the static files and ws from the same port
@@ -217,6 +216,8 @@ declare global {
 
 // We can't allow this file to hot reload, since it creates global state.
 // If we did, we'd accumulate global `messageBus`es, which is buggy.
-declineHotReload();
+if (import.meta.hot) {
+  import.meta.hot?.invalidate();
+}
 
 export default messageBus;

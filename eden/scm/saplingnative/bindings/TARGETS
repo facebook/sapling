@@ -60,6 +60,7 @@ rust_python_library(
         "//eden/scm/saplingnative/bindings/modules/pyidentity:pyidentity",
         "//eden/scm/saplingnative/bindings/modules/pyindexedlog:pyindexedlog",
         "//eden/scm/saplingnative/bindings/modules/pyio:pyio",
+        "//eden/scm/saplingnative/bindings/modules/pyjournal:pyjournal",
         "//eden/scm/saplingnative/bindings/modules/pylinelog:pylinelog",
         "//eden/scm/saplingnative/bindings/modules/pylock:pylock",
         "//eden/scm/saplingnative/bindings/modules/pylz4:pylz4",

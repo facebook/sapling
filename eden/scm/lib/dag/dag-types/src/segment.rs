@@ -76,9 +76,7 @@ impl PreparedFlatSegments {
                 // but speeds up graph shape verification (see `check_isomorphic_graph`).
                 // `parents` are either "universally known", essential for lazy protocol,
                 // or something necessary for the pull protocol to re-map the IdMap.
-                [seg.high, seg.low]
-                    .into_iter()
-                    .chain(seg.parents.clone().into_iter())
+                [seg.high, seg.low].into_iter().chain(seg.parents.clone())
             })
             .collect()
     }

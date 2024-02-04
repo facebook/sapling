@@ -17,8 +17,6 @@ use anyhow::Result;
 use async_trait::async_trait;
 use bytes::Bytes;
 use caching_ext::*;
-use clientinfo::ClientEntryPoint;
-use clientinfo::ClientRequestInfo;
 use itertools::Itertools;
 use maplit::hashmap;
 use maplit::hashset;
@@ -101,7 +99,18 @@ macro_rules! mononoke_queries {
                 #[allow(unused_imports)]
                 pub use [<$name Impl>]::query_with_transaction;
                 #[allow(unused_imports)]
-                pub use [<$name Impl>]::commented_query_with_transaction;
+                use [<$name Impl>]::commented_query_with_transaction;
+
+                #[allow(dead_code)]
+                pub async fn traced_query_with_transaction(
+                    transaction: Transaction,
+                    cri: &ClientRequestInfo,
+                    $( $pname: & $ptype, )*
+                    $( $lname: & [ $ltype ], )*
+                ) -> Result<(Transaction, Vec<($( $rtype, )*)>)> {
+                    let cri = serde_json::to_string(cri)?;
+                    commented_query_with_transaction(transaction, &cri, $( $pname, )* $( $lname, )*).await
+                }
 
                 #[allow(dead_code)]
                 pub async fn query(
@@ -160,9 +169,19 @@ macro_rules! mononoke_queries {
                 #[allow(unused_imports)]
                 pub use [<$name Impl>]::query_with_transaction;
                 #[allow(unused_imports)]
-                pub use [<$name Impl>]::commented_query_with_transaction;
+                use [<$name Impl>]::commented_query_with_transaction;
 
 
+                #[allow(dead_code)]
+                pub async fn traced_query_with_transaction(
+                    transaction: Transaction,
+                    cri: &ClientRequestInfo,
+                    $( $pname: & $ptype, )*
+                    $( $lname: & [ $ltype ], )*
+                ) -> Result<(Transaction, Vec<($( $rtype, )*)>)> {
+                    let cri = serde_json::to_string(cri)?;
+                    commented_query_with_transaction(transaction, &cri, $( $pname, )* $( $lname, )*).await
+                }
 
 
                 #[allow(dead_code)]
@@ -278,7 +297,20 @@ macro_rules! mononoke_queries {
                 #[allow(unused_imports)]
                 pub use [<$name Impl>]::query_with_transaction;
                 #[allow(unused_imports)]
-                pub use [<$name Impl>]::commented_query_with_transaction;
+                use [<$name Impl>]::commented_query_with_transaction;
+
+
+                #[allow(dead_code)]
+                pub async fn traced_query_with_transaction(
+                    transaction: Transaction,
+                    cri: &ClientRequestInfo,
+                    values: &[($( & $vtype, )*)],
+                    $( $pname: & $ptype ),*
+                ) -> Result<(Transaction, WriteResult)> {
+                    let cri = serde_json::to_string(cri)?;
+                    commented_query_with_transaction(transaction, &cri, values $( , $pname )*)
+                        .await
+                }
 
                 #[allow(dead_code)]
                 pub async fn query(
@@ -354,7 +386,20 @@ macro_rules! mononoke_queries {
                 #[allow(unused_imports)]
                 pub use [<$name Impl>]::query_with_transaction;
                 #[allow(unused_imports)]
-                pub use [<$name Impl>]::commented_query_with_transaction;
+                use [<$name Impl>]::commented_query_with_transaction;
+
+                #[allow(dead_code)]
+                pub async fn traced_query_with_transaction(
+                    transaction: Transaction,
+                    cri: &ClientRequestInfo,
+                    $( $pname: & $ptype, )*
+                    $( $lname: & [ $ltype ], )*
+                ) -> Result<(Transaction, WriteResult)> {
+                    let cri = serde_json::to_string(cri)?;
+                    commented_query_with_transaction(transaction, &cri $( , $pname )* $( , $lname )*)
+                        .await
+                }
+
 
                 #[allow(dead_code)]
                 pub async fn query(

@@ -48,7 +48,7 @@ class MemoryWriteBatch : public LocalStore::WriteBatch {
 
  private:
   MemoryLocalStore* store_;
-  std::vector<folly::StringKeyedUnorderedMap<std::string>> storage_;
+  std::vector<folly::F14NodeMap<std::string, std::string>> storage_;
 };
 } // namespace
 

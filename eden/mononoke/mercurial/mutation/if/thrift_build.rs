@@ -16,7 +16,7 @@ fn main() {
     fs::write(
         out_dir.join("cratemap"),
         "hg_mutation_entry crate
-mercurial_thrift mercurial_thrift",
+mercurial_thrift mercurial_thrift //eden/mononoke/mercurial/types/if:mercurial-thrift-rust",
     ).expect("Failed to write cratemap");
 
     let conf = {
@@ -45,6 +45,8 @@ mercurial_thrift mercurial_thrift",
         conf.base_path(base_path);
 
         conf.types_crate("hg_mutation_entry_thrift__types");
+        conf.clients_crate("hg_mutation_entry_thrift__clients");
+        conf.services_crate("hg_mutation_entry_thrift__services");
 
         let options = "";
         if !options.is_empty() {

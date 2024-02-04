@@ -7,10 +7,14 @@
 
 use std::borrow::Cow;
 use std::collections::HashSet;
+use std::fmt;
+use std::fmt::Display;
+use std::fmt::Formatter;
 use std::fs;
 use std::hash::Hash;
 use std::path::Path;
 use std::path::PathBuf;
+use std::rc::Rc;
 use std::str;
 use std::sync::Arc;
 
@@ -30,12 +34,21 @@ use crate::error::Error;
 #[derive(Clone, Default)]
 pub struct ConfigSet {
     name: Text,
+
+    // Max priority values that should always be remembered/maintained.
+    // These include --config CLI values and runtime config overrides.
+    // These take priority over `sections` and `secondary`.
+    pinned: IndexMap<Text, Section>,
+
+    // Regular priority values. This is where `load_file()` and `set()` go by default.
     sections: IndexMap<Text, Section>,
+
+    // Secondary, immutable config to try out if `sections` and `pinned` do not contain
+    // the requested config.
+    secondary: Option<Arc<dyn Config>>,
+
     // Canonicalized files that were loaded, including files with errors
     files: Vec<PathBuf>,
-    // Secondary, immutable config to try out if `sections` does not
-    // contain the requested config.
-    secondary: Option<Arc<dyn Config>>,
 }
 
 /// Internal representation of a config section.
@@ -49,7 +62,8 @@ struct Section {
 #[derive(Clone, Default)]
 pub struct Options {
     source: Text,
-    filters: Vec<Arc<Box<dyn Fn(Text, Text, Option<Text>) -> Option<(Text, Text, Option<Text>)>>>>,
+    filters: Vec<Rc<Box<dyn Fn(Text, Text, Option<Text>) -> Option<(Text, Text, Option<Text>)>>>>,
+    pin: Option<bool>,
 }
 
 impl Config for ConfigSet {
@@ -57,17 +71,28 @@ impl Config for ConfigSet {
     ///
     /// keys("foo") returns keys in section "foo".
     fn keys(&self, section: &str) -> Vec<Text> {
-        let self_keys = self
-            .sections
-            .get(section)
-            .map(|section| section.items.keys().cloned().collect())
-            .unwrap_or_default();
+        let pinned_keys: Cow<[Text]> = Cow::Owned(
+            self.pinned
+                .get(section)
+                .map(|section| section.items.keys().cloned().collect())
+                .unwrap_or_default(),
+        );
+
+        let main_keys: Cow<[Text]> = Cow::Owned(
+            self.sections
+                .get(section)
+                .map(|section| section.items.keys().cloned().collect())
+                .unwrap_or_default(),
+        );
+
+        let self_keys = merge_cow_list(pinned_keys, main_keys);
+
         if let Some(secondary) = &self.secondary {
             let secondary_keys = secondary.keys(section);
-            let result = merge_cow_list(Cow::Owned(secondary_keys), Cow::Owned(self_keys));
+            let result = merge_cow_list(Cow::Owned(secondary_keys), self_keys);
             result.into_owned()
         } else {
-            self_keys
+            self_keys.into_owned()
         }
     }
 
@@ -75,12 +100,15 @@ impl Config for ConfigSet {
     /// Return `None` if the config item does not exist.
     /// Return `Some(None)` if the config is is unset.
     fn get_considering_unset(&self, section: &str, name: &str) -> Option<Option<Text>> {
-        let self_value = (|| -> Option<Option<Text>> {
-            let section = self.sections.get(section)?;
+        let get_self_value = |sections: &IndexMap<Text, Section>| -> Option<Option<Text>> {
+            let section = sections.get(section)?;
             let value_sources: &Vec<ValueSource> = section.items.get(name)?;
             let value = value_sources.last()?.value.clone();
             Some(value)
-        })();
+        };
+
+        let self_value = get_self_value(&self.pinned).or_else(|| get_self_value(&self.sections));
+
         if let (None, Some(secondary)) = (&self_value, &self.secondary) {
             return secondary.get_considering_unset(section, name);
         }
@@ -89,8 +117,9 @@ impl Config for ConfigSet {
 
     /// Get config sections.
     fn sections(&self) -> Cow<[Text]> {
-        let sections = self.sections.keys().cloned().collect();
-        let self_sections: Cow<[Text]> = Cow::Owned(sections);
+        let pinned: Cow<[Text]> = Cow::Owned(self.pinned.keys().cloned().collect());
+        let main: Cow<[Text]> = Cow::Owned(self.sections.keys().cloned().collect());
+        let self_sections = merge_cow_list(pinned, main);
         if let Some(secondary) = &self.secondary {
             let secondary_sections = secondary.sections();
             merge_cow_list(secondary_sections, self_sections)
@@ -104,14 +133,23 @@ impl Config for ConfigSet {
     ///
     /// Return an emtpy vector if the config does not exist.
     fn get_sources(&self, section: &str, name: &str) -> Cow<[ValueSource]> {
-        let self_sources: Cow<[ValueSource]> = match self
+        let pinned_sources = self
+            .pinned
+            .get(section)
+            .and_then(|section| section.items.get(name));
+
+        let main_sources = self
             .sections
             .get(section)
-            .and_then(|section| section.items.get(name))
-        {
-            None => Cow::Owned(Vec::new()),
-            Some(sources) => Cow::Borrowed(sources),
+            .and_then(|section| section.items.get(name));
+
+        let self_sources: Cow<[ValueSource]> = match (pinned_sources, main_sources) {
+            (None, None) => Cow::Owned(Vec::new()),
+            (Some(pinned), None) => Cow::Borrowed(pinned),
+            (None, Some(main)) => Cow::Borrowed(main),
+            (Some(pinned), Some(main)) => Cow::Owned(main.iter().chain(pinned).cloned().collect()),
         };
+
         if let Some(secondary) = &self.secondary {
             let secondary_sources = secondary.get_sources(section, name);
             if secondary_sources.is_empty() {
@@ -120,8 +158,8 @@ impl Config for ConfigSet {
                 secondary_sources
             } else {
                 let sources: Vec<ValueSource> = secondary_sources
-                    .into_owned()
-                    .into_iter()
+                    .iter()
+                    .cloned()
                     .chain(self_sources.into_owned())
                     .collect();
                 Cow::Owned(sources)
@@ -168,9 +206,41 @@ fn merge_cow_list<'a, T: Clone + Hash + Eq>(a: Cow<'a, [T]>, b: Cow<'a, [T]>) ->
     } else if b.is_empty() {
         a
     } else {
-        let result: IndexSet<T> = a.into_owned().into_iter().chain(b.into_owned()).collect();
+        let result: IndexSet<T> = a.iter().cloned().chain(b.iter().cloned()).collect();
         let result: Vec<T> = result.into_iter().collect();
         Cow::Owned(result)
+    }
+}
+
+impl Display for ConfigSet {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        for section in self.sections().iter() {
+            writeln!(f, "[{}]", section.as_ref())?;
+
+            for key in self.keys(section).iter() {
+                let value = self.get_considering_unset(section, key);
+                #[cfg(test)]
+                {
+                    let values = self.get_sources(section, key);
+                    assert_eq!(values.last().map(|v| v.value().clone()), value);
+                }
+                if let Some(value) = value {
+                    if let Some(value) = value {
+                        // When a newline delimited list is loaded, the whitespace around each
+                        // entry is trimmed. In order for the serialized config to be parsable, we
+                        // need some indentation after each newline. Since this whitespace will be
+                        // stripped on load, it shouldn't hurt anything.
+                        writeln!(f, "{}={}", key, value.replace('\n', "\n "))?;
+                    } else {
+                        // None indicates the value was unset.
+                        writeln!(f, "%unset {}", key)?;
+                    }
+                }
+            }
+
+            writeln!(f)?;
+        }
+        Ok(())
     }
 }
 
@@ -180,14 +250,23 @@ impl ConfigSet {
         Default::default()
     }
 
+    /// Create a (mutable) ConfigSet wrapping `config`.
+    /// This allows you to overlay new configs on top of `config`.
+    pub fn wrap(config: Arc<dyn Config>) -> Self {
+        Self {
+            secondary: Some(config),
+            ..Default::default()
+        }
+    }
+
     /// Attach a secondary config as fallback for items missing from the
     /// main config.
     ///
     /// The secondary config is immutable, is cheaper to clone, and provides
     /// the layers information.
     ///
-    /// If a secondary config was already attached, it will be completed
-    /// replaced by this call.
+    /// If a secondary config was already attached, it will be replaced by this
+    /// call.
     pub fn secondary(&mut self, secondary: Arc<dyn Config>) -> &mut Self {
         self.secondary = Some(secondary);
         self
@@ -250,6 +329,7 @@ impl ConfigSet {
 
     /// Set a config item directly. `section`, `name` locates the config. `value` is the new value.
     /// `source` is some annotation about who set it, ex. "reporc", "userrc", "--config", etc.
+    /// Value is set as a "pinned" config which will "stick" if the config is re-loaded.
     pub fn set(
         &mut self,
         section: impl AsRef<str>,
@@ -272,8 +352,12 @@ impl ConfigSet {
         opts: &Options,
     ) {
         if let Some((section, name, value)) = opts.filter(section, name, value) {
-            self.sections
-                .entry(section)
+            let dest = if opts.pin.unwrap_or(true) {
+                &mut self.pinned
+            } else {
+                &mut self.sections
+            };
+            dest.entry(section)
                 .or_insert_with(Default::default)
                 .items
                 .entry(name)
@@ -412,51 +496,6 @@ impl ConfigSet {
         }
     }
 
-    pub fn files(&self) -> &[PathBuf] {
-        &self.files
-    }
-
-    pub fn to_string(&self) -> String {
-        let mut result = String::new();
-
-        for section in self.sections().iter() {
-            result.push('[');
-            result.push_str(section.as_ref());
-            result.push_str("]\n");
-
-            for key in self.keys(section).iter() {
-                let value = self.get_considering_unset(section, key);
-                #[cfg(test)]
-                {
-                    let values = self.get_sources(section, key);
-                    assert_eq!(values.last().map(|v| v.value().clone()), value);
-                }
-                if let Some(value) = value {
-                    if let Some(value) = value {
-                        result.push_str(key);
-                        result.push('=');
-                        // When a newline delimited list is loaded, the whitespace around each
-                        // entry is trimmed. In order for the serialized config to be parsable, we
-                        // need some indentation after each newline. Since this whitespace will be
-                        // stripped on load, it shouldn't hurt anything.
-                        let value = value.replace('\n', "\n ");
-                        result.push_str(&value);
-                        result.push('\n');
-                    } else {
-                        // None indicates the value was unset.
-                        result.push_str("%unset ");
-                        result.push_str(key);
-                        result.push('\n');
-                    }
-                }
-            }
-
-            result.push('\n');
-        }
-
-        result
-    }
-
     /// Drop configs from sources that are outside `allowed_locations` or
     /// `allowed_configs`.
     ///
@@ -538,6 +577,16 @@ impl ConfigSet {
             }
         }
     }
+
+    pub fn clear_unpinned(&mut self) {
+        self.sections.clear();
+        self.secondary = None;
+
+        // Not technically correct since "pinned" configs could have
+        // been loaded from files, but probably doesn't matter either
+        // way.
+        self.files.clear();
+    }
 }
 
 impl Options {
@@ -556,7 +605,7 @@ impl Options {
         mut self,
         filter: Box<dyn Fn(Text, Text, Option<Text>) -> Option<(Text, Text, Option<Text>)>>,
     ) -> Self {
-        self.filters.push(Arc::new(filter));
+        self.filters.push(Rc::new(filter));
         self
     }
 
@@ -579,9 +628,14 @@ impl Options {
     ) -> Option<(Text, Text, Option<Text>)> {
         self.filters
             .iter()
-            .fold(Some((section, name, value)), move |acc, func| {
-                acc.and_then(|(s, n, v)| func(s, n, v))
-            })
+            .try_fold((section, name, value), move |(s, n, v), func| func(s, n, v))
+    }
+
+    /// Mark config insertions as "pinned". This places them in a higher priority area
+    /// separate from regular configs, making them easier to maintain.
+    pub fn pin(mut self, pin: bool) -> Self {
+        self.pin = Some(pin);
+        self
     }
 }
 
@@ -1081,7 +1135,9 @@ space_list=value1.a value1.b
                     content: Text::from_static(""),
                     location: 0..1,
                 }),
-                &Options::new().source(Text::from_static("source")),
+                &Options::new()
+                    .source(Text::from_static("source"))
+                    .pin(false),
             );
         }
 
@@ -1277,5 +1333,42 @@ x = 2
             3
         );
         assert_eq!(cfg.get_or("foo", "float", || 42f32).unwrap(), 1.42f32);
+    }
+
+    #[test]
+    fn test_pinned() {
+        let mut cfg = ConfigSet::new();
+
+        let pin = Options {
+            pin: Some(true),
+            ..Default::default()
+        };
+        cfg.set("shared_sec", "value", Some("pin"), &pin);
+        cfg.set("pin_sec", "value", Some("pin"), &pin);
+
+        let dont_pin = Options {
+            pin: Some(false),
+            ..Default::default()
+        };
+        cfg.set("shared_sec", "value", Some("main"), &dont_pin);
+        cfg.set("main_sec", "value", Some("main"), &dont_pin);
+
+        assert_eq!(cfg.sections(), vec!["shared_sec", "pin_sec", "main_sec"]);
+        assert_eq!(cfg.keys("main_sec"), vec!["value"]);
+        assert_eq!(cfg.keys("pin_sec"), vec!["value"]);
+        assert_eq!(cfg.keys("shared_sec"), vec!["value"]);
+
+        assert_eq!(cfg.get("shared_sec", "value"), Some("pin".into()));
+
+        let sources = cfg.get_sources("shared_sec", "value");
+        assert_eq!(sources.len(), 2);
+
+        cfg.clear_unpinned();
+
+        assert_eq!(cfg.sections(), vec!["shared_sec", "pin_sec"]);
+        assert_eq!(cfg.keys("shared_sec"), vec!["value"]);
+
+        let sources = cfg.get_sources("shared_sec", "value");
+        assert_eq!(sources.len(), 1);
     }
 }

@@ -12,6 +12,7 @@ pub mod context;
 pub mod dispatch;
 pub mod errors;
 pub mod global_flags;
+mod hooks;
 pub mod optional_repo;
 pub mod util;
 

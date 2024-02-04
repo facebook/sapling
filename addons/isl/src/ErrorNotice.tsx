@@ -16,15 +16,20 @@ import './error-notice.css';
 export function ErrorNotice({
   title,
   description,
+  details,
   error,
   buttons,
+  startExpanded,
 }: {
   title: React.ReactNode;
   description?: React.ReactNode;
-  error: Error;
+  /** Hidden details shown when expanded */
+  details?: React.ReactNode;
+  error?: Error;
   buttons?: Array<React.ReactNode>;
+  startExpanded?: boolean;
 }) {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(startExpanded === true);
   return (
     <div className="error-notice" onClick={() => setIsExpanded(e => !e)}>
       <div className="error-notice-left">
@@ -33,9 +38,14 @@ export function ErrorNotice({
         </div>
         <div className="error-notice-content">
           <span className="error-notice-title">{title}</span>
-          <span className="error-notice-byline">{description ?? error.message}</span>
+          <span className="error-notice-byline">{description ?? error?.message}</span>
           {isExpanded ? (
-            <span className="error-notice-stack-trace">{error.stack ?? error.message}</span>
+            <div className="error-notice-details">
+              {details}
+              {error != null && (
+                <span className="error-notice-stack-trace">{error.stack ?? error.message}</span>
+              )}
+            </div>
           ) : null}
         </div>
       </div>

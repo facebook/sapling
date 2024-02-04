@@ -1254,23 +1254,7 @@ def pathto(root, n1, n2):
     return pycompat.ossep.join(([".."] * len(a)) + b) or "."
 
 
-def mainfrozen():
-    """return True if we are a frozen executable.
-
-    The code supports py2exe (most common, Windows only) and tools/freeze
-    (portable, not much used).
-    """
-    return hasattr(sys, "frozen") or hasattr(
-        sys, "importers"
-    )  # new py2exe  # tools/freeze
-
-
-# the location of data files matching the source code
-# pyre-fixme[16]: Module `sys` has no attribute `frozen`.
-if mainfrozen() and getattr(sys, "frozen", None) != "macosx_app":
-    # executable version (py2exe) doesn't support __file__
-    datapath = os.path.dirname(pycompat.sysexecutable)
-elif "HGDATAPATH" in os.environ:
+if "HGDATAPATH" in os.environ:
     datapath = os.environ["HGDATAPATH"]
 else:
     datapath = os.path.dirname(__file__)
@@ -1287,17 +1271,8 @@ def hgexecutable():
     """
     if _hgexecutable is None:
         hg = encoding.environ.get("HG")
-        mainmod = sys.modules["__main__"]
         if hg:
             _sethgexecutable(hg)
-        elif mainfrozen():
-            if getattr(sys, "frozen", None) == "macosx_app":
-                # Env variable set by py2app
-                _sethgexecutable(encoding.environ["EXECUTABLEPATH"])
-            else:
-                _sethgexecutable(pycompat.sysexecutable)
-        elif os.path.basename(getattr(mainmod, "__file__", None) or "") == "hg":
-            _sethgexecutable(mainmod.__file__)
         else:
             exe = findexe("hg") or os.path.basename(sys.argv[0])
             _sethgexecutable(exe)

@@ -18,6 +18,7 @@ use anyhow::Context;
 use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
+use context::CoreContext;
 use edenfs_client::CheckoutConflict;
 use manifest::Manifest;
 use pathmatcher::AlwaysMatcher;
@@ -25,7 +26,6 @@ use repo::repo::Repo;
 use spawn_ext::CommandExt;
 use termlogger::TermLogger;
 use treestate::filestate::StateFlags;
-use types::hgid::NULL_ID;
 use types::HgId;
 use types::RepoPath;
 use workingcopy::util::walk_treestate;
@@ -88,7 +88,7 @@ fn actionmap_from_eden_conflicts(
 }
 
 pub fn edenfs_checkout(
-    lgr: &TermLogger,
+    ctx: &CoreContext,
     repo: &mut Repo,
     wc: &LockedWorkingCopy,
     target_commit: HgId,
@@ -102,9 +102,13 @@ pub fn edenfs_checkout(
         CheckoutMode::Force => {
             edenfs_force_checkout(repo, wc, target_commit, target_commit_tree_hash)?
         }
-        CheckoutMode::NoConflict => {
-            edenfs_noconflict_checkout(lgr, repo, wc, target_commit, target_commit_tree_hash)?
-        }
+        CheckoutMode::NoConflict => edenfs_noconflict_checkout(
+            &ctx.logger,
+            repo,
+            wc,
+            target_commit,
+            target_commit_tree_hash,
+        )?,
         CheckoutMode::Merge => bail!("native merge checkout not yet supported for EdenFS"),
     };
 
@@ -115,7 +119,7 @@ pub fn edenfs_checkout(
     let updatestate_path = wc.dot_hg_path().join("updatestate");
     util::file::unlink_if_exists(updatestate_path)?;
     // Run EdenFS specific "hooks"
-    edenfs_redirect_fixup(lgr, repo.config(), wc)?;
+    edenfs_redirect_fixup(&ctx.logger, repo.config(), wc)?;
     Ok(())
 }
 
@@ -140,7 +144,7 @@ fn edenfs_noconflict_checkout(
     target_commit: HgId,
     target_commit_tree_hash: HgId,
 ) -> anyhow::Result<()> {
-    let current_commit = wc.parents()?.into_iter().next().unwrap_or(NULL_ID);
+    let current_commit = wc.first_parent()?;
     let tree_resolver = repo.tree_resolver()?;
     let source_mf = tree_resolver.get(&current_commit)?;
     let target_mf = tree_resolver.get(&target_commit)?;

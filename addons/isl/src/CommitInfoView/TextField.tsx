@@ -5,33 +5,30 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {TypeaheadKind, TypeaheadResult} from './types';
+import type {FieldConfig, TypeaheadKind, TypeaheadResult} from './types';
 
 import serverApi from '../ClientToServerAPI';
 import {Subtle} from '../Subtle';
 import {recentReviewers, SuggestedReviewers} from './SuggestedReviewers';
 import {extractTokens, TokensList, tokensToString} from './Tokens';
-import {getInnerTextareaForVSCodeTextArea} from './utils';
+import {getInnerTextareaForVSCodeTextArea, getOnClickToken} from './utils';
 import {VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
 import {useRef, useEffect, useState} from 'react';
 import {Icon} from 'shared/Icon';
 import {randomId} from 'shared/utils';
 
 export function CommitInfoTextField({
-  name,
+  field,
   autoFocus,
   editedMessage,
   setEditedCommitMessage,
-  typeaheadKind,
-  maxTokens,
 }: {
-  name: string;
+  field: FieldConfig & {type: 'field'};
   autoFocus: boolean;
   editedMessage: string;
   setEditedCommitMessage: (fieldValue: string) => unknown;
-  typeaheadKind: TypeaheadKind;
-  maxTokens?: number;
 }) {
+  const {key, maxTokens, typeaheadKind} = field;
   const ref = useRef(null);
   useEffect(() => {
     if (ref.current && autoFocus) {
@@ -65,7 +62,7 @@ export function CommitInfoTextField({
     });
   };
 
-  const fieldKey = name.toLowerCase().replace(/\s/g, '-');
+  const fieldKey = key.toLowerCase().replace(/\s/g, '-');
 
   const isReviewers = fieldKey === 'reviewers';
 
@@ -120,6 +117,7 @@ export function CommitInfoTextField({
         }}>
         <TokensList
           tokens={tokens}
+          onClickToken={getOnClickToken(field)}
           onClickX={(token: string) => {
             setEditedCommitMessage(
               tokensToString(
@@ -158,8 +156,8 @@ export function CommitInfoTextField({
                       {suggestion.image && <ImageWithFallback src={suggestion.image} />}
                       <span className="suggestion-label">
                         <span>{suggestion.label}</span>
-                        {suggestion.label !== suggestion.value && (
-                          <Subtle>{suggestion.value}</Subtle>
+                        {(suggestion.detail || suggestion.label !== suggestion.value) && (
+                          <Subtle>{suggestion.detail ?? suggestion.value}</Subtle>
                         )}
                       </span>
                     </span>

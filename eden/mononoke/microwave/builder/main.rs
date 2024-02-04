@@ -21,6 +21,7 @@ use blobstore_factory::PutBehaviour;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::BookmarksRef;
+use cache_warmup::CacheWarmupKind;
 use cache_warmup::CacheWarmupRequest;
 use cache_warmup::CacheWarmupTarget;
 use clap::Args;
@@ -154,7 +155,13 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                             Arc::new(MicrowaveChangesets::new(changesets_sender, inner))
                         });
 
-                    cache_warmup::cache_warmup(&warmup_ctx, &warmup_repo, req).await?;
+                    cache_warmup::cache_warmup(
+                        &warmup_ctx,
+                        &warmup_repo,
+                        req,
+                        CacheWarmupKind::MicrowaveBuilder,
+                    )
+                    .await?;
 
                     Result::<_, Error>::Ok(repo)
                 };

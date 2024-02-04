@@ -10,11 +10,12 @@ import {getInnerTextareaForVSCodeTextArea} from './CommitInfoView/utils';
 import {InlineErrorBadge} from './ErrorNotice';
 import {Tooltip} from './Tooltip';
 import {T, t} from './i18n';
+import {readAtom, writeAtom} from './jotaiUtils';
 import platform from './platform';
 import {replaceInTextArea, insertAtCursor} from './textareaUtils';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
+import {atom, useAtomValue} from 'jotai';
 import {type MutableRefObject, useState, type ReactNode, useId} from 'react';
-import {atom, selector, useRecoilCallback, useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 import {randomId} from 'shared/utils';
 
@@ -25,27 +26,23 @@ export type ImageUploadStatus = {id: number} & (
   | {status: 'canceled'}
 );
 export const imageUploadState = atom<{next: number; states: Record<number, ImageUploadStatus>}>({
-  key: 'imageUploadState',
-  default: {next: 1, states: {}},
+  next: 1,
+  states: {},
 });
-export const numPendingImageUploads = selector({
-  key: 'numPendingImageUploads',
-  get: ({get}): number => {
-    const state = get(imageUploadState);
-    return Object.values(state.states).filter(state => state.status === 'pending').length;
-  },
+export const numPendingImageUploads = atom((get): number => {
+  const state = get(imageUploadState);
+  return Object.values(state.states).filter(state => state.status === 'pending').length;
 });
 type UnresolvedErrorImageUploadStatus = ImageUploadStatus & {status: 'error'; resolved: false};
-export const unresolvedErroredImagedUploads = selector({
-  key: 'unresolvedErroredImagedUploads',
-  get: ({get}): Array<UnresolvedErrorImageUploadStatus> => {
+export const unresolvedErroredImagedUploads = atom(
+  (get): Array<UnresolvedErrorImageUploadStatus> => {
     const state = get(imageUploadState);
     return Object.values(state.states).filter(
       (state): state is UnresolvedErrorImageUploadStatus =>
         state.status === 'error' && !state.resolved,
     );
   },
-});
+);
 
 function placeholderForImageUpload(id: number): string {
   // TODO: it might be better to use a `contenteditable: true` div rather than
@@ -81,14 +78,14 @@ export async function uploadFile(file: File): Promise<string> {
  * Summary of ongoing image uploads. Click to cancel all ongoing uploads.
  */
 export function PendingImageUploads({textAreaRef}: {textAreaRef: MutableRefObject<unknown>}) {
-  const numPending = useRecoilValue(numPendingImageUploads);
-  const unresolvedErrors = useRecoilValue(unresolvedErroredImagedUploads);
+  const numPending = useAtomValue(numPendingImageUploads);
+  const unresolvedErrors = useAtomValue(unresolvedErroredImagedUploads);
   const [isHovering, setIsHovering] = useState(false);
-  const onCancel = useRecoilCallback(({set}) => () => {
+  const onCancel = () => {
     setIsHovering(false);
     // Canceling ongoing uploads doesn't actualy interrupt the async work for the uploads,
     // it just deletes the tracking state, by replacing 'pending' uploads as 'cancelled'.
-    set(imageUploadState, current => {
+    writeAtom(imageUploadState, current => {
       const canceledIds: Array<number> = [];
       // TODO: This cancels ALL ongoing uploads, even from other text areas, if any exist.
       // imageUploadStates should contain a unique id per text area,
@@ -116,10 +113,10 @@ export function PendingImageUploads({textAreaRef}: {textAreaRef: MutableRefObjec
       }
       return newState;
     });
-  });
+  };
 
-  const onDismissErrors = useRecoilCallback(({set}) => () => {
-    set(imageUploadState, value => ({
+  const onDismissErrors = () => {
+    writeAtom(imageUploadState, value => ({
       ...value,
       states: Object.fromEntries(
         Object.entries(value.states).map(([id, state]) => [
@@ -128,7 +125,7 @@ export function PendingImageUploads({textAreaRef}: {textAreaRef: MutableRefObjec
         ]),
       ),
     }));
-  });
+  };
 
   if (unresolvedErrors.length === 0 && numPending === 0) {
     return null;
@@ -229,10 +226,10 @@ export function useUploadFilesCallback(
   ref: MutableRefObject<unknown>,
   onInput: (event: {target: HTMLInputElement}) => unknown,
 ) {
-  return useRecoilCallback(({snapshot, set}) => async (files: Array<File>) => {
+  return async (files: Array<File>) => {
     // capture snapshot of next before doing async work
     // we need to account for all files in this batch
-    let {next} = snapshot.getLoadable(imageUploadState).valueOrThrow();
+    let {next} = readAtom(imageUploadState);
 
     const textArea = getInnerTextareaForVSCodeTextArea(ref.current as HTMLElement);
     if (textArea != null) {
@@ -250,7 +247,7 @@ export function useUploadFilesCallback(
           const id = next;
           next += 1;
           const state = {status: 'pending' as const, id};
-          set(imageUploadState, v => ({next, states: {...v.states, [id]: state}}));
+          writeAtom(imageUploadState, v => ({next, states: {...v.states, [id]: state}}));
           // insert pending text
           const placeholder = placeholderForImageUpload(state.id);
           insertAtCursor(textArea, placeholder);
@@ -259,14 +256,14 @@ export function useUploadFilesCallback(
           // start the file upload
           try {
             const uploadedFileText = await uploadFile(file);
-            set(imageUploadState, v => ({
+            writeAtom(imageUploadState, v => ({
               next,
               states: {...v.states, [id]: {status: 'complete' as const, id}},
             }));
             replaceInTextArea(textArea, placeholder, uploadedFileText);
             emitChangeEvent();
           } catch (error) {
-            set(imageUploadState, v => ({
+            writeAtom(imageUploadState, v => ({
               next,
               states: {
                 ...v.states,
@@ -279,7 +276,7 @@ export function useUploadFilesCallback(
         }),
       );
     }
-  });
+  };
 }
 
 /**

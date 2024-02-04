@@ -69,7 +69,7 @@ pub enum WorkingCopyError {
 
 #[instrument(skip(logger), err)]
 pub fn init_working_copy(
-    logger: &mut TermLogger,
+    logger: &TermLogger,
     repo: &mut Repo,
     target: Option<HgId>,
     sparse_profiles: Vec<String>,
@@ -118,7 +118,7 @@ pub fn init_working_copy(
 
     for profile in &sparse_profiles {
         let path = RepoPath::from_str(profile).map_err(|e| anyhow!(e))?;
-        if matches!(target_mf.get(path)?, None) {
+        if target_mf.get(path)?.is_none() {
             logger.warn(format!(
                 "The profile '{profile}' does not exist. Check out a commit where it exists, or remove it with '@prog@ sparse disableprofile'."
             ));

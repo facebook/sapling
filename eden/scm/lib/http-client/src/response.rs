@@ -67,8 +67,9 @@ impl Head {
     pub fn encoding(&self) -> Result<Encoding, HttpClientError> {
         self.headers
             .get(header::CONTENT_ENCODING)
-            .map(|encoding| Ok(encoding.to_str()?.into()))
-            .unwrap_or(Ok(Encoding::Identity))
+            .map_or(Ok(Encoding::Identity), |encoding| {
+                Ok(encoding.to_str()?.into())
+            })
             .map_err(|_: header::ToStrError| {
                 HttpClientError::BadResponse(anyhow!("Invalid Content-Encoding"))
             })

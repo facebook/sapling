@@ -64,7 +64,7 @@ fn main() {
                         }),
                         x,
                     );
-                    runtime.block_on(async move { while let Some(_) = stream.next().await {} });
+                    runtime.block_on(async move { while stream.next().await.is_some() {} });
                 })
             },
         );

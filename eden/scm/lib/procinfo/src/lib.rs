@@ -163,8 +163,8 @@ pub fn parent_pid(pid: u32) -> u32 {
         if let Ok(content) = std::fs::read_to_string(format!("/proc/{}/status", pid)) {
             let prefix = "PPid:";
             for line in content.lines() {
-                if line.starts_with(prefix) {
-                    if let Ok(ppid) = line[prefix.len()..].trim().parse() {
+                if let Some(suffix) = line.strip_prefix(prefix) {
+                    if let Ok(ppid) = suffix.trim().parse() {
                         return ppid;
                     }
                 }

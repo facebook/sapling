@@ -10,7 +10,6 @@
 use std::io;
 use std::io::Read;
 use std::io::Write;
-use std::mem::size_of;
 
 pub trait VLQEncode<T> {
     /// Encode an integer to a VLQ byte array and write it directly to a stream.
@@ -222,7 +221,7 @@ macro_rules! impl_signed_primitive {
     ($T: ty, $U: ty) => {
         impl<W: Write + ?Sized> VLQEncode<$T> for W {
             fn write_vlq(&mut self, v: $T) -> io::Result<()> {
-                self.write_vlq(((v << 1) ^ (v >> (size_of::<$U>() * 8 - 1))) as $U)
+                self.write_vlq(((v << 1) ^ (v >> (<$U>::BITS - 1))) as $U)
             }
         }
 

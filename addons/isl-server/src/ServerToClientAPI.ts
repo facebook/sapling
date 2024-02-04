@@ -622,7 +622,7 @@ export default class ServerToClientAPI {
       case 'typeahead': {
         // Current repo's code review provider should be able to handle all
         // TypeaheadKinds for the fields in its defined schema.
-        repo.codeReviewProvider?.typeahead?.(data.kind, data.query)?.then(result =>
+        repo.codeReviewProvider?.typeahead?.(data.kind, data.query, cwd)?.then(result =>
           this.postMessage({
             type: 'typeaheadResult',
             id: data.id,
@@ -791,6 +791,23 @@ export default class ServerToClientAPI {
               });
             });
         });
+        break;
+      }
+      case 'fetchActiveAlerts': {
+        repo
+          .getActiveAlerts()
+          .then(alerts => {
+            if (alerts.length === 0) {
+              return;
+            }
+            this.postMessage({
+              type: 'fetchedActiveAlerts',
+              alerts,
+            });
+          })
+          .catch(err => {
+            this.logger.error('Failed to fetch active alerts:', err);
+          });
         break;
       }
       default: {

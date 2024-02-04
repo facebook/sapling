@@ -145,7 +145,7 @@ pub fn decompress_into(data: &[u8], dest: &mut [u8]) -> Result<()> {
             LZ4_decompress_safe_continue(
                 stream.0,
                 source,
-                dest.as_mut_ptr() as *mut u8,
+                dest.as_mut_ptr(),
                 data.len() as i32,
                 dest.len() as i32,
             )
@@ -166,8 +166,7 @@ pub fn decompress(data: &[u8]) -> Result<Vec<u8>> {
     if max_decompressed_size == 0 {
         return Ok(Vec::new());
     }
-    let mut dest = Vec::<u8>::with_capacity(max_decompressed_size);
-    unsafe { dest.set_len(max_decompressed_size) };
+    let mut dest = vec![0; max_decompressed_size];
     decompress_into(data, &mut dest)?;
     Ok(dest)
 }

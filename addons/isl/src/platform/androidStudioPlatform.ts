@@ -20,7 +20,7 @@ declare global {
 }
 
 // important: this file should not try to import other code from 'isl',
-// since it will end up getting duplicated by webpack.
+// since it will end up getting duplicated when bundling.
 
 const androidStudioPlatform: Platform = {
   platformName: 'androidStudio',

@@ -15,6 +15,9 @@ use crate::MergeState;
 
 #[derive(Debug, Clone)]
 pub struct State {
+    // This is not read outside of `Debug` and `Clone` at the moment, but it doesn't feel like
+    // something we should remove
+    #[allow(dead_code)]
     // Sapling command name associated with this state.
     command: &'static str,
 

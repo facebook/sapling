@@ -33,7 +33,7 @@ export class CommitOperation extends Operation {
     private originalHeadHash: Hash,
     private filesPathsToCommit?: Array<RepoRelativePath>,
   ) {
-    super('CommitOperation');
+    super(filesPathsToCommit ? 'CommitFileSubsetOperation' : 'CommitOperation');
 
     // New commit should have a greater date.
     this.beforeCommitDate = new Date();

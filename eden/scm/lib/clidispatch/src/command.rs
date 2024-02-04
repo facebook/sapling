@@ -7,12 +7,13 @@
 
 use std::collections::BTreeMap;
 use std::ops::Deref;
+use std::sync::Arc;
 
 use anyhow::Result;
 use cliparser::parser::Flag;
 use cliparser::parser::ParseOutput;
 use cliparser::parser::StructFlags;
-use configloader::config::ConfigSet;
+use configmodel::Config;
 use repo::repo::Repo;
 use workingcopy::workingcopy::WorkingCopy;
 
@@ -21,7 +22,7 @@ use crate::OptionalRepo;
 use crate::ReqCtx;
 
 pub enum CommandFunc {
-    NoRepo(Box<dyn Fn(ParseOutput, &IO, &mut ConfigSet) -> Result<u8>>),
+    NoRepo(Box<dyn Fn(ParseOutput, &IO, &Arc<dyn Config>) -> Result<u8>>),
     OptionalRepo(Box<dyn Fn(ParseOutput, &IO, &mut OptionalRepo) -> Result<u8>>),
     Repo(Box<dyn Fn(ParseOutput, &IO, &mut Repo) -> Result<u8>>),
     WorkingCopy(Box<dyn Fn(ParseOutput, &IO, &mut Repo, &mut WorkingCopy) -> Result<u8>>),
@@ -56,10 +57,6 @@ impl CommandDefinition {
         (self.flags_func)()
     }
 
-    pub fn aliases(&self) -> &str {
-        &self.aliases
-    }
-
     pub fn doc(&self) -> &str {
         &self.doc
     }
@@ -78,6 +75,12 @@ impl CommandDefinition {
         } else {
             ""
         }
+    }
+
+    pub fn legacy_alias(&self) -> Option<&str> {
+        self.aliases
+            .split('|')
+            .find_map(|a| a.strip_prefix("legacy:"))
     }
 }
 
@@ -102,7 +105,11 @@ impl CommandTable {
         if !aliases.contains('|') {
             return;
         }
-        for name in aliases.split('|') {
+        for mut name in aliases.split('|') {
+            if let Some((_, after)) = name.split_once(':') {
+                name = after;
+            }
+
             if name.is_empty() {
                 continue;
             }
@@ -167,11 +174,11 @@ where
 impl<S, FN> Register<FN, ((), (), (), S)> for CommandTable
 where
     S: TryFrom<ParseOutput, Error = anyhow::Error> + StructFlags,
-    FN: Fn(ReqCtx<S>, &mut ConfigSet) -> Result<u8> + 'static,
+    FN: Fn(ReqCtx<S>, &Arc<dyn Config>) -> Result<u8> + 'static,
 {
     fn register(&mut self, f: FN, aliases: &str, doc: &str, synopsis: Option<&str>) {
         self.insert_aliases(aliases);
-        let func = move |opts: ParseOutput, io: &IO, config: &mut ConfigSet| {
+        let func = move |opts: ParseOutput, io: &IO, config: &Arc<dyn Config>| {
             f(ReqCtx::new(opts, io.clone())?, config)
         };
         let func = CommandFunc::NoRepo(Box::new(func));

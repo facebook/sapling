@@ -238,3 +238,37 @@ Update active bookmark
   $ cat .hg/bookmarks.current
   cat: .hg/bookmarks.current: $ENOENT$
   [1]
+
+#if no-windows
+Support "update" and "goto" hooks:
+  $ newclientrepo
+  $ hg go -q . --config 'hooks.pre-update=echo update' --config 'hooks.pre-goto=echo goto'
+  goto
+  update
+#endif
+
+#if no-windows
+Support "preupdate" and "update" hooks:
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > A
+  > EOS
+  $ setconfig 'hooks.preupdate=echo PRE PARENT1: $HG_PARENT1 && echo PRE PARENT2: $HG_PARENT2; exit 1'
+  $ setconfig 'hooks.update=echo POST PARENT1: $HG_PARENT1 && echo POST PARENT2: $HG_PARENT2 && echo POST ERROR: $HG_ERROR'
+  $ hg go -q $A
+  PRE PARENT1: 0000000000000000000000000000000000000000
+  PRE PARENT2: 426bada5c67598ca65036d57d9e4b64b0c1ce7a0
+  abort: preupdate hook exited with status 1
+  [255]
+  $ hg whereami
+  0000000000000000000000000000000000000000
+  $ setconfig 'hooks.preupdate=echo PARENT1: $HG_PARENT1 && echo PARENT2: $HG_PARENT2; exit 0'
+  $ hg go -q $A
+  PARENT1: 0000000000000000000000000000000000000000
+  PARENT2: 426bada5c67598ca65036d57d9e4b64b0c1ce7a0
+  POST PARENT1: 426bada5c67598ca65036d57d9e4b64b0c1ce7a0
+  POST PARENT2:
+  POST ERROR: 0
+  $ hg whereami
+  426bada5c67598ca65036d57d9e4b64b0c1ce7a0
+#endif

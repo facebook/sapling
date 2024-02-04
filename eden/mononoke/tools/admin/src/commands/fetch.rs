@@ -100,7 +100,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         Some(bubble_id) => {
             let bubble = repo
                 .repo_ephemeral_store()
-                .open_bubble(bubble_id)
+                .open_bubble(&ctx, bubble_id)
                 .await
                 .with_context(|| format!("Failed to open bubble {}", bubble_id))?;
             bubble.wrap_repo_blobstore(repo.repo_blobstore().clone())

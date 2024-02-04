@@ -26,11 +26,11 @@ macro_rules! key_type {
             }
         }
 
-        impl Into<$crate::Key> for $typename {
-            fn into(self) -> $crate::Key {
-                $crate::Key {
-                    path: self.path,
-                    hgid: self.hgid,
+        impl From<$typename> for $crate::Key {
+            fn from(this: $typename) -> Self {
+                Self {
+                    path: this.path,
+                    hgid: this.hgid,
                 }
             }
         }

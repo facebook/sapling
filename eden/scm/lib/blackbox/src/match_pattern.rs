@@ -118,7 +118,7 @@ fn match_pattern_captured<'a, 'b>(
 
         // Treat array as meaningful expressions.
         Array(v) => {
-            if let Some(String(op_name)) = v.get(0) {
+            if let Some(String(op_name)) = v.first() {
                 match op_name.as_ref() {
                     "or" => v[1..]
                         .iter()

@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.1.36
+
+- Fixed an issue where Pull button and cwd selector didn't appear in some cases
+- Updated tooltips for download menu and commit mode selector
+
+## 0.1.35
+
+### Jan 25 2024
+
+- Reduced polling frequency when ISL not visible
+- Remove arrow from "diff" icon
+- Prevent acting on obsolete commits to prevent confusing commit duplication
+- Set to amend mode when opening a commit in the sidebar
+- Make list of commits to submit scrollable
+- Show a confirmation toast when copying hashes and other data to the clipboard
+- Improve "You are here" and commit selection in high-contrast themes
+- Updated Goto tooltip
+- Improvements to split UI tracking copied files
+- Make font sizes more consistent with ISL outside of vscode
+- Experimental DAG-based renderer, hidden behind an SL config `isl.experimental-graph-renderer=1`
+
 ## 0.1.34
 
 ### Dec 14 2023

@@ -639,9 +639,9 @@ pub(crate) async fn test_find_entries<Root: RootDeletedManifestIdCommon>(
                     &ctx,
                     repo.repo_blobstore(),
                     vec![
-                        PathOrPrefix::Path(path("file.txt").into()),
-                        PathOrPrefix::Path(path("dir/f-2").into()),
-                        PathOrPrefix::Path(path("dir/sub/f-1").into()),
+                        PathOrPrefix::Path(path("file.txt")),
+                        PathOrPrefix::Path(path("dir/f-2")),
+                        PathOrPrefix::Path(path("dir/sub/f-1")),
                     ],
                 )
                 .map_ok(|(path, _)| path)
@@ -660,7 +660,7 @@ pub(crate) async fn test_find_entries<Root: RootDeletedManifestIdCommon>(
                 .find_entries(
                     &ctx,
                     repo.repo_blobstore(),
-                    vec![PathOrPrefix::Prefix(path("dir-2").into())],
+                    vec![PathOrPrefix::Prefix(path("dir-2"))],
                 )
                 .map_ok(|(path, _)| path)
                 .try_collect::<Vec<_>>()
@@ -680,8 +680,8 @@ pub(crate) async fn test_find_entries<Root: RootDeletedManifestIdCommon>(
                     &ctx,
                     repo.repo_blobstore(),
                     vec![
-                        PathOrPrefix::Prefix(path("dir/sub").into()),
-                        PathOrPrefix::Path(path("dir/sub/f-1").into()),
+                        PathOrPrefix::Prefix(path("dir/sub")),
+                        PathOrPrefix::Path(path("dir/sub/f-1")),
                     ],
                 )
                 .map_ok(|(path, _)| path)
@@ -747,11 +747,7 @@ pub(crate) async fn test_list_all_entries<Root: RootDeletedManifestIdCommon>(
                 .map(|(path, _)| path)
                 .collect::<Vec<_>>();
             entries.sort();
-            let expected_entries = vec![
-                path("dir/sub").into(),
-                path("dir/sub/f-1").into(),
-                path("dir/sub/f-3").into(),
-            ];
+            let expected_entries = vec![path("dir/sub"), path("dir/sub/f-1"), path("dir/sub/f-3")];
             assert_eq!(entries, expected_entries);
         }
     }

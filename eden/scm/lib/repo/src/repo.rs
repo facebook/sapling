@@ -15,6 +15,7 @@ use anyhow::Context;
 use anyhow::Result;
 use commits_trait::DagCommits;
 use configloader::config::ConfigSet;
+use configloader::hg::PinnedConfig;
 use configloader::Config;
 use configmodel::ConfigExt;
 use eagerepo::EagerRepo;
@@ -58,7 +59,7 @@ use crate::trees::TreeManifestResolver;
 pub struct Repo {
     path: PathBuf,
     ident: identity::Identity,
-    config: ConfigSet,
+    config: Arc<dyn Config>,
     shared_path: PathBuf,
     shared_ident: identity::Identity,
     pub(crate) store_path: PathBuf,
@@ -83,11 +84,11 @@ impl Repo {
         root_path: &Path,
         config: &ConfigSet,
         repo_config_contents: Option<String>,
-        extra_config_values: &[String],
+        pinned_config: &[PinnedConfig],
     ) -> Result<Repo> {
         let root_path = absolute(root_path)?;
         init::init_hg_repo(&root_path, config, repo_config_contents)?;
-        let mut repo = Self::load(&root_path, extra_config_values, &[])?;
+        let mut repo = Self::load(&root_path, pinned_config)?;
         repo.metalog()?.write().init_tracked()?;
         Ok(repo)
     }
@@ -95,15 +96,11 @@ impl Repo {
     /// Load the repo from explicit path.
     ///
     /// Load repo configurations.
-    pub fn load<P>(
-        path: P,
-        extra_config_values: &[String],
-        extra_config_files: &[String],
-    ) -> Result<Self>
+    pub fn load<P>(path: P, pinned_config: &[PinnedConfig]) -> Result<Self>
     where
         P: Into<PathBuf>,
     {
-        Self::build(path, extra_config_values, extra_config_files, None)
+        Self::build(path, pinned_config, None)
     }
 
     /// Loads the repo at given path, eschewing any config loading in
@@ -114,15 +111,10 @@ impl Repo {
     where
         P: Into<PathBuf>,
     {
-        Self::build(path, &[], &[], Some(config))
+        Self::build(path, &[], Some(config))
     }
 
-    fn build<P>(
-        path: P,
-        extra_config_values: &[String],
-        extra_config_files: &[String],
-        config: Option<ConfigSet>,
-    ) -> Result<Self>
+    fn build<P>(path: P, pinned_config: &[PinnedConfig], config: Option<ConfigSet>) -> Result<Self>
     where
         P: Into<PathBuf>,
     {
@@ -132,7 +124,7 @@ impl Repo {
         constructors::init();
 
         assert!(
-            config.is_none() || (extra_config_values.is_empty() && extra_config_files.is_empty()),
+            config.is_none() || pinned_config.is_empty(),
             "Don't pass a config and CLI overrides to Repo::build"
         );
 
@@ -145,7 +137,7 @@ impl Repo {
 
         let config = match config {
             Some(config) => config,
-            None => configloader::hg::load(Some(&path), extra_config_values, extra_config_files)?,
+            None => configloader::hg::load(Some(&path), pinned_config)?,
         };
 
         let dot_hg_path = path.join(ident.dot_dir());
@@ -179,7 +171,7 @@ impl Repo {
         Ok(Repo {
             path,
             ident,
-            config,
+            config: Arc::new(config),
             shared_path,
             shared_ident,
             store_path,
@@ -250,12 +242,8 @@ impl Repo {
         &self.shared_dot_hg_path
     }
 
-    pub fn config(&self) -> &ConfigSet {
+    pub fn config(&self) -> &Arc<dyn Config> {
         &self.config
-    }
-
-    pub fn config_mut(&mut self) -> &mut ConfigSet {
-        &mut self.config
     }
 
     pub fn locker(&self) -> &Arc<RepoLocker> {

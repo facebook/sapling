@@ -90,7 +90,7 @@ py_class!(class StringMatchObject |py| {
     def groupdict(&self) -> PyResult<HashMap<String, String>> {
         let mut dict = HashMap::new();
         for (name, range) in self.dict(py).iter() {
-            dict.insert(name.to_string().into(), self.get_slice(py, range.clone())?);
+            dict.insert(name.to_string(), self.get_slice(py, range.clone())?);
         }
         Ok(dict)
     }

@@ -303,6 +303,12 @@ def pull(orig, ui, repo, *args, **opts):
     if (isrebase or update) and not dest:
         dest = ui.config("tweakdefaults", "defaultdest")
 
+    if isrebase and not dest:
+        # Not using main bookmark for non-rebase pull. See D38066104 and D38066103.
+        dest = bookmarks.mainbookmark(repo)
+        if dest not in repo:
+            raise error.Abort(_("missing rebase destination - supply --dest / -d"))
+
     if isrebase and update:
         mess = _("specify either rebase or update, not both")
         raise error.Abort(mess)

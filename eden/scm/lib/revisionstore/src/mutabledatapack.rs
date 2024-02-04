@@ -108,8 +108,7 @@ impl MutableDataPackInner {
         self.data_file.flush_inner()?;
         let mut file = self.data_file.get_mut();
 
-        let mut data = Vec::with_capacity(location.size as usize);
-        unsafe { data.set_len(location.size as usize) };
+        let mut data = vec![0; location.size as usize];
 
         file.seek(SeekFrom::Start(location.offset))?;
         file.read_exact(&mut data)?;
@@ -148,7 +147,7 @@ impl MutableDataPackInner {
             delta
                 .base
                 .as_ref()
-                .map_or_else(|| HgId::null_id(), |k| &k.hgid)
+                .map_or(HgId::null_id(), |k| &k.hgid)
                 .as_ref(),
         )?;
         buf.write_u64::<BigEndian>(compressed.len() as u64)?;
@@ -450,7 +449,7 @@ mod tests {
         mutdatapack.add(&delta, &Default::default())?;
         let chain = mutdatapack.get_delta_chain(&delta.key)?.unwrap();
         assert_eq!(chain.len(), 1);
-        assert_eq!(chain.get(0), Some(&delta));
+        assert_eq!(chain.first(), Some(&delta));
 
         Ok(())
     }

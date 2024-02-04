@@ -32,7 +32,7 @@ def check_recent_writes(
 
     # Don't report counters that has a count less than this number
     minWriteThresholdString = instance.get_config_value(
-        "doctor.recent-writes-problem-threshold", "10000"
+        "doctor.recent-writes-problem-threshold", "50000"
     )
 
     # this can throw a parse exception, but instead of handling it here I think it's better to

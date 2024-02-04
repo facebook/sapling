@@ -45,7 +45,6 @@ use slog::trace;
 use slog::Logger;
 use thiserror::Error;
 use tokio::io::AsyncReadExt;
-use tunables::force_update_tunables;
 
 use crate::connection_acceptor;
 use crate::connection_acceptor::AcceptedConnection;
@@ -342,7 +341,6 @@ where
 
         if path == "/force_update_configerator" {
             self.acceptor().config_store.force_update_configs();
-            force_update_tunables();
             return Ok(ok);
         }
 
@@ -491,6 +489,7 @@ mod h2m {
                     .transpose()?)
             })?,
             Some(conn.pending.addr.ip()),
+            Some(conn.pending.addr.port()),
         )
         .await)
     }
@@ -508,6 +507,7 @@ mod h2m {
 
     const HEADER_ENCODED_CLIENT_IDENTITY: &str = "x-fb-validated-client-encoded-identity";
     const HEADER_CLIENT_IP: &str = "tfb-orig-client-ip";
+    const HEADER_CLIENT_PORT: &str = "tfb-orig-client-port";
     const HEADER_FORWARDED_CATS: &str = "x-forwarded-cats";
 
     fn metadata_populate_trusted(
@@ -550,9 +550,10 @@ mod h2m {
             try_get_cats_idents(conn.pending.acceptor.fb.clone(), headers, internal_identity)?;
 
         if is_trusted {
-            if let (Some(encoded_identities), Some(client_address)) = (
+            if let (Some(encoded_identities), Some(client_address), Some(client_port)) = (
                 headers.get(HEADER_ENCODED_CLIENT_IDENTITY),
                 headers.get(HEADER_CLIENT_IP),
+                headers.get(HEADER_CLIENT_PORT),
             ) {
                 let json_identities = percent_decode(encoded_identities.as_ref())
                     .decode_utf8()
@@ -564,6 +565,11 @@ mod h2m {
                     .to_str()?
                     .parse::<IpAddr>()
                     .context("Invalid IP Address")?;
+
+                let client_port = client_port
+                    .to_str()?
+                    .parse::<u16>()
+                    .context("Invalid client port")?;
 
                 identities.extend(cats_identities.unwrap_or_default().into_iter());
 
@@ -578,6 +584,7 @@ mod h2m {
                             .transpose()?)
                     })?,
                     Some(ip_addr),
+                    Some(client_port),
                 )
                 .await;
 
@@ -606,6 +613,7 @@ mod h2m {
                     .transpose()?)
             })?,
             Some(conn.pending.addr.ip()),
+            Some(conn.pending.addr.port()),
         )
         .await;
 

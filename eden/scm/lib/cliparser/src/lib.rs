@@ -22,6 +22,9 @@
 //! as other languages ( python ) or files ( configuration ).
 
 pub mod alias;
+// Re-export so define_flags! macro can reliably reference $crate::anyhow::Result instead
+// of implicitly requiring the caller to have "anyhow" available.
+pub use anyhow;
 pub mod errors;
 pub mod macros;
 pub mod parser;

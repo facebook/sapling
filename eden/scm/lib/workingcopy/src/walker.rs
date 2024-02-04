@@ -387,7 +387,7 @@ mod tests {
         )?;
         let walked_files: Result<Vec<_>> = walker.collect();
         let walked_files = walked_files?;
-        let res = vec!["foo/bar/baz.txt"];
+        let res = ["foo/bar/baz.txt"];
         assert_eq!(walked_files.len(), res.len());
         for file in walked_files {
             assert!(res.contains(&file.as_ref().to_string().as_str()));
@@ -411,7 +411,7 @@ mod tests {
         let walked_files: Result<Vec<_>> = walker.collect();
         let walked_files = walked_files?;
         // Includes root dir ""
-        let res = vec![
+        let res = [
             "",
             "dirA",
             "dirA/a.txt",

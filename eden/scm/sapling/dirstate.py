@@ -875,6 +875,7 @@ class dirstate:
 
         return status
 
+    @perftrace.tracefunc("add_clean_and_trigger_bad_matches")
     def _add_clean_and_trigger_bad_matches(
         self,
         match: matchmod.basematcher,

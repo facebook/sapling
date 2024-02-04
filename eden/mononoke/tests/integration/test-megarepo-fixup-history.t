@@ -13,13 +13,6 @@ Setup repositories
   $ NO_BOOKMARKS_CACHE=1 REPOID=$FBS_REPOID REPONAME=repo setup_common_config $REPOTYPE
   $ setup_commitsyncmap
   $ setup_configerator_configs
-  $ merge_tunables <<EOF
-  > {
-  >   "killswitches": {
-  >     "force_unode_v2": true
-  >   }
-  > }
-  > EOF
 
   $ cat >> "$HGRCPATH" <<EOF
   > [ui]

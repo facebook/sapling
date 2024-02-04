@@ -233,7 +233,7 @@ impl Ord for RepoPathBuf {
 
 impl PartialOrd for RepoPathBuf {
     fn partial_cmp(&self, other: &RepoPathBuf) -> Option<Ordering> {
-        self.as_repo_path().partial_cmp(other.as_repo_path())
+        Some(self.cmp(other))
     }
 }
 

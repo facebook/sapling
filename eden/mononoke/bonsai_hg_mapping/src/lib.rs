@@ -10,6 +10,7 @@ use std::sync::Arc;
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
+use clientinfo::ClientRequestInfo;
 use context::CoreContext;
 use context::PerfCounterType;
 use fbinit::FacebookInit;
@@ -34,6 +35,7 @@ use stats::prelude::*;
 mod caching;
 mod errors;
 mod mem_writes_bonsai_hg_mapping;
+use futures::FutureExt;
 
 pub use crate::caching::CachingBonsaiHgMapping;
 pub use crate::errors::ErrorKind;
@@ -296,7 +298,11 @@ impl SqlBonsaiHgMappingBuilder {
 impl SqlConstructFromMetadataDatabaseConfig for SqlBonsaiHgMappingBuilder {}
 
 impl SqlBonsaiHgMapping {
-    async fn verify_consistency(&self, entry: BonsaiHgMappingEntry) -> Result<(), Error> {
+    async fn verify_consistency(
+        &self,
+        ctx: &CoreContext,
+        entry: BonsaiHgMappingEntry,
+    ) -> Result<(), Error> {
         let BonsaiHgMappingEntry { hg_cs_id, bcs_id } = entry.clone();
 
         let tok: i32 = rand::thread_rng().gen();
@@ -308,12 +314,25 @@ impl SqlBonsaiHgMapping {
             hg_ids,
         );
         let bcs_ids = &[bcs_id];
-        let by_bcs = SelectMappingByBonsai::query(
-            &self.read_master_connection.conn,
-            &self.repo_id,
-            &tok,
-            bcs_ids,
-        );
+
+        let by_bcs = if let Some(cri) = ctx.metadata().client_request_info() {
+            SelectMappingByBonsai::traced_query(
+                &self.read_master_connection.conn,
+                cri,
+                &self.repo_id,
+                &tok,
+                bcs_ids,
+            )
+            .boxed()
+        } else {
+            SelectMappingByBonsai::query(
+                &self.read_master_connection.conn,
+                &self.repo_id,
+                &tok,
+                bcs_ids,
+            )
+            .boxed()
+        };
 
         let (by_hg_rows, by_bcs_rows) = future::try_join(by_hg, by_bcs).await?;
 
@@ -363,7 +382,7 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
             if result.affected_rows() == 1 {
                 Ok(true)
             } else {
-                self.verify_consistency(entry).await?;
+                self.verify_consistency(ctx, entry).await?;
                 Ok(false)
             }
         }
@@ -377,8 +396,14 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
         STATS::gets.add_value(1);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        let (mut mappings, left_to_fetch) =
-            select_mapping(ctx.fb, &self.read_connection, self.repo_id, ids).await?;
+        let (mut mappings, left_to_fetch) = select_mapping(
+            ctx.fb,
+            ctx.metadata().client_request_info().cloned(),
+            &self.read_connection,
+            self.repo_id,
+            ids,
+        )
+        .await?;
 
         if left_to_fetch.is_empty() {
             return Ok(mappings);
@@ -389,6 +414,7 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
             .increment_counter(PerfCounterType::SqlReadsMaster);
         let (mut master_mappings, _) = select_mapping(
             ctx.fb,
+            ctx.metadata().client_request_info().cloned(),
             &self.read_master_connection,
             self.repo_id,
             left_to_fetch,
@@ -441,6 +467,7 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
 
 async fn select_mapping(
     fb: FacebookInit,
+    cri: Option<ClientRequestInfo>,
     connection: &RendezVousConnection,
     repo_id: RepositoryId,
     cs_ids: BonsaiOrHgChangesetIds,
@@ -460,13 +487,24 @@ async fn select_mapping(
                     move |bcs_ids| async move {
                         let bcs_ids = bcs_ids.into_iter().collect::<Vec<_>>();
 
-                        Ok(
+                        let res = if let Some(cri) = cri {
+                            SelectMappingByBonsai::traced_query(
+                                &conn,
+                                &cri,
+                                &repo_id,
+                                &tok,
+                                &bcs_ids[..],
+                            )
+                            .await?
+                        } else {
                             SelectMappingByBonsai::query(&conn, &repo_id, &tok, &bcs_ids[..])
                                 .await?
-                                .into_iter()
-                                .map(|(hg_cs_id, bcs_id, _)| (bcs_id, hg_cs_id))
-                                .collect(),
-                        )
+                        };
+
+                        Ok(res
+                            .into_iter()
+                            .map(|(hg_cs_id, bcs_id, _)| (bcs_id, hg_cs_id))
+                            .collect())
                     }
                 })
                 .await?;

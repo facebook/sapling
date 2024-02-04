@@ -12,7 +12,9 @@ blackbox = { version = "0.1.0", path = "../blackbox" }
 cliparser = { version = "0.1.0", path = "../cliparser" }
 configloader = { version = "0.1.0", path = "../config/loader" }
 configmodel = { version = "0.1.0", path = "../config/model" }
+context = { version = "0.1.0", path = "../context" }
 hgplain = { version = "0.1.0", path = "../util/hgplain" }
+hook = { version = "0.1.0", path = "../hook" }
 hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 identity = { version = "0.1.0", path = "../identity" }
 indexedlog = { version = "0.1.0", path = "../indexedlog", features = ["configurable"] }
@@ -20,6 +22,7 @@ io = { version = "0.1.0", path = "../io" }
 network-doctor = { version = "0.1.0", path = "../doctor/network" }
 repo = { version = "0.1.0", path = "../repo" }
 sampling = { version = "0.1.0", path = "../sampling" }
+shell-escape = "0.1.5"
 termlogger = { version = "0.1.0", path = "../io/term/logger" }
 thiserror = "1.0.49"
 thrift-types = { version = "0.1.0", path = "../thrift-types", optional = true }

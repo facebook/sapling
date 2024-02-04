@@ -1127,16 +1127,16 @@ P->C: 50->N100, 50->N300"#
 
     #[test]
     fn test_multi_stores_discontinuous_merges() {
-        for_each_empty_store(|store| test_discontinuous_merges(store));
+        for_each_empty_store(test_discontinuous_merges);
     }
 
     #[test]
     fn test_multi_stores_remove_segment() {
-        for_each_empty_store(|store| test_remove_segment(store));
+        for_each_empty_store(test_remove_segment);
     }
 
     #[test]
     fn test_multi_stores_resize_segment() {
-        for_each_empty_store(|store| test_resize_segment(store));
+        for_each_empty_store(test_resize_segment);
     }
 }

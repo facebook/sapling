@@ -11,6 +11,7 @@ use io::IO;
 use lazystr::LazyStr;
 
 /// TermLogger mixes the IO object with knowledge of output verbosity.
+#[derive(Clone)]
 pub struct TermLogger {
     io: IO,
     quiet: bool,

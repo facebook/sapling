@@ -126,7 +126,7 @@ pub fn groups() -> Option<Vec<u32>> {
 
         groups.truncate(ngroups as _);
         groups.sort_unstable();
-        return Some(groups.into_iter().map(|v| v).collect());
+        return Some(groups.into_iter().collect());
     }
 
     #[allow(unreachable_code)]

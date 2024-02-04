@@ -1,0 +1,15 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "journal",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "//eden/scm/lib/hgtime:hgtime",
+        "//eden/scm/lib/types:types",
+        "//eden/scm/lib/util:util",
+    ],
+)

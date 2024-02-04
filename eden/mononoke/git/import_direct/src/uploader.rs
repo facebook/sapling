@@ -279,6 +279,7 @@ where
             tag.author_date.take().map(|date| date.into()),
             tag.message,
             annotated_tag,
+            tag.target_is_tag,
         )
         .await
         .context("Failure in creating changeset for tag")

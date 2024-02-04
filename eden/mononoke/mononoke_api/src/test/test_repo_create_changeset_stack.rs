@@ -17,6 +17,7 @@ use fbinit::FacebookInit;
 use fixtures::Linear;
 use fixtures::TestRepoFixture;
 use maplit::btreemap;
+use mononoke_types::path::MPath;
 
 use crate::ChangesetContext;
 use crate::ChangesetId;
@@ -28,12 +29,11 @@ use crate::CreateInfo;
 use crate::FileType;
 use crate::Mononoke;
 use crate::MononokeError;
-use crate::MononokePath;
 use crate::RepoContext;
 
 async fn create_changeset_stack(
     repo: &RepoContext,
-    changes_stack: Vec<BTreeMap<MononokePath, CreateChange>>,
+    changes_stack: Vec<BTreeMap<MPath, CreateChange>>,
     stack_parents: Vec<ChangesetId>,
 ) -> Result<Vec<ChangesetContext>, MononokeError> {
     let author = String::from("Test Author <test@example.com>");
@@ -63,7 +63,7 @@ async fn create_changeset_stack(
 
 async fn create_changesets_sequentially(
     repo: &RepoContext,
-    changes_stack: Vec<BTreeMap<MononokePath, CreateChange>>,
+    changes_stack: Vec<BTreeMap<MPath, CreateChange>>,
     stack_parents: Vec<ChangesetId>,
 ) -> Result<Vec<ChangesetContext>, MononokeError> {
     let author = String::from("Test Author <test@example.com>");
@@ -102,7 +102,7 @@ async fn create_changesets_sequentially(
 async fn compare_create_stack(
     stack_repo: &RepoContext,
     seq_repo: &RepoContext,
-    changes_stack: Vec<BTreeMap<MononokePath, CreateChange>>,
+    changes_stack: Vec<BTreeMap<MPath, CreateChange>>,
     stack_parents: Vec<ChangesetId>,
 ) -> Result<Option<Vec<ChangesetContext>>, Error> {
     let stack =
@@ -157,7 +157,7 @@ async fn test_create_commit_stack(fb: FacebookInit) -> Result<(), Error> {
 
     let changes = vec![
         btreemap! {
-            MononokePath::try_from("TEST_FILE")? =>
+            MPath::try_from("TEST_FILE")? =>
             CreateChange::Tracked(
                 CreateChangeFile::New {
                     bytes: Bytes::from("TEST CREATE 1\n"),
@@ -167,7 +167,7 @@ async fn test_create_commit_stack(fb: FacebookInit) -> Result<(), Error> {
             ),
         },
         btreemap! {
-            MononokePath::try_from("TEST_FILE")? =>
+            MPath::try_from("TEST_FILE")? =>
             CreateChange::Tracked(
                 CreateChangeFile::New {
                     bytes: Bytes::from("TEST CHANGE 1\n"),
@@ -175,7 +175,7 @@ async fn test_create_commit_stack(fb: FacebookInit) -> Result<(), Error> {
                 },
                 None,
             ),
-            MononokePath::try_from("TEST_DIR/TEST_FILE")? =>
+            MPath::try_from("TEST_DIR/TEST_FILE")? =>
             CreateChange::Tracked(
                 CreateChangeFile::New {
                     bytes: Bytes::from("TEST CREATE 2\n"),
@@ -185,7 +185,7 @@ async fn test_create_commit_stack(fb: FacebookInit) -> Result<(), Error> {
             ),
         },
         btreemap! {
-            MononokePath::try_from("TEST_DIR/TEST_FILE")? =>
+            MPath::try_from("TEST_DIR/TEST_FILE")? =>
             CreateChange::Tracked(
                 CreateChangeFile::New {
                     bytes: Bytes::from("TEST CHANGE 2\n"),
@@ -262,7 +262,7 @@ async fn test_create_commit_stack_delete_files(fb: FacebookInit) -> Result<(), E
     // Deleting a file that doesn't exist should fail.
     let changes = vec![
         btreemap! {
-            MononokePath::try_from("TEST_FILE")? =>
+            MPath::try_from("TEST_FILE")? =>
             CreateChange::Tracked(
                 CreateChangeFile::New {
                     bytes: Bytes::from("TEST CREATE 1\n"),
@@ -272,7 +272,7 @@ async fn test_create_commit_stack_delete_files(fb: FacebookInit) -> Result<(), E
             ),
         },
         btreemap! {
-            MononokePath::try_from("TEST_OTHER_FILE")? =>
+            MPath::try_from("TEST_OTHER_FILE")? =>
             CreateChange::Deletion,
         },
     ];
@@ -285,7 +285,7 @@ async fn test_create_commit_stack_delete_files(fb: FacebookInit) -> Result<(), E
     // But succeed if the file was created in the stack.
     let changes = vec![
         btreemap! {
-            MononokePath::try_from("TEST_NEW_FILE")? =>
+            MPath::try_from("TEST_NEW_FILE")? =>
             CreateChange::Tracked(
                 CreateChangeFile::New {
                     bytes: Bytes::from("TEST CREATE 1\n"),
@@ -295,7 +295,7 @@ async fn test_create_commit_stack_delete_files(fb: FacebookInit) -> Result<(), E
             ),
         },
         btreemap! {
-            MononokePath::try_from("TEST_NEW_FILE")? =>
+            MPath::try_from("TEST_NEW_FILE")? =>
             CreateChange::Deletion,
         },
     ];
@@ -306,7 +306,7 @@ async fn test_create_commit_stack_delete_files(fb: FacebookInit) -> Result<(), E
     // Deleting a file twice in the stack should also fail.
     let changes = vec![
         btreemap! {
-            MononokePath::try_from("TEST_FILE")? =>
+            MPath::try_from("TEST_FILE")? =>
             CreateChange::Tracked(
                 CreateChangeFile::New {
                     bytes: Bytes::from("TEST CREATE 2\n"),
@@ -316,11 +316,11 @@ async fn test_create_commit_stack_delete_files(fb: FacebookInit) -> Result<(), E
             ),
         },
         btreemap! {
-            MononokePath::try_from("TEST_FILE")? =>
+            MPath::try_from("TEST_FILE")? =>
             CreateChange::Deletion,
         },
         btreemap! {
-            MononokePath::try_from("TEST_FILE")? =>
+            MPath::try_from("TEST_FILE")? =>
             CreateChange::Deletion,
         },
     ];
@@ -333,7 +333,7 @@ async fn test_create_commit_stack_delete_files(fb: FacebookInit) -> Result<(), E
     // This should also be true if the first deletion was implicit.
     let changes = vec![
         btreemap! {
-            MononokePath::try_from("TEST_PATH/SUBDIR/TEST_FILE")? =>
+            MPath::try_from("TEST_PATH/SUBDIR/TEST_FILE")? =>
             CreateChange::Tracked(
                 CreateChangeFile::New {
                     bytes: Bytes::from("TEST CREATE 3\n"),
@@ -343,7 +343,7 @@ async fn test_create_commit_stack_delete_files(fb: FacebookInit) -> Result<(), E
             ),
         },
         btreemap! {
-            MononokePath::try_from("TEST_PATH")? =>
+            MPath::try_from("TEST_PATH")? =>
             CreateChange::Tracked(
                 CreateChangeFile::New {
                     bytes: Bytes::from("TEST CREATE 3\n"),
@@ -353,7 +353,7 @@ async fn test_create_commit_stack_delete_files(fb: FacebookInit) -> Result<(), E
             ),
         },
         btreemap! {
-            MononokePath::try_from("TEST_PATH/SUBDIR/TEST_FILE")? =>
+            MPath::try_from("TEST_PATH/SUBDIR/TEST_FILE")? =>
             CreateChange::Deletion,
         },
     ];
@@ -399,7 +399,7 @@ async fn test_create_commit_stack_path_conflicts(fb: FacebookInit) -> Result<(),
     // Attempting to create path conflicts in a stack should fail
     let changes = vec![
         btreemap! {
-            MononokePath::try_from("TEST_PATH")? =>
+            MPath::try_from("TEST_PATH")? =>
             CreateChange::Tracked(
                 CreateChangeFile::New {
                     bytes: Bytes::from("TEST CREATE 1\n"),
@@ -409,7 +409,7 @@ async fn test_create_commit_stack_path_conflicts(fb: FacebookInit) -> Result<(),
             ),
         },
         btreemap! {
-            MononokePath::try_from("TEST_PATH/SUBDIR/TEST_FILE")? =>
+            MPath::try_from("TEST_PATH/SUBDIR/TEST_FILE")? =>
             CreateChange::Tracked(
                 CreateChangeFile::New {
                     bytes: Bytes::from("TEST CREATE 1\n"),
@@ -428,7 +428,7 @@ async fn test_create_commit_stack_path_conflicts(fb: FacebookInit) -> Result<(),
     // But succeeds if you resolve the path conflict
     let changes = vec![
         btreemap! {
-            MononokePath::try_from("TEST_PATH")? =>
+            MPath::try_from("TEST_PATH")? =>
             CreateChange::Tracked(
                 CreateChangeFile::New {
                     bytes: Bytes::from("TEST CREATE 1\n"),
@@ -438,9 +438,9 @@ async fn test_create_commit_stack_path_conflicts(fb: FacebookInit) -> Result<(),
             ),
         },
         btreemap! {
-            MononokePath::try_from("TEST_PATH")? =>
+            MPath::try_from("TEST_PATH")? =>
             CreateChange::Deletion,
-            MononokePath::try_from("TEST_PATH/SUBDIR/TEST_FILE")? =>
+            MPath::try_from("TEST_PATH/SUBDIR/TEST_FILE")? =>
             CreateChange::Tracked(
                 CreateChangeFile::New {
                     bytes: Bytes::from("TEST CREATE 1\n"),
@@ -490,7 +490,7 @@ async fn test_create_commit_stack_copy_from(fb: FacebookInit) -> Result<(), Erro
     // Copy from source must exist in the parent
     let mut changes = vec![
         btreemap! {
-            MononokePath::try_from("TEST_FILE")? =>
+            MPath::try_from("TEST_FILE")? =>
             CreateChange::Tracked(
                 CreateChangeFile::New {
                     bytes: Bytes::from("TEST CREATE 1\n"),
@@ -500,13 +500,13 @@ async fn test_create_commit_stack_copy_from(fb: FacebookInit) -> Result<(), Erro
             ),
         },
         btreemap! {
-            MononokePath::try_from("TEST_FILE2")? =>
+            MPath::try_from("TEST_FILE2")? =>
             CreateChange::Tracked(
                 CreateChangeFile::New {
                     bytes: Bytes::from("TEST CREATE 1\n"),
                     file_type: FileType::Regular,
                 },
-                Some(CreateCopyInfo::new(MononokePath::try_from("OTHER_FILE")?, 0)),
+                Some(CreateCopyInfo::new(MPath::try_from("OTHER_FILE")?, 0)),
             ),
         },
     ];
@@ -525,7 +525,7 @@ async fn test_create_commit_stack_copy_from(fb: FacebookInit) -> Result<(), Erro
     changes.insert(
         0,
         btreemap! {
-            MononokePath::try_from("OTHER_FILE")? =>
+            MPath::try_from("OTHER_FILE")? =>
             CreateChange::Tracked(
                 CreateChangeFile::New {
                     bytes: Bytes::from("TEST CREATE 2\n"),

@@ -11,10 +11,7 @@ use anyhow::format_err;
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
-use bonsai_hg_mapping::BonsaiHgMappingRef;
-use bookmarks::BookmarksRef;
 use cmdlib::args;
-use cmdlib::helpers;
 use context::CoreContext;
 use facet::AsyncBuildable;
 use fbinit::FacebookInit;
@@ -24,52 +21,11 @@ use manifest::ManifestOps;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::NonRootMPath;
-use mononoke_types::BonsaiChangeset;
-use mononoke_types::FileChange;
-use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_factory::RepoFactoryBuilder;
-use repo_identity::RepoIdentityRef;
 use slog::debug;
 use slog::Logger;
 use synced_commit_mapping::SqlSyncedCommitMapping;
-
-pub async fn fetch_bonsai_changeset(
-    ctx: CoreContext,
-    rev: &str,
-    repo: impl RepoIdentityRef + BonsaiHgMappingRef + BookmarksRef,
-    blobstore: &RepoBlobstore,
-) -> Result<BonsaiChangeset, Error> {
-    let csid = helpers::csid_resolve(&ctx, repo, rev.to_string()).await?;
-    let cs = csid.load(&ctx, blobstore).await?;
-    Ok(cs)
-}
-
-pub fn print_bonsai_changeset(bcs: &BonsaiChangeset) {
-    println!(
-        "BonsaiChangesetId: {} \n\
-                     Author: {} \n\
-                     Message: {} \n\
-                     FileChanges:",
-        bcs.get_changeset_id(),
-        bcs.author(),
-        bcs.message().lines().next().unwrap_or("")
-    );
-
-    for (path, file_change) in bcs.file_changes() {
-        match file_change {
-            FileChange::Change(file_change) => match file_change.copy_from() {
-                Some(_) => println!("\t COPY/MOVE: {} {}", path, file_change.content_id()),
-                None => println!("\t ADDED/MODIFIED: {} {}", path, file_change.content_id()),
-            },
-            FileChange::Deletion => println!("\t REMOVED: {}", path),
-            FileChange::UntrackedChange(fc) => {
-                println!("\t UNTRACKED ADD/MODIFY: {} {}", path, fc.content_id())
-            }
-            FileChange::UntrackedDeletion => println!("\t MISSING: {}", path),
-        }
-    }
-}
 
 // The function retrieves the HgFileNodeId of a file, based on path and rev.
 // If the path is not valid an error is expected.

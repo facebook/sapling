@@ -493,6 +493,7 @@ impl TreeState {
     // Note: In TreeState's case, NEED_CHECK might mean "perform a quick mtime check",
     // or "perform a content check" depending on the caller. Be careful when removing
     // "mtime = -1" statement.
+    #[tracing::instrument(skip_all)]
     pub fn invalidate_mtime(&mut self, now: i32) -> Result<()> {
         self.visit(
             &mut |path, state| {

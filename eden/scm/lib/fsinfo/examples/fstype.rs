@@ -9,7 +9,7 @@ use anyhow::Result;
 
 fn main() -> Result<()> {
     for arg in std::env::args().skip(1) {
-        println!("{}: {}", &arg, fsinfo::fstype(&arg)?.to_string());
+        println!("{}: {}", &arg, fsinfo::fstype(&arg)?);
     }
     Ok(())
 }

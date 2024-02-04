@@ -84,14 +84,8 @@
   $ mononoke_newadmin git-bundle create from-repo -R repo --output-location "$BUNDLE_PATH"
 # Ensure that Git considers this a valid bundle
   $ cd $GIT_REPO
-  $ git bundle verify $BUNDLE_PATH
+  $ git bundle verify -q $BUNDLE_PATH
   $TESTTMP/repo_bundle.bundle is okay
-  The bundle contains these 4 refs:
-  * (glob)
-  * (glob)
-  * (glob)
-  * (glob)
-  The bundle records a complete history.
 
 # Create a new empty folder for containing the repo
   $ mkdir $TESTTMP/git_client_repo  

@@ -7,6 +7,13 @@
 
 use std::sync::Arc;
 
+use ::commits::DagCommits;
+use ::commits::GraphNode;
+use ::commits::HgCommit;
+use ::commits::HgCommits;
+use ::commits::HybridCommits;
+use ::commits::MemHgCommits;
+use ::commits::RevlogCommits;
 use anyhow::format_err;
 use async_runtime::try_block_unless_interrupted as block_on;
 use cpython::*;
@@ -27,13 +34,6 @@ use dag::Dag;
 use dag::DagAlgorithm;
 use dag::Vertex;
 use dag::VertexListWithOptions;
-use hgcommits::DagCommits;
-use hgcommits::GraphNode;
-use hgcommits::HgCommit;
-use hgcommits::HgCommits;
-use hgcommits::HybridCommits;
-use hgcommits::MemHgCommits;
-use hgcommits::RevlogCommits;
 use minibytes::Bytes;
 use parking_lot::RwLock;
 use pyedenapi::PyClient;

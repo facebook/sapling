@@ -53,9 +53,9 @@ macro_rules! _define_flags_impl {
         }
 
         impl TryFrom<$crate::parser::ParseOutput> for $name {
-            type Error = ::anyhow::Error;
+            type Error = $crate::anyhow::Error;
 
-            fn try_from(out: $crate::parser::ParseOutput) -> ::anyhow::Result<Self> {
+            fn try_from(out: $crate::parser::ParseOutput) -> $crate::anyhow::Result<Self> {
                 if !$has_varargs && out.args.len() > $varargs_offset {
                     return Err($crate::errors::InvalidArguments.into());
                 }

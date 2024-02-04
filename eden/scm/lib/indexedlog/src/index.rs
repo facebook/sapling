@@ -108,7 +108,7 @@ use crate::utils::mmap_bytes;
 use crate::utils::xxhash;
 use crate::utils::xxhash32;
 
-//// Structures and serialization
+/// Structures and serialization
 
 #[derive(Clone, PartialEq, Default)]
 struct MemRadix {
@@ -1963,7 +1963,7 @@ impl IterState {
     }
 }
 
-//// Main Index
+/// Main Index
 
 /// Insertion-only mapping from `bytes` to a list of [u64]s.
 ///
@@ -3363,7 +3363,7 @@ pub enum InsertValue {
     TombstonePrefix,
 }
 
-//// Debug Formatter
+/// Debug Formatter
 
 impl Debug for Offset {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
@@ -4690,7 +4690,7 @@ Disk[410]: Root { radix: Disk[402] }
     #[test]
     fn test_range_example1() {
         test_range_against_btreeset(
-            vec![
+            [
                 &[0x00, 0x00, 0x00][..],
                 &[0x10, 0x0d, 0x01],
                 &[0x10, 0x0e],

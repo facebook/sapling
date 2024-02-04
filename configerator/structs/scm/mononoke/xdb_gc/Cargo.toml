@@ -12,6 +12,7 @@ build = "thrift_build.rs"
 path = "thrift_lib.rs"
 test = false
 doctest = false
+doc = false
 
 [dependencies]
 anyhow = "1.0.75"
@@ -24,6 +25,8 @@ ref-cast = "1.0.18"
 thiserror = "1.0.49"
 tracing = "0.1.40"
 tracing-futures = { version = "0.2.5", features = ["futures-03"] }
+xdb_gc_structs__clients = { package = "xdb_gc_structs_clients", version = "0.1.0", path = "clients" }
+xdb_gc_structs__services = { package = "xdb_gc_structs_services", version = "0.1.0", path = "services" }
 xdb_gc_structs__types = { package = "xdb_gc_structs_types", version = "0.1.0", path = "types" }
 
 [build-dependencies]

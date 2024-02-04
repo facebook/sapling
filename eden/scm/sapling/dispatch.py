@@ -25,6 +25,7 @@ import time
 import bindings
 
 from . import (
+    alerts,
     blackbox,
     cmdutil,
     color,
@@ -50,6 +51,7 @@ from .i18n import _, _x
 
 
 cliparser = bindings.cliparser
+rsconfig = bindings.configloader.config
 
 
 unrecoverablewrite = registrar.command.unrecoverablewrite
@@ -65,10 +67,12 @@ class request:
         fout=None,
         ferr=None,
         prereposetups=None,
+        skipprehooks=False,
     ):
         self.args = args
         self.ui = ui
         self.repo = repo
+        self.skipprehooks = skipprehooks
 
         # The repo, if any, that ends up being used for command execution.
         self.cmdrepo = None
@@ -136,15 +140,11 @@ class request:
                 raise exc
 
 
-def run(args=None, fin=None, fout=None, ferr=None, config=None):
+def run(args, fin, fout, ferr, rcfg: rsconfig, skipprehooks: bool):
     "run the command in sys.argv"
     _initstdio()
-    if args is None:
-        args = pycompat.sysargv
 
-    ui = None
-    if config:
-        ui = uimod.ui(rcfg=config)
+    ui = uimod.ui(rcfg=rcfg)
 
     if not ui or ui.configbool("experimental", "mercurial-shim", True):
         from . import mercurialshim
@@ -154,7 +154,9 @@ def run(args=None, fin=None, fout=None, ferr=None, config=None):
         # (even though the shim module appears in sys.modules).
         sys.meta_path.insert(0, mercurialshim.MercurialImporter())
 
-    req = request(args[1:], fin=fin, fout=fout, ferr=ferr, ui=ui)
+    req = request(
+        args[1:], fin=fin, fout=fout, ferr=ferr, ui=ui, skipprehooks=skipprehooks
+    )
     err = None
     try:
         status = (dispatch(req) or 0) & 255
@@ -746,17 +748,35 @@ def _joinfullargs(fullargs):
     return " ".join(fullargs)
 
 
-def runcommand(lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions):
-    # run pre-hook, and abort if it fails
-    hook.hook(
-        lui,
-        repo,
-        "pre-%s" % cmd,
-        True,
-        args=_joinfullargs(fullargs),
-        pats=cmdpats,
-        opts=cmdoptions,
-    )
+def runcommand(
+    lui,
+    repo,
+    cmd,
+    fullargs,
+    ui,
+    options,
+    d,
+    cmdpats,
+    cmdoptions,
+    namesforhooks,
+    skipprehooks,
+):
+
+    fullargs = _joinfullargs(fullargs)
+
+    for name in namesforhooks:
+        # run pre-hook, and abort if it fails
+        hook.hook(
+            lui,
+            repo,
+            "pre-%s" % name,
+            True,
+            skipshell=skipprehooks,
+            args=fullargs,
+            pats=cmdpats,
+            opts=cmdoptions,
+        )
+
     try:
         hintutil.loadhintconfig(lui)
         ui.log("jobid", jobid=encoding.environ.get("HG_JOB_ID", "unknown"))
@@ -768,27 +788,29 @@ def runcommand(lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions):
             ret = 0 if repo else 1
 
         # run post-hook, passing command result
-        hook.hook(
-            lui,
-            repo,
-            "post-%s" % cmd,
-            False,
-            args=" ".join(fullargs),
-            result=ret,
-            pats=cmdpats,
-            opts=cmdoptions,
-        )
+        for name in namesforhooks:
+            hook.hook(
+                lui,
+                repo,
+                "post-%s" % name,
+                False,
+                args=fullargs,
+                result=ret,
+                pats=cmdpats,
+                opts=cmdoptions,
+            )
     except Exception as e:
-        # run failure hook and re-raise
-        hook.hook(
-            lui,
-            repo,
-            "fail-%s" % cmd,
-            False,
-            args=" ".join(fullargs),
-            pats=cmdpats,
-            opts=cmdoptions,
-        )
+        for name in namesforhooks:
+            # run failure hook and re-raise
+            hook.hook(
+                lui,
+                repo,
+                "fail-%s" % name,
+                False,
+                args=fullargs,
+                pats=cmdpats,
+                opts=cmdoptions,
+            )
         _log_exception(lui, e)
         raise
     if getattr(repo, "_txnreleased", False):
@@ -995,7 +1017,7 @@ def _dispatch(req):
         msg = _formatargs(fullargs)
         with perftrace.trace("Main Python Command"):
             repo = None
-            # Right now Rust `hgcommands` (undesirably) sets `func` to the
+            # Right now Rust `commands` (undesirably) sets `func` to the
             # command description, not a callable function.
             if not callable(func):
                 raise error.ProgrammingError(
@@ -1074,7 +1096,17 @@ def _dispatch(req):
             strcmdopt = cmdoptions
             d = lambda: util.checksignature(func)(ui, *args, **strcmdopt)
             ret = runcommand(
-                lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions
+                lui,
+                repo,
+                cmd,
+                fullargs,
+                ui,
+                options,
+                d,
+                cmdpats,
+                cmdoptions,
+                func.namesforhooks,
+                req.skipprehooks,
             )
             hintutil.show(lui)
             if repo:
@@ -1134,8 +1166,12 @@ def handlecommandexception(ui):
     if ui.configbool("devel", "silence-crash"):
         return True  # do not re-raise
     warning = _exceptionwarning(ui)
-    ui.log("command_exception", "%s\n%s\n", warning, util.smartformatexc())
+    crash = util.smartformatexc()
+    ui.log("command_exception", "%s\n%s\n", warning, crash)
     ui.warn(warning)
+
+    alerts.print_matching_alerts_for_exception(ui, crash)
+
     return False  # re-raise the exception
 
 

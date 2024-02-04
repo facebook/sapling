@@ -1028,7 +1028,9 @@ def remoteui(src, opts):
 
     if hasattr(src, "ui"):  # looks like a repository
         # drop repo-specific config
-        dst = src.ui.copywithoutrepo()
+        dst = src.ui.copy()
+        dst.reloadconfigs(None)
+
         # to copy target options from repo
         src = src.ui
     else:

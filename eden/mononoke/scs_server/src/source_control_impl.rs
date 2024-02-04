@@ -69,6 +69,7 @@ use crate::specifiers::SpecifierExt;
 
 const FORWARDED_IDENTITIES_HEADER: &str = "scm_forwarded_identities";
 const FORWARDED_CLIENT_IP_HEADER: &str = "scm_forwarded_client_ip";
+const FORWARDED_CLIENT_PORT_HEADER: &str = "scm_forwarded_client_port";
 const FORWARDED_CLIENT_DEBUG_HEADER: &str = "scm_forwarded_client_debug";
 const FORWARDED_OTHER_CATS_HEADER: &str = "scm_forwarded_other_cats";
 const PER_REQUEST_READ_QPS: usize = 4000;
@@ -260,9 +261,10 @@ impl SourceControlServiceImpl {
             .await;
 
         if is_trusted {
-            if let (Some(forwarded_identities), Some(forwarded_ip)) = (
+            if let (Some(forwarded_identities), Some(forwarded_ip), Some(forwarded_port)) = (
                 header(FORWARDED_IDENTITIES_HEADER)?,
                 header(FORWARDED_CLIENT_IP_HEADER)?,
+                header(FORWARDED_CLIENT_PORT_HEADER)?,
             ) {
                 let mut header_identities: MononokeIdentitySet =
                     serde_json::from_str(forwarded_identities.as_str())
@@ -270,6 +272,11 @@ impl SourceControlServiceImpl {
                 let client_ip = Some(
                     forwarded_ip
                         .parse::<IpAddr>()
+                        .map_err(errors::invalid_request)?,
+                );
+                let client_port = Some(
+                    forwarded_port
+                        .parse::<u16>()
                         .map_err(errors::invalid_request)?,
                 );
                 let client_debug = header(FORWARDED_CLIENT_DEBUG_HEADER)?.is_some();
@@ -282,6 +289,7 @@ impl SourceControlServiceImpl {
                     metadata::security::is_client_untrusted(|h| req_ctxt.header(h))
                         .map_err(errors::invalid_request)?,
                     client_ip,
+                    client_port,
                 )
                 .await;
 
@@ -303,6 +311,7 @@ impl SourceControlServiceImpl {
             false,
             metadata::security::is_client_untrusted(|h| req_ctxt.header(h))
                 .map_err(errors::invalid_request)?,
+            None,
             None,
         )
         .await;
@@ -382,10 +391,11 @@ impl SourceControlServiceImpl {
 
     fn bubble_fetcher_for_changeset(
         &self,
+        ctx: CoreContext,
         specifier: ChangesetSpecifier,
     ) -> impl FnOnce(RepoEphemeralStore) -> BoxFuture<'static, anyhow::Result<Option<BubbleId>>>
     {
-        move |ephemeral| async move { specifier.bubble_id(ephemeral).await }.boxed()
+        move |ephemeral| async move { specifier.bubble_id(&ctx, ephemeral).await }.boxed()
     }
 
     /// Get the repo and changeset specified by a `thrift::CommitSpecifier`.
@@ -396,13 +406,10 @@ impl SourceControlServiceImpl {
     ) -> Result<(RepoContext, ChangesetContext), errors::ServiceError> {
         let changeset_specifier = ChangesetSpecifier::from_request(&commit.id)?;
         let authz = AuthorizationContext::new(&ctx);
+        let bubble_fetcher =
+            self.bubble_fetcher_for_changeset(ctx.clone(), changeset_specifier.clone());
         let repo = self
-            .repo_impl(
-                ctx,
-                &commit.repo,
-                authz,
-                self.bubble_fetcher_for_changeset(changeset_specifier.clone()),
-            )
+            .repo_impl(ctx, &commit.repo, authz, bubble_fetcher)
             .await?;
         let changeset = repo
             .changeset(changeset_specifier)
@@ -430,13 +437,10 @@ impl SourceControlServiceImpl {
             )))?
         }
         let authz = AuthorizationContext::new(&ctx);
+        let bubble_fetcher =
+            self.bubble_fetcher_for_changeset(ctx.clone(), changeset_specifier.clone());
         let repo = self
-            .repo_impl(
-                ctx,
-                &commit.repo,
-                authz,
-                self.bubble_fetcher_for_changeset(changeset_specifier.clone()),
-            )
+            .repo_impl(ctx, &commit.repo, authz, bubble_fetcher)
             .await?;
         let (changeset, other_changeset) = try_join!(
             async {

@@ -12,6 +12,6 @@ rust_python_extension(
     module_name = "bindings",
     deps = [
         "fbsource//third-party/rust:cpython",
-        "//eden/scm/lib/hgcommands:hgcommands",
+        "//eden/scm/lib/commands:commands",
     ],
 )

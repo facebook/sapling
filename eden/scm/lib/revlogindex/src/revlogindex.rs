@@ -404,6 +404,7 @@ pub enum ParentRevs {
     Compact([i32; 2]),
     // Box<Vec<i32>> takes 8 bytes. Box<[i32]> takes 16 bytes.
     // Using smaller struct for better memory efficiency.
+    #[allow(clippy::box_collection)]
     Octopus(Box<Vec<i32>>),
 }
 
@@ -539,6 +540,10 @@ impl RevlogIndex {
             version: VerLink::new(),
         };
         Ok(result)
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     /// Revisions in total.
@@ -773,7 +778,7 @@ impl RevlogIndex {
             .create(true)
             .append(true)
             .write(true)
-            .open(&revlog_data_path)?;
+            .open(revlog_data_path)?;
         let mut revlog_index = fs::OpenOptions::new()
             .read(true)
             .create(true)
@@ -1165,7 +1170,7 @@ impl DagAlgorithm for RevlogIndex {
 
     /// Returns a set that covers all vertexes tracked by this DAG.
     async fn all(&self) -> dag::Result<Set> {
-        let id_set = if self.len() == 0 {
+        let id_set = if self.is_empty() {
             IdSet::empty()
         } else {
             IdSet::from(Id(0)..=Id(self.len() as u64 - 1))

@@ -12,6 +12,7 @@ use anyhow::Result;
 use async_stream::try_stream;
 use blobstore::Loadable;
 use bonsai_git_mapping::BonsaiGitMappingRef;
+use bonsai_tag_mapping::BonsaiTagMappingEntry;
 use bonsai_tag_mapping::BonsaiTagMappingRef;
 use bookmarks::BookmarkCategory;
 use bookmarks::BookmarkKey;
@@ -51,11 +52,15 @@ use rustc_hash::FxHashMap;
 use rustc_hash::FxHashSet;
 
 use crate::types::DeltaInclusion;
+use crate::types::LsRefsRequest;
+use crate::types::LsRefsResponse;
 use crate::types::PackItemStreamRequest;
 use crate::types::PackItemStreamResponse;
 use crate::types::PackfileItemInclusion;
+use crate::types::RefTarget;
 use crate::types::RequestedRefs;
 use crate::types::RequestedSymrefs;
+use crate::types::SymrefFormat;
 use crate::types::TagInclusion;
 
 const HEAD_REF: &str = "HEAD";
@@ -78,7 +83,7 @@ pub trait Repo = RepoIdentityRef
 async fn bookmarks(
     ctx: &CoreContext,
     repo: &impl Repo,
-    request: &PackItemStreamRequest,
+    requested_refs: &RequestedRefs,
 ) -> Result<FxHashMap<BookmarkKey, ChangesetId>> {
     let mut bookmarks = repo
         .bookmarks()
@@ -92,12 +97,23 @@ async fn bookmarks(
             u64::MAX,
         )
         .try_filter_map(|(bookmark, cs_id)| {
-            let refs = request.requested_refs.clone();
+            let refs = requested_refs.clone();
             let name = bookmark.name().to_string();
             async move {
                 let result = match refs {
                     RequestedRefs::Included(refs) if refs.contains(&name) => {
                         Some((bookmark.into_key(), cs_id))
+                    }
+                    RequestedRefs::IncludedWithPrefix(ref_prefixes) => {
+                        let ref_name = format!("refs/{}", name);
+                        if ref_prefixes
+                            .iter()
+                            .any(|ref_prefix| ref_name.starts_with(ref_prefix))
+                        {
+                            Some((bookmark.into_key(), cs_id))
+                        } else {
+                            None
+                        }
                     }
                     RequestedRefs::Excluded(refs) if !refs.contains(&name) => {
                         Some((bookmark.into_key(), cs_id))
@@ -114,7 +130,7 @@ async fn bookmarks(
         .await?;
     // In case the requested refs include specified refs with value and those refs are not
     // bookmarks known at the server, we need to manually include them in the output
-    if let RequestedRefs::IncludedWithValue(ref ref_value_map) = request.requested_refs {
+    if let RequestedRefs::IncludedWithValue(ref ref_value_map) = requested_refs {
         for (ref_name, ref_value) in ref_value_map {
             bookmarks.insert(
                 BookmarkKey::with_name(ref_name.as_str().try_into()?),
@@ -211,6 +227,46 @@ async fn object_count(
     Ok((total_object_count, duplicate_objects))
 }
 
+/// Get the tag entry for the given tag key
+async fn tag_entry(repo: &impl Repo, tag: &BookmarkKey) -> Result<Option<BonsaiTagMappingEntry>> {
+    let tag_name = tag.name().to_string();
+    repo.bonsai_tag_mapping()
+        .get_entry_by_tag_name(tag_name.clone())
+        .await
+        .with_context(|| {
+            format!(
+                "Error in gettting bonsai_tag_mapping entry for tag name {}",
+                tag_name
+            )
+        })
+}
+
+/// Get the Git counterpart for a bonsai commit, if it exists.
+async fn git_object_for_bonsai(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    cs_id: ChangesetId,
+) -> Result<ObjectId> {
+    let maybe_git_sha1 = repo
+        .bonsai_git_mapping()
+        .get_git_sha1_from_bonsai(ctx, cs_id)
+        .await
+        .with_context(|| {
+            format!(
+                "Error in fetching Git Sha1 for changeset {:?} through BonsaiGitMapping",
+                cs_id
+            )
+        })?;
+    let git_sha1 = maybe_git_sha1
+        .ok_or_else(|| anyhow::anyhow!("Git Sha1 not found for changeset {:?}", cs_id))?;
+    ObjectId::from_hex(git_sha1.to_hex().as_bytes()).with_context(|| {
+        format!(
+            "Error in converting GitSha1 {:?} to GitObjectId",
+            git_sha1.to_hex()
+        )
+    })
+}
+
 /// Get the list of Git refs that need to be included in the stream of PackfileItem. On Mononoke end, this
 /// will be bookmarks created from branches and tags. Branches and simple tags will be mapped to the
 /// Git commit that they point to. Annotated tags will be handled based on the `tag_inclusion` parameter
@@ -219,48 +275,42 @@ async fn refs_to_include(
     repo: &impl Repo,
     bookmarks: &FxHashMap<BookmarkKey, ChangesetId>,
     tag_inclusion: TagInclusion,
-) -> Result<FxHashMap<String, ObjectId>> {
+) -> Result<FxHashMap<String, RefTarget>> {
     stream::iter(bookmarks.iter())
         .map(|(bookmark, cs_id)| async move {
-            if bookmark.is_tag() && tag_inclusion == TagInclusion::AsIs {
-                let tag_name = bookmark.name().to_string();
-                let entry = repo
-                    .bonsai_tag_mapping()
-                    .get_entry_by_tag_name(tag_name.clone())
-                    .await
-                    .with_context(|| {
-                        format!(
-                            "Error in gettting bonsai_tag_mapping entry for tag name {}",
-                            tag_name
-                        )
-                    })?;
-                if let Some(entry) = entry {
-                    let git_objectid = entry.tag_hash.to_object_id()?;
-                    let ref_name = format!("refs/{}", bookmark);
-                    return anyhow::Ok((ref_name, git_objectid));
+            if bookmark.is_tag() {
+                match tag_inclusion {
+                    TagInclusion::AsIs => {
+                        if let Some(entry) = tag_entry(repo, bookmark).await? {
+                            let git_objectid = entry.tag_hash.to_object_id()?;
+                            let ref_name = format!("refs/{}", bookmark);
+                            return anyhow::Ok((ref_name, RefTarget::Plain(git_objectid)));
+                        }
+                    }
+                    TagInclusion::Peeled => {
+                        let git_objectid = git_object_for_bonsai(ctx, repo, *cs_id).await?;
+                        let ref_name = format!("refs/{}", bookmark);
+                        return anyhow::Ok((ref_name, RefTarget::Plain(git_objectid)));
+                    }
+                    TagInclusion::WithTarget => {
+                        if let Some(entry) = tag_entry(repo, bookmark).await? {
+                            let tag_objectid = entry.tag_hash.to_object_id()?;
+                            let commit_objectid = git_object_for_bonsai(ctx, repo, *cs_id).await?;
+                            let ref_name = format!("refs/{}", bookmark);
+                            let metadata = format!("peeled:{}", commit_objectid.to_hex());
+                            return anyhow::Ok((
+                                ref_name,
+                                RefTarget::WithMetadata(tag_objectid, metadata),
+                            ));
+                        }
+                    }
                 }
             };
-            let maybe_git_sha1 = repo
-                .bonsai_git_mapping()
-                .get_git_sha1_from_bonsai(ctx, *cs_id)
-                .await
-                .with_context(|| {
-                    format!(
-                        "Error in fetching Git Sha1 for changeset {:?} through BonsaiGitMapping",
-                        cs_id
-                    )
-                })?;
-            let git_sha1 = maybe_git_sha1
-                .ok_or_else(|| anyhow::anyhow!("Git Sha1 not found for changeset {:?}", cs_id))?;
-            let git_objectid =
-                ObjectId::from_hex(git_sha1.to_hex().as_bytes()).with_context(|| {
-                    format!(
-                        "Error in converting GitSha1 {:?} to GitObjectId",
-                        git_sha1.to_hex()
-                    )
-                })?;
+            // If the bookmark is a branch or if its just a simple (non-annotated) tag, we generate the
+            // ref to target mapping based on the changeset id
+            let git_objectid = git_object_for_bonsai(ctx, repo, *cs_id).await?;
             let ref_name = format!("refs/{}", bookmark);
-            anyhow::Ok((ref_name, git_objectid))
+            anyhow::Ok((ref_name, RefTarget::Plain(git_objectid)))
         })
         .boxed()
         .buffer_unordered(1000)
@@ -268,15 +318,30 @@ async fn refs_to_include(
         .await
 }
 
+/// Generate the appropriate RefTarget for symref based on the symref format
+fn symref_target(
+    symref_target: &str,
+    commit_id: ObjectId,
+    symref_format: SymrefFormat,
+) -> RefTarget {
+    match symref_format {
+        SymrefFormat::NameWithTarget => {
+            let metadata = format!("symref-target:{}", symref_target);
+            RefTarget::WithMetadata(commit_id, metadata)
+        }
+        SymrefFormat::NameOnly => RefTarget::Plain(commit_id),
+    }
+}
+
 /// The HEAD ref in Git doesn't have a direct counterpart in Mononoke bookmarks and is instead
 /// stored in the git_symbolic_refs. Fetch the mapping and add them to the list of refs to include
 async fn include_symrefs(
     repo: &impl Repo,
     requested_symrefs: RequestedSymrefs,
-    refs_to_include: &mut FxHashMap<String, ObjectId>,
+    refs_to_include: &mut FxHashMap<String, RefTarget>,
 ) -> Result<()> {
     let symref_commit_mapping = match requested_symrefs {
-        RequestedSymrefs::IncludeHead => {
+        RequestedSymrefs::IncludeHead(symref_format) => {
             // Get the branch that the HEAD symref points to
             let head_ref = repo
                 .git_symbolic_refs()
@@ -303,10 +368,16 @@ async fn include_symrefs(
                         &head_ref.ref_name_with_type(),
                         refs_to_include.keys()
                     )
-                })?;
-            FxHashMap::from_iter([(head_ref.symref_name, head_commit_id.clone())])
+                })?
+                .id();
+            let ref_target = symref_target(
+                &head_ref.ref_name_with_type(),
+                head_commit_id.clone(),
+                symref_format,
+            );
+            FxHashMap::from_iter([(head_ref.symref_name, ref_target)])
         }
-        RequestedSymrefs::IncludeAll => {
+        RequestedSymrefs::IncludeAll(symref_format) => {
             // Get all the symrefs with the branches/tags that they point to
             let symref_entries = repo
                 .git_symbolic_refs()
@@ -329,8 +400,10 @@ async fn include_symrefs(
                             &entry.ref_name_with_type(),
                             refs_to_include.keys()
                         )
-                    })?;
-                Ok((entry.symref_name, ref_commit_id.clone()))
+                    })?
+                    .id();
+                let ref_target = symref_target(&entry.ref_name_with_type(), ref_commit_id.clone(), symref_format);
+                Ok((entry.symref_name, ref_target))
             }).collect::<Result<FxHashMap<_, _>>>()?
         }
         RequestedSymrefs::ExcludeAll => FxHashMap::default(),
@@ -748,12 +821,14 @@ pub async fn generate_pack_item_stream<'a>(
     request: PackItemStreamRequest,
 ) -> Result<PackItemStreamResponse<'a>> {
     // We need to include the bookmarks (i.e. branches, tags) in the pack based on the request parameters
-    let bookmarks = bookmarks(ctx, repo, &request).await.with_context(|| {
-        format!(
-            "Error in fetching bookmarks for repo {}",
-            repo.repo_identity().name()
-        )
-    })?;
+    let bookmarks = bookmarks(ctx, repo, &request.requested_refs)
+        .await
+        .with_context(|| {
+            format!(
+                "Error in fetching bookmarks for repo {}",
+                repo.repo_identity().name()
+            )
+        })?;
 
     // STEP 1: Create state to track the total number of objects that will be included in the packfile/bundle. Initialize with the
     // tree, blob and commit count. Collect the set of duplicated objects.
@@ -770,7 +845,7 @@ pub async fn generate_pack_item_stream<'a>(
     // STEP 2.5: Add symrefs to the refs_to_include map based on the request parameters
     include_symrefs(repo, request.requested_symrefs, &mut refs_to_include)
         .await
-        .context("Error while adding HEAD ref to included set of refs")?;
+        .context("Error while adding symrefs to included set of refs")?;
 
     // STEP 3: Get the stream of blob and tree packfile items (with deltas where possible) to include in the pack/bundle. Note that
     // we have already counted these items as part of object count.
@@ -805,4 +880,33 @@ pub async fn generate_pack_item_stream<'a>(
         refs_to_include.into_iter().collect(),
     );
     Ok(response)
+}
+
+/// Based on the input request parameters, generate the response to the
+/// ls-refs request command
+pub async fn ls_refs_response(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    request: LsRefsRequest,
+) -> Result<LsRefsResponse> {
+    // We need to include the bookmarks (i.e. branches, tags) based on the request parameters
+    let bookmarks = bookmarks(ctx, repo, &request.requested_refs)
+        .await
+        .with_context(|| {
+            format!(
+                "Error in fetching bookmarks for repo {}",
+                repo.repo_identity().name()
+            )
+        })?;
+    // Convert the above bookmarks into refs that can be sent in the response
+    let mut refs_to_include = refs_to_include(ctx, repo, &bookmarks, request.tag_inclusion)
+        .await
+        .context("Error while determining refs to include in the response")?;
+
+    // Add symrefs to the refs_to_include map based on the request parameters
+    include_symrefs(repo, request.requested_symrefs, &mut refs_to_include)
+        .await
+        .context("Error while adding symrefs to included set of refs")?;
+
+    Ok(LsRefsResponse::new(refs_to_include.into_iter().collect()))
 }

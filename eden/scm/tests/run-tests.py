@@ -725,6 +725,7 @@ def parseargs(args, parser):
     if options.verbose:
         verbose = ""
 
+    try_increase_open_file_limit()
     setup_sigtrace()
 
     if options.tmpdir:
@@ -768,6 +769,25 @@ def parseargs(args, parser):
     return options
 
 
+def try_increase_open_file_limit():
+    try:
+        import resource
+
+        old_soft, old_hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+        if old_soft < 1_048_576:
+            resource.setrlimit(resource.RLIMIT_NOFILE, (old_hard, old_hard))
+        new_soft, new_hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+        vlog(
+            "Maximum number of open file descriptors:"
+            f" old(soft_limit={old_soft}, hard_limit={old_hard}),"
+            f" new(soft_limit={new_soft}, hard_limit={new_hard}),"
+        )
+    except Exception:
+        # `resource` module only avaible on unix-like platforms (Linux, Mac)
+        # Windows does not have the open file descriptors limit issue.
+        pass
+
+
 def rename(src, dst):
     """Like os.rename(), trade atomicity and opened files friendliness
     for existing destination support.
@@ -805,6 +825,15 @@ def getdiff(expected, output, ref, err):
             b"+  abort: child process failed to start"
         ):
             servefail = True
+
+        # mactest may have too many open files issue due to system settings,
+        # let's skip them. It should be okay since we have tests on Linux.
+        if (
+            line.startswith(b"+")
+            and b"Too many open files" in line
+            and sys.platform == "darwin"
+        ):
+            raise unittest.SkipTest("Too many open files")
 
     return servefail, lines
 

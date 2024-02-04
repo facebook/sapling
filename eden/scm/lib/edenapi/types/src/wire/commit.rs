@@ -114,7 +114,7 @@ impl ToWire for CommitHashToLocationRequestBatch {
     type Wire = WireCommitHashToLocationRequestBatch;
 
     fn to_wire(self) -> Self::Wire {
-        let client_head = self.master_heads.get(0).copied().to_wire();
+        let client_head = self.master_heads.first().copied().to_wire();
         Self::Wire {
             client_head,
             hgids: self.hgids.to_wire(),

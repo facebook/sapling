@@ -100,7 +100,7 @@ impl Config for UnionConfig {
         let mut result: IndexSet<PathBuf> = Default::default();
         // normal order: match order loading configs
         for config in self.configs.iter() {
-            for path in config.files().into_owned() {
+            for path in config.files().iter().cloned() {
                 result.insert(path);
             }
         }

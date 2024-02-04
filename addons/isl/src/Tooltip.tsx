@@ -49,7 +49,7 @@ type TooltipProps = {
     trigger: 'click';
     component: (dismiss: () => void) => JSX.Element;
     title?: string | React.ReactNode;
-    additionalToggles?: TypedEventEmitter<'change', unknown>;
+    additionalToggles?: TypedEventEmitter<'change', unknown> | TypedEventEmitter<'change', null>;
   }
 >;
 
@@ -137,9 +137,9 @@ export function Tooltip({
 
   useEffect(() => {
     const cb = () => setVisible(last => !last);
-    additionalToggles?.addListener('change', cb);
+    additionalToggles?.on('change', cb);
     return () => {
-      additionalToggles?.removeListener('change', cb);
+      additionalToggles?.off('change', cb);
     };
   }, [additionalToggles]);
 

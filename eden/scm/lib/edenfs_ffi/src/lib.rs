@@ -221,7 +221,7 @@ fn _profile_contents_from_repo(
     let mut repo_map = REPO_HASHMAP.lock();
     if !repo_map.contains_key(&abs_repo_path) {
         // Load the repo and store it for later use
-        let repo = Repo::load(&abs_repo_path, &[], &[]).with_context(|| {
+        let repo = Repo::load(&abs_repo_path, &[]).with_context(|| {
             anyhow!("failed to load Repo object for {}", abs_repo_path.display())
         })?;
         repo_map.insert(abs_repo_path.clone(), repo);

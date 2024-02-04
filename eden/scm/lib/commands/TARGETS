@@ -1,0 +1,138 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("mercurial_release")
+
+rust_library(
+    name = "commands",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "anyhow": {
+                        "features": ["backtrace"],
+                    },
+                    "constructors": {"features": ["git"]},
+                    "pytracing": {
+                        "default-features": False,
+                    },
+                    "repo": {"features": ["wdir"]},
+                },
+            },
+            "extra_buck_dependencies": {
+                "dependencies": [
+                    "//eden/scm/saplingnative/bindings/modules/pycheckout:pycheckout",
+                    "//eden/scm/saplingnative/bindings/modules/pyedenclient:pyedenclient",
+                    "//eden/scm/saplingnative/bindings/modules/pyworkingcopy:pyworkingcopy",
+                    "//eden/scm/lib/revisionstore:revisionstore",
+                ],
+            },
+            "features": {
+                "default": [],
+                "eden": [
+                    "clidispatch/eden",
+                    "pycheckout/eden",
+                    "pyedenclient/eden",
+                    "pyworkingcopy/eden",
+                    "cmdgoto/eden",
+                    "cmddebugwait/eden",
+                ],
+                "fb": [
+                    "cmdpy/fb",
+                    "configloader/fb",
+                    "identity/fb",
+                    "cmdversion/fb",
+                    "cmddebugdumpinternalconfig/fb",
+                    "cmddebugrefreshconfig/fb",
+                ],
+            },
+        },
+    },
+    crate_root = "src/lib.rs",
+    features = [
+        "eden",
+        "fb",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:ctrlc",
+        "fbsource//third-party/rust:fail",
+        "fbsource//third-party/rust:flate2",
+        "fbsource//third-party/rust:hostname",
+        "fbsource//third-party/rust:libc",
+        "fbsource//third-party/rust:parking_lot",
+        "fbsource//third-party/rust:tracing",
+        "fbsource//third-party/rust:tracing-subscriber",
+        "fbsource//third-party/rust:zstd",
+        "//eden/scm/lib/blackbox:blackbox",
+        "//eden/scm/lib/clidispatch:clidispatch",
+        "//eden/scm/lib/commands/cmdpy:cmdpy",
+        "//eden/scm/lib/commandserver:commandserver",
+        "//eden/scm/lib/config/loader:configloader",
+        "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/constructors:constructors",
+        "//eden/scm/lib/hg-http:hg-http",
+        "//eden/scm/lib/hg-metrics:hg-metrics",
+        "//eden/scm/lib/identity:identity",
+        "//eden/scm/lib/metrics/render:metrics-render",
+        "//eden/scm/lib/mincode:mincode",
+        "//eden/scm/lib/procinfo:procinfo",
+        "//eden/scm/lib/progress/model:progress-model",
+        "//eden/scm/lib/progress/render:progress-render",
+        "//eden/scm/lib/repo:repo",
+        "//eden/scm/lib/runlog:runlog",
+        "//eden/scm/lib/sampling:sampling",
+        "//eden/scm/lib/tracing-collector:tracing-collector",
+        "//eden/scm/lib/tracing-reload:tracing-reload",
+        "//eden/scm/lib/tracing-sampler:tracing-sampler",
+        "//eden/scm/lib/util:util",
+        "//eden/scm/lib/util/atexit:atexit",
+        "//eden/scm/lib/util/hgplain:hgplain",
+        "//eden/scm/lib/util/nodeipc:nodeipc",
+        "//eden/scm/lib/version:rust_version",
+        "//eden/scm/saplingnative/bindings/modules/pytracing:pytracing",
+        # see update_modules.sh
+        # [[[cog
+        # import cog, glob, os
+        # for path in sorted(glob.glob('commands/cmd*/TARGETS')):
+        #     name = os.path.basename(os.path.dirname(path))
+        #     cog.outl(f'"//eden/scm/lib/commands/commands/{name}:{name}",')
+        # for path in sorted(glob.glob('debugcommands/cmd*/TARGETS')):
+        #     name = os.path.basename(os.path.dirname(path))
+        #     cog.outl(f'"//eden/scm/lib/commands/debugcommands/{name}:{name}",')
+        # ]]]
+        "//eden/scm/lib/commands/commands/cmdclone:cmdclone",
+        "//eden/scm/lib/commands/commands/cmdconfig:cmdconfig",
+        "//eden/scm/lib/commands/commands/cmdconfigfile:cmdconfigfile",
+        "//eden/scm/lib/commands/commands/cmdgoto:cmdgoto",
+        "//eden/scm/lib/commands/commands/cmdroot:cmdroot",
+        "//eden/scm/lib/commands/commands/cmdstatus:cmdstatus",
+        "//eden/scm/lib/commands/commands/cmdversion:cmdversion",
+        "//eden/scm/lib/commands/commands/cmdwhereami:cmdwhereami",
+        "//eden/scm/lib/commands/debugcommands/cmddebugargs:cmddebugargs",
+        "//eden/scm/lib/commands/debugcommands/cmddebugcurrentexe:cmddebugcurrentexe",
+        "//eden/scm/lib/commands/debugcommands/cmddebugdumpindexedlog:cmddebugdumpindexedlog",
+        "//eden/scm/lib/commands/debugcommands/cmddebugdumpinternalconfig:cmddebugdumpinternalconfig",
+        "//eden/scm/lib/commands/debugcommands/cmddebugfsync:cmddebugfsync",
+        "//eden/scm/lib/commands/debugcommands/cmddebughttp:cmddebughttp",
+        "//eden/scm/lib/commands/debugcommands/cmddebugmergestate:cmddebugmergestate",
+        "//eden/scm/lib/commands/debugcommands/cmddebugmetrics:cmddebugmetrics",
+        "//eden/scm/lib/commands/debugcommands/cmddebugnetworkdoctor:cmddebugnetworkdoctor",
+        "//eden/scm/lib/commands/debugcommands/cmddebugpython:cmddebugpython",
+        "//eden/scm/lib/commands/debugcommands/cmddebugracyoutput:cmddebugracyoutput",
+        "//eden/scm/lib/commands/debugcommands/cmddebugrefreshconfig:cmddebugrefreshconfig",
+        "//eden/scm/lib/commands/debugcommands/cmddebugrevsets:cmddebugrevsets",
+        "//eden/scm/lib/commands/debugcommands/cmddebugrunlog:cmddebugrunlog",
+        "//eden/scm/lib/commands/debugcommands/cmddebugscmstore:cmddebugscmstore",
+        "//eden/scm/lib/commands/debugcommands/cmddebugscmstorereplay:cmddebugscmstorereplay",
+        "//eden/scm/lib/commands/debugcommands/cmddebugsegmentclone:cmddebugsegmentclone",
+        "//eden/scm/lib/commands/debugcommands/cmddebugsegmentgraph:cmddebugsegmentgraph",
+        "//eden/scm/lib/commands/debugcommands/cmddebugsegmentpull:cmddebugsegmentpull",
+        "//eden/scm/lib/commands/debugcommands/cmddebugstore:cmddebugstore",
+        "//eden/scm/lib/commands/debugcommands/cmddebugstructuredprogress:cmddebugstructuredprogress",
+        "//eden/scm/lib/commands/debugcommands/cmddebugtestcommand:cmddebugtestcommand",
+        "//eden/scm/lib/commands/debugcommands/cmddebugtop:cmddebugtop",
+        "//eden/scm/lib/commands/debugcommands/cmddebugwait:cmddebugwait",
+        # [[[end]]]
+    ],
+)

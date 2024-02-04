@@ -12,6 +12,7 @@ build = "thrift_build.rs"
 path = "thrift_lib.rs"
 test = false
 doctest = false
+doc = false
 
 [dependencies]
 anyhow = "1.0.75"
@@ -23,6 +24,8 @@ futures = { version = "0.3.28", features = ["async-await", "compat"] }
 ref-cast = "1.0.18"
 thiserror = "1.0.49"
 thrift = { version = "0.1.0", path = ".." }
+thrift_streaming__clients = { package = "thrift_streaming_clients", version = "0.1.0", path = "clients" }
+thrift_streaming__services = { package = "thrift_streaming_services", version = "0.1.0", path = "services" }
 thrift_streaming__types = { package = "thrift_streaming_types", version = "0.1.0", path = "types" }
 tracing = "0.1.40"
 tracing-futures = { version = "0.2.5", features = ["futures-03"] }

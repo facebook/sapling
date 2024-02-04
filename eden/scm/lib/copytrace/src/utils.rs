@@ -77,7 +77,7 @@ pub fn is_content_similar(a: &[u8], b: &[u8], config: &dyn Config) -> anyhow::Re
         " content similarity configs"
     );
 
-    let cost = xdiff::edit_cost(&a, &b, max_edit_cost + 1);
+    let cost = xdiff::edit_cost(a, b, max_edit_cost + 1);
     Ok(cost <= max_edit_cost)
 }
 

@@ -183,7 +183,7 @@ mod tests {
     impl RetryableTest {
         pub(crate) fn new(keys: Vec<Key>, fails: u32) -> Self {
             Self {
-                keys: HashSet::from_iter(keys.into_iter()),
+                keys: HashSet::from_iter(keys),
                 fails,
                 attempts: 0,
             }
@@ -206,7 +206,7 @@ mod tests {
                     "fake error"
                 ))));
             }
-            response.entries = Box::pin(Box::new(stream::iter(entries.into_iter())));
+            response.entries = Box::pin(Box::new(stream::iter(entries)));
             Ok(response)
         }
 

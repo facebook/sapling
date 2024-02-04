@@ -12,12 +12,15 @@ build = "thrift_build.rs"
 path = "thrift_lib.rs"
 test = false
 doctest = false
+doc = false
 
 [dependencies]
 anyhow = "1.0.75"
 async-trait = "0.1.71"
 codegen_includer_proc_macro = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 const-cstr = "0.3.0"
+derived_data_service_if__clients = { package = "derived_data_service_if_clients", version = "0.1.0", path = "clients" }
+derived_data_service_if__services = { package = "derived_data_service_if_services", version = "0.1.0", path = "services" }
 derived_data_service_if__types = { package = "derived_data_service_if_types", version = "0.1.0", path = "types" }
 derived_data_thrift = { version = "0.1.0", path = "../../changeset_info/if" }
 fb303_core = { version = "0.0.0", git = "https://github.com/facebook/fb303.git", branch = "main" }

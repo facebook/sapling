@@ -7,6 +7,7 @@
 
 import react from '@vitejs/plugin-react';
 import {defineConfig} from 'vite';
+import styleX from 'vite-plugin-stylex';
 import viteTsconfigPaths from 'vite-tsconfig-paths';
 
 // TODO: this could be a glob on src/platform/*.html
@@ -25,6 +26,7 @@ export default defineConfig({
     react({
       include: '**/*.tsx',
     }),
+    styleX(),
     viteTsconfigPaths(),
   ],
   build: {

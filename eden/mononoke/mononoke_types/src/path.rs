@@ -493,6 +493,12 @@ impl MPath {
             .count()
     }
 
+    /// Whether this path is related to the given path. A path P1 is related to path P2 iff
+    /// P1 is prefix of P2 or vice versa.
+    pub fn is_related_to(&self, other: &MPath) -> bool {
+        self.is_prefix_of(other.as_ref()) || other.is_prefix_of(self.as_ref())
+    }
+
     /// Whether this path is a path prefix of the given path.
     /// `foo` is a prefix of `foo/bar`, but not of `foo1`.
     #[inline]
@@ -754,6 +760,14 @@ impl<'a> TryFrom<&'a str> for MPath {
     type Error = Error;
 
     fn try_from(value: &str) -> Result<Self> {
+        MPath::new(value.as_bytes())
+    }
+}
+
+impl<'a> TryFrom<&'a String> for MPath {
+    type Error = Error;
+
+    fn try_from(value: &String) -> Result<Self> {
         MPath::new(value.as_bytes())
     }
 }

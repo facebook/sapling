@@ -16,7 +16,7 @@ import React, {createContext, useContext, useEffect, useState} from 'react';
  */
 type LanguageId = string;
 
-// TODO: these language files should be lazilly loaded rather than bundled with webpack
+// TODO: these language files should be lazilly loaded rather than bundled directly
 const langs: {[key: string]: {[key: string]: string}} = {
   en,
   // Add other languages here!

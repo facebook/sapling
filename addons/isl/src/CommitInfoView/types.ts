@@ -8,15 +8,25 @@
 /** Values for each field key,  */
 export type CommitMessageFields = Record<string, string | Array<string>>;
 
-export type TypeaheadKind = 'meta-user' | 'meta-task' | 'meta-tag' | 'meta-diff';
+export type TypeaheadKind =
+  | 'meta-user'
+  | 'meta-task'
+  | 'meta-tag'
+  | 'meta-diff'
+  | 'meta-privacy-context';
 export type TypeaheadResult = {
   /** The display text of the suggestion */
   label: string;
 
   /**
-   * The literal value of the suggestion,
-   * shown de-emphasized next to the display name
-   * and placed literally as text into the commit message
+   * Additional details to show de-emphasized next to the display name.
+   * If provided, this is shown visually instead of the value.
+   */
+  detail?: string;
+
+  /**
+   * The literal value of the suggestion, placed literally as text into the commit message.
+   * If `detail` is not provided, value is shown de-emphasized next to the display name.
    */
   value: string;
 
@@ -76,5 +86,6 @@ export type FieldConfig = {
       extractValues?: (text: string) => Array<string>;
       /** post-process token values before placing it in the actual commit message */
       formatValues?: (tokens: Array<string>) => string | undefined;
+      getUrl?: (token: string) => string;
     }
 );

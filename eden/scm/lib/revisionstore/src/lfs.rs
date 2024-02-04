@@ -304,7 +304,7 @@ impl LfsPointersStore {
 
     /// Find the pointer corresponding to the passed in `HgId`.
     fn get_by_hgid(&self, hgid: &HgId) -> Result<Option<LfsPointersEntry>> {
-        let mut iter = self.0.lookup(Self::INDEX_NODE, &hgid)?;
+        let mut iter = self.0.lookup(Self::INDEX_NODE, hgid)?;
         let buf = match iter.next() {
             None => return Ok(None),
             Some(buf) => buf?,
@@ -834,7 +834,7 @@ impl HgIdDataStore for LfsStore {
         let entry = self.pointers.read().get(&key)?;
         if let Some(entry) = entry {
             Ok(StoreResult::Found(Metadata {
-                size: Some(entry.size.try_into()?),
+                size: Some(entry.size),
                 flags: None,
             }))
         } else {
@@ -964,19 +964,16 @@ impl LfsPointersEntry {
         for line in lines {
             if line.starts_with(LFS_POINTER_VERSION) {
                 continue;
-            } else if line.starts_with(LFS_POINTER_OID_SHA256) {
-                let oid = &line[LFS_POINTER_OID_SHA256.len()..];
-                hash = Some(oid.parse::<Sha256>()?);
-            } else if line.starts_with(LFS_POINTER_SIZE) {
-                let stored_size = &line[LFS_POINTER_SIZE.len()..];
-                size = Some(stored_size.parse::<usize>()?);
-            } else if line.starts_with(LFS_POINTER_X_HG_COPY) {
-                path = Some(RepoPath::from_str(&line[LFS_POINTER_X_HG_COPY.len()..])?.to_owned());
-            } else if line.starts_with(LFS_POINTER_X_HG_COPYREV) {
-                copy_hgid = Some(HgId::from_str(&line[LFS_POINTER_X_HG_COPYREV.len()..])?);
-            } else if line.starts_with(LFS_POINTER_X_IS_BINARY) {
-                let stored_is_binary = &line[LFS_POINTER_X_IS_BINARY.len()..];
-                is_binary = stored_is_binary.parse::<u8>()? == 1;
+            } else if let Some(suffix) = line.strip_prefix(LFS_POINTER_OID_SHA256) {
+                hash = Some(suffix.parse::<Sha256>()?);
+            } else if let Some(suffix) = line.strip_prefix(LFS_POINTER_SIZE) {
+                size = Some(suffix.parse::<usize>()?);
+            } else if let Some(suffix) = line.strip_prefix(LFS_POINTER_X_HG_COPY) {
+                path = Some(RepoPath::from_str(suffix)?.to_owned());
+            } else if let Some(suffix) = line.strip_prefix(LFS_POINTER_X_HG_COPYREV) {
+                copy_hgid = Some(HgId::from_str(suffix)?);
+            } else if let Some(suffix) = line.strip_prefix(LFS_POINTER_X_IS_BINARY) {
+                is_binary = suffix.parse::<u8>()? == 1;
             } else {
                 bail!("unknown metadata: {}", line);
             }
@@ -1991,7 +1988,7 @@ impl RemoteDataStore for LfsFallbackRemoteStore {
                 .collect::<Vec<_>>(),
         )?;
 
-        not_found.extend(not_prefetched.into_iter());
+        not_found.extend(not_prefetched);
         Ok(not_found)
     }
 

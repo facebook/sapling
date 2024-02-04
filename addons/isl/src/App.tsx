@@ -7,6 +7,7 @@
 
 import type {RepositoryError} from './types';
 import type {ReactNode} from 'react';
+import type {Writable} from 'shared/typeUtils';
 
 import {AccessGlobalRecoil} from './AccessGlobalRecoil';
 import {CommandHistoryAndProgress} from './CommandHistoryAndProgress';
@@ -18,8 +19,10 @@ import {Drawers} from './Drawers';
 import {EmptyState} from './EmptyState';
 import {ErrorBoundary, ErrorNotice} from './ErrorNotice';
 import {ISLCommandContext, useCommand} from './ISLShortcuts';
+import {Internal} from './Internal';
 import {TooltipRootContainer} from './Tooltip';
 import {TopBar} from './TopBar';
+import {TopLevelAlerts} from './TopLevelAlert';
 import {TopLevelErrors} from './TopLevelErrors';
 import {TopLevelToast} from './TopLevelToast';
 import {tracker} from './analytics';
@@ -28,12 +31,15 @@ import {GettingStartedModal} from './gettingStarted/GettingStartedModal';
 import {I18nSupport, t, T} from './i18n';
 import {setJotaiStore} from './jotaiUtils';
 import platform from './platform';
+import {getEntangledAtomsInitializedState} from './recoilUtils';
 import {DEFAULT_RESET_CSS} from './resetStyle';
 import {useMainContentWidth, zoomUISettingAtom} from './responsive';
 import {applicationinfo, repositoryInfo} from './serverAPIState';
 import {themeState} from './theme';
+import {light} from './tokens.stylex';
 import {ModalContainer} from './useModal';
 import {isTest} from './utils';
+import * as stylex from '@stylexjs/stylex';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {Provider, useAtomValue, useSetAtom, useStore} from 'jotai';
 import React from 'react';
@@ -49,7 +55,7 @@ export default function App() {
     <React.StrictMode>
       <ResetStyle />
       <I18nSupport>
-        <RecoilRoot>
+        <RecoilRoot initializeState={getEntangledAtomsInitializedState}>
           <AccessGlobalRecoil />
           <MaybeWithJotaiRoot>
             <ISLRoot>
@@ -102,12 +108,12 @@ function ResetStyle() {
 function ISLRoot({children}: {children: ReactNode}) {
   const theme = useAtomValue(themeState);
   useAtomValue(zoomUISettingAtom);
+  const props = stylex.props(theme === 'light' && light);
+  // stylex would overwrite className
+  (props as Writable<typeof props>).className += ` isl-root ${theme}-theme`;
   return (
-    <div
-      className={`isl-root ${theme}-theme`}
-      onDragEnter={handleDragAndDrop}
-      onDragOver={handleDragAndDrop}>
-      {children}
+    <div onDragEnter={handleDragAndDrop} onDragOver={handleDragAndDrop}>
+      <div {...props}>{children}</div>
     </div>
   );
 }
@@ -157,6 +163,7 @@ function MainContent() {
     <div className="main-content-area" ref={ref}>
       <TopBar />
       <TopLevelErrors />
+      <TopLevelAlerts />
       {repoInfo != null && repoInfo.type !== 'success' ? (
         <ISLNullState repoError={repoInfo} />
       ) : (
@@ -207,12 +214,20 @@ function ISLNullState({repoError}: {repoError: RepositoryError}) {
           <CwdSelections dismiss={() => null} />
         </>
       );
-    } else if (repoError.type === 'invalidCommand') {
+    } else if (repoError.type === 'cwdDoesNotExist') {
       content = (
         <ErrorNotice
-          title={<T>Invalid Sapling command. Is Sapling installed correctly?</T>}
+          title={
+            <T replace={{$cwd: repoError.cwd}}>
+              cwd $cwd does not exist. Make sure the folder exists.
+            </T>
+          }
           error={
-            new Error(t('Command "$cmd" was not found.', {replace: {$cmd: repoError.command}}))
+            new Error(
+              t('$cwd not found', {
+                replace: {$cwd: repoError.cwd},
+              }),
+            )
           }
           buttons={[
             <VSCodeButton
@@ -228,6 +243,35 @@ function ISLNullState({repoError}: {repoError: RepositoryError}) {
           ]}
         />
       );
+    } else if (repoError.type === 'invalidCommand') {
+      if (Internal.InvalidSlCommand) {
+        content = <Internal.InvalidSlCommand repoError={repoError} />;
+      } else {
+        content = (
+          <ErrorNotice
+            startExpanded
+            title={<T>Invalid Sapling command. Is Sapling installed correctly?</T>}
+            description={
+              <T replace={{$cmd: repoError.command}}>Command "$cmd" was not found in PATH</T>
+            }
+            details={<T replace={{$path: repoError.path ?? '(no path found)'}}>PATH: $path'</T>}
+            buttons={[
+              <VSCodeButton
+                key="help-button"
+                appearance="secondary"
+                onClick={e => {
+                  platform.openExternalLink(
+                    'https://sapling-scm.com/docs/introduction/installation',
+                  );
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}>
+                <T>See installation docs</T>
+              </VSCodeButton>,
+            ]}
+          />
+        );
+      }
     } else {
       content = <ErrorNotice title={<T>Something went wrong</T>} error={repoError.error} />;
     }

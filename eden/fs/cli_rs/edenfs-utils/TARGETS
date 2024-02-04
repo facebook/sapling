@@ -26,6 +26,9 @@ rust_library(
             ],
         ),
     ],
+    test_deps = [
+        "fbsource//third-party/rust:lazy_static",
+    ],
     test_os_deps = [
         (
             "windows",
@@ -37,6 +40,7 @@ rust_library(
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:byteorder",
         "fbsource//third-party/rust:glob",
         "fbsource//third-party/rust:sysinfo",
         "fbsource//third-party/rust:tracing",

@@ -36,14 +36,14 @@ pub fn extract_tables(tid_spans: &TidSpans) -> Tables {
     tables
 }
 
-fn extract_dev_command_timers<'a>(tables: &mut Tables, tid_spans: &TidSpans) {
+fn extract_dev_command_timers(tables: &mut Tables, tid_spans: &TidSpans) {
     let mut row = Row::new();
     let toint = |value: &str| -> Value { value.parse::<i64>().unwrap_or_default().into() };
 
     for spans in tid_spans.values() {
         for span in spans.walk() {
             match span.meta.get("name").cloned().unwrap_or("") {
-                // By hgcommands, run.rs
+                // By commands, run.rs
                 "Run Command" => {
                     let duration = span.duration_millis().unwrap_or(0);
                     row.insert("command_duration".into(), duration.into());
@@ -66,7 +66,7 @@ fn extract_dev_command_timers<'a>(tables: &mut Tables, tid_spans: &TidSpans) {
                             }
                             "parent_names" => {
                                 if let Ok(names) = serde_json::from_str::<Vec<String>>(value) {
-                                    let name = names.get(0).cloned().unwrap_or_default();
+                                    let name = names.first().cloned().unwrap_or_default();
                                     row.insert("parent".into(), name.into());
                                 }
                             }
@@ -107,7 +107,7 @@ fn extract_dev_command_timers<'a>(tables: &mut Tables, tid_spans: &TidSpans) {
     tables.insert("dev_command_timers".into(), vec![row]);
 }
 
-fn extract_other_tables<'a>(tables: &mut Tables, tid_spans: &TidSpans) {
+fn extract_other_tables(tables: &mut Tables, tid_spans: &TidSpans) {
     for spans in tid_spans.values() {
         for span in spans.walk() {
             match span.meta.get("name").cloned().unwrap_or("") {

@@ -44,7 +44,7 @@ export function DownloadCommitsTooltipButton() {
       title={
         <div>
           <T replace={{$shortcut: <Kbd modifiers={[Modifier.ALT]} keycode={KeyCode.D} />}}>
-            Download commits ($shortcut)
+            Download commits and diffs ($shortcut)
           </T>
         </div>
       }>

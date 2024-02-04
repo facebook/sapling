@@ -43,12 +43,6 @@ def _pythonhook(ui, repo, htype, hname, funcname, args, throw):
             )
         modname = funcname[:d]
         oldpaths = sys.path
-        if util.mainfrozen():
-            # binary installs require sys.path manipulation
-            modpath, modfile = os.path.split(modname)
-            if modpath and modfile:
-                sys.path = sys.path[:] + [modpath]
-                modname = modfile
         with demandimport.deactivated():
             try:
                 obj = __import__(modname)
@@ -174,10 +168,6 @@ def _exthook(ui, repo, htype, name, cmd, args, throw, background=False):
     return r
 
 
-# represent an untrusted hook command
-_fromuntrusted = object()
-
-
 def _allhooks(ui):
     """return a list of (hook-id, cmd) pairs sorted by priority"""
     hooks = _hookitems(ui)
@@ -190,17 +180,8 @@ def _hookitems(ui):
     for name, cmd in ui.configitems("hooks"):
         if not name.startswith("priority"):
             priority = ui.configint("hooks", "priority.%s" % name, 0)
-            # TODO: check whether the hook item is trusted or not
             hooks[name] = (-priority, len(hooks), name, cmd)
     return hooks
-
-
-_redirect = False
-
-
-def redirect(state: bool) -> None:
-    global _redirect
-    _redirect = state
 
 
 def hashook(ui, htype) -> bool:
@@ -213,13 +194,17 @@ def hashook(ui, htype) -> bool:
     return False
 
 
-def hook(ui, repo, htype, throw: bool = False, **args) -> bool:
+def hook(ui, repo, htype, throw: bool = False, skipshell: bool = False, **args) -> bool:
     if not ui.callhooks:
         return False
 
     hooks = []
     for hname, cmd in _allhooks(ui):
         if hname.split(".")[0] == htype and cmd:
+            # This is for Rust commands that already ran "pre" hooks and then fell back to
+            # Python. Rust doesn't support python hooks, so let's run those.
+            if skipshell and not callable(cmd) and not cmd.startswith("python:"):
+                continue
             hooks.append((hname, cmd))
 
     if not hooks:
@@ -235,75 +220,45 @@ def hook(ui, repo, htype, throw: bool = False, **args) -> bool:
 def runhooks(ui, repo, htype, hooks, throw: bool = False, **args):
     args = args
     res = {}
-    oldstdout = -1
 
-    try:
-        for hname, cmd in hooks:
-            if oldstdout == -1 and _redirect:
+    for hname, cmd in hooks:
+        if callable(cmd):
+            r, raised = _pythonhook(ui, repo, htype, hname, cmd, args, throw)
+        elif cmd.startswith("python:"):
+            if cmd.count(":") >= 2:
+                path, cmd = cmd[7:].rsplit(":", 1)
+                path = util.expandpath(path)
+                if repo:
+                    path = os.path.join(repo.root, path)
                 try:
-                    stdoutno = util.stdout.fileno()
-                    stderrno = util.stderr.fileno()
-                    # temporarily redirect stdout to stderr, if possible
-                    if stdoutno >= 0 and stderrno >= 0:
-                        util.stdout.flush()
-                        oldstdout = os.dup(stdoutno)
-                        os.dup2(stderrno, stdoutno)
-                except (OSError, AttributeError):
-                    # files seem to be bogus, give up on redirecting (WSGI, etc)
-                    pass
-
-            if cmd is _fromuntrusted:
-                if throw:
-                    raise error.HookAbort(
-                        _("untrusted hook %s not executed") % hname,
-                        hint=_("see '@prog@ help config.trusted'"),
-                    )
-                ui.warn(_("warning: untrusted hook %s not executed\n") % hname)
-                r = 1
-                raised = False
-            elif callable(cmd):
-                r, raised = _pythonhook(ui, repo, htype, hname, cmd, args, throw)
-            elif cmd.startswith("python:"):
-                if cmd.count(":") >= 2:
-                    path, cmd = cmd[7:].rsplit(":", 1)
-                    path = util.expandpath(path)
-                    if repo:
-                        path = os.path.join(repo.root, path)
-                    try:
-                        mod = extensions.loadpath(path, "hghook.%s" % hname)
-                    except Exception as e:
-                        ui.write(_("loading %s hook failed: %s\n") % (hname, e))
-                        raise
-                    hookfn = getattr(mod, cmd)
-                else:
-                    hookfn = cmd[7:].strip()
-                    # Compatibility: Change "ext" to "sapling.ext"
-                    # automatically.
-                    if hookfn.startswith("ext."):
-                        hookfn = "sapling." + hookfn
-                r, raised = _pythonhook(ui, repo, htype, hname, hookfn, args, throw)
-            elif cmd.startswith("background:"):
-                # Run a shell command in background. Do not throw.
-                cmd = cmd.split(":", 1)[1]
-                r = _exthook(
-                    ui, repo, htype, hname, cmd, args, throw=False, background=True
-                )
-                raised = False
+                    mod = extensions.loadpath(path, "hghook.%s" % hname)
+                except Exception as e:
+                    ui.write(_("loading %s hook failed: %s\n") % (hname, e))
+                    raise
+                hookfn = getattr(mod, cmd)
             else:
-                r = _exthook(ui, repo, htype, hname, cmd, args, throw)
-                raised = False
+                hookfn = cmd[7:].strip()
+                # Compatibility: Change "ext" to "sapling.ext"
+                # automatically.
+                if hookfn.startswith("ext."):
+                    hookfn = "sapling." + hookfn
+            r, raised = _pythonhook(ui, repo, htype, hname, hookfn, args, throw)
+        elif cmd.startswith("background:"):
+            # Run a shell command in background. Do not throw.
+            cmd = cmd.split(":", 1)[1]
+            r = _exthook(
+                ui, repo, htype, hname, cmd, args, throw=False, background=True
+            )
+            raised = False
+        else:
+            r = _exthook(ui, repo, htype, hname, cmd, args, throw)
+            raised = False
 
-            res[hname] = r, raised
+        res[hname] = r, raised
 
-            # The stderr is fully buffered on Windows when connected to a pipe.
-            # A forcible flush is required to make small stderr data in the
-            # remote side available to the client immediately.
-            util.stderr.flush()
-    finally:
-        if _redirect and oldstdout >= 0:
-            util.stdout.flush()  # write hook output to stderr fd
-            # pyre-fixme[61]: `stdoutno` is undefined, or not always defined.
-            os.dup2(oldstdout, stdoutno)
-            os.close(oldstdout)
+        # The stderr is fully buffered on Windows when connected to a pipe.
+        # A forcible flush is required to make small stderr data in the
+        # remote side available to the client immediately.
+        util.stderr.flush()
 
     return res

@@ -15,13 +15,13 @@ fn main() {
     let out_dir: &Path = out_dir.as_ref();
     fs::write(
         out_dir.join("cratemap"),
-        "changeset_info_thrift derived_data_thrift
+        "changeset_info_thrift derived_data_thrift //eden/mononoke/derived_data/changeset_info/if:derived_data-thrift-rust
 derived_data_service crate
-fb303_core fb303_core
-filenodes filenodes_if
-git_types_thrift git_types_thrift
-mercurial_thrift mercurial_thrift
-mononoke_types_thrift mononoke_types_thrift",
+fb303_core fb303_core //fb303/thrift:fb303_core-rust
+filenodes filenodes_if //eden/mononoke/filenodes/if:filenodes-if-rust
+git_types_thrift git_types_thrift //eden/mononoke/git/git_types/if:git-types-thrift-rust
+mercurial_thrift mercurial_thrift //eden/mononoke/mercurial/types/if:mercurial-thrift-rust
+mononoke_types_thrift mononoke_types_thrift //eden/mononoke/mononoke_types/if:mononoke_types-thrift-rust",
     ).expect("Failed to write cratemap");
 
     let conf = {
@@ -50,6 +50,8 @@ mononoke_types_thrift mononoke_types_thrift",
         conf.base_path(base_path);
 
         conf.types_crate("derived_data_service_if__types");
+        conf.clients_crate("derived_data_service_if__clients");
+        conf.services_crate("derived_data_service_if__services");
 
         let options = "deprecated_default_enum_min_i32";
         if !options.is_empty() {

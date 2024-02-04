@@ -40,3 +40,17 @@ export type AllUndefined<T> = {[P in keyof T]?: undefined};
 export type Writable<T> = {-readonly [P in keyof T]: T[P]};
 
 export type Json = string | number | boolean | null | Json[] | {[key: string]: Json};
+
+type UnionKeys<T> = T extends unknown ? keyof T : never;
+type StrictUnionHelper<T, TAll> = T extends unknown
+  ? T & Partial<Record<Exclude<UnionKeys<TAll>, keyof T>, undefined>>
+  : never;
+/**
+ * Make a union type T be a strict union by making all keys required.
+ * This allows a discriminated union to have fields accessed without a cast.
+ * For example,
+ * ```
+ * StrictUnion<{type: 'foo', foo: string} | {type: 'bar', bar: number}> => {type: 'foo' | 'bar', foo?: string, bar?: number}
+ * ```
+ */
+export type StrictUnion<T> = StrictUnionHelper<T, T>;

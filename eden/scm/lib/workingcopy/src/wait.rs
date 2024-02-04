@@ -14,7 +14,6 @@ use std::time::Duration;
 use configmodel::Config;
 use status::FileStatus;
 use termlogger::TermLogger;
-use types::hgid::NULL_ID;
 use types::RepoPathBuf;
 
 use crate::metadata::Metadata;
@@ -94,7 +93,7 @@ impl Wait {
         // A more "accurate" check would be checking the treestate filename,
         // root, etc. But that has complexities about the edenfs dirstate,
         // which does not yet use a real on-disk treestate.
-        if wc.parents()?.first().unwrap_or(&NULL_ID) != &self.treestate_wait.p1() {
+        if wc.first_parent()? != self.treestate_wait.p1() {
             return Ok(WaitOutput::ShouldReload);
         }
 

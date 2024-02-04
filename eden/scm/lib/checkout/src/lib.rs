@@ -23,6 +23,7 @@ use anyhow::format_err;
 use anyhow::Error;
 use anyhow::Result;
 use atexit::AtExit;
+use context::CoreContext;
 use crossbeam::channel;
 #[cfg(windows)]
 use fs_err as fs;
@@ -51,7 +52,6 @@ use treestate::filestate::StateFlags;
 use treestate::treestate::TreeState;
 use types::hgid::MF_ADDED_NODE_ID;
 use types::hgid::MF_MODIFIED_NODE_ID;
-use types::hgid::NULL_ID;
 use types::HgId;
 use types::Key;
 use types::RepoPath;
@@ -842,17 +842,27 @@ fn truncate_u64(f: &str, path: &RepoPath, v: u64) -> i32 {
 }
 
 pub fn checkout(
-    lgr: &TermLogger,
+    ctx: &CoreContext,
     repo: &mut Repo,
     wc: &LockedWorkingCopy,
     target_commit: HgId,
     mut maybe_bookmark: Option<String>,
     update_mode: CheckoutMode,
 ) -> Result<Option<(usize, usize)>> {
+    let preupdate_hooks = hook::Hooks::from_config(repo.config(), &ctx.io, "preupdate");
+    preupdate_hooks.run_shell_hooks(
+        Some(repo.path()),
+        true,
+        &HashMap::from([
+            ("parent1".to_string(), wc.first_parent()?.to_hex()),
+            ("parent2".to_string(), target_commit.to_hex()),
+        ]),
+    )?;
+
     let stats = if repo.requirements.contains("eden") {
         #[cfg(feature = "eden")]
         {
-            edenfs::edenfs_checkout(lgr, repo, wc, target_commit, update_mode)?;
+            edenfs::edenfs_checkout(ctx, repo, wc, target_commit, update_mode)?;
             None
         }
 
@@ -860,13 +870,26 @@ pub fn checkout(
         bail!("checkout() called on eden working copy on non-eden build");
     } else {
         Some(filesystem_checkout(
-            lgr,
+            ctx,
             repo,
             wc,
             target_commit,
             update_mode,
         )?)
     };
+
+    let update_hooks = hook::Hooks::from_config(repo.config(), &ctx.io, "update");
+    update_hooks.run_shell_hooks(
+        Some(repo.path()),
+        false,
+        &HashMap::from([
+            ("parent1".to_string(), target_commit.to_hex()),
+            ("parent2".to_string(), "".to_string()),
+            // This is number of unresolved files. We don't support leaving unresolved
+            // files in Rust yet, so hard code to "0" for now.
+            ("error".to_string(), "0".to_string()),
+        ]),
+    )?;
 
     let local_bms = repo.local_bookmarks()?;
     if !maybe_bookmark
@@ -880,11 +903,11 @@ pub fn checkout(
     if maybe_bookmark != current_bookmark {
         match (&current_bookmark, &maybe_bookmark) {
             // TODO: color bookmark name
-            (Some(old), Some(new)) => {
-                lgr.info(format!("(changing active bookmark from {old} to {new})"))
-            }
-            (None, Some(new)) => lgr.info(format!("(activating bookmark {new})")),
-            (Some(old), None) => lgr.info(format!("(leaving bookmark {old})")),
+            (Some(old), Some(new)) => ctx
+                .logger
+                .info(format!("(changing active bookmark from {old} to {new})")),
+            (None, Some(new)) => ctx.logger.info(format!("(activating bookmark {new})")),
+            (Some(old), None) => ctx.logger.info(format!("(leaving bookmark {old})")),
             (None, None) => {}
         }
 
@@ -914,13 +937,13 @@ fn file_type(vfs: &VFS, path: &RepoPath) -> FileType {
 }
 
 pub fn filesystem_checkout(
-    lgr: &TermLogger,
+    ctx: &CoreContext,
     repo: &mut Repo,
     wc: &LockedWorkingCopy,
     target_commit: HgId,
     update_mode: CheckoutMode,
 ) -> Result<(usize, usize)> {
-    let current_commit = wc.parents()?.into_iter().next().unwrap_or(NULL_ID);
+    let current_commit = wc.first_parent()?;
 
     let tree_resolver = repo.tree_resolver()?;
     let mut current_mf = tree_resolver.get(&current_commit)?;
@@ -930,7 +953,7 @@ pub fn filesystem_checkout(
         create_sparse_matchers(repo, wc.vfs(), &current_mf, &target_mf)?;
 
     // Overlay manifest with "status" info to include outstanding working copy changes.
-    let status = wc.status(sparse_matcher.clone(), false, repo.config(), lgr)?;
+    let status = wc.status(sparse_matcher.clone(), false, repo.config(), &ctx.logger)?;
 
     if update_mode == CheckoutMode::Force {
         // With --clean, mix on our working copy changes so they are "undone" by
@@ -960,7 +983,7 @@ pub fn filesystem_checkout(
 
     if update_mode != CheckoutMode::Force {
         // 2. Check if status is dirty
-        check_conflicts(lgr, repo, wc, &plan, &target_mf, &status)?;
+        check_conflicts(&ctx.logger, repo, wc, &plan, &target_mf, &status)?;
     }
 
     // 3. Signal that an update is being performed
@@ -975,7 +998,8 @@ pub fn filesystem_checkout(
     let apply_result = plan.apply_store(repo.file_store()?.as_ref())?;
 
     for (path, err) in apply_result.remove_failed {
-        lgr.warn(format!("update failed to remove {}: {:#}!\n", path, err));
+        ctx.logger
+            .warn(format!("update failed to remove {}: {:#}!\n", path, err));
     }
 
     // 5. Update the treestate parents, dirstate
@@ -1043,7 +1067,7 @@ pub(crate) fn check_conflicts(
         bail!("untracked files in working directory differ from files in requested revision");
     }
 
-    let conflicts = plan.check_conflicts(&status);
+    let conflicts = plan.check_conflicts(status);
     if !conflicts.is_empty() {
         bail!(
             "{:?} conflicting file changes:\n {}",

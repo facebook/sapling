@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.75"
 async-runtime = { version = "0.1.0", path = "../async-runtime" }
-commits-trait = { version = "0.1.0", path = "../hgcommits/trait" }
+commits-trait = { version = "0.1.0", path = "../commits/trait" }
 configloader = { version = "0.1.0", path = "../config/loader" }
 configmodel = { version = "0.1.0", path = "../config/model" }
 constructors = { version = "0.1.0", path = "../constructors", default-features = false }

@@ -94,10 +94,8 @@ impl EdenApiError {
                         _ => false,
                     }
                 // 500-599
-                } else if status.is_server_error() {
-                    true
                 } else {
-                    false
+                    status.is_server_error()
                 }
             }
             _ => false,

@@ -44,6 +44,8 @@ fn main() {
         conf.base_path(base_path);
 
         conf.types_crate("redaction_set__types");
+        conf.clients_crate("redaction_set__clients");
+        conf.services_crate("redaction_set__services");
 
         let options = "serde";
         if !options.is_empty() {

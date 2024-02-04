@@ -279,16 +279,22 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
     <div className="commit-info-view" data-testid="commit-info-view">
       {!commit.isHead ? null : (
         <div className="commit-info-view-toolbar-top" data-testid="commit-info-toolbar-top">
-          <VSCodeRadioGroup
-            value={mode}
-            onChange={e => setMode((e.target as HTMLOptionElement).value as CommitInfoMode)}>
-            <VSCodeRadio value="commit" checked={mode === 'commit'} tabIndex={0}>
-              <T>Commit</T>
-            </VSCodeRadio>
-            <VSCodeRadio value="amend" checked={mode === 'amend'} tabIndex={0}>
-              <T>Amend</T>
-            </VSCodeRadio>
-          </VSCodeRadioGroup>
+          <Tooltip
+            title={t(
+              'In Commit mode, you can edit the blank commit message for a new commit. \n\n' +
+                'In Amend mode, you can view and edit the commit message for the current head commit.',
+            )}>
+            <VSCodeRadioGroup
+              value={mode}
+              onChange={e => setMode((e.target as HTMLOptionElement).value as CommitInfoMode)}>
+              <VSCodeRadio value="commit" checked={mode === 'commit'} tabIndex={0}>
+                <T>Commit</T>
+              </VSCodeRadio>
+              <VSCodeRadio value="amend" checked={mode === 'amend'} tabIndex={0}>
+                <T>Amend</T>
+              </VSCodeRadio>
+            </VSCodeRadioGroup>
+          </Tooltip>
         </div>
       )}
 
@@ -638,7 +644,7 @@ function ActionsBar({
     diffSummaries.value && provider?.getSubmittableDiffs([commit], diffSummaries.value);
   const canSubmitIndividualDiffs = submittable && submittable.length > 0;
 
-  const ongoingImageUploads = useRecoilValue(numPendingImageUploads);
+  const ongoingImageUploads = useAtomValue(numPendingImageUploads);
   const areImageUploadsOngoing = ongoingImageUploads > 0;
 
   // Generally "Amend"/"Commit" for head commit, but if there's no changes while amending, just use "Amend message"

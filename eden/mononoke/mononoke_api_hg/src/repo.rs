@@ -61,7 +61,6 @@ use mercurial_types::HgManifestId;
 use mercurial_types::HgNodeHash;
 use metaconfig_types::RepoConfig;
 use mononoke_api::errors::MononokeError;
-use mononoke_api::path::MononokePath;
 use mononoke_api::repo::RepoContext;
 use mononoke_types::path::MPath;
 use mononoke_types::BonsaiChangeset;
@@ -135,7 +134,7 @@ impl HgRepoContext {
         Ok(self
             .repo()
             .repo_ephemeral_store_arc()
-            .create_bubble(custom_duration, labels)
+            .create_bubble(self.ctx(), custom_duration, labels)
             .await?)
     }
 
@@ -488,15 +487,15 @@ impl HgRepoContext {
     /// command.
     pub fn trees_under_path(
         &self,
-        path: MononokePath,
+        path: MPath,
         root_versions: impl IntoIterator<Item = HgManifestId>,
         base_versions: impl IntoIterator<Item = HgManifestId>,
         depth: Option<usize>,
-    ) -> impl TryStream<Ok = (HgTreeContext, MononokePath), Error = MononokeError> {
+    ) -> impl TryStream<Ok = (HgTreeContext, MPath), Error = MononokeError> {
         let ctx = self.ctx().clone();
         let blob_repo = self.blob_repo();
         let args = GettreepackArgs {
-            rootdir: path.into_mpath().into(),
+            rootdir: path,
             mfnodes: root_versions.into_iter().collect(),
             basemfnodes: base_versions.into_iter().collect(),
             directories: vec![], // Not supported.
@@ -512,7 +511,6 @@ impl HgRepoContext {
                     let repo = repo.clone();
                     async move {
                         let tree = HgTreeContext::new(repo, mfid).await?;
-                        let path = MononokePath::new(path.into_optional_non_root_path());
                         Ok((tree, path))
                     }
                 }
@@ -1104,12 +1102,7 @@ mod tests {
         let hg = repo_ctx.hg();
 
         let trees = hg
-            .trees_under_path(
-                MononokePath::new(None),
-                vec![root_mfid_2],
-                vec![root_mfid_1],
-                Some(2),
-            )
+            .trees_under_path(MPath::ROOT, vec![root_mfid_2], vec![root_mfid_1], Some(2))
             .try_collect::<Vec<_>>()
             .await?;
 

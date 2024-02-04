@@ -40,7 +40,7 @@ export interface CodeReviewProvider {
   /** Convert Code Review Provider info into a short summary string, usable in analytics */
   getSummaryName(): string;
 
-  typeahead?(kind: TypeaheadKind, query: string): Promise<Array<TypeaheadResult>>;
+  typeahead?(kind: TypeaheadKind, query: string, cwd: string): Promise<Array<TypeaheadResult>>;
 
   getDiffUrlMarkdown(diffId: DiffId): string;
   getCommitHashUrlMarkdown(hash: string): string;

@@ -39,3 +39,20 @@ since package.json points to `dist/`:
 ```
 ln -s ./vscode ~/.vscode/extensions/meta.sapling-scm-100.0.0-dev
 ```
+
+**Debugging**
+
+VS Code Webview source maps don't load automatically, since we produce separate .js.map files
+instead of inline source maps. The VS Code webview resource system doesn't seem to load these correctly.
+
+To get source maps in the webview, you need to load them manually:
+
+- Open ISL in vscode
+- Open the developer tools from the Help menu
+- Go to the "console" tab
+- Change "top" to the "pending-frame" that corresponds to ISL
+- open webview.js in the "sources" tab. (e.g. from a stack trace)
+- right click on the file, choose "Add source map..."
+- enter the full URL to the .map file: `file:///path/to/addons/vscode/dist/webview/webview.js.map`
+
+Enjoy your proper stack traces, files, breakpoints!

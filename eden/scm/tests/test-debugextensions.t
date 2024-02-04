@@ -32,13 +32,13 @@
     tested with: 3.0 3.1 3.2.1
     bug reporting: https://example.org/bts
   histedit
-    location: */ext/histedit.py* (glob)
+    location: * (glob)
     bundled: yes
   hotfix1
     location: <sapling_ext_hotfix1>
     bundled: no
   rebase
-    location: */ext/rebase.py* (glob)
+    location: *rebase* (glob)
     bundled: yes
 
   $ hg debugextensions --excludedefault -Tjson | sed 's|\\\\|/|g'
@@ -61,7 +61,7 @@
     "buglink": "",
     "bundled": true,
     "name": "histedit",
-    "source": "*/ext/histedit.py*", (glob)
+    "source": "*histedit*", (glob)
     "testedwith": []
    },
    {
@@ -75,7 +75,7 @@
     "buglink": "",
     "bundled": true,
     "name": "rebase",
-    "source": "*/ext/rebase.py*", (glob)
+    "source": "*rebase*", (glob)
     "testedwith": []
    }
   ]

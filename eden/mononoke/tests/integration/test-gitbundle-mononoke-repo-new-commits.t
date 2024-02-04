@@ -108,14 +108,8 @@
 
 # Ensure that Git considers this a valid bundle
   $ cd $GIT_REPO
-  $ git bundle verify $BUNDLE_PATH
+  $ git bundle verify -q $BUNDLE_PATH
   $TESTTMP/repo_bundle.bundle is okay
-  The bundle contains these 3 refs:
-  * (glob)
-  * (glob)
-  * (glob)
-  The bundle requires this ref:
-  e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 
 
 # Apply the bundle on the existing Git repo
   $ cd $TESTTMP/git_client_repo  

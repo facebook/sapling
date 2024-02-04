@@ -52,13 +52,13 @@ pub fn expand_aliases<S: ToString>(
         }
         replaced.push(command_name.clone());
 
-        args = if alias.starts_with('!') {
+        args = if let Some(suffix) = alias.strip_prefix('!') {
             // Alias starting with "!" is "shell alias". It is a string that should
             // be passed "as-is" to the shell (after $1/$2/$@ substitutions).
             // Round-trip through shlex::split and shlex::quote is not lossless.
             // Therefore use a different alias handling function that does not
             // use shlex::split.
-            expand_shell_alias_args(&args, &alias[1..])
+            expand_shell_alias_args(&args, suffix)
         } else {
             let alias_args: Vec<String> = split(&alias).ok_or_else(bad_alias)?;
             expand_alias_args(&args, alias_args)
@@ -136,8 +136,8 @@ fn expand_alias_args(command_args: &[String], alias_args: Vec<String>) -> Vec<St
     let mut args: Vec<String> = alias_args
         .into_iter()
         .map(|a| {
-            if a.starts_with('$') {
-                if let Ok(i) = a[1..].parse::<usize>() {
+            if let Some(suffix) = a.strip_prefix('$') {
+                if let Ok(i) = suffix.parse::<usize>() {
                     if let Some(existing_arg) = command_args.get(i) {
                         // Found a substitution. Use it.
                         // Also update the maximum number `n`.
@@ -185,7 +185,7 @@ fn expand_shell_alias_args(command_args: &[String], shell_alias: &str) -> Vec<St
                 cmd += &command_args
                     .iter()
                     .skip(1)
-                    .map(|s| shlex::quote(s))
+                    .map(|s| shlex::try_quote(s).expect("null byte unexpected"))
                     .collect::<Vec<_>>()
                     .join(" ");
                 buf.clear();
@@ -293,7 +293,7 @@ pub fn expand_prefix(
                 }
 
                 // sort command aliases by length for consistency
-                for (_, vec) in &mut id_to_command_map {
+                for vec in id_to_command_map.values_mut() {
                     vec.sort_by_key(|s| s.len());
                 }
 
@@ -310,8 +310,7 @@ pub fn expand_prefix(
                     possibilities,
                 });
             } else if command_matches.len() == 1 {
-                let alias = command_matches.into_iter().next().unwrap();
-                alias
+                command_matches.into_iter().next().unwrap()
             } else {
                 arg
             }
@@ -521,7 +520,7 @@ mod tests {
         };
 
         assert_eq!(expand("echo \"foo\"", vec!["bar"]), "echo \"foo\"");
-        assert_eq!(expand("echo \"$@\"", vec!["a b", "c"]), "echo \"a b\" c");
+        assert_eq!(expand("echo \"$@\"", vec!["a b", "c"]), "echo 'a b' c");
         assert_eq!(expand("echo $@", vec!["a b", "c"]), "echo a b c");
         assert_eq!(
             expand("$0 $1 $2", vec!["echo -n", "a b", "c d"]),

@@ -125,6 +125,7 @@ impl RepoContext {
         author_date: Option<DateTime<FixedOffset>>,
         annotation: String,
         annotated_tag: BonsaiAnnotatedTag,
+        target_is_tag: bool,
     ) -> Result<ChangesetContext, GitError> {
         let new_changeset_id = create_annotated_tag(
             self.ctx(),
@@ -135,6 +136,7 @@ impl RepoContext {
             author_date,
             annotation,
             annotated_tag,
+            target_is_tag,
         )
         .await?;
 
@@ -254,6 +256,7 @@ pub async fn create_annotated_tag(
     author_date: Option<DateTime<FixedOffset>>,
     annotation: String,
     annotated_tag: BonsaiAnnotatedTag,
+    target_is_tag: bool,
 ) -> Result<mononoke_types::ChangesetId, GitError> {
     let tag_id = format!("{:?}", annotated_tag);
 
@@ -288,6 +291,7 @@ pub async fn create_annotated_tag(
         changeset_id,
         tag_hash,
         tag_name: name,
+        target_is_tag,
     };
     repo.bonsai_tag_mapping()
         .add_or_update_mappings(vec![mapping_entry])
@@ -369,10 +373,12 @@ pub async fn repo_stack_git_bundle(
     let refs_to_include = response
         .included_refs
         .into_iter()
-        .map(|(ref_name, commit)| match ref_name.strip_prefix("refs/") {
-            Some(stripped_ref) => (stripped_ref.to_owned(), commit),
-            None => (ref_name, commit),
-        })
+        .map(
+            |(ref_name, ref_target)| match ref_name.strip_prefix("refs/") {
+                Some(stripped_ref) => (stripped_ref.to_owned(), ref_target.into_object_id()),
+                None => (ref_name, ref_target.into_object_id()),
+            },
+        )
         .collect();
 
     // Create the bundle writer with the header pre-written
